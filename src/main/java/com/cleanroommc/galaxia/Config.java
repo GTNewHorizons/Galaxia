@@ -1,4 +1,4 @@
-package com.myname.mymodid;
+package com.cleanroommc.galaxia;
 
 import java.io.File;
 
