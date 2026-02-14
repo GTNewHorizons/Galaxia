@@ -111,4 +111,26 @@ public class OrbitalCalculator {
         return  Math.round((v_1+ v_2)*100) / 100.0;
     }
 
+    /**
+     * Calculates the required escape velocity for a body from a given orbital altitude
+     * @param launchBody The gravitational body from which to escape
+     * @param launchAltitude The current orbital altitude (launchBody.radius for surface launch)
+     * @return The required escape velocity
+     */
+    public static double calculateEscapeVelocity(SpaceBody launchBody, double launchAltitude) {
+        return Math.sqrt( (2 * gravitationalConstant * launchBody.getMass()) / launchAltitude);
+    }
+
+    /**
+     * Calculates the Delta V for a 'direct' travel from one body to another (effectively 'straight line' travel)
+     * @param launchBody The gravitational body from which to escape
+     * @param targetBody The gravitational body from which to enter orbit
+     * @param launchAltitude The current orbital altitude of the launch body (launchBody.radius = surface launch)
+     * @param targetAltitude The target orbital altitude of the target body (targetBody.radius = landing)
+     * @return The required DeltaV for a direct line travel
+     */
+    public static double calculateDirectDeltaV(SpaceBody launchBody
+        , SpaceBody targetBody, double launchAltitude, double targetAltitude) {
+        return calculateEscapeVelocity(launchBody, launchAltitude) + calculateEscapeVelocity(targetBody, targetAltitude);
+    }
 }
