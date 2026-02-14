@@ -1,6 +1,7 @@
 package com.cleanroommc.galaxia.api;
 
 public class Rocket {
+
     private double baseMass;
     private double fuelMass;
     private double maxFuelStorage;
@@ -45,7 +46,7 @@ public class Rocket {
     }
 
     public void addFuel(double volume) {
-        if ( getMaxFuelStorage() - getFuelMass() < volume) {
+        if (getMaxFuelStorage() - getFuelMass() < volume) {
             return;
         }
         this.fuelMass += volume;

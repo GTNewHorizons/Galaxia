@@ -1,6 +1,7 @@
 package com.cleanroommc.galaxia.api;
 
 public class SpaceBody {
+
     private double mass;
     private double radius;
     private double systemRadius;
@@ -36,4 +37,3 @@ public class SpaceBody {
     }
 
 }
-
