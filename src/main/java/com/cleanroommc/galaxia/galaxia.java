@@ -1,5 +1,12 @@
 package com.cleanroommc.galaxia;
 
+import com.cleanroommc.galaxia.config.GalaxiaConfig;
+import com.cleanroommc.galaxia.items.ItemCalxTeleporter;
+import cpw.mods.fml.common.registry.GameRegistry;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,6 +20,11 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 @Mod(modid = galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
 public class galaxia {
 
+    public static Item calxTeleporter;
+    public static CreativeTabs creativeTab = new CreativeTabs("galaxia") {
+        @Override public Item getTabIconItem() { return Item.getItemById(264); }
+    };
+
     public static final String MODID = "galaxia";
     public static final Logger LOG = LogManager.getLogger(MODID);
 
@@ -20,16 +32,21 @@ public class galaxia {
     public static CommonProxy proxy;
 
     @Mod.EventHandler
-    // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the
-    // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
-        proxy.preInit(event);
+        GalaxiaConfig.init(event.getSuggestedConfigurationFile());
+        DimensionRegistry.registerDimensions();
     }
 
     @Mod.EventHandler
-    // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
-        proxy.init(event);
+        calxTeleporter = new ItemCalxTeleporter().setUnlocalizedName("calxTeleporter")
+            .setCreativeTab(creativeTab).setMaxStackSize(16);
+        GameRegistry.registerItem(calxTeleporter, "calxTeleporter");
+
+        GameRegistry.addRecipe(new ItemStack(calxTeleporter),
+            "III", "IEI", "III",
+            'I', Items.iron_ingot,
+            'E', Items.ender_pearl);
     }
 
     @Mod.EventHandler
