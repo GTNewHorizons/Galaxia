@@ -6,6 +6,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.world.Teleporter;
 import net.minecraft.world.World;
 
 public class ItemCalxTeleporter extends Item {
@@ -20,7 +21,7 @@ public class ItemCalxTeleporter extends Item {
             playerMP.mcServer.getConfigurationManager().transferPlayerToDimension(
                 playerMP,
                 dimId,
-                new net.minecraft.world.Teleporter(playerMP.mcServer.worldServerForDimension(dimId)) {
+                new Teleporter(playerMP.mcServer.worldServerForDimension(dimId)) {
                     @Override
                     public void placeInPortal(Entity entity, double x, double y, double z, float yaw) {
                         entity.setLocationAndAngles(0, 80, 0, yaw, 0);

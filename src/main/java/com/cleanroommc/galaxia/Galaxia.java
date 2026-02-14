@@ -1,12 +1,9 @@
 package com.cleanroommc.galaxia;
 
-import com.cleanroommc.galaxia.config.GalaxiaConfig;
-import com.cleanroommc.galaxia.items.ItemCalxTeleporter;
-import cpw.mods.fml.common.registry.GameRegistry;
+import com.cleanroommc.galaxia.dimension.SolarSystemRegistry;
+import com.cleanroommc.galaxia.items.GalaxiaItems;
 import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.init.Items;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,10 +14,9 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
-@Mod(modid = galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
-public class galaxia {
+@Mod(modid = Galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
+public class Galaxia {
 
-    public static Item calxTeleporter;
     public static CreativeTabs creativeTab = new CreativeTabs("galaxia") {
         @Override public Item getTabIconItem() { return Item.getItemById(264); }
     };
@@ -33,20 +29,12 @@ public class galaxia {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        GalaxiaConfig.init(event.getSuggestedConfigurationFile());
-        DimensionRegistry.registerDimensions();
+        SolarSystemRegistry.registerAll();
     }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        calxTeleporter = new ItemCalxTeleporter().setUnlocalizedName("calxTeleporter")
-            .setCreativeTab(creativeTab).setMaxStackSize(16);
-        GameRegistry.registerItem(calxTeleporter, "calxTeleporter");
-
-        GameRegistry.addRecipe(new ItemStack(calxTeleporter),
-            "III", "IEI", "III",
-            'I', Items.iron_ingot,
-            'E', Items.ender_pearl);
+        GalaxiaItems.registerAll();
     }
 
     @Mod.EventHandler

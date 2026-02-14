@@ -12,8 +12,8 @@ public class CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
 
-        galaxia.LOG.info(Config.greeting);
-        galaxia.LOG.info("I am MyMod at version " + Tags.VERSION);
+        Galaxia.LOG.info(Config.greeting);
+        Galaxia.LOG.info("I am MyMod at version " + Tags.VERSION);
     }
 
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
