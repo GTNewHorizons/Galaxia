@@ -1,16 +1,15 @@
 package com.cleanroommc.galaxia.dimension;
 
-import com.cleanroommc.galaxia.world.BiomeGenCalx;
 import com.cleanroommc.galaxia.world.WorldProviderCalx;
 
-public class SolarSystemRegistry {
+public final class SolarSystemRegistry {
+    public static DimensionDef CALX;
+
     public static void registerAll() {
-        new DimensionBuilder()
-            .name("Calx")
+        CALX = new DimensionBuilder()
+            .name("calx")
             .id(666)
             .provider(WorldProviderCalx.class)
-            .biome(() -> new BiomeGenCalx(150))
-            .dimensionId(666)
             .build();
     }
 }

@@ -2,18 +2,12 @@ package com.cleanroommc.galaxia.dimension;
 
 import net.minecraftforge.common.DimensionManager;
 import net.minecraft.world.WorldProvider;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.chunk.IChunkProvider;
-
-import java.util.function.Supplier;
 
 public class DimensionBuilder {
-    private int ID;
+
+    private int id;
     private String name;
     private Class<? extends WorldProvider> providerClass;
-    private Supplier<BiomeGenBase> biomeSupplier;
-    private Supplier<IChunkProvider> chunkGenSupplier;
-    private int dimensionId;
     private boolean keepLoaded = true;
 
     public DimensionBuilder name(String name) {
@@ -21,8 +15,8 @@ public class DimensionBuilder {
         return this;
     }
 
-    public DimensionBuilder id(int ID) {
-        this.ID = ID;
+    public DimensionBuilder id(int id) {
+        this.id = id;
         return this;
     }
 
@@ -31,39 +25,29 @@ public class DimensionBuilder {
         return this;
     }
 
-    public DimensionBuilder biome(Supplier<BiomeGenBase> biomeSupplier) {
-        this.biomeSupplier = biomeSupplier;
-        return this;
-    }
-
-    public DimensionBuilder chunkGenerator(Supplier<IChunkProvider> chunkGenSupplier) {
-        this.chunkGenSupplier = chunkGenSupplier;
-        return this;
-    }
-
-    public DimensionBuilder dimensionId(int id) {
-        this.dimensionId = id;
-        return this;
-    }
-
     public DimensionBuilder keepLoaded(boolean keep) {
         this.keepLoaded = keep;
         return this;
     }
 
-    public void build() {
-        if (providerClass == null) throw new IllegalStateException("Provider class required for dimension " + name);
-        if (ID == 0) throw new IllegalStateException("Invalid ID for " + name);
+    public DimensionDef build() {
+        if (name == null) throw new IllegalStateException("Name required");
+        if (providerClass == null) throw new IllegalStateException("Provider required");
 
-        int providerType = ID;
+        DimensionManager.registerProviderType(id, providerClass, keepLoaded);
 
-        DimensionManager.registerProviderType(providerType, providerClass, keepLoaded);
-
-        if (!DimensionManager.isDimensionRegistered(ID)) {
-            DimensionManager.registerDimension(ID, providerType);
-            System.out.println("[Galaxia] Registered dimension: " + name + " (ID: " + ID + ")");
-        } else {
-            System.out.println("[Galaxia] Dimension ID " + ID + " already taken for " + name);
+        if (!DimensionManager.isDimensionRegistered(id)) {
+            DimensionManager.registerDimension(id, id);
         }
+
+        DimensionDef def = new DimensionDef(
+            name,
+            id,
+            providerClass,
+            keepLoaded
+        );
+
+        DimensionRegistry.register(def);
+        return def;
     }
 }

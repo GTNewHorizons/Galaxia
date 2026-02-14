@@ -1,6 +1,5 @@
 package com.cleanroommc.galaxia.items;
 
-import com.cleanroommc.galaxia.config.GalaxiaConfig;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -8,6 +7,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.Teleporter;
 import net.minecraft.world.World;
+
+import static com.cleanroommc.galaxia.dimension.SolarSystemRegistry.CALX;
 
 public class ItemCalxTeleporter extends Item {
     public ItemCalxTeleporter() {
@@ -17,7 +18,7 @@ public class ItemCalxTeleporter extends Item {
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (!world.isRemote && player instanceof EntityPlayerMP playerMP) {
-            int dimId = GalaxiaConfig.CALX_DIM_ID;
+            int dimId = CALX.id;
             playerMP.mcServer.getConfigurationManager().transferPlayerToDimension(
                 playerMP,
                 dimId,
