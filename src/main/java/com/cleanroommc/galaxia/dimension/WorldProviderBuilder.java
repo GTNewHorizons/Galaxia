@@ -1,10 +1,10 @@
 package com.cleanroommc.galaxia.dimension;
 
+import java.util.function.Supplier;
+
 import net.minecraft.util.Vec3;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
-
-import java.util.function.Supplier;
 
 public class WorldProviderBuilder {
 

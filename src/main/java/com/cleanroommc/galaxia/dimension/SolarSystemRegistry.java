@@ -1,13 +1,16 @@
 package com.cleanroommc.galaxia.dimension;
 
-import com.cleanroommc.galaxia.dimension.planets.*;
-import cpw.mods.fml.common.FMLLog;
-import net.minecraftforge.common.DimensionManager;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraftforge.common.DimensionManager;
+
+import com.cleanroommc.galaxia.dimension.planets.BasePlanet;
+import com.cleanroommc.galaxia.dimension.planets.Calx;
+
+import cpw.mods.fml.common.FMLLog;
 
 public final class SolarSystemRegistry {
 

@@ -1,19 +1,21 @@
 package com.cleanroommc.galaxia.dimension.planets;
 
+import net.minecraft.init.Blocks;
+import net.minecraft.world.WorldProvider;
+
 import com.cleanroommc.galaxia.dimension.BiomeGenBuilder;
 import com.cleanroommc.galaxia.dimension.BiomeGenSpace;
 import com.cleanroommc.galaxia.dimension.DimensionBuilder;
 import com.cleanroommc.galaxia.dimension.PlanetEnum;
 import com.cleanroommc.galaxia.dimension.WorldProviderBuilder;
 import com.cleanroommc.galaxia.dimension.WorldProviderSpace;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.WorldProvider;
 
 public class Calx extends BasePlanet {
 
     @Override
     protected DimensionBuilder createBuilder() {
-        return super.createBuilder().gravity(0.1);
+        return super.createBuilder().gravity(.5)
+            .airResistance(.7);
     }
 
     public static final PlanetEnum ENUM = PlanetEnum.CALX;
@@ -29,27 +31,29 @@ public class Calx extends BasePlanet {
     }
 
     public static class WorldProviderCalx extends WorldProviderSpace {
+
         public WorldProviderCalx() {
             WorldProviderBuilder.configure(this)
-                    .sky(true)
-                    .fog(0.15f, 0.1f, 0.3f)
-                    .avgGround(80)
-                    .biome(new BiomeGenCalx(100))
-                    .name(ENUM)
-                    .build();
+                .sky(true)
+                .fog(0.15f, 0.1f, 0.3f)
+                .avgGround(80)
+                .biome(new BiomeGenCalx(100))
+                .name(ENUM)
+                .build();
         }
     }
 
     public static class BiomeGenCalx extends BiomeGenSpace {
+
         public BiomeGenCalx(int id) {
-            super(id, new BiomeGenBuilder(id)
-                    .name("Calx Surface")
+            super(
+                id,
+                new BiomeGenBuilder(id).name("Calx Surface")
                     .height(0.1F, 0.11F)
                     .temperature(0.4F)
                     .rainfall(0.99F)
                     .topBlock(Blocks.brick_block)
-                    .fillerBlock(Blocks.stone)
-            );
+                    .fillerBlock(Blocks.stone));
         }
     }
 }

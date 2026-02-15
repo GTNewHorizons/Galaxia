@@ -1,14 +1,13 @@
 package com.cleanroommc.galaxia;
 
-import com.cleanroommc.galaxia.dimension.SolarSystemRegistry;
-import com.cleanroommc.galaxia.handler.GravityHandler;
-import com.cleanroommc.galaxia.items.GalaxiaItems;
-import cpw.mods.fml.common.FMLCommonHandler;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
-import net.minecraftforge.common.MinecraftForge;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.cleanroommc.galaxia.dimension.SolarSystemRegistry;
+import com.cleanroommc.galaxia.items.GalaxiaItems;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -21,7 +20,11 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 public class Galaxia {
 
     public static CreativeTabs creativeTab = new CreativeTabs("galaxia") {
-        @Override public Item getTabIconItem() { return Item.getItemById(264); }
+
+        @Override
+        public Item getTabIconItem() {
+            return Item.getItemById(264);
+        }
     };
 
     public static final String MODID = "galaxia";
@@ -37,8 +40,6 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        MinecraftForge.EVENT_BUS.register(new GravityHandler());
-        FMLCommonHandler.instance().bus().register(new GravityHandler());
         GalaxiaItems.registerAll();
     }
 

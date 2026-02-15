@@ -1,13 +1,13 @@
 package com.cleanroommc.galaxia.dimension;
 
+import java.util.function.Supplier;
+
 import net.minecraft.util.Vec3;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.biome.WorldChunkManagerHell;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.ChunkProviderGenerate;
-
-import java.util.function.Supplier;
 
 public abstract class WorldProviderSpace extends WorldProvider {
 
@@ -32,8 +32,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     @Override
     public IChunkProvider createChunkGenerator() {
-        return chunkGenSupplier != null
-            ? chunkGenSupplier.get()
+        return chunkGenSupplier != null ? chunkGenSupplier.get()
             : new ChunkProviderGenerate(worldObj, worldObj.getSeed(), false);
     }
 
