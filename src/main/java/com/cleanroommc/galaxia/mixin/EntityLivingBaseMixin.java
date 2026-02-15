@@ -23,25 +23,18 @@ public abstract class EntityLivingBaseMixin {
     private double galaxia$removeAirResistance(double original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double res = PlanetAPI.getAirResistance(self);
-        if (res == 1.0D) return original;
-        // Milder adjustment: use power to soften the effect for res >1 (denser air -> slightly stronger drag)
-        return Math.pow(original, Math.sqrt(res)); // For res=1.5, ~0.96 instead of ~0.65
+        // Pure formula: at res=1 → original, at res=0 → 1.0 (no vertical drag)
+        return Math.pow(original, Math.sqrt(res));
     }
 
     // air resistance horizontal
     @ModifyConstant(method = "moveEntityWithHeading", constant = @Constant(floatValue = 0.91F))
     private float galaxia$removeResistance(float original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
-        if (self.onGround) {
-            return original; // No air resistance adjustment on ground to preserve block friction
-        }
         double res = PlanetAPI.getAirResistance(self);
-        if (res == 1.0D) return original;
-        // Milder adjustment: for res>1, slightly reduce coefficient; for res<1, slightly increase
-        float adjusted = (float) Math.pow(original, Math.sqrt(res));
-        // Prevent extreme values
-        if (adjusted > 1.0F) adjusted = 1.0F;
-        if (adjusted < 0.5F) adjusted = 0.5F;
-        return PlanetAPI.cancelSpeed(self) ? 1.0F : adjusted;
+        // Pure formula: exponent is zeroed when cancelSpeed is true, always returns 1.0
+        // Otherwise normal drag scaling; at res=1 - original, at res=0 - 1.0
+        double exponent = Math.sqrt(res) * (PlanetAPI.cancelSpeed(self) ? 0.0 : 1.0);
+        return (float) Math.pow(original, exponent);
     }
 }
