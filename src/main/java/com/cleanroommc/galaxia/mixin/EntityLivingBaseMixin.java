@@ -23,7 +23,7 @@ public abstract class EntityLivingBaseMixin {
     private double galaxia$removeAirResistance(double original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double res = PlanetAPI.getAirResistance(self);
-        if (res < 1) return 1;
+        if (res < 1) return original;
         return 1 / res;
     }
 
@@ -34,7 +34,7 @@ public abstract class EntityLivingBaseMixin {
         // if speed is canceled, replace *0.91 with *1 so it doesnt change, otherwise adjust air resistance
         double res = PlanetAPI.getAirResistance(self);
         // prevent infinite acceleration
-        if (res < 1) return 1;
+        if (res < 1) return original;
         float resistance = (float) (original / res);
         return PlanetAPI.cancelSpeed(self) ? 1 : resistance;
     }

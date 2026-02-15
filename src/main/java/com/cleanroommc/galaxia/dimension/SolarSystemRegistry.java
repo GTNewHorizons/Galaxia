@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cleanroommc.galaxia.dimension.planets.Dunia;
 import net.minecraftforge.common.DimensionManager;
 
 import com.cleanroommc.galaxia.dimension.planets.BasePlanet;
@@ -25,6 +26,7 @@ public final class SolarSystemRegistry {
         registered = true;
 
         registerPlanet(new Calx());
+        registerPlanet(new Dunia());
 
         FMLLog.info("[Galaxia] registered %d celestial bodies", DIMENSIONS.size());
     }

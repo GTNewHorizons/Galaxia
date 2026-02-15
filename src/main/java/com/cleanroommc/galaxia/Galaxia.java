@@ -1,5 +1,8 @@
 package com.cleanroommc.galaxia;
 
+import cpw.mods.fml.common.network.NetworkRegistry;
+import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+import cpw.mods.fml.relauncher.Side;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 
@@ -19,6 +22,7 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 @Mod(modid = Galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
 public class Galaxia {
 
+    public static final SimpleNetworkWrapper channel = NetworkRegistry.INSTANCE.newSimpleChannel("galaxia");
     public static CreativeTabs creativeTab = new CreativeTabs("galaxia") {
 
         @Override
@@ -40,6 +44,8 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        int packetId = 0;
+        channel.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId++, Side.SERVER);
         GalaxiaItems.registerAll();
     }
 

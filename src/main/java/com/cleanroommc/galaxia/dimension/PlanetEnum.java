@@ -2,7 +2,8 @@ package com.cleanroommc.galaxia.dimension;
 
 public enum PlanetEnum {
 
-    CALX(666, "Calx");
+    CALX(20, "Calx"),
+    Dunia(21, "Dunia");
 
     final int id;
     final String name;

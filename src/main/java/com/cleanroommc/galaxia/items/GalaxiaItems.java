@@ -17,7 +17,7 @@ public class GalaxiaItems {
 
     public enum GalaxiaItem {
 
-        CALX_TELEPORTER("calxTeleporter", 64, () -> new ItemCalxTeleporter().setUnlocalizedName("calxTeleporter"),
+        TELEPORTER("teleporter", 64, () -> new ItemTeleporter().setUnlocalizedName("teleporter"),
             (item) -> GameRegistry.addShapedRecipe(
                 new ItemStack(item),
                 "III",
