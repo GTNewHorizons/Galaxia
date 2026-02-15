@@ -1,13 +1,15 @@
 package com.cleanroommc.galaxia.client.gui;
 
-import com.cleanroommc.galaxia.Galaxia;
-import com.cleanroommc.galaxia.dimension.PlanetEnum;
-import com.cleanroommc.galaxia.TeleportRequestPacket;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.resources.I18n;
+
 import org.lwjgl.input.Keyboard;
+
+import com.cleanroommc.galaxia.Galaxia;
+import com.cleanroommc.galaxia.TeleportRequestPacket;
+import com.cleanroommc.galaxia.dimension.PlanetEnum;
 
 public class GuiPlanetTeleporter extends GuiScreen {
 
@@ -34,8 +36,13 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
         for (int i = 0; i < planets.length; i++) {
             PlanetEnum planet = planets[i];
-            GuiButton planetButton = new GuiButton(i, this.width / 2 - buttonWidth / 2, startY + i * spacing,
-                buttonWidth, buttonHeight, planet.name());
+            GuiButton planetButton = new GuiButton(
+                i,
+                this.width / 2 - buttonWidth / 2,
+                startY + i * spacing,
+                buttonWidth,
+                buttonHeight,
+                planet.name());
             this.buttonList.add(planetButton);
         }
 
@@ -53,7 +60,13 @@ public class GuiPlanetTeleporter extends GuiScreen {
         this.zField.setText("0");
         this.zField.setMaxStringLength(12);
 
-        this.teleportButton = new GuiButton(200, this.width / 2 - 100, fieldY + 80, 200, 20, I18n.format("gui.teleport"));
+        this.teleportButton = new GuiButton(
+            200,
+            this.width / 2 - 100,
+            fieldY + 80,
+            200,
+            20,
+            I18n.format("gui.teleport"));
         this.buttonList.add(teleportButton);
     }
 
@@ -89,7 +102,12 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
         this.drawCenteredString(this.fontRendererObj, "Planet Teleporter", this.width / 2, 15, 0xFFFFFF);
 
-        this.drawCenteredString(this.fontRendererObj, "Selected: " + selectedPlanet.name(), this.width / 2, 30, 0xAAAAFF);
+        this.drawCenteredString(
+            this.fontRendererObj,
+            "Selected: " + selectedPlanet.name(),
+            this.width / 2,
+            30,
+            0xAAAAFF);
 
         this.drawString(this.fontRendererObj, "X:", this.width / 2 - 80, xField.yPosition + 6, 0xFFFFFF);
         this.drawString(this.fontRendererObj, "Y:", this.width / 2 - 80, yField.yPosition + 6, 0xFFFFFF);

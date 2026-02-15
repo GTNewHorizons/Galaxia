@@ -17,16 +17,8 @@ public class GalaxiaItems {
 
     public enum GalaxiaItem {
 
-        TELEPORTER("teleporter", 64, () -> new ItemTeleporter().setUnlocalizedName("teleporter"),
-            (item) -> GameRegistry.addShapedRecipe(
-                new ItemStack(item),
-                "III",
-                "IEI",
-                "III",
-                'I',
-                Items.iron_ingot,
-                'E',
-                Items.ender_pearl)),
+        TELEPORTER("teleporter", 64, () -> new ItemTeleporter().setUnlocalizedName("teleporter"), (item) -> GameRegistry
+            .addShapedRecipe(new ItemStack(item), "III", "IEI", "III", 'I', Items.iron_ingot, 'E', Items.ender_pearl)),
         ANOTHER_THING("anotherThing");
 
         private final String registryName;

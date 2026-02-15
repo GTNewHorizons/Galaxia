@@ -1,13 +1,14 @@
 package com.cleanroommc.galaxia.dimension.planets;
 
+import net.minecraft.init.Blocks;
+import net.minecraft.world.WorldProvider;
+
 import com.cleanroommc.galaxia.dimension.BiomeGenBuilder;
 import com.cleanroommc.galaxia.dimension.BiomeGenSpace;
 import com.cleanroommc.galaxia.dimension.DimensionBuilder;
 import com.cleanroommc.galaxia.dimension.PlanetEnum;
 import com.cleanroommc.galaxia.dimension.WorldProviderBuilder;
 import com.cleanroommc.galaxia.dimension.WorldProviderSpace;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.WorldProvider;
 
 public class Dunia extends BasePlanet {
 

@@ -5,6 +5,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+
 import com.cleanroommc.galaxia.client.gui.GuiPlanetTeleporter;
 
 public class ItemTeleporter extends Item {
@@ -17,7 +18,8 @@ public class ItemTeleporter extends Item {
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (world.isRemote) {
-            Minecraft.getMinecraft().displayGuiScreen(new GuiPlanetTeleporter());
+            Minecraft.getMinecraft()
+                .displayGuiScreen(new GuiPlanetTeleporter());
         }
         player.swingItem();
         return stack;

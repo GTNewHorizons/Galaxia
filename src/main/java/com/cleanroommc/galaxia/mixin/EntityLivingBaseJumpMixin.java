@@ -15,8 +15,9 @@ public abstract class EntityLivingBaseJumpMixin {
     private double galaxia$modifyJump(double original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double g = PlanetAPI.getGravity(self);
-        if (g == 1) return original;
-        // adding + 0.1 to account weight of a player (and prevent division by 0)
-        return original * (1 / g + 0.1 * (1 - (int) Math.abs(Math.signum(g))));
+        if (g == 1.0D) return original;
+        if (g == 0) return 0;
+        // Simplify: standard inverse for jump velocity to achieve similar height (h ~ v^2 / g)
+        return original / Math.sqrt(g); // For low g, higher jump; for high g, lower
     }
 }

@@ -16,6 +16,8 @@ public abstract class EntityLivingBaseFallMixin {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         // fallback for getGravity is 1, so it won't affect damage
         double g = PlanetAPI.getGravity(self);
-        return (float) (distance * g * g);
+        if (g == 1.0D) return distance;
+        // realistic kinetic energy scaling (damage ~ v^2 ~ g * h)
+        return (float) (distance * g);
     }
 }
