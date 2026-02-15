@@ -8,6 +8,9 @@ import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.client.gui.GuiPlanetTeleporter;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 public class ItemTeleporter extends Item {
 
     public ItemTeleporter() {
@@ -16,6 +19,7 @@ public class ItemTeleporter extends Item {
     }
 
     @Override
+    @SideOnly(Side.CLIENT)
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (world.isRemote) {
             Minecraft.getMinecraft()
