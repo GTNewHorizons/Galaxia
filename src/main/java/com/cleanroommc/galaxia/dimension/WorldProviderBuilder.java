@@ -6,49 +6,49 @@ import net.minecraft.world.chunk.IChunkProvider;
 
 import java.util.function.Supplier;
 
-public class SpaceWorldBuilder {
+public class WorldProviderBuilder {
 
     private final WorldProviderSpace provider;
 
-    private SpaceWorldBuilder(WorldProviderSpace provider) {
+    private WorldProviderBuilder(WorldProviderSpace provider) {
         this.provider = provider;
     }
 
-    public static SpaceWorldBuilder configure(WorldProviderSpace provider) {
-        return new SpaceWorldBuilder(provider);
+    public static WorldProviderBuilder configure(WorldProviderSpace provider) {
+        return new WorldProviderBuilder(provider);
     }
 
-    public SpaceWorldBuilder sky(boolean sky) {
+    public WorldProviderBuilder sky(boolean sky) {
         provider.hasSky = sky;
         return this;
     }
 
-    public SpaceWorldBuilder cloudHeight(float height) {
+    public WorldProviderBuilder cloudHeight(float height) {
         provider.cloudHeight = height;
         return this;
     }
 
-    public SpaceWorldBuilder surface(boolean surface) {
+    public WorldProviderBuilder surface(boolean surface) {
         provider.isSurface = surface;
         return this;
     }
 
-    public SpaceWorldBuilder avgGround(int level) {
+    public WorldProviderBuilder avgGround(int level) {
         provider.avgGround = level;
         return this;
     }
 
-    public SpaceWorldBuilder fog(double r, double g, double b) {
+    public WorldProviderBuilder fog(double r, double g, double b) {
         provider.fogColor = Vec3.createVectorHelper(r, g, b);
         return this;
     }
 
-    public SpaceWorldBuilder biome(BiomeGenBase biome) {
+    public WorldProviderBuilder biome(BiomeGenBase biome) {
         provider.biome = biome;
         return this;
     }
 
-    public SpaceWorldBuilder chunkGen(Supplier<IChunkProvider> gen) {
+    public WorldProviderBuilder chunkGen(Supplier<IChunkProvider> gen) {
         provider.chunkGenSupplier = gen;
         return this;
     }

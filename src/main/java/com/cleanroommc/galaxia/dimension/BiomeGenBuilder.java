@@ -7,6 +7,7 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 
 
+import java.util.Collections;
 import java.util.List;
 
 public class BiomeGenBuilder {
@@ -20,11 +21,11 @@ public class BiomeGenBuilder {
     Block topBlock = Blocks.stone;
     Block fillerBlock = Blocks.stone;
 
-    List<FlowerEntry> flowers = List.of();
-    List<SpawnListEntry> mobsWater = List.of();
-    List<SpawnListEntry> mobsCave = List.of();
-    List<SpawnListEntry> mobsGeneral = List.of();
-    List<SpawnListEntry> mobsMonster = List.of();
+    List<FlowerEntry> flowers = Collections.emptyList();
+    List<SpawnListEntry> mobsWater = Collections.emptyList();
+    List<SpawnListEntry> mobsCave = Collections.emptyList();
+    List<SpawnListEntry> mobsGeneral = Collections.emptyList();
+    List<SpawnListEntry> mobsMonster = Collections.emptyList();
 
     public BiomeGenBuilder(int id) {
         this.id = id;

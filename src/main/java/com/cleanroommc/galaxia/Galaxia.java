@@ -29,7 +29,7 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        SolarSystemRegistry.registerAll();
+        SolarSystemRegistry.registerAll(event.getAsmData());
     }
 
     @Mod.EventHandler

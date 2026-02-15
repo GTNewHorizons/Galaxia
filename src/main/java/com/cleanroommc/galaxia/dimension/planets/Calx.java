@@ -4,18 +4,20 @@ import com.cleanroommc.galaxia.dimension.BiomeGenBuilder;
 import com.cleanroommc.galaxia.dimension.BiomeGenSpace;
 import com.cleanroommc.galaxia.dimension.DimensionBuilder;
 import com.cleanroommc.galaxia.dimension.DimensionDef;
-import com.cleanroommc.galaxia.dimension.IPlanet;
-import com.cleanroommc.galaxia.dimension.SpaceWorldBuilder;
+import com.cleanroommc.galaxia.utility.IPlanet;
+import com.cleanroommc.galaxia.utility.Planet;
+import com.cleanroommc.galaxia.dimension.WorldProviderBuilder;
 import com.cleanroommc.galaxia.dimension.WorldProviderSpace;
 import net.minecraft.init.Blocks;
 
+@Planet(id = 666, name = "calx")
 public class Calx implements IPlanet {
 
     @Override
     public DimensionDef buildDimension() {
         return new DimensionBuilder()
-            .name("calx")
-            .id(666)
+            .name(getName())
+            .id(getId())
             .provider(WorldProviderCalx.class)
             .build();
     }
@@ -23,7 +25,7 @@ public class Calx implements IPlanet {
     public static class WorldProviderCalx extends WorldProviderSpace {
 
         public WorldProviderCalx() {
-            SpaceWorldBuilder.configure(this)
+            WorldProviderBuilder.configure(this)
                 .sky(true)
                 .fog(0.15, 0.1, 0.3)
                 .avgGround(80)
@@ -33,7 +35,7 @@ public class Calx implements IPlanet {
 
         @Override
         public String getDimensionName() {
-            return "Calx (Moon)";
+            return "Calx";
         }
     }
 
