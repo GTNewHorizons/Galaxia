@@ -24,6 +24,13 @@ public class DimensionBuilder {
     private Class<? extends WorldProvider> providerClass;
     private boolean keepLoaded = true;
 
+    public DimensionBuilder enumValue(PlanetEnum planet) {
+        if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
+        this.name = planet.getName();
+        this.id = planet.getId();
+        return this;
+    }
+
     public DimensionBuilder name(String name) {
         this.name = name;
         return this;

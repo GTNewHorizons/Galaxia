@@ -53,6 +53,16 @@ public class WorldProviderBuilder {
         return this;
     }
 
+    public WorldProviderBuilder name(String name) {
+        provider.name = name;
+        return this;
+    }
+
+    public WorldProviderBuilder name(PlanetEnum planet) {
+        provider.name = planet.getName();
+        return this;
+    }
+
     public void build() {
         provider.applyFlags();
     }

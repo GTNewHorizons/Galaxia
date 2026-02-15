@@ -16,6 +16,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
     protected boolean isSurface = false;
     protected int avgGround = 64;
     protected Vec3 fogColor = Vec3.createVectorHelper(0.2D, 0.1D, 0.4D);
+    protected String name;
 
     protected Supplier<IChunkProvider> chunkGenSupplier;
     protected BiomeGenBase biome;
@@ -34,5 +35,10 @@ public abstract class WorldProviderSpace extends WorldProvider {
         return chunkGenSupplier != null
             ? chunkGenSupplier.get()
             : new ChunkProviderGenerate(worldObj, worldObj.getSeed(), false);
+    }
+
+    @Override
+    public String getDimensionName() {
+        return name;
     }
 }

@@ -1,7 +1,6 @@
 package com.cleanroommc.galaxia.items;
 
-import com.cleanroommc.galaxia.utility.Planet;
-import com.cleanroommc.galaxia.dimension.planets.Calx;
+import com.cleanroommc.galaxia.dimension.PlanetEnum;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -18,7 +17,7 @@ public class ItemCalxTeleporter extends Item {
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (!world.isRemote && player instanceof EntityPlayerMP playerMP) {
-            int dimId = Calx.class.getAnnotation(Planet.class).id();
+            int dimId = PlanetEnum.CALX.getId();
             playerMP.mcServer.getConfigurationManager().transferPlayerToDimension(
                 playerMP,
                 dimId,
