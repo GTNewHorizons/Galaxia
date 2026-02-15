@@ -39,6 +39,9 @@ public final class SolarSystemRegistry {
             FMLLog.warning("[Galaxia] Dim ID %d already taken!", dimId);
         }
 
+        BY_ID.put(dimId, def);
+        BY_NAME.put(def.name.toLowerCase(), def);
+
         DIMENSIONS.add(def);
     }
 

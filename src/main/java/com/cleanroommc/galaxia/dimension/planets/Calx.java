@@ -13,7 +13,7 @@ public class Calx extends BasePlanet {
 
     @Override
     protected DimensionBuilder createBuilder() {
-        return super.createBuilder().gravity(10);
+        return super.createBuilder().gravity(0.1);
     }
 
     public static final PlanetEnum ENUM = PlanetEnum.CALX;
