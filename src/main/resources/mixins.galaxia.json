@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "com.cleanroommc.galaxia.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "EntityLivingBaseJumpMixin",
+    "EntityLivingBaseMixin",
+    "EntityItemGravityMixin",
+    "EntityLivingBaseFallMixin"
+  ],
+  "client": [
+  ],
+  "server": [
+  ]
+}

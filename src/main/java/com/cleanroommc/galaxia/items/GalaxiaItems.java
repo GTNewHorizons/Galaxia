@@ -1,31 +1,25 @@
 package com.cleanroommc.galaxia.items;
 
-import com.cleanroommc.galaxia.Galaxia;
-import cpw.mods.fml.common.registry.GameRegistry;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import com.cleanroommc.galaxia.Galaxia;
+
+import cpw.mods.fml.common.registry.GameRegistry;
 
 public class GalaxiaItems {
+
     private static final Supplier<Item> DEFAULT_ITEM_FACTORY = Item::new;
 
     public enum GalaxiaItem {
-        CALX_TELEPORTER(
-            "calxTeleporter",
-            64,
-            () -> new ItemCalxTeleporter().setUnlocalizedName("calxTeleporter"),
-            (item) -> GameRegistry.addShapedRecipe(
-                new ItemStack(item),
-                "III", "IEI", "III",
-                'I', Items.iron_ingot,
-                'E', Items.ender_pearl
-            )
-        ),
-        ANOTHER_THING("anotherThing")
-        ;
+
+        TELEPORTER("teleporter", 64, () -> new ItemTeleporter().setUnlocalizedName("teleporter"), (item) -> GameRegistry
+            .addShapedRecipe(new ItemStack(item), "III", "IEI", "III", 'I', Items.iron_ingot, 'E', Items.ender_pearl)),
+        ANOTHER_THING("anotherThing");
 
         private final String registryName;
         private final int maxStackSize;

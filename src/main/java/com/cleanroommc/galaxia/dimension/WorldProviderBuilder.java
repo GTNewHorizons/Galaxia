@@ -1,10 +1,10 @@
 package com.cleanroommc.galaxia.dimension;
 
+import java.util.function.Supplier;
+
 import net.minecraft.util.Vec3;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
-
-import java.util.function.Supplier;
 
 public class WorldProviderBuilder {
 
@@ -50,6 +50,16 @@ public class WorldProviderBuilder {
 
     public WorldProviderBuilder chunkGen(Supplier<IChunkProvider> gen) {
         provider.chunkGenSupplier = gen;
+        return this;
+    }
+
+    public WorldProviderBuilder name(String name) {
+        provider.name = name;
+        return this;
+    }
+
+    public WorldProviderBuilder name(PlanetEnum planet) {
+        provider.name = planet.getName();
         return this;
     }
 

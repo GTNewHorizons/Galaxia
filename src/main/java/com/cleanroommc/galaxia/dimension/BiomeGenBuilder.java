@@ -1,16 +1,16 @@
 package com.cleanroommc.galaxia.dimension;
 
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase.Height;
-import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
-import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
-
-
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
+import net.minecraft.world.biome.BiomeGenBase.Height;
+import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+
 public class BiomeGenBuilder {
+
     private final int id;
 
     String name = "unset";

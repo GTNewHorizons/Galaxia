@@ -1,4 +1,5 @@
 package com.cleanroommc.galaxia.dimension;
+
 import net.minecraft.world.biome.BiomeGenBase;
 
 public class BiomeGenSpace extends BiomeGenBase {
