@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "com.cleanroommc.galaxia.mixin",
+  "package": "com.gtnewhorizons.galaxia.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "EntityLivingBaseJumpMixin",
