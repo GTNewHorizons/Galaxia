@@ -1,5 +1,9 @@
 package com.cleanroommc.galaxia;
 
+import com.cleanroommc.galaxia.dimension.SolarSystemRegistry;
+import com.cleanroommc.galaxia.items.GalaxiaItems;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -10,8 +14,12 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
-@Mod(modid = galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
-public class galaxia {
+@Mod(modid = Galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
+public class Galaxia {
+
+    public static CreativeTabs creativeTab = new CreativeTabs("galaxia") {
+        @Override public Item getTabIconItem() { return Item.getItemById(264); }
+    };
 
     public static final String MODID = "galaxia";
     public static final Logger LOG = LogManager.getLogger(MODID);
@@ -20,16 +28,13 @@ public class galaxia {
     public static CommonProxy proxy;
 
     @Mod.EventHandler
-    // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the
-    // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
-        proxy.preInit(event);
+        SolarSystemRegistry.registerAll(event.getAsmData());
     }
 
     @Mod.EventHandler
-    // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
-        proxy.init(event);
+        GalaxiaItems.registerAll();
     }
 
     @Mod.EventHandler
