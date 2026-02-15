@@ -11,6 +11,5 @@ public class BiomeGenCalx extends BiomeGenBase {
         this.setTemperatureRainfall(0.4F, 0.0F);
         this.topBlock = Blocks.grass;
         this.fillerBlock = Blocks.stone;
-        this.heightVariation = 10;
     }
 }
