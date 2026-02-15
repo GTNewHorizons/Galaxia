@@ -23,6 +23,7 @@ public class DimensionBuilder {
     private String name;
     private Class<? extends WorldProvider> providerClass;
     private boolean keepLoaded = true;
+    private double gravity;
 
     public DimensionBuilder enumValue(PlanetEnum planet) {
         if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
@@ -51,6 +52,11 @@ public class DimensionBuilder {
         return this;
     }
 
+    public DimensionBuilder gravity(double gravity) {
+        this.gravity = gravity;
+        return this;
+    }
+
     public DimensionDef build() {
         if (name == null) throw new IllegalStateException("Name required");
         if (providerClass == null) throw new IllegalStateException("Provider required");
@@ -60,7 +66,7 @@ public class DimensionBuilder {
             DimensionManager.registerDimension(id, id);
         }
 
-        DimensionDef def = new DimensionDef(name, id, providerClass, keepLoaded);
+        DimensionDef def = new DimensionDef(name, id, providerClass, keepLoaded, gravity);
 
         BY_NAME.put(name.toLowerCase(), def);
         BY_ID.put(id, def);

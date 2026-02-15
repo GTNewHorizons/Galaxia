@@ -1,9 +1,11 @@
 package com.cleanroommc.galaxia;
 
 import com.cleanroommc.galaxia.dimension.SolarSystemRegistry;
+import com.cleanroommc.galaxia.handler.GravityHandler;
 import com.cleanroommc.galaxia.items.GalaxiaItems;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
+import net.minecraftforge.common.MinecraftForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,6 +36,7 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new GravityHandler());
         GalaxiaItems.registerAll();
     }
 

@@ -2,6 +2,7 @@ package com.cleanroommc.galaxia.dimension.planets;
 
 import com.cleanroommc.galaxia.dimension.BiomeGenBuilder;
 import com.cleanroommc.galaxia.dimension.BiomeGenSpace;
+import com.cleanroommc.galaxia.dimension.DimensionBuilder;
 import com.cleanroommc.galaxia.dimension.PlanetEnum;
 import com.cleanroommc.galaxia.dimension.WorldProviderBuilder;
 import com.cleanroommc.galaxia.dimension.WorldProviderSpace;
@@ -9,7 +10,12 @@ import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
 public class Calx extends BasePlanet {
-    
+
+    @Override
+    protected DimensionBuilder createBuilder() {
+        return super.createBuilder().gravity(10);
+    }
+
     public static final PlanetEnum ENUM = PlanetEnum.CALX;
 
     @Override
