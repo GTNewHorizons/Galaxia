@@ -6,7 +6,8 @@
     "EntityLivingBaseJumpMixin",
     "EntityLivingBaseMixin",
     "EntityItemGravityMixin",
-    "EntityLivingBaseFallMixin"
+    "EntityLivingBaseFallMixin",
+    "RenderGlobalSkyMixin"
   ],
   "client": [
   ],

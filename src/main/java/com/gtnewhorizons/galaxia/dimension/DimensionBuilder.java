@@ -1,10 +1,15 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.world.WorldProvider;
 import net.minecraftforge.common.DimensionManager;
+
+import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
+import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
 public class DimensionBuilder {
 
@@ -26,6 +31,7 @@ public class DimensionBuilder {
     private double gravity = 1;
     private double air_resistance = 1;
     private boolean removeSpeedCancelation = false;
+    private List<CelestialBody> celestialBodies = Collections.emptyList();
 
     public DimensionBuilder enumValue(PlanetEnum planet) {
         if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
@@ -64,13 +70,18 @@ public class DimensionBuilder {
         return this;
     }
 
+    public DimensionBuilder sky(SkyBuilder sky) {
+        this.celestialBodies = sky.build();
+        return this;
+    }
+
     /**
      * all entities multiply their speed by 0.91 every tick to prevent infinite speed
      * <p>
      * override this to cancel it (useful for 0g dimensions)
      */
-    public DimensionBuilder removeSpeedCancelation(double air_resistance) {
-        this.air_resistance = air_resistance;
+    public DimensionBuilder removeSpeedCancelation() {
+        this.removeSpeedCancelation = true;
         return this;
     }
 
@@ -90,7 +101,8 @@ public class DimensionBuilder {
             keepLoaded,
             gravity,
             air_resistance,
-            removeSpeedCancelation);
+            removeSpeedCancelation,
+            celestialBodies);
 
         BY_NAME.put(name.toLowerCase(), def);
         BY_ID.put(id, def);

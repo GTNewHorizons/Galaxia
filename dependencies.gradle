@@ -50,7 +50,7 @@ dependencies {
 
     compileOnlyApi("com.github.GTNewHorizons:Avaritia:1.85:dev")
 
-    compileOnlyApi('com.github.GTNewHorizons:Angelica:2.0.0-alpha20:dev') { transitive = false }
+    compileOnlyApi('com.github.GTNewHorizons:Angelica:2.0.0-alpha17:dev') { transitive = false }
 
     compileOnly("com.github.GTNewHorizons:Chisel:2.17.14-GTNH:dev") { transitive = false }
     compileOnly("com.github.GTNewHorizons:Translocators:1.4.3:dev") { transitive = false }
