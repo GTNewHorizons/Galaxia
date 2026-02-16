@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
@@ -52,8 +53,8 @@ public class Dunia extends BasePlanet {
                     .height(0.1F, 0.11F)
                     .temperature(0.4F)
                     .rainfall(0.99F)
-                    .topBlock(Blocks.lapis_block)
-                    .fillerBlock(Blocks.brown_mushroom_block));
+                    .topBlock(GalaxiaBlocks.GalaxiaBlock.DUNIA_SAND.getBlock())
+                    .fillerBlock(GalaxiaBlocks.GalaxiaBlock.DUNIA_ROCK.getBlock()));
         }
     }
 }

@@ -9,7 +9,10 @@ public class GalaxiaBlocks {
     public enum GalaxiaBlock {
 
         CALX_REGOLITH(new BlockCalxRegolith("calxRegolith")),
-        CALX_ROCK(new BlockCalxRock("calxRock"));
+        CALX_ROCK(new BlockCalxRock("calxRock")),
+
+        DUNIA_SAND(new BlockDuniaSand("duniaSand")),
+        DUNIA_ROCK(new BlockDuniaRock("duniaRock"));
 
         private final Block block;
         private final String blockName;
