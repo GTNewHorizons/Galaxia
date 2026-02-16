@@ -10,6 +10,7 @@ public class BlockCalxRock extends Block implements IGalaxiaBlock {
         super(Material.rock);
         setHardness(1.5F);
         setBlockName(blockName);
+        setBlockTextureName("galaxia:lunar_andesite");
         this.blockName = blockName;
     }
 

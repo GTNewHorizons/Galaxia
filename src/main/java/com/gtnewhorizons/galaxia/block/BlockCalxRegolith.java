@@ -10,6 +10,7 @@ public class BlockCalxRegolith extends BlockFalling implements IGalaxiaBlock {
         super(Material.sand);
         setHardness(1.0F);
         setBlockName(blockName);
+        setBlockTextureName("galaxia:lunar_regolith");
         this.blockName = blockName;
     }
 
