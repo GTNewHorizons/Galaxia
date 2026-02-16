@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
 import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
-import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
@@ -54,7 +53,7 @@ public class Calx extends BasePlanet {
                     .temperature(0.4F)
                     .rainfall(0.99F)
                     .topBlock(GalaxiaBlocks.GalaxiaBlock.CALX_REGOLITH.getBlock())
-                    .fillerBlock(Blocks.stone));
+                    .fillerBlock(GalaxiaBlocks.GalaxiaBlock.CALX_ROCK.getBlock()));
         }
     }
 }

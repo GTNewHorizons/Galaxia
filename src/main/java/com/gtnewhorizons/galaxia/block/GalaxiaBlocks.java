@@ -8,7 +8,8 @@ public class GalaxiaBlocks {
 
     public enum GalaxiaBlock {
 
-        CALX_REGOLITH(new BlockCalxRegolith("calxRegolith"));
+        CALX_REGOLITH(new BlockCalxRegolith("calxRegolith")),
+        CALX_ROCK(new BlockCalxRock("calxRock"));
 
         private final Block block;
         private final String blockName;
