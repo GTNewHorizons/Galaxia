@@ -57,7 +57,6 @@ public class Calx extends BasePlanet {
                             .distance(90.0)
                             .inclination(30.0f)
                             .period(6000L)));
-            .airResistance(1.7);
     }
 
     public static final PlanetEnum ENUM = PlanetEnum.CALX;
