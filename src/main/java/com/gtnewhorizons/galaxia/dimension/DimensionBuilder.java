@@ -80,8 +80,8 @@ public class DimensionBuilder {
      * <p>
      * override this to cancel it (useful for 0g dimensions)
      */
-    public DimensionBuilder removeSpeedCancelation(double air_resistance) {
-        this.air_resistance = air_resistance;
+    public DimensionBuilder removeSpeedCancelation() {
+        this.removeSpeedCancelation = true;
         return this;
     }
 

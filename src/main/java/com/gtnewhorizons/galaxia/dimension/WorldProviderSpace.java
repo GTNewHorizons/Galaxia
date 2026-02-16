@@ -20,7 +20,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     protected boolean hasSky = true;
     protected float cloudHeight = 8.0F;
-    protected boolean isSurface = false;
+    protected boolean isSurface = true;
     protected int avgGround = 64;
     protected Vec3 fogColor = Vec3.createVectorHelper(0.2D, 0.1D, 0.4D);
     protected String name;
