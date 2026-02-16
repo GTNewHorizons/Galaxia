@@ -4,6 +4,7 @@ import net.minecraft.block.BlockFalling;
 import net.minecraft.block.material.Material;
 
 public class BlockCalxRegolith extends BlockFalling implements IGalaxiaBlock {
+
     private final String blockName;
 
     protected BlockCalxRegolith(String blockName) {

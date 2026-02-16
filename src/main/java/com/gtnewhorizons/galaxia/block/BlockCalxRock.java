@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 
 public class BlockCalxRock extends Block implements IGalaxiaBlock {
+
     private final String blockName;
 
     protected BlockCalxRock(String blockName) {

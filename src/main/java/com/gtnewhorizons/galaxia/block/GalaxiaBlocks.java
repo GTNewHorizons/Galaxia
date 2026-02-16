@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.block;
 
-import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.block.Block;
 
-public class GalaxiaBlocks {
+import cpw.mods.fml.common.registry.GameRegistry;
 
+public class GalaxiaBlocks {
 
     public enum GalaxiaBlock {
 
@@ -19,7 +19,7 @@ public class GalaxiaBlocks {
 
         GalaxiaBlock(Block block) {
             this.block = block;
-            this.blockName = ((IGalaxiaBlock)block).getBlockName();
+            this.blockName = ((IGalaxiaBlock) block).getBlockName();
         }
 
         public void register() {

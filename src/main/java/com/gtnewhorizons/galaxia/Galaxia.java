@@ -1,12 +1,12 @@
 package com.gtnewhorizons.galaxia;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.items.GalaxiaItems;
 

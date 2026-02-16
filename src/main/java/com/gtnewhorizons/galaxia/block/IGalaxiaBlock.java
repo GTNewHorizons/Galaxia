@@ -6,5 +6,6 @@ package com.gtnewhorizons.galaxia.block;
  * Maybe there is a better solution than this.
  */
 public interface IGalaxiaBlock {
+
     String getBlockName();
 }
