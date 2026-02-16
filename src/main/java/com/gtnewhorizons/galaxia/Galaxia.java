@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia;
 
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 
@@ -50,6 +51,7 @@ public class Galaxia {
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId++, Side.SERVER);
         GalaxiaItems.registerAll();
+        GalaxiaBlocks.registerAll();
     }
 
     @Mod.EventHandler
