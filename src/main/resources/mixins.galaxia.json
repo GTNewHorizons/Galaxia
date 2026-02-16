@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.gtnewhorizons.galaxia.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "EntityLivingBaseJumpMixin",
+    "EntityLivingBaseMixin",
+    "EntityItemGravityMixin",
+    "EntityLivingBaseFallMixin",
+    "RenderGlobalSkyMixin"
+  ],
+  "client": [
+  ],
+  "server": [
+  ]
+}
