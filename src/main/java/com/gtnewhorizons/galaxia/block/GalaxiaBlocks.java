@@ -21,6 +21,10 @@ public class GalaxiaBlocks {
         public void register() {
             GameRegistry.registerBlock(block, blockName);
         }
+
+        public Block getBlock() {
+            return block;
+        }
     }
 
     public static void registerAll() {
