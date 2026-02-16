@@ -43,17 +43,7 @@ public abstract class RenderGlobalSkyMixin {
 
     static {
         List<CelestialBody> list = new ArrayList<>();
-        list.add(
-            new CelestialBody(
-                locationSunPng,
-                null,
-                30f,
-                100.0,
-                23.44f,
-                24000L,
-                true,
-                false,
-                0));
+        list.add(new CelestialBody(locationSunPng, null, 30f, 100.0, 23.44f, 24000L, true, false, 0));
         list.add(
             new CelestialBody(
                 locationMoonPhasesPng,
