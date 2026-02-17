@@ -6,6 +6,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockFalling;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.item.Item;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
@@ -16,12 +17,24 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     private final String planetName;
     private final BlockVariant[] variants;
+    private final Item dust;
     private IIcon[] icons;
+
+    public BlockPlanetGalaxia(String planetName, Item dust, BlockVariant... variants) {
+        super(Material.rock);
+        this.planetName = planetName;
+        this.variants = variants;
+        this.dust = dust;
+
+        setStepSound(soundTypeStone);
+        setCreativeTab(Galaxia.creativeTab);
+    }
 
     public BlockPlanetGalaxia(String planetName, BlockVariant... variants) {
         super(Material.rock);
         this.planetName = planetName;
         this.variants = variants;
+        this.dust = null;
 
         setStepSound(soundTypeStone);
         setCreativeTab(Galaxia.creativeTab);
@@ -33,6 +46,36 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     public int getVariantCount() {
         return variants.length;
+    }
+
+    @Override
+    public String getHarvestTool(int meta) {
+        meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
+        return variants[meta].harvestTool;
+    }
+
+    @Override
+    public int getHarvestLevel(int meta) {
+        meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
+        return variants[meta].harvestLevel;
+    }
+
+    @Override
+    public Item getItemDropped(int meta, Random rand, int fortune) {
+        meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
+        if (this.dust != null && variants[meta].dropsDust) {
+            return this.dust;
+        }
+        return Item.getItemFromBlock(this);
+    }
+
+    @Override
+    public int quantityDropped(int meta, int fortune, Random random) {
+        meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
+        if (this.dust != null && variants[meta].dropsDust) {
+            return 2 + random.nextInt(3 + fortune);
+        }
+        return 1;
     }
 
     public String getVariantSuffix(int meta) {
