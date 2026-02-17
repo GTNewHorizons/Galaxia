@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.client.resources.I18n;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
 
@@ -66,7 +66,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
             fieldY + 80,
             200,
             20,
-            I18n.format("gui.teleport"));
+            StatCollector.translateToLocal("galaxia.gui.planet_teleporter.teleport"));
         this.buttonList.add(teleportButton);
     }
 
@@ -100,11 +100,16 @@ public class GuiPlanetTeleporter extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
 
-        this.drawCenteredString(this.fontRendererObj, "Planet Teleporter", this.width / 2, 15, 0xFFFFFF);
+        this.drawCenteredString(
+            this.fontRendererObj,
+            StatCollector.translateToLocal("galaxia.gui.planet_teleporter.title"),
+            this.width / 2,
+            15,
+            0xFFFFFF);
 
         this.drawCenteredString(
             this.fontRendererObj,
-            "Selected: " + selectedPlanet.name(),
+            StatCollector.translateToLocalFormatted("galaxia.gui.planet_teleporter.selected", selectedPlanet.name()),
             this.width / 2,
             30,
             0xAAAAFF);
