@@ -6,6 +6,7 @@ import net.minecraft.item.Item;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.items.GalaxiaItems;
 
@@ -50,6 +51,7 @@ public class Galaxia {
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId++, Side.SERVER);
         GalaxiaItems.registerAll();
+        GalaxiaBlocks.registerAll();
     }
 
     @Mod.EventHandler
