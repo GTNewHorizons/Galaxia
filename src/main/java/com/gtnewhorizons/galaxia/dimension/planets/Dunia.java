@@ -1,8 +1,9 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
@@ -18,7 +19,7 @@ public class Dunia extends BasePlanet {
             .airResistance(.7);
     }
 
-    public static final PlanetEnum ENUM = PlanetEnum.Dunia;
+    public static final PlanetEnum ENUM = PlanetEnum.DUNIA;
 
     @Override
     protected PlanetEnum getPlanetEnum() {
@@ -52,8 +53,8 @@ public class Dunia extends BasePlanet {
                     .height(0.1F, 0.11F)
                     .temperature(0.4F)
                     .rainfall(0.99F)
-                    .topBlock(GalaxiaBlocks.GalaxiaBlock.DUNIA_SAND.getBlock())
-                    .fillerBlock(GalaxiaBlocks.GalaxiaBlock.DUNIA_ROCK.getBlock()));
+                    .topBlock(GalaxiaBlockBase.get(PlanetEnum.CALX, "rock"))
+                    .fillerBlock(Blocks.brick_block));
         }
     }
 }

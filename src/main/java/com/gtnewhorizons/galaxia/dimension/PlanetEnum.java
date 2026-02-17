@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.dimension;
 public enum PlanetEnum {
 
     CALX(20, "Calx"),
-    Dunia(21, "Dunia");
+    DUNIA(21, "Dunia");
 
     final int id;
     final String name;

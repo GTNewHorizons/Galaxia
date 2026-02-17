@@ -51,7 +51,7 @@ public class Galaxia {
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId++, Side.SERVER);
         GalaxiaItems.registerAll();
-        GalaxiaBlocks.registerAll();
+        GalaxiaBlocks.registerPlanetBlocks();
     }
 
     @Mod.EventHandler

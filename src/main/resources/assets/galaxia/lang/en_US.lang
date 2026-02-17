@@ -1,13 +1,19 @@
 ## Galaxia English (US) translation file
 
 ## Blocks
-# Calx
-tile.galaxia.calxRegolith.name=Calx Regolith
-tile.galaxia.calxRock.name=Calx Rock
 
-# Dunia
-tile.galaxia.duniaSand.name=Dunia Sand
-tile.galaxia.duniaRock.name=Dunia Rock
+# Blocks - Calx
+tile.CalxRock.name=Calx Rock
+tile.CalxAsh.name=Calx Ash
+tile.CalxRegolith.name=Calx Regolith
+tile.CalxSand.name=Calx Sand
+
+# Blocks - Dunia
+tile.DuniaRock.name=Dunia Ash
+tile.DuniaSand.name=Dunia Sand
+
+## Creative tab
+itemGroup.galaxia=§9Galaxia
 
 ## Items
 item.galaxia.teleporter.name=Teleporter

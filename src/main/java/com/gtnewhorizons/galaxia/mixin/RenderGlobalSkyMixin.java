@@ -37,8 +37,6 @@ public abstract class RenderGlobalSkyMixin {
     @Final
     private static ResourceLocation locationMoonPhasesPng;
 
-    private static final long MOON_PERIOD = 23151L;
-
     private static final List<CelestialBody> DEFAULT_OVERWORLD_BODIES;
 
     static {
@@ -51,7 +49,7 @@ public abstract class RenderGlobalSkyMixin {
                 20f,
                 -100.0,
                 5.14f,
-                MOON_PERIOD,
+                23151L,
                 false,
                 true,
                 8));
