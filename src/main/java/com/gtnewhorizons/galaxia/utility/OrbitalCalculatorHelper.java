@@ -8,20 +8,20 @@ public class OrbitalCalculatorHelper {
 
     /**
      * Calculates the Effective Exhaust Velocity (v_e) based on the rocket and body to launch from
-     * 
+     *
      * @param launchBody     The Gravitational Body from the surface of which to launch
      * @param rocket         The rocket being used to calculate
      * @param launchAltitude The altitude above the body from which to launch
      * @return Effective Exhaust Velocity (v_e)
      */
     public static double calculateEffectiveExhaustVelocity(BasePlanet launchBody, Rocket rocket, int launchAltitude) {
-        return rocket.getSpecificImpulse() * (launchBody.getMass() * gravitationalConstant)
-            / Math.pow((launchAltitude + launchBody.getOrbitalDistance()), 2);
+        return rocket.getSpecificImpulse() * (launchBody.getDef().mass * gravitationalConstant)
+            / Math.pow((launchAltitude + launchBody.getDef().orbitalRadius), 2);
     }
 
     /**
      * Calculates the Maximum DeltaV of the rocket provided launching from a given body
-     * 
+     *
      * @param launchBody     The Gravitational Body from the surface of which to launch
      * @param rocket         The rocket being used to calculate
      * @param launchAltitude The altitude above the body from which to launch
@@ -37,7 +37,7 @@ public class OrbitalCalculatorHelper {
 
     /**
      * Calculates the DeltaV required to enter elliptical orbit (stage 1)
-     * 
+     *
      * @param launchBody  The Gravitational Body for starting orbit
      * @param centerBody  The Gravitational Body from which main source of Gravity in system
      * @param targetBody  The Gravitational Body for arrival orbit
@@ -53,13 +53,13 @@ public class OrbitalCalculatorHelper {
         final double mu_s = centerBody.getMass() * gravitationalConstant;
 
         // GM of departure body
-        final double mu_1 = launchBody.getMass() * gravitationalConstant;
+        final double mu_1 = launchBody.getDef().mass * gravitationalConstant;
 
         // Distance from center body to launch body
-        final double r_1 = launchBody.getOrbitalDistance();
+        final double r_1 = launchBody.getDef().orbitalRadius;
 
         // Distance from center body to arrival body
-        final double r_2 = targetBody.getOrbitalDistance();
+        final double r_2 = targetBody.getDef().orbitalRadius;
 
         // Radius of original orbit
         final double a_1 = startRadius;
@@ -71,7 +71,7 @@ public class OrbitalCalculatorHelper {
 
     /**
      * Calculates the DeltaV required to correct elliptical orbit into circular (stage 2)
-     * 
+     *
      * @param centerBody The Gravitational Body from which gravity is mainly felt
      * @param launchBody The Gravitational Body for starting orbit
      * @param targetBody The Gravitational Body for arrival orbit
@@ -94,13 +94,13 @@ public class OrbitalCalculatorHelper {
         final double mu_s = centerBody.getMass() * gravitationalConstant;
 
         // GM of target body
-        final double mu_2 = targetBody.getMass() * gravitationalConstant;
+        final double mu_2 = targetBody.getDef().mass * gravitationalConstant;
 
         // Distance from center body to launch body
-        final double r_1 = launchBody.getOrbitalDistance();
+        final double r_1 = launchBody.getDef().orbitalRadius;
 
         // Distance from center body to target body
-        final double r_2 = targetBody.getOrbitalDistance();
+        final double r_2 = targetBody.getDef().orbitalRadius;
 
         // orbital height for target body
         final double a_2 = endRadius;
@@ -114,7 +114,7 @@ public class OrbitalCalculatorHelper {
 
     /**
      * Combines the two stages of Hohmann Transfer
-     * 
+     *
      * @param launchBody  The Gravitational Body from first orbit
      * @param targetBody  The Gravitational Body for final orbit
      * @param centerBody  The Gravitational Body providing main gravitational pull in system (i.e. star etc.)
@@ -137,7 +137,8 @@ public class OrbitalCalculatorHelper {
      */
     public static double calculateEscapeVelocity(BasePlanet launchBody, int launchAltitude) {
         return Math.sqrt(
-            (2 * gravitationalConstant * launchBody.getMass()) / (launchBody.getOrbitalDistance() + launchAltitude));
+            (2 * gravitationalConstant * launchBody.getDef().mass)
+                / (launchBody.getDef().orbitalRadius + launchAltitude));
     }
 
     public static double calculateDirectDeltaV(BasePlanet launchBody, BasePlanet targetBody, int launchAltitude,

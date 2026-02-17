@@ -15,9 +15,9 @@ public class Dunia extends BasePlanet {
 
     @Override
     protected DimensionBuilder createBuilder() {
-        this.setMass((int) (6.4 * Math.pow(10, 23)));
-        this.setOrbitalDistance((int) (2.3 * Math.pow(10, 11)));
-        return super.createBuilder().gravity(.5)
+        return super.createBuilder().mass((int) (6.4 * Math.pow(10, 23)))
+            .orbitalRadius((int) (2.3 * Math.pow(10, 11)))
+            .gravity(.5)
             .airResistance(.7);
     }
 

@@ -25,6 +25,8 @@ public class DimensionBuilder {
     }
 
     private int id;
+    private int mass;
+    private int orbitalRadius;
     private String name;
     private Class<? extends WorldProvider> providerClass;
     private boolean keepLoaded = true;
@@ -75,6 +77,16 @@ public class DimensionBuilder {
         return this;
     }
 
+    public DimensionBuilder mass(int mass) {
+        this.mass = mass;
+        return this;
+    }
+
+    public DimensionBuilder orbitalRadius(int orbitalRadius) {
+        this.orbitalRadius = orbitalRadius;
+        return this;
+    }
+
     /**
      * all entities multiply their speed by 0.91 every tick to prevent infinite speed
      * <p>
@@ -102,7 +114,9 @@ public class DimensionBuilder {
             gravity,
             air_resistance,
             removeSpeedCancelation,
-            celestialBodies);
+            celestialBodies,
+            mass,
+            orbitalRadius);
 
         BY_NAME.put(name.toLowerCase(), def);
         BY_ID.put(id, def);

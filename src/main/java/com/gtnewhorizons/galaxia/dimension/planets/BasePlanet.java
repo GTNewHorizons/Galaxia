@@ -32,22 +32,6 @@ public abstract class BasePlanet implements IPlanet {
             .provider(getProviderClass());
     }
 
-    public int getOrbitalDistance() {
-        return this.orbitalDistance;
-    };
-
-    public void setOrbitalDistance(int orbitalDistance) {
-        this.orbitalDistance = orbitalDistance;
-    }
-
-    public int getMass() {
-        return this.mass;
-    };
-
-    public void setMass(int mass) {
-        this.mass = mass;
-    }
-
     protected abstract PlanetEnum getPlanetEnum();
 
     protected abstract Class<? extends WorldProvider> getProviderClass();
