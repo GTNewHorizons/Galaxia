@@ -71,18 +71,30 @@ public class Asteroid extends WorldGenerator {
     }
 
     private float calculateFullness(int[][] interpolationPositions, float[] interpolationValues, int x, int y, int z) {
-        float distortion = 0;
+        float fullness = 0;
         for (int interpolation = 0; interpolation < interpolationValues.length; interpolation++) {
-            distortion += interpolationValues[interpolation]
+            fullness += interpolationValues[interpolation]
                 * calculateInterpolationSignificance(interpolationPositions[interpolation], x, y, z);
+            if (fullness > 1) {
+                return fullness;
+            }
         }
-        return distortion;
+        return fullness;
     }
 
     private float calculateInterpolationSignificance(int[] interpolationLocation, int x, int y, int z) {
         int xDistance = Math.abs(interpolationLocation[0] - x);
+        if (xDistance > 16) {
+            return 0;
+        }
         int yDistance = Math.abs(interpolationLocation[1] - y);
+        if (yDistance > 16) {
+            return 0;
+        }
         int zDistance = Math.abs(interpolationLocation[2] - z);
+        if (zDistance > 16) {
+            return 0;
+        }
         float totalDistance = (float) Math.sqrt(xDistance*xDistance + yDistance*yDistance + zDistance*zDistance);
         return 1 / (totalDistance + 1);
     }
