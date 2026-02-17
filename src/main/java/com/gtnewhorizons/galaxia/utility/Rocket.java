@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.utility;
 
 // THIS CLASS IS TEMPORARY TO ACT AS A DATACLASS UNTIL ROCKETS ARE WORKING AS A FULL CLASS
 public class Rocket {
+
     private int dryMass;
     private double specificImpulse;
     private int fuelMass;

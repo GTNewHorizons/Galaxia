@@ -40,7 +40,7 @@ public abstract class BasePlanet implements IPlanet {
         this.orbitalDistance = orbitalDistance;
     }
 
-    public  int getMass() {
+    public int getMass() {
         return this.mass;
     };
 

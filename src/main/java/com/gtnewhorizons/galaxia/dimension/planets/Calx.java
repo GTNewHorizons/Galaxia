@@ -14,11 +14,10 @@ import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
 public class Calx extends BasePlanet {
 
-
     @Override
     protected DimensionBuilder createBuilder() {
-        this.setMass((int) (7 * Math.pow(10,22)));
-        this.setOrbitalDistance((int) (1.5 * Math.pow(10,11)));
+        this.setMass((int) (7 * Math.pow(10, 22)));
+        this.setOrbitalDistance((int) (1.5 * Math.pow(10, 11)));
         return super.createBuilder().gravity(2)
             .airResistance(1.7)
             .sky(

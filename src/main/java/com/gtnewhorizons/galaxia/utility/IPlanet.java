@@ -6,5 +6,4 @@ public interface IPlanet {
 
     DimensionDef buildDimension();
 
-
 }
