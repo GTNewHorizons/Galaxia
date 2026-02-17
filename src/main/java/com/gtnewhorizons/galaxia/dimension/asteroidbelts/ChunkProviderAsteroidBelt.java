@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
+import com.gtnewhorizons.galaxia.structure.Asteroid;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.util.IProgressUpdate;
@@ -18,10 +19,12 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
     private Random rand;
     private World worldObj;
     private MapGenScatteredFeature scatteredFeatureGenerator = new MapGenScatteredFeature();
+    private final Asteroid[] asteroids;
 
-    public ChunkProviderAsteroidBelt(World world, long seed) {
+    public ChunkProviderAsteroidBelt(World world, long seed, Asteroid[] asteroids) {
         this.worldObj = world;
         this.rand = new Random(seed);
+        this.asteroids = asteroids;
     }
 
     @Override
@@ -47,8 +50,16 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
     }
 
     @Override
-    public void populate(IChunkProvider p_73153_1_, int p_73153_2_, int p_73153_3_) {
+    public void populate(IChunkProvider iChunkProvider, int chunkX, int chunkZ) {
+        int x = chunkX * 16;
+        int z = chunkZ * 16;
 
+        for (Asteroid asteroid : asteroids) {
+            int localX = x + this.rand.nextInt(16) + 8;
+            int localY = this.rand.nextInt(176) + 16;
+            int localZ = z + this.rand.nextInt(16) + 8;
+            asteroid.generate(worldObj, rand, localX, localY, localZ);
+        }
     }
 
     @Override

@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
 import com.gtnewhorizons.galaxia.dimension.*;
+import com.gtnewhorizons.galaxia.structure.Asteroid;
+import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
 public class Vulcanoids extends BaseAsteroidBelt {
@@ -19,6 +21,10 @@ public class Vulcanoids extends BaseAsteroidBelt {
     public static class WorldProviderVulcanoids extends WorldProviderSpace {
 
         public WorldProviderVulcanoids() {
+            Asteroid[] asteroids = new Asteroid[] {
+                new Asteroid(2, 6, 8, Blocks.stone, 0),
+                new Asteroid(4, 10, 2, Blocks.iron_block, 0),
+            };
             WorldProviderBuilder.configure(this)
                 .sky(true)
                 .skyColor(1, 0.5, 0)
@@ -26,7 +32,7 @@ public class Vulcanoids extends BaseAsteroidBelt {
                 .biome(new BiomeGenVulcanoids(100))
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)
-                .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed()))
+                .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed(), asteroids))
                 .build();
         }
     }
