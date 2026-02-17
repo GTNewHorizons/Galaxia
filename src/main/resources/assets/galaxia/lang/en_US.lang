@@ -1,12 +1,8 @@
 ## Galaxia English (US) translation file
 
 ## Blocks
-
 # Blocks - Calx
-tile.CalxRock.name=Calx Rock
-tile.CalxAsh.name=Calx Ash
 tile.CalxRegolith.name=Calx Regolith
-tile.CalxSand.name=Calx Sand
 
 # Blocks - Dunia
 tile.DuniaRock.name=Dunia Ash
@@ -18,6 +14,8 @@ itemGroup.galaxia=§9Galaxia
 ## Items
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.anotherThing.name=Another thing; that is now localized, super cool right, yes I agree
+# Planet stone dust
+item.galaxia.calx_dust.name=Calx stone dust
 
 ## Gui elements
 # Planet Teleporter

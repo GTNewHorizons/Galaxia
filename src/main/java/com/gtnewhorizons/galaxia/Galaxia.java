@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
-import com.gtnewhorizons.galaxia.items.GalaxiaItems;
+import com.gtnewhorizons.galaxia.items.GalaxiaItem;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -32,6 +32,7 @@ public class Galaxia {
         }
     };
 
+    public static final String UNLOCALIZED_PREFIX = "galaxia.";
     public static final String MODID = "galaxia";
     public static final Logger LOG = LogManager.getLogger(MODID);
 
@@ -49,8 +50,8 @@ public class Galaxia {
     public void init(FMLInitializationEvent event) {
         int packetId = 0;
         channel
-            .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId++, Side.SERVER);
-        GalaxiaItems.registerAll();
+            .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
+        GalaxiaItem.registerAll();
         GalaxiaBlocks.registerPlanetBlocks();
     }
 
