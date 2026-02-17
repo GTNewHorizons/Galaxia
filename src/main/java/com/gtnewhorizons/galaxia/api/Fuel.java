@@ -1,4 +1,4 @@
-package com.cleanroommc.galaxia.api;
+package com.gtnewhorizons.galaxia.api;
 
 public class Fuel {
 

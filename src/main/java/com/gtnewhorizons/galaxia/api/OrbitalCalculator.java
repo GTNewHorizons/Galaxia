@@ -1,4 +1,4 @@
-package com.cleanroommc.galaxia.api;
+package com.gtnewhorizons.galaxia.api;
 
 public class OrbitalCalculator {
 
@@ -6,7 +6,7 @@ public class OrbitalCalculator {
 
     /**
      * Calculates the Effective Exhaust Velocity (v_e) based on the rocket and body to launch from
-     * 
+     *
      * @param launchBody     The gravitational Body from the surface of which to launch
      * @param rocket         The rocket being used to calculate
      * @param launchAltitude The altitude from which to launch
@@ -20,7 +20,7 @@ public class OrbitalCalculator {
 
     /**
      * Calculates the Maximum DeltaV of the rocket provided launching from a given body
-     * 
+     *
      * @param launchBody     The gravitational Body from the surface of which to launch
      * @param rocket         The rocket being used to calculate
      * @param launchAltitude The altitude from which to launch
@@ -36,7 +36,7 @@ public class OrbitalCalculator {
 
     /**
      * Calculates the DeltaV required to enter elliptical orbit (stage 1)
-     * 
+     *
      * @param launchBody  The gravitational Body for starting orbit
      * @param centerBody  The gravitational Body from which main source of Gravity in system
      * @param targetBody  The gravitational Body for arrival orbit
@@ -69,7 +69,7 @@ public class OrbitalCalculator {
 
     /**
      * Calculates the DeltaV required to correct elliptical orbit into circular (stage 2)
-     * 
+     *
      * @param centerBody The gravitational Body from which gravity is mainly felt
      * @param launchBody The gravitational Body for starting orbit
      * @param targetBody The gravitational Body for arrival orbit
@@ -104,7 +104,7 @@ public class OrbitalCalculator {
 
     /**
      * Combines the two stages of Hohmann Transfer
-     * 
+     *
      * @param launchBody  The Celestial Body from first orbit
      * @param targetBody  The Celestial Body for final orbit
      * @param centerBody  The Celestial Body providing main gravitational pull in system (i.e. star etc.)
@@ -121,7 +121,7 @@ public class OrbitalCalculator {
 
     /**
      * Calculates the required escape velocity for a body from a given orbital altitude
-     * 
+     *
      * @param launchBody     The gravitational body from which to escape
      * @param launchAltitude The current orbital altitude (launchBody.radius for surface launch)
      * @return The required escape velocity
@@ -132,7 +132,7 @@ public class OrbitalCalculator {
 
     /**
      * Calculates the Delta V for a 'direct' travel from one body to another (effectively 'straight line' travel)
-     * 
+     *
      * @param launchBody     The gravitational body from which to escape
      * @param targetBody     The gravitational body from which to enter orbit
      * @param launchAltitude The current orbital altitude of the launch body (launchBody.radius = surface launch)
