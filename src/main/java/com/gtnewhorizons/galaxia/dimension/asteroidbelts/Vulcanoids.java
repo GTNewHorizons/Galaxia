@@ -22,8 +22,9 @@ public class Vulcanoids extends BaseAsteroidBelt {
 
         public WorldProviderVulcanoids() {
             Asteroid[] asteroids = new Asteroid[] {
-                new Asteroid(8, 12, 16, Blocks.stone, 0),
-                new Asteroid(16, 20, 4, Blocks.iron_block, 0),
+                new Asteroid(12, 16, 32, Blocks.stone, 0),
+                new Asteroid(16, 20, 64, Blocks.iron_block, 0),
+                new Asteroid(20, 32, 128, Blocks.gold_block, 0),
             };
             WorldProviderBuilder.configure(this)
                 .sky(true)

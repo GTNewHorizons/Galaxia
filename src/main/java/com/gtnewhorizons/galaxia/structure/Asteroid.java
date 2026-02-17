@@ -33,12 +33,13 @@ public class Asteroid extends WorldGenerator {
             size += random.nextInt(variation);
         }
 
+        int interpolationComplexity = size / 2 + 1;
         int interpolationRange = size / 4 + 1;
-        float[] interpolationValues = new float[9];
+        float[] interpolationValues = new float[interpolationComplexity];
         for (int value = 0; value < interpolationValues.length; value++) {
             interpolationValues[value] = random.nextFloat()/4 + 0.75F;
         }
-        int[][] interpolationPositions = new int[9][];
+        int[][] interpolationPositions = new int[interpolationComplexity][];
         interpolationPositions[0] = new int[] {x, y, z};
         for (int index = 1; index < interpolationPositions.length; index++) {
             int xOffset = random.nextInt(interpolationRange) + 1;
