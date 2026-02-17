@@ -10,6 +10,7 @@ import org.lwjgl.input.Keyboard;
 import com.gtnewhorizons.galaxia.Galaxia;
 import com.gtnewhorizons.galaxia.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.utility.Colors;
 
 public class GuiPlanetTeleporter extends GuiScreen {
 
@@ -105,18 +106,18 @@ public class GuiPlanetTeleporter extends GuiScreen {
             StatCollector.translateToLocal("galaxia.gui.planet_teleporter.title"),
             this.width / 2,
             15,
-            0xFFFFFF);
+            Colors.Title.getColor());
 
         this.drawCenteredString(
             this.fontRendererObj,
             StatCollector.translateToLocalFormatted("galaxia.gui.planet_teleporter.selected", selectedPlanet.name()),
             this.width / 2,
             30,
-            0xAAAAFF);
+            Colors.SubTitle.getColor());
 
-        this.drawString(this.fontRendererObj, "X:", this.width / 2 - 80, xField.yPosition + 6, 0xFFFFFF);
-        this.drawString(this.fontRendererObj, "Y:", this.width / 2 - 80, yField.yPosition + 6, 0xFFFFFF);
-        this.drawString(this.fontRendererObj, "Z:", this.width / 2 - 80, zField.yPosition + 6, 0xFFFFFF);
+        this.drawString(this.fontRendererObj, "X:", this.width / 2 - 80, xField.yPosition + 6, Colors.Value.getColor());
+        this.drawString(this.fontRendererObj, "Y:", this.width / 2 - 80, yField.yPosition + 6, Colors.Value.getColor());
+        this.drawString(this.fontRendererObj, "Z:", this.width / 2 - 80, zField.yPosition + 6, Colors.Value.getColor());
 
         xField.drawTextBox();
         yField.drawTextBox();
