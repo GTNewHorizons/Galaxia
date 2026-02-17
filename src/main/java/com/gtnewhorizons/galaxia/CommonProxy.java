@@ -1,4 +1,4 @@
-package com.cleanroommc.galaxia;
+package com.gtnewhorizons.galaxia;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;

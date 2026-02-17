@@ -1,4 +1,4 @@
-package com.cleanroommc.galaxia;
+package com.gtnewhorizons.galaxia;
 
 import java.io.File;
 
