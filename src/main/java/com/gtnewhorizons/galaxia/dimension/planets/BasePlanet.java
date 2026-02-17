@@ -9,7 +9,6 @@ import com.gtnewhorizons.galaxia.utility.IPlanet;
 
 public abstract class BasePlanet implements IPlanet {
 
-
     @Override
     public DimensionDef buildDimension() {
         return DEF;
