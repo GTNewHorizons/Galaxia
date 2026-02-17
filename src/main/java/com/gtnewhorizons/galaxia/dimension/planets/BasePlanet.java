@@ -9,8 +9,6 @@ import com.gtnewhorizons.galaxia.utility.IPlanet;
 
 public abstract class BasePlanet implements IPlanet {
 
-    private int mass;
-    private int orbitalDistance;
 
     @Override
     public DimensionDef buildDimension() {
