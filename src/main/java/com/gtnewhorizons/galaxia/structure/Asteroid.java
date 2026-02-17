@@ -33,14 +33,56 @@ public class Asteroid extends WorldGenerator {
             size += random.nextInt(variation);
         }
 
+        int interpolationRange = size / 4 + 1;
+        float[] interpolationValues = new float[9];
+        for (int value = 0; value < interpolationValues.length; value++) {
+            interpolationValues[value] = random.nextFloat()/3 + 0.66F;
+        }
+        int[][] interpolationPositions = new int[9][];
+        interpolationPositions[0] = new int[] {x, y, z};
+        for (int index = 1; index < interpolationPositions.length; index++) {
+            int xOffset = random.nextInt(interpolationRange);
+            if (random.nextBoolean()) {
+                xOffset *= -1;
+            }
+            int yOffset = random.nextInt(interpolationRange);
+            if (random.nextBoolean()) {
+                yOffset *= -1;
+            }
+            int zOffset = random.nextInt(interpolationRange);
+            if (random.nextBoolean()) {
+                zOffset *= -1;
+            }
+            interpolationPositions[index] = new int[] {x + xOffset, y + yOffset, z + zOffset};
+        }
         int radius = size / 2;
         for (int xOffset = -radius; xOffset <= radius; xOffset++) {
             for (int yOffset = -radius; yOffset <= radius; yOffset++) {
                 for (int zOffset = -radius; zOffset <= radius; zOffset++) {
-                    world.setBlock(x + xOffset, y + yOffset, z + zOffset, fillerBlock, fillerBlockMeta, 2);
+                    float fullness = calculateFullness(interpolationPositions, interpolationValues, x + xOffset, y + yOffset, z + zOffset);
+                    if (fullness > 1) {
+                        world.setBlock(x + xOffset, y + yOffset, z + zOffset, fillerBlock, fillerBlockMeta, 2);
+                    }
                 }
             }
         }
         return true;
+    }
+
+    private float calculateFullness(int[][] interpolationPositions, float[] interpolationValues, int x, int y, int z) {
+        float distortion = 0;
+        for (int interpolation = 0; interpolation < interpolationValues.length; interpolation++) {
+            distortion += interpolationValues[interpolation]
+                * calculateInterpolationSignificance(interpolationPositions[interpolation], x, y, z);
+        }
+        return distortion;
+    }
+
+    private float calculateInterpolationSignificance(int[] interpolationLocation, int x, int y, int z) {
+        int xDistance = Math.abs(interpolationLocation[0] - x);
+        int yDistance = Math.abs(interpolationLocation[1] - y);
+        int zDistance = Math.abs(interpolationLocation[2] - z);
+        float totalDistance = (float) Math.sqrt(xDistance*xDistance + yDistance*yDistance + zDistance*zDistance);
+        return 1 / (totalDistance + 1);
     }
 }
