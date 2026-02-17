@@ -15,7 +15,6 @@ public final class DimensionDef {
     public final boolean keepLoaded;
     public final double gravity;
     public final double air_resistance;
-
     public final boolean removeSpeedCancelation;
     public final List<CelestialBody> celestialBodies;
 

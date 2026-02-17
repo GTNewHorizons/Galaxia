@@ -18,7 +18,7 @@ public class GalaxiaItems {
 
     public enum GalaxiaItem {
 
-        TELEPORTER("teleporter", 64, ItemTeleporter::new, (item) -> GameRegistry
+        TELEPORTER("teleporter", 1, ItemTeleporter::new, (item) -> GameRegistry
             .addShapedRecipe(new ItemStack(item), "III", "IEI", "III", 'I', Items.iron_ingot, 'E', Items.ender_pearl)),
         ANOTHER_THING("anotherThing");
 
