@@ -7,7 +7,7 @@ import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
-import com.gtnewhorizons.galaxia.items.GalaxiaItems;
+import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
@@ -25,7 +25,7 @@ public class GalaxiaBlockBase {
         planetBlocks.put(planet, block);
     }
 
-    static void reg(PlanetEnum planet, GalaxiaItems dustEnum, BlockVariant... variants) {
+    static void reg(PlanetEnum planet, GalaxiaItemList dustEnum, BlockVariant... variants) {
         if (variants.length == 0) {
             throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
         }
