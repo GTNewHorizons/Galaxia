@@ -1,0 +1,44 @@
+package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
+
+import com.gtnewhorizons.galaxia.dimension.*;
+import net.minecraft.world.WorldProvider;
+
+public class Vulcanoids extends BaseAsteroidBelt {
+    public static final PlanetEnum ENUM = PlanetEnum.VULCANOIDS;
+
+    @Override
+    protected PlanetEnum getPlanetEnum() {
+        return ENUM;
+    }
+
+    @Override
+    protected Class<? extends WorldProvider> getProviderClass() {
+        return WorldProviderVulcanoids.class;
+    }
+
+    public static class WorldProviderVulcanoids extends WorldProviderSpace {
+
+        public WorldProviderVulcanoids() {
+            WorldProviderBuilder.configure(this)
+                .sky(true)
+                .skyColor(1, 0.5, 0)
+                .fog(0.15f, 0.1f, 0.3f)
+                .biome(new BiomeGenVulcanoids(100))
+                .name(ENUM)
+                .cloudHeight(Integer.MIN_VALUE)
+                .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed()))
+                .build();
+        }
+    }
+
+    public static class BiomeGenVulcanoids extends BiomeGenSpace {
+
+        public BiomeGenVulcanoids(int id) {
+            super(
+                id,
+                new BiomeGenBuilder(id).name("Vulcanoids")
+                    .temperature(1.0F)
+                    .rainfall(0));
+        }
+    }
+}

@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.gtnewhorizons.galaxia.dimension.asteroidbelts.BaseAsteroidBelt;
+import com.gtnewhorizons.galaxia.dimension.asteroidbelts.Vulcanoids;
 import net.minecraftforge.common.DimensionManager;
 
 import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
@@ -27,12 +29,32 @@ public final class SolarSystemRegistry {
 
         registerPlanet(new Calx());
         registerPlanet(new Dunia());
+        registerAsteroidBelt(new Vulcanoids());
 
         FMLLog.info("[Galaxia] registered %d celestial bodies", DIMENSIONS.size());
     }
 
     private static void registerPlanet(BasePlanet planet) {
         DimensionDef def = planet.buildDimension();
+
+        int dimId = def.id;
+
+        DimensionManager.registerProviderType(dimId, def.provider, true);
+        if (!DimensionManager.isDimensionRegistered(dimId)) {
+            DimensionManager.registerDimension(dimId, dimId);
+            FMLLog.info("[Galaxia] Registered dim %s (ID %d)", def.name, dimId);
+        } else {
+            FMLLog.warning("[Galaxia] Dim ID %d already taken!", dimId);
+        }
+
+        BY_ID.put(dimId, def);
+        BY_NAME.put(def.name.toLowerCase(), def);
+
+        DIMENSIONS.add(def);
+    }
+
+    private static void registerAsteroidBelt(BaseAsteroidBelt belt) {
+        DimensionDef def = belt.buildDimension();
 
         int dimId = def.id;
 
