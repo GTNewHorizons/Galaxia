@@ -9,6 +9,10 @@ tile.galaxia.calxRock.name=Calx Rock
 tile.galaxia.duniaSand.name=Dunia Sand
 tile.galaxia.duniaRock.name=Dunia Rock
 
+## Items
+item.galaxia.teleporter.name=Teleporter
+item.galaxia.anotherThing.name=Another thing; that is now localized, super cool right, yes I agree
+
 ## Gui elements
 # Planet Teleporter
 galaxia.gui.planet_teleporter.title=Planet Teleporter

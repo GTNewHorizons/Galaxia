@@ -14,10 +14,11 @@ import cpw.mods.fml.common.registry.GameRegistry;
 public class GalaxiaItems {
 
     private static final Supplier<Item> DEFAULT_ITEM_FACTORY = Item::new;
+    private static final String UNLOCALIZED_PREFIX = "galaxia.";
 
     public enum GalaxiaItem {
 
-        TELEPORTER("teleporter", 64, () -> new ItemTeleporter().setUnlocalizedName("teleporter"), (item) -> GameRegistry
+        TELEPORTER("teleporter", 64, ItemTeleporter::new, (item) -> GameRegistry
             .addShapedRecipe(new ItemStack(item), "III", "IEI", "III", 'I', Items.iron_ingot, 'E', Items.ender_pearl)),
         ANOTHER_THING("anotherThing");
 
@@ -48,7 +49,7 @@ public class GalaxiaItems {
 
         public void register() {
             Item item = itemFactory.get();
-            item.setUnlocalizedName(registryName);
+            item.setUnlocalizedName(UNLOCALIZED_PREFIX + registryName);
             item.setMaxStackSize(maxStackSize);
             item.setCreativeTab(Galaxia.creativeTab);
 
