@@ -5,10 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.dimension.asteroidbelts.BaseAsteroidBelt;
-import com.gtnewhorizons.galaxia.dimension.asteroidbelts.Vulcanoids;
 import net.minecraftforge.common.DimensionManager;
 
+import com.gtnewhorizons.galaxia.dimension.asteroidbelts.BaseAsteroidBelt;
+import com.gtnewhorizons.galaxia.dimension.asteroidbelts.Vulcanoids;
 import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.dimension.planets.Calx;
 import com.gtnewhorizons.galaxia.dimension.planets.Dunia;

@@ -1,12 +1,14 @@
 package com.gtnewhorizons.galaxia.structure;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import java.util.Random;
+
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
-import java.util.Random;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 public class Asteroid extends WorldGenerator {
+
     private final int minimumSize;
     private final int maximumSize;
     private final int rarity;
@@ -35,10 +37,10 @@ public class Asteroid extends WorldGenerator {
         int interpolationRange = size / 4 + 1;
         float[] interpolationValues = new float[interpolationComplexity];
         for (int value = 0; value < interpolationValues.length; value++) {
-            interpolationValues[value] = random.nextFloat()/4 + 0.75F;
+            interpolationValues[value] = random.nextFloat() / 4 + 0.75F;
         }
         int[][] interpolationPositions = new int[interpolationComplexity][];
-        interpolationPositions[0] = new int[] {x, y, z};
+        interpolationPositions[0] = new int[] { x, y, z };
         for (int index = 1; index < interpolationPositions.length; index++) {
             int xOffset = random.nextInt(interpolationRange) + 1;
             if (random.nextBoolean()) {
@@ -52,16 +54,27 @@ public class Asteroid extends WorldGenerator {
             if (random.nextBoolean()) {
                 zOffset *= -1;
             }
-            interpolationPositions[index] = new int[] {x + xOffset, y + yOffset, z + zOffset};
+            interpolationPositions[index] = new int[] { x + xOffset, y + yOffset, z + zOffset };
         }
         int radius = size / 2;
         for (int xOffset = -radius; xOffset <= radius; xOffset++) {
             for (int yOffset = -radius; yOffset <= radius; yOffset++) {
                 for (int zOffset = -radius; zOffset <= radius; zOffset++) {
-                    float fullness = calculateFullness(interpolationPositions, interpolationValues, x + xOffset, y + yOffset, z + zOffset);
+                    float fullness = calculateFullness(
+                        interpolationPositions,
+                        interpolationValues,
+                        x + xOffset,
+                        y + yOffset,
+                        z + zOffset);
                     if (fullness > 1) {
                         BlockMeta pickedBlock = blockPalette[random.nextInt(blockPalette.length)];
-                        world.setBlock(x + xOffset, y + yOffset, z + zOffset, pickedBlock.block(), pickedBlock.meta(), 2);
+                        world.setBlock(
+                            x + xOffset,
+                            y + yOffset,
+                            z + zOffset,
+                            pickedBlock.block(),
+                            pickedBlock.meta(),
+                            2);
                     }
                 }
             }
@@ -94,7 +107,7 @@ public class Asteroid extends WorldGenerator {
         if (zDistance > 16) {
             return 0;
         }
-        float totalDistance = (float) Math.sqrt(xDistance*xDistance + yDistance*yDistance + zDistance*zDistance);
+        float totalDistance = (float) Math.sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
         return 1 / (totalDistance + 1);
     }
 }

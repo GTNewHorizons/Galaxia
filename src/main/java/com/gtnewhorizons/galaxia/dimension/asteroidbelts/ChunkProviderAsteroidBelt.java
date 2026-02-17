@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
-import com.gtnewhorizons.galaxia.structure.Asteroid;
+import java.util.List;
+import java.util.Random;
+
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.util.IProgressUpdate;
@@ -11,14 +13,13 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.structure.MapGenScatteredFeature;
 
-import java.util.List;
-import java.util.Random;
+import com.gtnewhorizons.galaxia.structure.Asteroid;
 
 public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
-    private Random rand;
-    private World worldObj;
-    private MapGenScatteredFeature scatteredFeatureGenerator = new MapGenScatteredFeature();
+    private final Random rand;
+    private final World worldObj;
+    private final MapGenScatteredFeature scatteredFeatureGenerator = new MapGenScatteredFeature();
     private final Asteroid[] asteroids;
 
     public ChunkProviderAsteroidBelt(World world, long seed, Asteroid[] asteroids) {
@@ -32,9 +33,8 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
         return true;
     }
 
-    public Chunk provideChunk(int p_73154_1_, int p_73154_2_)
-    {
-        this.rand.setSeed((long)p_73154_1_ * 341873128712L + (long)p_73154_2_ * 132897987541L);
+    public Chunk provideChunk(int p_73154_1_, int p_73154_2_) {
+        this.rand.setSeed((long) p_73154_1_ * 341873128712L + (long) p_73154_2_ * 132897987541L);
         Block[] ablock = new Block[65536];
         byte[] abyte = new byte[65536];
 
@@ -83,13 +83,18 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
     }
 
     @Override
-    public List<BiomeGenBase.SpawnListEntry> getPossibleCreatures(EnumCreatureType p_73155_1_, int p_73155_2_, int p_73155_3_, int p_73155_4_) {
+    public List<BiomeGenBase.SpawnListEntry> getPossibleCreatures(EnumCreatureType p_73155_1_, int p_73155_2_,
+        int p_73155_3_, int p_73155_4_) {
         BiomeGenBase biomegenbase = this.worldObj.getBiomeGenForCoords(p_73155_2_, p_73155_4_);
-        return p_73155_1_ == EnumCreatureType.monster && this.scatteredFeatureGenerator.func_143030_a(p_73155_2_, p_73155_3_, p_73155_4_) ? this.scatteredFeatureGenerator.getScatteredFeatureSpawnList() : biomegenbase.getSpawnableList(p_73155_1_);
+        return p_73155_1_ == EnumCreatureType.monster
+            && this.scatteredFeatureGenerator.func_143030_a(p_73155_2_, p_73155_3_, p_73155_4_)
+                ? this.scatteredFeatureGenerator.getScatteredFeatureSpawnList()
+                : biomegenbase.getSpawnableList(p_73155_1_);
     }
 
     @Override
-    public ChunkPosition func_147416_a(World p_147416_1_, String p_147416_2_, int p_147416_3_, int p_147416_4_, int p_147416_5_) {
+    public ChunkPosition func_147416_a(World p_147416_1_, String p_147416_2_, int p_147416_3_, int p_147416_4_,
+        int p_147416_5_) {
         return null;
     }
 

@@ -1,10 +1,11 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
+import net.minecraft.world.WorldProvider;
+
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
 import com.gtnewhorizons.galaxia.utility.IPlanet;
-import net.minecraft.world.WorldProvider;
 
 public abstract class BaseAsteroidBelt implements IPlanet {
 
@@ -25,7 +26,9 @@ public abstract class BaseAsteroidBelt implements IPlanet {
 
     protected DimensionBuilder createBuilder() {
         return new DimensionBuilder().enumValue(getPlanetEnum())
-            .provider(getProviderClass()).airResistance(0).gravity(0);
+            .provider(getProviderClass())
+            .airResistance(0)
+            .gravity(0);
     }
 
     protected abstract PlanetEnum getPlanetEnum();
