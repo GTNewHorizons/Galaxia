@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
 import com.gtnewhorizons.galaxia.dimension.*;
 import com.gtnewhorizons.galaxia.structure.Asteroid;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
@@ -22,9 +23,18 @@ public class Vulcanoids extends BaseAsteroidBelt {
 
         public WorldProviderVulcanoids() {
             Asteroid[] asteroids = new Asteroid[] {
-                new Asteroid(12, 16, 32, Blocks.stone, 0),
-                new Asteroid(16, 20, 64, Blocks.iron_block, 0),
-                new Asteroid(20, 32, 128, Blocks.gold_block, 0),
+                new Asteroid(12, 16, 32, new BlockMeta[]{
+                    new BlockMeta(Blocks.stone, 0),
+                    new BlockMeta(Blocks.cobblestone, 0)
+                }),
+                new Asteroid(16, 20, 64, new BlockMeta[]{
+                    new BlockMeta(Blocks.iron_ore, 0),
+                    new BlockMeta(Blocks.iron_block, 0)
+                }),
+                new Asteroid(20, 32, 128, new BlockMeta[]{
+                    new BlockMeta(Blocks.gold_ore, 0),
+                    new BlockMeta(Blocks.gold_block, 0)
+                }),
             };
             WorldProviderBuilder.configure(this)
                 .sky(true)

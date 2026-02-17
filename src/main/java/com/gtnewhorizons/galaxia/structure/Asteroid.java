@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.structure;
 
-import net.minecraft.block.Block;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
@@ -10,15 +10,13 @@ public class Asteroid extends WorldGenerator {
     private final int minimumSize;
     private final int maximumSize;
     private final int rarity;
-    private final Block fillerBlock;
-    private final int fillerBlockMeta;
+    private final BlockMeta[] blockPalette;
 
-    public Asteroid(int minimumSize, int maximumSize, int rarity, Block fillerBlock, int fillerBlockMeta) {
+    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
         this.rarity = rarity;
-        this.fillerBlock = fillerBlock;
-        this.fillerBlockMeta = fillerBlockMeta;
+        this.blockPalette = blockPalette;
     }
 
     @Override
@@ -62,7 +60,8 @@ public class Asteroid extends WorldGenerator {
                 for (int zOffset = -radius; zOffset <= radius; zOffset++) {
                     float fullness = calculateFullness(interpolationPositions, interpolationValues, x + xOffset, y + yOffset, z + zOffset);
                     if (fullness > 1) {
-                        world.setBlock(x + xOffset, y + yOffset, z + zOffset, fillerBlock, fillerBlockMeta, 2);
+                        BlockMeta pickedBlock = blockPalette[random.nextInt(blockPalette.length)];
+                        world.setBlock(x + xOffset, y + yOffset, z + zOffset, pickedBlock.block(), pickedBlock.meta(), 2);
                     }
                 }
             }
