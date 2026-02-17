@@ -6,6 +6,8 @@ import cpw.mods.fml.common.registry.GameRegistry;
 
 public class GalaxiaBlocks {
 
+    private static final String UNLOCALIZED_PREFIX = "galaxia.";
+
     public enum GalaxiaBlock {
 
         CALX_REGOLITH(new BlockCalxRegolith("calxRegolith")),
@@ -20,6 +22,7 @@ public class GalaxiaBlocks {
         GalaxiaBlock(Block block) {
             this.block = block;
             this.blockName = ((IGalaxiaBlock) block).getBlockName();
+            this.block.setBlockName(UNLOCALIZED_PREFIX + blockName);
         }
 
         public void register() {

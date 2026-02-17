@@ -1,7 +1,16 @@
 ## Galaxia English (US) translation file
 
-## Planet Teleporter
-# Gui
+## Blocks
+# Calx
+tile.galaxia.calxRegolith.name=Calx Regolith
+tile.galaxia.calxRock.name=Calx Rock
+
+# Dunia
+tile.galaxia.duniaSand.name=Dunia Sand
+tile.galaxia.duniaRock.name=Dunia Rock
+
+## Gui elements
+# Planet Teleporter
 galaxia.gui.planet_teleporter.title=Planet Teleporter
-#galaxia.gui.planet_teleporter.teleport=<Idk what you want here, //TODO>
+galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
