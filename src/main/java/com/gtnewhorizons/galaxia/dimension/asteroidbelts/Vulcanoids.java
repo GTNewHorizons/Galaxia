@@ -39,7 +39,13 @@ public class Vulcanoids extends BaseAsteroidBelt {
                     20,
                     32,
                     128,
-                    new BlockMeta[] { new BlockMeta(Blocks.gold_ore, 0), new BlockMeta(Blocks.gold_block, 0) }), };
+                    new BlockMeta[] { new BlockMeta(Blocks.gold_ore, 0), new BlockMeta(Blocks.gold_block, 0) }),
+                new Asteroid(
+                    32,
+                    128,
+                    512,
+                    new BlockMeta[]{ new BlockMeta(Blocks.diamond_block, 0), new BlockMeta(Blocks.diamond_ore, 0) })
+            };
             WorldProviderBuilder.configure(this)
                 .sky(true)
                 .skyColor(1, 0.5, 0)

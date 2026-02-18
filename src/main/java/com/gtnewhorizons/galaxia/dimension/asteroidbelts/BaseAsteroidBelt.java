@@ -5,11 +5,9 @@ import net.minecraft.world.WorldProvider;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
-import com.gtnewhorizons.galaxia.utility.IPlanet;
 
-public abstract class BaseAsteroidBelt implements IPlanet {
+public abstract class BaseAsteroidBelt {
 
-    @Override
     public DimensionDef buildDimension() {
         return DEF;
     }

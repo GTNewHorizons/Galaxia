@@ -34,6 +34,7 @@ public class Asteroid extends WorldGenerator {
         }
 
         int interpolationComplexity = size / 2 + 1;
+        interpolationComplexity *= Math.max(interpolationComplexity/10, 1);
         int interpolationRange = size / 4 + 1;
         float[] interpolationValues = new float[interpolationComplexity];
         for (int value = 0; value < interpolationValues.length; value++) {
