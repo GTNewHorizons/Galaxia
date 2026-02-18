@@ -16,14 +16,14 @@ public class Asteroid extends WorldGenerator {
     private final int maximumSize;
     private final int rarity;
     private final BlockMeta[] blockPalette;
-    private final int craterRarity;
+    private final int craterFrequency;
 
-    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette, int craterRarity) {
+    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette, int craterFrequency) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
         this.rarity = rarity;
         this.blockPalette = blockPalette;
-        this.craterRarity = Math.max(1, craterRarity);
+        this.craterFrequency = Math.max(1, craterFrequency);
     }
 
     @Override
@@ -90,9 +90,9 @@ public class Asteroid extends WorldGenerator {
             }
         }
 
-        int craterCount = Math.min(8, 2 + size / (craterRarity * 4));
+        int craterCount = Math.max(8, 2 + size * craterFrequency);
         for (int i = 0; i < craterCount; i++) {
-            carveCraterInMemory(data, random, diameter, offset, craterRarity);
+            carveCraterInMemory(data, random, diameter);
         }
 
         long memMs = (System.nanoTime() - startMem) / 1_000_000;
@@ -147,23 +147,24 @@ public class Asteroid extends WorldGenerator {
         chunk.isModified = true;
     }
 
-    private void carveCraterInMemory(byte[][][] data, Random rand, int diameter, int offset, int craterRarity) {
-        int cx = rand.nextInt(diameter);
-        int cy = rand.nextInt(diameter);
-        int cz = rand.nextInt(diameter);
+    private void carveCraterInMemory(byte[][][] data, Random rand, int diameter) {
+        int longAxis = rand.nextInt(3);
+        int craterX = getCraterDistance(rand, diameter, 0, longAxis);
+        int craterY = getCraterDistance(rand, diameter, 1, longAxis);
+        int craterZ = getCraterDistance(rand, diameter, 2, longAxis);
 
-        double r = 4 + rand.nextDouble() * (diameter * 0.18 / craterRarity);
-        double rSq = r * r;
+        double craterRadius = 4 + rand.nextDouble() * ((double) diameter / 8);
+        double squaredCraterRadius = craterRadius * craterRadius;
 
         for (int x = 0; x < diameter; x++) {
             for (int y = 0; y < diameter; y++) {
                 for (int z = 0; z < diameter; z++) {
                     if (data[x][y][z] == 0) continue;
-                    double dx = x - cx;
-                    double dy = y - cy;
-                    double dz = z - cz;
-                    double distSq = dx * dx + dy * dy + dz * dz;
-                    if (distSq < rSq * (1.0 - rand.nextDouble() * 0.3)) {
+                    double dx = x - craterX;
+                    double dy = y - craterY;
+                    double dz = z - craterZ;
+                    double squaredDistance = dx * dx + dy * dy + dz * dz;
+                    if (squaredDistance < squaredCraterRadius * (1.0 - rand.nextDouble() * 0.3)) {
                         data[x][y][z] = 0;
                     }
                 }
@@ -189,5 +190,23 @@ public class Asteroid extends WorldGenerator {
         if (dz > 16) return 0;
         float dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         return 1 / (dist + 1);
+    }
+
+    private int getCraterDistance(Random random, int craterDistance, int axis, int longAxis) {
+        if (axis == longAxis) {
+            return getLongCraterDistance(random, craterDistance);
+        }
+        return getShortCraterDistance(random, craterDistance);
+    }
+
+    private int getShortCraterDistance(Random random, int craterDistance) {
+        return random.nextInt(1 + craterDistance);
+    }
+
+    private int getLongCraterDistance(Random random, int craterDistance) {
+        if (random.nextBoolean()) {
+            return random.nextInt(craterDistance/16 + 1);
+        }
+        return craterDistance + random.nextInt(craterDistance/16 + 1);
     }
 }
