@@ -17,11 +17,16 @@ public final class DimensionDef {
     public final double air_resistance;
     public final boolean removeSpeedCancelation;
     public final List<CelestialBody> celestialBodies;
+    public final int mass;
+    public final int orbitalRadius;
 
     DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded, double gravity,
-        double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies) {
+        double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, int mass,
+        int orbitalRadius) {
         this.name = name;
         this.id = id;
+        this.mass = mass;
+        this.orbitalRadius = orbitalRadius;
         this.provider = provider;
         this.keepLoaded = keepLoaded;
         this.gravity = gravity;

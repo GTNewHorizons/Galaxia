@@ -16,8 +16,11 @@ public class Calx extends BasePlanet {
 
     @Override
     protected DimensionBuilder createBuilder() {
+
         return super.createBuilder().gravity(2)
             .airResistance(1.7)
+            .mass((int) (7 * Math.pow(10, 22)))
+            .orbitalRadius((int) (1.5 * Math.pow(10, 11)))
             .sky(
                 SkyBuilder.builder()
                     .sun(
