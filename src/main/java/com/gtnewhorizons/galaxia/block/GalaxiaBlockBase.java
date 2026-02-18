@@ -6,17 +6,17 @@ import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 
-import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
 public class GalaxiaBlockBase {
 
-    private static final Map<PlanetEnum, BlockPlanetGalaxia> planetBlocks = new HashMap<>();
-    private static final Map<PlanetEnum, Item> planetDustMap = new HashMap<>();
+    private static final Map<DimensionEnum, BlockPlanetGalaxia> planetBlocks = new HashMap<>();
+    private static final Map<DimensionEnum, Item> planetDustMap = new HashMap<>();
 
-    static void reg(PlanetEnum planet, BlockVariant... variants) {
+    static void reg(DimensionEnum planet, BlockVariant... variants) {
         if (variants.length == 0) {
             throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
         }
@@ -25,7 +25,7 @@ public class GalaxiaBlockBase {
         planetBlocks.put(planet, block);
     }
 
-    static void reg(PlanetEnum planet, GalaxiaItemList dustEnum, BlockVariant... variants) {
+    static void reg(DimensionEnum planet, GalaxiaItemList dustEnum, BlockVariant... variants) {
         if (variants.length == 0) {
             throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
         }
@@ -37,11 +37,11 @@ public class GalaxiaBlockBase {
         planetDustMap.put(planet, dustItem);
     }
 
-    public static Block get(PlanetEnum planet) {
+    public static Block get(DimensionEnum planet) {
         return planetBlocks.get(planet);
     }
 
-    public static Block get(PlanetEnum planet, String variant) {
+    public static Block get(DimensionEnum planet, String variant) {
         BlockPlanetGalaxia block = planetBlocks.get(planet);
         if (block == null) {
             throw new IllegalArgumentException("Planet not registered: " + planet);

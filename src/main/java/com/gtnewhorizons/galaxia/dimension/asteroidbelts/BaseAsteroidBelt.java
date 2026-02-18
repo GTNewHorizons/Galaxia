@@ -5,7 +5,6 @@ import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
 
 public abstract class BaseAsteroidBelt extends BasePlanet {
 

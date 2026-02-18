@@ -7,23 +7,23 @@ import com.gtnewhorizons.galaxia.dimension.*;
 import com.gtnewhorizons.galaxia.structure.Asteroid;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
-public class Vulcanoids extends BaseAsteroidBelt {
+public class FrozenBelt extends BaseAsteroidBelt {
 
-    public static final PlanetEnum ENUM = PlanetEnum.VULCANOIDS;
+    public static final DimensionEnum ENUM = DimensionEnum.FROZEN_BELT;
 
     @Override
-    public PlanetEnum getPlanetEnum() {
+    public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
     @Override
     protected Class<? extends WorldProvider> getProviderClass() {
-        return WorldProviderVulcanoids.class;
+        return WorldProviderFrozenBelt.class;
     }
 
-    public static class WorldProviderVulcanoids extends WorldProviderSpace {
+    public static class WorldProviderFrozenBelt extends WorldProviderSpace {
 
-        public WorldProviderVulcanoids() {
+        public WorldProviderFrozenBelt() {
             Asteroid[] asteroids = new Asteroid[] {
                 new Asteroid(
                     12,
@@ -58,9 +58,9 @@ public class Vulcanoids extends BaseAsteroidBelt {
             };
             WorldProviderBuilder.configure(this)
                 .sky(true)
-                .skyColor(1, 0.5, 0)
-                .fog(0.15f, 0.1f, 0.3f)
-                .biome(new BiomeGenVulcanoids(100))
+                .skyColor(0, 0.1, 0.3)
+                .fog(0, 0.1f, 0.3f)
+                .biome(new BiomeGenFrozenBelt(100))
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)
                 .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed(), asteroids))
@@ -68,12 +68,12 @@ public class Vulcanoids extends BaseAsteroidBelt {
         }
     }
 
-    public static class BiomeGenVulcanoids extends BiomeGenSpace {
+    public static class BiomeGenFrozenBelt extends BiomeGenSpace {
 
-        public BiomeGenVulcanoids(int id) {
+        public BiomeGenFrozenBelt(int id) {
             super(
                 id,
-                new BiomeGenBuilder(id).name("Vulcanoids")
+                new BiomeGenBuilder(id).name("Frozen Belt")
                     .temperature(1.0F)
                     .rainfall(0));
         }

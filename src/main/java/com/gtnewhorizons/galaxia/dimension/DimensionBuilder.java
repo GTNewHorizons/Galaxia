@@ -35,7 +35,7 @@ public class DimensionBuilder {
     private boolean removeSpeedCancelation = false;
     private List<CelestialBody> celestialBodies = Collections.emptyList();
 
-    public DimensionBuilder enumValue(PlanetEnum planet) {
+    public DimensionBuilder enumValue(DimensionEnum planet) {
         if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
         this.name = planet.getName();
         this.id = planet.getId();

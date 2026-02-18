@@ -7,15 +7,15 @@ import com.gtnewhorizons.galaxia.block.BlockVariant;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
-import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 
 public class Dunia extends BasePlanet {
 
-    public static final PlanetEnum ENUM = PlanetEnum.DUNIA;
+    public static final DimensionEnum ENUM = DimensionEnum.DUNIA;
 
     @Override
-    public PlanetEnum getPlanetEnum() {
+    public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
@@ -41,7 +41,7 @@ public class Dunia extends BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(GalaxiaBlockBase.get(PlanetEnum.DUNIA, BlockVariant.REGOLITH.suffix))
+            .topBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix))
             .fillerBlock(Blocks.brick_block)
             .build();
     }

@@ -9,7 +9,7 @@ import org.lwjgl.input.Keyboard;
 
 import com.gtnewhorizons.galaxia.Galaxia;
 import com.gtnewhorizons.galaxia.TeleportRequestPacket;
-import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.utility.Colors;
 
 public class GuiPlanetTeleporter extends GuiScreen {
@@ -18,8 +18,8 @@ public class GuiPlanetTeleporter extends GuiScreen {
     private GuiTextField yField;
     private GuiTextField zField;
 
-    private PlanetEnum selectedPlanet = PlanetEnum.CALX;
-    private final PlanetEnum[] planets = PlanetEnum.values();
+    private DimensionEnum selectedPlanet = DimensionEnum.CALX;
+    private final DimensionEnum[] planets = DimensionEnum.values();
 
     private GuiButton teleportButton;
 
@@ -36,7 +36,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
         int spacing = 25;
 
         for (int i = 0; i < planets.length; i++) {
-            PlanetEnum planet = planets[i];
+            DimensionEnum planet = planets[i];
             GuiButton planetButton = new GuiButton(
                 i,
                 this.width / 2 - buttonWidth / 2,

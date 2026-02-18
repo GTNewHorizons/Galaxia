@@ -60,7 +60,7 @@ public class WorldProviderBuilder {
         return this;
     }
 
-    public WorldProviderBuilder name(PlanetEnum planet) {
+    public WorldProviderBuilder name(DimensionEnum planet) {
         provider.name = planet.getName();
         return this;
     }

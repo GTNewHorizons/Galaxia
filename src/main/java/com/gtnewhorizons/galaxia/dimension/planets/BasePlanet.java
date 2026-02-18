@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.dimension.planets;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderGalaxia;
 
@@ -15,7 +15,7 @@ public abstract class BasePlanet {
     }
 
     protected DimensionBuilder createBuilder() {
-        PlanetEnum planet = getPlanetEnum();
+        DimensionEnum planet = getPlanetEnum();
 
         WorldProviderGalaxia.registerConfigurator(planet.getId(), this::configureProvider);
 
@@ -36,5 +36,5 @@ public abstract class BasePlanet {
         return DEF;
     }
 
-    public abstract PlanetEnum getPlanetEnum();
+    public abstract DimensionEnum getPlanetEnum();
 }

@@ -6,16 +6,16 @@ import net.minecraft.world.biome.BiomeGenBase;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
-import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
 public class Calx extends BasePlanet {
 
-    public static final PlanetEnum ENUM = PlanetEnum.CALX;
+    public static final DimensionEnum ENUM = DimensionEnum.CALX;
 
     @Override
-    public PlanetEnum getPlanetEnum() {
+    public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
@@ -84,7 +84,7 @@ public class Calx extends BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(GalaxiaBlockBase.get(PlanetEnum.CALX))
+            .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX))
             .fillerBlock(Blocks.brick_block)
             .build();
     }
