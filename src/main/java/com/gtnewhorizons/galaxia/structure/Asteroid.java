@@ -205,8 +205,8 @@ public class Asteroid extends WorldGenerator {
 
     private int getLongCraterDistance(Random random, int craterDistance) {
         if (random.nextBoolean()) {
-            return random.nextInt(craterDistance/16 + 1);
+            return random.nextInt(craterDistance / 16 + 1);
         }
-        return craterDistance + random.nextInt(craterDistance/16 + 1);
+        return craterDistance + random.nextInt(craterDistance / 16 + 1);
     }
 }
