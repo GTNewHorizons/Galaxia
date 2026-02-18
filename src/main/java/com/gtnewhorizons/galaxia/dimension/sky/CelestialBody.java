@@ -13,9 +13,11 @@ public class CelestialBody {
     public final boolean emissive;
     public final boolean hasPhases; // moon has 8 phases
     public final int phaseCount; // default 8
+    public final long phaseOffsetTicks;
 
     public CelestialBody(ResourceLocation texture, ResourceLocation phaseTexture, float size, double distance,
-        float inclination, long orbitalPeriodTicks, boolean emissive, boolean hasPhases, int phaseCount) {
+        float inclination, long orbitalPeriodTicks, boolean emissive, boolean hasPhases, int phaseCount,
+        long phaseOffsetTicks) {
         this.texture = texture;
         this.phaseTexture = phaseTexture;
         this.size = size;
@@ -25,5 +27,6 @@ public class CelestialBody {
         this.emissive = emissive;
         this.hasPhases = hasPhases;
         this.phaseCount = phaseCount;
+        this.phaseOffsetTicks = phaseOffsetTicks;
     }
 }

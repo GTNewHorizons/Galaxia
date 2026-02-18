@@ -46,6 +46,7 @@ public class MoonBuilder extends CelestialBodyBuilder<MoonBuilder> {
             orbitalPeriodTicks,
             false,
             hasPhases,
-            phaseCount);
+            phaseCount,
+            phaseOffsetTicks);
     }
 }

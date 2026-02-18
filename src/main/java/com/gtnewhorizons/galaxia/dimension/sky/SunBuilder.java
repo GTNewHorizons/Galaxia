@@ -12,6 +12,16 @@ public class SunBuilder extends CelestialBodyBuilder<SunBuilder> {
     @Override
     public CelestialBody build() {
         validate();
-        return new CelestialBody(texture, null, size, distance, inclination, orbitalPeriodTicks, emissive, false, 0);
+        return new CelestialBody(
+            texture,
+            null,
+            size,
+            distance,
+            inclination,
+            orbitalPeriodTicks,
+            emissive,
+            false,
+            0,
+            phaseOffsetTicks);
     }
 }
