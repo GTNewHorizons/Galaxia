@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.structure;
 
 import java.util.Random;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
@@ -76,12 +77,13 @@ public class Asteroid extends WorldGenerator {
                         y + yOffset,
                         z + zOffset);
                     if (fullness > 1) {
+                        BlockMeta pickedBlock = blockPalette[random.nextInt(blockPalette.length)];
                         world.setBlock(
                             x + xOffset,
                             y + yOffset,
                             z + zOffset,
-                            Blocks.stone,
-                            0,
+                            pickedBlock.block(),
+                            pickedBlock.meta(),
                             2);
                     }
                 }
@@ -110,7 +112,7 @@ public class Asteroid extends WorldGenerator {
                         if (Math.abs(zCrater + zOffset) > radius) {
                             continue;
                         }
-                        if (world.getBlock(x + xOffset + xCrater, y + yOffset + yCrater, z + zOffset + zCrater) != Blocks.stone) {
+                        if (isNotAsteroidBlock(world, x + xOffset + xCrater, y + yOffset + yCrater, z + zOffset + zCrater)) {
                             continue;
                         }
                         double centerDistance = Math.sqrt(xCrater*xCrater + yCrater*yCrater + zCrater*zCrater);
@@ -124,24 +126,17 @@ public class Asteroid extends WorldGenerator {
             }
         }
 
-        // Replace blocks
-        for (int xOffset = -radius; xOffset <= radius; xOffset++) {
-            for (int yOffset = -radius; yOffset <= radius; yOffset++) {
-                for (int zOffset = -radius; zOffset <= radius; zOffset++) {
-                    if (world.getBlock(x + xOffset, y + yOffset, z + zOffset) == Blocks.stone) {
-                        BlockMeta pickedBlock = blockPalette[random.nextInt(blockPalette.length)];
-                        world.setBlock(
-                            x + xOffset,
-                            y + yOffset,
-                            z + zOffset,
-                            pickedBlock.block(),
-                            pickedBlock.meta(),
-                            2);
-                    }
-                }
+        return true;
+    }
+
+    private boolean isNotAsteroidBlock(World world, int x, int y, int z) {
+        Block block = world.getBlock(x, y, z);
+        int blockMeta = world.getBlockMetadata(x, y, z);
+        for (BlockMeta meta : blockPalette) {
+            if (block == meta.block() && blockMeta == meta.meta()) {
+                return false;
             }
         }
-
         return true;
     }
 
