@@ -41,7 +41,7 @@ public abstract class RenderGlobalSkyMixin {
 
     static {
         List<CelestialBody> list = new ArrayList<>();
-        list.add(new CelestialBody(locationSunPng, null, 30f, 100.0, 23.44f, 24000L, true, false, 0));
+        list.add(new CelestialBody(locationSunPng, null, 30f, 100.0, 23.44f, 24000L, true, false, 0, -6000));
         list.add(
             new CelestialBody(
                 locationMoonPhasesPng,
@@ -52,7 +52,8 @@ public abstract class RenderGlobalSkyMixin {
                 23151L,
                 false,
                 true,
-                8));
+                8,
+                0));
         DEFAULT_OVERWORLD_BODIES = Collections.unmodifiableList(list);
     }
 
@@ -88,7 +89,8 @@ public abstract class RenderGlobalSkyMixin {
         // angles
         List<Float> angles = new ArrayList<>();
         for (CelestialBody body : bodies) {
-            float angle = (float) ((timeWithPartial % body.orbitalPeriodTicks) / (double) body.orbitalPeriodTicks);
+            float angle = (float) (((timeWithPartial + body.phaseOffsetTicks) % body.orbitalPeriodTicks)
+                / (double) body.orbitalPeriodTicks);
             angles.add(angle);
         }
 

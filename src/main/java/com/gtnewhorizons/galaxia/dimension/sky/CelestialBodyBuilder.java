@@ -10,6 +10,7 @@ public abstract class CelestialBodyBuilder<T extends CelestialBodyBuilder<T>> {
     protected double distance = 100.0;
     protected float inclination = 0f;
     protected long orbitalPeriodTicks = 24000L;
+    protected long phaseOffsetTicks = 0L;
 
     @SuppressWarnings("unchecked")
     protected T self() {
@@ -42,6 +43,11 @@ public abstract class CelestialBodyBuilder<T extends CelestialBodyBuilder<T>> {
 
     public T period(long orbitalPeriodTicks) {
         this.orbitalPeriodTicks = orbitalPeriodTicks;
+        return self();
+    }
+
+    public T phaseOffset(long ticks) {
+        this.phaseOffsetTicks = ticks;
         return self();
     }
 

@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import com.gtnewhorizons.galaxia.utility.PlanetAPI;
 
 @Mixin(EntityLivingBase.class)
-public abstract class EntityLivingBaseFallMixin {
+public abstract class FallDamageMixin {
 
     @ModifyVariable(method = "fall", at = @At("HEAD"), argsOnly = true)
     private float galaxia$modifyFallDistance(float distance) {

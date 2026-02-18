@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import com.gtnewhorizons.galaxia.utility.PlanetAPI;
 
 @Mixin(EntityLivingBase.class)
-public abstract class EntityLivingBaseMixin {
+public abstract class GravityAirResistanceMixin {
 
     // gravity
     @ModifyConstant(method = "moveEntityWithHeading", constant = @Constant(doubleValue = 0.08D))
@@ -23,7 +23,6 @@ public abstract class EntityLivingBaseMixin {
     private double galaxia$removeAirResistance(double original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double res = PlanetAPI.getAirResistance(self);
-        // Pure formula: at res=1 → original, at res=0 → 1.0 (no vertical drag)
         return Math.pow(original, Math.sqrt(res));
     }
 
@@ -32,8 +31,6 @@ public abstract class EntityLivingBaseMixin {
     private float galaxia$removeResistance(float original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double res = PlanetAPI.getAirResistance(self);
-        // Pure formula: exponent is zeroed when cancelSpeed is true, always returns 1.0
-        // Otherwise normal drag scaling; at res=1 - original, at res=0 - 1.0
         double exponent = Math.sqrt(res) * (PlanetAPI.cancelSpeed(self) ? 0.0 : 1.0);
         return (float) Math.pow(original, exponent);
     }
