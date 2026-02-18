@@ -5,9 +5,10 @@
   "mixins": [
     "EntityLivingBaseJumpMixin",
     "EntityLivingBaseMixin",
-    "EntityItemGravityMixin",
-    "EntityLivingBaseFallMixin",
-    "RenderGlobalSkyMixin"
+    "UnifiedGravityMixin",
+    "EntityLivingBaseFallDamageMixin",
+    "RenderGlobalSkyMixin",
+    "ParticleGravityMixin"
   ],
   "client": [
   ],
