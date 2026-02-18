@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.structure;
 
 import java.util.Random;
 
+import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
@@ -27,12 +28,14 @@ public class Asteroid extends WorldGenerator {
             return false;
         }
 
+        // Calculate size
         int size = minimumSize;
         int variation = maximumSize - minimumSize;
         if (variation > 0) {
             size += random.nextInt(variation);
         }
 
+        // Generate interpolation points
         int interpolationComplexity = size / 2 + 1;
         interpolationComplexity *= Math.max(interpolationComplexity/10, 1);
         interpolationComplexity *= Math.max(interpolationComplexity/20, 1);
@@ -58,6 +61,8 @@ public class Asteroid extends WorldGenerator {
             }
             interpolationPositions[index] = new int[] { x + xOffset, y + yOffset, z + zOffset };
         }
+
+        // Generate basic shape
         int radius = size / 2;
         for (int xOffset = -radius; xOffset <= radius; xOffset++) {
             for (int yOffset = -radius; yOffset <= radius; yOffset++) {
@@ -69,6 +74,58 @@ public class Asteroid extends WorldGenerator {
                         y + yOffset,
                         z + zOffset);
                     if (fullness > 1) {
+                        world.setBlock(
+                            x + xOffset,
+                            y + yOffset,
+                            z + zOffset,
+                            Blocks.stone,
+                            0,
+                            2);
+                    }
+                }
+            }
+        }
+
+        // Carve craters
+        int craterDistance = radius - radius/4;
+        int maximumCraterSize = size/8 + 1;
+        int craterCount = random.nextInt((size*size)/4 + 1);
+        for (int crater = 0; crater < craterCount; crater++) {
+            int craterSize = random.nextInt(1 + maximumCraterSize) + 1;
+            int distantCoordinate = random.nextInt(3);
+            int xOffset = getCraterDistance(random, craterDistance, size, 0, distantCoordinate);
+            int yOffset = getCraterDistance(random, craterDistance, size, 1, distantCoordinate);
+            int zOffset = getCraterDistance(random, craterDistance, size, 2, distantCoordinate);
+            for (int xCrater = -craterSize; xCrater <= craterSize; xCrater++) {
+                for (int yCrater = -craterSize; yCrater <= craterSize; yCrater++) {
+                    for (int zCrater = -craterSize; zCrater <= craterSize; zCrater++) {
+                        if (Math.abs(xCrater + xOffset) > radius) {
+                            continue;
+                        }
+                        if (Math.abs(yCrater + yOffset) > radius) {
+                            continue;
+                        }
+                        if (Math.abs(zCrater + zOffset) > radius) {
+                            continue;
+                        }
+                        if (world.getBlock(x + xOffset + xCrater, y + yOffset + yCrater, z + zOffset + zCrater) != Blocks.stone) {
+                            continue;
+                        }
+                        double centerDistance = Math.sqrt(xCrater*xCrater + yCrater*yCrater + zCrater*zCrater);
+                        if (centerDistance > craterSize) {
+                            continue;
+                        }
+                        world.setBlock(x + xOffset + xCrater, y + yOffset + yCrater, z + zOffset + zCrater, Blocks.air);
+                    }
+                }
+            }
+        }
+
+        // Replace blocks
+        for (int xOffset = -radius; xOffset <= radius; xOffset++) {
+            for (int yOffset = -radius; yOffset <= radius; yOffset++) {
+                for (int zOffset = -radius; zOffset <= radius; zOffset++) {
+                    if (world.getBlock(x + xOffset, y + yOffset, z + zOffset) == Blocks.stone) {
                         BlockMeta pickedBlock = blockPalette[random.nextInt(blockPalette.length)];
                         world.setBlock(
                             x + xOffset,
@@ -81,6 +138,7 @@ public class Asteroid extends WorldGenerator {
                 }
             }
         }
+
         return true;
     }
 
@@ -111,5 +169,28 @@ public class Asteroid extends WorldGenerator {
         }
         float totalDistance = (float) Math.sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
         return 1 / (totalDistance + 1);
+    }
+
+    private int getCraterDistance(Random random, int craterDistance, int size, int axis, int longAxis) {
+        if (axis == longAxis) {
+            return getLongCraterDistance(random, craterDistance, size);
+        }
+        return getShortCraterDistance(random, craterDistance);
+    }
+
+    private int getShortCraterDistance(Random random, int craterDistance) {
+        int distance = random.nextInt(1 + craterDistance);
+        if (random.nextBoolean()) {
+            distance *= -1;
+        }
+        return distance;
+    }
+
+    private int getLongCraterDistance(Random random, int craterDistance, int size) {
+        int distance = craterDistance + random.nextInt( size/16 + 1);
+        if (random.nextBoolean()) {
+            distance *= -1;
+        }
+        return distance;
     }
 }
