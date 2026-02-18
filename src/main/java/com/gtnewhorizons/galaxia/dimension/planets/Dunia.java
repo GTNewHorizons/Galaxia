@@ -1,63 +1,48 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
 import net.minecraft.init.Blocks;
-import net.minecraft.world.WorldProvider;
+import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.block.BlockVariant;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
 
 public class Dunia extends BasePlanet {
-
-    @Override
-    protected DimensionBuilder createBuilder() {
-        return super.createBuilder().mass((int) (6.4 * Math.pow(10, 23)))
-            .orbitalRadius((int) (2.3 * Math.pow(10, 11)))
-            .gravity(.5)
-            .airResistance(.7);
-    }
 
     public static final PlanetEnum ENUM = PlanetEnum.DUNIA;
 
     @Override
-    protected PlanetEnum getPlanetEnum() {
+    public PlanetEnum getPlanetEnum() {
         return ENUM;
     }
 
     @Override
-    protected Class<? extends WorldProvider> getProviderClass() {
-        return WorldProviderDunia.class;
+    protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
+        return builder.mass((int) (6.4 * Math.pow(10, 23)))
+            .orbitalRadius((int) (2.3 * Math.pow(10, 11)))
+            .gravity(0.5)
+            .airResistance(0.7);
     }
 
-    public static class WorldProviderDunia extends WorldProviderSpace {
-
-        public WorldProviderDunia() {
-            WorldProviderBuilder.configure(this)
-                .sky(true)
-                .fog(0.15f, 0.1f, 0.3f)
-                .avgGround(80)
-                .biome(new BiomeGenDunia(100))
-                .name(ENUM)
-                .build();
-        }
+    @Override
+    protected void configureProvider(WorldProviderBuilder builder) {
+        builder.sky(true)
+            .fog(0.15f, 0.1f, 0.3f)
+            .avgGround(80)
+            .biome(createBiome())
+            .name(ENUM);
     }
 
-    public static class BiomeGenDunia extends BiomeGenSpace {
-
-        public BiomeGenDunia(int id) {
-            super(
-                id,
-                new BiomeGenBuilder(id).name("Dunia Surface")
-                    .height(0.1F, 0.11F)
-                    .temperature(0.4F)
-                    .rainfall(0.99F)
-                    .topBlock(GalaxiaBlockBase.get(PlanetEnum.CALX, BlockVariant.REGOLITH.suffix))
-                    .fillerBlock(Blocks.brick_block));
-        }
+    protected static BiomeGenBase createBiome() {
+        return new BiomeGenBuilder(100).name("Dunia Surface")
+            .height(0.1F, 0.11F)
+            .temperature(0.4F)
+            .rainfall(0.99F)
+            .topBlock(GalaxiaBlockBase.get(PlanetEnum.DUNIA, BlockVariant.REGOLITH.suffix))
+            .fillerBlock(Blocks.brick_block)
+            .build();
     }
 }

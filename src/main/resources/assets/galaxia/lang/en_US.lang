@@ -3,6 +3,13 @@
 ## Blocks
 # Blocks - Calx
 tile.CalxRegolith.name=Calx Regolith
+tile.CalxMagma.name=Calx Magma
+tile.CalxGabbro.name=Calx Gabbro
+tile.CalxBreccia.name=Calx Breccia
+tile.CalxBasalt.name=Calx Basalt
+tile.CalxAnorthosite.name=Calx Anorthosite
+tile.CalxAndesite.name=Calx Andesite
+tile.CalxTektite.name=Calx Tektite
 
 # Blocks - Dunia
 tile.DuniaRock.name=Dunia Ash
