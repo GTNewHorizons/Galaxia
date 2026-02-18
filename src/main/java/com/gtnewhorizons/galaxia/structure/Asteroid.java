@@ -14,12 +14,14 @@ public class Asteroid extends WorldGenerator {
     private final int maximumSize;
     private final int rarity;
     private final BlockMeta[] blockPalette;
+    private final int craterRarity;
 
-    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette) {
+    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette, int craterRarity) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
         this.rarity = rarity;
         this.blockPalette = blockPalette;
+        this.craterRarity = craterRarity;
     }
 
     @Override
@@ -89,7 +91,7 @@ public class Asteroid extends WorldGenerator {
         // Carve craters
         int craterDistance = radius - radius/4;
         int maximumCraterSize = size/8 + 1;
-        int craterCount = random.nextInt((size*size)/4 + 1);
+        int craterCount = random.nextInt((size*size)/craterRarity + 1);
         for (int crater = 0; crater < craterCount; crater++) {
             int craterSize = random.nextInt(1 + maximumCraterSize) + 1;
             int distantCoordinate = random.nextInt(3);

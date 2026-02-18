@@ -29,22 +29,32 @@ public class Vulcanoids extends BaseAsteroidBelt {
                     12,
                     16,
                     32,
-                    new BlockMeta[] { new BlockMeta(Blocks.stone, 0), new BlockMeta(Blocks.cobblestone, 0) }),
+                    new BlockMeta[] { new BlockMeta(Blocks.stone, 0), new BlockMeta(Blocks.cobblestone, 0) },
+                    16),
                 new Asteroid(
                     16,
                     20,
                     64,
-                    new BlockMeta[] { new BlockMeta(Blocks.iron_ore, 0), new BlockMeta(Blocks.iron_block, 0) }),
+                    new BlockMeta[] { new BlockMeta(Blocks.iron_ore, 0), new BlockMeta(Blocks.iron_block, 0) },
+                    2),
                 new Asteroid(
                     20,
                     32,
                     128,
-                    new BlockMeta[] { new BlockMeta(Blocks.gold_ore, 0), new BlockMeta(Blocks.gold_block, 0) }),
+                    new BlockMeta[] { new BlockMeta(Blocks.gold_ore, 0), new BlockMeta(Blocks.gold_block, 0) },
+                    4),
                 new Asteroid(
                     32,
                     128,
                     512,
-                    new BlockMeta[]{ new BlockMeta(Blocks.diamond_block, 0), new BlockMeta(Blocks.diamond_ore, 0) })
+                    new BlockMeta[]{ new BlockMeta(Blocks.diamond_block, 0), new BlockMeta(Blocks.diamond_ore, 0) },
+                    4),
+                new Asteroid(
+                    32,
+                    128,
+                    512,
+                    new BlockMeta[]{ new BlockMeta(Blocks.stonebrick, 0), new BlockMeta(Blocks.stonebrick, 1) },
+                    32)
             };
             WorldProviderBuilder.configure(this)
                 .sky(true)
