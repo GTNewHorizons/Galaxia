@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import com.gtnewhorizons.galaxia.utility.PlanetAPI;
 
 @Mixin(EntityLivingBase.class)
-public abstract class EntityLivingBaseMixin {
+public abstract class GravityAirResistanceMixin {
 
     // gravity
     @ModifyConstant(method = "moveEntityWithHeading", constant = @Constant(doubleValue = 0.08D))

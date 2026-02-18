@@ -3,12 +3,12 @@
   "package": "com.gtnewhorizons.galaxia.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "EntityLivingBaseJumpMixin",
-    "EntityLivingBaseMixin",
-    "UnifiedGravityMixin",
-    "EntityLivingBaseFallDamageMixin",
     "RenderGlobalSkyMixin",
-    "ParticleGravityMixin"
+    "GravityAirResistanceMixin",
+    "ParticleGravityMixin",
+    "UnifiedGravityMixin",
+    "FallDamageMixin",
+    "JumpMixin"
   ],
   "client": [
   ],

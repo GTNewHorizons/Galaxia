@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import com.gtnewhorizons.galaxia.utility.PlanetAPI;
 
 @Mixin(EntityLivingBase.class)
-public abstract class EntityLivingBaseJumpMixin {
+public abstract class JumpMixin {
 
     @ModifyConstant(method = "jump", constant = @Constant(doubleValue = 0.41999998688697815D))
     private double galaxia$modifyJump(double original) {
