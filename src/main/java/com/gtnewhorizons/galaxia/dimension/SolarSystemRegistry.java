@@ -35,7 +35,7 @@ public final class SolarSystemRegistry {
         PlanetEnum e = planet.getPlanetEnum();
         int id = e.getId();
         String name = e.getName()
-            .toLowerCase(); // для case-insensitive поиска
+            .toLowerCase();
 
         BODIES.add(planet);
         BY_ID.put(id, planet);
