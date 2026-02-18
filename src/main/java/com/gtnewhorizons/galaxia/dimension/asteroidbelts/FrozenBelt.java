@@ -1,13 +1,13 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
+import net.minecraft.init.Blocks;
+import net.minecraft.world.WorldProvider;
+
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.WorldProvider;
-
 import com.gtnewhorizons.galaxia.structure.Asteroid;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
