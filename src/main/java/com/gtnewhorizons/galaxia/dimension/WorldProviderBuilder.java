@@ -8,9 +8,12 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
 
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+
 public class WorldProviderBuilder {
 
     private final WorldProviderSpace provider;
+    TerrainConfiguration terrainConfig;
 
     private WorldProviderBuilder(WorldProviderSpace provider) {
         this.provider = provider;
@@ -22,6 +25,11 @@ public class WorldProviderBuilder {
 
     public WorldProviderBuilder sky(boolean sky) {
         provider.hasSky = sky;
+        return this;
+    }
+
+    public WorldProviderBuilder terrain(TerrainConfiguration config) {
+        this.terrainConfig = config;
         return this;
     }
 
@@ -157,6 +165,7 @@ public class WorldProviderBuilder {
     }
 
     public void build() {
+        provider.terrainConfig = this.terrainConfig;
         provider.applyFlags();
     }
 }

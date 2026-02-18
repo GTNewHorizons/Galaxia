@@ -13,6 +13,9 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.ChunkProviderGenerate;
 import net.minecraftforge.client.IRenderHandler;
 
+import com.gtnewhorizons.galaxia.worldgen.ChunkProviderGalaxiaPlanet;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -45,6 +48,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
     protected IRenderHandler skyRenderer;
     protected IRenderHandler cloudRenderer;
     protected IRenderHandler weatherRenderer;
+    protected TerrainConfiguration terrainConfig;
 
     protected void applyFlags() {
         this.hasNoSky = !hasSky;
@@ -57,8 +61,15 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     @Override
     public IChunkProvider createChunkGenerator() {
+        if (terrainConfig != null) {
+            return new ChunkProviderGalaxiaPlanet(worldObj, terrainConfig);
+        }
         return chunkGenSupplier != null ? chunkGenSupplier.get()
             : new ChunkProviderGenerate(worldObj, worldObj.getSeed(), false);
+    }
+
+    public TerrainConfiguration getTerrainConfig() {
+        return terrainConfig;
     }
 
     @Override

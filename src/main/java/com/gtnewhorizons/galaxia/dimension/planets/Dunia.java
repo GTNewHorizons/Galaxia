@@ -9,6 +9,8 @@ import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
 public class Dunia extends BasePlanet {
 
@@ -33,7 +35,15 @@ public class Dunia extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .biome(createBiome())
-            .name(ENUM);
+            .name(ENUM)
+            .terrain(
+                TerrainConfiguration.builder()
+                    .feature(TerrainPreset.SAND_DUNES)
+                    .scale(1)
+                    .fillerBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.ANDESITE.suffix))
+                    .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix))
+                    .endFeature()
+                    .build());
     }
 
     protected static BiomeGenBase createBiome() {
