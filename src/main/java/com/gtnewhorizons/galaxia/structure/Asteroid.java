@@ -114,6 +114,7 @@ public class Asteroid extends WorldGenerator {
                             continue;
                         }
                         double centerDistance = Math.sqrt(xCrater*xCrater + yCrater*yCrater + zCrater*zCrater);
+                        centerDistance += random.nextInt(2);
                         if (centerDistance > craterSize) {
                             continue;
                         }
