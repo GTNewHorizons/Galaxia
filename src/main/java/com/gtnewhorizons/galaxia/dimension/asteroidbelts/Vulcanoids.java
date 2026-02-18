@@ -12,7 +12,7 @@ public class Vulcanoids extends BaseAsteroidBelt {
     public static final PlanetEnum ENUM = PlanetEnum.VULCANOIDS;
 
     @Override
-    protected PlanetEnum getPlanetEnum() {
+    public PlanetEnum getPlanetEnum() {
         return ENUM;
     }
 
