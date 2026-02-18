@@ -15,9 +15,9 @@ import cpw.mods.fml.common.FMLLog;
 
 public final class SolarSystemRegistry {
 
-    private static final List<DimensionDef> DIMENSIONS = new ArrayList<>();
-    private static final Map<String, DimensionDef> BY_NAME = new HashMap<>();
-    private static final Map<Integer, DimensionDef> BY_ID = new HashMap<>();
+    private static final List<BasePlanet> BODIES = new ArrayList<>();
+    private static final Map<Integer, BasePlanet> BY_ID = new HashMap<>();
+    private static final Map<String, BasePlanet> BY_NAME = new HashMap<>();
 
     private static boolean registered = false;
 
@@ -28,37 +28,39 @@ public final class SolarSystemRegistry {
         registerPlanet(new Calx());
         registerPlanet(new Dunia());
 
-        FMLLog.info("[Galaxia] registered %d celestial bodies", DIMENSIONS.size());
+        FMLLog.info("[Galaxia] Registered %d celestial bodies", BODIES.size());
     }
 
     private static void registerPlanet(BasePlanet planet) {
-        DimensionDef def = planet.buildDimension();
+        PlanetEnum e = planet.getPlanetEnum();
+        int id = e.getId();
+        String name = e.getName()
+            .toLowerCase(); // для case-insensitive поиска
 
-        int dimId = def.id;
+        BODIES.add(planet);
+        BY_ID.put(id, planet);
+        BY_NAME.put(name, planet);
 
-        DimensionManager.registerProviderType(dimId, def.provider, true);
-        if (!DimensionManager.isDimensionRegistered(dimId)) {
-            DimensionManager.registerDimension(dimId, dimId);
-            FMLLog.info("[Galaxia] Registered dim %s (ID %d)", def.name, dimId);
+        if (!DimensionManager.isDimensionRegistered(id)) {
+            DimensionManager.registerDimension(id, id);
+            FMLLog.info("[Galaxia] Registered dimension %s (ID %d)", e.getName(), id);
         } else {
-            FMLLog.warning("[Galaxia] Dim ID %d already taken!", dimId);
+            FMLLog.warning("[Galaxia] Dimension ID %d already taken!", id);
         }
-
-        BY_ID.put(dimId, def);
-        BY_NAME.put(def.name.toLowerCase(), def);
-
-        DIMENSIONS.add(def);
-    }
-
-    public static DimensionDef getByName(String name) {
-        return BY_NAME.get(name.toLowerCase());
     }
 
     public static DimensionDef getById(int id) {
-        return BY_ID.get(id);
+        BasePlanet planet = BY_ID.get(id);
+        return planet != null ? planet.getDef() : null;
     }
 
-    public static List<DimensionDef> getAll() {
-        return new ArrayList<>(DIMENSIONS);
+    public static DimensionDef getByName(String name) {
+        if (name == null) return null;
+        BasePlanet planet = BY_NAME.get(name.toLowerCase());
+        return planet != null ? planet.getDef() : null;
+    }
+
+    public static List<BasePlanet> getAllPlanets() {
+        return new ArrayList<>(BODIES);
     }
 }

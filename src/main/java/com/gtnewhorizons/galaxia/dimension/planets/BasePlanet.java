@@ -1,20 +1,12 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
-import net.minecraft.world.WorldProvider;
-
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.dimension.PlanetEnum;
+import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.dimension.WorldProviderGalaxia;
 
 public abstract class BasePlanet {
-
-    public DimensionDef buildDimension() {
-        return DEF;
-    }
-
-    public DimensionDef getDef() {
-        return DEF;
-    }
 
     protected final DimensionDef DEF;
 
@@ -23,11 +15,26 @@ public abstract class BasePlanet {
     }
 
     protected DimensionBuilder createBuilder() {
-        return new DimensionBuilder().enumValue(getPlanetEnum())
-            .provider(getProviderClass());
+        PlanetEnum planet = getPlanetEnum();
+
+        WorldProviderGalaxia.registerConfigurator(planet.getId(), this::configureProvider);
+
+        return customizeDimension(
+            new DimensionBuilder().enumValue(planet)
+                .provider(WorldProviderGalaxia.class));
     }
 
-    protected abstract PlanetEnum getPlanetEnum();
+    protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
+        return builder;
+    }
 
-    protected abstract Class<? extends WorldProvider> getProviderClass();
+    protected void configureProvider(WorldProviderBuilder builder) {
+        builder.sky(true);
+    }
+
+    public DimensionDef getDef() {
+        return DEF;
+    }
+
+    public abstract PlanetEnum getPlanetEnum();
 }

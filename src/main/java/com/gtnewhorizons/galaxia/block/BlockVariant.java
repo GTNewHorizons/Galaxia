@@ -34,5 +34,5 @@ public class BlockVariant {
     public static final BlockVariant BRECCIA = stoneLike("breccia", 2F);
     public static final BlockVariant GABBRO = stoneLike("gabbro", 2F);
     public static final BlockVariant MAGMA = stoneLike("magma", 8F);
-    public static final BlockVariant TEKTITE = stoneLike("regolith", 10F);
+    public static final BlockVariant TEKTITE = stoneLike("tektite", 10F);
 }
