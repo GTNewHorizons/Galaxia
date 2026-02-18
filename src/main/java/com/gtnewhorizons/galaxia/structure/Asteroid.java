@@ -3,8 +3,9 @@ package com.gtnewhorizons.galaxia.structure;
 import java.util.Random;
 
 import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
@@ -22,173 +23,171 @@ public class Asteroid extends WorldGenerator {
         this.maximumSize = maximumSize;
         this.rarity = rarity;
         this.blockPalette = blockPalette;
-        this.craterRarity = craterRarity;
+        this.craterRarity = Math.max(1, craterRarity);
     }
 
     @Override
-    public boolean generate(World world, Random random, int x, int y, int z) {
-        if (random.nextInt(rarity) > 0) {
-            return false;
-        }
+    public boolean generate(World world, Random random, int baseX, int baseY, int baseZ) {
+        long startTotal = System.nanoTime();
 
-        // Calculate size
-        int size = minimumSize;
-        int variation = maximumSize - minimumSize;
-        if (variation > 0) {
-            size += random.nextInt(variation);
-        }
+        if (random.nextInt(rarity) > 0) return false;
 
-        // Generate interpolation points
-        int interpolationComplexity = size / 2 + 1;
-        interpolationComplexity *= Math.max(interpolationComplexity/10, 1);
-        interpolationComplexity *= Math.max(interpolationComplexity/20, 1);
-        int interpolationRange = size / 4 + 1;
-        float[] interpolationValues = new float[interpolationComplexity];
-        for (int value = 0; value < interpolationValues.length; value++) {
-            interpolationValues[value] = random.nextFloat() / 4 + 0.75F;
-        }
-        int[][] interpolationPositions = new int[interpolationComplexity][];
-        interpolationPositions[0] = new int[] { x, y, z };
-        for (int index = 1; index < interpolationPositions.length; index++) {
-            int xOffset = random.nextInt(interpolationRange) + 1;
-            if (random.nextBoolean()) {
-                xOffset *= -1;
-            }
-            int yOffset = random.nextInt(interpolationRange) + 1;
-            if (random.nextBoolean()) {
-                yOffset *= -1;
-            }
-            int zOffset = random.nextInt(interpolationRange) + 1;
-            if (random.nextBoolean()) {
-                zOffset *= -1;
-            }
-            interpolationPositions[index] = new int[] { x + xOffset, y + yOffset, z + zOffset };
-        }
-
-        // Generate basic shape
+        int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize) : 0);
         int radius = size / 2;
-        for (int xOffset = -radius; xOffset <= radius; xOffset++) {
-            for (int yOffset = -radius; yOffset <= radius; yOffset++) {
-                for (int zOffset = -radius; zOffset <= radius; zOffset++) {
-                    float fullness = calculateFullness(
-                        interpolationPositions,
-                        interpolationValues,
-                        x + xOffset,
-                        y + yOffset,
-                        z + zOffset);
-                    if (fullness > 1) {
-                        BlockMeta pickedBlock = blockPalette[random.nextInt(blockPalette.length)];
-                        world.setBlock(
-                            x + xOffset,
-                            y + yOffset,
-                            z + zOffset,
-                            pickedBlock.block(),
-                            pickedBlock.meta(),
-                            2);
+        int diameter = size + 4;
+        int offset = diameter / 2;
+
+        System.out.printf(
+            "[Asteroid] Generating at (%d,%d,%d) | size=%d | radius=%d | diameter=%d%n",
+            baseX,
+            baseY,
+            baseZ,
+            size,
+            radius,
+            diameter);
+
+        long startPrep = System.nanoTime();
+
+        int interpCount = size / 2 + 1;
+        interpCount *= Math.max(interpCount / 10, 1);
+        interpCount *= Math.max(interpCount / 20, 1);
+        int interpRange = size / 4 + 1;
+
+        float[] interpValues = new float[interpCount];
+        for (int i = 0; i < interpValues.length; i++) {
+            interpValues[i] = random.nextFloat() / 4 + 0.75F;
+        }
+
+        int[][] interpPos = new int[interpCount][];
+        interpPos[0] = new int[] { baseX, baseY, baseZ };
+
+        for (int i = 1; i < interpPos.length; i++) {
+            int ox = random.nextInt(interpRange) + 1;
+            if (random.nextBoolean()) ox = -ox;
+            int oy = random.nextInt(interpRange) + 1;
+            if (random.nextBoolean()) oy = -oy;
+            int oz = random.nextInt(interpRange) + 1;
+            if (random.nextBoolean()) oz = -oz;
+            interpPos[i] = new int[] { baseX + ox, baseY + oy, baseZ + oz };
+        }
+
+        long prepMs = (System.nanoTime() - startPrep) / 1_000_000;
+        long startMem = System.nanoTime();
+
+        byte[][][] data = new byte[diameter][diameter][diameter];
+
+        for (int lx = 0; lx < diameter; lx++) {
+            for (int ly = 0; ly < diameter; ly++) {
+                for (int lz = 0; lz < diameter; lz++) {
+                    int wx = baseX + lx - offset;
+                    int wy = baseY + ly - offset;
+                    int wz = baseZ + lz - offset;
+
+                    if (calculateFullness(interpPos, interpValues, wx, wy, wz) > 1) {
+                        data[lx][ly][lz] = (byte) (1 + random.nextInt(blockPalette.length));
                     }
                 }
             }
         }
 
-        // Carve craters
-        int craterDistance = radius - radius/4;
-        int maximumCraterSize = size/8 + 1;
-        int craterCount = random.nextInt((size*size)/craterRarity + 1);
-        for (int crater = 0; crater < craterCount; crater++) {
-            int craterSize = random.nextInt(1 + maximumCraterSize) + 1;
-            int distantCoordinate = random.nextInt(3);
-            int xOffset = getCraterDistance(random, craterDistance, size, 0, distantCoordinate);
-            int yOffset = getCraterDistance(random, craterDistance, size, 1, distantCoordinate);
-            int zOffset = getCraterDistance(random, craterDistance, size, 2, distantCoordinate);
-            for (int xCrater = -craterSize; xCrater <= craterSize; xCrater++) {
-                for (int yCrater = -craterSize; yCrater <= craterSize; yCrater++) {
-                    for (int zCrater = -craterSize; zCrater <= craterSize; zCrater++) {
-                        if (Math.abs(xCrater + xOffset) > radius) {
-                            continue;
-                        }
-                        if (Math.abs(yCrater + yOffset) > radius) {
-                            continue;
-                        }
-                        if (Math.abs(zCrater + zOffset) > radius) {
-                            continue;
-                        }
-                        if (isNotAsteroidBlock(world, x + xOffset + xCrater, y + yOffset + yCrater, z + zOffset + zCrater)) {
-                            continue;
-                        }
-                        double centerDistance = Math.sqrt(xCrater*xCrater + yCrater*yCrater + zCrater*zCrater);
-                        centerDistance += random.nextInt(2);
-                        if (centerDistance > craterSize) {
-                            continue;
-                        }
-                        world.setBlock(x + xOffset + xCrater, y + yOffset + yCrater, z + zOffset + zCrater, Blocks.air);
+        int craterCount = Math.min(8, 2 + size / (craterRarity * 4));
+        for (int i = 0; i < craterCount; i++) {
+            carveCraterInMemory(data, random, diameter, offset, craterRarity);
+        }
+
+        long memMs = (System.nanoTime() - startMem) / 1_000_000;
+
+        long startPlace = System.nanoTime();
+        int blocksPlaced = 0;
+
+        for (int lx = 0; lx < diameter; lx++) {
+            int wx = baseX + lx - offset;
+            for (int ly = 0; ly < diameter; ly++) {
+                int wy = baseY + ly - offset;
+                for (int lz = 0; lz < diameter; lz++) {
+                    byte val = data[lx][ly][lz];
+                    if (val > 0) {
+                        BlockMeta bm = blockPalette[val - 1];
+                        setBlockFast(world, wx, wy, baseZ + lz - offset, bm.block(), bm.meta());
+                        blocksPlaced++;
                     }
                 }
             }
         }
 
+        long placeMs = (System.nanoTime() - startPlace) / 1_000_000;
+        long totalMs = (System.nanoTime() - startTotal) / 1_000_000;
+
+        System.out
+            .printf("[Asteroid] Prep: %d ms | Memory gen + craters: %d ms | Craters: %d%n", prepMs, memMs, craterCount);
+        System.out.printf("[Asteroid] EBS Placement: %d ms | blocks placed: %d%n", placeMs, blocksPlaced);
+        System.out.printf("[Asteroid] TOTAL: %d ms | coord (%d,%d,%d)%n%n", totalMs, baseX, baseY, baseZ);
+
         return true;
     }
 
-    private boolean isNotAsteroidBlock(World world, int x, int y, int z) {
-        Block block = world.getBlock(x, y, z);
-        int blockMeta = world.getBlockMetadata(x, y, z);
-        for (BlockMeta meta : blockPalette) {
-            if (block == meta.block() && blockMeta == meta.meta()) {
-                return false;
+    private void setBlockFast(World world, int x, int y, int z, Block block, int meta) {
+        if (y < 0 || y > 255) return;
+
+        Chunk chunk = world.getChunkFromChunkCoords(x >> 4, z >> 4);
+        ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
+        int sectionY = y >> 4;
+
+        ExtendedBlockStorage ebs = storage[sectionY];
+        if (ebs == null) {
+            ebs = storage[sectionY] = new ExtendedBlockStorage(sectionY << 4, !world.provider.hasNoSky);
+        }
+
+        int lx = x & 15;
+        int ly = y & 15;
+        int lz = z & 15;
+
+        ebs.func_150818_a(lx, ly, lz, block);
+        ebs.setExtBlockMetadata(lx, ly, lz, meta);
+        chunk.isModified = true;
+    }
+
+    private void carveCraterInMemory(byte[][][] data, Random rand, int diameter, int offset, int craterRarity) {
+        int cx = rand.nextInt(diameter);
+        int cy = rand.nextInt(diameter);
+        int cz = rand.nextInt(diameter);
+
+        double r = 4 + rand.nextDouble() * (diameter * 0.18 / craterRarity);
+        double rSq = r * r;
+
+        for (int x = 0; x < diameter; x++) {
+            for (int y = 0; y < diameter; y++) {
+                for (int z = 0; z < diameter; z++) {
+                    if (data[x][y][z] == 0) continue;
+                    double dx = x - cx;
+                    double dy = y - cy;
+                    double dz = z - cz;
+                    double distSq = dx * dx + dy * dy + dz * dz;
+                    if (distSq < rSq * (1.0 - rand.nextDouble() * 0.3)) {
+                        data[x][y][z] = 0;
+                    }
+                }
             }
         }
-        return true;
     }
 
-    private float calculateFullness(int[][] interpolationPositions, float[] interpolationValues, int x, int y, int z) {
+    private float calculateFullness(int[][] positions, float[] values, int x, int y, int z) {
         float fullness = 0;
-        for (int interpolation = 0; interpolation < interpolationValues.length; interpolation++) {
-            fullness += interpolationValues[interpolation]
-                * calculateInterpolationSignificance(interpolationPositions[interpolation], x, y, z);
-            if (fullness > 1) {
-                return fullness;
-            }
+        for (int i = 0; i < values.length; i++) {
+            fullness += values[i] * calculateInterpolationSignificance(positions[i], x, y, z);
+            if (fullness > 1) return fullness;
         }
         return fullness;
     }
 
-    private float calculateInterpolationSignificance(int[] interpolationLocation, int x, int y, int z) {
-        int xDistance = Math.abs(interpolationLocation[0] - x);
-        if (xDistance > 16) {
-            return 0;
-        }
-        int yDistance = Math.abs(interpolationLocation[1] - y);
-        if (yDistance > 16) {
-            return 0;
-        }
-        int zDistance = Math.abs(interpolationLocation[2] - z);
-        if (zDistance > 16) {
-            return 0;
-        }
-        float totalDistance = (float) Math.sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
-        return 1 / (totalDistance + 1);
-    }
-
-    private int getCraterDistance(Random random, int craterDistance, int size, int axis, int longAxis) {
-        if (axis == longAxis) {
-            return getLongCraterDistance(random, craterDistance, size);
-        }
-        return getShortCraterDistance(random, craterDistance);
-    }
-
-    private int getShortCraterDistance(Random random, int craterDistance) {
-        int distance = random.nextInt(1 + craterDistance);
-        if (random.nextBoolean()) {
-            distance *= -1;
-        }
-        return distance;
-    }
-
-    private int getLongCraterDistance(Random random, int craterDistance, int size) {
-        int distance = craterDistance + random.nextInt( size/16 + 1);
-        if (random.nextBoolean()) {
-            distance *= -1;
-        }
-        return distance;
+    private float calculateInterpolationSignificance(int[] loc, int x, int y, int z) {
+        int dx = Math.abs(loc[0] - x);
+        if (dx > 16) return 0;
+        int dy = Math.abs(loc[1] - y);
+        if (dy > 16) return 0;
+        int dz = Math.abs(loc[2] - z);
+        if (dz > 16) return 0;
+        float dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        return 1 / (dist + 1);
     }
 }

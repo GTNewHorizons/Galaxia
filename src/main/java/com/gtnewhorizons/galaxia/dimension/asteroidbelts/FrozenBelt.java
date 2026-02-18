@@ -45,17 +45,16 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     4),
                 new Asteroid(
                     32,
-                    128,
+                    64,
                     512,
-                    new BlockMeta[]{ new BlockMeta(Blocks.diamond_block, 0), new BlockMeta(Blocks.diamond_ore, 0) },
+                    new BlockMeta[] { new BlockMeta(Blocks.diamond_block, 0), new BlockMeta(Blocks.diamond_ore, 0) },
                     4),
                 new Asteroid(
                     32,
-                    128,
+                    64,
                     512,
-                    new BlockMeta[]{ new BlockMeta(Blocks.stonebrick, 0), new BlockMeta(Blocks.stonebrick, 1) },
-                    32)
-            };
+                    new BlockMeta[] { new BlockMeta(Blocks.stonebrick, 0), new BlockMeta(Blocks.stonebrick, 1) },
+                    32) };
             WorldProviderBuilder.configure(this)
                 .sky(true)
                 .skyColor(0, 0.1, 0.3)

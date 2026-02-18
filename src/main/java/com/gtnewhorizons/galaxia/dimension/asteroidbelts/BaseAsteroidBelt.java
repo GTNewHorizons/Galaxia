@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
-import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 
 public abstract class BaseAsteroidBelt extends BasePlanet {
 
