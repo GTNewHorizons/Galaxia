@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 
@@ -14,19 +15,19 @@ public final class TerrainFeature {
     private final double size;
     private final int minHeight;
     private final int variation;
-    private final Block topBlock;
-    private final Block fillerBlock;
+    private final BlockMeta topBlock;
+    private final BlockMeta fillerBlock;
     private final int depth;
     private final Map<String, Object> customParams;
 
-    TerrainFeature(TerrainPreset preset, double frequency, double size, int minHeight, int variation, Block topBlock,
-        Block fillerBlock, int depth, Map<String, Object> customParams) {
+    TerrainFeature(TerrainPreset preset, double frequency, double size, int minHeight, int variation, BlockMeta topBlock,
+                   BlockMeta fillerBlock, int depth, Map<String, Object> customParams) {
         this.preset = preset;
         this.frequency = frequency;
         this.size = size;
         this.minHeight = minHeight;
         this.variation = variation;
-        this.topBlock = topBlock != null ? topBlock : Blocks.grass; // fallback
+        this.topBlock = topBlock != null ? topBlock : new BlockMeta(Blocks.grass, 0); // fallback
         this.fillerBlock = fillerBlock;
         this.depth = depth;
         this.customParams = Collections.unmodifiableMap(new HashMap<>(customParams));
@@ -52,11 +53,11 @@ public final class TerrainFeature {
         return variation;
     }
 
-    public Block getTopBlock() {
+    public BlockMeta getTopBlock() {
         return topBlock;
     }
 
-    public Block getFillerBlock() {
+    public BlockMeta getFillerBlock() {
         return fillerBlock;
     }
 

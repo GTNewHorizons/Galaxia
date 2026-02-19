@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.dimension;
 import java.util.Collections;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
@@ -12,6 +13,7 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 public class BiomeGenBuilder {
 
     private final int id;
+    private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
 
     String name = "unset";
     Height height = new Height(0, 0);
@@ -19,8 +21,8 @@ public class BiomeGenBuilder {
     float rainfall = 0.0F;
     boolean generateBedrock = true;
 
-    Block topBlock = Blocks.stone;
-    Block fillerBlock = Blocks.stone;
+    BlockMeta topBlock = stone;
+    BlockMeta fillerBlock = stone;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -53,11 +55,19 @@ public class BiomeGenBuilder {
     }
 
     public BiomeGenBuilder topBlock(Block block) {
+        return topBlock(new BlockMeta(block, 0));
+    }
+
+    public BiomeGenBuilder topBlock(BlockMeta block) {
         this.topBlock = block;
         return this;
     }
 
     public BiomeGenBuilder fillerBlock(Block block) {
+        return fillerBlock(new BlockMeta(block, 0));
+    }
+
+    public BiomeGenBuilder fillerBlock(BlockMeta block) {
         this.fillerBlock = block;
         return this;
     }

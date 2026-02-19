@@ -12,8 +12,9 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setHeight(b.height);
         this.setTemperatureRainfall(b.temperature, b.rainfall);
 
-        this.topBlock = b.topBlock;
-        this.fillerBlock = b.fillerBlock;
+        // TODO: Expand space biomes to also store block meta
+        this.topBlock = b.topBlock.block();
+        this.fillerBlock = b.fillerBlock.block();
 
         this.spawnableCaveCreatureList = b.mobsCave;
         this.spawnableCreatureList = b.mobsGeneral;

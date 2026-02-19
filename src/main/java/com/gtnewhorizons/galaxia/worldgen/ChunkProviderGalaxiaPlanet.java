@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Random;
 
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -23,6 +24,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final Random rand;
     private final NoiseGeneratorPerlin baseNoise;
     private final boolean showDebug = false;
+    private final BlockMeta bedrock = new BlockMeta(Blocks.bedrock, 0);
+    private final BlockMeta grass = new BlockMeta(Blocks.grass, 0);
+    private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
 
     public ChunkProviderGalaxiaPlanet(World world, TerrainConfiguration terrainConfig) {
         this.worldObj = world;
@@ -52,19 +56,19 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             heightMap[i] = Math.max(1, Math.min(256, heightMap[i]));
         }
 
-        Block topBlock = Blocks.grass;
-        Block fillerBlock = Blocks.stone;
+        BlockMeta topBlock = grass;
+        BlockMeta fillerBlock = stone;
         int surfaceDepth = 1;
 
-        for (TerrainFeature f : terrain.getAllFeatures()) {
-            if (f.getTopBlock() != null) {
-                topBlock = f.getTopBlock();
+        for (TerrainFeature terrainFeature : terrain.getAllFeatures()) {
+            if (terrainFeature.getTopBlock() != null) {
+                topBlock = terrainFeature.getTopBlock();
             }
-            if (f.getFillerBlock() != null) {
-                fillerBlock = f.getFillerBlock();
+            if (terrainFeature.getFillerBlock() != null) {
+                fillerBlock = terrainFeature.getFillerBlock();
             }
-            if (f.getDepth() > 0) {
-                surfaceDepth = f.getDepth();
+            if (terrainFeature.getDepth() > 0) {
+                surfaceDepth = terrainFeature.getDepth();
             }
         }
 
@@ -75,18 +79,20 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 if (localBiome instanceof BiomeGenSpace) {
                     generateBedrock = ((BiomeGenSpace)localBiome).generateBedrock();
                 }
-                int h = Math.max(1, heightMap[localX + (localZ << 4)]);
-                for (int y = 0; y < h; y++) {
+                int height = Math.max(1, heightMap[localX + (localZ << 4)]);
+                for (int y = 0; y < height; y++) {
                     int sy = y >> 4;
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
-                    Block block = (y >= h - surfaceDepth) ? topBlock : fillerBlock;
+                    BlockMeta blockMeta = (y >= height - surfaceDepth) ? topBlock : fillerBlock;
                     if (generateBedrock && y == 0) {
-                        block = Blocks.bedrock;
+                        blockMeta = bedrock;
                     }
-                    storage[sy].func_150818_a(localX, y & 15, localZ, block);
-                    storage[sy].setExtBlockMetadata(localX, y & 15, localZ, 0);
+                    if (blockMeta.block() != null) {
+                        storage[sy].func_150818_a(localX, y & 15, localZ, blockMeta.block());
+                        storage[sy].setExtBlockMetadata(localX, y & 15, localZ, blockMeta.meta());
+                    }
                 }
             }
         }
