@@ -54,7 +54,8 @@ public class Dunia extends BasePlanet {
                     .fillerBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.ANDESITE.suffix))
                     .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix))
                     .endFeature()
-                    .build());
+                    .build())
+            .build();
     }
 
     protected static BiomeGenBase createBiome(String name, Block block) {
