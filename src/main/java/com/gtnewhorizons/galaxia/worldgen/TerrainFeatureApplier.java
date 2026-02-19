@@ -58,8 +58,8 @@ public final class TerrainFeatureApplier {
     private static void applySandDunes(int[] hm, double size, Random r) {
         for (int i = 0; i < 256; i++) {
             int x = i & 15, z = i >> 4;
-            double wave = Math.sin(x * 0.7 + z * 0.4) * 7 * size;
-            hm[i] += (int) (wave + r.nextGaussian() * 2 * size);
+            double wave = Math.sin((x * 0.7 + z * 0.4) / (size * 4)) * size;
+            hm[i] += (int) (wave * size + r.nextDouble());
         }
     }
 

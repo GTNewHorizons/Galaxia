@@ -39,7 +39,7 @@ public class Dunia extends BasePlanet {
             .terrain(
                 TerrainConfiguration.builder()
                     .feature(TerrainPreset.SAND_DUNES)
-                    .scale(1)
+                    .scale(4)
                     .fillerBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.ANDESITE.suffix))
                     .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix))
                     .endFeature()
