@@ -17,6 +17,7 @@ public class BiomeGenBuilder {
     Height height = new Height(0, 0);
     float temperature = 0.4F;
     float rainfall = 0.0F;
+    boolean generateBedrock = true;
 
     Block topBlock = Blocks.stone;
     Block fillerBlock = Blocks.stone;
@@ -58,6 +59,11 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder fillerBlock(Block block) {
         this.fillerBlock = block;
+        return this;
+    }
+
+    public BiomeGenBuilder generateBedrock(boolean generateBedrock) {
+        this.generateBedrock = generateBedrock;
         return this;
     }
 

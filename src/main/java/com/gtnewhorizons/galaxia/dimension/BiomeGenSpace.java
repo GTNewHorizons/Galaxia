@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.dimension;
 import net.minecraft.world.biome.BiomeGenBase;
 
 public class BiomeGenSpace extends BiomeGenBase {
+    private final boolean generateBedrock;
 
     public BiomeGenSpace(int id, BiomeGenBuilder b) {
         super(id);
@@ -19,5 +20,11 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableMonsterList = b.mobsMonster;
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
+
+        this.generateBedrock = b.generateBedrock;
+    }
+
+    public boolean generateBedrock() {
+        return generateBedrock;
     }
 }

@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -67,17 +68,25 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
         }
 
-        for (int lx = 0; lx < 16; lx++) {
-            for (int lz = 0; lz < 16; lz++) {
-                int h = Math.max(1, heightMap[lx + (lz << 4)]);
+        for (int localX = 0; localX < 16; localX++) {
+            for (int localZ = 0; localZ < 16; localZ++) {
+                BiomeGenBase localBiome = worldObj.getWorldChunkManager().getBiomeGenAt(chunkX * 16 + localX, chunkZ * 16 + localZ);
+                boolean generateBedrock = false;
+                if (localBiome instanceof BiomeGenSpace) {
+                    generateBedrock = ((BiomeGenSpace)localBiome).generateBedrock();
+                }
+                int h = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < h; y++) {
                     int sy = y >> 4;
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
                     Block block = (y >= h - surfaceDepth) ? topBlock : fillerBlock;
-                    storage[sy].func_150818_a(lx, y & 15, lz, block);
-                    storage[sy].setExtBlockMetadata(lx, y & 15, lz, 0);
+                    if (generateBedrock && y == 0) {
+                        block = Blocks.bedrock;
+                    }
+                    storage[sy].func_150818_a(localX, y & 15, localZ, block);
+                    storage[sy].setExtBlockMetadata(localX, y & 15, localZ, 0);
                 }
             }
         }

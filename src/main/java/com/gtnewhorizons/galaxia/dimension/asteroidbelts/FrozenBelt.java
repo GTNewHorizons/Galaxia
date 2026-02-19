@@ -78,7 +78,8 @@ public class FrozenBelt extends BaseAsteroidBelt {
                 id,
                 new BiomeGenBuilder(id).name("Frozen Belt")
                     .temperature(1.0F)
-                    .rainfall(0));
+                    .rainfall(0)
+                    .generateBedrock(false));
         }
     }
 }
