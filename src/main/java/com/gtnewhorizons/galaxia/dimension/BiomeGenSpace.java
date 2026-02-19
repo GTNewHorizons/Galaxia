@@ -4,6 +4,8 @@ import net.minecraft.world.biome.BiomeGenBase;
 
 public class BiomeGenSpace extends BiomeGenBase {
     private final boolean generateBedrock;
+    private final int topBlockMeta;
+    private final int fillerBlockMeta;
 
     public BiomeGenSpace(int id, BiomeGenBuilder b) {
         super(id);
@@ -12,9 +14,10 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setHeight(b.height);
         this.setTemperatureRainfall(b.temperature, b.rainfall);
 
-        // TODO: Expand space biomes to also store block meta
         this.topBlock = b.topBlock.block();
         this.fillerBlock = b.fillerBlock.block();
+        this.topBlockMeta = b.topBlock.meta();
+        this.fillerBlockMeta = b.fillerBlock.meta();
 
         this.spawnableCaveCreatureList = b.mobsCave;
         this.spawnableCreatureList = b.mobsGeneral;
@@ -27,5 +30,13 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public boolean generateBedrock() {
         return generateBedrock;
+    }
+
+    public int getTopBlockMeta() {
+        return topBlockMeta;
+    }
+
+    public int getFillerBlockMeta() {
+        return fillerBlockMeta;
     }
 }

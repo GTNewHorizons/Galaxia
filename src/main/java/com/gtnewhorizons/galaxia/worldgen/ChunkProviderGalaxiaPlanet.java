@@ -79,7 +79,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 if (localBiome instanceof BiomeGenSpace) {
                     BiomeGenSpace spaceBiome = ((BiomeGenSpace)localBiome);
                     generateBedrock = spaceBiome.generateBedrock();
-                    topBlock = new BlockMeta(spaceBiome.topBlock, 0);
+                    topBlock = new BlockMeta(spaceBiome.topBlock, spaceBiome.getTopBlockMeta());
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < height; y++) {

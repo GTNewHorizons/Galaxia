@@ -33,7 +33,7 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      */
     public BiomeGenBase getBiomeGenAt(int x, int z) {
         int biomeCount = biomeGenerator.size();
-        double noise = biomeNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.1, 0.1, 0)[0];
+        double noise = biomeNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.025, 0.025, 0)[0];
         noise += 6;
         noise *= biomeCount;
         noise /= 12;
