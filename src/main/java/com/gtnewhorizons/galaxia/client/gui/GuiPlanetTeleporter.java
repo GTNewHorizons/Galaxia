@@ -7,8 +7,8 @@ import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
 
-import com.gtnewhorizons.galaxia.Galaxia;
-import com.gtnewhorizons.galaxia.TeleportRequestPacket;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.utility.Colors;
 

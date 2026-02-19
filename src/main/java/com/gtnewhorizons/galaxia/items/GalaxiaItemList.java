@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.items;
 
-import static com.gtnewhorizons.galaxia.Galaxia.UNLOCALIZED_PREFIX;
+import static com.gtnewhorizons.galaxia.core.Galaxia.UNLOCALIZED_PREFIX;
 import static com.gtnewhorizons.galaxia.items.GalaxiaItems.DEFAULT_ITEM_FACTORY;
 
 import java.util.function.Consumer;
@@ -10,7 +10,7 @@ import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.Galaxia;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 

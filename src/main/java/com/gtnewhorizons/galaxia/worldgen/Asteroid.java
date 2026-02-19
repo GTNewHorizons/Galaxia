@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.structure;
+package com.gtnewhorizons.galaxia.worldgen;
 
 import java.util.Random;
 

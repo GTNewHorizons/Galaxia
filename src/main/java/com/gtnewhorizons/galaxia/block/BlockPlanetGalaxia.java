@@ -11,7 +11,7 @@ import net.minecraft.util.IIcon;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.Galaxia;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 
 public class BlockPlanetGalaxia extends BlockFalling {
 
