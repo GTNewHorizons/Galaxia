@@ -63,12 +63,15 @@ public final class TerrainFeatureApplier {
     }
 
     private static void applySandDunes(int[] hm, double size, Random r, int chunkX, int chunkZ) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (size * 4));
         chunkX *= 16;
         chunkZ *= 16;
-        for (int i = 0; i < 256; i++) {
-            int x = i & 15, z = i >> 4;
-            double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (size * 4)) * size;
-            hm[i] += (int) (wave * size + r.nextDouble());
+        for (int x = 15; x >= 0; x--) {
+            for (int z = 15; z >= 0; z--) {
+                double localNoise = (noise[x + z * 16] + 5) / 10;
+                double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (size * 4)) * size * localNoise;
+                hm[x + z * 16] += (int) (wave * size);
+            }
         }
     }
 
