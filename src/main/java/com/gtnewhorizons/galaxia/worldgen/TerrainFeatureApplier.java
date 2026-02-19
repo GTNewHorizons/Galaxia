@@ -15,7 +15,7 @@ public final class TerrainFeatureApplier {
 
         switch (preset) {
             case SAND_DUNES:
-                applySandDunes(heightMap, size, localRand);
+                applySandDunes(heightMap, size, localRand, chunkX, chunkZ);
                 break;
             case IMPACT_CRATERS:
                 applyImpactCraters(heightMap, size, depth, localRand);
@@ -55,10 +55,12 @@ public final class TerrainFeatureApplier {
         }
     }
 
-    private static void applySandDunes(int[] hm, double size, Random r) {
+    private static void applySandDunes(int[] hm, double size, Random r, int chunkX, int chunkZ) {
+        chunkX *= 16;
+        chunkZ *= 16;
         for (int i = 0; i < 256; i++) {
             int x = i & 15, z = i >> 4;
-            double wave = Math.sin((x * 0.7 + z * 0.4) / (size * 4)) * size;
+            double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (size * 4)) * size;
             hm[i] += (int) (wave * size + r.nextDouble());
         }
     }
