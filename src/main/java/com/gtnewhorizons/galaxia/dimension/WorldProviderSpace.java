@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.function.Supplier;
 
 import net.minecraft.entity.Entity;
@@ -8,7 +11,6 @@ import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.WorldChunkManagerHell;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.ChunkProviderGenerate;
 import net.minecraftforge.client.IRenderHandler;
@@ -21,6 +23,8 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 public abstract class WorldProviderSpace extends WorldProvider {
 
+    private final List<BiomeGenBase> biomes = new ArrayList<>();
+
     protected boolean hasSky = true;
     protected float cloudHeight = 8.0F;
     protected boolean isSurface = true;
@@ -29,7 +33,6 @@ public abstract class WorldProviderSpace extends WorldProvider {
     protected String name;
 
     protected Supplier<IChunkProvider> chunkGenSupplier;
-    protected BiomeGenBase biome;
     protected Vec3 skyColor;
     protected float[] sunriseSunsetColors;
     protected boolean skyColored = true;
@@ -54,9 +57,14 @@ public abstract class WorldProviderSpace extends WorldProvider {
         this.hasNoSky = !hasSky;
     }
 
+    public WorldProviderSpace() {
+        super();
+        worldChunkMgr = new WorldChunkManagerSpace();
+    }
+
     @Override
     protected void registerWorldChunkManager() {
-        this.worldChunkMgr = new WorldChunkManagerHell(biome, 0.8F);
+        ((WorldChunkManagerSpace)this.worldChunkMgr).assignSeed(worldObj.getSeed());
     }
 
     @Override
@@ -70,6 +78,14 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     public TerrainConfiguration getTerrainConfig() {
         return terrainConfig;
+    }
+
+    public void addBiome(BiomeGenBase biome) {
+        biomes.add(biome);
+    }
+
+    public void transferBiomes() {
+        ((WorldChunkManagerSpace)worldChunkMgr).provideBiomes(biomes);
     }
 
     @Override

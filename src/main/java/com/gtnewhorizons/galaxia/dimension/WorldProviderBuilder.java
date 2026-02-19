@@ -54,7 +54,7 @@ public class WorldProviderBuilder {
     }
 
     public WorldProviderBuilder biome(BiomeGenBase biome) {
-        provider.biome = biome;
+        provider.addBiome(biome);
         return this;
     }
 
@@ -167,5 +167,6 @@ public class WorldProviderBuilder {
     public void build() {
         provider.terrainConfig = this.terrainConfig;
         provider.applyFlags();
+        provider.transferBiomes();
     }
 }

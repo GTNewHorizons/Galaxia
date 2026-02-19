@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -34,7 +35,9 @@ public class Dunia extends BasePlanet {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
-            .biome(createBiome())
+            .biome(createBiome("Dunia Dunes", Blocks.brick_block))
+            .biome(createBiome("Dunia Hills", GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix).block()))
+            .biome(createBiome("Dunia Basins", GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix).block()))
             .name(ENUM)
             .terrain(
                 TerrainConfiguration.builder()
@@ -51,12 +54,12 @@ public class Dunia extends BasePlanet {
                     .build());
     }
 
-    protected static BiomeGenBase createBiome() {
-        return new BiomeGenBuilder(100).name("Dunia Surface")
+    protected static BiomeGenBase createBiome(String name, Block block) {
+        return new BiomeGenBuilder(100).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix))
+            .topBlock(block)
             .fillerBlock(Blocks.brick_block)
             .build();
     }
