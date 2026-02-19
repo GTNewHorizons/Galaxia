@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.worldgen;
 
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
 import java.util.Random;
+
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 public final class TerrainFeatureApplier {
 
@@ -31,7 +31,14 @@ public final class TerrainFeatureApplier {
                 applyCentralPeakCraters(heightMap, size, depth, localRand);
                 break;
             case MOUNTAIN_RANGES:
-                applyMountainRanges(heightMap, size, feature.getMinHeight(), feature.getVariation(), localRand, chunkX, chunkZ);
+                applyMountainRanges(
+                    heightMap,
+                    size,
+                    feature.getMinHeight(),
+                    feature.getVariation(),
+                    localRand,
+                    chunkX,
+                    chunkZ);
                 break;
             case CANYONS:
                 applyCanyons(heightMap, size, depth, localRand);
@@ -100,7 +107,8 @@ public final class TerrainFeatureApplier {
         }
     }
 
-    private static void applyMountainRanges(int[] hm, double size, int minH, int var, Random r, int chunkX, int chunkZ) {
+    private static void applyMountainRanges(int[] hm, double size, int minH, int var, Random r, int chunkX,
+        int chunkZ) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (size * 4));
         for (int x = 15; x >= 0; x--) {
             for (int z = 15; z >= 0; z--) {

@@ -8,8 +8,8 @@ import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
-import com.gtnewhorizons.galaxia.structure.Asteroid;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 
 public class FrozenBelt extends BaseAsteroidBelt {
 

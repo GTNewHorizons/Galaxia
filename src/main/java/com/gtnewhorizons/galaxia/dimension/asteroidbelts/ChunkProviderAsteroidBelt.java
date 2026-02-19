@@ -13,7 +13,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.structure.MapGenScatteredFeature;
 
-import com.gtnewhorizons.galaxia.structure.Asteroid;
+import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 
 public class ChunkProviderAsteroidBelt implements IChunkProvider {
 

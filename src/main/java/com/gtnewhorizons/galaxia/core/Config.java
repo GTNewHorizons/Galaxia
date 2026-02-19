@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia;
+package com.gtnewhorizons.galaxia.core;
 
 import java.io.File;
 

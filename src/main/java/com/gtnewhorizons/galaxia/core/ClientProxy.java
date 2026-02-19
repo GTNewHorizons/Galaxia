@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia;
+package com.gtnewhorizons.galaxia.core;
 
 public class ClientProxy extends CommonProxy {
 
