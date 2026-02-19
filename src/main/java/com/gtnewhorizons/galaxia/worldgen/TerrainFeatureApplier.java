@@ -1,11 +1,18 @@
 package com.gtnewhorizons.galaxia.worldgen;
 
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 import java.util.Random;
 
 public final class TerrainFeatureApplier {
 
+    private static NoiseGeneratorOctaves generationNoise;
+
     // TODO improve formulas for all features
     public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand) {
+        if (generationNoise == null) {
+            generationNoise = new NoiseGeneratorOctaves(rand, 4);
+        }
         TerrainPreset preset = feature.getPreset();
         double size = feature.getSize();
         double freq = feature.getFrequency();
@@ -24,7 +31,7 @@ public final class TerrainFeatureApplier {
                 applyCentralPeakCraters(heightMap, size, depth, localRand);
                 break;
             case MOUNTAIN_RANGES:
-                applyMountainRanges(heightMap, size, feature.getMinHeight(), feature.getVariation(), localRand);
+                applyMountainRanges(heightMap, size, feature.getMinHeight(), feature.getVariation(), localRand, chunkX, chunkZ);
                 break;
             case CANYONS:
                 applyCanyons(heightMap, size, depth, localRand);
@@ -90,9 +97,12 @@ public final class TerrainFeatureApplier {
         }
     }
 
-    private static void applyMountainRanges(int[] hm, double size, int minH, int var, Random r) {
-        for (int i = 0; i < 256; i++) {
-            hm[i] = minH + (int) (var * size * (0.6 + 0.4 * Math.sin(i * 0.13)));
+    private static void applyMountainRanges(int[] hm, double size, int minH, int var, Random r, int chunkX, int chunkZ) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (size * 4));
+        for (int x = 15; x >= 0; x--) {
+            for (int z = 15; z >= 0; z--) {
+                hm[x + z * 16] = (int) (minH + noise[x + z * 16] * size);
+            }
         }
     }
 
@@ -124,5 +134,11 @@ public final class TerrainFeatureApplier {
         for (int i = 0; i < 256; i++) {
             hm[i] += (int) (r.nextGaussian() * 6 * size);
         }
+    }
+
+    private static double[] generatePerlinNoise(int chunkX, int chunkZ, double scale) {
+        chunkX *= 16;
+        chunkZ *= 16;
+        return generationNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, scale, scale, 0);
     }
 }
