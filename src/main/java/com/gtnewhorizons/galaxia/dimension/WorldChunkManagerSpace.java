@@ -51,11 +51,12 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * WorldChunkManager Args: oldBiomeList, x, z, width, depth
      */
     public BiomeGenBase[] loadBlockGeneratorData(BiomeGenBase[] p_76933_1_, int p_76933_2_, int p_76933_3_, int p_76933_4_, int p_76933_5_) {
+        // TODO: This code is just a placeholder, I do not know what it is meant to do other than preventing a crash
         if (p_76933_1_ == null || p_76933_1_.length < p_76933_4_ * p_76933_5_) {
             p_76933_1_ = new BiomeGenBase[p_76933_4_ * p_76933_5_];
         }
 
-        Arrays.fill(p_76933_1_, 0, p_76933_4_ * p_76933_5_, this.biomeGenerator);
+        Arrays.fill(p_76933_1_, 0, p_76933_4_ * p_76933_5_, this.biomeGenerator.get(0));
         return p_76933_1_;
     }
 
@@ -85,5 +86,15 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
             }
         }
         return false;
+    }
+
+    public BiomeGenBase[] getBiomesForGeneration(BiomeGenBase[] p_76937_1_, int p_76937_2_, int p_76937_3_, int p_76937_4_, int p_76937_5_) {
+        // TODO: This code is just a placeholder, I do not know what it is meant to do other than preventing a crash
+        if (p_76937_1_ == null || p_76937_1_.length < p_76937_4_ * p_76937_5_) {
+            p_76937_1_ = new BiomeGenBase[p_76937_4_ * p_76937_5_];
+        }
+
+        Arrays.fill(p_76937_1_, 0, p_76937_4_ * p_76937_5_, this.biomeGenerator.get(0));
+        return p_76937_1_;
     }
 }
