@@ -26,8 +26,6 @@ import cpw.mods.fml.common.gameevent.TickEvent;
  */
 public class DimensionEventHandler {
 
-    public static final String MODID = "galaxia";
-    public static final Logger LOG = LogManager.getLogger(MODID);
     public int counter;
     // Get all custom dimension IDs from Galaxia
     public ArrayList<Integer> galaxiaDims;
@@ -122,7 +120,6 @@ public class DimensionEventHandler {
      */
     private void applySpores(EffectDef def, EntityPlayer player) {
         if (!def.spores) return;
-        LOG.info("Testing Spore");
         List<Integer> possibleEffects = Arrays.asList(2, 4, 15, 17, 18, 19, 20);
         /*
          * 2 = Slowness
@@ -137,7 +134,6 @@ public class DimensionEventHandler {
         // Check if one of above conditions already applied
         for (PotionEffect effect : player.getActivePotionEffects()) {
             if (possibleEffects.contains(effect.getPotionID())) {
-                LOG.info("FOUND APPLIED");
                 return;
             }
         }
@@ -145,7 +141,6 @@ public class DimensionEventHandler {
         // Add a random effect from list
         Random random = new Random();
 
-        LOG.info("Adding new");
         int effectToAdd = possibleEffects.get(random.nextInt(possibleEffects.size() - 1) + 1);
         player.addPotionEffect(new PotionEffect(effectToAdd, 100, 1));
     }
