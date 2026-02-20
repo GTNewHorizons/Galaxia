@@ -1,6 +1,10 @@
 package com.gtnewhorizons.galaxia.utility;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.Potion;
