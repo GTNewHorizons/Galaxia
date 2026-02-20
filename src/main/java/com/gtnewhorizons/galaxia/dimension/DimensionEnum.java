@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import java.util.ArrayList;
+import java.util.EnumSet;
+
 public enum DimensionEnum {
 
     CALX(20, "Calx"),
@@ -21,4 +24,6 @@ public enum DimensionEnum {
     public int getId() {
         return this.id;
     }
+
+
 }

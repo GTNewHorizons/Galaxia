@@ -1,8 +1,11 @@
 package com.gtnewhorizons.galaxia.core;
 
+import com.gtnewhorizons.galaxia.utility.DimensionEventHandler;
+import cpw.mods.fml.common.FMLCommonHandler;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 
+import net.minecraftforge.common.MinecraftForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,11 +53,14 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        FMLCommonHandler.instance().bus().register(new DimensionEventHandler());
         int packetId = 0;
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
         GalaxiaItems.registerAll();
         GalaxiaBlocks.registerPlanetBlocks();
+
+
     }
 
     @Mod.EventHandler
