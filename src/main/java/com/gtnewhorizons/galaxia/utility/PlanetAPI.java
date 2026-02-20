@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.utility;
 
-import com.gtnewhorizons.galaxia.dimension.EffectDef;
 import net.minecraft.entity.Entity;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.dimension.EffectDef;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 
 public final class PlanetAPI {

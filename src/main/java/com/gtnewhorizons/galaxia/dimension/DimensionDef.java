@@ -23,7 +23,6 @@ public final class DimensionDef {
     public final int mass;
     public final int orbitalRadius;
 
-
     DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded, double gravity,
         double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, int mass,
         int orbitalRadius, EffectDef effects) {

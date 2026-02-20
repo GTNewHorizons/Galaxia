@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
-import com.gtnewhorizons.galaxia.dimension.*;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
+import com.gtnewhorizons.galaxia.dimension.*;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
 public class Calx extends BasePlanet {
@@ -24,12 +24,9 @@ public class Calx extends BasePlanet {
             .orbitalRadius((int) (1.5 * Math.pow(10, 11)))
             .sky(buildSky())
             .effects(
-                new EffectBuilder().baseTemp(0)
+                new EffectBuilder().baseTemp(273)
                     .oxygenPercent(0)
-                    .radiation(10)
-                    .dayTempMod(100)
-                    .nightTempMod(-200)
-            );
+                    .pressure(1));
     }
 
     @Override

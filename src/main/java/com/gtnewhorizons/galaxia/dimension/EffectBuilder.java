@@ -1,34 +1,16 @@
 package com.gtnewhorizons.galaxia.dimension;
 
-import net.minecraft.world.WorldProvider;
-
-import java.util.HashMap;
-import java.util.Map;
-
 public class EffectBuilder {
 
     private int baseTemp;
-    private int dayTempMod;
-    private int nightTempMod;
     private boolean withering;
     private int oxygenPercent;
     private int radiation;
     private boolean spores;
     private int pressure;
 
-
     public EffectBuilder baseTemp(int baseTemp) {
         this.baseTemp = baseTemp;
-        return this;
-    }
-
-    public EffectBuilder dayTempMod(int dayTempMod) {
-        this.dayTempMod = dayTempMod;
-        return this;
-    }
-
-    public EffectBuilder nightTempMod(int nightTempMod) {
-        this.nightTempMod = nightTempMod;
         return this;
     }
 
@@ -58,15 +40,6 @@ public class EffectBuilder {
     }
 
     public EffectDef build() {
-        return new EffectDef(
-            baseTemp,
-            dayTempMod,
-            nightTempMod,
-            withering,
-            oxygenPercent,
-            radiation,
-            spores,
-            pressure
-        );
+        return new EffectDef(baseTemp, withering, oxygenPercent, radiation, spores, pressure);
     }
 }
