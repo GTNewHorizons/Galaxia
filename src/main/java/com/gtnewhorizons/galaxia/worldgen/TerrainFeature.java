@@ -5,14 +5,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 
 public final class TerrainFeature {
 
     private final TerrainPreset preset;
     private final double frequency;
-    private final double size;
+    private final double height;
+    private final double width;
     private final int minHeight;
     private final int variation;
     private final BlockMeta topBlock;
@@ -20,11 +20,12 @@ public final class TerrainFeature {
     private final int depth;
     private final Map<String, Object> customParams;
 
-    TerrainFeature(TerrainPreset preset, double frequency, double size, int minHeight, int variation, BlockMeta topBlock,
+    TerrainFeature(TerrainPreset preset, double frequency, double height, double width, int minHeight, int variation, BlockMeta topBlock,
                    BlockMeta fillerBlock, int depth, Map<String, Object> customParams) {
         this.preset = preset;
         this.frequency = frequency;
-        this.size = size;
+        this.height = height;
+        this.width = width;
         this.minHeight = minHeight;
         this.variation = variation;
         this.topBlock = topBlock != null ? topBlock : new BlockMeta(Blocks.grass, 0); // fallback
@@ -41,8 +42,12 @@ public final class TerrainFeature {
         return frequency;
     }
 
-    public double getSize() {
-        return size;
+    public double getHeight() {
+        return height;
+    }
+
+    public double getWidth() {
+        return width;
     }
 
     public int getMinHeight() {
@@ -80,6 +85,6 @@ public final class TerrainFeature {
 
     @Override
     public String toString() {
-        return "TerrainFeature{" + preset + ", freq=" + frequency + ", size=" + size + ", depth=" + depth + "}";
+        return "TerrainFeature{" + preset + ", freq=" + frequency + ", height=" + height + ", depth=" + depth + "}";
     }
 }
