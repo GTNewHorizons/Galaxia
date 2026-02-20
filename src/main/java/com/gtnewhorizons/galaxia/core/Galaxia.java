@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.items.GalaxiaItems;
+import com.gtnewhorizons.galaxia.modules.ModuleRegistry;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -53,8 +54,12 @@ public class Galaxia {
         int packetId = 0;
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
-        GalaxiaItems.registerAll();
+
         GalaxiaBlocks.registerPlanetBlocks();
+        GalaxiaBlocks.registerBlocks();
+        GalaxiaItems.registerAll();
+        ModuleRegistry.init();
+        proxy.init(event);
     }
 
     @Mod.EventHandler
