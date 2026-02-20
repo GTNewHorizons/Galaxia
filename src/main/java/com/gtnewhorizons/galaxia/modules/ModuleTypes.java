@@ -5,8 +5,10 @@ public enum ModuleTypes {
     HUB_3X3(ModuleType.builder("hub_3x3")
         .internalSize(3, 3, 3)
         .wallThickness(1)
-        .model("models/modules/hub_3x3.obj")
-        .build()),;
+        .model("models/modules/hub_3x3/hub_3x3.obj")
+        .build()),
+
+    ;
 
     public final ModuleType data;
 

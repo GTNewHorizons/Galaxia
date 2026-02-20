@@ -26,9 +26,7 @@ public class BlockModuleController extends BlockContainer {
         if (world.isRemote) return;
 
         TileEntity te = world.getTileEntity(x, y, z);
-        if (te instanceof TileEntityModuleController) {
-            TileEntityModuleController ctrl = (TileEntityModuleController) te;
-
+        if (te instanceof TileEntityModuleController ctrl) {
             if (ctrl.getType() == null) {
                 String id = ModuleTypes.HUB_3X3.getId();
                 ctrl.setModule(id);

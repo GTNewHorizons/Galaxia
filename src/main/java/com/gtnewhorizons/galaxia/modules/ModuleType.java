@@ -1,8 +1,13 @@
 package com.gtnewhorizons.galaxia.modules;
 
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.client.model.AdvancedModelLoader;
+import net.minecraftforge.client.model.IModelCustom;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 public class ModuleType {
 
@@ -10,7 +15,9 @@ public class ModuleType {
     private final String unlocalizedName;
     private final int internalSizeX, internalSizeY, internalSizeZ;
     private final int wallThickness;
+    private final ResourceLocation textureLocation;
     private final ResourceLocation modelLocation;
+    private final float scale;
 
     private ModuleType(Builder b) {
         this.id = b.id;
@@ -19,7 +26,9 @@ public class ModuleType {
         this.internalSizeY = b.internalSizeY;
         this.internalSizeZ = b.internalSizeZ;
         this.wallThickness = b.wallThickness;
+        this.textureLocation = b.textureLocation;
         this.modelLocation = b.modelLocation;
+        this.scale = b.scale;
     }
 
     public static Builder builder(String id) {
@@ -50,17 +59,43 @@ public class ModuleType {
         return wallThickness;
     }
 
+    public ResourceLocation getTextureLocation() {
+        return textureLocation != null ? textureLocation
+            : new ResourceLocation(Galaxia.MODID, "textures/models/modules/" + id + ".png");
+    }
+
     public ResourceLocation getModelLocation() {
         return modelLocation;
+    }
+
+    public float getScale() {
+        return scale;
+    }
+
+    @SideOnly(Side.CLIENT)
+    private IModelCustom model;
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getModel() {
+        if (model == null && modelLocation != null) {
+            try {
+                model = AdvancedModelLoader.loadModel(modelLocation);
+            } catch (Exception ignored) {
+                Galaxia.LOG.error("[Galaxia] Failed to load OBJ model: {}", modelLocation);
+            }
+        }
+        return model;
     }
 
     public static class Builder {
 
         private final String id;
         private String unlocalizedName;
-        private int internalSizeX = 2, internalSizeY = 2, internalSizeZ = 2;
+        private int internalSizeX = 3, internalSizeY = 3, internalSizeZ = 3;
         private int wallThickness = 1;
+        private ResourceLocation textureLocation;
         private ResourceLocation modelLocation;
+        private float scale = 0.0625F;
 
         private Builder(String id) {
             this.id = id;
@@ -83,12 +118,25 @@ public class ModuleType {
             return this;
         }
 
+        public Builder texture(String path) {
+            this.textureLocation = new ResourceLocation(Galaxia.MODID, path);
+            return this;
+        }
+
         public Builder model(String path) {
             this.modelLocation = new ResourceLocation(Galaxia.MODID, path);
             return this;
         }
 
+        public Builder scale(float scale) {
+            this.scale = scale;
+            return this;
+        }
+
         public ModuleType build() {
+            if (modelLocation == null) {
+                throw new IllegalStateException("Module " + id + " must have an OBJ model");
+            }
             return new ModuleType(this);
         }
     }

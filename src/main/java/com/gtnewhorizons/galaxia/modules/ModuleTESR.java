@@ -1,40 +1,27 @@
 package com.gtnewhorizons.galaxia.modules;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
 public class ModuleTESR extends TileEntitySpecialRenderer {
 
-    private static final Map<String, IModelCustom> MODEL_CACHE = new HashMap<>();
-
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         TileEntityModuleController ctrl = (TileEntityModuleController) tile;
         ModuleType type = ctrl.getType();
-
-        if (type == null || type.getModelLocation() == null) {
-            return; // data is not yet synchronized, skip until it is
-        }
-
-        String modelKey = type.getId();
-        IModelCustom model = MODEL_CACHE
-            .computeIfAbsent(modelKey, k -> AdvancedModelLoader.loadModel(type.getModelLocation()));
+        if (type == null) return;
+        IModelCustom model = type.getModel();
         if (model == null) return;
         GL11.glPushMatrix();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
         GL11.glEnable(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_CULL_FACE);
-
+        GL11.glScalef(type.getScale(), type.getScale(), type.getScale());
         model.renderAll();
-
         GL11.glPopAttrib();
         GL11.glPopMatrix();
     }
