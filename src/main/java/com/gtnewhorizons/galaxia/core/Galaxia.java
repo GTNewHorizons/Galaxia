@@ -12,7 +12,9 @@ import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.items.GalaxiaItems;
 import com.gtnewhorizons.galaxia.modules.ModuleRegistry;
+import com.gtnewhorizons.galaxia.utility.DimensionEventHandler;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -51,6 +53,9 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new DimensionEventHandler());
         int packetId = 0;
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
@@ -60,6 +65,7 @@ public class Galaxia {
         GalaxiaItems.registerAll();
         ModuleRegistry.init();
         proxy.init(event);
+
     }
 
     @Mod.EventHandler

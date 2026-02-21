@@ -17,12 +17,15 @@ public final class DimensionDef {
     public final double air_resistance;
     public final boolean removeSpeedCancelation;
     public final List<CelestialBody> celestialBodies;
+    public final EffectDef effects;
+
+    // Used in Orbital Calculator
     public final int mass;
     public final int orbitalRadius;
 
     DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded, double gravity,
         double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, int mass,
-        int orbitalRadius) {
+        int orbitalRadius, EffectDef effects) {
         this.name = name;
         this.id = id;
         this.mass = mass;
@@ -34,5 +37,6 @@ public final class DimensionDef {
         this.removeSpeedCancelation = removeSpeedCancelation;
         this.celestialBodies = celestialBodies == null ? Collections.emptyList()
             : Collections.unmodifiableList(celestialBodies);
+        this.effects = effects;
     }
 }
