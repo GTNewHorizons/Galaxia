@@ -5,8 +5,10 @@ public enum ModuleTypes {
     HUB_3X3(ModuleType.builder("hub_3x3")
         .internalSize(0, 0, 0)
         .wallThickness(0)
-        .model("textures/model/modules/hub_3x3/hub_3x3.obj")
-        .texture("textures/model/modules/hub_3x3/hub_3x3.png")
+        .model("textures/model/modules/hub_3x3/model.obj")
+        .texture("textures/model/modules/hub_3x3/texture.png")
+        .offset(0, 0, 0)
+        .modelBounds(-1.5, 0, -1.5, 1.5, 5, 1.5)
         .build()),
 
     ;

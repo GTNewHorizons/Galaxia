@@ -3,6 +3,9 @@ package com.gtnewhorizons.galaxia.modules;
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
 public class BlockModuleController extends BlockContainer {
@@ -53,5 +56,68 @@ public class BlockModuleController extends BlockContainer {
     @Override
     public boolean isNormalCube() {
         return ModuleConfig.DEBUG_RENDER;
+    }
+
+    @Override
+    public MovingObjectPosition collisionRayTrace(World world, int x, int y, int z, Vec3 start, Vec3 end) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (!(te instanceof TileEntityModuleController ctrl)) {
+            return super.collisionRayTrace(world, x, y, z, start, end);
+        }
+
+        ModuleType type = ctrl.getType();
+        if (type == null) return null;
+
+        double cx = x + 0.5 + type.getOffsetX();
+        double cy = y + 0.5 + type.getOffsetY();
+        double cz = z + 0.5 + type.getOffsetZ();
+
+        AxisAlignedBB rel = type.getModelBounds();
+        float s = type.getScale();
+
+        AxisAlignedBB box = AxisAlignedBB.getBoundingBox(
+            cx + rel.minX * s,
+            cy + rel.minY * s,
+            cz + rel.minZ * s,
+            cx + rel.maxX * s,
+            cy + rel.maxY * s,
+            cz + rel.maxZ * s);
+
+        MovingObjectPosition mop = box.calculateIntercept(start, end);
+        if (mop != null) {
+            mop.blockX = x;
+            mop.blockY = y;
+            mop.blockZ = z;
+            return mop;
+        }
+        return null;
+    }
+
+    @Override
+    public AxisAlignedBB getSelectedBoundingBoxFromPool(World world, int x, int y, int z) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (!(te instanceof TileEntityModuleController ctrl)) {
+            return super.getSelectedBoundingBoxFromPool(world, x, y, z);
+        }
+
+        ModuleType type = ctrl.getType();
+        if (type == null) {
+            return AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1);
+        }
+
+        double cx = x + 0.5 + type.getOffsetX();
+        double cy = y + 0.5 + type.getOffsetY();
+        double cz = z + 0.5 + type.getOffsetZ();
+
+        AxisAlignedBB rel = type.getModelBounds();
+        float s = type.getScale();
+
+        return AxisAlignedBB.getBoundingBox(
+            cx + rel.minX * s,
+            cy + rel.minY * s,
+            cz + rel.minZ * s,
+            cx + rel.maxX * s,
+            cy + rel.maxY * s,
+            cz + rel.maxZ * s);
     }
 }

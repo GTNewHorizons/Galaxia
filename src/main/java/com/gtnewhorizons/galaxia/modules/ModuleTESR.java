@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.modules;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
@@ -18,22 +17,22 @@ public class ModuleTESR extends TileEntitySpecialRenderer {
         if (type == null) return;
 
         IModelCustom model = type.getModel();
-        if (model == null) return;
+        if (model != null) {
+            GL11.glPushMatrix();
+            GL11.glTranslated(x + 0.5 + type.getOffsetX(), y + 0.5 + type.getOffsetY(), z + 0.5 + type.getOffsetZ());
+            GL11.glScalef(type.getScale(), type.getScale(), type.getScale());
 
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glScalef(type.getScale(), type.getScale(), type.getScale());
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glEnable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_CULL_FACE);
 
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glEnable(GL11.GL_LIGHTING);
-        GL11.glDisable(GL11.GL_CULL_FACE);
+            Minecraft.getMinecraft()
+                .getTextureManager()
+                .bindTexture(type.getTextureLocation());
+            model.renderAll();
 
-        ResourceLocation texture = type.getTextureLocation();
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(texture);
-        model.renderAll();
-        GL11.glEnable(GL11.GL_CULL_FACE);
-        GL11.glPopMatrix();
+            GL11.glEnable(GL11.GL_CULL_FACE);
+            GL11.glPopMatrix();
+        }
     }
 }
