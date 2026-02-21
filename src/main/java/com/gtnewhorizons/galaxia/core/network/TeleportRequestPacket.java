@@ -51,7 +51,6 @@ public class TeleportRequestPacket implements IMessage {
 
             if (targetWorld == null) return null;
 
-            // Если в том же измерении — просто перемещаем
             if (player.dimension == message.dim) {
                 player.setLocationAndAngles(
                     message.x,
@@ -64,7 +63,6 @@ public class TeleportRequestPacket implements IMessage {
                 return null;
             }
 
-            // Иначе — трансфер с кастомным Teleporter
             server.getConfigurationManager()
                 .transferPlayerToDimension(player, message.dim, new Teleporter(targetWorld) {
 

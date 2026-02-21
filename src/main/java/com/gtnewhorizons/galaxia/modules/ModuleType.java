@@ -67,12 +67,7 @@ public class ModuleType {
     @SideOnly(Side.CLIENT)
     public IModelCustom getModel() {
         if (model == null && modelLocation != null) {
-            try {
-                model = AdvancedModelLoader.loadModel(modelLocation);
-                Galaxia.LOG.info("[Galaxia] Successfully loaded OBJ: {}", modelLocation);
-            } catch (Exception e) {
-                Galaxia.LOG.error("[Galaxia] Failed to load OBJ: {}", modelLocation, e);
-            }
+            model = AdvancedModelLoader.loadModel(modelLocation);
         }
         return model;
     }

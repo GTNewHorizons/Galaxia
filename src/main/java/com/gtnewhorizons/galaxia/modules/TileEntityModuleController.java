@@ -103,7 +103,6 @@ public class TileEntityModuleController extends TileEntity {
         moduleId = nbt.hasKey("moduleId") ? nbt.getString("moduleId") : null;
     }
 
-    // client synchronisation
     @Override
     public Packet getDescriptionPacket() {
         NBTTagCompound nbt = new NBTTagCompound();
@@ -112,7 +111,7 @@ public class TileEntityModuleController extends TileEntity {
     }
 
     @Override
-    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
-        readFromNBT(pkt.func_148857_g());
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        readFromNBT(packet.func_148857_g());
     }
 }
