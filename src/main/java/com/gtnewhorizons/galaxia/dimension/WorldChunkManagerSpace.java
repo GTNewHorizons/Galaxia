@@ -14,6 +14,14 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
     private NoiseGeneratorOctaves xBiomeNoise;
     private NoiseGeneratorOctaves zBiomeNoise;
 
+    private boolean cacheCreated = false;
+    private int cacheX = 0;
+    private int cacheZ = 0;
+    private int cacheBiomeIndexX = 0;
+    private int cacheBiomeIndexZ = 0;
+    private double cacheNoiseX = 0;
+    private double cacheNoiseZ = 0;
+
     public void assignSeed(long seed) {
         if (xBiomeNoise != null) {
             return;
@@ -33,17 +41,30 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * Returns the BiomeGenBase related to the x, z position on the world.
      */
     public BiomeGenBase getBiomeGenAt(int x, int z) {
+        if (cacheCreated && x == cacheX && z == cacheZ) {
+            return biomeGenerator[cacheBiomeIndexX][cacheBiomeIndexZ];
+        }
         int matrixLength = biomeGenerator[0].length;
-        int xIndex = getBiomeIndex(x, z, matrixLength, xBiomeNoise);
-        int zIndex = getBiomeIndex(x, z, matrixLength, zBiomeNoise);
+        int xIndex = getBiomeIndex(x, z, matrixLength, xBiomeNoise, true);
+        int zIndex = getBiomeIndex(x, z, matrixLength, zBiomeNoise, false);
+        cacheCreated = true;
+        cacheX = x;
+        cacheZ = z;
+        cacheBiomeIndexX = xIndex;
+        cacheBiomeIndexZ = zIndex;
         return this.biomeGenerator[xIndex][zIndex];
     }
 
-    private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator) {
+    private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator, boolean firstIndex) {
         double noise = noiseGenerator.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.025, 0.025, 0)[0];
         noise += 6;
         noise *= matrixLength;
         noise /= 12;
+        if (firstIndex) {
+            cacheNoiseX = noise;
+        } else {
+            cacheNoiseZ = noise;
+        }
         int pickedBiome = (int) Math.floor(noise);
         if (pickedBiome >= matrixLength) {
             pickedBiome = matrixLength - 1;
