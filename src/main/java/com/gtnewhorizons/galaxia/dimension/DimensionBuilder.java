@@ -34,6 +34,7 @@ public class DimensionBuilder {
     private double air_resistance = 1;
     private boolean removeSpeedCancelation = false;
     private List<CelestialBody> celestialBodies = Collections.emptyList();
+    private EffectDef effects;
 
     public DimensionBuilder enumValue(DimensionEnum planet) {
         if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
@@ -97,6 +98,11 @@ public class DimensionBuilder {
         return this;
     }
 
+    public DimensionBuilder effects(EffectBuilder effects) {
+        this.effects = effects.build();
+        return this;
+    }
+
     public DimensionDef build() {
         if (name == null) throw new IllegalStateException("Name required");
         if (providerClass == null) throw new IllegalStateException("Provider required");
@@ -116,7 +122,8 @@ public class DimensionBuilder {
             removeSpeedCancelation,
             celestialBodies,
             mass,
-            orbitalRadius);
+            orbitalRadius,
+            effects);
 
         BY_NAME.put(name.toLowerCase(), def);
         BY_ID.put(id, def);

@@ -20,7 +20,7 @@ itemGroup.galaxia=§9Galaxia
 
 ## Items
 item.galaxia.teleporter.name=Teleporter
-item.galaxia.anotherThing.name=Another thing; that is now localized, super cool right, yes I agree
+item.galaxia.another_thing.name=Another thing; that is now localized, super cool right, yes I agree
 # Planet stone dust
 item.galaxia.calx_dust.name=Calx stone dust
 
