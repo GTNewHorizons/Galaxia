@@ -114,6 +114,33 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
         }
 
+        // Calculate total biome significance
+        double[] totalBiomeSignificance = new double[256];
+        for (int currentSignificanceIndex = 0; currentSignificanceIndex < biomeSignificances.length; currentSignificanceIndex++) {
+            double[] currentSignificance = biomeSignificances[currentSignificanceIndex];
+            if (currentSignificance == null) {
+                continue;
+            }
+            for (int index = 0; index < currentSignificance.length; index++) {
+                totalBiomeSignificance[index] += currentSignificance[index];
+            }
+        }
+
+        // Normalize biome significance
+        for (int index = 0; index < totalBiomeSignificance.length; index++) {
+            double totalValue = totalBiomeSignificance[index];
+            if (totalValue <= 1) {
+                continue;
+            }
+            for (int currentSignificanceIndex = 0; currentSignificanceIndex < biomeSignificances.length; currentSignificanceIndex++) {
+                double[] currentSignificance = biomeSignificances[currentSignificanceIndex];
+                if (currentSignificance == null) {
+                    continue;
+                }
+                currentSignificance[index] /= totalValue;
+            }
+        }
+
         // Calculate terrain features
         for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
             BiomeGenBase currentBiome = biomeList.get(biomeIndex);
