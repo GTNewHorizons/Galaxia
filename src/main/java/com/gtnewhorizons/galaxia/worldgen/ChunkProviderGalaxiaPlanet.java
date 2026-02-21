@@ -57,7 +57,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
                 BiomeGenBase[] adjacentBiomes = ((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getAdjacentBiomes();
                 double[] adjacentBiomeSignificance = ((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getAdjacentBiomeSignificance();
-                double localBiomeSignificance = 1 - adjacentBiomeSignificance[0] - adjacentBiomeSignificance[1];
+                double totalSignificance = adjacentBiomeSignificance[0] + adjacentBiomeSignificance[1] + adjacentBiomeSignificance[2];
+                if (totalSignificance > 1) {
+                    double shrinkingMultiplier = 1 / totalSignificance;
+                    adjacentBiomeSignificance[0] *= shrinkingMultiplier;
+                    adjacentBiomeSignificance[1] *= shrinkingMultiplier;
+                    adjacentBiomeSignificance[2] *= shrinkingMultiplier;
+                    totalSignificance = adjacentBiomeSignificance[0] + adjacentBiomeSignificance[1] + adjacentBiomeSignificance[2];
+                }
+                double localBiomeSignificance = 1 - totalSignificance;
 
                 // Set blending value for local biome
                 int localBiomeIndex = biomeList.indexOf(localBiome);

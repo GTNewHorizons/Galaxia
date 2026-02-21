@@ -90,16 +90,18 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         if (adjacentIndexZ >= biomeGenerator.length) {
             adjacentIndexZ = 0;
         }
-        BiomeGenBase[] adjacentBiomes = new BiomeGenBase[2];
+        BiomeGenBase[] adjacentBiomes = new BiomeGenBase[3];
         adjacentBiomes[0] = biomeGenerator[adjacentIndexX][cacheBiomeIndexZ];
         adjacentBiomes[1] = biomeGenerator[cacheBiomeIndexX][adjacentIndexZ];
+        adjacentBiomes[2] = biomeGenerator[adjacentIndexX][adjacentIndexZ];
         return adjacentBiomes;
     }
 
     public double[] getAdjacentBiomeSignificance() {
         double xDeviation = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 0.5) * 2;
         double zDeviation = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 0.5) * 2;
-        return new double[] {xDeviation, zDeviation};
+        double diagonalDeviation = xDeviation + zDeviation;
+        return new double[] {xDeviation, zDeviation, diagonalDeviation};
     }
 
     public int getBiomeCount() {
