@@ -123,7 +123,7 @@ public final class TerrainFeatureApplier {
                 if (localRelevance == 0) {
                     continue;
                 }
-                hm[x + z * 16] = (int) (minH + noise[x + z * 16] * height * localRelevance);
+                hm[x + z * 16] += (int) (minH + noise[x + z * 16] * height * localRelevance);
             }
         }
     }

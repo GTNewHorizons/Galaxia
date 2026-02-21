@@ -63,8 +63,8 @@ public class Dunia extends BasePlanet {
             .biome(createBiome("Dunia Hills", GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix).block(),
                 TerrainConfiguration.builder()
                     .feature(TerrainPreset.MOUNTAIN_RANGES)
-                    .scale(0.5)
-                    .height(0.25)
+                    .scale(0.25)
+                    .height(4)
                     .width(2)
                     .fillerBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.ANDESITE.suffix))
                     .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix))

@@ -63,7 +63,10 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     @Override
     public IChunkProvider createChunkGenerator() {
-        return new ChunkProviderGalaxiaPlanet(worldObj);
+        if (chunkGenSupplier == null) {
+            return new ChunkProviderGalaxiaPlanet(worldObj);
+        }
+        return chunkGenSupplier.get();
     }
 
     public void createBiomeMatrix(int size) {
