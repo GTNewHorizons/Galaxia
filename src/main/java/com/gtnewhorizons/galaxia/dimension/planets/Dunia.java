@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -28,7 +29,11 @@ public class Dunia extends BasePlanet {
         return builder.mass((int) (6.4 * Math.pow(10, 23)))
             .orbitalRadius((int) (2.3 * Math.pow(10, 11)))
             .gravity(0.5)
-            .airResistance(0.7);
+            .airResistance(0.7)
+            .effects(
+                new EffectBuilder().baseTemp(67)
+                    .oxygenPercent(0)
+                    .pressure(1));
     }
 
     @Override

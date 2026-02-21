@@ -8,20 +8,6 @@ import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 
 public abstract class BaseAsteroidBelt extends BasePlanet {
 
-    public DimensionDef buildDimension() {
-        return DEF;
-    }
-
-    public DimensionDef getDef() {
-        return DEF;
-    }
-
-    protected final DimensionDef DEF;
-
-    protected BaseAsteroidBelt() {
-        DEF = createBuilder().build();
-    }
-
     protected DimensionBuilder createBuilder() {
         return new DimensionBuilder().enumValue(getPlanetEnum())
             .provider(getProviderClass())

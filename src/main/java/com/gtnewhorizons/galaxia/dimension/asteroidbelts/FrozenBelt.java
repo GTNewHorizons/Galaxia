@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
+import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
+import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
@@ -18,6 +20,15 @@ public class FrozenBelt extends BaseAsteroidBelt {
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
+    }
+
+    @Override
+    protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
+        return super.customizeDimension(builder)
+            .effects(
+                new EffectBuilder().baseTemp(67)
+                    .oxygenPercent(0)
+                    .pressure(1));
     }
 
     @Override
