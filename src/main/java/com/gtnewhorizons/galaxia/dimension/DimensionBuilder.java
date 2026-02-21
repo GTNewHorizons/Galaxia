@@ -129,6 +129,7 @@ public class DimensionBuilder {
             celestialBodies,
             mass,
             orbitalRadius,
+            radius,
             effects);
 
         BY_NAME.put(name.toLowerCase(), def);

@@ -11,8 +11,13 @@ public class OrbitalCalculatorHelper {
      * All distances are measured as average Earth Radii;
      */
 
+    // Corrective factor for unit conversion in Hohmann Transfers
     static final double hohmannCorrectiveFactor = 6700;
+
+    // Corrective factor for unit conversion in escape velocities
     static final double escapeCorrectiveFactor = 1.65;
+
+    // Corrective factor for calculating effective exhaust velocity
     static final double effectiveCorrectiveFactor = 2.7;
 
     /**
