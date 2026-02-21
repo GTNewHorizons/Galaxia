@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.dimension.WorldChunkManagerSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
@@ -41,32 +42,80 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         Chunk chunk = new Chunk(worldObj, chunkX, chunkZ);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
 
+        // Get local biomes
         int[] heightMap = generateBaseHeightmap(chunkX, chunkZ);
         BiomeGenBase[] chunkBiomes = new BiomeGenBase[256];
         List<BiomeGenBase> biomeList = new ArrayList<>();
+        double[][] biomeSignificances = new double[((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getBiomeCount()][];
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
+                // Get relevant data for biome blending
                 BiomeGenBase localBiome = worldObj.getWorldChunkManager().getBiomeGenAt(chunkX * 16 + localX, chunkZ * 16 + localZ);
                 chunkBiomes[localX + localZ * 16] = localBiome;
                 if (!biomeList.contains(localBiome)) {
                     biomeList.add(localBiome);
                 }
+                BiomeGenBase[] adjacentBiomes = ((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getAdjacentBiomes();
+                double[] adjacentBiomeSignificance = ((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getAdjacentBiomeSignificance();
+                double localBiomeSignificance = 1 - adjacentBiomeSignificance[0] - adjacentBiomeSignificance[1];
+
+                // Set blending value for local biome
+                int localBiomeIndex = biomeList.indexOf(localBiome);
+                double[] localBiomeSignificanceArray;
+                if (biomeSignificances[localBiomeIndex] == null) {
+                    localBiomeSignificanceArray = new double[256];
+                } else {
+                    localBiomeSignificanceArray = biomeSignificances[localBiomeIndex];
+                }
+                localBiomeSignificanceArray[localX + localZ * 16] = localBiomeSignificance;
+                biomeSignificances[localBiomeIndex] = localBiomeSignificanceArray;
+
+                // Set blending value for adjacent biome
+                for (int index = 0; index < adjacentBiomes.length; index++) {
+                    BiomeGenBase adjacentBiome = adjacentBiomes[index];
+                    if (!biomeList.contains(adjacentBiome)) {
+                        biomeList.add(adjacentBiome);
+                    }
+                    int adjacentBiomeIndex = biomeList.indexOf(adjacentBiome);
+                    double[] adjacentBiomeSignificanceArray;
+                    if (biomeSignificances[adjacentBiomeIndex] == null) {
+                        adjacentBiomeSignificanceArray = new double[256];
+                    } else {
+                        adjacentBiomeSignificanceArray = biomeSignificances[adjacentBiomeIndex];
+                    }
+                    adjacentBiomeSignificanceArray[localX + localZ * 16] = adjacentBiomeSignificance[index];
+                    biomeSignificances[adjacentBiomeIndex] = adjacentBiomeSignificanceArray;
+                }
             }
         }
 
+        // Clean up blending values
+        for (int biomeSignificanceIndex = 0; biomeSignificanceIndex < biomeSignificances.length; biomeSignificanceIndex++) {
+            double[] biomeSignificance = biomeSignificances[biomeSignificanceIndex];
+            if (biomeSignificance == null) {
+                continue;
+            }
+            for (int index = 0; index < biomeSignificance.length; index++) {
+                double biomeSignificanceValue = biomeSignificance[index];
+                if (biomeSignificanceValue > 1) {
+                    biomeSignificanceValue = 1;
+                } else if (biomeSignificanceValue < 0) {
+                    biomeSignificanceValue = 0;
+                }
+                biomeSignificance[index] = biomeSignificanceValue;
+            }
+        }
+
+        // Calculate terrain features
         for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
             BiomeGenBase currentBiome = biomeList.get(biomeIndex);
             if (currentBiome instanceof BiomeGenSpace) {
                 BiomeGenSpace spaceBiome = ((BiomeGenSpace)currentBiome);
-                float[] terrainRelevance = new float[256];
-                for (int localX = 0; localX < 16; localX++) {
-                    for (int localZ = 0; localZ < 16; localZ++) {
-                        if (chunkBiomes[localX + localZ * 16] == spaceBiome) {
-                            terrainRelevance[localX + localZ * 16] = 1;
-                        } else {
-                            terrainRelevance[localX + localZ * 16] = 0;
-                        }
-                    }
+                double[] terrainRelevance;
+                if (biomeSignificances[biomeIndex] == null) {
+                    terrainRelevance = new double[256];
+                } else {
+                    terrainRelevance = biomeSignificances[biomeIndex];
                 }
                 TerrainConfiguration terrain = spaceBiome.getTerrain();
                 for (TerrainFeature f : terrain.getMacroFeatures()) {
@@ -77,15 +126,14 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
             }
         }
-
         for (int i = 0; i < 256; i++) {
             heightMap[i] = Math.max(1, Math.min(256, heightMap[i]));
         }
 
+        // Generate blocks
         BlockMeta topBlock = grass;
         BlockMeta fillerBlock = stone;
         int surfaceDepth = 1;
-
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];

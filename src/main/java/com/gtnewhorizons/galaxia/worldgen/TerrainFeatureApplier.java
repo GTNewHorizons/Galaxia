@@ -9,7 +9,7 @@ public final class TerrainFeatureApplier {
     private static NoiseGeneratorOctaves generationNoise;
 
     // TODO improve formulas for all features
-    public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand, float[] terrainRelevance) {
+    public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand, double[] terrainRelevance) {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
         }
@@ -72,13 +72,13 @@ public final class TerrainFeatureApplier {
         }
     }
 
-    private static void applySandDunes(int[] hm, double height, double width, Random r, int chunkX, int chunkZ, float[] terrainRelevance) {
+    private static void applySandDunes(int[] hm, double height, double width, Random r, int chunkX, int chunkZ, double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         chunkX *= 16;
         chunkZ *= 16;
         for (int x = 15; x >= 0; x--) {
             for (int z = 15; z >= 0; z--) {
-                float localRelevance = terrainRelevance[x + z * 16];
+                double localRelevance = terrainRelevance[x + z * 16];
                 if (localRelevance == 0) {
                     continue;
                 }
@@ -115,15 +115,15 @@ public final class TerrainFeatureApplier {
     }
 
     private static void applyMountainRanges(int[] hm, double height, double width, int minH, int var, Random r, int chunkX,
-        int chunkZ, float[] terrainRelevance) {
+        int chunkZ, double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 15; x >= 0; x--) {
             for (int z = 15; z >= 0; z--) {
-                float localRelevance = terrainRelevance[x + z * 16];
+                double localRelevance = terrainRelevance[x + z * 16];
                 if (localRelevance == 0) {
                     continue;
                 }
-                hm[x + z * 16] += (int) (minH + noise[x + z * 16] * height * localRelevance);
+                hm[x + z * 16] += (int) ((minH + noise[x + z * 16] * height) * localRelevance);
             }
         }
     }

@@ -81,6 +81,32 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         return pickedBiome;
     }
 
+    public BiomeGenBase[] getAdjacentBiomes() {
+        int adjacentIndexX = cacheBiomeIndexX + 1;
+        int adjacentIndexZ = cacheBiomeIndexZ + 1;
+        if (adjacentIndexX >= biomeGenerator.length) {
+            adjacentIndexX = 0;
+        }
+        if (adjacentIndexZ >= biomeGenerator.length) {
+            adjacentIndexZ = 0;
+        }
+        BiomeGenBase[] adjacentBiomes = new BiomeGenBase[2];
+        adjacentBiomes[0] = biomeGenerator[adjacentIndexX][cacheBiomeIndexZ];
+        adjacentBiomes[1] = biomeGenerator[cacheBiomeIndexX][adjacentIndexZ];
+        return adjacentBiomes;
+    }
+
+    public double[] getAdjacentBiomeSignificance() {
+        double xDeviation = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 0.5) * 2;
+        double zDeviation = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 0.5) * 2;
+        return new double[] {xDeviation, zDeviation};
+    }
+
+    public int getBiomeCount() {
+        int matrixLength = biomeGenerator.length;
+        return matrixLength * matrixLength;
+    }
+
     /**
      * Returns biomes to use for the blocks and loads the other data like temperature and humidity onto the
      * WorldChunkManager Args: oldBiomeList, x, z, width, depth
