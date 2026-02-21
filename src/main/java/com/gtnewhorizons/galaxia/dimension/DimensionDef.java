@@ -20,12 +20,12 @@ public final class DimensionDef {
     public final EffectDef effects;
 
     // Used in Orbital Calculator
-    public final int mass;
-    public final int orbitalRadius;
+    public final double mass;
+    public final double orbitalRadius;
 
     DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded, double gravity,
-        double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, int mass,
-        int orbitalRadius, EffectDef effects) {
+        double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, double mass,
+        double orbitalRadius, EffectDef effects) {
         this.name = name;
         this.id = id;
         this.mass = mass;
