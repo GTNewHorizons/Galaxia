@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
@@ -20,6 +21,7 @@ public class BiomeGenBuilder {
     float temperature = 0.4F;
     float rainfall = 0.0F;
     boolean generateBedrock = true;
+    TerrainConfiguration terrain;
 
     BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
@@ -74,6 +76,11 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder generateBedrock(boolean generateBedrock) {
         this.generateBedrock = generateBedrock;
+        return this;
+    }
+
+    public BiomeGenBuilder terrain(TerrainConfiguration terrain) {
+        this.terrain = terrain;
         return this;
     }
 

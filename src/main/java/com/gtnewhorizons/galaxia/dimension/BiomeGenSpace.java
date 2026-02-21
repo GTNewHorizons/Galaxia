@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import net.minecraft.world.biome.BiomeGenBase;
 
 public class BiomeGenSpace extends BiomeGenBase {
     private final boolean generateBedrock;
     private final int topBlockMeta;
     private final int fillerBlockMeta;
+    private final TerrainConfiguration terrain;
 
     public BiomeGenSpace(int id, BiomeGenBuilder b) {
         super(id);
@@ -25,6 +27,9 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
 
+        this.terrain = b.terrain != null ? b.terrain
+            : TerrainConfiguration.builder()
+            .build();
         this.generateBedrock = b.generateBedrock;
     }
 
@@ -38,5 +43,9 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public int getFillerBlockMeta() {
         return fillerBlockMeta;
+    }
+
+    public TerrainConfiguration getTerrain() {
+        return terrain;
     }
 }

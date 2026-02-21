@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.worldgen;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -20,7 +21,6 @@ import net.minecraft.world.gen.NoiseGeneratorPerlin;
 public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private final World worldObj;
-    private final TerrainConfiguration terrain;
     private final Random rand;
     private final NoiseGeneratorPerlin baseNoise;
     private final boolean showDebug = false;
@@ -28,11 +28,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final BlockMeta grass = new BlockMeta(Blocks.grass, 0);
     private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
 
-    public ChunkProviderGalaxiaPlanet(World world, TerrainConfiguration terrainConfig) {
+    public ChunkProviderGalaxiaPlanet(World world) {
         this.worldObj = world;
-        this.terrain = terrainConfig != null ? terrainConfig
-            : TerrainConfiguration.builder()
-                .build();
+
         this.rand = new Random(world.getSeed());
         this.baseNoise = new NoiseGeneratorPerlin(rand, 4);
         if (showDebug) writeDebug();
@@ -44,12 +42,40 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
 
         int[] heightMap = generateBaseHeightmap(chunkX, chunkZ);
-
-        for (TerrainFeature f : terrain.getMacroFeatures()) {
-            TerrainFeatureApplier.applyToHeightmap(f, heightMap, chunkX, chunkZ, rand);
+        BiomeGenBase[] chunkBiomes = new BiomeGenBase[256];
+        List<BiomeGenBase> biomeList = new ArrayList<>();
+        for (int localX = 0; localX < 16; localX++) {
+            for (int localZ = 0; localZ < 16; localZ++) {
+                BiomeGenBase localBiome = worldObj.getWorldChunkManager().getBiomeGenAt(chunkX * 16 + localX, chunkZ * 16 + localZ);
+                chunkBiomes[localX + localZ * 16] = localBiome;
+                if (!biomeList.contains(localBiome)) {
+                    biomeList.add(localBiome);
+                }
+            }
         }
-        for (TerrainFeature f : terrain.getMesoFeatures()) {
-            TerrainFeatureApplier.applyToHeightmap(f, heightMap, chunkX, chunkZ, rand);
+
+        for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
+            BiomeGenBase currentBiome = biomeList.get(biomeIndex);
+            if (currentBiome instanceof BiomeGenSpace) {
+                BiomeGenSpace spaceBiome = ((BiomeGenSpace)currentBiome);
+                float[] terrainRelevance = new float[256];
+                for (int localX = 0; localX < 16; localX++) {
+                    for (int localZ = 0; localZ < 16; localZ++) {
+                        if (chunkBiomes[localX + localZ * 16] == spaceBiome) {
+                            terrainRelevance[localX + localZ * 16] = 1;
+                        } else {
+                            terrainRelevance[localX + localZ * 16] = 0;
+                        }
+                    }
+                }
+                TerrainConfiguration terrain = spaceBiome.getTerrain();
+                for (TerrainFeature f : terrain.getMacroFeatures()) {
+                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, chunkX, chunkZ, rand, terrainRelevance);
+                }
+                for (TerrainFeature f : terrain.getMesoFeatures()) {
+                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, chunkX, chunkZ, rand, terrainRelevance);
+                }
+            }
         }
 
         for (int i = 0; i < 256; i++) {
@@ -60,26 +86,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         BlockMeta fillerBlock = stone;
         int surfaceDepth = 1;
 
-        for (TerrainFeature terrainFeature : terrain.getAllFeatures()) {
-            if (terrainFeature.getTopBlock() != null) {
-                topBlock = terrainFeature.getTopBlock();
-            }
-            if (terrainFeature.getFillerBlock() != null) {
-                fillerBlock = terrainFeature.getFillerBlock();
-            }
-            if (terrainFeature.getDepth() > 0) {
-                surfaceDepth = terrainFeature.getDepth();
-            }
-        }
-
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
-                BiomeGenBase localBiome = worldObj.getWorldChunkManager().getBiomeGenAt(chunkX * 16 + localX, chunkZ * 16 + localZ);
+                BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
                 boolean generateBedrock = false;
                 if (localBiome instanceof BiomeGenSpace) {
                     BiomeGenSpace spaceBiome = ((BiomeGenSpace)localBiome);
                     generateBedrock = spaceBiome.generateBedrock();
                     topBlock = new BlockMeta(spaceBiome.topBlock, spaceBiome.getTopBlockMeta());
+                    fillerBlock = new BlockMeta(spaceBiome.fillerBlock, spaceBiome.getFillerBlockMeta());
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < height; y++) {
@@ -171,30 +186,31 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     }
 
     public void writeDebug() {
-        System.out.println(
-            "Terrain features TOTAL: " + this.terrain.getAllFeatures()
-                .size());
-        System.out.println(
-            "MACRO features: " + this.terrain.getMacroFeatures()
-                .size());
-        System.out.println(
-            "MESO  features: " + this.terrain.getMesoFeatures()
-                .size());
-        System.out.println(
-            "MICRO features: " + this.terrain.getMicroFeatures()
-                .size());
-
-        if (!this.terrain.getAllFeatures()
-            .isEmpty()) {
-            System.out.println(
-                "First feature: " + this.terrain.getAllFeatures()
-                    .get(0));
-        }
-        if (!this.terrain.getMacroFeatures()
-            .isEmpty()) {
-            System.out.println(
-                "First MACRO: " + this.terrain.getMacroFeatures()
-                    .get(0));
-        }
+        // TODO: Update debug to biome-specific terrain generation
+//        System.out.println(
+//            "Terrain features TOTAL: " + this.terrain.getAllFeatures()
+//                .size());
+//        System.out.println(
+//            "MACRO features: " + this.terrain.getMacroFeatures()
+//                .size());
+//        System.out.println(
+//            "MESO  features: " + this.terrain.getMesoFeatures()
+//                .size());
+//        System.out.println(
+//            "MICRO features: " + this.terrain.getMicroFeatures()
+//                .size());
+//
+//        if (!this.terrain.getAllFeatures()
+//            .isEmpty()) {
+//            System.out.println(
+//                "First feature: " + this.terrain.getAllFeatures()
+//                    .get(0));
+//        }
+//        if (!this.terrain.getMacroFeatures()
+//            .isEmpty()) {
+//            System.out.println(
+//                "First MACRO: " + this.terrain.getMacroFeatures()
+//                    .get(0));
+//        }
     }
 }
