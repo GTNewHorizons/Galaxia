@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.utility;
 
-import java.util.ArrayList;
+import static com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -11,7 +12,6 @@ import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
-import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.EffectDef;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 
@@ -24,8 +24,6 @@ import cpw.mods.fml.common.gameevent.TickEvent;
 public class DimensionEventHandler {
 
     public int counter;
-    // Get all custom dimension IDs from Galaxia
-    public ArrayList<Integer> galaxiaDims;
 
     DamageSource temperature = new DamageSource("galaxia.temperature").setDamageBypassesArmor()
         .setMagicDamage();
@@ -36,11 +34,6 @@ public class DimensionEventHandler {
 
     public DimensionEventHandler() {
         this.counter = 0;
-        // Get all custom dimension IDs from Galaxia
-        this.galaxiaDims = new ArrayList<>();
-        for (DimensionEnum dim : DimensionEnum.values()) {
-            this.galaxiaDims.add(dim.getId());
-        }
     }
 
     /**
@@ -65,7 +58,7 @@ public class DimensionEventHandler {
         // Only applies to first dimensional transfer, i.e. no "previous" dimension
 
         // Only apply to galaxia dims, and only immediately after transfer
-        if (!(this.galaxiaDims.contains(currentDim))) return;
+        if (!(GALAXIA_DIMENSIONS.contains(currentDim))) return;
         applyEffects(SolarSystemRegistry.getById(currentDim).effects, player);
 
     }

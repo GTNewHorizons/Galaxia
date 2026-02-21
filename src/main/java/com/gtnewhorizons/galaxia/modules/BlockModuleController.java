@@ -42,7 +42,7 @@ public class BlockModuleController extends BlockContainer {
 
     @Override
     public int getRenderType() {
-        return ModuleConfig.DEBUG_RENDER ? 0 : 1;
+        return ModuleConfig.DEBUG_RENDER ? 0 : -1;
     }
 
     @Override

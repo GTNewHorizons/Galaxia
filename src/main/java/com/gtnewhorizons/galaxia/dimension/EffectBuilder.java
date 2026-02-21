@@ -9,16 +9,25 @@ public class EffectBuilder {
     private boolean spores;
     private int pressure;
 
+    /**
+     * @param baseTemp temperature in Kelvins
+     */
     public EffectBuilder baseTemp(int baseTemp) {
         this.baseTemp = baseTemp;
         return this;
     }
 
+    /**
+     * @param oxygenPercent oxygen amount where 100 is earth atmosphere
+     */
     public EffectBuilder oxygenPercent(int oxygenPercent) {
         this.oxygenPercent = oxygenPercent;
         return this;
     }
 
+    /**
+     * @param pressure pressure in earth atmospheres
+     */
     public EffectBuilder pressure(int pressure) {
         this.pressure = pressure;
         return this;
