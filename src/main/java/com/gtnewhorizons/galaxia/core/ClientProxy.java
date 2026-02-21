@@ -13,13 +13,9 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void init(FMLInitializationEvent event) {
         super.init(event);
-        registerRenderers();
-    }
 
-    private void registerRenderers() {
-        System.out.println("[Galaxia ClientProxy] Регистрирую TESR для TileEntityModuleController...");
+        // Регистрируем TESR
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityModuleController.class, new ModuleTESR());
-        System.out.println("[Galaxia ClientProxy] TESR зарегистрирован успешно");
     }
 
     @Override

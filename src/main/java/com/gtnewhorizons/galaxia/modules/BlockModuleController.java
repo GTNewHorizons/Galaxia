@@ -40,9 +40,15 @@ public class BlockModuleController extends BlockContainer {
         return ModuleConfig.DEBUG_RENDER;
     }
 
+    private static int renderId = -1;
+
+    public static void setRenderId(int id) {
+        renderId = id;
+    }
+
     @Override
     public int getRenderType() {
-        return ModuleConfig.DEBUG_RENDER ? 0 : -1;
+        return ModuleConfig.DEBUG_RENDER ? 0 : renderId;
     }
 
     @Override
