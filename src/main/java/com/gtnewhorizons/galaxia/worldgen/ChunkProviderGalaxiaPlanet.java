@@ -57,15 +57,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
                 BiomeGenBase[] adjacentBiomes = ((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getAdjacentBiomes();
                 double[] adjacentBiomeSignificance = ((WorldChunkManagerSpace)worldObj.getWorldChunkManager()).getAdjacentBiomeSignificance();
-                double totalSignificance = adjacentBiomeSignificance[0] + adjacentBiomeSignificance[1] + adjacentBiomeSignificance[2];
-                if (totalSignificance > 1) {
-                    double shrinkingMultiplier = 1 / totalSignificance;
-                    adjacentBiomeSignificance[0] *= shrinkingMultiplier;
-                    adjacentBiomeSignificance[1] *= shrinkingMultiplier;
-                    adjacentBiomeSignificance[2] *= shrinkingMultiplier;
-                    totalSignificance = adjacentBiomeSignificance[0] + adjacentBiomeSignificance[1] + adjacentBiomeSignificance[2];
+                int dominanceIndex = 0;
+                double dominantSignificance = adjacentBiomeSignificance[0];
+                for (int index = 1; index < adjacentBiomeSignificance.length; index++) {
+                    if (adjacentBiomeSignificance[index] > dominantSignificance) {
+                        dominanceIndex = index;
+                        dominantSignificance = adjacentBiomeSignificance[index];
+                    }
                 }
-                double localBiomeSignificance = 1 - totalSignificance;
+                double localBiomeSignificance = 1 - dominantSignificance;
 
                 // Set blending value for local biome
                 int localBiomeIndex = biomeList.indexOf(localBiome);
@@ -79,21 +79,19 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 biomeSignificances[localBiomeIndex] = localBiomeSignificanceArray;
 
                 // Set blending value for adjacent biome
-                for (int index = 0; index < adjacentBiomes.length; index++) {
-                    BiomeGenBase adjacentBiome = adjacentBiomes[index];
-                    if (!biomeList.contains(adjacentBiome)) {
-                        biomeList.add(adjacentBiome);
-                    }
-                    int adjacentBiomeIndex = biomeList.indexOf(adjacentBiome);
-                    double[] adjacentBiomeSignificanceArray;
-                    if (biomeSignificances[adjacentBiomeIndex] == null) {
-                        adjacentBiomeSignificanceArray = new double[256];
-                    } else {
-                        adjacentBiomeSignificanceArray = biomeSignificances[adjacentBiomeIndex];
-                    }
-                    adjacentBiomeSignificanceArray[localX + localZ * 16] = adjacentBiomeSignificance[index];
-                    biomeSignificances[adjacentBiomeIndex] = adjacentBiomeSignificanceArray;
+                BiomeGenBase adjacentBiome = adjacentBiomes[dominanceIndex];
+                if (!biomeList.contains(adjacentBiome)) {
+                    biomeList.add(adjacentBiome);
                 }
+                int adjacentBiomeIndex = biomeList.indexOf(adjacentBiome);
+                double[] adjacentBiomeSignificanceArray;
+                if (biomeSignificances[adjacentBiomeIndex] == null) {
+                    adjacentBiomeSignificanceArray = new double[256];
+                } else {
+                    adjacentBiomeSignificanceArray = biomeSignificances[adjacentBiomeIndex];
+                }
+                adjacentBiomeSignificanceArray[localX + localZ * 16] = dominantSignificance;
+                biomeSignificances[adjacentBiomeIndex] = adjacentBiomeSignificanceArray;
             }
         }
 
@@ -111,33 +109,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     biomeSignificanceValue = 0;
                 }
                 biomeSignificance[index] = biomeSignificanceValue;
-            }
-        }
-
-        // Calculate total biome significance
-        double[] totalBiomeSignificance = new double[256];
-        for (int currentSignificanceIndex = 0; currentSignificanceIndex < biomeSignificances.length; currentSignificanceIndex++) {
-            double[] currentSignificance = biomeSignificances[currentSignificanceIndex];
-            if (currentSignificance == null) {
-                continue;
-            }
-            for (int index = 0; index < currentSignificance.length; index++) {
-                totalBiomeSignificance[index] += currentSignificance[index];
-            }
-        }
-
-        // Normalize biome significance
-        for (int index = 0; index < totalBiomeSignificance.length; index++) {
-            double totalValue = totalBiomeSignificance[index];
-            if (totalValue <= 1) {
-                continue;
-            }
-            for (int currentSignificanceIndex = 0; currentSignificanceIndex < biomeSignificances.length; currentSignificanceIndex++) {
-                double[] currentSignificance = biomeSignificances[currentSignificanceIndex];
-                if (currentSignificance == null) {
-                    continue;
-                }
-                currentSignificance[index] /= totalValue;
             }
         }
 
