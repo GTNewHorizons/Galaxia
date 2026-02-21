@@ -67,7 +67,14 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         }
         int pickedBiome = (int) Math.floor(noise);
         if (pickedBiome >= matrixLength) {
+            double correctedNoise = noise - pickedBiome;
             pickedBiome = matrixLength - 1;
+            correctedNoise += pickedBiome;
+            if (firstIndex) {
+                cacheNoiseX = correctedNoise;
+            } else {
+                cacheNoiseZ = correctedNoise;
+            }
         } else if (pickedBiome < 0) {
             pickedBiome = 0;
         }
