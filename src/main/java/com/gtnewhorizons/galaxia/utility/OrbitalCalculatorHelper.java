@@ -6,7 +6,7 @@ public class OrbitalCalculatorHelper {
     /*
      * Notes and explanations:
      * For the sake of computational complexity, the following changes have been made to the standard equations:
-     * G (Gravitaional constant) = 1 (for simplicity)
+     * G (Gravitational constant) = 1 (for simplicity)
      * All masses are in Earth Masses as unit
      * All distances are measured as average Earth Radii;
      */
