@@ -23,7 +23,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 public abstract class WorldProviderSpace extends WorldProvider {
 
-    private final List<BiomeGenBase> biomes = new ArrayList<>();
+    private BiomeGenBase[][] biomes;
 
     protected boolean hasSky = true;
     protected float cloudHeight = 8.0F;
@@ -80,8 +80,12 @@ public abstract class WorldProviderSpace extends WorldProvider {
         return terrainConfig;
     }
 
-    public void addBiome(BiomeGenBase biome) {
-        biomes.add(biome);
+    public void createBiomeMatrix(int size) {
+        biomes = new BiomeGenBase[size][size];
+    }
+
+    public void addBiome(BiomeGenBase biome, int x, int z) {
+        biomes[x][z] = biome;
     }
 
     public void transferBiomes() {

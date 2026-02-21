@@ -5,45 +5,52 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.biome.WorldChunkManager;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class WorldChunkManagerSpace extends WorldChunkManager {
-    private final List<BiomeGenBase> biomeGenerator = new ArrayList<>();
-    private NoiseGeneratorOctaves biomeNoise;
+    private BiomeGenBase[][] biomeGenerator;
+    private NoiseGeneratorOctaves xBiomeNoise;
+    private NoiseGeneratorOctaves zBiomeNoise;
 
     public void assignSeed(long seed) {
-        if (biomeNoise != null) {
+        if (xBiomeNoise != null) {
             return;
         }
-        biomeNoise = new NoiseGeneratorOctaves(new Random(seed), 4);
+        xBiomeNoise = new NoiseGeneratorOctaves(new Random(seed), 4);
+        zBiomeNoise = new NoiseGeneratorOctaves(new Random(seed + 1), 4);
     }
 
-    public void provideBiomes(List<BiomeGenBase> biomes) {
-        if (!biomeGenerator.isEmpty()) {
+    public void provideBiomes(BiomeGenBase[][] biomes) {
+        if (biomeGenerator != null) {
             return;
         }
-        biomeGenerator.addAll(biomes);
+        biomeGenerator = biomes;
     }
 
     /**
      * Returns the BiomeGenBase related to the x, z position on the world.
      */
     public BiomeGenBase getBiomeGenAt(int x, int z) {
-        int biomeCount = biomeGenerator.size();
-        double noise = biomeNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.025, 0.025, 0)[0];
+        int matrixLength = biomeGenerator[0].length;
+        int xIndex = getBiomeIndex(x, z, matrixLength, xBiomeNoise);
+        int zIndex = getBiomeIndex(x, z, matrixLength, zBiomeNoise);
+        return this.biomeGenerator[xIndex][zIndex];
+    }
+
+    private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator) {
+        double noise = noiseGenerator.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.025, 0.025, 0)[0];
         noise += 6;
-        noise *= biomeCount;
+        noise *= matrixLength;
         noise /= 12;
         int pickedBiome = (int) Math.floor(noise);
-        if (pickedBiome >= biomeCount) {
-            pickedBiome = biomeCount - 1;
+        if (pickedBiome >= matrixLength) {
+            pickedBiome = matrixLength - 1;
         } else if (pickedBiome < 0) {
             pickedBiome = 0;
         }
-        return this.biomeGenerator.get(pickedBiome);
+        return pickedBiome;
     }
 
     /**
@@ -56,7 +63,7 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
             p_76933_1_ = new BiomeGenBase[p_76933_4_ * p_76933_5_];
         }
 
-        Arrays.fill(p_76933_1_, 0, p_76933_4_ * p_76933_5_, this.biomeGenerator.get(0));
+        Arrays.fill(p_76933_1_, 0, p_76933_4_ * p_76933_5_, this.biomeGenerator[0][0]);
         return p_76933_1_;
     }
 
@@ -65,10 +72,12 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * don't check biomeCache to avoid infinite loop in BiomeCacheBlock)
      */
     public BiomeGenBase[] getBiomeGenAt(BiomeGenBase[] p_76931_1_, int p_76931_2_, int p_76931_3_, int p_76931_4_, int p_76931_5_, boolean p_76931_6_) {
+        // TODO: This code is just a placeholder, I do not know what it is meant to do other than preventing a crash
         return this.loadBlockGeneratorData(p_76931_1_, p_76931_2_, p_76931_3_, p_76931_4_, p_76931_5_);
     }
 
     public ChunkPosition findBiomePosition(int p_150795_1_, int p_150795_2_, int p_150795_3_, List<BiomeGenBase> p_150795_4_, Random p_150795_5_) {
+        // TODO: This code is just a placeholder, I do not know what it is meant to do other than preventing a crash
         return doesListContainBiomes(p_150795_4_) ? new ChunkPosition(p_150795_1_ - p_150795_3_ + p_150795_5_.nextInt(p_150795_3_ * 2 + 1), 0, p_150795_2_ - p_150795_3_ + p_150795_5_.nextInt(p_150795_3_ * 2 + 1)) : null;
     }
 
@@ -76,13 +85,16 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * checks given Chunk's Biomes against List of allowed ones
      */
     public boolean areBiomesViable(int p_76940_1_, int p_76940_2_, int p_76940_3_, List<BiomeGenBase> p_76940_4_) {
+        // TODO: This code is just a placeholder, I do not know what it is meant to do other than preventing a crash
         return doesListContainBiomes(p_76940_4_);
     }
 
     private boolean doesListContainBiomes(List<BiomeGenBase> listToCheck) {
-        for (BiomeGenBase biomeGenBase : biomeGenerator) {
-            if (listToCheck.contains(biomeGenBase)) {
-                return true;
+        for (int x = 0; x < biomeGenerator.length; x++) {
+            for (int z = 0; z < biomeGenerator[x].length; z++) {
+                if (listToCheck.contains(biomeGenerator[x][z])) {
+                    return true;
+                }
             }
         }
         return false;
@@ -94,7 +106,7 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
             p_76937_1_ = new BiomeGenBase[p_76937_4_ * p_76937_5_];
         }
 
-        Arrays.fill(p_76937_1_, 0, p_76937_4_ * p_76937_5_, this.biomeGenerator.get(0));
+        Arrays.fill(p_76937_1_, 0, p_76937_4_ * p_76937_5_, this.biomeGenerator[0][0]);
         return p_76937_1_;
     }
 }

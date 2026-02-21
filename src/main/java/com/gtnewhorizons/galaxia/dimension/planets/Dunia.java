@@ -37,10 +37,11 @@ public class Dunia extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             // These biome names are mostly just for testing
-            .biome(createBiome("Dunia Dunes", Blocks.brick_block))
-            .biome(createBiome("Dunia Craters", Blocks.wool, 4))
-            .biome(createBiome("Dunia Hills", GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix).block()))
-            .biome(createBiome("Dunia Basins", GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix).block()))
+            .createBiomeMatrix(2)
+            .biome(createBiome("Dunia Dunes", Blocks.brick_block), 0, 0)
+            .biome(createBiome("Dunia Craters", Blocks.wool, 4), 0, 1)
+            .biome(createBiome("Dunia Hills", GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix).block()), 1, 0)
+            .biome(createBiome("Dunia Basins", GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix).block()), 1, 1)
             .name(ENUM)
             .terrain(
                 TerrainConfiguration.builder()
