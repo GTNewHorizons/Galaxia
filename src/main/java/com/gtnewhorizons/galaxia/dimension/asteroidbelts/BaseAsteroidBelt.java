@@ -9,10 +9,10 @@ import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 public abstract class BaseAsteroidBelt extends BasePlanet {
 
     protected DimensionBuilder createBuilder() {
-        return new DimensionBuilder().enumValue(getPlanetEnum())
+        return customizeDimension(new DimensionBuilder().enumValue(getPlanetEnum())
             .provider(getProviderClass())
             .airResistance(0)
-            .gravity(0);
+            .gravity(0));
     }
 
     protected abstract Class<? extends WorldProvider> getProviderClass();
