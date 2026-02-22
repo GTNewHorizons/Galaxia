@@ -31,7 +31,7 @@ public enum GalaxiaBlocks {
 
     // spotless:off
     public static void registerPlanetBlocks() {
-        reg(DimensionEnum.CALX, GalaxiaItemList.DUST_CALX,
+        reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
             BlockVariant.TEKTITE,
             BlockVariant.MAGMA,
@@ -41,7 +41,7 @@ public enum GalaxiaBlocks {
             BlockVariant.ANORTHOSITE,
             BlockVariant.ANDESITE);
 
-        reg(DimensionEnum.DUNIA,
+        reg(DimensionEnum.HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
             BlockVariant.SNOW);

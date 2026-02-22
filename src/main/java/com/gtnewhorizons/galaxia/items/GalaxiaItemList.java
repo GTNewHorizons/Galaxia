@@ -15,7 +15,7 @@ public enum GalaxiaItemList {
 
     TELEPORTER("teleporter", ItemTeleporter::new, 1),
     ANOTHER_THING("another_thing"),
-    DUST_CALX("calx_dust"),
+    DUST_THEIA("theia_dust"),
     MODULE_PLACER("module_placer", ItemHabitatBuilder::new),
     MODULE_MOVER("module_mover", ItemModuleMover::new);
 
