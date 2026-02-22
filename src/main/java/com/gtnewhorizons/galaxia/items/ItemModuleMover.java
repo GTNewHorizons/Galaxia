@@ -16,7 +16,6 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 public class ItemModuleMover extends Item {
 
-    // TODO fix module disappearing when is placed on top of itself (maybe in some other conditions idk)
     private static final String LANG_PREFIX = "galaxia.module_mover.";
 
     public ItemModuleMover() {
@@ -79,38 +78,44 @@ public class ItemModuleMover extends Item {
         String moduleId = oldTe.getType()
             .getId();
 
-        oldTe.destroyStructure();
-        world.setBlockToAir(selected[0], selected[1], selected[2]);
-
         ForgeDirection dir = ForgeDirection.getOrientation(side);
         int nx = x + dir.offsetX;
         int ny = y + dir.offsetY;
         int nz = z + dir.offsetZ;
 
-        if (!world.isAirBlock(nx, ny, nz) && !world.getBlock(nx, ny, nz)
-            .isReplaceable(world, nx, ny, nz)) {
-            player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "cannot_place_here"));
-            return false;
+        boolean samePosition = selected[0] == nx && selected[1] == ny && selected[2] == nz;
+
+        if (!samePosition) {
+            if (!world.isAirBlock(nx, ny, nz) && !world.getBlock(nx, ny, nz)
+                .isReplaceable(world, nx, ny, nz)) {
+                player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "cannot_place_here"));
+                return false;
+            }
         }
 
-        world.setBlock(nx, ny, nz, GalaxiaBlocks.moduleController);
-        TileEntityModuleController newTe = (TileEntityModuleController) world.getTileEntity(nx, ny, nz);
-        if (newTe != null) {
-            newTe.setModule(moduleId);
-            newTe.buildStructure();
-            player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "module_moved"));
+        if (!samePosition) {
+            oldTe.destroyStructure();
+            world.setBlockToAir(selected[0], selected[1], selected[2]);
+
+            world.setBlock(nx, ny, nz, GalaxiaBlocks.moduleController);
+            TileEntityModuleController newTe = (TileEntityModuleController) world.getTileEntity(nx, ny, nz);
+            if (newTe != null) {
+                newTe.setModule(moduleId);
+                newTe.buildStructure();
+            }
+        } else {
+            oldTe.buildStructure();
         }
 
+        player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "module_moved"));
         clearSelected(stack);
         return true;
     }
 
-    // prevent player from
+    // prevent player from destroying module on left click
     @Override
     public boolean onBlockStartBreak(ItemStack itemstack, int x, int y, int z, EntityPlayer player) {
-        if (!player.capabilities.isCreativeMode) {
-            return false;
-        }
+        if (!player.capabilities.isCreativeMode) return false;
 
         World world = player.worldObj;
         if (world.getBlock(x, y, z) == GalaxiaBlocks.moduleController) {
