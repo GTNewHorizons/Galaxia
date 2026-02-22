@@ -40,4 +40,5 @@ public class BlockVariant {
     public static final BlockVariant MAGMA = stoneLike("magma", 8F);
     public static final BlockVariant TEKTITE = stoneLike("tektite", 10F);
     public static final BlockVariant SNOW = dirtLike("snow", 0.5F);
+    public static final BlockVariant ICE = stoneLike("ice", 1.0F);
 }

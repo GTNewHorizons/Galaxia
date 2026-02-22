@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
+import com.gtnewhorizons.galaxia.block.BlockVariant;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
@@ -67,7 +69,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     32,
                     64,
                     512,
-                    new BlockMeta[] { new BlockMeta(Blocks.stonebrick, 0), new BlockMeta(Blocks.stonebrick, 1) },
+                    new BlockMeta[] {GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix), new BlockMeta(Blocks.stonebrick, 1) },
                     4) };
             WorldProviderBuilder.configure(this)
                 .sky(true)

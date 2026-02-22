@@ -4,7 +4,7 @@ public enum DimensionEnum {
 
     CALX(20, "Calx"),
     DUNIA(21, "Dunia"),
-    FROZEN_BELT(22, "Frozen Belt");
+    FROZEN_BELT(22, "Frozen_Belt");
 
     final int id;
     final String name;

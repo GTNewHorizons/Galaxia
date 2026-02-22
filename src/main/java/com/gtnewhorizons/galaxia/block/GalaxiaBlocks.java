@@ -45,6 +45,9 @@ public enum GalaxiaBlocks {
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
             BlockVariant.SNOW);
+
+        reg(DimensionEnum.FROZEN_BELT,
+            BlockVariant.ICE);
     }
     //spotless:on
 
