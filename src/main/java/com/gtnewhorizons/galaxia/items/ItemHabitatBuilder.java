@@ -74,7 +74,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
             return false;
         }
 
-        world.setBlock(px, py, pz, GalaxiaBlocks.moduleController);
+        world.setBlock(px, py, pz, GalaxiaBlocks.MODULE_CONTROLLER.get());
 
         TileEntityModuleController te = (TileEntityModuleController) world.getTileEntity(px, py, pz);
         if (te != null) {
