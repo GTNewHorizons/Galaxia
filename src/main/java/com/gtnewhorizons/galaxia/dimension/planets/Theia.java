@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.dimension.planets;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.block.BlockVariant;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
@@ -10,6 +11,7 @@ import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 public class Theia extends BasePlanet {
 
@@ -39,8 +41,16 @@ public class Theia extends BasePlanet {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
-            .createBiomeMatrix(1)
-            .biome(createBiome(), 0, 0)
+            .biome(
+                createBiome("Theia Surface", GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)),
+                0,
+                0)
+            .biome(
+                createBiome(
+                    "Theia Rough Surface",
+                    GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix)),
+                1,
+                0)
             .name(ENUM)
             .build();
     }
@@ -86,12 +96,12 @@ public class Theia extends BasePlanet {
                     .period(6000L));
     }
 
-    protected static BiomeGenBase createBiome() {
-        return new BiomeGenBuilder(100).name("Theia Surface")
+    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock) {
+        return new BiomeGenBuilder(100).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(GalaxiaBlockBase.get(DimensionEnum.THEIA))
+            .topBlock(topBlock)
             .fillerBlock(Blocks.brick_block)
             .build();
     }
