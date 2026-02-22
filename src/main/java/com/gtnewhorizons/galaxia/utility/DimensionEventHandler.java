@@ -5,11 +5,11 @@ import static com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry.GALAXIA_DI
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.dimension.EffectDef;
@@ -24,6 +24,7 @@ import cpw.mods.fml.common.gameevent.TickEvent;
 public class DimensionEventHandler {
 
     public int counter;
+    public final int BASE_EFFECT_DURATION = 39;
 
     DamageSource temperature = new DamageSource("galaxia.temperature").setDamageBypassesArmor()
         .setMagicDamage();
@@ -39,28 +40,19 @@ public class DimensionEventHandler {
     /**
      * Event Handler method that runs every tick, primarily used at the moment to apply dimensional transfer effects
      * USE WITH CAUTION - this method runs every player tick on the server, use guard clauses where possible to not
-     * waste
-     * computation
+     * waste computation
      *
      * @param event The player tick event
      */
     @SubscribeEvent
-    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        counter++;
-        if (counter != 20) return;
-        counter = 0;
-
+    public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-
-        EntityPlayer player = event.player;
-        UUID id = player.getUniqueID();
-        int currentDim = player.dimension;
-        // Only applies to first dimensional transfer, i.e. no "previous" dimension
-
-        // Only apply to galaxia dims, and only immediately after transfer
-        if (!(GALAXIA_DIMENSIONS.contains(currentDim))) return;
-        applyEffects(SolarSystemRegistry.getById(currentDim).effects, player);
-
+        for (EntityPlayer player : MinecraftServer.getServer()
+            .getConfigurationManager().playerEntityList) {
+            if (!GALAXIA_DIMENSIONS.contains(player.dimension)) continue;
+            if (player.ticksExisted % 20 != 0) continue;
+            applyEffects(SolarSystemRegistry.getById(player.dimension).effects, player);
+        }
     }
 
     /**
@@ -99,7 +91,7 @@ public class DimensionEventHandler {
     private void applyWithering(EffectDef def, EntityPlayer player) {
         if (!def.withering) return;
         if (player.isPotionActive(Potion.wither)) return;
-        player.addPotionEffect(new PotionEffect(Potion.wither.id, 10, 1));
+        player.addPotionEffect(new PotionEffect(Potion.wither.id, BASE_EFFECT_DURATION, 1));
     }
 
     /**
@@ -132,7 +124,7 @@ public class DimensionEventHandler {
         Random random = new Random();
 
         int effectToAdd = possibleEffects.get(random.nextInt(possibleEffects.size() - 1) + 1);
-        player.addPotionEffect(new PotionEffect(effectToAdd, 100, 1));
+        player.addPotionEffect(new PotionEffect(effectToAdd, BASE_EFFECT_DURATION, 1));
     }
 
     /**
@@ -159,15 +151,15 @@ public class DimensionEventHandler {
         }
 
         if (diff < 20) {
-            player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, 10, 0));
-            player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 10, 0));
+            player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION, 0));
+            player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, BASE_EFFECT_DURATION, 0));
         } else if (diff <= 50) {
 
-            player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, 10, 1));
-            player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 10, 1));
+            player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION, 1));
+            player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, BASE_EFFECT_DURATION, 1));
         } else {
-            player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, 10, 2));
-            player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 10, 2));
+            player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION, 2));
+            player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, BASE_EFFECT_DURATION, 2));
             player.attackEntityFrom(this.temperature, 2.0f);
         }
 
@@ -200,8 +192,8 @@ public class DimensionEventHandler {
         if (def.pressure <= acceptableMax && def.pressure >= acceptableMin) return;
         if (player.isPotionActive(Potion.moveSlowdown)) return;
         if (player.isPotionActive(Potion.digSlowdown)) return;
-        player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, 10, 1));
-        player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 10, 1));
+        player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION, 1));
+        player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, BASE_EFFECT_DURATION, 1));
 
     }
 
