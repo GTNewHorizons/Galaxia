@@ -15,15 +15,27 @@ import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
+/**
+ * The class holding all data related to the dimension Hemateria
+ */
 public class Hemateria extends BasePlanet {
 
     public static final DimensionEnum ENUM = DimensionEnum.HEMATERIA;
 
+    /**
+     * Getter for dimension Enum
+     * @return Dimension Enum
+     */
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
+    /**
+     * The configuration of the DimensionBuilder to configure the dimension
+     * @param builder The dimension builder to chain on
+     * @return The dimension Builder with all properties assigned
+     */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.mass(0.1)
@@ -37,6 +49,10 @@ public class Hemateria extends BasePlanet {
                     .pressure(1));
     }
 
+    /**
+     * Configures the world provider to add the correct biomes and settings
+     * @param builder The world provider builder being configured
+     */
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
@@ -108,10 +124,25 @@ public class Hemateria extends BasePlanet {
             .build();
     }
 
+    /**
+     * Creates a biome with a specific block type, and terrain configuration
+     * @param name Biome name
+     * @param block The block used for the biome top block
+     * @param terrain The required terrain configuration
+     * @return The BiomeGenBase used to generated biomes of that type
+     */
     protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain) {
         return createBiome(name, block, 0, terrain);
     }
 
+    /**
+     * Creates a biome with a specific block type (containing meta), and terrain configuration
+     * @param name The biome name
+     * @param block The block used for the top block
+     * @param meta The meta-data of the block
+     * @param terrain The required terrain configuration
+     * @return
+     */
     protected static BiomeGenBase createBiome(String name, Block block, int meta, TerrainConfiguration terrain) {
         return new BiomeGenBuilder(100).name(name)
             .height(0.1F, 0.11F)
