@@ -21,7 +21,7 @@ public final class TerrainConfiguration {
         List<TerrainFeature> mi = new ArrayList<>();
 
         for (TerrainFeature f : features) {
-            switch (f.getPreset().scale) {
+            switch (f.preset().scale) {
                 case MACRO:
                     m.add(f);
                     break;

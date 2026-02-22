@@ -51,7 +51,10 @@ public class DimensionEventHandler {
             .getConfigurationManager().playerEntityList) {
             if (!GALAXIA_DIMENSIONS.contains(player.dimension)) continue;
             if (player.ticksExisted % 20 != 0) continue;
-            applyEffects(SolarSystemRegistry.getById(player.dimension).effects, player);
+            applyEffects(
+                SolarSystemRegistry.getById(player.dimension)
+                    .effects(),
+                player);
         }
     }
 
@@ -89,7 +92,7 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyWithering(EffectDef def, EntityPlayer player) {
-        if (!def.withering) return;
+        if (!def.withering()) return;
         if (player.isPotionActive(Potion.wither)) return;
         player.addPotionEffect(new PotionEffect(Potion.wither.id, BASE_EFFECT_DURATION, 1));
     }
@@ -101,7 +104,7 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applySpores(EffectDef def, EntityPlayer player) {
-        if (!def.spores) return;
+        if (!def.spores()) return;
         List<Integer> possibleEffects = Arrays.asList(2, 4, 15, 17, 18, 19, 20);
         /*
          * 2 = Slowness
@@ -141,13 +144,13 @@ public class DimensionEventHandler {
         int acceptableMin = 268; // -5 Celsius
         int acceptableMax = 323; // 50 Celsius
 
-        if (def.baseTemp < acceptableMax && def.baseTemp > acceptableMin) return;
+        if (def.baseTemp() < acceptableMax && def.baseTemp() > acceptableMin) return;
 
         int diff;
-        if (def.baseTemp < acceptableMin) {
-            diff = acceptableMin - def.baseTemp;
+        if (def.baseTemp() < acceptableMin) {
+            diff = acceptableMin - def.baseTemp();
         } else {
-            diff = def.baseTemp - acceptableMax;
+            diff = def.baseTemp() - acceptableMax;
         }
 
         if (diff < 20) {
@@ -172,7 +175,7 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyLowOxygen(EffectDef def, EntityPlayer player) {
-        if (def.oxygenPercent == 100) return;
+        if (def.oxygenPercent() == 100) return;
         // Temp until oxygen gear added
         boolean hasOxygenGear = false;
         if (hasOxygenGear) return;
@@ -189,7 +192,7 @@ public class DimensionEventHandler {
         // Temp until space suit added:
         int acceptableMin = 1;
         int acceptableMax = 2;
-        if (def.pressure <= acceptableMax && def.pressure >= acceptableMin) return;
+        if (def.pressure() <= acceptableMax && def.pressure() >= acceptableMin) return;
         if (player.isPotionActive(Potion.moveSlowdown)) return;
         if (player.isPotionActive(Potion.digSlowdown)) return;
         player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION, 1));
@@ -204,7 +207,7 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyRadiation(EffectDef def, EntityPlayer player) {
-        if (def.radiation == 0) return;
+        if (def.radiation() == 0) return;
         // Temp until radiation suit added
         boolean hasRadSuit = false;
         if (hasRadSuit) return;

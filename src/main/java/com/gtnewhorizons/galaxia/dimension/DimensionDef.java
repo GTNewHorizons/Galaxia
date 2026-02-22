@@ -5,40 +5,18 @@ import java.util.List;
 
 import net.minecraft.world.WorldProvider;
 
+import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
 
-public final class DimensionDef {
+@Desugar
+public record DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded,
+    double gravity, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
+    EffectDef effects,
 
-    public final String name;
-    public final int id;
-    public final Class<? extends WorldProvider> provider;
-    public final boolean keepLoaded;
-    public final double gravity;
-    public final double air_resistance;
-    public final boolean removeSpeedCancelation;
-    public final List<CelestialBody> celestialBodies;
-    public final EffectDef effects;
+    // Orbital
+    double mass, double orbitalRadius, double radius) {
 
-    // Used in Orbital Calculator
-    public final double mass;
-    public final double orbitalRadius;
-    public final double radius;
-
-    DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded, double gravity,
-        double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, double mass,
-        double orbitalRadius, double radius, EffectDef effects) {
-        this.name = name;
-        this.id = id;
-        this.mass = mass;
-        this.orbitalRadius = orbitalRadius;
-        this.radius = radius;
-        this.provider = provider;
-        this.keepLoaded = keepLoaded;
-        this.gravity = gravity;
-        this.air_resistance = airResistance;
-        this.removeSpeedCancelation = removeSpeedCancelation;
-        this.celestialBodies = celestialBodies == null ? Collections.emptyList()
-            : Collections.unmodifiableList(celestialBodies);
-        this.effects = effects;
+    public DimensionDef {
+        celestialBodies = celestialBodies == null ? null : Collections.unmodifiableList(celestialBodies);
     }
 }

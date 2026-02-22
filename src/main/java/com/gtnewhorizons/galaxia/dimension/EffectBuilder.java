@@ -2,12 +2,12 @@ package com.gtnewhorizons.galaxia.dimension;
 
 public class EffectBuilder {
 
-    private int baseTemp;
-    private boolean withering;
-    private int oxygenPercent;
-    private int radiation;
-    private boolean spores;
-    private int pressure;
+    private int baseTemp = 273;
+    private boolean withering = false;
+    private int oxygenPercent = 100;
+    private int radiation = 0;
+    private boolean spores = false;
+    private int pressure = 1;
 
     /**
      * @param baseTemp temperature in Kelvins

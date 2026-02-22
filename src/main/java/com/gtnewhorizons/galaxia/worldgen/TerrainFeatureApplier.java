@@ -14,11 +14,11 @@ public final class TerrainFeatureApplier {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
         }
-        TerrainPreset preset = feature.getPreset();
-        double height = feature.getHeight();
-        double width = feature.getWidth();
-        double freq = feature.getFrequency();
-        int depth = feature.getDepth();
+        TerrainPreset preset = feature.preset();
+        double height = feature.height();
+        double width = feature.width();
+        double freq = feature.frequency();
+        int depth = feature.depth();
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
         Random localRand = new Random(seed);
 
@@ -37,8 +37,8 @@ public final class TerrainFeatureApplier {
                     heightMap,
                     height,
                     width,
-                    feature.getMinHeight(),
-                    feature.getVariation(),
+                    feature.minHeight(),
+                    feature.variation(),
                     localRand,
                     chunkX,
                     chunkZ,

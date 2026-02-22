@@ -132,10 +132,10 @@ public class DimensionBuilder {
             air_resistance,
             removeSpeedCancelation,
             celestialBodies,
+            effects,
             mass,
             orbitalRadius,
-            radius,
-            effects);
+            radius);
 
         BY_NAME.put(name.toLowerCase(), def);
         BY_ID.put(id, def);

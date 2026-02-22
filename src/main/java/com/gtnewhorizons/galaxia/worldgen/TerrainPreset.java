@@ -19,13 +19,13 @@ public enum TerrainPreset {
     GLACIAL_VALLEYS(Scale.MESO, 0.38, 1.15, 1.15, -42, 58),
 
     // ====================== MICRO ======================
-    YARDANGS(Scale.MICRO, 0.92, 0.55, 0.55, 0, 0),
-    LAVA_TUBES(Scale.MICRO, 0.62, 1.05, 1.05, 0, 0),
-    CRYOVOLCANOES(Scale.MICRO, 0.25, 1.55, 1.55, 0, 0),
-    ICE_FISSURES(Scale.MICRO, 0.72, 0.82, 0.82, 0, 0),
-    KARST_SINKHOLES(Scale.MICRO, 0.55, 1.05, 1.05, 0, 0),
-    SALT_FLATS(Scale.MICRO, 0.85, 0.65, 0.65, 0, 0),
-    LAYERED_SEDIMENTARY_ROCKS(Scale.MICRO, 1.0, 1, 1, 0, 0);
+    YARDANGS(Scale.MICRO, 0.92, 0.55, 0.55),
+    LAVA_TUBES(Scale.MICRO, 0.62, 1.05, 1.05),
+    CRYOVOLCANOES(Scale.MICRO, 0.25, 1.55, 1.55),
+    ICE_FISSURES(Scale.MICRO, 0.72, 0.82, 0.82),
+    KARST_SINKHOLES(Scale.MICRO, 0.55, 1.05, 1.05),
+    SALT_FLATS(Scale.MICRO, 0.85, 0.65, 0.65),
+    LAYERED_SEDIMENTARY_ROCKS(Scale.MICRO, 1.0, 1, 1);
 
     public enum Scale {
         MACRO,
@@ -49,8 +49,7 @@ public enum TerrainPreset {
         this.defaultVariation = var;
     }
 
-    @Override
-    public String toString() {
-        return name() + " (" + scale + ")";
+    TerrainPreset(Scale scale, double freq, double height, double width) {
+        this(scale, freq, height, width, 0, 0);
     }
 }

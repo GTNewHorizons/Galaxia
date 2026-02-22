@@ -76,7 +76,7 @@ public abstract class RenderGlobalSkyMixin {
 
         Tessellator t = Tessellator.instance;
 
-        List<CelestialBody> bodies = (dimId == 0) ? DEFAULT_OVERWORLD_BODIES : def.celestialBodies;
+        List<CelestialBody> bodies = (dimId == 0) ? DEFAULT_OVERWORLD_BODIES : def.celestialBodies();
 
         if (bodies.isEmpty()) {
             return;
