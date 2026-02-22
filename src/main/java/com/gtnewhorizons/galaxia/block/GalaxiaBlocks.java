@@ -12,6 +12,10 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
+/**
+ * The ENUM used for all custom blocks in Galaxia. BlockVariants are used to change the planet the block can be found on
+ * for types of rock etc.
+ */
 public enum GalaxiaBlocks {
     // spotless:off
 
@@ -21,6 +25,9 @@ public enum GalaxiaBlocks {
 
     // spotless:on
 
+    /**
+     * Registers all blocks in the ENUM into the game registry, including tile entity blocks
+     */
     public static void registerBlocks() {
         for (GalaxiaBlocks block : values()) {
             GameRegistry.registerBlock(block.get(), block.name);
@@ -30,6 +37,10 @@ public enum GalaxiaBlocks {
     }
 
     // spotless:off
+
+    /**
+     * Registers all block variants for each planet, alongside the relevant dust items
+     */
     public static void registerPlanetBlocks() {
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
