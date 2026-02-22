@@ -58,7 +58,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     @Override
     protected void registerWorldChunkManager() {
-        ((WorldChunkManagerSpace)this.worldChunkMgr).assignSeed(worldObj.getSeed());
+        ((WorldChunkManagerSpace) this.worldChunkMgr).assignSeed(worldObj.getSeed());
     }
 
     @Override
@@ -78,7 +78,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
     }
 
     public void transferBiomes() {
-        ((WorldChunkManagerSpace)worldChunkMgr).provideBiomes(biomes);
+        ((WorldChunkManagerSpace) worldChunkMgr).provideBiomes(biomes);
     }
 
     @Override

@@ -16,7 +16,7 @@ public final class TerrainFeature {
     private final Map<String, Object> customParams;
 
     TerrainFeature(TerrainPreset preset, double frequency, double height, double width, int minHeight, int variation,
-                   int depth, Map<String, Object> customParams) {
+        int depth, Map<String, Object> customParams) {
         this.preset = preset;
         this.frequency = frequency;
         this.height = height;

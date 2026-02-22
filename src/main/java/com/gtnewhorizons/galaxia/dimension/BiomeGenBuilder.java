@@ -3,13 +3,14 @@ package com.gtnewhorizons.galaxia.dimension;
 import java.util.Collections;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
+
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 
 public class BiomeGenBuilder {
 
@@ -86,7 +87,8 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight, BlockMeta seabed, int seabedHeight) {
+    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight, BlockMeta seabed,
+        int seabedHeight) {
         this.oceanFiller = oceanFiller;
         this.oceanSurface = oceanSurface;
         this.oceanHeight = oceanHeight;

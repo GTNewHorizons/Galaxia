@@ -1,10 +1,12 @@
 package com.gtnewhorizons.galaxia.dimension;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+
 public class BiomeGenSpace extends BiomeGenBase {
+
     private final boolean generateBedrock;
     private final int topBlockMeta;
     private final int fillerBlockMeta;
@@ -44,7 +46,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
         this.terrain = b.terrain != null ? b.terrain
             : TerrainConfiguration.builder()
-            .build();
+                .build();
         this.generateBedrock = b.generateBedrock;
     }
 

@@ -1,13 +1,13 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
-import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
-import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
@@ -24,11 +24,10 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return super.customizeDimension(builder)
-            .effects(
-                new EffectBuilder().baseTemp(67)
-                    .oxygenPercent(0)
-                    .pressure(1));
+        return super.customizeDimension(builder).effects(
+            new EffectBuilder().baseTemp(67)
+                .oxygenPercent(0)
+                .pressure(1));
     }
 
     @Override

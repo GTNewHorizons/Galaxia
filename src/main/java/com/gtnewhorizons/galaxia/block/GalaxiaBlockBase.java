@@ -3,12 +3,12 @@ package com.gtnewhorizons.galaxia.block;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 

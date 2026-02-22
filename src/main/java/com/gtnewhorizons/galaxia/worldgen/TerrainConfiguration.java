@@ -6,9 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import net.minecraft.init.Blocks;
-
 public final class TerrainConfiguration {
 
     private final List<TerrainFeature> allFeatures;

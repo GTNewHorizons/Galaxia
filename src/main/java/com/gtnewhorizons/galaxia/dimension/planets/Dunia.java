@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
-import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -11,7 +9,9 @@ import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
@@ -44,47 +44,66 @@ public class Dunia extends BasePlanet {
             .avgGround(80)
             // These biome names are mostly just for testing
             .createBiomeMatrix(2)
-            .biome(createBiome("Dunia Dunes", Blocks.brick_block,
+            .biome(
+                createBiome(
+                    "Dunia Dunes",
+                    Blocks.brick_block,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.SAND_DUNES)
                         .scale(4)
                         .width(1.5)
                         .height(2)
                         .endFeature()
-                        .build()
-                ), 0, 0)
-            .biome(createBiome("Dunia Mountains", Blocks.wool, 4,
-                TerrainConfiguration.builder()
-                    .feature(TerrainPreset.MOUNTAIN_RANGES)
-                    .scale(4)
-                    .height(0.5)
-                    .width(2)
-                    .endFeature()
-                    .build()
-                ), 0, 1)
-            .biome(createBiome("Dunia Hills", GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix).block(),
-                TerrainConfiguration.builder()
-                    .feature(TerrainPreset.MOUNTAIN_RANGES)
-                    .scale(0.25)
-                    .height(4)
-                    .width(2)
-                    .endFeature()
-                    .build()
-                ), 1, 0)
-            .biome(createBiome("Dunia Dune Hills", GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix).block(),
-                TerrainConfiguration.builder()
-                    .feature(TerrainPreset.MOUNTAIN_RANGES)
-                    .scale(4)
-                    .height(0.5)
-                    .width(2)
-                    .endFeature()
-                    .feature(TerrainPreset.SAND_DUNES)
-                    .scale(4)
-                    .width(1.5)
-                    .height(2)
-                    .endFeature()
-                    .build()
-                ), 1, 1)
+                        .build()),
+                0,
+                0)
+            .biome(
+                createBiome(
+                    "Dunia Mountains",
+                    Blocks.wool,
+                    4,
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .scale(4)
+                        .height(0.5)
+                        .width(2)
+                        .endFeature()
+                        .build()),
+                0,
+                1)
+            .biome(
+                createBiome(
+                    "Dunia Hills",
+                    GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix)
+                        .block(),
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .scale(0.25)
+                        .height(4)
+                        .width(2)
+                        .endFeature()
+                        .build()),
+                1,
+                0)
+            .biome(
+                createBiome(
+                    "Dunia Dune Hills",
+                    GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix)
+                        .block(),
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .scale(4)
+                        .height(0.5)
+                        .width(2)
+                        .endFeature()
+                        .feature(TerrainPreset.SAND_DUNES)
+                        .scale(4)
+                        .width(1.5)
+                        .height(2)
+                        .endFeature()
+                        .build()),
+                1,
+                1)
             .name(ENUM)
             .build();
     }
@@ -102,7 +121,12 @@ public class Dunia extends BasePlanet {
             .fillerBlock(Blocks.brick_block)
             .snowBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.SNOW.suffix), 144)
             .terrain(terrain)
-            .ocean(new BlockMeta(Blocks.glass, 1), GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix), 64, new BlockMeta(Blocks.obsidian, 0), 32)
+            .ocean(
+                new BlockMeta(Blocks.glass, 1),
+                GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix),
+                64,
+                new BlockMeta(Blocks.obsidian, 0),
+                32)
             .build();
     }
 }
