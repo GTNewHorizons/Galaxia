@@ -8,6 +8,8 @@ import com.gtnewhorizons.galaxia.dimension.WorldProviderGalaxia;
 
 public abstract class BasePlanet {
 
+    public static final double earthRadiusToAU = 23481;
+
     protected final DimensionDef DEF;
 
     protected BasePlanet() {

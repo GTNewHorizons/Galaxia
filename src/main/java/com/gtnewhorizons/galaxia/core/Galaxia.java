@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia;
+package com.gtnewhorizons.galaxia.core;
 
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
@@ -6,9 +6,8 @@ import net.minecraft.item.Item;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
-import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
-import com.gtnewhorizons.galaxia.items.GalaxiaItems;
+import com.gtnewhorizons.galaxia.Tags;
+import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -37,13 +36,13 @@ public class Galaxia {
     public static final Logger LOG = LogManager.getLogger(MODID);
 
     @SidedProxy(
-        clientSide = "com.gtnewhorizons.galaxia.ClientProxy",
-        serverSide = "com.gtnewhorizons.galaxia.CommonProxy")
+        clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy",
+        serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
     public static CommonProxy proxy;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        SolarSystemRegistry.registerAll();
+        proxy.preInit(event);
     }
 
     @Mod.EventHandler
@@ -51,8 +50,8 @@ public class Galaxia {
         int packetId = 0;
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
-        GalaxiaItems.registerAll();
-        GalaxiaBlocks.registerPlanetBlocks();
+
+        proxy.init(event);
     }
 
     @Mod.EventHandler

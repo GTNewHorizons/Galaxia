@@ -8,6 +8,7 @@ import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
@@ -41,15 +42,17 @@ public class GalaxiaBlockBase {
         return planetBlocks.get(planet);
     }
 
-    public static Block get(DimensionEnum planet, String variant) {
+    public static BlockMeta get(DimensionEnum planet, String variant) {
         BlockPlanetGalaxia block = planetBlocks.get(planet);
         if (block == null) {
             throw new IllegalArgumentException("Planet not registered: " + planet);
         }
         boolean found = false;
+        int meta = 0;
         for (int i = 0; i < block.getVariantCount(); i++) {
             if (block.getVariantSuffix(i)
                 .equalsIgnoreCase(variant)) {
+                meta = i;
                 found = true;
                 break;
             }
@@ -57,6 +60,6 @@ public class GalaxiaBlockBase {
         if (!found) {
             throw new IllegalArgumentException("Variant '" + variant + "' not found for planet " + planet.getName());
         }
-        return block;
+        return new BlockMeta(block, meta);
     }
 }

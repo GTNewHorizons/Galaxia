@@ -9,7 +9,7 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 
-import com.gtnewhorizons.galaxia.Galaxia;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 
 public class ItemBlockGalaxiaPlanet extends ItemBlock {
 

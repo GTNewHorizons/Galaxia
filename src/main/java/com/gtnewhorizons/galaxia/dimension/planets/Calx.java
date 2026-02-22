@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
@@ -23,9 +24,14 @@ public class Calx extends BasePlanet {
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.gravity(2)
             .airResistance(1.7)
-            .mass((int) (7 * Math.pow(10, 22)))
-            .orbitalRadius((int) (1.5 * Math.pow(10, 11)))
-            .sky(buildSky());
+            .mass(0.012)
+            .radius(0.27)
+            .orbitalRadius(1 * earthRadiusToAU)
+            .sky(buildSky())
+            .effects(
+                new EffectBuilder().baseTemp(273)
+                    .oxygenPercent(0)
+                    .pressure(1));
     }
 
     @Override
@@ -33,8 +39,10 @@ public class Calx extends BasePlanet {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
-            .biome(createBiome())
-            .name(ENUM);
+            .createBiomeMatrix(1)
+            .biome(createBiome(), 0, 0)
+            .name(ENUM)
+            .build();
     }
 
     protected SkyBuilder buildSky() {

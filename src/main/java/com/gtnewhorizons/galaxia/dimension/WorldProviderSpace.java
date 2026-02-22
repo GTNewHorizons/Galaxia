@@ -8,18 +8,17 @@ import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.biome.WorldChunkManagerHell;
 import net.minecraft.world.chunk.IChunkProvider;
-import net.minecraft.world.gen.ChunkProviderGenerate;
 import net.minecraftforge.client.IRenderHandler;
 
 import com.gtnewhorizons.galaxia.worldgen.ChunkProviderGalaxiaPlanet;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 public abstract class WorldProviderSpace extends WorldProvider {
+
+    private BiomeGenBase[][] biomes;
 
     protected boolean hasSky = true;
     protected float cloudHeight = 8.0F;
@@ -29,7 +28,6 @@ public abstract class WorldProviderSpace extends WorldProvider {
     protected String name;
 
     protected Supplier<IChunkProvider> chunkGenSupplier;
-    protected BiomeGenBase biome;
     protected Vec3 skyColor;
     protected float[] sunriseSunsetColors;
     protected boolean skyColored = true;
@@ -48,28 +46,39 @@ public abstract class WorldProviderSpace extends WorldProvider {
     protected IRenderHandler skyRenderer;
     protected IRenderHandler cloudRenderer;
     protected IRenderHandler weatherRenderer;
-    protected TerrainConfiguration terrainConfig;
 
     protected void applyFlags() {
         this.hasNoSky = !hasSky;
     }
 
+    public WorldProviderSpace() {
+        super();
+        worldChunkMgr = new WorldChunkManagerSpace();
+    }
+
     @Override
     protected void registerWorldChunkManager() {
-        this.worldChunkMgr = new WorldChunkManagerHell(biome, 0.8F);
+        ((WorldChunkManagerSpace) this.worldChunkMgr).assignSeed(worldObj.getSeed());
     }
 
     @Override
     public IChunkProvider createChunkGenerator() {
-        if (terrainConfig != null) {
-            return new ChunkProviderGalaxiaPlanet(worldObj, terrainConfig);
+        if (chunkGenSupplier == null) {
+            return new ChunkProviderGalaxiaPlanet(worldObj);
         }
-        return chunkGenSupplier != null ? chunkGenSupplier.get()
-            : new ChunkProviderGenerate(worldObj, worldObj.getSeed(), false);
+        return chunkGenSupplier.get();
     }
 
-    public TerrainConfiguration getTerrainConfig() {
-        return terrainConfig;
+    public void createBiomeMatrix(int size) {
+        biomes = new BiomeGenBase[size][size];
+    }
+
+    public void addBiome(BiomeGenBase biome, int x, int z) {
+        biomes[x][z] = biome;
+    }
+
+    public void transferBiomes() {
+        ((WorldChunkManagerSpace) worldChunkMgr).provideBiomes(biomes);
     }
 
     @Override
