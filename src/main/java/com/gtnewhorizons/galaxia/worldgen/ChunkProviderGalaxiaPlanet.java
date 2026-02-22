@@ -29,6 +29,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final BlockMeta grass = new BlockMeta(Blocks.grass, 0);
     private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
     private final BlockMeta snow = new BlockMeta(Blocks.snow, 0);
+    private final BlockMeta water = new BlockMeta(Blocks.water, 0);
+    private final BlockMeta sand = new BlockMeta(Blocks.sand, 0);
 
     public ChunkProviderGalaxiaPlanet(World world) {
         this.worldObj = world;
@@ -141,8 +143,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         BlockMeta topBlock = grass;
         BlockMeta fillerBlock = stone;
         BlockMeta snowBlock = snow;
+        BlockMeta oceanFiller = water;
+        BlockMeta oceanSurface = sand;
         int surfaceDepth = 1;
         int snowHeight = 512;
+        int oceanHeight = 0;
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
@@ -154,9 +159,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     fillerBlock = new BlockMeta(spaceBiome.fillerBlock, spaceBiome.getFillerBlockMeta());
                     snowHeight = spaceBiome.getSnowHeight();
                     snowBlock = spaceBiome.getSnowBlock();
+                    oceanHeight = spaceBiome.getOceanHeight();
+                    oceanFiller = spaceBiome.getOceanFiller();
+                    oceanSurface = spaceBiome.getOceanSurface();
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
-                for (int y = 0; y < height; y++) {
+                for (int y = 0; y < Math.max(oceanHeight, height); y++) {
                     int sy = y >> 4;
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
@@ -167,6 +175,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     }
                     if (generateBedrock && y == 0) {
                         blockMeta = bedrock;
+                    }
+                    if (y <= oceanHeight) {
+                        if (y > height - 1) {
+                            blockMeta = oceanFiller;
+                        } else if (y == height - 1) {
+                            blockMeta = oceanSurface;
+                        }
                     }
                     if (blockMeta.block() != null) {
                         storage[sy].func_150818_a(localX, y & 15, localZ, blockMeta.block());

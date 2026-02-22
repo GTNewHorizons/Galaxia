@@ -23,6 +23,9 @@ public class BiomeGenBuilder {
     boolean generateBedrock = true;
     TerrainConfiguration terrain;
     int snowHeight = 512;
+    int oceanHeight = 0;
+    BlockMeta oceanFiller = stone;
+    BlockMeta oceanSurface = stone;
 
     BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
@@ -79,6 +82,13 @@ public class BiomeGenBuilder {
     public BiomeGenBuilder snowBlock(BlockMeta blockMeta, int snowHeight) {
         this.snowBlock = blockMeta;
         this.snowHeight = snowHeight;
+        return this;
+    }
+
+    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight) {
+        this.oceanFiller = oceanFiller;
+        this.oceanSurface = oceanSurface;
+        this.oceanHeight = oceanHeight;
         return this;
     }
 
