@@ -18,7 +18,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
     private GuiTextField yField;
     private GuiTextField zField;
 
-    private DimensionEnum selectedPlanet = DimensionEnum.CALX;
+    private DimensionEnum selectedPlanet = DimensionEnum.THEIA;
     private final DimensionEnum[] planets = DimensionEnum.values();
 
     private GuiButton teleportButton;

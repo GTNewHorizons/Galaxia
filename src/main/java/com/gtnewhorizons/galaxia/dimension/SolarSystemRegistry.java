@@ -9,8 +9,8 @@ import net.minecraftforge.common.DimensionManager;
 
 import com.gtnewhorizons.galaxia.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.dimension.planets.Calx;
-import com.gtnewhorizons.galaxia.dimension.planets.Dunia;
+import com.gtnewhorizons.galaxia.dimension.planets.Hemateria;
+import com.gtnewhorizons.galaxia.dimension.planets.Theia;
 
 import cpw.mods.fml.common.FMLLog;
 
@@ -27,8 +27,8 @@ public final class SolarSystemRegistry {
         if (registered) return;
         registered = true;
 
-        registerDimensions(new Calx());
-        registerDimensions(new Dunia());
+        registerDimensions(new Theia());
+        registerDimensions(new Hemateria());
         registerDimensions(new FrozenBelt());
 
         FMLLog.info("[Galaxia] Registered %d celestial bodies", BODIES.size());

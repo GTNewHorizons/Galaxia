@@ -74,6 +74,11 @@ public class DimensionBuilder {
         return this;
     }
 
+    public DimensionBuilder sky(List<CelestialBody> sky) {
+        this.celestialBodies = sky;
+        return this;
+    }
+
     public DimensionBuilder sky(SkyBuilder sky) {
         this.celestialBodies = sky.build();
         return this;
