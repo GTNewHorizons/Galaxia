@@ -29,3 +29,19 @@ item.galaxia.calx_dust.name=Calx stone dust
 galaxia.gui.planet_teleporter.title=Planet Teleporter
 galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
+
+# Habitat Builder
+galaxia.gui.habitat_builder=Habitat Builder
+galaxia.gui.select_module=§l§nSelect Module
+galaxia.habitat_builder.tooltip.selected=§bSelected: §f%s
+galaxia.habitat_builder.tooltip.open=§eRight-click — open module menu
+galaxia.habitat_builder.tooltip.build=§7Right-click block — build selected module
+
+# Module Mover
+galaxia.module_mover.module_selected=§aModule selected for moving!
+galaxia.module_mover.no_module_selected=§cFirst left-click on a module!
+galaxia.module_mover.cannot_place_here=§cCannot place here!
+galaxia.module_mover.module_moved=§aModule successfully moved!
+galaxia.module_mover.tooltip.selected=§bSelected: §f%d, %d, %d
+galaxia.module_mover.tooltip.instruction_left=§eLeft-click on module — select
+galaxia.module_mover.tooltip.instruction_right=§7Right-click on new location — move

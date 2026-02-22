@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.modules;
 
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
@@ -17,6 +18,9 @@ public class ModuleType {
     private final ResourceLocation modelLocation;
     private final ResourceLocation textureLocation;
     private final float scale;
+    private final double offsetX, offsetY, offsetZ;
+
+    private final AxisAlignedBB modelBounds;
 
     private ModuleType(Builder b) {
         this.id = b.id;
@@ -27,6 +31,12 @@ public class ModuleType {
         this.modelLocation = b.modelLocation;
         this.textureLocation = b.textureLocation;
         this.scale = b.scale;
+        this.offsetX = b.offsetX;
+        this.offsetY = b.offsetY;
+        this.offsetZ = b.offsetZ;
+
+        this.modelBounds = AxisAlignedBB
+            .getBoundingBox(b.modelMinX, b.modelMinY, b.modelMinZ, b.modelMaxX, b.modelMaxY, b.modelMaxZ);
     }
 
     public static Builder builder(String id) {
@@ -53,6 +63,18 @@ public class ModuleType {
         return wallThickness;
     }
 
+    public double getOffsetX() {
+        return offsetX;
+    }
+
+    public double getOffsetY() {
+        return offsetY;
+    }
+
+    public double getOffsetZ() {
+        return offsetZ;
+    }
+
     public float getScale() {
         return scale;
     }
@@ -72,6 +94,10 @@ public class ModuleType {
         return model;
     }
 
+    public AxisAlignedBB getModelBounds() {
+        return modelBounds;
+    }
+
     public static class Builder {
 
         private final String id;
@@ -80,6 +106,10 @@ public class ModuleType {
         private ResourceLocation modelLocation;
         private ResourceLocation textureLocation;
         private float scale = 1F;
+        private double offsetX = 0, offsetY = 0, offsetZ = 0;
+
+        private double modelMinX = -0.5, modelMinY = -0.5, modelMinZ = -0.5;
+        private double modelMaxX = 0.5, modelMaxY = 0.5, modelMaxZ = 0.5;
 
         private Builder(String id) {
             this.id = id;
@@ -107,8 +137,25 @@ public class ModuleType {
             return this;
         }
 
+        public Builder offset(double x, double y, double z) {
+            this.offsetX = x;
+            this.offsetY = y;
+            this.offsetZ = z;
+            return this;
+        }
+
         public Builder scale(float scale) {
             this.scale = scale;
+            return this;
+        }
+
+        public Builder modelBounds(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+            this.modelMinX = minX;
+            this.modelMinY = minY;
+            this.modelMinZ = minZ;
+            this.modelMaxX = maxX;
+            this.modelMaxY = maxY;
+            this.modelMaxZ = maxZ;
             return this;
         }
 
