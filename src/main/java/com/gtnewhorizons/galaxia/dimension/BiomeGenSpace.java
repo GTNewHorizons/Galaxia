@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -8,6 +9,8 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final int topBlockMeta;
     private final int fillerBlockMeta;
     private final TerrainConfiguration terrain;
+    private final int snowHeight;
+    private final BlockMeta snowBlock;
 
     public BiomeGenSpace(int id, BiomeGenBuilder b) {
         super(id);
@@ -20,6 +23,8 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.fillerBlock = b.fillerBlock.block();
         this.topBlockMeta = b.topBlock.meta();
         this.fillerBlockMeta = b.fillerBlock.meta();
+        this.snowBlock = b.snowBlock;
+        this.snowHeight = b.snowHeight;
 
         this.spawnableCaveCreatureList = b.mobsCave;
         this.spawnableCreatureList = b.mobsGeneral;
@@ -47,5 +52,13 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public TerrainConfiguration getTerrain() {
         return terrain;
+    }
+
+    public BlockMeta getSnowBlock() {
+        return snowBlock;
+    }
+
+    public int getSnowHeight() {
+        return snowHeight;
     }
 }

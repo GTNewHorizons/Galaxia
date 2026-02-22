@@ -28,6 +28,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final BlockMeta bedrock = new BlockMeta(Blocks.bedrock, 0);
     private final BlockMeta grass = new BlockMeta(Blocks.grass, 0);
     private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
+    private final BlockMeta snow = new BlockMeta(Blocks.snow, 0);
 
     public ChunkProviderGalaxiaPlanet(World world) {
         this.worldObj = world;
@@ -139,7 +140,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         // Generate blocks
         BlockMeta topBlock = grass;
         BlockMeta fillerBlock = stone;
+        BlockMeta snowBlock = snow;
         int surfaceDepth = 1;
+        int snowHeight = 512;
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
@@ -149,6 +152,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     generateBedrock = spaceBiome.generateBedrock();
                     topBlock = new BlockMeta(spaceBiome.topBlock, spaceBiome.getTopBlockMeta());
                     fillerBlock = new BlockMeta(spaceBiome.fillerBlock, spaceBiome.getFillerBlockMeta());
+                    snowHeight = spaceBiome.getSnowHeight();
+                    snowBlock = spaceBiome.getSnowBlock();
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < height; y++) {
@@ -157,6 +162,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
                     BlockMeta blockMeta = (y >= height - surfaceDepth) ? topBlock : fillerBlock;
+                    if (blockMeta == topBlock && y >= snowHeight) {
+                        blockMeta = snowBlock;
+                    }
                     if (generateBedrock && y == 0) {
                         blockMeta = bedrock;
                     }

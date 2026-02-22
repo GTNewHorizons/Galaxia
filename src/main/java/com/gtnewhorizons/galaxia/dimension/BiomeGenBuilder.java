@@ -22,9 +22,11 @@ public class BiomeGenBuilder {
     float rainfall = 0.0F;
     boolean generateBedrock = true;
     TerrainConfiguration terrain;
+    int snowHeight = 512;
 
     BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
+    BlockMeta snowBlock = stone;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -71,6 +73,12 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder fillerBlock(BlockMeta block) {
         this.fillerBlock = block;
+        return this;
+    }
+
+    public BiomeGenBuilder snowBlock(BlockMeta blockMeta, int snowHeight) {
+        this.snowBlock = blockMeta;
+        this.snowHeight = snowHeight;
         return this;
     }
 

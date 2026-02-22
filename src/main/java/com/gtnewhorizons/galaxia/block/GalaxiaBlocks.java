@@ -41,7 +41,8 @@ public class GalaxiaBlocks {
             BlockVariant.ANDESITE);
         reg(DimensionEnum.DUNIA,
             BlockVariant.REGOLITH,
-            BlockVariant.ANDESITE);
+            BlockVariant.ANDESITE,
+            BlockVariant.SNOW);
     }
     //spotless:on
 }

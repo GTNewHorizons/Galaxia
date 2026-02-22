@@ -110,6 +110,7 @@ public class Dunia extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(new BlockMeta(block, meta))
             .fillerBlock(Blocks.brick_block)
+            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.SNOW.suffix), 144)
             .terrain(terrain)
             .build();
     }
