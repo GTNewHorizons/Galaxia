@@ -73,7 +73,6 @@ public class FrozenBelt extends BaseAsteroidBelt {
                 .sky(true)
                 .skyColor(0, 0.1, 0.3)
                 .fog(0, 0.1f, 0.3f)
-                .createBiomeMatrix(1)
                 .biome(new BiomeGenFrozenBelt(100), 0, 0)
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)

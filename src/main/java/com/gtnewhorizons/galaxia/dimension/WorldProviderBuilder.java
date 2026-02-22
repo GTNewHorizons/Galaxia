@@ -45,11 +45,6 @@ public class WorldProviderBuilder {
         return this;
     }
 
-    public WorldProviderBuilder createBiomeMatrix(int size) {
-        provider.createBiomeMatrix(size);
-        return this;
-    }
-
     public WorldProviderBuilder biomeWithTerrain(BiomeGenSpace biome, int x, int z) {
         provider.addBiome(biome, x, z);
         return this;
