@@ -11,6 +11,9 @@ import net.minecraft.util.MathHelper;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
+/**
+ * The class to define all ItemBlocks for Galaxia Planet blocks
+ */
 public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     private final BlockPlanetGalaxia planetBlock;
@@ -22,11 +25,22 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
         setMaxDamage(0);
     }
 
+    /**
+     * Gets the metadata of the item block (damage)
+     * @param damage  the damage to the item block
+     * @return Metadata of the item block
+     */
     @Override
     public int getMetadata(int damage) {
         return damage;
     }
 
+    /**
+     * Adds all metadata variants of the item block to the given list (used in creative tab)
+     * @param item The base item block to register variants
+     * @param tab The creative tab for the galaxia blocks
+     * @param list The list of all meta-variants
+     */
     @Override
     public void getSubItems(Item item, CreativeTabs tab, List<ItemStack> list) {
         if (tab == Galaxia.creativeTab || tab == CreativeTabs.tabAllSearch) {
@@ -36,6 +50,11 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
         }
     }
 
+    /**
+     * Gets the unlocalized name of the provided ItemStack for registry
+     * @param stack The item stack for which the name is required
+     * @return Unlocalized name of the item stack
+     */
     @Override
     public String getUnlocalizedName(ItemStack stack) {
         int meta = MathHelper.clamp_int(stack.getItemDamage(), 0, planetBlock.getVariantCount() - 1);
@@ -43,6 +62,11 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
         return "tile." + planetBlock.getPlanetName() + capitalize(suffix);
     }
 
+    /**
+     * Capitalizes the first letter of a string
+     * @param s The string to capitalized
+     * @return Capitalized string
+     */
     private static String capitalize(String s) {
         return s == null || s.isEmpty() ? ""
             : s.substring(0, 1)
