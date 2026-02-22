@@ -86,8 +86,6 @@ public final class TerrainConfiguration {
         private double scaleMultiplier = 1.0;
         private int minHeight = -1;
         private int variation = -1;
-        private BlockMeta topBlock = null;
-        private BlockMeta fillerBlock = new BlockMeta(Blocks.stone, 0);
         private int depth = 5;
         private final Map<String, Object> custom = new HashMap<>();
 
@@ -122,16 +120,6 @@ public final class TerrainConfiguration {
             return this;
         }
 
-        public FeatureConfigurator topBlock(BlockMeta block) {
-            this.topBlock = block;
-            return this;
-        }
-
-        public FeatureConfigurator fillerBlock(BlockMeta block) {
-            this.fillerBlock = block;
-            return this;
-        }
-
         public FeatureConfigurator depth(int d) {
             this.depth = d;
             return this;
@@ -156,8 +144,6 @@ public final class TerrainConfiguration {
                 finalWidth,
                 finalMinH,
                 finalVar,
-                topBlock,
-                fillerBlock,
                 depth,
                 custom);
 
