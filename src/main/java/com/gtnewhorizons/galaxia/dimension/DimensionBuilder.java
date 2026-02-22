@@ -25,8 +25,9 @@ public class DimensionBuilder {
     }
 
     private int id;
-    private int mass;
-    private int orbitalRadius;
+    private double mass;
+    private double orbitalRadius;
+    private double radius;
     private String name;
     private Class<? extends WorldProvider> providerClass;
     private boolean keepLoaded = true;
@@ -78,13 +79,18 @@ public class DimensionBuilder {
         return this;
     }
 
-    public DimensionBuilder mass(int mass) {
+    public DimensionBuilder mass(double mass) {
         this.mass = mass;
         return this;
     }
 
-    public DimensionBuilder orbitalRadius(int orbitalRadius) {
+    public DimensionBuilder orbitalRadius(double orbitalRadius) {
         this.orbitalRadius = orbitalRadius;
+        return this;
+    }
+
+    public DimensionBuilder radius(double radius) {
+        this.radius = radius;
         return this;
     }
 
@@ -123,6 +129,7 @@ public class DimensionBuilder {
             celestialBodies,
             mass,
             orbitalRadius,
+            radius,
             effects);
 
         BY_NAME.put(name.toLowerCase(), def);
