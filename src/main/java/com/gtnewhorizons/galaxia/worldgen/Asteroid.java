@@ -28,25 +28,11 @@ public class Asteroid extends WorldGenerator {
 
     @Override
     public boolean generate(World world, Random random, int x, int y, int z) {
-        long startTotal = System.nanoTime();
-
         if (random.nextInt(rarity) > 0) return false;
 
         int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize) : 0);
-        int radius = size / 2;
         int diameter = size + 4;
         int halfDiameter = diameter / 2;
-
-        System.out.printf(
-            "[Asteroid] Generating at (%d,%d,%d) | size=%d | radius=%d | diameter=%d%n",
-            x,
-            y,
-            z,
-            size,
-            radius,
-            diameter);
-
-        long startPrep = System.nanoTime();
 
         int interpolationCount = size / 2 + 1;
         interpolationCount *= Math.max(interpolationCount / 10, 1);
@@ -71,9 +57,6 @@ public class Asteroid extends WorldGenerator {
             interpolationPositions[i] = new int[] { x + offsetX, y + offsetY, z + offsetZ };
         }
 
-        long prepMs = (System.nanoTime() - startPrep) / 1_000_000;
-        long startMem = System.nanoTime();
-
         byte[][][] blockData = new byte[diameter][diameter][diameter];
 
         for (int localX = 0; localX < diameter; localX++) {
@@ -96,11 +79,6 @@ public class Asteroid extends WorldGenerator {
             carveCraterInMemory(blockData, random, diameter);
         }
 
-        long memMs = (System.nanoTime() - startMem) / 1_000_000;
-
-        long startPlace = System.nanoTime();
-        int blocksPlaced = 0;
-
         for (int localX = 0; localX < diameter; localX++) {
             int combinedX = x + localX - halfDiameter;
             for (int localY = 0; localY < diameter; localY++) {
@@ -111,19 +89,10 @@ public class Asteroid extends WorldGenerator {
                     if (localBlockValue > 0) {
                         BlockMeta blockMeta = blockPalette[localBlockValue - 1];
                         setBlockFast(world, combinedX, combinedY, combinedZ, blockMeta.block(), blockMeta.meta());
-                        blocksPlaced++;
                     }
                 }
             }
         }
-
-        long placeMs = (System.nanoTime() - startPlace) / 1_000_000;
-        long totalMs = (System.nanoTime() - startTotal) / 1_000_000;
-
-        System.out
-            .printf("[Asteroid] Prep: %d ms | Memory gen + craters: %d ms | Craters: %d%n", prepMs, memMs, craterCount);
-        System.out.printf("[Asteroid] EBS Placement: %d ms | blocks placed: %d%n", placeMs, blocksPlaced);
-        System.out.printf("[Asteroid] TOTAL: %d ms | coord (%d,%d,%d)%n%n", totalMs, x, y, z);
 
         return true;
     }
