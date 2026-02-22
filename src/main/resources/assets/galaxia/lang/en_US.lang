@@ -1,5 +1,24 @@
 ## Galaxia English (US) translation file
 
+## Before you commit war crime please read:
+## Strings marked with [?] = Need correct name, currently placeholder
+## Use StatCollector and localized enum Colors
+## Have "§r" (color reset) at the end of colored string
+## Keep the lang file nice and clean '='
+#
+## Sort like:
+# Creative tab
+# Block
+# Items
+# Elements
+ #- Gui
+ #- Tooltip
+ #- Other
+
+
+## Creative tab
+itemGroup.galaxia=§9Galaxia
+
 ## Blocks
 # Blocks -Theia
 tile.TheiaRegolith.name=Theia Regolith
@@ -12,36 +31,47 @@ tile.TheiaAndesite.name=Theia Andesite
 tile.TheiaTektite.name=Theia Tektite
 
 # Blocks - Hemateria
+tile.HemateriaRegolith.name=Hemateria Regolith
 tile.HemateriaRock.name=Hemateria Ash
+tile.HemateriaAndesite.name=Hemateria Andesite
 tile.HemateriaSand.name=Hemateria Sand
+tile.HemateriaSnow.name=Hemateria Snow
 
-## Creative tab
-itemGroup.galaxia=§9Galaxia
+# Blocks - Modules
+tile.module.shell.name=[?]Shell module
+tile.module.controller.name=[?]Controller module
 
 ## Items
 item.galaxia.teleporter.name=Teleporter
-item.galaxia.another_thing.name=Another thing; that is now localized, super cool right, yes I agree
+item.galaxia.module_placer.name=Module Builder
+item.galaxia.module_mover.name=Module Mover
+
 # Planet stone dust
 item.galaxia.theia_dust.name=Theia stone dust
 
-## Gui elements
+## Elements
 # Planet Teleporter
 galaxia.gui.planet_teleporter.title=Planet Teleporter
 galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
 
-# Habitat Builder
+# Habitat Builder (Placer)
 galaxia.gui.habitat_builder=Habitat Builder
-galaxia.gui.select_module=§l§nSelect Module
-galaxia.habitat_builder.tooltip.selected=§bSelected: §f%s
-galaxia.habitat_builder.tooltip.open=§eRight-click — open module menu
-galaxia.habitat_builder.tooltip.build=§7Right-click block — build selected module
+galaxia.gui.select_module=§l§nSelect Module§r
+
+galaxia.gui.module.hub_3x3.name=Hub 3x3
+galaxia.gui.module.capsule_3x3.name=Capsule 3x3
+
+galaxia.tooltip.habitat_builder.selected=§bSelected: §f%s§r
+galaxia.tooltip.habitat_builder.open=§eRight-click - open module menu§r
+galaxia.tooltip.habitat_builder.build=§7Right-click block - build selected module
 
 # Module Mover
-galaxia.module_mover.module_selected=§aModule selected for moving!
-galaxia.module_mover.no_module_selected=§cFirst left-click on a module!
-galaxia.module_mover.cannot_place_here=§cCannot place here!
-galaxia.module_mover.module_moved=§aModule successfully moved!
-galaxia.module_mover.tooltip.selected=§bSelected: §f%d, %d, %d
-galaxia.module_mover.tooltip.instruction_left=§eLeft-click on module — select
-galaxia.module_mover.tooltip.instruction_right=§7Right-click on new location — move
+galaxia.tooltip.module_mover.selected=§bSelected: §f%d, %d, %d§r
+galaxia.tooltip.module_mover.instruction_left=§eLeft-click on module - select§r
+galaxia.tooltip.module_mover.instruction_right=§7Right-click on new location - move
+
+galaxia.module_mover.module_selected=§aModule selected for moving!§r
+galaxia.module_mover.no_module_selected=§cFirst left-click on a module!§r
+galaxia.module_mover.cannot_place_here=§cCannot place here!§r
+galaxia.module_mover.module_moved=§aModule successfully moved!§r

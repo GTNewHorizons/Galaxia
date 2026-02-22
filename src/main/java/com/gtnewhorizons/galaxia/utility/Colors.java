@@ -8,9 +8,12 @@ import cpw.mods.fml.common.FMLLog;
 
 public enum Colors {
 
+    Transparent(0xFF),
     Title(0xFFFFFF),
     SubTitle(0xAAAAFF),
-    Value(0xFFFFFF);
+    Value(0xFFFFFF),
+
+    IconGreen(0x55FF55);
     // Add more colors here
 
     private static final String PREFIX = "galaxia.color.override.";
