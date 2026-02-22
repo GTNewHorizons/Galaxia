@@ -1,10 +1,9 @@
 package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
-import com.gtnewhorizons.galaxia.block.BlockVariant;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import net.minecraft.init.Blocks;
 import net.minecraft.world.WorldProvider;
 
+import com.gtnewhorizons.galaxia.block.BlockVariant;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
@@ -45,31 +44,36 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     12,
                     16,
                     32,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANDESITE.suffix), GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANORTHOSITE.suffix) },
+                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANDESITE.suffix),
+                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANORTHOSITE.suffix) },
                     1),
                 new Asteroid(
                     16,
                     20,
                     64,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix), GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
+                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix),
+                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
                     6),
                 new Asteroid(
                     20,
                     32,
                     128,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix), GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
+                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix),
+                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
                     8),
                 new Asteroid(
                     32,
                     64,
                     512,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix), GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
+                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix),
+                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
                     12),
                 new Asteroid(
                     32,
                     64,
                     512,
-                    new BlockMeta[] {GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix), GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
+                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix),
+                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
                     4) };
             WorldProviderBuilder.configure(this)
                 .sky(true)

@@ -83,7 +83,8 @@ public class Asteroid extends WorldGenerator {
                     int combinedY = y + localY - halfDiameter;
                     int combinedZ = z + localZ - halfDiameter;
 
-                    if (calculateFullness(interpolationPositions, interpolationValues, combinedX, combinedY, combinedZ) > 1) {
+                    if (calculateFullness(interpolationPositions, interpolationValues, combinedX, combinedY, combinedZ)
+                        > 1) {
                         blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(blockPalette.length));
                     }
                 }
