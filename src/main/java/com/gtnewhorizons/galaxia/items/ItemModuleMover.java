@@ -16,8 +16,6 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 public class ItemModuleMover extends Item {
 
-    private static final String LANG_PREFIX = "galaxia.module_mover.";
-
     public ItemModuleMover() {
         super();
         setMaxStackSize(1);
@@ -54,7 +52,7 @@ public class ItemModuleMover extends Item {
 
     public void selectModule(World world, int x, int y, int z, EntityPlayer player, ItemStack stack) {
         setSelectedPos(stack, x, y, z);
-        player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "module_selected"));
+        player.addChatComponentMessage(new ChatComponentTranslation("galaxia.module_mover.module_selected"));
     }
 
     @Override
@@ -64,7 +62,7 @@ public class ItemModuleMover extends Item {
 
         int[] selected = getSelectedPos(stack);
         if (selected == null) {
-            player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "no_module_selected"));
+            player.addChatComponentMessage(new ChatComponentTranslation("galaxia.module_mover.no_module_selected"));
             return false;
         }
 
@@ -88,7 +86,7 @@ public class ItemModuleMover extends Item {
         if (!samePosition) {
             if (!world.isAirBlock(nx, ny, nz) && !world.getBlock(nx, ny, nz)
                 .isReplaceable(world, nx, ny, nz)) {
-                player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "cannot_place_here"));
+                player.addChatComponentMessage(new ChatComponentTranslation("galaxia.module_mover.cannot_place_here"));
                 return false;
             }
         }
@@ -107,7 +105,7 @@ public class ItemModuleMover extends Item {
             oldTe.buildStructure();
         }
 
-        player.addChatComponentMessage(new ChatComponentTranslation(LANG_PREFIX + "module_moved"));
+        player.addChatComponentMessage(new ChatComponentTranslation("galaxia.module_mover.module_moved"));
         clearSelected(stack);
         return true;
     }
@@ -128,9 +126,11 @@ public class ItemModuleMover extends Item {
     public void addInformation(ItemStack stack, EntityPlayer player, List list, boolean advanced) {
         int[] pos = getSelectedPos(stack);
         if (pos != null) {
-            list.add(StatCollector.translateToLocalFormatted(LANG_PREFIX + "tooltip.selected", pos[0], pos[1], pos[2]));
+            list.add(
+                StatCollector
+                    .translateToLocalFormatted("galaxia.tooltip.module_mover.selected", pos[0], pos[1], pos[2]));
         }
-        list.add(StatCollector.translateToLocal(LANG_PREFIX + "tooltip.instruction_left"));
-        list.add(StatCollector.translateToLocal(LANG_PREFIX + "tooltip.instruction_right"));
+        list.add(StatCollector.translateToLocal("galaxia.tooltip.module_mover.instruction_left"));
+        list.add(StatCollector.translateToLocal("galaxia.tooltip.module_mover.instruction_right"));
     }
 }

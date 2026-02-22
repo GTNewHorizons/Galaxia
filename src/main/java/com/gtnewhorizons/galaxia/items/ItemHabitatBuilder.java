@@ -25,7 +25,6 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     // TODO fix builder not working in survival mode because of not updating held item
-    private static final String LANG_PREFIX = "galaxia.habitat_builder.";
 
     public ItemHabitatBuilder() {
         super();
@@ -95,10 +94,10 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
         String id = getSelectedModule(stack);
         ModuleType t = ModuleTypes.byId(id);
         if (t != null) {
-            String name = StatCollector.translateToLocal("galaxia.module." + t.getId() + ".name");
-            list.add(StatCollector.translateToLocalFormatted(LANG_PREFIX + "tooltip.selected", name));
+            String name = StatCollector.translateToLocal("galaxia.gui.module." + t.getId() + ".name");
+            list.add(StatCollector.translateToLocalFormatted("galaxia.tooltip.habitat_builder.selected", name));
         }
-        list.add(StatCollector.translateToLocal(LANG_PREFIX + "tooltip.open"));
-        list.add(StatCollector.translateToLocal(LANG_PREFIX + "tooltip.build"));
+        list.add(StatCollector.translateToLocal("galaxia.tooltip.habitat_builder.open"));
+        list.add(StatCollector.translateToLocal("galaxia.tooltip.habitat_builder.build"));
     }
 }
