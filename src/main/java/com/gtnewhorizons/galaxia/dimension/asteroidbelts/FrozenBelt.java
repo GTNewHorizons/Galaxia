@@ -13,31 +13,55 @@ import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 
+/**
+ * The class holding all data related to the dimension FrozenBelt
+ */
 public class FrozenBelt extends BaseAsteroidBelt {
 
     public static final DimensionEnum ENUM = DimensionEnum.FROZEN_BELT;
 
+    /**
+     * Returns the ENUM of the dimension
+     * @return DimensionEnum of the planet
+     */
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
+    /**
+     * Overrides the Dimension builder to add effects, and other fields
+     * @param builder The DimensionBuilder for this dim
+     * @return The same builder with fields added as required
+     */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
+        // super call adds basic asteroid belt stats - add on top as required
         return super.customizeDimension(builder).effects(
             new EffectBuilder().baseTemp(67)
                 .oxygenPercent(0)
                 .pressure(1));
     }
 
+    /**
+     * Getter for the world provider class
+     * @return WorldProvider class
+     */
     @Override
     protected Class<? extends WorldProvider> getProviderClass() {
         return WorldProviderFrozenBelt.class;
     }
 
+    /**
+     * Static class to hold world provider for frozen belt
+     */
     public static class WorldProviderFrozenBelt extends WorldProviderSpace {
 
+        /**
+         * Creates the world provider used in generation of this dimension
+         */
         public WorldProviderFrozenBelt() {
+            // Generates an array of asteroids for use in generation
             Asteroid[] asteroids = new Asteroid[] {
                 new Asteroid(
                     12,
@@ -69,6 +93,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     512,
                     new BlockMeta[] { new BlockMeta(Blocks.stonebrick, 0), new BlockMeta(Blocks.stonebrick, 1) },
                     4) };
+            // Configure the world provider for this dimension
             WorldProviderBuilder.configure(this)
                 .sky(true)
                 .skyColor(0, 0.1, 0.3)
@@ -82,8 +107,15 @@ public class FrozenBelt extends BaseAsteroidBelt {
         }
     }
 
+    /**
+     * Static class to hold the Biome generation
+     */
     public static class BiomeGenFrozenBelt extends BiomeGenSpace {
 
+        /**
+         * Creates the biome generator for the FrozenBelt for a given biome ID
+         * @param id The ID of the biome to generate
+         */
         public BiomeGenFrozenBelt(int id) {
             super(
                 id,
