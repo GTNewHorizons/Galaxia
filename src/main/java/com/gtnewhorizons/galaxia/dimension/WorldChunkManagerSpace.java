@@ -56,7 +56,7 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
     }
 
     private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator, boolean firstIndex) {
-        double noise = noiseGenerator.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.025, 0.025, 0)[0];
+        double noise = noiseGenerator.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.02, 0.02, 0)[0];
         noise += 6;
         noise *= matrixLength;
         noise /= 12;
@@ -98,9 +98,9 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
     }
 
     public double[] getAdjacentBiomeSignificance() {
-        double xDeviation = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 0.75) * 4;
-        double zDeviation = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 0.75) * 4;
-        double diagonalDeviation = Math.sqrt(xDeviation*xDeviation + zDeviation*zDeviation);
+        double xDeviation = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 0.95) * 20;
+        double zDeviation = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 0.95) * 20;
+        double diagonalDeviation = Math.sqrt(xDeviation*xDeviation + zDeviation*zDeviation) / 1.25;
         return new double[] {xDeviation, zDeviation, diagonalDeviation};
     }
 
