@@ -3,8 +3,22 @@ package com.gtnewhorizons.galaxia.utility;
 import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 
 public class OrbitalCalculatorHelper {
+    /*
+     * Notes and explanations:
+     * For the sake of computational complexity, the following changes have been made to the standard equations:
+     * G (Gravitational constant) = 1 (for simplicity)
+     * All masses are in Earth Masses as unit
+     * All distances are measured as average Earth Radii;
+     */
 
-    static final double gravitationalConstant = 6.674 * Math.pow(10, -11);
+    // Corrective factor for unit conversion in Hohmann Transfers
+    static final double hohmannCorrectiveFactor = 6700;
+
+    // Corrective factor for unit conversion in escape velocities
+    static final double escapeCorrectiveFactor = 1.65;
+
+    // Corrective factor for calculating effective exhaust velocity
+    static final double effectiveCorrectiveFactor = 2.7;
 
     /**
      * Calculates the Effective Exhaust Velocity (v_e) based on the rocket and body to launch from
@@ -15,7 +29,8 @@ public class OrbitalCalculatorHelper {
      * @return Effective Exhaust Velocity (v_e)
      */
     public static double calculateEffectiveExhaustVelocity(BasePlanet launchBody, Rocket rocket, int launchAltitude) {
-        return rocket.getSpecificImpulse() * (launchBody.getDef().mass * gravitationalConstant)
+        return effectiveCorrectiveFactor * rocket.getSpecificImpulse()
+            * (launchBody.getDef().mass)
             / Math.pow((launchAltitude + launchBody.getDef().orbitalRadius), 2);
     }
 
@@ -50,10 +65,10 @@ public class OrbitalCalculatorHelper {
         // Most of this is renaming readable variables to fit standard notation for calculation, and legibility
 
         // GM of the center body
-        final double mu_s = centerBody.getMass() * gravitationalConstant;
+        final double mu_s = centerBody.getMass();
 
         // GM of departure body
-        final double mu_1 = launchBody.getDef().mass * gravitationalConstant;
+        final double mu_1 = launchBody.getDef().mass;
 
         // Distance from center body to launch body
         final double r_1 = launchBody.getDef().orbitalRadius;
@@ -64,7 +79,7 @@ public class OrbitalCalculatorHelper {
         // Radius of original orbit
         final double a_1 = startRadius;
 
-        return Math.sqrt(
+        return hohmannCorrectiveFactor * Math.sqrt(
             Math.pow((Math.sqrt((2 * mu_s * r_2) / (r_1 * (r_1 + r_2))) - Math.sqrt(mu_s / r_1)), 2) + (2 * mu_1) / a_1)
             - Math.sqrt(mu_1 / a_1);
     }
@@ -91,10 +106,10 @@ public class OrbitalCalculatorHelper {
          */
 
         // GM of center body
-        final double mu_s = centerBody.getMass() * gravitationalConstant;
+        final double mu_s = centerBody.getMass();
 
         // GM of target body
-        final double mu_2 = targetBody.getDef().mass * gravitationalConstant;
+        final double mu_2 = targetBody.getDef().mass;
 
         // Distance from center body to launch body
         final double r_1 = launchBody.getDef().orbitalRadius;
@@ -105,7 +120,7 @@ public class OrbitalCalculatorHelper {
         // orbital height for target body
         final double a_2 = endRadius;
 
-        return Math.sqrt(
+        return hohmannCorrectiveFactor * Math.sqrt(
             (Math.pow((Math.sqrt((2 * mu_s * r_1) / (r_2 * (r_1 + r_2))) - Math.sqrt(mu_s / r_2)), 2)
                 + (2 * mu_2) / a_2))
             - Math.sqrt(mu_2 / a_2);
@@ -126,7 +141,7 @@ public class OrbitalCalculatorHelper {
         double startRadius, double endRadius) {
         final double v_1 = calculateHohmannV1(launchBody, targetBody, centerBody, startRadius);
         final double v_2 = calculateHohmannV2(launchBody, targetBody, centerBody, endRadius);
-        return Math.round((v_1 + v_2) * 100) / 100.0;
+        return (Math.round((v_1 + v_2) * 100) / 100.0);
     }
 
     /**
@@ -136,15 +151,14 @@ public class OrbitalCalculatorHelper {
      * @return The escape velocity of the planet from that altitude
      */
     public static double calculateEscapeVelocity(BasePlanet launchBody, int launchAltitude) {
-        return Math.sqrt(
-            (2 * gravitationalConstant * launchBody.getDef().mass)
-                / (launchBody.getDef().orbitalRadius + launchAltitude));
+        return escapeCorrectiveFactor
+            * Math.sqrt((double) (2 * launchBody.getDef().mass) / (launchBody.getDef().orbitalRadius + launchAltitude));
     }
 
     public static double calculateDirectDeltaV(BasePlanet launchBody, BasePlanet targetBody, int launchAltitude,
         int targetAltitude) {
-        return calculateEscapeVelocity(launchBody, launchAltitude)
-            + calculateEscapeVelocity(targetBody, targetAltitude);
+        return (calculateEscapeVelocity(launchBody, launchAltitude)
+            + calculateEscapeVelocity(targetBody, targetAltitude));
     }
 
 }

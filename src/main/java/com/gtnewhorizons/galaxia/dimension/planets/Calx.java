@@ -24,8 +24,9 @@ public class Calx extends BasePlanet {
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.gravity(2)
             .airResistance(1.7)
-            .mass((int) (7 * Math.pow(10, 22)))
-            .orbitalRadius((int) (1.5 * Math.pow(10, 11)))
+            .mass(0.012)
+            .radius(0.27)
+            .orbitalRadius(1 * earthRadiusToAU)
             .sky(buildSky())
             .effects(
                 new EffectBuilder().baseTemp(273)

@@ -23,8 +23,9 @@ public class Dunia extends BasePlanet {
 
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.mass((int) (6.4 * Math.pow(10, 23)))
-            .orbitalRadius((int) (2.3 * Math.pow(10, 11)))
+        return builder.mass(0.1)
+            .orbitalRadius(1.52 * earthRadiusToAU)
+            .radius(0.53)
             .gravity(0.5)
             .airResistance(0.7);
     }
