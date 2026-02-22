@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import net.minecraft.entity.Entity;
@@ -16,7 +19,9 @@ import com.gtnewhorizons.galaxia.worldgen.ChunkProviderGalaxiaPlanet;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public abstract class WorldProviderSpace extends WorldProvider {
+public class WorldProviderSpace extends WorldProvider {
+
+    private static final Map<Integer, Consumer<WorldProviderBuilder>> CONFIGS = new ConcurrentHashMap<>();
 
     private BiomeGenBase[][] biomes;
 
@@ -54,6 +59,22 @@ public abstract class WorldProviderSpace extends WorldProvider {
     public WorldProviderSpace() {
         super();
         worldChunkMgr = new WorldChunkManagerSpace();
+    }
+
+    public static void registerConfigurator(int dimensionId, Consumer<WorldProviderBuilder> configurator) {
+        CONFIGS.put(dimensionId, configurator);
+    }
+
+    @Override
+    public void setDimension(int dimensionId) {
+        super.setDimension(dimensionId);
+
+        Consumer<WorldProviderBuilder> config = CONFIGS.get(dimensionId);
+        if (config != null) {
+            WorldProviderBuilder builder = WorldProviderBuilder.configure(this);
+            config.accept(builder);
+            builder.build();
+        }
     }
 
     @Override

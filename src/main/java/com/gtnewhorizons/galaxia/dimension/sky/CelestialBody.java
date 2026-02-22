@@ -2,31 +2,18 @@ package com.gtnewhorizons.galaxia.dimension.sky;
 
 import net.minecraft.util.ResourceLocation;
 
-public class CelestialBody {
+import com.github.bsideup.jabel.Desugar;
 
-    public final ResourceLocation texture;
-    public final ResourceLocation phaseTexture; // null if none
-    public final float size;
-    public final double distance;
-    public final float inclination;
-    public final long orbitalPeriodTicks; // default mc day is 24000
-    public final boolean emissive;
-    public final boolean hasPhases; // moon has 8 phases
-    public final int phaseCount; // default 8
-    public final long phaseOffsetTicks;
-
-    public CelestialBody(ResourceLocation texture, ResourceLocation phaseTexture, float size, double distance,
-        float inclination, long orbitalPeriodTicks, boolean emissive, boolean hasPhases, int phaseCount,
-        long phaseOffsetTicks) {
-        this.texture = texture;
-        this.phaseTexture = phaseTexture;
-        this.size = size;
-        this.distance = distance;
-        this.inclination = inclination;
-        this.orbitalPeriodTicks = orbitalPeriodTicks;
-        this.emissive = emissive;
-        this.hasPhases = hasPhases;
-        this.phaseCount = phaseCount;
-        this.phaseOffsetTicks = phaseOffsetTicks;
-    }
-}
+/**
+ * @param texture            object texture location
+ * @param size               size on a skybox
+ * @param distance           relative distance to player, only changes render order, shouldn't be negative
+ * @param orbitalPeriodTicks default mc day - 24000 ticks
+ * @param hasPhases          does have phases
+ * @param phaseCount         amount of phases
+ * @param phaseOffsetTicks   offset in ticks from default position
+ * @param isMainLightSource  sets if this object is the main light source on a planet
+ */
+@Desugar
+public record CelestialBody(ResourceLocation texture, float size, double distance, float inclination,
+    long orbitalPeriodTicks, boolean hasPhases, int phaseCount, long phaseOffsetTicks, boolean isMainLightSource) {}
