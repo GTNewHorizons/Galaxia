@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
+    // TODO fix builder not working in survival mode because of not updating held item
     private static final String LANG_PREFIX = "galaxia.habitat_builder.";
 
     public ItemHabitatBuilder() {
