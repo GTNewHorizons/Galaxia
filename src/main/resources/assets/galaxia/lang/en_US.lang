@@ -1,19 +1,19 @@
 ## Galaxia English (US) translation file
 
 ## Blocks
-# Blocks - Calx
-tile.CalxRegolith.name=Calx Regolith
-tile.CalxMagma.name=Calx Magma
-tile.CalxGabbro.name=Calx Gabbro
-tile.CalxBreccia.name=Calx Breccia
-tile.CalxBasalt.name=Calx Basalt
-tile.CalxAnorthosite.name=Calx Anorthosite
-tile.CalxAndesite.name=Calx Andesite
-tile.CalxTektite.name=Calx Tektite
+# Blocks -Theia
+tile.TheiaRegolith.name=Theia Regolith
+tile.TheiaMagma.name=Theia Magma
+tile.TheiaGabbro.name=Theia Gabbro
+tile.TheiaBreccia.name=Theia Breccia
+tile.TheiaBasalt.name=Theia Basalt
+tile.TheiaAnorthosite.name=Theia Anorthosite
+tile.TheiaAndesite.name=Theia Andesite
+tile.TheiaTektite.name=Theia Tektite
 
-# Blocks - Dunia
-tile.DuniaRock.name=Dunia Ash
-tile.DuniaSand.name=Dunia Sand
+# Blocks - Hemateria
+tile.HemateriaRock.name=Hemateria Ash
+tile.HemateriaSand.name=Hemateria Sand
 
 ## Creative tab
 itemGroup.galaxia=§9Galaxia
@@ -22,7 +22,7 @@ itemGroup.galaxia=§9Galaxia
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.another_thing.name=Another thing; that is now localized, super cool right, yes I agree
 # Planet stone dust
-item.galaxia.calx_dust.name=Calx stone dust
+item.galaxia.theia_dust.name=Theia stone dust
 
 ## Gui elements
 # Planet Teleporter

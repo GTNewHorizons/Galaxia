@@ -15,9 +15,9 @@ import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
-public class Dunia extends BasePlanet {
+public class Hemateria extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.DUNIA;
+    public static final DimensionEnum ENUM = DimensionEnum.HEMATERIA;
 
     @Override
     public DimensionEnum getPlanetEnum() {
@@ -46,7 +46,7 @@ public class Dunia extends BasePlanet {
             .createBiomeMatrix(2)
             .biome(
                 createBiome(
-                    "Dunia Dunes",
+                    "Hemateria Dunes",
                     Blocks.brick_block,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.SAND_DUNES)
@@ -59,7 +59,7 @@ public class Dunia extends BasePlanet {
                 0)
             .biome(
                 createBiome(
-                    "Dunia Mountains",
+                    "Hemateria Mountains",
                     Blocks.wool,
                     4,
                     TerrainConfiguration.builder()
@@ -73,8 +73,8 @@ public class Dunia extends BasePlanet {
                 1)
             .biome(
                 createBiome(
-                    "Dunia Hills",
-                    GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix)
+                    "Hemateria Hills",
+                    GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix)
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -87,8 +87,8 @@ public class Dunia extends BasePlanet {
                 0)
             .biome(
                 createBiome(
-                    "Dunia Dune Hills",
-                    GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix)
+                    "Hemateria Dune Hills",
+                    GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -119,11 +119,11 @@ public class Dunia extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(new BlockMeta(block, meta))
             .fillerBlock(Blocks.brick_block)
-            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.SNOW.suffix), 144)
+            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix), 144)
             .terrain(terrain)
             .ocean(
                 new BlockMeta(Blocks.glass, 1),
-                GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix),
+                GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix),
                 64,
                 new BlockMeta(Blocks.obsidian, 0),
                 32)

@@ -11,9 +11,9 @@ import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
-public class Calx extends BasePlanet {
+public class Theia extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.CALX;
+    public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
     @Override
     public DimensionEnum getPlanetEnum() {
@@ -88,11 +88,11 @@ public class Calx extends BasePlanet {
     }
 
     protected static BiomeGenBase createBiome() {
-        return new BiomeGenBuilder(100).name("Calx Surface")
+        return new BiomeGenBuilder(100).name("Theia Surface")
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX))
+            .topBlock(GalaxiaBlockBase.get(DimensionEnum.THEIA))
             .fillerBlock(Blocks.brick_block)
             .build();
     }
