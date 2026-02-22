@@ -97,9 +97,7 @@ public class WorldProviderSpace extends WorldProvider {
             BiomeGenBase[][] biggerMatrix = new BiomeGenBase[Math.max(x + 1, biomes.length)][Math
                 .max(z + 1, biomes[0].length)];
             for (int oldX = 0; oldX < biomes.length; oldX++) {
-                for (int oldZ = 0; oldZ < biomes[0].length; oldZ++) {
-                    biggerMatrix[oldX][oldZ] = biomes[oldX][oldZ];
-                }
+                System.arraycopy(biomes[oldX], 0, biggerMatrix[oldX], 0, biomes[0].length);
             }
             biomes = biggerMatrix;
         }
