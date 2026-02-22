@@ -24,7 +24,7 @@ import cpw.mods.fml.common.gameevent.TickEvent;
 public class DimensionEventHandler {
 
     public int counter;
-    public final int BASE_EFFECT_DURATION = 39;
+    public final int BASE_EFFECT_DURATION = 40;
 
     DamageSource temperature = new DamageSource("galaxia.temperature").setDamageBypassesArmor()
         .setMagicDamage();

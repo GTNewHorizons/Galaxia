@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.mixin;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
@@ -22,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
+import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
 @Mixin(RenderGlobal.class)
 public abstract class RenderGlobalSkyMixin {
@@ -37,25 +37,24 @@ public abstract class RenderGlobalSkyMixin {
     @Final
     private static ResourceLocation locationMoonPhasesPng;
 
-    private static final List<CelestialBody> DEFAULT_OVERWORLD_BODIES;
-
-    static {
-        List<CelestialBody> list = new ArrayList<>();
-        list.add(new CelestialBody(locationSunPng, null, 30f, 100.0, 23.44f, 24000L, true, false, 0, -6000));
-        list.add(
-            new CelestialBody(
-                locationMoonPhasesPng,
-                locationMoonPhasesPng,
-                20f,
-                -100.0,
-                5.14f,
-                23151L,
-                false,
-                true,
-                8,
-                0));
-        DEFAULT_OVERWORLD_BODIES = Collections.unmodifiableList(list);
-    }
+    private static final List<CelestialBody> DEFAULT_OVERWORLD_BODIES = SkyBuilder.builder()
+        .addBody(
+            b -> b.texture(locationSunPng)
+                .size(30f)
+                .distance(100.0)
+                .inclination(23.44f)
+                .period(24000L)
+                .phaseOffset(-6000L)
+                .mainLightSource())
+        .addBody(
+            b -> b.texture(locationMoonPhasesPng)
+                .size(20f)
+                .distance(-100.0)
+                .inclination(5.14f)
+                .period(23151L)
+                .hasPhases()
+                .phaseCount(8))
+        .build();
 
     @Inject(
         method = "renderSky",
@@ -89,14 +88,15 @@ public abstract class RenderGlobalSkyMixin {
         // angles
         List<Float> angles = new ArrayList<>();
         for (CelestialBody body : bodies) {
-            float angle = (float) (((timeWithPartial + body.phaseOffsetTicks) % body.orbitalPeriodTicks)
-                / (double) body.orbitalPeriodTicks);
+            float angle = (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
+                / (double) body.orbitalPeriodTicks());
             angles.add(angle);
         }
 
         float primarySunAngle = 0.0f;
         for (int i = 0; i < bodies.size(); i++) {
-            if (bodies.get(i).emissive) {
+            if (bodies.get(i)
+                .isMainLightSource()) {
                 primarySunAngle = angles.get(i);
                 break;
             }
@@ -105,7 +105,12 @@ public abstract class RenderGlobalSkyMixin {
         // sorting for eclipses
         List<Integer> indices = new ArrayList<>();
         for (int i = 0; i < bodies.size(); i++) indices.add(i);
-        indices.sort((i1, i2) -> Double.compare(bodies.get(i2).distance, bodies.get(i1).distance));
+        indices.sort(
+            (i1, i2) -> Double.compare(
+                bodies.get(i2)
+                    .distance(),
+                bodies.get(i1)
+                    .distance()));
 
         GL11.glPopMatrix();
         GL11.glPushMatrix();
@@ -125,22 +130,22 @@ public abstract class RenderGlobalSkyMixin {
     private void drawCelestialBody(Tessellator t, CelestialBody body, float angle, float primarySunAngle) {
         GL11.glPushMatrix();
 
-        GL11.glRotatef(body.inclination, 0F, 0F, 1F);
+        GL11.glRotatef(body.inclination(), 0F, 0F, 1F);
         GL11.glRotatef(angle * 360.0F, 1F, 0F, 0F);
 
         Minecraft.getMinecraft()
             .getTextureManager()
-            .bindTexture(body.texture);
+            .bindTexture(body.texture());
 
-        float size = body.size;
-        double height = body.distance;
+        float size = body.size();
+        double height = body.distance();
 
-        if (body.hasPhases) {
+        if (body.hasPhases()) {
             float delta = angle - primarySunAngle;
             float phaseProgress = delta % 1.0f;
             if (phaseProgress < 0.0f) phaseProgress += 1.0f;
 
-            int phase = (int) (phaseProgress * body.phaseCount) % body.phaseCount;
+            int phase = (int) (phaseProgress * body.phaseCount()) % body.phaseCount();
 
             int u = phase % 4;
             int v = (phase / 4) % 2;

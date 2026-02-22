@@ -47,39 +47,38 @@ public class Theia extends BasePlanet {
 
     protected SkyBuilder buildSky() {
         return SkyBuilder.builder()
-            .sun(
+            .addBody(
                 s -> s.texture("minecraft:textures/environment/sun.png")
                     .size(30f)
                     .distance(100.0)
                     .inclination(45)
-                    .period(24000L)
-                    .emissive(true))
-            .moon(
+                    .period(24000L))
+            .addBody(
                 m -> m.texture("minecraft:textures/environment/moon_phases.png")
                     .size(20f)
                     .distance(-100.0)
                     .inclination(60)
                     .period(23151L)
-                    .phases())
-            .moon(
+                    .hasPhases())
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(10.0f)
                     .period(3000L))
-            .moon(
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(20.0f)
                     .period(1200L))
-            .moon(
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(40.0f)
                     .period(12000L))
-            .moon(
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
