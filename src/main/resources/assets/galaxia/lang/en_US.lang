@@ -17,7 +17,7 @@
 
 
 ## Creative tab
-itemGroup.galaxia=§9Galaxia
+itemGroup.galaxia=§9Galaxia§r
 
 ## Blocks
 # Blocks -Theia
@@ -36,6 +36,14 @@ tile.HemateriaRock.name=Hemateria Ash
 tile.HemateriaAndesite.name=Hemateria Andesite
 tile.HemateriaSand.name=Hemateria Sand
 tile.HemateriaSnow.name=Hemateria Snow
+
+# Blocks - Frozen Belt
+tile.Frozen_BeltIce.name=Frozen Belt Ice
+tile.Frozen_BeltBreccia.name=Frozen Belt Breccia
+tile.Frozen_BeltGabbro.name=Frozen Belt Gabbro
+tile.Frozen_BeltBasalt.name=Frozen Belt Basalt
+tile.Frozen_BeltAndesite.name=Frozen Belt Andesite
+tile.Frozen_BeltAnorthosite.name=Frozen Belt Anorthosite
 
 # Blocks - Modules
 tile.module.shell.name=[?]Shell module
