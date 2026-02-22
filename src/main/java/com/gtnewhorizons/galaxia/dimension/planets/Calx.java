@@ -1,15 +1,14 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
 import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
 public class Calx extends BasePlanet {
 
@@ -40,60 +39,61 @@ public class Calx extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .createBiomeMatrix(1)
-            .biome(createBiome(), 0, 0)
+            .biome(
+                createBiome(
+                    "Calx Dunes",
+                    Blocks.brick_block,
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.SAND_DUNES)
+                        .scale(4)
+                        .width(1.5)
+                        .height(2)
+                        .endFeature()
+                        .build()),
+                0,
+                0)
             .name(ENUM)
             .build();
     }
 
     protected SkyBuilder buildSky() {
         return SkyBuilder.builder()
-            .sun(
+            .addBody(
                 s -> s.texture("minecraft:textures/environment/sun.png")
                     .size(30f)
                     .distance(100.0)
                     .inclination(45)
-                    .period(24000L)
-                    .emissive(true))
-            .moon(
+                    .period(24000L))
+            .addBody(
                 m -> m.texture("minecraft:textures/environment/moon_phases.png")
                     .size(20f)
                     .distance(-100.0)
                     .inclination(60)
                     .period(23151L)
-                    .phases())
-            .moon(
+                    .hasPhases())
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(10.0f)
                     .period(3000L))
-            .moon(
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(20.0f)
                     .period(1200L))
-            .moon(
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(40.0f)
                     .period(12000L))
-            .moon(
+            .addBody(
                 m -> m.texture("galaxia:textures/environment/phobos.png")
                     .size(6f)
                     .distance(90.0)
                     .inclination(30.0f)
                     .period(6000L));
-    }
-
-    protected static BiomeGenBase createBiome() {
-        return new BiomeGenBuilder(100).name("Calx Surface")
-            .height(0.1F, 0.11F)
-            .temperature(0.4F)
-            .rainfall(0.99F)
-            .topBlock(GalaxiaBlockBase.get(DimensionEnum.CALX))
-            .fillerBlock(Blocks.brick_block)
-            .build();
     }
 }
