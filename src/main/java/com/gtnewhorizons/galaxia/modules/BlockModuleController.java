@@ -2,11 +2,15 @@ package com.gtnewhorizons.galaxia.modules;
 
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.items.ItemModuleMover;
 
 public class BlockModuleController extends BlockContainer {
 
@@ -31,11 +35,23 @@ public class BlockModuleController extends BlockContainer {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityModuleController ctrl) {
             if (ctrl.getType() == null) {
-                String id = ModuleTypes.HUB_3X3.getId();
+                String id = ModuleTypes.CAPSULE_3X3.getId();
                 ctrl.setModule(id);
                 ctrl.buildStructure();
             }
         }
+    }
+
+    @Override
+    public void onBlockClicked(World world, int x, int y, int z, EntityPlayer player) {
+        ItemStack held = player.getHeldItem();
+        if (held != null && held.getItem() instanceof ItemModuleMover mover) {
+            if (!world.isRemote) {
+                mover.selectModule(world, x, y, z, player, held);
+            }
+            return;
+        }
+        super.onBlockClicked(world, x, y, z, player);
     }
 
     @Override
