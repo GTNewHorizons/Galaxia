@@ -90,11 +90,17 @@ public class WorldProviderSpace extends WorldProvider {
         return chunkGenSupplier.get();
     }
 
-    public void createBiomeMatrix(int size) {
-        biomes = new BiomeGenBase[size][size];
-    }
-
     public void addBiome(BiomeGenBase biome, int x, int z) {
+        if (biomes == null) {
+            biomes = new BiomeGenBase[x + 1][z + 1];
+        } else if (x >= biomes.length || z >= biomes[0].length) {
+            BiomeGenBase[][] biggerMatrix = new BiomeGenBase[Math.max(x + 1, biomes.length)][Math
+                .max(z + 1, biomes[0].length)];
+            for (int oldX = 0; oldX < biomes.length; oldX++) {
+                System.arraycopy(biomes[oldX], 0, biggerMatrix[oldX], 0, biomes[0].length);
+            }
+            biomes = biggerMatrix;
+        }
         biomes[x][z] = biome;
     }
 

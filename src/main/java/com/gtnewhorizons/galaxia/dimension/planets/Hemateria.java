@@ -39,7 +39,6 @@ public class Hemateria extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             // These biome names are mostly just for testing
-            .createBiomeMatrix(2)
             .biome(
                 createBiome(
                     "Hemateria Dunes",
