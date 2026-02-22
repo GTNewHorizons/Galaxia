@@ -102,7 +102,7 @@ public class Dunia extends BasePlanet {
             .fillerBlock(Blocks.brick_block)
             .snowBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.SNOW.suffix), 144)
             .terrain(terrain)
-            .ocean(new BlockMeta(Blocks.glass, 1), GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix), 64)
+            .ocean(new BlockMeta(Blocks.glass, 1), GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix), 64, new BlockMeta(Blocks.obsidian, 0), 32)
             .build();
     }
 }

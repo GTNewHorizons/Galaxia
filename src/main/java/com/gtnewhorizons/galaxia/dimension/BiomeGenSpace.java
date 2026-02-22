@@ -12,8 +12,10 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final int snowHeight;
     private final BlockMeta snowBlock;
     private final int oceanHeight;
+    private final int seabedHeight;
     private final BlockMeta oceanFiller;
     private final BlockMeta oceanSurface;
+    private final BlockMeta seabed;
 
     public BiomeGenSpace(int id, BiomeGenBuilder b) {
         super(id);
@@ -29,8 +31,10 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
         this.oceanHeight = b.oceanHeight;
+        this.seabedHeight = b.seabedHeight;
         this.oceanFiller = b.oceanFiller;
         this.oceanSurface = b.oceanSurface;
+        this.seabed = b.seabed;
 
         this.spawnableCaveCreatureList = b.mobsCave;
         this.spawnableCreatureList = b.mobsGeneral;
@@ -78,5 +82,13 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public BlockMeta getOceanSurface() {
         return oceanSurface;
+    }
+
+    public BlockMeta getSeabed() {
+        return seabed;
+    }
+
+    public int getSeabedHeight() {
+        return seabedHeight;
     }
 }

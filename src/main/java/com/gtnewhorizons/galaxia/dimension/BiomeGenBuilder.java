@@ -24,9 +24,10 @@ public class BiomeGenBuilder {
     TerrainConfiguration terrain;
     int snowHeight = 512;
     int oceanHeight = 0;
+    int seabedHeight = 0;
     BlockMeta oceanFiller = stone;
     BlockMeta oceanSurface = stone;
-
+    BlockMeta seabed = stone;
     BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
     BlockMeta snowBlock = stone;
@@ -85,10 +86,12 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight) {
+    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight, BlockMeta seabed, int seabedHeight) {
         this.oceanFiller = oceanFiller;
         this.oceanSurface = oceanSurface;
         this.oceanHeight = oceanHeight;
+        this.seabed = seabed;
+        this.seabedHeight = seabedHeight;
         return this;
     }
 

@@ -31,6 +31,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final BlockMeta snow = new BlockMeta(Blocks.snow, 0);
     private final BlockMeta water = new BlockMeta(Blocks.water, 0);
     private final BlockMeta sand = new BlockMeta(Blocks.sand, 0);
+    private final BlockMeta gravel = new BlockMeta(Blocks.gravel, 0);
 
     public ChunkProviderGalaxiaPlanet(World world) {
         this.worldObj = world;
@@ -145,9 +146,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         BlockMeta snowBlock = snow;
         BlockMeta oceanFiller = water;
         BlockMeta oceanSurface = sand;
+        BlockMeta seabed = gravel;
         int surfaceDepth = 1;
         int snowHeight = 512;
         int oceanHeight = 0;
+        int seabedHeight = 0;
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
@@ -162,6 +165,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     oceanHeight = spaceBiome.getOceanHeight();
                     oceanFiller = spaceBiome.getOceanFiller();
                     oceanSurface = spaceBiome.getOceanSurface();
+                    seabed = spaceBiome.getSeabed();
+                    seabedHeight = spaceBiome.getSeabedHeight();
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
@@ -180,7 +185,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         if (y > height - 1) {
                             blockMeta = oceanFiller;
                         } else if (y == height - 1) {
-                            blockMeta = oceanSurface;
+                            if (y > seabedHeight) {
+                                blockMeta = oceanSurface;
+                            } else {
+                                blockMeta = seabed;
+                            }
                         }
                     }
                     if (blockMeta.block() != null) {
