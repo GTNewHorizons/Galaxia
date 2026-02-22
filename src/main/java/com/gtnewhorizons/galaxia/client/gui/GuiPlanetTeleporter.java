@@ -23,6 +23,9 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     private GuiButton teleportButton;
 
+    /**
+     * Initializes the GUI by creating the widget and buttons etc.
+     */
     @Override
     public void initGui() {
         super.initGui();
@@ -35,6 +38,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
         int startY = 40;
         int spacing = 25;
 
+        // Add options for all Galaxia Dimensions and create buttons
         for (int i = 0; i < planets.length; i++) {
             DimensionEnum planet = planets[i];
             GuiButton planetButton = new GuiButton(
@@ -47,6 +51,8 @@ public class GuiPlanetTeleporter extends GuiScreen {
             this.buttonList.add(planetButton);
         }
 
+
+        // Create text fields for desired coordinates
         int fieldY = startY + planets.length * spacing + 20;
 
         this.xField = new GuiTextField(this.fontRendererObj, this.width / 2 - 50, fieldY, 100, 20);
@@ -61,6 +67,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
         this.zField.setText("0");
         this.zField.setMaxStringLength(12);
 
+        // Add the teleport button
         this.teleportButton = new GuiButton(
             200,
             this.width / 2 - 100,
@@ -71,13 +78,21 @@ public class GuiPlanetTeleporter extends GuiScreen {
         this.buttonList.add(teleportButton);
     }
 
+    /**
+     * Configures the user inputs after GUI closure
+     */
     @Override
     public void onGuiClosed() {
         Keyboard.enableRepeatEvents(false);
     }
 
+    /**
+     * Defines the behaviour on button presses
+     * @param button The button pressed
+     */
     @Override
     protected void actionPerformed(GuiButton button) {
+        // If button is a planet name, select that planet
         if (button.id < planets.length) {
             selectedPlanet = planets[button.id];
             for (GuiButton obj : this.buttonList) {
@@ -85,6 +100,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
                     obj.enabled = planets[obj.id] != selectedPlanet;
                 }
             }
+            // If button is teleporter, set the desired coordinates and send a teleport request packet
         } else if (button.id == 200) {
             try {
                 double x = Double.parseDouble(xField.getText());
@@ -97,6 +113,12 @@ public class GuiPlanetTeleporter extends GuiScreen {
         }
     }
 
+    /**
+     * Draws the screen of the GUI
+     * @param mouseX Current cursor x position
+     * @param mouseY Current cursor y position
+     * @param partialTicks The current partial tick (how far user is between current game tick and next)
+     */
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
@@ -126,12 +148,19 @@ public class GuiPlanetTeleporter extends GuiScreen {
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
+    /**
+     * Handles keyboard presses for textfield entry
+     * @param typedChar The character typed in the field
+     * @param keyCode The keycode of non-alphanumeric commands (enter, return etc.)
+     */
     @Override
     protected void keyTyped(char typedChar, int keyCode) {
+        // Update coordinate fields
         xField.textboxKeyTyped(typedChar, keyCode);
         yField.textboxKeyTyped(typedChar, keyCode);
         zField.textboxKeyTyped(typedChar, keyCode);
 
+        // If return pressed, activate teleport button
         if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER) {
             actionPerformed(teleportButton);
         }
@@ -139,8 +168,15 @@ public class GuiPlanetTeleporter extends GuiScreen {
         super.keyTyped(typedChar, keyCode);
     }
 
+    /**
+     * Handles mouse click events
+     * @param mouseX Current cursor x position
+     * @param mouseY Current cursor y position
+     * @param mouseButton The mouse button pressed (right click, left click etc)
+     */
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        // Update coordinate fields
         xField.mouseClicked(mouseX, mouseY, mouseButton);
         yField.mouseClicked(mouseX, mouseY, mouseButton);
         zField.mouseClicked(mouseX, mouseY, mouseButton);
@@ -148,6 +184,9 @@ public class GuiPlanetTeleporter extends GuiScreen {
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
+    /**
+     * Updates the screen to reflect current choices
+     */
     @Override
     public void updateScreen() {
         super.updateScreen();
