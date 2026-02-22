@@ -12,25 +12,26 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
-public class GalaxiaBlocks {
+public enum GalaxiaBlocks {
+    // spotless:off
 
-    public static Block moduleController;
-    public static Block moduleShell;
+    MODULE_CONTROLLER(new BlockModuleController(), "module_controller"),
+    MODULE_SHELL(new BlockModuleShell(), "module_shell"),
+    ; // leave trailing semicolon
+
+    // spotless:on
 
     public static void registerBlocks() {
-        moduleController = new BlockModuleController();
-        GameRegistry.registerBlock(moduleController, "module_controller");
-        moduleShell = new BlockModuleShell();
-        GameRegistry.registerBlock(moduleShell, "module_shell");
+        for (GalaxiaBlocks block : values()) {
+            GameRegistry.registerBlock(block.get(), block.name);
+        }
 
         GameRegistry.registerTileEntity(TileEntityModuleController.class, "galaxia_module_controller");
     }
 
     // spotless:off
     public static void registerPlanetBlocks() {
-        reg(
-            DimensionEnum.CALX,
-            GalaxiaItemList.DUST_CALX,
+        reg(DimensionEnum.CALX, GalaxiaItemList.DUST_CALX,
             BlockVariant.REGOLITH,
             BlockVariant.TEKTITE,
             BlockVariant.MAGMA,
@@ -39,10 +40,23 @@ public class GalaxiaBlocks {
             BlockVariant.BASALT,
             BlockVariant.ANORTHOSITE,
             BlockVariant.ANDESITE);
+
         reg(DimensionEnum.DUNIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
             BlockVariant.SNOW);
     }
     //spotless:on
+
+    private final Block theBlock;
+    private final String name;
+
+    GalaxiaBlocks(Block block, String name) {
+        this.theBlock = block;
+        this.name = name;
+    }
+
+    public Block get() {
+        return theBlock;
+    }
 }
