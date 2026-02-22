@@ -2,8 +2,8 @@ package com.gtnewhorizons.galaxia.dimension;
 
 public enum DimensionEnum {
 
-    CALX(20, "Calx"),
-    DUNIA(21, "Dunia"),
+    THEIA(20, "Theia"),
+    HEMATERIA(21, "Hemateria"),
     FROZEN_BELT(22, "Frozen Belt");
 
     final int id;

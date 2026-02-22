@@ -1,19 +1,23 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.block.BlockVariant;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
+import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
-public class Dunia extends BasePlanet {
+public class Hemateria extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.DUNIA;
+    public static final DimensionEnum ENUM = DimensionEnum.HEMATERIA;
 
     @Override
     public DimensionEnum getPlanetEnum() {
@@ -42,7 +46,7 @@ public class Dunia extends BasePlanet {
             .createBiomeMatrix(2)
             .biome(
                 createBiome(
-                    "Dunia Dunes",
+                    "Hemateria Dunes",
                     Blocks.brick_block,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.SAND_DUNES)
@@ -55,7 +59,7 @@ public class Dunia extends BasePlanet {
                 0)
             .biome(
                 createBiome(
-                    "Dunia Mountains",
+                    "Hemateria Mountains",
                     Blocks.wool,
                     4,
                     TerrainConfiguration.builder()
@@ -69,8 +73,8 @@ public class Dunia extends BasePlanet {
                 1)
             .biome(
                 createBiome(
-                    "Dunia Hills",
-                    GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix)
+                    "Hemateria Hills",
+                    GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix)
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -83,8 +87,8 @@ public class Dunia extends BasePlanet {
                 0)
             .biome(
                 createBiome(
-                    "Dunia Dune Hills",
-                    GalaxiaBlockBase.get(DimensionEnum.CALX, BlockVariant.REGOLITH.suffix)
+                    "Hemateria Dune Hills",
+                    GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)

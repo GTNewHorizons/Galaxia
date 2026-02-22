@@ -1,18 +1,19 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
 import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
+import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
-public class Calx extends BasePlanet {
+public class Theia extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.CALX;
+    public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
     @Override
     public DimensionEnum getPlanetEnum() {
@@ -39,19 +40,7 @@ public class Calx extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .createBiomeMatrix(1)
-            .biome(
-                createBiome(
-                    "Calx Dunes",
-                    Blocks.brick_block,
-                    TerrainConfiguration.builder()
-                        .feature(TerrainPreset.SAND_DUNES)
-                        .scale(4)
-                        .width(1.5)
-                        .height(2)
-                        .endFeature()
-                        .build()),
-                0,
-                0)
+            .biome(createBiome(), 0, 0)
             .name(ENUM)
             .build();
     }
@@ -95,5 +84,15 @@ public class Calx extends BasePlanet {
                     .distance(90.0)
                     .inclination(30.0f)
                     .period(6000L));
+    }
+
+    protected static BiomeGenBase createBiome() {
+        return new BiomeGenBuilder(100).name("Theia Surface")
+            .height(0.1F, 0.11F)
+            .temperature(0.4F)
+            .rainfall(0.99F)
+            .topBlock(GalaxiaBlockBase.get(DimensionEnum.THEIA))
+            .fillerBlock(Blocks.brick_block)
+            .build();
     }
 }
