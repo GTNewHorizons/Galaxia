@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.block;
 
+/**
+ * Defines the different variants of a block, and the characteristics they should have
+ */
 public class BlockVariant {
 
     public final String suffix;
@@ -18,19 +21,37 @@ public class BlockVariant {
         this.harvestLevel = harvestLevel;
         this.dropsDust = dropsDust;
     }
-
+    /**
+     * Registers the block variant as having similar characteristics to vanilla stone
+     * @param suffix The suffix in the ENUM giving the type of rock, e.g. Andesite etc.
+     * @param hardness The desired hardness level of the block
+     * @return A BlockVariant with desired characteristics
+     */
     public static BlockVariant stoneLike(String suffix, float hardness) {
         return new BlockVariant(suffix, hardness, false, "pickaxe", 1, true);
     }
 
+    /**
+     * Registers the block variant as having similar characteristics to vanilla sand
+     * @param suffix The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
+     * @param hardness The desired hardness level of the block
+     * @return A BlockVariant with desired characteristics
+     */
     public static BlockVariant sandLike(String suffix, float hardness) {
         return new BlockVariant(suffix, hardness, true, "shovel", 0, true);
     }
 
+    /**
+     * Registers the block variant as having similar characteristics to vanilla dirt
+     * @param suffix The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
+     * @param hardness The desired hardness level of the block
+     * @return A BlockVariant with desired characteristics
+     */
     public static BlockVariant dirtLike(String suffix, float hardness) {
         return new BlockVariant(suffix, hardness, false, "shovel", 0, true);
     }
 
+    // Creating block variants for all ENUM requirements
     public static final BlockVariant REGOLITH = sandLike("regolith", 0.7F);
     public static final BlockVariant ANDESITE = stoneLike("andesite", 2F);
     public static final BlockVariant ANORTHOSITE = stoneLike("anorthosite", 2F);
