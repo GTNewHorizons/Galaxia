@@ -1,6 +1,20 @@
 ## Galaxia English (US) translation file
 
+## Before you commit war crime please read:
 ## Strings marked with [?] = Need correct name, currently placeholder
+## Use StatCollector and localized enum Colors
+## Have "§r" (color reset) at the end of colored string
+## Keep the lang file nice and clean '='
+#
+## Sort like:
+# Creative tab
+# Block
+# Items
+# Elements
+ #- Gui
+ #- Tooltip
+ #- Other
+
 
 ## Creative tab
 itemGroup.galaxia=§9Galaxia
