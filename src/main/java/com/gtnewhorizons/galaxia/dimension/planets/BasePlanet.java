@@ -60,11 +60,11 @@ public abstract class BasePlanet {
             .rainfall(0.99F)
             .topBlock(new BlockMeta(block, meta))
             .fillerBlock(Blocks.brick_block)
-            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.SNOW.suffix), 144)
+            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix), 144)
             .terrain(terrain)
             .ocean(
                 new BlockMeta(Blocks.glass, 1),
-                GalaxiaBlockBase.get(DimensionEnum.DUNIA, BlockVariant.REGOLITH.suffix),
+                GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix),
                 64,
                 new BlockMeta(Blocks.obsidian, 0),
                 32)
