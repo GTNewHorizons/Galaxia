@@ -69,7 +69,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     32,
                     64,
                     512,
-                    new BlockMeta[] {GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix), new BlockMeta(Blocks.stonebrick, 1) },
+                    new BlockMeta[] {GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix), GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
                     4) };
             WorldProviderBuilder.configure(this)
                 .sky(true)
