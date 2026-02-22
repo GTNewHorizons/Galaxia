@@ -24,8 +24,6 @@ import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
-    // TODO fix item synchronisation issue (in creative only places chosen module on inventory open, in survival just
-    // doesnt update)
     private static final String LANG_PREFIX = "galaxia.habitat_builder.";
 
     public ItemHabitatBuilder() {

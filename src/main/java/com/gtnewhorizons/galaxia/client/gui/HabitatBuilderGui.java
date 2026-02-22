@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui;
 
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
@@ -31,7 +30,8 @@ public class HabitatBuilderGui {
 
     public ModularPanel build() {
         EntityPlayer player = guiData.getPlayer();
-        ItemStack held = guiData.getMainHandItem();
+        int slot = player.inventory.currentItem;
+        ItemStack held = player.inventory.getStackInSlot(slot);
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:habitat_builder")
             .size(250, 240);
@@ -56,9 +56,11 @@ public class HabitatBuilderGui {
                 .onMousePressed((mouseButton) -> {
                     if (mouseButton == 0) {
                         ItemHabitatBuilder.setSelectedModule(held, id);
+
+                        player.inventory.setInventorySlotContents(slot, held);
                         player.inventory.markDirty();
-                        if (player instanceof EntityPlayerMP mp) {
-                            mp.inventoryContainer.detectAndSendChanges();
+                        if (player.inventoryContainer != null) {
+                            player.inventoryContainer.detectAndSendChanges();
                         }
                         panel.closeIfOpen();
                     }
