@@ -125,7 +125,7 @@ public class Hemateria extends BasePlanet {
     }
 
     /**
-     * Creates a biome with a specific block type, and terrain configuration
+     * Creates a biome generator with a specific block type, and terrain configuration
      * @param name Biome name
      * @param block The block used for the biome top block
      * @param terrain The required terrain configuration

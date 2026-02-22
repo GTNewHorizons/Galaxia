@@ -11,15 +11,27 @@ import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
+/**
+ * The class holding all data related to the dimension Theia
+ */
 public class Theia extends BasePlanet {
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
+    /**
+     * Getter for dimension Enum
+     * @return Dimension Enum
+     */
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
+    /**
+     * The configuration of the DimensionBuilder to configure the dimension
+     * @param builder The dimension builder to chain on
+     * @return The dimension Builder with all properties assigned
+     */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.gravity(2)
@@ -34,6 +46,10 @@ public class Theia extends BasePlanet {
                     .pressure(1));
     }
 
+    /**
+     * Configures the world provider to add the correct biomes and settings
+     * @param builder The world provider builder being configured
+     */
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
@@ -45,6 +61,10 @@ public class Theia extends BasePlanet {
             .build();
     }
 
+    /**
+     * Builds a skybox builder with required bodies in the sky
+     * @return The SkyBuilder configured with correct bodies
+     */
     protected SkyBuilder buildSky() {
         return SkyBuilder.builder()
             .sun(
@@ -87,6 +107,10 @@ public class Theia extends BasePlanet {
                     .period(6000L));
     }
 
+    /**
+     * Creates a biome generator with specific requirements
+     * @return The BiomeGenBase used to generated biomes of that type
+     */
     protected static BiomeGenBase createBiome() {
         return new BiomeGenBuilder(100).name("Theia Surface")
             .height(0.1F, 0.11F)
