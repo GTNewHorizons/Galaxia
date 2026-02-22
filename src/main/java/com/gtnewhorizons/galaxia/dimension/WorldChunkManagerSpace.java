@@ -42,9 +42,8 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         if (cacheCreated && x == cacheX && z == cacheZ) {
             return biomeGenerator[cacheBiomeIndexX][cacheBiomeIndexZ];
         }
-        int matrixLength = biomeGenerator[0].length;
-        int xIndex = getBiomeIndex(x, z, matrixLength, xBiomeNoise, true);
-        int zIndex = getBiomeIndex(x, z, matrixLength, zBiomeNoise, false);
+        int xIndex = getBiomeIndex(x, z, biomeGenerator.length, xBiomeNoise, true);
+        int zIndex = getBiomeIndex(x, z, biomeGenerator[0].length, zBiomeNoise, false);
         cacheCreated = true;
         cacheX = x;
         cacheZ = z;
@@ -86,7 +85,7 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         if (adjacentIndexX >= biomeGenerator.length) {
             adjacentIndexX = 0;
         }
-        if (adjacentIndexZ >= biomeGenerator.length) {
+        if (adjacentIndexZ >= biomeGenerator[0].length) {
             adjacentIndexZ = 0;
         }
         BiomeGenBase[] adjacentBiomes = new BiomeGenBase[3];
@@ -105,6 +104,7 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
 
     public int getBiomeCount() {
         int matrixLength = biomeGenerator.length;
-        return matrixLength * matrixLength;
+        int matrixWidth = biomeGenerator[0].length;
+        return matrixLength * matrixWidth;
     }
 }

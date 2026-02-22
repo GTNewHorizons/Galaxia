@@ -71,13 +71,11 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     public void addBiome(BiomeGenBase biome, int x, int z) {
         if (biomes == null) {
-            int largerValue = Math.max(x, z) + 1;
-            biomes = new BiomeGenBase[largerValue][largerValue];
+            biomes = new BiomeGenBase[x + 1][z + 1];
         } else if (x >= biomes.length || z >= biomes[0].length) {
-            int largerValue = Math.max(x, z) + 1;
-            BiomeGenBase[][] biggerMatrix = new BiomeGenBase[largerValue][largerValue];
+            BiomeGenBase[][] biggerMatrix = new BiomeGenBase[x + 1][z + 1];
             for (int oldX = 0; oldX < biomes.length; oldX++) {
-                for (int oldZ = 0; oldZ < biomes.length; oldZ++) {
+                for (int oldZ = 0; oldZ < biomes[0].length; oldZ++) {
                     biggerMatrix[oldX][oldZ] = biomes[oldX][oldZ];
                     biomes = biggerMatrix;
                 }
