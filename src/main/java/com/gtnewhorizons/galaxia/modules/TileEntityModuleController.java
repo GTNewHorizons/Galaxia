@@ -67,7 +67,7 @@ public class TileEntityModuleController extends TileEntity {
                     int wy = yCoord + dy;
                     int wz = zCoord + dz;
 
-                    worldObj.setBlock(wx, wy, wz, GalaxiaBlocks.moduleShell);
+                    worldObj.setBlock(wx, wy, wz, GalaxiaBlocks.MODULE_SHELL.get());
                     shellPositions.add(new int[] { wx, wy, wz });
                 }
             }
@@ -77,7 +77,7 @@ public class TileEntityModuleController extends TileEntity {
 
     public void destroyStructure() {
         for (int[] p : shellPositions) {
-            if (worldObj.getBlock(p[0], p[1], p[2]) == GalaxiaBlocks.moduleShell) {
+            if (worldObj.getBlock(p[0], p[1], p[2]) == GalaxiaBlocks.MODULE_SHELL.get()) {
                 worldObj.setBlockToAir(p[0], p[1], p[2]);
             }
         }

@@ -97,7 +97,7 @@ public class ItemModuleMover extends Item {
             oldTe.destroyStructure();
             world.setBlockToAir(selected[0], selected[1], selected[2]);
 
-            world.setBlock(nx, ny, nz, GalaxiaBlocks.moduleController);
+            world.setBlock(nx, ny, nz, GalaxiaBlocks.MODULE_CONTROLLER.get());
             TileEntityModuleController newTe = (TileEntityModuleController) world.getTileEntity(nx, ny, nz);
             if (newTe != null) {
                 newTe.setModule(moduleId);
@@ -118,7 +118,7 @@ public class ItemModuleMover extends Item {
         if (!player.capabilities.isCreativeMode) return false;
 
         World world = player.worldObj;
-        if (world.getBlock(x, y, z) == GalaxiaBlocks.moduleController) {
+        if (world.getBlock(x, y, z) == GalaxiaBlocks.MODULE_CONTROLLER.get()) {
             selectModule(world, x, y, z, player, itemstack);
         }
         return true;
