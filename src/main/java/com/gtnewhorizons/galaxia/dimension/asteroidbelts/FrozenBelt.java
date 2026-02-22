@@ -5,7 +5,9 @@ import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
@@ -18,6 +20,14 @@ public class FrozenBelt extends BaseAsteroidBelt {
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
+    }
+
+    @Override
+    protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
+        return super.customizeDimension(builder).effects(
+            new EffectBuilder().baseTemp(67)
+                .oxygenPercent(0)
+                .pressure(1));
     }
 
     @Override
@@ -63,7 +73,8 @@ public class FrozenBelt extends BaseAsteroidBelt {
                 .sky(true)
                 .skyColor(0, 0.1, 0.3)
                 .fog(0, 0.1f, 0.3f)
-                .biome(new BiomeGenFrozenBelt(100))
+                .createBiomeMatrix(1)
+                .biome(new BiomeGenFrozenBelt(100), 0, 0)
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)
                 .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed(), asteroids))
@@ -78,7 +89,8 @@ public class FrozenBelt extends BaseAsteroidBelt {
                 id,
                 new BiomeGenBuilder(id).name("Frozen Belt")
                     .temperature(1.0F)
-                    .rainfall(0));
+                    .rainfall(0)
+                    .generateBedrock(false));
         }
     }
 }

@@ -9,12 +9,14 @@ public final class TerrainFeatureApplier {
     private static NoiseGeneratorOctaves generationNoise;
 
     // TODO improve formulas for all features
-    public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand) {
+    public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand,
+        double[] terrainRelevance) {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
         }
         TerrainPreset preset = feature.getPreset();
-        double size = feature.getSize();
+        double height = feature.getHeight();
+        double width = feature.getWidth();
         double freq = feature.getFrequency();
         int depth = feature.getDepth();
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
@@ -22,38 +24,40 @@ public final class TerrainFeatureApplier {
 
         switch (preset) {
             case SAND_DUNES:
-                applySandDunes(heightMap, size, localRand, chunkX, chunkZ);
+                applySandDunes(heightMap, height, width, localRand, chunkX, chunkZ, terrainRelevance);
                 break;
             case IMPACT_CRATERS:
-                applyImpactCraters(heightMap, size, depth, localRand);
+                applyImpactCraters(heightMap, height, depth, localRand);
                 break;
             case CENTRAL_PEAK_CRATERS:
-                applyCentralPeakCraters(heightMap, size, depth, localRand);
+                applyCentralPeakCraters(heightMap, height, depth, localRand);
                 break;
             case MOUNTAIN_RANGES:
                 applyMountainRanges(
                     heightMap,
-                    size,
+                    height,
+                    width,
                     feature.getMinHeight(),
                     feature.getVariation(),
                     localRand,
                     chunkX,
-                    chunkZ);
+                    chunkZ,
+                    terrainRelevance);
                 break;
             case CANYONS:
-                applyCanyons(heightMap, size, depth, localRand);
+                applyCanyons(heightMap, height, depth, localRand);
                 break;
             case LAVA_PLATEAUS:
-                applyLavaPlateaus(heightMap, size, localRand);
+                applyLavaPlateaus(heightMap, height, localRand);
                 break;
             case RIVER_VALLEYS:
-                applyRiverValleys(heightMap, size, depth, localRand);
+                applyRiverValleys(heightMap, height, depth, localRand);
                 break;
             case YARDANGS:
-                applyYardangs(heightMap, size, localRand);
+                applyYardangs(heightMap, height, localRand);
                 break;
             case SALT_FLATS:
-                applySaltFlats(heightMap, size, localRand);
+                applySaltFlats(heightMap, height, localRand);
                 break;
             case MULTI_RING_BASINS:
             case SHIELD_VOLCANOES:
@@ -69,15 +73,20 @@ public final class TerrainFeatureApplier {
         }
     }
 
-    private static void applySandDunes(int[] hm, double size, Random r, int chunkX, int chunkZ) {
-        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (size * 4));
+    private static void applySandDunes(int[] hm, double height, double width, Random r, int chunkX, int chunkZ,
+        double[] terrainRelevance) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         chunkX *= 16;
         chunkZ *= 16;
         for (int x = 15; x >= 0; x--) {
             for (int z = 15; z >= 0; z--) {
+                double localRelevance = terrainRelevance[x + z * 16];
+                if (localRelevance == 0) {
+                    continue;
+                }
                 double localNoise = (noise[x + z * 16] + 5) / 10;
-                double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (size * 4)) * size * localNoise;
-                hm[x + z * 16] += (int) (wave * size);
+                double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (width * 4)) * height * localNoise;
+                hm[x + z * 16] += (int) (wave * height * localRelevance);
             }
         }
     }
@@ -107,12 +116,16 @@ public final class TerrainFeatureApplier {
         }
     }
 
-    private static void applyMountainRanges(int[] hm, double size, int minH, int var, Random r, int chunkX,
-        int chunkZ) {
-        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (size * 4));
+    private static void applyMountainRanges(int[] hm, double height, double width, int minH, int var, Random r,
+        int chunkX, int chunkZ, double[] terrainRelevance) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 15; x >= 0; x--) {
             for (int z = 15; z >= 0; z--) {
-                hm[x + z * 16] = (int) (minH + noise[x + z * 16] * size);
+                double localRelevance = terrainRelevance[x + z * 16];
+                if (localRelevance == 0) {
+                    continue;
+                }
+                hm[x + z * 16] += (int) ((minH + noise[x + z * 16] * height) * localRelevance);
             }
         }
     }

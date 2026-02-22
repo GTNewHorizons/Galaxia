@@ -6,9 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-
 public final class TerrainConfiguration {
 
     private final List<TerrainFeature> allFeatures;
@@ -81,13 +78,12 @@ public final class TerrainConfiguration {
         private final TerrainPreset preset;
 
         private double frequency = -1;
-        private double size = -1;
+        private double height = -1;
+        private double width = -1;
         private double scaleMultiplier = 1.0;
         private int minHeight = -1;
         private int variation = -1;
-        private Block topBlock = null;
-        private Block fillerBlock = Blocks.stone;
-        private int depth = 30;
+        private int depth = 5;
         private final Map<String, Object> custom = new HashMap<>();
 
         FeatureConfigurator(Builder parent, TerrainPreset preset) {
@@ -105,24 +101,19 @@ public final class TerrainConfiguration {
             return this;
         }
 
-        public FeatureConfigurator size(double s) {
-            this.size = s;
+        public FeatureConfigurator height(double h) {
+            this.height = h;
             return this;
         }
 
-        public FeatureConfigurator height(int min, int var) {
+        public FeatureConfigurator width(double w) {
+            this.width = w;
+            return this;
+        }
+
+        public FeatureConfigurator minimumHeight(int min, int var) {
             this.minHeight = min;
             this.variation = var;
-            return this;
-        }
-
-        public FeatureConfigurator topBlock(Block block) {
-            this.topBlock = block;
-            return this;
-        }
-
-        public FeatureConfigurator fillerBlock(Block block) {
-            this.fillerBlock = block;
             return this;
         }
 
@@ -138,18 +129,18 @@ public final class TerrainConfiguration {
 
         public Builder endFeature() {
             double finalFreq = (frequency > 0 ? frequency : preset.defaultFrequency) * scaleMultiplier;
-            double finalSize = (size > 0 ? size : preset.defaultSize) * scaleMultiplier;
+            double finalHeight = (height > 0 ? height : preset.defaultHeight) * scaleMultiplier;
+            double finalWidth = (width > 0 ? width : preset.defaultWidth) * scaleMultiplier;
             int finalMinH = minHeight >= 0 ? minHeight : preset.defaultMinHeight;
             int finalVar = variation >= 0 ? variation : preset.defaultVariation;
 
             TerrainFeature feature = new TerrainFeature(
                 preset,
                 finalFreq,
-                finalSize,
+                finalHeight,
+                finalWidth,
                 finalMinH,
                 finalVar,
-                topBlock,
-                fillerBlock,
                 depth,
                 custom);
 

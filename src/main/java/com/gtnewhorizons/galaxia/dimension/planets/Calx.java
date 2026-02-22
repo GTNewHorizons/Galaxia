@@ -39,8 +39,10 @@ public class Calx extends BasePlanet {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
-            .biome(createBiome())
-            .name(ENUM);
+            .createBiomeMatrix(1)
+            .biome(createBiome(), 0, 0)
+            .name(ENUM)
+            .build();
     }
 
     protected SkyBuilder buildSky() {

@@ -9,17 +9,29 @@ import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+
 public class BiomeGenBuilder {
 
     private final int id;
+    private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
 
     String name = "unset";
     Height height = new Height(0, 0);
     float temperature = 0.4F;
     float rainfall = 0.0F;
-
-    Block topBlock = Blocks.stone;
-    Block fillerBlock = Blocks.stone;
+    boolean generateBedrock = true;
+    TerrainConfiguration terrain;
+    int snowHeight = 512;
+    int oceanHeight = 0;
+    int seabedHeight = 0;
+    BlockMeta oceanFiller = stone;
+    BlockMeta oceanSurface = stone;
+    BlockMeta seabed = stone;
+    BlockMeta topBlock = stone;
+    BlockMeta fillerBlock = stone;
+    BlockMeta snowBlock = stone;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -52,12 +64,46 @@ public class BiomeGenBuilder {
     }
 
     public BiomeGenBuilder topBlock(Block block) {
+        return topBlock(new BlockMeta(block, 0));
+    }
+
+    public BiomeGenBuilder topBlock(BlockMeta block) {
         this.topBlock = block;
         return this;
     }
 
     public BiomeGenBuilder fillerBlock(Block block) {
+        return fillerBlock(new BlockMeta(block, 0));
+    }
+
+    public BiomeGenBuilder fillerBlock(BlockMeta block) {
         this.fillerBlock = block;
+        return this;
+    }
+
+    public BiomeGenBuilder snowBlock(BlockMeta blockMeta, int snowHeight) {
+        this.snowBlock = blockMeta;
+        this.snowHeight = snowHeight;
+        return this;
+    }
+
+    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight, BlockMeta seabed,
+        int seabedHeight) {
+        this.oceanFiller = oceanFiller;
+        this.oceanSurface = oceanSurface;
+        this.oceanHeight = oceanHeight;
+        this.seabed = seabed;
+        this.seabedHeight = seabedHeight;
+        return this;
+    }
+
+    public BiomeGenBuilder generateBedrock(boolean generateBedrock) {
+        this.generateBedrock = generateBedrock;
+        return this;
+    }
+
+    public BiomeGenBuilder terrain(TerrainConfiguration terrain) {
+        this.terrain = terrain;
         return this;
     }
 
