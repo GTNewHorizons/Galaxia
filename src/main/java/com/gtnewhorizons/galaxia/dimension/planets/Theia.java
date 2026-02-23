@@ -45,7 +45,7 @@ public class Theia extends BasePlanet {
             .orbitalRadius(1 * earthRadiusToAU)
             .sky(buildSky())
             .effects(
-                new EffectBuilder().baseTemp(273)
+                new EffectBuilder().baseTemp(225)
                     .oxygenPercent(0)
                     .pressure(1));
     }
