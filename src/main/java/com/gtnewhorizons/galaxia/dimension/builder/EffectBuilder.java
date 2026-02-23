@@ -12,7 +12,7 @@ public class EffectBuilder {
     private boolean spores = false; // Whether the planet has fungal spores in atmosphere
     private int pressure = 1; // Pressure on surface relative to Overworld (OW -> 1)
 
-    //Effect modifiers, Lambda functions, taking a player entity and the base value and producing a new value
+    // Effect modifiers, Lambda functions, taking a player entity and the base value and producing a new value
     private EffectDef.IEffectModifier tempMod;
     private EffectDef.IEffectModifier oxygenMod;
     private EffectDef.IEffectModifier radiationMod;
@@ -86,6 +86,7 @@ public class EffectBuilder {
 
     /**
      * Sets the modifier for the temperature
+     * 
      * @param modifier Modifier
      * @return configured builder
      */
@@ -96,6 +97,7 @@ public class EffectBuilder {
 
     /**
      * Sets the modifier for the oxygen percentage
+     * 
      * @param modifier Modifier
      * @return configured Builder
      */
@@ -106,6 +108,7 @@ public class EffectBuilder {
 
     /**
      * Sets the modifier for the pressure
+     * 
      * @param modifier modifier
      * @return configured Builder
      */
@@ -116,6 +119,7 @@ public class EffectBuilder {
 
     /**
      * Sets the modifier for the radiation
+     * 
      * @param modifier modifier
      * @return configured builder
      */
