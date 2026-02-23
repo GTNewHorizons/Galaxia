@@ -15,8 +15,8 @@ public enum Colors {
 
     IconGreen(0x55FF55),
 
+    // Add more colors here
     ; // leave trailing semicolon
-      // Add more colors here
 
     private static final String PREFIX = "galaxia.color.override.";
     private final int defaultColor;
