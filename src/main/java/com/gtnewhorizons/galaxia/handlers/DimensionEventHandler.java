@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.items.armor.ItemSpaceSuit;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
@@ -16,6 +15,7 @@ import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.dimension.builder.EffectDef;
+import com.gtnewhorizons.galaxia.items.armor.ItemSpaceSuit;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;

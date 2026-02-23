@@ -11,12 +11,8 @@ public class ItemSpaceSuit extends ItemArmor {
     public static final int MIN_TEMP = 223; // -50 Celsius
     public static final int MAX_TEMP = 373; // 100 Celsius
 
-    public static final ArmorMaterial SUIT_MATERIAL = EnumHelper.addArmorMaterial(
-        "SPACESUIT",
-        30,
-        new int[]{3, 8, 6, 3},
-        15
-    );
+    public static final ArmorMaterial SUIT_MATERIAL = EnumHelper
+        .addArmorMaterial("SPACESUIT", 30, new int[] { 3, 8, 6, 3 }, 15);
 
     public ItemSpaceSuit(ArmorMaterial material, int renderIndex, int armorType) {
         super(material, renderIndex, armorType);
@@ -33,20 +29,24 @@ public class ItemSpaceSuit extends ItemArmor {
     }
 
     public static int getMinTemp(ItemStack stack) {
-        if (stack != null && stack.hasTagCompound() && stack.getTagCompound().hasKey("minTemp")) {
-            return stack.getTagCompound().getInteger("minTemp");
+        if (stack != null && stack.hasTagCompound()
+            && stack.getTagCompound()
+                .hasKey("minTemp")) {
+            return stack.getTagCompound()
+                .getInteger("minTemp");
         }
         return MIN_TEMP;
     }
 
     public static int getMaxTemp(ItemStack stack) {
-        if (stack != null && stack.hasTagCompound() && stack.getTagCompound().hasKey("maxTemp")) {
-            return stack.getTagCompound().getInteger("maxTemp");
+        if (stack != null && stack.hasTagCompound()
+            && stack.getTagCompound()
+                .hasKey("maxTemp")) {
+            return stack.getTagCompound()
+                .getInteger("maxTemp");
         }
         return MAX_TEMP;
     }
-
-
 
     @Override
     public boolean isDamageable() {
