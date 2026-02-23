@@ -22,8 +22,8 @@ import cpw.mods.fml.relauncher.Side;
 @Mod(modid = Galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
 public class Galaxia {
 
-    public static final SimpleNetworkWrapper channel = NetworkRegistry.INSTANCE.newSimpleChannel("galaxia");
-    public static CreativeTabs creativeTab = new CreativeTabs("galaxia") {
+    public static final SimpleNetworkWrapper channel = NetworkRegistry.INSTANCE.newSimpleChannel(Galaxia.MODID);
+    public static CreativeTabs creativeTab = new CreativeTabs(Galaxia.MODID) {
 
         @Override
         public Item getTabIconItem() {

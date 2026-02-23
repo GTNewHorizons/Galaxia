@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.Tessellator;
@@ -12,6 +10,7 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.client.TextureEnum;
 import com.gtnewhorizons.galaxia.client.config.GalaxiaConfigOverlay;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -19,11 +18,6 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 public class GalaxiaOverlayHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
-
-    private static final ResourceLocation OXYGEN_BG = LocationGalaxia("textures/gui/oxygen_bar_bg.png");
-    private static final ResourceLocation OXYGEN_FILL = LocationGalaxia("textures/gui/oxygen_bar_fill.png");
-    private static final ResourceLocation TEMP_BG = LocationGalaxia("textures/gui/temp_bar_bg.png");
-    private static final ResourceLocation TEMP_FILL = LocationGalaxia("textures/gui/temp_bar_fill.png");
 
     // HUD POSITIONING CONSTANTS
     private static final int HOTBAR_HALF_WIDTH = 91; // hotbar center = screenWidth/2 - 91
@@ -57,8 +51,8 @@ public class GalaxiaOverlayHandler {
                 pos.oxygenX,
                 pos.oxygenY,
                 oxygenLevel,
-                OXYGEN_BG,
-                OXYGEN_FILL,
+                TextureEnum.OXYGEN_BG.get(),
+                TextureEnum.OXYGEN_FILL.get(),
                 oxygenCritical,
                 GalaxiaConfigOverlay.oxygenTextureWidth,
                 GalaxiaConfigOverlay.oxygenTextureHeight,
@@ -73,8 +67,8 @@ public class GalaxiaOverlayHandler {
                 pos.temperatureX,
                 pos.temperatureY,
                 temperatureLevel,
-                TEMP_BG,
-                TEMP_FILL,
+                TextureEnum.TEMP_BG.get(),
+                TextureEnum.TEMP_FILL.get(),
                 tempCritical,
                 GalaxiaConfigOverlay.temperatureTextureWidth,
                 GalaxiaConfigOverlay.temperatureTextureHeight,
