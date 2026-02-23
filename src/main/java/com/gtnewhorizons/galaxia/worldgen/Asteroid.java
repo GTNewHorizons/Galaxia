@@ -52,23 +52,26 @@ public class Asteroid extends WorldGenerator {
     public boolean generate(World world, Random random, int x, int y, int z) {
         if (random.nextInt(rarity) > 0) return false;
 
+        // Calculate relevant size values
         int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize) : 0);
         int diameter = size + 4;
         int halfDiameter = diameter / 2;
 
+        // Determine number of interpolation points
         int interpolationCount = size / 2 + 1;
         interpolationCount *= Math.max(interpolationCount / 10, 1);
         interpolationCount *= Math.max(interpolationCount / 20, 1);
         int interpolationRange = size / 4 + 1;
 
+        // Set values for interpolation points
         float[] interpolationValues = new float[interpolationCount];
         for (int i = 0; i < interpolationValues.length; i++) {
             interpolationValues[i] = random.nextFloat() / 4 + 0.75F;
         }
 
+        // Set positions for interpolation points
         int[][] interpolationPositions = new int[interpolationCount][];
         interpolationPositions[0] = new int[] { x, y, z };
-
         for (int i = 1; i < interpolationPositions.length; i++) {
             int offsetX = random.nextInt(interpolationRange) + 1;
             if (random.nextBoolean()) offsetX = -offsetX;
@@ -79,8 +82,8 @@ public class Asteroid extends WorldGenerator {
             interpolationPositions[i] = new int[] { x + offsetX, y + offsetY, z + offsetZ };
         }
 
+        // Calculate basic shape
         byte[][][] blockData = new byte[diameter][diameter][diameter];
-
         for (int localX = 0; localX < diameter; localX++) {
             for (int localY = 0; localY < diameter; localY++) {
                 for (int localZ = 0; localZ < diameter; localZ++) {
@@ -96,11 +99,13 @@ public class Asteroid extends WorldGenerator {
             }
         }
 
+        // Add craters to shape
         int craterCount = Math.max(8, 2 + size * craterFrequency);
         for (int i = 0; i < craterCount; i++) {
             carveCraterInMemory(blockData, random, diameter);
         }
 
+        // Convert block data into placed blocks
         for (int localX = 0; localX < diameter; localX++) {
             int combinedX = x + localX - halfDiameter;
             for (int localY = 0; localY < diameter; localY++) {
