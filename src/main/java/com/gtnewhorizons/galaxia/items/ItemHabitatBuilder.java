@@ -22,17 +22,28 @@ import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
 import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
+/**
+ * Class to contain the HabitatBuilder and GUI
+ */
 public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     // TODO fix builder not working in survival mode because of not updating held item
     private static final String LANG_PREFIX = "galaxia.habitat_builder.";
 
+    /**
+     * Constructor to set max stack of 1 and name
+     */
     public ItemHabitatBuilder() {
         super();
         setMaxStackSize(1);
         setUnlocalizedName("habitatBuilder");
     }
 
+    /**
+     * Gets the selected module if there is one, if not returns the default module
+     * @param stack The item stack for the item
+     * @return The selected module's string
+     */
     public static String getSelectedModule(ItemStack stack) {
         if (stack.hasTagCompound() && stack.getTagCompound()
             .hasKey("selectedModule")) {
@@ -42,12 +53,24 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
         return ModuleTypes.HUB_3X3.getId();
     }
 
+    /**
+     * Sets the selected module NBT
+     * @param stack The item stack for the item
+     * @param id The ID of the module to set
+     */
     public static void setSelectedModule(ItemStack stack, String id) {
         if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
         stack.getTagCompound()
             .setString("selectedModule", id);
     }
 
+    /**
+     * Handler for the right click action of the item (opening GUI etc.)
+     * @param stack The item stack for the item
+     * @param world The world it is used in
+     * @param player The player using the item
+     * @return The item stack for the item
+     */
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (!world.isRemote) {
@@ -57,6 +80,20 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
         return stack;
     }
 
+    /**
+     * The handler for when the item has been used (i.e. GUI screen closed by submitting
+     * @param stack The item stack for the builder item
+     * @param player The player using the item
+     * @param world The world it is being used in
+     * @param x X coordinate to place in world
+     * @param y Y coordinate to place in world
+     * @param z Z coordinate to place in world
+     * @param side The direction for the habitat to face
+     * @param hitX Not used in this implementation, required from original signature
+     * @param hitY Not used in this implementation, required from original signature
+     * @param hitZ Not used in this implementation, required from original signature
+     * @return Boolean : True => successful item use and placement of module
+     */
     @Override
     public boolean onItemUse(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side,
         float hitX, float hitY, float hitZ) {
@@ -85,11 +122,25 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
         return true;
     }
 
+    /**
+     * Creates the UI as a ModularPanel
+     * @param guiData        Data about the context of the GUI creation
+     * @param guiSyncManager Sync handler for where widgets register
+     * @param uiSettings    General settings for all of UI, not specific to this module
+     * @return ModularPanel UI
+     */
     @Override
     public ModularPanel buildUI(GuiData guiData, PanelSyncManager guiSyncManager, UISettings uiSettings) {
         return new HabitatBuilderGui(guiData, guiSyncManager).build();
     }
 
+    /**
+     * Adds information to the item based on selected modules etc.
+     * @param stack The item stack for the item
+     * @param player The player entity using the item
+     * @param list The list of information to add to
+     * @param advanced Not used in this implementation, required from original signature
+     */
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List list, boolean advanced) {
         String id = getSelectedModule(stack);
