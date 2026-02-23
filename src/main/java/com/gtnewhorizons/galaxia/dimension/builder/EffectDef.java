@@ -35,11 +35,11 @@ public class EffectDef {
         this(273, false, 100, 0, false, 1);
     }
 
-
     /**
      * Lambda function to override the value of an effect based on the playerentity.
      */
     public interface IEffectModifier {
+
         public int apply(int base, EntityPlayer player);
     }
 
@@ -61,11 +61,11 @@ public class EffectDef {
         @Override
         public int apply(int base, EntityPlayer player) {
             float time = player.worldObj.getCelestialAngle(freq);
-            return base + (int)(Math.sin(time) * amp);
+            return base + (int) (Math.sin(time) * amp);
         }
     }
 
-    //Stored Modifiers
+    // Stored Modifiers
     public IEffectModifier tempModifier;
     public IEffectModifier oxygenModifier;
     public IEffectModifier radiationModifier;
@@ -84,7 +84,7 @@ public class EffectDef {
     }
 
     /**
-     * @param player  Player to check effects of.
+     * @param player Player to check effects of.
      * @return oxygen levels around player as a percentage
      */
     public int getOxygenPercent(EntityPlayer player) {
@@ -95,9 +95,8 @@ public class EffectDef {
         }
     }
 
-
     /**
-     * @param player  Player to check effects of.
+     * @param player Player to check effects of.
      * @return radiation value of player relative to overworld
      */
     public int getRadiation(EntityPlayer player) {
@@ -123,7 +122,6 @@ public class EffectDef {
     public boolean getSpore(EntityPlayer player) {
         return spores;
     }
-
 
     public boolean getWithering(EntityPlayer player) {
         return withering;
