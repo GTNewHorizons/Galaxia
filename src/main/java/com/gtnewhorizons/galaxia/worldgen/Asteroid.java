@@ -43,9 +43,9 @@ public class Asteroid extends WorldGenerator {
      *
      * @param world  The world to create in
      * @param random Holds a Random instance
-     * @param x  The asteroid's x origin
-     * @param y  The asteroid's y origin
-     * @param z  The asteroid's z origin
+     * @param x      The asteroid's x origin
+     * @param y      The asteroid's y origin
+     * @param z      The asteroid's z origin
      * @return Boolean : True => Successful generation
      */
     @Override
@@ -160,8 +160,8 @@ public class Asteroid extends WorldGenerator {
      * This process happens entirely within the data-generation stage
      *
      * @param blockData Existing asteroid block data
-     * @param random Randomizer used to roughen the crater's outline
-     * @param diameter Diameter of the crater
+     * @param random    Randomizer used to roughen the crater's outline
+     * @param diameter  Diameter of the crater
      */
     private void carveCraterInMemory(byte[][][] blockData, Random random, int diameter) {
         int longAxis = random.nextInt(3);
@@ -194,10 +194,10 @@ public class Asteroid extends WorldGenerator {
      * Location counts as valid if fullness reaches one
      *
      * @param positions Coordinates of all interpolation values
-     * @param values Values of interpolation points
-     * @param x Target x coordinate
-     * @param y Target y coordinate
-     * @param z Target z coordinate
+     * @param values    Values of interpolation points
+     * @param x         Target x coordinate
+     * @param y         Target y coordinate
+     * @param z         Target z coordinate
      * @return Fullness value ranging between zero and one
      */
     private float calculateFullness(int[][] positions, float[] values, int x, int y, int z) {
@@ -213,9 +213,9 @@ public class Asteroid extends WorldGenerator {
      * Calculates how relevant an interpolation point is based on distance
      *
      * @param coordinates Location of the interpolation point
-     * @param x Target x coordinate
-     * @param y Target y coordinate
-     * @param z Target z coordinate
+     * @param x           Target x coordinate
+     * @param y           Target y coordinate
+     * @param z           Target z coordinate
      * @return Significance multiplier between zero (exclusive) and one (inclusive)
      */
     private float calculateInterpolationSignificance(int[] coordinates, int x, int y, int z) {
@@ -233,12 +233,12 @@ public class Asteroid extends WorldGenerator {
      * Calculates a suitable distance value from the center of the asteroid along a single axis
      * Can calculate position variation on the asteroid's surface or distance from the center
      *
-     * @param random Randomizer needed for variation in the results
+     * @param random         Randomizer needed for variation in the results
      * @param craterDistance Distance from the center
-     * @param axis Determines which axis is being calculated (0 = x, 1 = y, 2 = z)
-     * @param longAxis Axis which should determine distance from center
-     *                 If the specified axis is not equal to this value, then it will be treated
-     *                 as position variation on the asteroid's surface
+     * @param axis           Determines which axis is being calculated (0 = x, 1 = y, 2 = z)
+     * @param longAxis       Axis which should determine distance from center
+     *                       If the specified axis is not equal to this value, then it will be treated
+     *                       as position variation on the asteroid's surface
      * @return Distance from the center
      */
     private int getCraterDistance(Random random, int craterDistance, int axis, int longAxis) {
@@ -251,7 +251,7 @@ public class Asteroid extends WorldGenerator {
     /**
      * Calculates position variation on the asteroid's surface
      *
-     * @param random Randomizer needed for variation in the results
+     * @param random         Randomizer needed for variation in the results
      * @param craterDistance Maximum distance from the center
      * @return Position variation value
      */
@@ -262,7 +262,7 @@ public class Asteroid extends WorldGenerator {
     /**
      * Calculates distance from the center of the asteroid
      *
-     * @param random Randomizer needed for variation in the results
+     * @param random         Randomizer needed for variation in the results
      * @param craterDistance Minimum distance from the center
      * @return Distance from the center
      */
