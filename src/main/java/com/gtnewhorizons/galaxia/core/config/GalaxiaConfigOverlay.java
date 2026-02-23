@@ -63,7 +63,7 @@ public class GalaxiaConfigOverlay {
      * Critical thresholds (logic layer, not rendering).
      */
 
-    @Config.LangKey("Oxygen level below which the bar is considered critical")
+    @Config.LangKey("galaxia.config.overlay.oxygen_bar_critical")
     @Config.DefaultDouble(0.25D)
     @Config.RangeDouble(min = 0.0D, max = 1.0D)
     public static double lowOxygenThreshold;
