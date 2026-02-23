@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import com.gtnewhorizons.galaxia.dimension.builder.EffectDef;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 

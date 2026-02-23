@@ -12,6 +12,12 @@ public class EffectBuilder {
     private boolean spores = false; // Whether the planet has fungal spores in atmosphere
     private int pressure = 1; // Pressure on surface relative to Overworld (OW -> 1)
 
+    //Effect modifiers, Lambda functions, taking a player entity and the base value and producing a new value
+    private EffectDef.IEffectModifier tempMod;
+    private EffectDef.IEffectModifier oxygenMod;
+    private EffectDef.IEffectModifier radiationMod;
+    private EffectDef.IEffectModifier pressureMod;
+
     /**
      * Sets the base temperature of the dimension
      *
@@ -79,11 +85,56 @@ public class EffectBuilder {
     }
 
     /**
+     * Sets the modifier for the temperature
+     * @param modifier Modifier
+     * @return configured builder
+     */
+    public EffectBuilder tempMod(EffectDef.IEffectModifier modifier) {
+        tempMod = modifier;
+        return this;
+    }
+
+    /**
+     * Sets the modifier for the oxygen percentage
+     * @param modifier Modifier
+     * @return configured Builder
+     */
+    public EffectBuilder oxygenMod(EffectDef.IEffectModifier modifier) {
+        oxygenMod = modifier;
+        return this;
+    }
+
+    /**
+     * Sets the modifier for the pressure
+     * @param modifier modifier
+     * @return configured Builder
+     */
+    public EffectBuilder pressureMod(EffectDef.IEffectModifier modifier) {
+        pressureMod = modifier;
+        return this;
+    }
+
+    /**
+     * Sets the modifier for the radiation
+     * @param modifier modifier
+     * @return configured builder
+     */
+    public EffectBuilder radiationMod(EffectDef.IEffectModifier modifier) {
+        radiationMod = modifier;
+        return this;
+    }
+
+    /**
      * Builds an Effect Definition based on current fields
      *
      * @return Configured EffectDef
      */
     public EffectDef build() {
-        return new EffectDef(baseTemp, withering, oxygenPercent, radiation, spores, pressure);
+        EffectDef def = new EffectDef(baseTemp, withering, oxygenPercent, radiation, spores, pressure);
+        def.pressureModifier = pressureMod;
+        def.radiationModifier = radiationMod;
+        def.oxygenModifier = oxygenMod;
+        def.tempModifier = tempMod;
+        return def;
     }
 }
