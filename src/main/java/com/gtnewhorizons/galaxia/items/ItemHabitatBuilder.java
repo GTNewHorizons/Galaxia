@@ -41,6 +41,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Gets the selected module if there is one, if not returns the default module
+     * 
      * @param stack The item stack for the item
      * @return The selected module's string
      */
@@ -55,8 +56,9 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Sets the selected module NBT
+     * 
      * @param stack The item stack for the item
-     * @param id The ID of the module to set
+     * @param id    The ID of the module to set
      */
     public static void setSelectedModule(ItemStack stack, String id) {
         if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
@@ -66,8 +68,9 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Handler for the right click action of the item (opening GUI etc.)
-     * @param stack The item stack for the item
-     * @param world The world it is used in
+     * 
+     * @param stack  The item stack for the item
+     * @param world  The world it is used in
      * @param player The player using the item
      * @return The item stack for the item
      */
@@ -82,16 +85,17 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * The handler for when the item has been used (i.e. GUI screen closed by submitting
-     * @param stack The item stack for the builder item
+     * 
+     * @param stack  The item stack for the builder item
      * @param player The player using the item
-     * @param world The world it is being used in
-     * @param x X coordinate to place in world
-     * @param y Y coordinate to place in world
-     * @param z Z coordinate to place in world
-     * @param side The direction for the habitat to face
-     * @param hitX Not used in this implementation, required from original signature
-     * @param hitY Not used in this implementation, required from original signature
-     * @param hitZ Not used in this implementation, required from original signature
+     * @param world  The world it is being used in
+     * @param x      X coordinate to place in world
+     * @param y      Y coordinate to place in world
+     * @param z      Z coordinate to place in world
+     * @param side   The direction for the habitat to face
+     * @param hitX   Not used in this implementation, required from original signature
+     * @param hitY   Not used in this implementation, required from original signature
+     * @param hitZ   Not used in this implementation, required from original signature
      * @return Boolean : True => successful item use and placement of module
      */
     @Override
@@ -124,9 +128,10 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Creates the UI as a ModularPanel
+     * 
      * @param guiData        Data about the context of the GUI creation
      * @param guiSyncManager Sync handler for where widgets register
-     * @param uiSettings    General settings for all of UI, not specific to this module
+     * @param uiSettings     General settings for all of UI, not specific to this module
      * @return ModularPanel UI
      */
     @Override
@@ -136,9 +141,10 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Adds information to the item based on selected modules etc.
-     * @param stack The item stack for the item
-     * @param player The player entity using the item
-     * @param list The list of information to add to
+     * 
+     * @param stack    The item stack for the item
+     * @param player   The player entity using the item
+     * @param list     The list of information to add to
      * @param advanced Not used in this implementation, required from original signature
      */
     @Override

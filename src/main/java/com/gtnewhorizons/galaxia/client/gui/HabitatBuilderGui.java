@@ -18,7 +18,7 @@ import com.gtnewhorizons.galaxia.items.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
 
-//TODO: JAVADOC
+// TODO: JAVADOC
 public class HabitatBuilderGui {
 
     private final GuiData guiData;

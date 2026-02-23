@@ -30,6 +30,7 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     /**
      * Checks that a chunk exists at given coordinates
+     * 
      * @param x Checked x coordinate
      * @param z Checked z coordinate
      * @return boolean - Whether chunk exists or not
@@ -41,6 +42,7 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     /**
      * Creates a new basic chunk at given chunk coordinates
+     * 
      * @param chunkX The chunk x coordinates
      * @param chunkZ The chunk z coordinates
      * @return The chunk generated
@@ -53,6 +55,7 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     /**
      * Loads and generates a chunk at given chunk coordinates
+     * 
      * @param x The x coordinates to load at
      * @param z The z coordinates to load at
      * @return The chunk generated
@@ -64,9 +67,10 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     /**
      * Populates given chunk with asteroids
+     * 
      * @param iChunkProvider the chunk provider interface
-     * @param chunkX The chunk x coordinates
-     * @param chunkZ The chunk y coordinates
+     * @param chunkX         The chunk x coordinates
+     * @param chunkZ         The chunk y coordinates
      */
     @Override
     public void populate(IChunkProvider iChunkProvider, int chunkX, int chunkZ) {
@@ -111,7 +115,8 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     // Unused but needs implementation from interface
     @Override
-    public ChunkPosition func_147416_a(World p_147416_1_, String p_147416_2_, int p_147416_3_, int p_147416_4_, int p_147416_5_) {
+    public ChunkPosition func_147416_a(World p_147416_1_, String p_147416_2_, int p_147416_3_, int p_147416_4_,
+        int p_147416_5_) {
         return null;
     }
 

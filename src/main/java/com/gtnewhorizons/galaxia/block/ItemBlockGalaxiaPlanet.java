@@ -27,7 +27,8 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Gets the metadata of the item block (damage)
-     * @param damage  the damage to the item block
+     * 
+     * @param damage the damage to the item block
      * @return Metadata of the item block
      */
     @Override
@@ -37,8 +38,9 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Adds all metadata variants of the item block to the given list (used in creative tab)
+     * 
      * @param item The base item block to register variants
-     * @param tab The creative tab for the galaxia blocks
+     * @param tab  The creative tab for the galaxia blocks
      * @param list The list of all meta-variants
      */
     @Override
@@ -52,6 +54,7 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Gets the unlocalized name of the provided ItemStack for registry
+     * 
      * @param stack The item stack for which the name is required
      * @return Unlocalized name of the item stack
      */
@@ -64,6 +67,7 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Capitalizes the first letter of a string
+     * 
      * @param s The string to capitalized
      * @return Capitalized string
      */

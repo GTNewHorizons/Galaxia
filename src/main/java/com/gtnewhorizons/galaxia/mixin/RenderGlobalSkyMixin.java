@@ -62,8 +62,9 @@ public abstract class RenderGlobalSkyMixin {
 
     /**
      * Replaces the sun and moon in the skybox with custom based on Galaxia Registry
+     * 
      * @param partialTicks How far through the current tick
-     * @param ci The callback info (used in things like early cancels of methods etc.)
+     * @param ci           The callback info (used in things like early cancels of methods etc.)
      */
     @Inject(
         method = "renderSky",
@@ -132,9 +133,10 @@ public abstract class RenderGlobalSkyMixin {
 
     /**
      * Draws a celestial body given certain parameters
-     * @param t The tesselator to use
-     * @param body The body to be drawn
-     * @param angle The angle in the sky
+     * 
+     * @param t               The tesselator to use
+     * @param body            The body to be drawn
+     * @param angle           The angle in the sky
      * @param primarySunAngle The angle of the primary light source (sun usually) in the sky
      */
     private void drawCelestialBody(Tessellator t, CelestialBody body, float angle, float primarySunAngle) {

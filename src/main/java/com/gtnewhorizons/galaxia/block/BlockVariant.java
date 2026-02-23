@@ -21,9 +21,11 @@ public class BlockVariant {
         this.harvestLevel = harvestLevel;
         this.dropsDust = dropsDust;
     }
+
     /**
      * Registers the block variant as having similar characteristics to vanilla stone
-     * @param suffix The suffix in the ENUM giving the type of rock, e.g. Andesite etc.
+     * 
+     * @param suffix   The suffix in the ENUM giving the type of rock, e.g. Andesite etc.
      * @param hardness The desired hardness level of the block
      * @return A BlockVariant with desired characteristics
      */
@@ -33,7 +35,8 @@ public class BlockVariant {
 
     /**
      * Registers the block variant as having similar characteristics to vanilla sand
-     * @param suffix The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
+     * 
+     * @param suffix   The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
      * @param hardness The desired hardness level of the block
      * @return A BlockVariant with desired characteristics
      */
@@ -43,7 +46,8 @@ public class BlockVariant {
 
     /**
      * Registers the block variant as having similar characteristics to vanilla dirt
-     * @param suffix The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
+     * 
+     * @param suffix   The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
      * @param hardness The desired hardness level of the block
      * @return A BlockVariant with desired characteristics
      */

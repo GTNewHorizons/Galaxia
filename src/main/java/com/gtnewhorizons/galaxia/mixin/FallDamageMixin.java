@@ -16,6 +16,7 @@ public abstract class FallDamageMixin {
 
     /**
      * Modifies the fall distance used for damage based on gravity of the planets
+     * 
      * @param distance The actual distance being fallen
      * @return The "effective" distance to be used in damange calculations
      */

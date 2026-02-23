@@ -51,7 +51,6 @@ public class GuiPlanetTeleporter extends GuiScreen {
             this.buttonList.add(planetButton);
         }
 
-
         // Create text fields for desired coordinates
         int fieldY = startY + planets.length * spacing + 20;
 
@@ -88,6 +87,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Defines the behaviour on button presses
+     * 
      * @param button The button pressed
      */
     @Override
@@ -115,8 +115,9 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Draws the screen of the GUI
-     * @param mouseX Current cursor x position
-     * @param mouseY Current cursor y position
+     * 
+     * @param mouseX       Current cursor x position
+     * @param mouseY       Current cursor y position
      * @param partialTicks The current partial tick (how far user is between current game tick and next)
      */
     @Override
@@ -150,8 +151,9 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Handles keyboard presses for textfield entry
+     * 
      * @param typedChar The character typed in the field
-     * @param keyCode The keycode of non-alphanumeric commands (enter, return etc.)
+     * @param keyCode   The keycode of non-alphanumeric commands (enter, return etc.)
      */
     @Override
     protected void keyTyped(char typedChar, int keyCode) {
@@ -170,8 +172,9 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Handles mouse click events
-     * @param mouseX Current cursor x position
-     * @param mouseY Current cursor y position
+     * 
+     * @param mouseX      Current cursor x position
+     * @param mouseY      Current cursor y position
      * @param mouseButton The mouse button pressed (right click, left click etc)
      */
     @Override

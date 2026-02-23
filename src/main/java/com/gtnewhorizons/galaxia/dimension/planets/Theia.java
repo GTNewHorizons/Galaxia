@@ -20,6 +20,7 @@ public class Theia extends BasePlanet {
 
     /**
      * Getter for dimension Enum
+     * 
      * @return Dimension Enum
      */
     @Override
@@ -29,6 +30,7 @@ public class Theia extends BasePlanet {
 
     /**
      * The configuration of the DimensionBuilder to configure the dimension
+     * 
      * @param builder The dimension builder to chain on
      * @return The dimension Builder with all properties assigned
      */
@@ -48,6 +50,7 @@ public class Theia extends BasePlanet {
 
     /**
      * Configures the world provider to add the correct biomes and settings
+     * 
      * @param builder The world provider builder being configured
      */
     @Override
@@ -63,6 +66,7 @@ public class Theia extends BasePlanet {
 
     /**
      * Builds a skybox builder with required bodies in the sky
+     * 
      * @return The SkyBuilder configured with correct bodies
      */
     protected SkyBuilder buildSky() {
@@ -109,6 +113,7 @@ public class Theia extends BasePlanet {
 
     /**
      * Creates a biome generator with specific requirements
+     * 
      * @return The BiomeGenBase used to generated biomes of that type
      */
     protected static BiomeGenBase createBiome() {

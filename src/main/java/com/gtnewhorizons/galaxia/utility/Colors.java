@@ -31,9 +31,10 @@ public enum Colors {
     /**
      * Gets the colour as a parsed form if possible, or default:
      * Optional resource pack color override
-     *  Examples (lowercase):
-     *    - galaxia.color.override.title=FFFFFF
-     *    - galaxia.color.override.subtitle=CD7F32
+     * Examples (lowercase):
+     * - galaxia.color.override.title=FFFFFF
+     * - galaxia.color.override.subtitle=CD7F32
+     * 
      * @return Parsed colour from ENUM, or default
      */
     public int getColor() {
@@ -47,6 +48,7 @@ public enum Colors {
 
     /**
      * Gets the unlocalized colour name
+     * 
      * @return Unlocalized colour name
      */
     public String getUnlocalized() {
@@ -55,7 +57,8 @@ public enum Colors {
 
     /**
      * Colour parser given a colour string
-     * @param raw The string to parse
+     * 
+     * @param raw      The string to parse
      * @param fallback A default colour if parsing failed
      * @return Color parsed, or fallback if failed
      */

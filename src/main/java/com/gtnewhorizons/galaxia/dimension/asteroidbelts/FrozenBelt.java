@@ -22,6 +22,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     /**
      * Returns the ENUM of the dimension
+     * 
      * @return DimensionEnum of the planet
      */
     @Override
@@ -31,6 +32,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     /**
      * Overrides the Dimension builder to add effects, and other fields
+     * 
      * @param builder The DimensionBuilder for this dim
      * @return The same builder with fields added as required
      */
@@ -45,6 +47,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     /**
      * Getter for the world provider class
+     * 
      * @return WorldProvider class
      */
     @Override
@@ -114,6 +117,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
         /**
          * Creates the biome generator for the FrozenBelt for a given biome ID
+         * 
          * @param id The ID of the biome to generate
          */
         public BiomeGenFrozenBelt(int id) {

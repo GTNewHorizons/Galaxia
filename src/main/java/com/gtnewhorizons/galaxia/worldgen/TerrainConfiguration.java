@@ -18,6 +18,7 @@ public final class TerrainConfiguration {
 
     /**
      * Constructor to initalize terrain feature lists
+     * 
      * @param features
      */
     private TerrainConfiguration(List<TerrainFeature> features) {
@@ -48,6 +49,7 @@ public final class TerrainConfiguration {
 
     /**
      * Getter for all features of any type
+     * 
      * @return List of all features
      */
     public List<TerrainFeature> getAllFeatures() {
@@ -56,6 +58,7 @@ public final class TerrainConfiguration {
 
     /**
      * Getter for macro features of any type
+     * 
      * @return List of macro features
      */
     public List<TerrainFeature> getMacroFeatures() {
@@ -64,6 +67,7 @@ public final class TerrainConfiguration {
 
     /**
      * Getter for meso features of any type
+     * 
      * @return List of meso features
      */
     public List<TerrainFeature> getMesoFeatures() {
@@ -72,6 +76,7 @@ public final class TerrainConfiguration {
 
     /**
      * Getter for micro features of any type
+     * 
      * @return List of micro features
      */
     public List<TerrainFeature> getMicroFeatures() {
@@ -80,6 +85,7 @@ public final class TerrainConfiguration {
 
     /**
      * Instantiates a builder for generating new config
+     * 
      * @return A default builder
      */
     public static Builder builder() {
@@ -95,6 +101,7 @@ public final class TerrainConfiguration {
 
         /**
          * Adds a new feature based on a preset
+         * 
          * @param preset The preset feature to add
          * @return The feature configurator with this preset added
          */
@@ -104,6 +111,7 @@ public final class TerrainConfiguration {
 
         /**
          * Builds the Terrain configuration based on current features
+         * 
          * @return Terrain configuration with features
          */
         public TerrainConfiguration build() {
@@ -130,6 +138,7 @@ public final class TerrainConfiguration {
 
         /**
          * Constructs with a parent builder and a preset
+         * 
          * @param parent
          * @param preset
          */
@@ -140,6 +149,7 @@ public final class TerrainConfiguration {
 
         /**
          * Modifies the scale of the feature
+         * 
          * @param multiplier the scale factor by which to change size
          * @return Configured builder
          */
@@ -150,6 +160,7 @@ public final class TerrainConfiguration {
 
         /**
          * Sets the frequency of the feature
+         * 
          * @param freq Required frequency
          * @return Configured builder
          */
@@ -160,6 +171,7 @@ public final class TerrainConfiguration {
 
         /**
          * Sets the feature height
+         * 
          * @param h Required height
          * @return Configured builder
          */
@@ -170,6 +182,7 @@ public final class TerrainConfiguration {
 
         /**
          * Sets the feature width
+         * 
          * @param w Required width
          * @return Configured builder
          */
@@ -180,6 +193,7 @@ public final class TerrainConfiguration {
 
         /**
          * Sets the minimum feature height
+         * 
          * @param min Required minimum height
          * @param var Target variation
          * @return Configured builder
@@ -192,6 +206,7 @@ public final class TerrainConfiguration {
 
         /**
          * Sets the required feature depth
+         * 
          * @param d The required depth
          * @return Configured builder
          */
@@ -202,7 +217,8 @@ public final class TerrainConfiguration {
 
         /**
          * Adds a custom feature based on a key value pair
-         * @param key The key of the addition
+         * 
+         * @param key   The key of the addition
          * @param value The value of the addition
          * @return Configured builder
          */
@@ -213,6 +229,7 @@ public final class TerrainConfiguration {
 
         /**
          * The final stage building of the feature itself based on all parameters previously given
+         * 
          * @return A builder with the feature added
          */
         public Builder endFeature() {
@@ -238,6 +255,7 @@ public final class TerrainConfiguration {
 
         /**
          * Adds a feature based on a preset
+         * 
          * @param nextPreset The next preset to add
          * @return Configured builder
          */

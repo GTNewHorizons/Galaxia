@@ -29,18 +29,19 @@ public final class DimensionDef {
 
     /**
      * Constructs a definition based on the given parameters
-     * @param name The dimension name (from ENUM)
-     * @param id The dimension ID (from ENUM)
-     * @param provider The world provider used
-     * @param keepLoaded Whether to keep the dimension loaded (True -> Loaded)
-     * @param gravity The gravity multiplier (1 = Overworld, 0.1 = 10% of Overworld)
-     * @param airResistance The air resistance on planet
+     * 
+     * @param name                   The dimension name (from ENUM)
+     * @param id                     The dimension ID (from ENUM)
+     * @param provider               The world provider used
+     * @param keepLoaded             Whether to keep the dimension loaded (True -> Loaded)
+     * @param gravity                The gravity multiplier (1 = Overworld, 0.1 = 10% of Overworld)
+     * @param airResistance          The air resistance on planet
      * @param removeSpeedCancelation Whether to cancel speed over time (see method in builder)
-     * @param celestialBodies Celestial Bodies List for sky-box buildiong
-     * @param mass The mass of the planet (used in calculations)
-     * @param orbitalRadius The distance from the system centre to the planet (used in calculations)
-     * @param radius The radius of the planet (used in calculations)
-     * @param effects The EffectDef containing all effects for this planet
+     * @param celestialBodies        Celestial Bodies List for sky-box buildiong
+     * @param mass                   The mass of the planet (used in calculations)
+     * @param orbitalRadius          The distance from the system centre to the planet (used in calculations)
+     * @param radius                 The radius of the planet (used in calculations)
+     * @param effects                The EffectDef containing all effects for this planet
      */
     DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded, double gravity,
         double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies, double mass,

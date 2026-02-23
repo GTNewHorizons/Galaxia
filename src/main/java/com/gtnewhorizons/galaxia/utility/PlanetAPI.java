@@ -13,6 +13,7 @@ public final class PlanetAPI {
 
     /**
      * Gets the gravity on the planet, or returns 1 if failed
+     * 
      * @param e The entity to check effects on
      * @return Gravity on the entity, or 1 if failed
      */
@@ -26,6 +27,7 @@ public final class PlanetAPI {
 
     /**
      * Gets the effects on the planet, or returns defaults if failed
+     * 
      * @param e The entity to check effects on
      * @return Effects on the entity, or defaults if failed
      */
@@ -38,6 +40,7 @@ public final class PlanetAPI {
 
     /**
      * Gets the air resistance on the planet, or returns 1 if failed
+     * 
      * @param e The entity to check effects on
      * @return Air resistance on the entity, or 1 if failed
      */
@@ -50,6 +53,7 @@ public final class PlanetAPI {
 
     /**
      * Gets whether speed is cancelled
+     * 
      * @param e The entity to check effects on
      * @return Boolean : True => Speed cancellation enabled
      */

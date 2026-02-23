@@ -22,6 +22,7 @@ public class DimensionBuilder {
 
     /**
      * Getter for the DimensionDef by name
+     * 
      * @param name The dimension name
      * @return The associated DimensionDef
      */
@@ -31,6 +32,7 @@ public class DimensionBuilder {
 
     /**
      * Getter for the DimensionDef by ID
+     * 
      * @param id The dimension ID
      * @return The associated DimensionDef
      */
@@ -53,6 +55,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the name and ID based on the ENUM provided
+     * 
      * @param planet The ENUM related to the planet
      * @return Configured Builder
      */
@@ -65,6 +68,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the name of the dimension in the builder
+     * 
      * @param name The required name
      * @return Configured builder
      */
@@ -75,6 +79,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the ID of the dimension in the builder
+     * 
      * @param id The required id
      * @return Configured builder
      */
@@ -85,6 +90,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the WorldProvider of the dimension
+     * 
      * @param providerClass The required provider class
      * @return Configured builder
      */
@@ -95,6 +101,7 @@ public class DimensionBuilder {
 
     /**
      * Sets whether to keep the dimension loaded
+     * 
      * @param keep True => Always load the dimension
      * @return Configured builder
      */
@@ -105,6 +112,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the relative gravity of the planet compared to Overworld
+     * 
      * @param gravity The required gravity
      * @return Configured builder
      */
@@ -115,6 +123,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the relative air resistance of the planet compared to Overworld
+     * 
      * @param air_resistance The required air resistance
      * @return Configured builder
      */
@@ -125,6 +134,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the skybox builder for the planet
+     * 
      * @param sky The SkyBuilder used to generate the skybox
      * @return Configured builder
      */
@@ -135,6 +145,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the mass of the planet (used in orbital calculations)
+     * 
      * @param mass The required planetary mass
      * @return Configured builder
      */
@@ -150,6 +161,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the radius of the planet (used in orbital calculation, does not affect world generation)
+     * 
      * @param radius The required planetary radius
      * @return Configured builder
      */
@@ -158,10 +170,10 @@ public class DimensionBuilder {
         return this;
     }
 
-
     /**
      * Sets whether to remove speed cancellation on the planet. All entities by default
      * reduce their speed by 9% every tick. Override this to cancel (useful in low gravity dimensions)
+     * 
      * @return Configured builder
      */
     public DimensionBuilder removeSpeedCancelation() {
@@ -171,6 +183,7 @@ public class DimensionBuilder {
 
     /**
      * Sets the effect builder for the dimension
+     * 
      * @param effects The effect builder required for the planet
      * @return Configured builder
      */
@@ -181,6 +194,7 @@ public class DimensionBuilder {
 
     /**
      * Builds a dimension definition based on fields set in previous methods
+     * 
      * @return DimensionDef containing fields set from this builder
      */
     public DimensionDef build() {

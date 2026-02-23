@@ -17,9 +17,9 @@ import com.gtnewhorizons.galaxia.utility.PlanetAPI;
 @Mixin({ EntityItem.class, EntityFallingBlock.class, EntityTNTPrimed.class })
 public abstract class UnifiedGravityMixin {
 
-
     /**
      * Modifies the fall rate of specific entities with falling properties such as items, falling sand or tnt
+     * 
      * @param original The original fall rate
      * @return The recalculated fall rate
      */

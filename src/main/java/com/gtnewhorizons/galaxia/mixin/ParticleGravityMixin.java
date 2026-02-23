@@ -17,6 +17,7 @@ public abstract class ParticleGravityMixin {
 
     /**
      * Modifies the fall rate of particles based on gravity effects
+     * 
      * @param original The original fall rate
      * @return The new recalculated fall rate
      */

@@ -13,7 +13,8 @@ public class WorldProviderGalaxia extends WorldProviderSpace {
 
     /**
      * Registers the configurator for the dimension
-     * @param dimensionId The ID of the dimension to set the configurator to
+     * 
+     * @param dimensionId  The ID of the dimension to set the configurator to
      * @param configurator The configurator to bind to the planet
      */
     public static void registerConfigurator(int dimensionId, Consumer<WorldProviderBuilder> configurator) {
@@ -24,6 +25,7 @@ public class WorldProviderGalaxia extends WorldProviderSpace {
 
     /**
      * Sets the dimension of the world provider
+     * 
      * @param dimensionId Dimension ID to set to
      */
     @Override

@@ -42,6 +42,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Registers a given dimension
+     * 
      * @param planet The planet to register
      */
     private static void registerDimensions(BasePlanet planet) {
@@ -68,6 +69,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Getter for a specific dimension by ID
+     * 
      * @param id The ID of the dimension to get
      * @return The Dimension Definition of the planet or null if not found
      */
@@ -78,6 +80,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Getter for a specific dimension by name
+     * 
      * @param name The name of the dimension to get
      * @return The Dimension Definition of the planet or null if not found
      */
@@ -89,6 +92,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Gets all planets currently in the registry
+     * 
      * @return ArrayList of all bodies in the system
      */
     public static List<BasePlanet> getAllPlanets() {

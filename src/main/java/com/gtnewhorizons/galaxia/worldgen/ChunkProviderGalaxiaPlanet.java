@@ -38,6 +38,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Constructor to initialize the world and noise/random generators
+     * 
      * @param world The world to bind the chunk generator to
      */
     public ChunkProviderGalaxiaPlanet(World world) {
@@ -50,6 +51,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Provides a chunk to be loaded in the future
+     * 
      * @param chunkX The chunk x coordinate
      * @param chunkZ The chunk z coordinate
      * @return The provided chunk
@@ -234,6 +236,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Loads a chunk based on world coordinates
+     * 
      * @param x The target x coordinates
      * @param z The target z coordinates
      * @return The provided chunk at these coordinates
@@ -245,9 +248,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Generates a random number generator used for populating chunks with features
+     * 
      * @param provider The Chunk provider being used
-     * @param cx Chunk x coordinates
-     * @param cz Chunk z coordinates
+     * @param cx       Chunk x coordinates
+     * @param cz       Chunk z coordinates
      */
     @Override
     public void populate(IChunkProvider provider, int cx, int cz) {
@@ -257,6 +261,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Checks whether a chunk exists currently at given coordinates
+     * 
      * @param x Target x coordinates
      * @param z Target z coordinates
      * @return
@@ -268,6 +273,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Sets whether the chunk provider can save chunks
+     * 
      * @return Boolean : True => Can save
      */
     @Override
@@ -277,6 +283,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Gives a string form of the class
+     * 
      * @return The string form of this class
      */
     @Override
@@ -286,6 +293,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Gets the current loaded chunk count - Not used in this implementation
+     * 
      * @return The amount of currently loaded chunks (0)
      */
     @Override
@@ -301,6 +309,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Not used in this implementation
+     * 
      * @param x Target x coordinates
      * @param z Target z coordinates
      */
@@ -309,7 +318,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Saves chunks to the game - Not used in this implementation
-     * @param all Not used in this implementation
+     * 
+     * @param all      Not used in this implementation
      * @param progress Not used in this implementation
      * @return true
      */
@@ -320,6 +330,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Gets whether to unloadQueuedChunks
+     * 
      * @return Boolean : True => Unloads queued
      */
     @Override
@@ -329,10 +340,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     /**
      * Gets the list of possible spawn creatures at coordinates - Not used in this implementation
+     * 
      * @param type Not used in this implementation
-     * @param x Not used in this implementation
-     * @param y Not used in this implementation
-     * @param z Not used in this implementation
+     * @param x    Not used in this implementation
+     * @param y    Not used in this implementation
+     * @param z    Not used in this implementation
      * @return List of possible spawn creatures
      */
     @Override

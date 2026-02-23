@@ -29,6 +29,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Gets the coordinates of a selected module / null if none selected
+     * 
      * @param stack The item stack for the item
      * @return An integer array holding the position, or null if no selected
      */
@@ -45,10 +46,11 @@ public class ItemModuleMover extends Item {
 
     /**
      * Sets the selected position in the NBT data
+     * 
      * @param stack The item stack for the item
-     * @param x The x coordinate of the module
-     * @param y The y coordinate of the module
-     * @param z The z coordinate of the module
+     * @param x     The x coordinate of the module
+     * @param y     The y coordinate of the module
+     * @param z     The z coordinate of the module
      */
     public static void setSelectedPos(ItemStack stack, int x, int y, int z) {
         if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
@@ -60,6 +62,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Clears the current selection from NBT data
+     * 
      * @param stack The item stack for the item
      */
     public static void clearSelected(ItemStack stack) {
@@ -73,12 +76,13 @@ public class ItemModuleMover extends Item {
 
     /**
      * Selects a module based on the given coordinates
-     * @param world The world in which the item is used
-     * @param x The x coordinates to get the module from
-     * @param y The y coordinates to get the module from
-     * @param z The z coordinates to get the module from
+     * 
+     * @param world  The world in which the item is used
+     * @param x      The x coordinates to get the module from
+     * @param y      The y coordinates to get the module from
+     * @param z      The z coordinates to get the module from
      * @param player The player entity using the item
-     * @param stack The item stack for the item
+     * @param stack  The item stack for the item
      */
     public void selectModule(World world, int x, int y, int z, EntityPlayer player, ItemStack stack) {
         setSelectedPos(stack, x, y, z);
@@ -87,16 +91,17 @@ public class ItemModuleMover extends Item {
 
     /**
      * Handler for when the item is used
-     * @param stack The item stack for the item
+     * 
+     * @param stack  The item stack for the item
      * @param player The player entity using the item
-     * @param world The world in which the item is used
-     * @param x The x coordinates used on
-     * @param y The y coordinates used on
-     * @param z The z coordinates used on
-     * @param side The direction faced
-     * @param hitX Not used in this implementation, required from original signature
-     * @param hitY Not used in this implementation, required from original signature
-     * @param hitZ Not used in this implementation, required from original signature
+     * @param world  The world in which the item is used
+     * @param x      The x coordinates used on
+     * @param y      The y coordinates used on
+     * @param z      The z coordinates used on
+     * @param side   The direction faced
+     * @param hitX   Not used in this implementation, required from original signature
+     * @param hitY   Not used in this implementation, required from original signature
+     * @param hitZ   Not used in this implementation, required from original signature
      * @return Boolean : True => Successful use
      */
     @Override
@@ -156,11 +161,12 @@ public class ItemModuleMover extends Item {
 
     /**
      * Handler for the start of one of the blocks being broken - prevents player from destroying modules in survival
+     * 
      * @param itemstack The current ItemStack
-     * @param x The X Position
-     * @param y The Y Position
-     * @param z The Z Position
-     * @param player The player entity holding the item
+     * @param x         The X Position
+     * @param y         The Y Position
+     * @param z         The Z Position
+     * @param player    The player entity holding the item
      * @return Boolean : True => Successful break
      */
     @Override
@@ -176,9 +182,10 @@ public class ItemModuleMover extends Item {
 
     /**
      * Adds information to the stat collector about the module
-     * @param stack The item stack of the item
-     * @param player The player entity using the item
-     * @param list The list of information to add to
+     * 
+     * @param stack    The item stack of the item
+     * @param player   The player entity using the item
+     * @param list     The list of information to add to
      * @param advanced Not used in this implementation, required from original signature
      */
     @Override

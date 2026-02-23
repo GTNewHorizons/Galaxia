@@ -22,7 +22,8 @@ public class GalaxiaBlockBase {
 
     /**
      * Registers the given block variants for a given planet
-     * @param planet The planet intended to generate the block variants
+     * 
+     * @param planet   The planet intended to generate the block variants
      * @param variants The BlockVariants to register
      */
     static void reg(DimensionEnum planet, BlockVariant... variants) {
@@ -39,7 +40,8 @@ public class GalaxiaBlockBase {
 
     /**
      * Registers the given block variants and dust item for a given planet
-     * @param planet The planet intended to generate the dust items
+     * 
+     * @param planet   The planet intended to generate the dust items
      * @param dustEnum The ENUM for the dust being registered
      * @param variants The BlockVariants to register
      */
@@ -64,7 +66,8 @@ public class GalaxiaBlockBase {
 
     /**
      * Returns the BlockMeta for a given variant of the planet blocks
-     * @param planet The planet from which the blocks generate
+     * 
+     * @param planet  The planet from which the blocks generate
      * @param variant The specific variant to get the meta of
      * @return The BlockMeta of the variant
      */

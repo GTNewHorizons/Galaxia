@@ -24,8 +24,9 @@ public class ItemTeleporter extends Item {
 
     /**
      * Defines the right click behaviour to open the teleportation GUI
-     * @param stack The item stack defining the held item
-     * @param world The current world of the using player
+     * 
+     * @param stack  The item stack defining the held item
+     * @param world  The current world of the using player
      * @param player The player using the item
      * @return The item stack initially used
      */

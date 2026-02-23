@@ -22,6 +22,7 @@ public class GalaxiaItems {
 
     /**
      * Gets an item by its given key in the ENUM
+     * 
      * @param key The key to be used in the retrieval
      * @return the Item the key responds to
      */

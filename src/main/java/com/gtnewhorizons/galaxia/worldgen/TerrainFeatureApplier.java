@@ -15,11 +15,12 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies features to height map provided in given chunks
-     * @param feature The feature to apply
-     * @param heightMap The current height map
-     * @param chunkX The chunk x coordinate
-     * @param chunkZ The chunk z coordinate
-     * @param rand Random instance
+     * 
+     * @param feature          The feature to apply
+     * @param heightMap        The current height map
+     * @param chunkX           The chunk x coordinate
+     * @param chunkZ           The chunk z coordinate
+     * @param rand             Random instance
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand,
@@ -88,12 +89,13 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies sand dunes to a height map
-     * @param hm The current height map
-     * @param height The height of the sand dunes
-     * @param width The width of the sand dunes
-     * @param r Random instance
-     * @param chunkX The chunk x coordinate
-     * @param chunkZ The chunk z coordinate
+     * 
+     * @param hm               The current height map
+     * @param height           The height of the sand dunes
+     * @param width            The width of the sand dunes
+     * @param r                Random instance
+     * @param chunkX           The chunk x coordinate
+     * @param chunkZ           The chunk z coordinate
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applySandDunes(int[] hm, double height, double width, Random r, int chunkX, int chunkZ,
@@ -116,10 +118,11 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies impact craters as a terrain feature
-     * @param hm Current height map
-     * @param size Size of the craters (radius)
+     * 
+     * @param hm    Current height map
+     * @param size  Size of the craters (radius)
      * @param depth Depth of the craters
-     * @param r Random instance
+     * @param r     Random instance
      */
     private static void applyImpactCraters(int[] hm, double size, int depth, Random r) {
         int cx = 8 + r.nextInt(4) - 2;
@@ -136,10 +139,11 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies Central Peak Craters to the height map
-     * @param hm Current height map
-     * @param size Size of the craters (radius)
+     * 
+     * @param hm    Current height map
+     * @param size  Size of the craters (radius)
      * @param depth Depth of the craters
-     * @param r Random instance
+     * @param r     Random instance
      */
     private static void applyCentralPeakCraters(int[] hm, double size, int depth, Random r) {
         applyImpactCraters(hm, size, depth, r);
@@ -155,14 +159,15 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies mountain ranges to the height map
-     * @param hm The height map
-     * @param height Target mountain range height
-     * @param width Target mountain range width
-     * @param minH Minimum height for the range
-     * @param var Variance in heightmap
-     * @param r Random instance
-     * @param chunkX Chunk x coordinates
-     * @param chunkZ Chunk z coordinates
+     * 
+     * @param hm               The height map
+     * @param height           Target mountain range height
+     * @param width            Target mountain range width
+     * @param minH             Minimum height for the range
+     * @param var              Variance in heightmap
+     * @param r                Random instance
+     * @param chunkX           Chunk x coordinates
+     * @param chunkZ           Chunk z coordinates
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applyMountainRanges(int[] hm, double height, double width, int minH, int var, Random r,
@@ -181,10 +186,11 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies canyons to the height map
-     * @param hm The height map
-     * @param size The canyon size
+     * 
+     * @param hm    The height map
+     * @param size  The canyon size
      * @param depth The depth of the canyon
-     * @param r Random instance
+     * @param r     Random instance
      */
     private static void applyCanyons(int[] hm, double size, int depth, Random r) {
         for (int i = 0; i < 256; i++) {
@@ -194,9 +200,10 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies lava plateaus to the height map
-     * @param hm The height map
+     * 
+     * @param hm   The height map
      * @param size The plateau size
-     * @param r Random instance
+     * @param r    Random instance
      */
     private static void applyLavaPlateaus(int[] hm, double size, Random r) {
         for (int i = 0; i < 256; i++) hm[i] += (int) (12 * size);
@@ -204,10 +211,11 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies river valleys to the height map
-     * @param hm The height map
-     * @param size The river valley size
+     * 
+     * @param hm    The height map
+     * @param size  The river valley size
      * @param depth The depth of the river valley
-     * @param r Random instance
+     * @param r     Random instance
      */
     private static void applyRiverValleys(int[] hm, double size, int depth, Random r) {
         for (int i = 0; i < 256; i++) {
@@ -217,9 +225,10 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies yardangs to the heightmap
-     * @param hm The height map
+     * 
+     * @param hm   The height map
      * @param size The size of the yardangs
-     * @param r Random instance
+     * @param r    Random instance
      */
     private static void applyYardangs(int[] hm, double size, Random r) {
         for (int i = 0; i < 256; i++) hm[i] += (int) (Math.sin((i & 15) * 1.8) * 4 * size);
@@ -227,9 +236,10 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies salt flats to the heightmap
-     * @param hm The height map
+     * 
+     * @param hm   The height map
      * @param size The size of the salt flats
-     * @param r Random instance
+     * @param r    Random instance
      */
     private static void applySaltFlats(int[] hm, double size, Random r) {
         for (int i = 0; i < 256; i++) hm[i] = Math.max(2, hm[i] - 3);
@@ -237,11 +247,12 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies generic noise to the height map
-     * @param hm The current height map
+     * 
+     * @param hm     The current height map
      * @param preset The terrain preset to use
-     * @param size The size of the noise application
-     * @param freq The frequency of the noise
-     * @param r Random instance
+     * @param size   The size of the noise application
+     * @param freq   The frequency of the noise
+     * @param r      Random instance
      */
     private static void applyGenericNoise(int[] hm, TerrainPreset preset, double size, double freq, Random r) {
         for (int i = 0; i < 256; i++) {
@@ -251,9 +262,10 @@ public final class TerrainFeatureApplier {
 
     /**
      * Generates Perlin noise for a given chunk
+     * 
      * @param chunkX Chunk x coordinates
      * @param chunkZ Chunk y coordinates
-     * @param scale the scale of the perlin noise effect
+     * @param scale  the scale of the perlin noise effect
      * @return A matrix of variations based on noise output
      */
     private static double[] generatePerlinNoise(int chunkX, int chunkZ, double scale) {

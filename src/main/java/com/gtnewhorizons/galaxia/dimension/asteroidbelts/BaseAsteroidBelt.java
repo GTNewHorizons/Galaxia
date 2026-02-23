@@ -12,6 +12,7 @@ public abstract class BaseAsteroidBelt extends BasePlanet {
 
     /**
      * Creates a dimension builder with some default values
+     * 
      * @return A DimensionBuilder with some universal defaults for all asteroid belts
      */
     protected DimensionBuilder createBuilder() {

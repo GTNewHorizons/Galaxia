@@ -16,6 +16,7 @@ public abstract class GravityAirResistanceMixin {
 
     /**
      * Modifies the fall rate of entities based on gravity of the dimension
+     * 
      * @param original The original fall rate
      * @return The new recalculated fall rate
      */
@@ -27,6 +28,7 @@ public abstract class GravityAirResistanceMixin {
 
     /**
      * Modifies the vertical air resistance based on air resistance from API
+     * 
      * @param original The original vertical air resistance
      * @return The new recalculated vertical air resistance
      */
@@ -39,6 +41,7 @@ public abstract class GravityAirResistanceMixin {
 
     /**
      * Modifies the horizontal air resistance based on air resistance from API
+     * 
      * @param original The original horizontal air resistance
      * @return The new recalculated horizontal air resistance
      */

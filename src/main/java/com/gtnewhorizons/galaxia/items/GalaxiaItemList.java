@@ -29,8 +29,9 @@ public enum GalaxiaItemList {
 
     /**
      * Constructor to initialize factory and registry
+     * 
      * @param registryName Name of the registry
-     * @param itemFactory The Item Factory
+     * @param itemFactory  The Item Factory
      * @param maxStackSize The max stack size of the item
      */
     GalaxiaItemList(String registryName, Supplier<Item> itemFactory, int maxStackSize) {
@@ -41,8 +42,9 @@ public enum GalaxiaItemList {
 
     /**
      * Constructor to initialize factory and registry, with maxStackSize defaulted to 64
+     * 
      * @param registryName Name of the registry
-     * @param itemFactory The Item Factory
+     * @param itemFactory  The Item Factory
      */
     GalaxiaItemList(String registryName, Supplier<Item> itemFactory) {
         this(registryName, itemFactory, 64);
@@ -50,6 +52,7 @@ public enum GalaxiaItemList {
 
     /**
      * Constructor to initalize the registry using default item factory and stack size of 64
+     * 
      * @param registryName Name of the registry
      */
     GalaxiaItemList(String registryName) {
@@ -72,6 +75,7 @@ public enum GalaxiaItemList {
 
     /**
      * Gets the item instance
+     * 
      * @return Item instance
      */
     public Item getItem() {
@@ -80,6 +84,7 @@ public enum GalaxiaItemList {
 
     /**
      * Gets the registry name
+     * 
      * @return Registry name
      */
     public String getRegistryName() {

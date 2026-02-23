@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.worldgen;
 
+/**
+ * ENUM to hold all terrain presets
+ */
 public enum TerrainPreset {
 
     // ====================== MACRO ======================

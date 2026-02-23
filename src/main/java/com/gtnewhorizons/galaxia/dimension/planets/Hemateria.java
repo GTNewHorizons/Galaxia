@@ -24,6 +24,7 @@ public class Hemateria extends BasePlanet {
 
     /**
      * Getter for dimension Enum
+     * 
      * @return Dimension Enum
      */
     @Override
@@ -33,6 +34,7 @@ public class Hemateria extends BasePlanet {
 
     /**
      * The configuration of the DimensionBuilder to configure the dimension
+     * 
      * @param builder The dimension builder to chain on
      * @return The dimension Builder with all properties assigned
      */
@@ -51,6 +53,7 @@ public class Hemateria extends BasePlanet {
 
     /**
      * Configures the world provider to add the correct biomes and settings
+     * 
      * @param builder The world provider builder being configured
      */
     @Override
@@ -126,8 +129,9 @@ public class Hemateria extends BasePlanet {
 
     /**
      * Creates a biome generator with a specific block type, and terrain configuration
-     * @param name Biome name
-     * @param block The block used for the biome top block
+     * 
+     * @param name    Biome name
+     * @param block   The block used for the biome top block
      * @param terrain The required terrain configuration
      * @return The BiomeGenBase used to generated biomes of that type
      */
@@ -137,9 +141,10 @@ public class Hemateria extends BasePlanet {
 
     /**
      * Creates a biome with a specific block type (containing meta), and terrain configuration
-     * @param name The biome name
-     * @param block The block used for the top block
-     * @param meta The meta-data of the block
+     * 
+     * @param name    The biome name
+     * @param block   The block used for the top block
+     * @param meta    The meta-data of the block
      * @param terrain The required terrain configuration
      * @return
      */

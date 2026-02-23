@@ -16,6 +16,7 @@ public abstract class JumpMixin {
 
     /**
      * Modifies jumping based on gravity of a planet - 1g = original, 0g = 0, see inverse sqrt for all else
+     * 
      * @param original The original jump value
      * @return The recalculated jump value
      */

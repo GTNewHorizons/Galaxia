@@ -14,6 +14,7 @@ public class EffectBuilder {
 
     /**
      * Sets the base temperature of the dimension
+     * 
      * @param baseTemp The required temperature
      * @return Configured builder
      */
@@ -24,6 +25,7 @@ public class EffectBuilder {
 
     /**
      * Sets the oxygen level relative to the overworld (OW -> 1)
+     * 
      * @param oxygenPercent The required oxygen level
      * @return Configured builder
      */
@@ -34,6 +36,7 @@ public class EffectBuilder {
 
     /**
      * Sets the atmospheric pressure on the planet relative to the overworld (OW -> 1)
+     * 
      * @param pressure The required pressure level
      * @return Configured builder
      */
@@ -44,6 +47,7 @@ public class EffectBuilder {
 
     /**
      * Sets the radiation level relative to the overworld (OW -> 1)
+     * 
      * @param radiation The required radiation level
      * @return Configured builder
      */
@@ -54,6 +58,7 @@ public class EffectBuilder {
 
     /**
      * Sets whether the planet should have a withering effect (See Ambergris)
+     * 
      * @param withering Boolean : True => wither effect
      * @return Configured builder
      */
@@ -64,6 +69,7 @@ public class EffectBuilder {
 
     /**
      * Sets whether the planet should have fungal spores in the atmosphere (See Mykelia)
+     * 
      * @param spores Boolean : True => spores effect
      * @return Configured builder
      */
@@ -74,6 +80,7 @@ public class EffectBuilder {
 
     /**
      * Builds an Effect Definition based on current fields
+     * 
      * @return Configured EffectDef
      */
     public EffectDef build() {
