@@ -1,15 +1,11 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import com.gtnewhorizons.galaxia.dimension.*;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.block.BlockVariant;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
-import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 

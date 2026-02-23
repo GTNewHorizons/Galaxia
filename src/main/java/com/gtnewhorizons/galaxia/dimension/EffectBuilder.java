@@ -9,6 +9,11 @@ public class EffectBuilder {
     private boolean spores = false;
     private int pressure = 1;
 
+    private EffectDef.IEffectModifier tempMod;
+    private EffectDef.IEffectModifier oxygenMod;
+    private EffectDef.IEffectModifier radiationMod;
+    private EffectDef.IEffectModifier pressureMod;
+
     /**
      * @param baseTemp temperature in Kelvins
      */
@@ -48,7 +53,32 @@ public class EffectBuilder {
         return this;
     }
 
+    public EffectBuilder tempMod(EffectDef.IEffectModifier modifier) {
+        tempMod = modifier;
+        return this;
+    }
+
+    public EffectBuilder oxygenMod(EffectDef.IEffectModifier modifier) {
+        oxygenMod = modifier;
+        return this;
+    }
+
+    public EffectBuilder pressureMod(EffectDef.IEffectModifier modifier) {
+        pressureMod = modifier;
+        return this;
+    }
+
+    public EffectBuilder radiationMod(EffectDef.IEffectModifier modifier) {
+        radiationMod = modifier;
+        return this;
+    }
+
     public EffectDef build() {
-        return new EffectDef(baseTemp, withering, oxygenPercent, radiation, spores, pressure);
+        EffectDef def = new EffectDef(baseTemp, withering, oxygenPercent, radiation, spores, pressure);
+        def.pressureModifier = pressureMod;
+        def.radiationModifier = radiationMod;
+        def.oxygenModifier = oxygenMod;
+        def.tempModifier = tempMod;
+        return def;
     }
 }
