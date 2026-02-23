@@ -1,6 +1,10 @@
 package com.gtnewhorizons.galaxia.utility;
 
 // THIS CLASS IS TEMPORARY TO ACT AS A DATACLASS UNTIL ROCKETS ARE WORKING AS A FULL CLASS
+
+/**
+ * Temporary base class to create an example rocket
+ */
 public class Rocket {
 
     private int dryMass;
