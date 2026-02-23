@@ -1,17 +1,13 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
-import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
-import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.block.BlockVariant;
 import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
@@ -24,7 +20,7 @@ public class Hemateria extends BasePlanet {
 
     /**
      * Getter for dimension Enum
-     * 
+     *
      * @return Dimension Enum
      */
     @Override
@@ -34,7 +30,7 @@ public class Hemateria extends BasePlanet {
 
     /**
      * The configuration of the DimensionBuilder to configure the dimension
-     * 
+     *
      * @param builder The dimension builder to chain on
      * @return The dimension Builder with all properties assigned
      */
@@ -53,7 +49,7 @@ public class Hemateria extends BasePlanet {
 
     /**
      * Configures the world provider to add the correct biomes and settings
-     * 
+     *
      * @param builder The world provider builder being configured
      */
     @Override
@@ -62,7 +58,6 @@ public class Hemateria extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             // These biome names are mostly just for testing
-            .createBiomeMatrix(2)
             .biome(
                 createBiome(
                     "Hemateria Dunes",
@@ -124,45 +119,6 @@ public class Hemateria extends BasePlanet {
                 1,
                 1)
             .name(ENUM)
-            .build();
-    }
-
-    /**
-     * Creates a biome generator with a specific block type, and terrain configuration
-     * 
-     * @param name    Biome name
-     * @param block   The block used for the biome top block
-     * @param terrain The required terrain configuration
-     * @return The BiomeGenBase used to generated biomes of that type
-     */
-    protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain) {
-        return createBiome(name, block, 0, terrain);
-    }
-
-    /**
-     * Creates a biome with a specific block type (containing meta), and terrain configuration
-     * 
-     * @param name    The biome name
-     * @param block   The block used for the top block
-     * @param meta    The meta-data of the block
-     * @param terrain The required terrain configuration
-     * @return
-     */
-    protected static BiomeGenBase createBiome(String name, Block block, int meta, TerrainConfiguration terrain) {
-        return new BiomeGenBuilder(100).name(name)
-            .height(0.1F, 0.11F)
-            .temperature(0.4F)
-            .rainfall(0.99F)
-            .topBlock(new BlockMeta(block, meta))
-            .fillerBlock(Blocks.brick_block)
-            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix), 144)
-            .terrain(terrain)
-            .ocean(
-                new BlockMeta(Blocks.glass, 1),
-                GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix),
-                64,
-                new BlockMeta(Blocks.obsidian, 0),
-                32)
             .build();
     }
 }

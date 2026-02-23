@@ -20,7 +20,7 @@ public class WorldProviderBuilder {
 
     /**
      * The first method to be called in a configuration chain
-     * 
+     *
      * @param provider The world provider to configure
      * @return Builder object
      */
@@ -30,7 +30,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether the provider should have a sky
-     * 
+     *
      * @param sky Boolean : True => has a sky
      * @return Configured builder
      */
@@ -41,7 +41,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the cloud height of the provider
-     * 
+     *
      * @param height The required cloud height
      * @return Configured builder
      */
@@ -52,7 +52,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether the world provider should have a surface (planets vs. asteroid belts etc.)
-     * 
+     *
      * @param surface Boolean : True => Has a surface
      * @return Configured builder
      */
@@ -63,7 +63,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the average ground height of the world provider
-     * 
+     *
      * @param level The required average ground height
      * @return Configured builder
      */
@@ -74,7 +74,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the colour of the fog required in the world provider (RGB format)
-     * 
+     *
      * @param r The amount of red
      * @param g The amount of green
      * @param b The amount of blue
@@ -86,19 +86,8 @@ public class WorldProviderBuilder {
     }
 
     /**
-     * Creates a biome matrix of designated size
-     * 
-     * @param size The required size of the biome matrix
-     * @return Configured builder
-     */
-    public WorldProviderBuilder createBiomeMatrix(int size) {
-        provider.createBiomeMatrix(size);
-        return this;
-    }
-
-    /**
      * Adds a biome to the provider
-     * 
+     *
      * @param biome The BiomeGenSpace to add
      * @param x     The x index of the biome in the matrix
      * @param z     The z index of the biome in the matrix
@@ -111,7 +100,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the Chunk gen supplier for the provider
-     * 
+     *
      * @param gen The chunk gen supplier to be used
      * @return Configured builder
      */
@@ -122,7 +111,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the name of the world provider given a string
-     * 
+     *
      * @param name The required name
      * @return Configured builder
      */
@@ -133,7 +122,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the name of the world provider given a planet ENUM
-     * 
+     *
      * @param planet The ENUM of the planet
      * @return Configured builder
      */
@@ -144,7 +133,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the sky color for the provider (RGB format)
-     * 
+     *
      * @param r The amount of red
      * @param g The amount of green
      * @param b The amount of blue
@@ -157,7 +146,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the sunrise colour for the provider (RGBA format)
-     * 
+     *
      * @param r The amount of red
      * @param g The amount of green
      * @param b The amount of blue
@@ -171,7 +160,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether the sky should be coloured
-     * 
+     *
      * @param colored Boolean : True => Coloured sky
      * @return Configured builder
      */
@@ -182,7 +171,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether there should be void particles
-     * 
+     *
      * @param has Boolean : True => void particles
      * @return Configured builder
      */
@@ -193,7 +182,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the y factor for the fog (how strong fog gets with height)
-     * 
+     *
      * @param factor The required y factor
      * @return Configured builder
      */
@@ -204,7 +193,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether to show fog in the X-Z plane
-     * 
+     *
      * @param show Boolean : True => Shows fog
      * @return Configured builder
      */
@@ -215,7 +204,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the star brightness
-     * 
+     *
      * @param factor The factor by which to increase star brightness
      * @return Configured builder
      */
@@ -226,7 +215,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the sun brightness
-     * 
+     *
      * @param factor The factor by which to increase sun brightness
      * @return Configured builder
      */
@@ -237,7 +226,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the celestial cycle speed (sky-box background speed)
-     * 
+     *
      * @param speed The speed at which to cycle
      * @return Configured builder
      */
@@ -248,7 +237,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the current moon phase
-     * 
+     *
      * @param phase The current moon phase required
      * @return Configured builder
      */
@@ -260,7 +249,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether compasses should spin wildly (like in the nether) or follow a point
-     * 
+     *
      * @param spin Boolean : True => Spinning compass
      * @return Configured builder
      */
@@ -271,7 +260,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the respawn dimension for this planet
-     * 
+     *
      * @param dim The ID of the respawn dimension
      * @return Configured builder
      */
@@ -282,7 +271,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets whether you can respawn on this planet
-     * 
+     *
      * @param can Boolean : True => Can respawn here
      * @return Configured builder
      */
@@ -298,7 +287,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the cloud renderer for the world
-     * 
+     *
      * @param renderer The renderer to be used
      * @return Configured builder
      */
@@ -309,7 +298,7 @@ public class WorldProviderBuilder {
 
     /**
      * Sets the weather renderer for the world
-     * 
+     *
      * @param renderer The renderer to be used
      * @return Configured builder
      */

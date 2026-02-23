@@ -5,16 +5,16 @@ package com.gtnewhorizons.galaxia.dimension;
  */
 public class EffectBuilder {
 
-    private int baseTemp; // Base temperature of planet
-    private boolean withering; // Whether the planet has a withering effect
-    private int oxygenPercent; // Oxygen percent (relative to Overworld -> 1)
-    private int radiation; // The level of radiation relative to Overworld (OW -> 1)
-    private boolean spores; // Whether the planet has fungal spores in atmosphere
-    private int pressure; // Pressure on surface relative to Overworld (OW -> 1)
+    private int baseTemp = 273; // Base temperature of planet
+    private boolean withering = false; // Whether the planet has a withering effect
+    private int oxygenPercent = 100; // Oxygen percent (relative to Overworld -> 1)
+    private int radiation = 0; // The level of radiation relative to Overworld (OW -> 1)
+    private boolean spores = false; // Whether the planet has fungal spores in atmosphere
+    private int pressure = 1; // Pressure on surface relative to Overworld (OW -> 1)
 
     /**
      * Sets the base temperature of the dimension
-     * 
+     *
      * @param baseTemp The required temperature
      * @return Configured builder
      */
@@ -25,7 +25,7 @@ public class EffectBuilder {
 
     /**
      * Sets the oxygen level relative to the overworld (OW -> 1)
-     * 
+     *
      * @param oxygenPercent The required oxygen level
      * @return Configured builder
      */
@@ -36,7 +36,7 @@ public class EffectBuilder {
 
     /**
      * Sets the atmospheric pressure on the planet relative to the overworld (OW -> 1)
-     * 
+     *
      * @param pressure The required pressure level
      * @return Configured builder
      */
@@ -47,7 +47,7 @@ public class EffectBuilder {
 
     /**
      * Sets the radiation level relative to the overworld (OW -> 1)
-     * 
+     *
      * @param radiation The required radiation level
      * @return Configured builder
      */
@@ -58,7 +58,7 @@ public class EffectBuilder {
 
     /**
      * Sets whether the planet should have a withering effect (See Ambergris)
-     * 
+     *
      * @param withering Boolean : True => wither effect
      * @return Configured builder
      */
@@ -69,7 +69,7 @@ public class EffectBuilder {
 
     /**
      * Sets whether the planet should have fungal spores in the atmosphere (See Mykelia)
-     * 
+     *
      * @param spores Boolean : True => spores effect
      * @return Configured builder
      */
@@ -80,7 +80,7 @@ public class EffectBuilder {
 
     /**
      * Builds an Effect Definition based on current fields
-     * 
+     *
      * @return Configured EffectDef
      */
     public EffectDef build() {

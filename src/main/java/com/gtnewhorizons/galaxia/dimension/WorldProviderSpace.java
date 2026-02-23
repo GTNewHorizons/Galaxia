@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import net.minecraft.entity.Entity;
@@ -19,7 +22,9 @@ import cpw.mods.fml.relauncher.SideOnly;
 /**
  * An abstract version of the WorldProvider to be used on Galaxia Planets
  */
-public abstract class WorldProviderSpace extends WorldProvider {
+public class WorldProviderSpace extends WorldProvider {
+
+    private static final Map<Integer, Consumer<WorldProviderBuilder>> CONFIGS = new ConcurrentHashMap<>();
 
     private BiomeGenBase[][] biomes;
 
@@ -65,6 +70,22 @@ public abstract class WorldProviderSpace extends WorldProvider {
         worldChunkMgr = new WorldChunkManagerSpace();
     }
 
+    public static void registerConfigurator(int dimensionId, Consumer<WorldProviderBuilder> configurator) {
+        CONFIGS.put(dimensionId, configurator);
+    }
+
+    @Override
+    public void setDimension(int dimensionId) {
+        super.setDimension(dimensionId);
+
+        Consumer<WorldProviderBuilder> config = CONFIGS.get(dimensionId);
+        if (config != null) {
+            WorldProviderBuilder builder = WorldProviderBuilder.configure(this);
+            config.accept(builder);
+            builder.build();
+        }
+    }
+
     /**
      * Registers the world chunk manager given the seed
      */
@@ -75,7 +96,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Creates a chunk generator if none existent, or gets current one
-     * 
+     *
      * @return Chunk generator for world provider
      */
     @Override
@@ -87,22 +108,23 @@ public abstract class WorldProviderSpace extends WorldProvider {
     }
 
     /**
-     * Creates a new Biome matrix of given size
-     * 
-     * @param size The size of the matrix (will always be square)
-     */
-    public void createBiomeMatrix(int size) {
-        biomes = new BiomeGenBase[size][size];
-    }
-
-    /**
      * Adds a new biome to the matrix
-     * 
+     *
      * @param biome The biome to add
      * @param x     The x index of the matrix to add to
      * @param z     The z index of the matrix to add to
      */
     public void addBiome(BiomeGenBase biome, int x, int z) {
+        if (biomes == null) {
+            biomes = new BiomeGenBase[x + 1][z + 1];
+        } else if (x >= biomes.length || z >= biomes[0].length) {
+            BiomeGenBase[][] biggerMatrix = new BiomeGenBase[Math.max(x + 1, biomes.length)][Math
+                .max(z + 1, biomes[0].length)];
+            for (int oldX = 0; oldX < biomes.length; oldX++) {
+                System.arraycopy(biomes[oldX], 0, biggerMatrix[oldX], 0, biomes[0].length);
+            }
+            biomes = biggerMatrix;
+        }
         biomes[x][z] = biome;
     }
 
@@ -115,7 +137,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Getter for the dimension name
-     * 
+     *
      * @return Dimension name
      */
     @Override
@@ -125,7 +147,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the sky colour of the world
-     * 
+     *
      * @param cameraEntity The camera entity to use
      * @param partialTicks The partial ticks (how far through current tick)
      * @return The sky colour as a Vec3
@@ -139,7 +161,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the sunrise/sunset colours based on celestial angle
-     * 
+     *
      * @param celestialAngle The angle of the main celestial body in the sky
      * @param partialTicks   The partial ticks (how far through current tick)
      * @return The sunrise/sunset colours as a float array
@@ -153,7 +175,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the fog colour based on celestial angle
-     * 
+     *
      * @param celestialAngle The angle of the main celestial body in the sky
      * @param partialTicks   The partial ticks (how far through current tick)
      * @return The fog colour as a Vec3
@@ -167,7 +189,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets whether the sky is colored
-     * 
+     *
      * @return Boolean : True => Colored
      */
     @Override
@@ -178,7 +200,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets whether there are void particles
-     * 
+     *
      * @return Boolean : True => Void particles
      */
     @Override
@@ -189,7 +211,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the Void Fog Y Factor
-     * 
+     *
      * @return VoidFogYFactor
      */
     @Override
@@ -200,7 +222,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets whether there is fog shown in X-Z plane based on given coordinates
-     * 
+     *
      * @param x The x coordinate to check
      * @param z The z coordinate to check
      * @return Boolean : True => shows fog
@@ -213,7 +235,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the cloud height of the planet
-     * 
+     *
      * @return The cloud height
      */
     @Override
@@ -224,7 +246,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Calculates the celestial angle based on world time
-     * 
+     *
      * @param worldTime    The current world time
      * @param partialTicks The partial ticks (how far through current tick)
      * @return The celestial angle
@@ -241,7 +263,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the current moon phase based on world time
-     * 
+     *
      * @param worldTime Current world time
      * @return the current moon phase (0 - 7)
      */
@@ -253,7 +275,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets star brightness
-     * 
+     *
      * @param partialTicks The partial ticks (how far through current tick)
      * @return The star brightness
      */
@@ -265,7 +287,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets sun brightness
-     * 
+     *
      * @param partialTicks The partial ticks (how far through current tick)
      * @return The sun brightness
      */
@@ -277,7 +299,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets whether the planet is a surface world
-     * 
+     *
      * @return Boolean : True => Surface world
      */
     @Override
@@ -287,7 +309,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the average ground height
-     * 
+     *
      * @return Average ground level
      */
     @Override
@@ -297,8 +319,8 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets whether compasses etc. should spin wildly
-     * 
-     * @param entity The entity holding the compass etc, playername, or frame-ENTITYID
+     *
+     * @param entity The entity holding the compass etc., playername, or frame-ENTITYID
      * @param x      X Position
      * @param y      Y Position
      * @param z      Z Position
@@ -311,7 +333,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the dimension to respawn in upon death on this dimension
-     * 
+     *
      * @param player The player that is respawning
      * @return Respawn Dimension ID
      */
@@ -322,7 +344,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets whether you can respawn directly on this planet
-     * 
+     *
      * @return Boolean : True => Can respawn here
      */
     @Override
@@ -332,7 +354,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the sky renderer
-     * 
+     *
      * @return The sky renderer being used
      */
     @Override
@@ -343,7 +365,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the cloud renderer
-     * 
+     *
      * @return The cloud renderer being used
      */
     @Override
@@ -354,7 +376,7 @@ public abstract class WorldProviderSpace extends WorldProvider {
 
     /**
      * Gets the weather renderer
-     * 
+     *
      * @return The weather renderer being used
      */
     @Override
@@ -363,4 +385,21 @@ public abstract class WorldProviderSpace extends WorldProvider {
         return weatherRenderer != null ? weatherRenderer : super.getWeatherRenderer();
     }
 
+    @Override
+    @SideOnly(Side.CLIENT)
+    public void setSkyRenderer(IRenderHandler skyRenderer) {
+        this.skyRenderer = skyRenderer;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public void setCloudRenderer(IRenderHandler cloudRenderer) {
+        this.cloudRenderer = cloudRenderer;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public void setWeatherRenderer(IRenderHandler weatherRenderer) {
+        this.weatherRenderer = weatherRenderer;
+    }
 }

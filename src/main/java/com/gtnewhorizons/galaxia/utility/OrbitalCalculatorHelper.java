@@ -30,8 +30,12 @@ public class OrbitalCalculatorHelper {
      */
     public static double calculateEffectiveExhaustVelocity(BasePlanet launchBody, Rocket rocket, int launchAltitude) {
         return effectiveCorrectiveFactor * rocket.getSpecificImpulse()
-            * (launchBody.getDef().mass)
-            / Math.pow((launchAltitude + launchBody.getDef().orbitalRadius), 2);
+            * (launchBody.getDef()
+                .mass())
+            / Math.pow(
+                (launchAltitude + launchBody.getDef()
+                    .orbitalRadius()),
+                2);
     }
 
     /**
@@ -65,16 +69,19 @@ public class OrbitalCalculatorHelper {
         // Most of this is renaming readable variables to fit standard notation for calculation, and legibility
 
         // GM of the center body
-        final double mu_s = centerBody.getMass();
+        final double mu_s = centerBody.mass();
 
         // GM of departure body
-        final double mu_1 = launchBody.getDef().mass;
+        final double mu_1 = launchBody.getDef()
+            .mass();
 
         // Distance from center body to launch body
-        final double r_1 = launchBody.getDef().orbitalRadius;
+        final double r_1 = launchBody.getDef()
+            .orbitalRadius();
 
         // Distance from center body to arrival body
-        final double r_2 = targetBody.getDef().orbitalRadius;
+        final double r_2 = targetBody.getDef()
+            .orbitalRadius();
 
         // Radius of original orbit
         final double a_1 = startRadius;
@@ -106,16 +113,19 @@ public class OrbitalCalculatorHelper {
          */
 
         // GM of center body
-        final double mu_s = centerBody.getMass();
+        final double mu_s = centerBody.mass();
 
         // GM of target body
-        final double mu_2 = targetBody.getDef().mass;
+        final double mu_2 = targetBody.getDef()
+            .mass();
 
         // Distance from center body to launch body
-        final double r_1 = launchBody.getDef().orbitalRadius;
+        final double r_1 = launchBody.getDef()
+            .orbitalRadius();
 
         // Distance from center body to target body
-        final double r_2 = targetBody.getDef().orbitalRadius;
+        final double r_2 = targetBody.getDef()
+            .orbitalRadius();
 
         // orbital height for target body
         final double a_2 = endRadius;
@@ -151,8 +161,11 @@ public class OrbitalCalculatorHelper {
      * @return The escape velocity of the planet from that altitude
      */
     public static double calculateEscapeVelocity(BasePlanet launchBody, int launchAltitude) {
-        return escapeCorrectiveFactor
-            * Math.sqrt((double) (2 * launchBody.getDef().mass) / (launchBody.getDef().orbitalRadius + launchAltitude));
+        return escapeCorrectiveFactor * Math.sqrt(
+            (2 * launchBody.getDef()
+                .mass())
+                / (launchBody.getDef()
+                    .orbitalRadius() + launchAltitude));
     }
 
     public static double calculateDirectDeltaV(BasePlanet launchBody, BasePlanet targetBody, int launchAltitude,

@@ -43,70 +43,54 @@ public class Asteroid extends WorldGenerator {
      *
      * @param world  The world to create in
      * @param random Holds a Random instance
-     * @param baseX  The asteroid's x origin
-     * @param baseY  The asteroid's y origin
-     * @param baseZ  The asteroid's z origin
+     * @param x  The asteroid's x origin
+     * @param y  The asteroid's y origin
+     * @param z  The asteroid's z origin
      * @return Boolean : True => Successful generation
      */
     @Override
-    public boolean generate(World world, Random random, int baseX, int baseY, int baseZ) {
-        long startTotal = System.nanoTime();
-
+    public boolean generate(World world, Random random, int x, int y, int z) {
         if (random.nextInt(rarity) > 0) return false;
 
         int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize) : 0);
-        int radius = size / 2;
         int diameter = size + 4;
-        int offset = diameter / 2;
+        int halfDiameter = diameter / 2;
 
-        System.out.printf(
-            "[Asteroid] Generating at (%d,%d,%d) | size=%d | radius=%d | diameter=%d%n",
-            baseX,
-            baseY,
-            baseZ,
-            size,
-            radius,
-            diameter);
+        int interpolationCount = size / 2 + 1;
+        interpolationCount *= Math.max(interpolationCount / 10, 1);
+        interpolationCount *= Math.max(interpolationCount / 20, 1);
+        int interpolationRange = size / 4 + 1;
 
-        long startPrep = System.nanoTime();
-
-        int interpCount = size / 2 + 1;
-        interpCount *= Math.max(interpCount / 10, 1);
-        interpCount *= Math.max(interpCount / 20, 1);
-        int interpRange = size / 4 + 1;
-
-        float[] interpValues = new float[interpCount];
-        for (int i = 0; i < interpValues.length; i++) {
-            interpValues[i] = random.nextFloat() / 4 + 0.75F;
+        float[] interpolationValues = new float[interpolationCount];
+        for (int i = 0; i < interpolationValues.length; i++) {
+            interpolationValues[i] = random.nextFloat() / 4 + 0.75F;
         }
 
-        int[][] interpPos = new int[interpCount][];
-        interpPos[0] = new int[] { baseX, baseY, baseZ };
+        int[][] interpolationPositions = new int[interpolationCount][];
+        interpolationPositions[0] = new int[] { x, y, z };
 
-        for (int i = 1; i < interpPos.length; i++) {
-            int ox = random.nextInt(interpRange) + 1;
-            if (random.nextBoolean()) ox = -ox;
-            int oy = random.nextInt(interpRange) + 1;
-            if (random.nextBoolean()) oy = -oy;
-            int oz = random.nextInt(interpRange) + 1;
-            if (random.nextBoolean()) oz = -oz;
-            interpPos[i] = new int[] { baseX + ox, baseY + oy, baseZ + oz };
+        for (int i = 1; i < interpolationPositions.length; i++) {
+            int offsetX = random.nextInt(interpolationRange) + 1;
+            if (random.nextBoolean()) offsetX = -offsetX;
+            int offsetY = random.nextInt(interpolationRange) + 1;
+            if (random.nextBoolean()) offsetY = -offsetY;
+            int offsetZ = random.nextInt(interpolationRange) + 1;
+            if (random.nextBoolean()) offsetZ = -offsetZ;
+            interpolationPositions[i] = new int[] { x + offsetX, y + offsetY, z + offsetZ };
         }
 
-        long prepMs = (System.nanoTime() - startPrep) / 1_000_000;
-        long startMem = System.nanoTime();
+        byte[][][] blockData = new byte[diameter][diameter][diameter];
 
-        byte[][][] data = new byte[diameter][diameter][diameter];
+        for (int localX = 0; localX < diameter; localX++) {
+            for (int localY = 0; localY < diameter; localY++) {
+                for (int localZ = 0; localZ < diameter; localZ++) {
+                    int combinedX = x + localX - halfDiameter;
+                    int combinedY = y + localY - halfDiameter;
+                    int combinedZ = z + localZ - halfDiameter;
 
-        for (int lx = 0; lx < diameter; lx++) {
-            for (int ly = 0; ly < diameter; ly++) {
-                for (int lz = 0; lz < diameter; lz++) {
-                    int wx = baseX + lx - offset;
-                    int wy = baseY + ly - offset;
-                    int wz = baseZ + lz - offset;
-
-                    if (calculateFullness(interpPos, interpValues, wx, wy, wz) > 1) {
-                        data[lx][ly][lz] = (byte) (1 + random.nextInt(blockPalette.length));
+                    if (calculateFullness(interpolationPositions, interpolationValues, combinedX, combinedY, combinedZ)
+                        > 1) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(blockPalette.length));
                     }
                 }
             }
@@ -114,36 +98,23 @@ public class Asteroid extends WorldGenerator {
 
         int craterCount = Math.max(8, 2 + size * craterFrequency);
         for (int i = 0; i < craterCount; i++) {
-            carveCraterInMemory(data, random, diameter);
+            carveCraterInMemory(blockData, random, diameter);
         }
 
-        long memMs = (System.nanoTime() - startMem) / 1_000_000;
-
-        long startPlace = System.nanoTime();
-        int blocksPlaced = 0;
-
-        for (int lx = 0; lx < diameter; lx++) {
-            int wx = baseX + lx - offset;
-            for (int ly = 0; ly < diameter; ly++) {
-                int wy = baseY + ly - offset;
-                for (int lz = 0; lz < diameter; lz++) {
-                    byte val = data[lx][ly][lz];
-                    if (val > 0) {
-                        BlockMeta bm = blockPalette[val - 1];
-                        setBlockFast(world, wx, wy, baseZ + lz - offset, bm.block(), bm.meta());
-                        blocksPlaced++;
+        for (int localX = 0; localX < diameter; localX++) {
+            int combinedX = x + localX - halfDiameter;
+            for (int localY = 0; localY < diameter; localY++) {
+                int combinedY = y + localY - halfDiameter;
+                for (int localZ = 0; localZ < diameter; localZ++) {
+                    int combinedZ = z + localZ - halfDiameter;
+                    byte localBlockValue = blockData[localX][localY][localZ];
+                    if (localBlockValue > 0) {
+                        BlockMeta blockMeta = blockPalette[localBlockValue - 1];
+                        setBlockFast(world, combinedX, combinedY, combinedZ, blockMeta.block(), blockMeta.meta());
                     }
                 }
             }
         }
-
-        long placeMs = (System.nanoTime() - startPlace) / 1_000_000;
-        long totalMs = (System.nanoTime() - startTotal) / 1_000_000;
-
-        System.out
-            .printf("[Asteroid] Prep: %d ms | Memory gen + craters: %d ms | Craters: %d%n", prepMs, memMs, craterCount);
-        System.out.printf("[Asteroid] EBS Placement: %d ms | blocks placed: %d%n", placeMs, blocksPlaced);
-        System.out.printf("[Asteroid] TOTAL: %d ms | coord (%d,%d,%d)%n%n", totalMs, baseX, baseY, baseZ);
 
         return true;
     }
@@ -165,17 +136,17 @@ public class Asteroid extends WorldGenerator {
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
         int sectionY = y >> 4;
 
-        ExtendedBlockStorage ebs = storage[sectionY];
-        if (ebs == null) {
-            ebs = storage[sectionY] = new ExtendedBlockStorage(sectionY << 4, !world.provider.hasNoSky);
+        ExtendedBlockStorage currentBlockStorage = storage[sectionY];
+        if (currentBlockStorage == null) {
+            currentBlockStorage = storage[sectionY] = new ExtendedBlockStorage(sectionY << 4, !world.provider.hasNoSky);
         }
 
         int lx = x & 15;
         int ly = y & 15;
         int lz = z & 15;
 
-        ebs.func_150818_a(lx, ly, lz, block);
-        ebs.setExtBlockMetadata(lx, ly, lz, meta);
+        currentBlockStorage.func_150818_a(lx, ly, lz, block);
+        currentBlockStorage.setExtBlockMetadata(lx, ly, lz, meta);
         chunk.isModified = true;
     }
 
@@ -183,29 +154,29 @@ public class Asteroid extends WorldGenerator {
      * Carves craters by generating a sphere used to cut out sections of the asteroid
      * This process happens entirely within the data-generation stage
      *
-     * @param data Existing asteroid block data
-     * @param rand Randomizer used to roughen the crater's outline
+     * @param blockData Existing asteroid block data
+     * @param random Randomizer used to roughen the crater's outline
      * @param diameter Diameter of the crater
      */
-    private void carveCraterInMemory(byte[][][] data, Random rand, int diameter) {
-        int longAxis = rand.nextInt(3);
-        int craterX = getCraterDistance(rand, diameter, 0, longAxis);
-        int craterY = getCraterDistance(rand, diameter, 1, longAxis);
-        int craterZ = getCraterDistance(rand, diameter, 2, longAxis);
+    private void carveCraterInMemory(byte[][][] blockData, Random random, int diameter) {
+        int longAxis = random.nextInt(3);
+        int craterX = getCraterDistance(random, diameter, 0, longAxis);
+        int craterY = getCraterDistance(random, diameter, 1, longAxis);
+        int craterZ = getCraterDistance(random, diameter, 2, longAxis);
 
-        double craterRadius = 4 + rand.nextDouble() * ((double) diameter / 8);
+        double craterRadius = 4 + random.nextDouble() * ((double) diameter / 8);
         double squaredCraterRadius = craterRadius * craterRadius;
 
-        for (int x = 0; x < diameter; x++) {
-            for (int y = 0; y < diameter; y++) {
-                for (int z = 0; z < diameter; z++) {
-                    if (data[x][y][z] == 0) continue;
-                    double dx = x - craterX;
-                    double dy = y - craterY;
-                    double dz = z - craterZ;
-                    double squaredDistance = dx * dx + dy * dy + dz * dz;
-                    if (squaredDistance < squaredCraterRadius * (1.0 - rand.nextDouble() * 0.3)) {
-                        data[x][y][z] = 0;
+        for (int localX = 0; localX < diameter; localX++) {
+            for (int localY = 0; localY < diameter; localY++) {
+                for (int localZ = 0; localZ < diameter; localZ++) {
+                    if (blockData[localX][localY][localZ] == 0) continue;
+                    double combinedX = localX - craterX;
+                    double combinedY = localY - craterY;
+                    double combinedZ = localZ - craterZ;
+                    double squaredDistance = combinedX * combinedX + combinedY * combinedY + combinedZ * combinedZ;
+                    if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.3)) {
+                        blockData[localX][localY][localZ] = 0;
                     }
                 }
             }
@@ -236,21 +207,21 @@ public class Asteroid extends WorldGenerator {
     /**
      * Calculates how relevant an interpolation point is based on distance
      *
-     * @param loc Location of the interpolation point
+     * @param coordinates Location of the interpolation point
      * @param x Target x coordinate
      * @param y Target y coordinate
      * @param z Target z coordinate
      * @return Significance multiplier between zero (exclusive) and one (inclusive)
      */
-    private float calculateInterpolationSignificance(int[] loc, int x, int y, int z) {
-        int dx = Math.abs(loc[0] - x);
-        if (dx > 16) return 0;
-        int dy = Math.abs(loc[1] - y);
-        if (dy > 16) return 0;
-        int dz = Math.abs(loc[2] - z);
-        if (dz > 16) return 0;
-        float dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        return 1 / (dist + 1);
+    private float calculateInterpolationSignificance(int[] coordinates, int x, int y, int z) {
+        int xDistance = Math.abs(coordinates[0] - x);
+        if (xDistance > 16) return 0;
+        int yDistance = Math.abs(coordinates[1] - y);
+        if (yDistance > 16) return 0;
+        int zDistance = Math.abs(coordinates[2] - z);
+        if (zDistance > 16) return 0;
+        float distance = (float) Math.sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
+        return 1 / (distance + 1);
     }
 
     /**

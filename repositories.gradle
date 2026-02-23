@@ -1,5 +1,5 @@
 // Add any additional repositories for your dependencies here.
 
 repositories {
-
+    maven { url = "https://gregtech.overminddl1.com/" }
 }

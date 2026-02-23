@@ -13,21 +13,16 @@ public class SkyBuilder {
         return new SkyBuilder();
     }
 
-    public SkyBuilder sun(Consumer<SunBuilder> config) {
-        SunBuilder builder = new SunBuilder();
-        config.accept(builder);
-        bodies.add(builder.build());
-        return this;
-    }
-
-    public SkyBuilder moon(Consumer<MoonBuilder> config) {
-        MoonBuilder builder = new MoonBuilder();
-        config.accept(builder);
-        bodies.add(builder.build());
-        return this;
-    }
-
-    public SkyBuilder body(Consumer<CelestialBodyBuilder<?>> config) {
+    /**
+     * Add any celestial body
+     *
+     * @param config Settings for the body
+     * @return this builder
+     */
+    public SkyBuilder addBody(Consumer<CelestialBodyBuilder> config) {
+        CelestialBodyBuilder b = new CelestialBodyBuilder();
+        config.accept(b);
+        bodies.add(b.build());
         return this;
     }
 

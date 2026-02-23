@@ -21,7 +21,7 @@ public final class PlanetAPI {
         if (e == null || e.worldObj == null) return 1.0;
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
         if (def == null) return 1.0;
-        return def.gravity;
+        return def.gravity();
         // for some cases clamping might be required
     }
 
@@ -35,7 +35,7 @@ public final class PlanetAPI {
         if (e == null || e.worldObj == null) return new EffectDef();
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
         if (def == null) return new EffectDef();
-        return def.effects;
+        return def.effects();
     }
 
     /**
@@ -48,7 +48,7 @@ public final class PlanetAPI {
         if (e == null || e.worldObj == null) return 1.0;
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
         if (def == null) return 1.0;
-        return def.air_resistance;
+        return def.airResistance();
     }
 
     /**
@@ -61,6 +61,6 @@ public final class PlanetAPI {
         if (e == null || e.worldObj == null) return false;
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
         if (def == null) return false;
-        return def.removeSpeedCancelation;
+        return def.removeSpeedCancelation();
     }
 }
