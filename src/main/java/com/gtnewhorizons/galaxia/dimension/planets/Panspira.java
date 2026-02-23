@@ -60,7 +60,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Dunes",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SOIL.suffix)
+                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SOIL.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.SAND_DUNES)
@@ -74,7 +74,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Mountains",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.STONE.suffix)
+                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.STONE.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -88,7 +88,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Hills",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix)
+                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -102,7 +102,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Plains",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SOIL.suffix)
+                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SOIL.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -131,14 +131,14 @@ public class Panspira extends BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(new BlockMeta(block, meta))
-            .fillerBlock(GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.STONE.suffix))
-            .snowBlock(GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SNOW.suffix), 144)
+            .fillerBlock(GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.STONE.suffix()))
+            .snowBlock(GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SNOW.suffix()), 144)
             .terrain(terrain)
             .ocean(
                 new BlockMeta(Blocks.water, 1),
-                GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix),
+                GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix()),
                 64,
-                GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix),
+                GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix()),
                 32)
             .build();
     }
