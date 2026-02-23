@@ -85,55 +85,56 @@ galaxia.module_mover.cannot_place_here=§cCannot place here!§r
 galaxia.module_mover.module_moved=§aModule successfully moved!§r
 
 #### Config
-### Config - "Categories"
+### Config - "Overlay"
 galaxia.config.category.overlay=Overlay
-galaxia.config.category.overlay.tooltip=Settings for the Galaxia HUD overlay.
+galaxia.config.category.overlay.tooltip=Settings for the Galaxia HUD overlays
 
-### Config - "Entries"
-## Config - Entries - "Overlay Category"
-# Config - Entries - Overlay Category - "HUD global offsets"
+### Config - Overlay - "Global"
+galaxia.config.category.overlay_global=Global
+galaxia.config.category.overlay_global.tooltip=Global overlay settings for the Galaxia HUD
+
 galaxia.config.overlay.horizontal_offset=Global bars horizontal offset
 galaxia.config.overlay.horizontal_offset.tooltip=Moves HUD horizontally\nPositive = right
 galaxia.config.overlay.vertical_offset=Global bars vertical offset
 galaxia.config.overlay.vertical_offset.tooltip=Moves HUD vertically\nPositive = down
-
-# Config - Entries - Overlay Category - "Bar orientation"
 galaxia.config.overlay.bars_orientation=Global bars orientation
 galaxia.config.overlay.bars_orientation.tooltip=Choose whether bars are displayed horizontally or vertically
-
-# Config - Entries - Overlay Category - "Visibility and per-bar offsets"
-galaxia.config.overlay.show_oxygen_bar=Oxygen bar display
-galaxia.config.overlay.show_oxygen_bar.tooltip=Enable or disable rendering of the oxygen bar
-galaxia.config.overlay.show_temperature_bar=Temperature bar display
-galaxia.config.overlay.show_temperature_bar.tooltip=Enable or disable rendering of the temperature bar
-galaxia.config.overlay.oxygen_bar_horizontal_offset=Oxygen bar horizontal offset
-galaxia.config.overlay.oxygen_bar_horizontal_offset.tooltip=Additional horizontal offset for oxygen bar in pixels
-galaxia.config.overlay.oxygen_bar_vertical_offset=Oxygen bar vertical offset
-galaxia.config.overlay.oxygen_bar_vertical_offset.tooltip=Additional vertical offset for oxygen bar in pixels
-galaxia.config.overlay.temperature_bar_horizontal_offset=Temperature bar horizontal offset
-galaxia.config.overlay.temperature_bar_horizontal_offset.tooltip=Additional horizontal offset for temperature bar in pixels
-galaxia.config.overlay.temperature_bar_vertical_offset=Temperature bar vertical offset
-galaxia.config.overlay.temperature_bar_vertical_offset.tooltip=Additional vertical offset for temperature bar in pixels
-
-# Config - Entries - Overlay Category - "Critical thresholds (logic layer, not rendering)"
-galaxia.config.overlay.oxygen_bar_critical=Oxygen bar low threshold
-galaxia.config.overlay.oxygen_bar_critical.tooltip=Oxygen level below which the oxygen bar is considered critical
-galaxia.config.overlay.temperature_bar_too_cold=Temperature bar low threshold
-galaxia.config.overlay.temperature_bar_too_cold.tooltip=Temperature level below which it is considered too cold
-galaxia.config.overlay.temperature_bar_too_hot=Temperature bar high hreshold
-galaxia.config.overlay.temperature_bar_too_hot.tooltip=Temperature level above which it is considered too hot
-
-# Config - Entries - Overlay Category - "Pulse / warning visual settings"
 galaxia.config.overlay.pulse.speed=Global bars pulse speed
 galaxia.config.overlay.pulse.speed.tooltip=Pulse speed factor for bars (higher value = slower pulse)
 galaxia.config.overlay.pulse.amplitude=Global bars pulse amplitude
 galaxia.config.overlay.pulse.amplitude.tooltip=Pulse intensity for bars, used to dim the bar
 
-# Config - Entries - Overlay Category - "Texture pixel dimensions"
+### Config - Overlay - "Oxygen Bar"
+galaxia.config.category.overlay_oxygen_bar=Oxygen Bar
+galaxia.config.category.overlay_oxygen_bar.tooltip=Overlay settings for the Oxygen Bar
+
+galaxia.config.overlay.show_oxygen_bar=Oxygen bar display
+galaxia.config.overlay.show_oxygen_bar.tooltip=Enable or disable rendering of the oxygen bar
+galaxia.config.overlay.oxygen_bar_horizontal_offset=Oxygen bar horizontal offset
+galaxia.config.overlay.oxygen_bar_horizontal_offset.tooltip=Additional horizontal offset for oxygen bar in pixels
+galaxia.config.overlay.oxygen_bar_vertical_offset=Oxygen bar vertical offset
+galaxia.config.overlay.oxygen_bar_vertical_offset.tooltip=Additional vertical offset for oxygen bar in pixels
+galaxia.config.overlay.oxygen_bar_critical=Oxygen bar low threshold
+galaxia.config.overlay.oxygen_bar_critical.tooltip=Oxygen level below which the oxygen bar is considered critical
 galaxia.config.overlay.texture.oxygen_bar_width=Oxygen bar texture width
 galaxia.config.overlay.texture.oxygen_bar_width.tooltip=Oxygen bar texture width in pixels
 galaxia.config.overlay.texture.oxygen_bar_height=Oxygen bar texture height
 galaxia.config.overlay.texture.oxygen_bar_height.tooltip=Oxygen bar texture height in pixels
+
+### Config - Overlay - "Temperature Bar"
+galaxia.config.category.overlay_temperature_bar=Temperature Bar
+galaxia.config.category.overlay_temperature_bar.tooltip=Overlay settings for the Temperature Bar
+
+galaxia.config.overlay.show_temperature_bar=Temperature bar display
+galaxia.config.overlay.show_temperature_bar.tooltip=Enable or disable rendering of the temperature bar
+galaxia.config.overlay.temperature_bar_horizontal_offset=Temperature bar horizontal offset
+galaxia.config.overlay.temperature_bar_horizontal_offset.tooltip=Additional horizontal offset for temperature bar in pixels
+galaxia.config.overlay.temperature_bar_vertical_offset=Temperature bar vertical offset
+galaxia.config.overlay.temperature_bar_vertical_offset.tooltip=Additional vertical offset for temperature bar in pixels
+galaxia.config.overlay.temperature_bar_too_cold=Temperature bar low threshold
+galaxia.config.overlay.temperature_bar_too_cold.tooltip=Temperature level below which it is considered too cold
+galaxia.config.overlay.temperature_bar_too_hot=Temperature bar high hreshold
+galaxia.config.overlay.temperature_bar_too_hot.tooltip=Temperature level above which it is considered too hot
 galaxia.config.overlay.texture.temperature_bar_width=Temperature bar texture width
 galaxia.config.overlay.texture.temperature_bar_width.tooltip=Temperature bar texture width in pixels
 galaxia.config.overlay.texture.temperature_bar_height=Temperature bar texture height

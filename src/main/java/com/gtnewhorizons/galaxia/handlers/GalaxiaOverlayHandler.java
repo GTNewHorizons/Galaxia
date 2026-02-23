@@ -11,7 +11,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.core.config.GalaxiaConfigOverlay;
+import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -45,8 +45,8 @@ public class GalaxiaOverlayHandler {
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-        if (GalaxiaConfigOverlay.showOxygenBar) {
-            boolean oxygenCritical = oxygenLevel < GalaxiaConfigOverlay.lowOxygenThreshold;
+        if (ConfigOverlay.showOxygenBar) {
+            boolean oxygenCritical = oxygenLevel < ConfigOverlay.lowOxygenThreshold;
             drawBar(
                 pos.oxygenX,
                 pos.oxygenY,
@@ -54,14 +54,14 @@ public class GalaxiaOverlayHandler {
                 EnumTextures.OXYGEN_BG.get(),
                 EnumTextures.OXYGEN_FILL.get(),
                 oxygenCritical,
-                GalaxiaConfigOverlay.oxygenTextureWidth,
-                GalaxiaConfigOverlay.oxygenTextureHeight,
-                GalaxiaConfigOverlay.barOrientation);
+                ConfigOverlay.oxygenTextureWidth,
+                ConfigOverlay.oxygenTextureHeight,
+                ConfigOverlay.barOrientation);
         }
 
-        if (GalaxiaConfigOverlay.showTemperatureBar) {
-            boolean tempCritical = temperatureLevel < GalaxiaConfigOverlay.temperatureLowThreshold
-                || temperatureLevel > GalaxiaConfigOverlay.temperatureHighThreshold;
+        if (ConfigOverlay.showTemperatureBar) {
+            boolean tempCritical = temperatureLevel < ConfigOverlay.temperatureLowThreshold
+                || temperatureLevel > ConfigOverlay.temperatureHighThreshold;
 
             drawBar(
                 pos.temperatureX,
@@ -70,9 +70,9 @@ public class GalaxiaOverlayHandler {
                 EnumTextures.TEMP_BG.get(),
                 EnumTextures.TEMP_FILL.get(),
                 tempCritical,
-                GalaxiaConfigOverlay.temperatureTextureWidth,
-                GalaxiaConfigOverlay.temperatureTextureHeight,
-                GalaxiaConfigOverlay.barOrientation);
+                ConfigOverlay.temperatureTextureWidth,
+                ConfigOverlay.temperatureTextureHeight,
+                ConfigOverlay.barOrientation);
         }
 
         GL11.glDisable(GL11.GL_BLEND);
@@ -85,21 +85,21 @@ public class GalaxiaOverlayHandler {
 
         int centerX = screenWidth / 2;
         int hotbarLeft = centerX - HOTBAR_HALF_WIDTH;
-        int leftSideX = hotbarLeft - GalaxiaConfigOverlay.oxygenTextureWidth - HOTBAR_SIDE_PADDING;
+        int leftSideX = hotbarLeft - ConfigOverlay.oxygenTextureWidth - HOTBAR_SIDE_PADDING;
         int rightSideX = hotbarLeft + HOTBAR_FULL_WIDTH + HOTBAR_SIDE_PADDING;
         int baseY = screenHeight - ABOVE_HOTBAR_BASE_Y;
 
-        oxygenX = leftSideX + GalaxiaConfigOverlay.hudOffsetX + GalaxiaConfigOverlay.oxygenOffsetX;
-        oxygenY = baseY + GalaxiaConfigOverlay.hudOffsetY + GalaxiaConfigOverlay.oxygenOffsetY;
+        oxygenX = leftSideX + ConfigOverlay.hudOffsetX + ConfigOverlay.oxygenOffsetX;
+        oxygenY = baseY + ConfigOverlay.hudOffsetY + ConfigOverlay.oxygenOffsetY;
 
-        temperatureX = rightSideX + GalaxiaConfigOverlay.hudOffsetX + GalaxiaConfigOverlay.temperatureOffsetX;
-        temperatureY = baseY + GalaxiaConfigOverlay.hudOffsetY + GalaxiaConfigOverlay.temperatureOffsetY;
+        temperatureX = rightSideX + ConfigOverlay.hudOffsetX + ConfigOverlay.temperatureOffsetX;
+        temperatureY = baseY + ConfigOverlay.hudOffsetY + ConfigOverlay.temperatureOffsetY;
 
         return new BarScreenPositions(oxygenX, oxygenY, temperatureX, temperatureY);
     }
 
     private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex,
-        boolean pulsing, int texWidth, int texHeight, GalaxiaConfigOverlay.BarOrientation orientation) {
+        boolean pulsing, int texWidth, int texHeight, ConfigOverlay.BarOrientation orientation) {
 
         // Background
         mc.getTextureManager()
@@ -113,14 +113,14 @@ public class GalaxiaOverlayHandler {
             .bindTexture(fillTex);
 
         float pulse = pulsing
-            ? (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
-                * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude))
+            ? (float) (Math.sin(System.currentTimeMillis() / ConfigOverlay.pulseSpeed) * ConfigOverlay.pulseAmplitude
+                + (1.0f - ConfigOverlay.pulseAmplitude))
             : 1.0f;
 
         GL11.glPushMatrix();
         GL11.glColor4f(pulse, pulse, pulse, 1.0f);
 
-        if (orientation == GalaxiaConfigOverlay.BarOrientation.VERTICAL) {
+        if (orientation == ConfigOverlay.BarOrientation.VERTICAL) {
             int fillHeightPx = Math.max(0, (int) (texHeight * clamp01(fillPercent)));
             if (fillHeightPx > 0) {
                 int drawY = y + texHeight - fillHeightPx;
@@ -152,8 +152,8 @@ public class GalaxiaOverlayHandler {
     }
 
     private int applyPulse() {
-        float pulse = (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
-            * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude));
+        float pulse = (float) (Math.sin(System.currentTimeMillis() / ConfigOverlay.pulseSpeed)
+            * ConfigOverlay.pulseAmplitude + (1.0f - ConfigOverlay.pulseAmplitude));
 
         int r = (int) (255 * pulse);
         int g = (int) (255 * pulse);
