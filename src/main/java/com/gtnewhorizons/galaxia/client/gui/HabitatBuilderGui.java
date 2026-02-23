@@ -21,7 +21,7 @@ import com.cleanroommc.modularui.widgets.layout.Row;
 import com.gtnewhorizons.galaxia.items.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
-import com.gtnewhorizons.galaxia.utility.Colors;
+import com.gtnewhorizons.galaxia.utility.ColorEnum;
 
 public class HabitatBuilderGui {
 
@@ -77,11 +77,11 @@ public class HabitatBuilderGui {
                 });
 
             IDrawable markerDrawable = selected
-                ? IDrawable.of(GuiTextures.PLAY.withColorOverride(Colors.IconGreen.getColor()))
+                ? IDrawable.of(GuiTextures.PLAY.withColorOverride(ColorEnum.IconGreen.getColor()))
                 : IDrawable.EMPTY;
             IWidget marker = markerDrawable.asWidget()
                 .size(8, 8);
-            IWidget label = new TextWidget(IKey.str(name)).color(Colors.Value.getColor());
+            IWidget label = new TextWidget(IKey.str(name)).color(ColorEnum.Value.getColor());
 
             Row content = new Row();
             content.children(Arrays.asList(marker, label));

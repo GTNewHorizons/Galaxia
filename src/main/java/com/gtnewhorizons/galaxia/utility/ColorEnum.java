@@ -6,7 +6,7 @@ import net.minecraft.util.StatCollector;
 
 import cpw.mods.fml.common.FMLLog;
 
-public enum Colors {
+public enum ColorEnum {
 
     Transparent(0xFF),
     Title(0xFFFFFF),
@@ -21,7 +21,7 @@ public enum Colors {
     private static final String PREFIX = "galaxia.color.override.";
     private final int defaultColor;
 
-    Colors(int defaultColor) {
+    ColorEnum(int defaultColor) {
         this.defaultColor = defaultColor;
     }
 
