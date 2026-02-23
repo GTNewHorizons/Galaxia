@@ -4,6 +4,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Dataclass holding terrain features
+ */
 public final class TerrainFeature {
 
     private final TerrainPreset preset;
