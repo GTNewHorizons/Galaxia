@@ -60,12 +60,27 @@ public class GalaxiaConfigOverlay {
     public static int temperatureOffsetY;
 
     /**
-     * Pulse / warning settings.
+     * Critical thresholds (logic layer, not rendering).
      */
-    @Config.Comment("Fill level below which the bar pulses (0.0 - 1.0)")
-    @Config.DefaultDouble(0.2D)
+
+    @Config.Comment("Oxygen level below which the bar is considered critical (0.0 - 1.0)")
+    @Config.DefaultDouble(0.25D)
     @Config.RangeDouble(min = 0.0D, max = 1.0D)
-    public static double lowPulseThreshold;
+    public static double lowOxygenThreshold;
+
+    @Config.Comment("Temperature below which it is considered too cold (0.0 - 1.0)")
+    @Config.DefaultDouble(0.35D)
+    @Config.RangeDouble(min = 0.0D, max = 1.0D)
+    public static double temperatureLowThreshold;
+
+    @Config.Comment("Temperature above which it is considered too hot (0.0 - 1.0)")
+    @Config.DefaultDouble(0.65D)
+    @Config.RangeDouble(min = 0.0D, max = 1.0D)
+    public static double temperatureHighThreshold;
+
+    /**
+     * Pulse / warning visual settings.
+     */
 
     @Config.Comment("Pulse speed (higher = slower). sin(currentTimeMillis / pulseSpeed)")
     @Config.DefaultDouble(150.0D)
