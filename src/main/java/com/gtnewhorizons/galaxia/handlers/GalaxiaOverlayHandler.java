@@ -72,7 +72,8 @@ public class GalaxiaOverlayHandler {
                 float fillPercent = (highThresh < 1.0f) ? (temperatureLevel - highThresh) / (1.0f - highThresh) : 0.0f;
                 fillPercent = clamp01(fillPercent);
                 if (fillPercent > 0f) {
-                    mc.getTextureManager().bindTexture(EnumTextures.TEMP_FILL_HOT.get());
+                    mc.getTextureManager()
+                        .bindTexture(EnumTextures.TEMP_FILL_HOT.get());
                     GL11.glPushMatrix();
                     GL11.glColor4f(1, 1, 1, 1.0f);
                     int fillW = (int) (w * fillPercent);
@@ -117,7 +118,7 @@ public class GalaxiaOverlayHandler {
     }
 
     private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex,
-                         int texWidth, int texHeight) {
+        int texWidth, int texHeight) {
 
         // Background
         mc.getTextureManager()
@@ -177,7 +178,7 @@ public class GalaxiaOverlayHandler {
     }
 
     private void drawTexturedSubQuad(int x, int y, int w, int h, int srcX, int srcY, int srcW, int srcH, int texW,
-                                     int texH) {
+        int texH) {
         Tessellator t = Tessellator.instance;
         float u0 = srcX / (float) texW;
         float v0 = srcY / (float) texH;
