@@ -10,7 +10,7 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.TextureEnum;
+import com.gtnewhorizons.galaxia.client.TextureEnum;
 import com.gtnewhorizons.galaxia.client.config.GalaxiaConfigOverlay;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;

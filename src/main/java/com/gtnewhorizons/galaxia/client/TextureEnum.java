@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia;
+package com.gtnewhorizons.galaxia.client;
 
 import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
 
