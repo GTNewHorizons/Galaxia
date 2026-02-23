@@ -13,7 +13,6 @@ import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.config.GalaxiaConfigOverlay;
-import com.gtnewhorizons.galaxia.utility.Colors;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -60,7 +59,6 @@ public class GalaxiaOverlayHandler {
                 oxygenLevel,
                 OXYGEN_BG,
                 OXYGEN_FILL,
-                Colors.OxygenDefault.getColor(),
                 oxygenCritical,
                 GalaxiaConfigOverlay.oxygenTextureWidth,
                 GalaxiaConfigOverlay.oxygenTextureHeight,
@@ -77,7 +75,6 @@ public class GalaxiaOverlayHandler {
                 temperatureLevel,
                 TEMP_BG,
                 TEMP_FILL,
-                Colors.TemperatureNormal.getColor(),
                 tempCritical,
                 GalaxiaConfigOverlay.temperatureTextureWidth,
                 GalaxiaConfigOverlay.temperatureTextureHeight,
@@ -107,7 +104,7 @@ public class GalaxiaOverlayHandler {
         return new BarScreenPositions(oxygenX, oxygenY, temperatureX, temperatureY);
     }
 
-    private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex, int color,
+    private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex,
         boolean pulsing, int texWidth, int texHeight, GalaxiaConfigOverlay.BarOrientation orientation) {
 
         // Background
@@ -121,13 +118,13 @@ public class GalaxiaOverlayHandler {
         mc.getTextureManager()
             .bindTexture(fillTex);
 
-        int finalColor = pulsing ? applyPulse(color) : color;
+        float pulse = pulsing
+            ? (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
+                * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude))
+            : 1.0f;
+
         GL11.glPushMatrix();
-        GL11.glColor4f(
-            ((finalColor >> 16) & 0xFF) / 255f,
-            ((finalColor >> 8) & 0xFF) / 255f,
-            (finalColor & 0xFF) / 255f,
-            1.0f);
+        GL11.glColor4f(pulse, pulse, pulse, 1.0f);
 
         if (orientation == GalaxiaConfigOverlay.BarOrientation.VERTICAL) {
             int fillHeightPx = Math.max(0, (int) (texHeight * clamp01(fillPercent)));
@@ -160,13 +157,13 @@ public class GalaxiaOverlayHandler {
         return Math.max(0f, Math.min(1f, v));
     }
 
-    private int applyPulse(int color) {
+    private int applyPulse() {
         float pulse = (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
             * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude));
 
-        int r = (int) (((color >> 16) & 0xFF) * pulse);
-        int g = (int) (((color >> 8) & 0xFF) * pulse);
-        int b = (int) ((color & 0xFF) * pulse);
+        int r = (int) (255 * pulse);
+        int g = (int) (255 * pulse);
+        int b = (int) (255 * pulse);
 
         // Clamp components so we don't get negative values due to rounding
         r = Math.max(0, Math.min(255, r));

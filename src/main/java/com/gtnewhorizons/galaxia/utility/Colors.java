@@ -15,11 +15,6 @@ public enum Colors {
 
     IconGreen(0x55FF55),
 
-    OxygenDefault(0x88FFFF),
-    TemperatureHot(0xFF4444),
-    TemperatureCold(0x4488FF),
-    TemperatureNormal(0xFFFFFF)
-
     ; // leave trailing semicolon
       // Add more colors here
 
