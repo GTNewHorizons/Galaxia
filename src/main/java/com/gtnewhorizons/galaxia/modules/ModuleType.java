@@ -1,11 +1,11 @@
 package com.gtnewhorizons.galaxia.modules;
 
+import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
+
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
-
-import com.gtnewhorizons.galaxia.core.Galaxia;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -128,12 +128,12 @@ public class ModuleType {
         }
 
         public Builder model(String path) {
-            this.modelLocation = new ResourceLocation(Galaxia.MODID, path);
+            this.modelLocation = LocationGalaxia(path);
             return this;
         }
 
         public Builder texture(String path) {
-            this.textureLocation = new ResourceLocation(Galaxia.MODID, path);
+            this.textureLocation = LocationGalaxia(path);
             return this;
         }
 

@@ -5,9 +5,9 @@ import net.minecraftforge.common.MinecraftForge;
 import com.gtnewhorizon.gtnhlib.config.ConfigException;
 import com.gtnewhorizon.gtnhlib.config.ConfigurationManager;
 import com.gtnewhorizons.galaxia.client.config.GalaxiaConfigOverlay;
+import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.modules.ModuleTESR;
 import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
-import com.gtnewhorizons.galaxia.utility.GalaxiaOverlayHandler;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.event.FMLInitializationEvent;

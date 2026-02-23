@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility;
+package com.gtnewhorizons.galaxia.handlers;
 
 import static com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 

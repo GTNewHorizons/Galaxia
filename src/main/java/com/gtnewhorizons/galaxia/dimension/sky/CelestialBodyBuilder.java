@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.dimension.sky;
 
+import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
+
 import net.minecraft.util.ResourceLocation;
 
 public class CelestialBodyBuilder {
@@ -34,6 +36,16 @@ public class CelestialBodyBuilder {
      */
     public CelestialBodyBuilder texture(String texture) {
         return texture(new ResourceLocation(texture));
+    }
+
+    /**
+     * Sets the main texture file using a string.
+     *
+     * @param texture The texture path as string, doesn't require "galaxia:"
+     * @return builder
+     */
+    public CelestialBodyBuilder textureGalaxia(String texture) {
+        return texture(LocationGalaxia(texture));
     }
 
     /**
