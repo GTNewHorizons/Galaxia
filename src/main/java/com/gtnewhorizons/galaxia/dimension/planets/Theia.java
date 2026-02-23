@@ -46,7 +46,7 @@ public class Theia extends BasePlanet {
             .sky(buildSky())
             .effects(
                 new EffectBuilder().baseTemp(225)
-                    .oxygenPercent(100)
+                    .oxygenPercent(0)
                     .pressure(1));
     }
 

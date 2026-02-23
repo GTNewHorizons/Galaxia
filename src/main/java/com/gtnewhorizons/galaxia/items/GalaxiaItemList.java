@@ -4,10 +4,10 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.UNLOCALIZED_PREFIX;
 
 import java.util.function.Supplier;
 
-import com.gtnewhorizons.galaxia.items.armor.ItemSpaceSuit;
 import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.items.special.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.items.special.ItemModuleMover;
 import com.gtnewhorizons.galaxia.items.special.ItemTeleporter;
@@ -23,14 +23,10 @@ public enum GalaxiaItemList {
     DUST_THEIA("theia_dust"),
     MODULE_PLACER("module_placer", ItemHabitatBuilder::new),
     MODULE_MOVER("module_mover", ItemModuleMover::new),
-    SPACESUIT_HELMET("spacesuit_helmet",
-        () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
-    SPACESUIT_CHESTPLATE("spacesuit_chestplate",
-                         () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
-    SPACESUIT_LEGGINGS("spacesuit_leggings",
-                         () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
-    SPACESUIT_BOOTS("spacesuit_boots",
-                         () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1);
+    SPACESUIT_HELMET("spacesuit_helmet", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
+    SPACESUIT_CHESTPLATE("spacesuit_chestplate", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
+    SPACESUIT_LEGGINGS("spacesuit_leggings", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
+    SPACESUIT_BOOTS("spacesuit_boots", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1);
 
     private final String registryName;
     private final int maxStackSize;
