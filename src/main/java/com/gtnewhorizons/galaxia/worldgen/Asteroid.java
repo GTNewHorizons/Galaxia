@@ -10,6 +10,11 @@ import net.minecraft.world.gen.feature.WorldGenerator;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
+//TODO: GENERATE JAVADOCS - I don't quite understand this code and it is frankly too late to be pinging authors
+
+/**
+ * World Generator for Asteroids
+ */
 public class Asteroid extends WorldGenerator {
 
     private final int minimumSize;
@@ -18,6 +23,14 @@ public class Asteroid extends WorldGenerator {
     private final BlockMeta[] blockPalette;
     private final int craterFrequency;
 
+    /**
+     * Constructor to create a base world gen
+     * @param minimumSize Minimum asteroid radius
+     * @param maximumSize Maximum asteroid radius
+     * @param rarity Sparsity of asteroids in worldgen
+     * @param blockPalette Block paletter to be used in creation
+     * @param craterFrequency Frequency of craters on asteroids
+     */
     public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette, int craterFrequency) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
@@ -26,6 +39,15 @@ public class Asteroid extends WorldGenerator {
         this.craterFrequency = Math.max(1, craterFrequency);
     }
 
+    /**
+     * Generates an asteroid based on coordinates
+     * @param world The world to create in
+     * @param random Holds a Random instance
+     * @param baseX The asteroid's x origin
+     * @param baseY The asteroid's y origin
+     * @param baseZ The asteroid's z origin
+     * @return Boolean : True => Successful generation
+     */
     @Override
     public boolean generate(World world, Random random, int baseX, int baseY, int baseZ) {
         long startTotal = System.nanoTime();
@@ -126,6 +148,15 @@ public class Asteroid extends WorldGenerator {
         return true;
     }
 
+    /**
+     * Sets block in the world at set coordinates
+     * @param world The world to place the block in
+     * @param x Target x coordinate
+     * @param y Target y coordinate
+     * @param z Target z coordinate
+     * @param block The block to place
+     * @param meta Metadata of the block to place
+     */
     private void setBlockFast(World world, int x, int y, int z, Block block, int meta) {
         if (y < 0 || y > 255) return;
 
