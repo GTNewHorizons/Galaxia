@@ -3,6 +3,9 @@ package com.gtnewhorizons.galaxia.core.config;
 import com.gtnewhorizon.gtnhlib.config.Config;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
+/**
+ * Configuration class for the Galaxia Overlay Config (oxygen levels, temps etc.)
+ */
 @Config(modid = Galaxia.MODID, category = "Overlay")
 public class GalaxiaConfigOverlay {
 
