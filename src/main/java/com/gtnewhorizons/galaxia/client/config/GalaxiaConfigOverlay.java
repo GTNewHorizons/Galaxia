@@ -4,18 +4,18 @@ import com.gtnewhorizon.gtnhlib.config.Config;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
 @Config(modid = Galaxia.MODID, category = "Overlay")
+@Config.LangKey("galaxia.config.category.overlay")
 public class GalaxiaConfigOverlay {
 
     /**
      * HUD global offsets.
      */
-
-    @Config.Comment("Global horizontal offset (positive = right)")
+    @Config.LangKey("galaxia.config.overlay.horizontal_offset")
     @Config.DefaultInt(0)
     @Config.RangeInt(min = -200, max = 200)
     public static int hudOffsetX;
 
-    @Config.Comment("Global vertical offset (positive = down)")
+    @Config.LangKey("galaxia.config.overlay.vertical_offset")
     @Config.DefaultInt(0)
     @Config.RangeInt(min = -200, max = 200)
     public static int hudOffsetY;
@@ -24,37 +24,37 @@ public class GalaxiaConfigOverlay {
      * Bar orientation.
      */
 
-    @Config.Comment("Orientation of bars")
+    @Config.LangKey("galaxia.config.overlay.bars_orientation")
     @Config.DefaultEnum("HORIZONTAL")
     public static BarOrientation barOrientation;
 
     /**
      * Visibility and per-bar offsets.
      */
-    @Config.Comment("Show the Oxygen bar")
+    @Config.LangKey("galaxia.config.overlay.show_oxygen_bar")
     @Config.DefaultBoolean(true)
     public static boolean showOxygenBar;
 
-    @Config.Comment("Show the Temperature bar")
+    @Config.LangKey("galaxia.config.overlay.show_temperature_bar")
     @Config.DefaultBoolean(true)
     public static boolean showTemperatureBar;
 
-    @Config.Comment("Additional horizontal offset for Oxygen bar (pixels)")
+    @Config.LangKey("galaxia.config.overlay.oxygen_bar_horizontal_offset")
     @Config.DefaultInt(87)
     @Config.RangeInt(min = -300, max = 300)
     public static int oxygenOffsetX;
 
-    @Config.Comment("Additional vertical offset for Oxygen bar (pixels)")
+    @Config.LangKey("galaxia.config.overlay.oxygen_bar_vertical_offset")
     @Config.DefaultInt(0)
     @Config.RangeInt(min = -300, max = 300)
     public static int oxygenOffsetY;
 
-    @Config.Comment("Additional horizontal offset for Temperature bar (pixels)")
+    @Config.LangKey("galaxia.config.overlay.temperature_bar_horizontal_offset")
     @Config.DefaultInt(-87)
     @Config.RangeInt(min = -300, max = 300)
     public static int temperatureOffsetX;
 
-    @Config.Comment("Additional vertical offset for Temperature bar (pixels)")
+    @Config.LangKey("galaxia.config.overlay.temperature_bar_vertical_offset")
     @Config.DefaultInt(0)
     @Config.RangeInt(min = -300, max = 300)
     public static int temperatureOffsetY;
@@ -63,17 +63,17 @@ public class GalaxiaConfigOverlay {
      * Critical thresholds (logic layer, not rendering).
      */
 
-    @Config.Comment("Oxygen level below which the bar is considered critical (0.0 - 1.0)")
+    @Config.LangKey("Oxygen level below which the bar is considered critical")
     @Config.DefaultDouble(0.25D)
     @Config.RangeDouble(min = 0.0D, max = 1.0D)
     public static double lowOxygenThreshold;
 
-    @Config.Comment("Temperature below which it is considered too cold (0.0 - 1.0)")
+    @Config.LangKey("galaxia.config.overlay.temperature_bar_too_cold")
     @Config.DefaultDouble(0.35D)
     @Config.RangeDouble(min = 0.0D, max = 1.0D)
     public static double temperatureLowThreshold;
 
-    @Config.Comment("Temperature above which it is considered too hot (0.0 - 1.0)")
+    @Config.LangKey("galaxia.config.overlay.temperature_bar_too_hot")
     @Config.DefaultDouble(0.65D)
     @Config.RangeDouble(min = 0.0D, max = 1.0D)
     public static double temperatureHighThreshold;
@@ -82,12 +82,12 @@ public class GalaxiaConfigOverlay {
      * Pulse / warning visual settings.
      */
 
-    @Config.Comment("Pulse speed (higher = slower). sin(currentTimeMillis / pulseSpeed)")
+    @Config.LangKey("galaxia.config.overlay.pulse.speed")
     @Config.DefaultDouble(150.0D)
     @Config.RangeDouble(min = 50.0D, max = 500.0D)
     public static double pulseSpeed;
 
-    @Config.Comment("Pulse amplitude (0.0-0.5) – how strongly it dims")
+    @Config.LangKey("galaxia.config.overlay.pulse.amplitude")
     @Config.DefaultDouble(0.3D)
     @Config.RangeDouble(min = 0.0D, max = 0.5D)
     public static double pulseAmplitude;
@@ -98,22 +98,22 @@ public class GalaxiaConfigOverlay {
      * Set to the actual pixel size of your texture to make correct UV mapping.
      * Defaults match bar size so default behavior stays compatible.
      */
-    @Config.Comment("Oxygen texture width in pixels")
+    @Config.LangKey("galaxia.config.overlay.texture.oxygen_bar_width")
     @Config.DefaultInt(81)
     @Config.RangeInt(min = 1, max = 2048)
     public static int oxygenTextureWidth;
 
-    @Config.Comment("Oxygen texture height in pixels")
+    @Config.LangKey("galaxia.config.overlay.texture.oxygen_bar_height")
     @Config.DefaultInt(9)
     @Config.RangeInt(min = 1, max = 2048)
     public static int oxygenTextureHeight;
 
-    @Config.Comment("Temperature texture width in pixels")
+    @Config.LangKey("galaxia.config.overlay.texture.temperature_bar_width")
     @Config.DefaultInt(81)
     @Config.RangeInt(min = 1, max = 2048)
     public static int temperatureTextureWidth;
 
-    @Config.Comment("Temperature texture height in pixels")
+    @Config.LangKey("galaxia.config.overlay.texture.temperature_bar_height")
     @Config.DefaultInt(9)
     @Config.RangeInt(min = 1, max = 2048)
     public static int temperatureTextureHeight;
