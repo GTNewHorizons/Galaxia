@@ -2,15 +2,15 @@ package com.gtnewhorizons.galaxia.dimension.asteroidbelts;
 
 import net.minecraft.world.WorldProvider;
 
-import com.gtnewhorizons.galaxia.block.BlockVariant;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
-import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.block.base.GalaxiaBlock;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenBuilder;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 
@@ -23,7 +23,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     /**
      * Returns the ENUM of the dimension
-     * 
+     *
      * @return DimensionEnum of the planet
      */
     @Override
@@ -33,7 +33,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     /**
      * Overrides the Dimension builder to add effects, and other fields
-     * 
+     *
      * @param builder The DimensionBuilder for this dim
      * @return The same builder with fields added as required
      */
@@ -48,7 +48,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
     /**
      * Getter for the world provider class
-     * 
+     *
      * @return WorldProvider class
      */
     @Override
@@ -71,36 +71,36 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     12,
                     16,
                     32,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANDESITE.suffix),
-                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANORTHOSITE.suffix) },
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANDESITE.suffix),
+                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANORTHOSITE.suffix) },
                     1),
                 new Asteroid(
                     16,
                     20,
                     64,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix),
-                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix),
+                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
                     6),
                 new Asteroid(
                     20,
                     32,
                     128,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix),
-                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix),
+                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
                     8),
                 new Asteroid(
                     32,
                     64,
                     512,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix),
-                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix),
+                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix) },
                     12),
                 new Asteroid(
                     32,
                     64,
                     512,
-                    new BlockMeta[] { GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix),
-                        GalaxiaBlockBase.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix),
+                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix) },
                     4) };
             // Configure the world provider for this dimension
             WorldProviderBuilder.configure(this)
@@ -122,7 +122,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
 
         /**
          * Creates the biome generator for the FrozenBelt for a given biome ID
-         * 
+         *
          * @param id The ID of the biome to generate
          */
         public BiomeGenFrozenBelt(int id) {

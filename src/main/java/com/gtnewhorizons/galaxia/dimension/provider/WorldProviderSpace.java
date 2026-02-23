@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.provider;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

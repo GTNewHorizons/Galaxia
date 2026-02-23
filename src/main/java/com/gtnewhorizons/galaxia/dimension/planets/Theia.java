@@ -3,13 +3,13 @@ package com.gtnewhorizons.galaxia.dimension.planets;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.block.BlockVariant;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.block.base.GalaxiaBlock;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
@@ -61,13 +61,13 @@ public class Theia extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .biome(
-                createBiome("Theia Surface", GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)),
+                createBiome("Theia Surface", GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)),
                 0,
                 0)
             .biome(
                 createBiome(
                     "Theia Rough Surface",
-                    GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix)),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix)),
                 1,
                 0)
             .name(ENUM)

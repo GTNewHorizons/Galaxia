@@ -4,14 +4,14 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.block.BlockVariant;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.block.base.GalaxiaBlock;
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 
@@ -34,7 +34,7 @@ public abstract class BasePlanet {
 
     /**
      * Creates a Dimension Builder to add effects and fields to more simply
-     * 
+     *
      * @return The dimension builder configured with the planet enum etc.
      */
     protected DimensionBuilder createBuilder() {
@@ -49,7 +49,7 @@ public abstract class BasePlanet {
 
     /**
      * The start point of any building chain
-     * 
+     *
      * @param builder The dimension builder to chain on
      * @return The dimension builder ready for chaining
      */
@@ -59,7 +59,7 @@ public abstract class BasePlanet {
 
     /**
      * Configures the WorldProviderBuilder
-     * 
+     *
      * @param builder The world provider builder being configured
      */
     protected void configureProvider(WorldProviderBuilder builder) {
@@ -68,7 +68,7 @@ public abstract class BasePlanet {
 
     /**
      * Getter for DimensionDef
-     * 
+     *
      * @return DimensionDef
      */
     public DimensionDef getDef() {
@@ -77,7 +77,7 @@ public abstract class BasePlanet {
 
     /**
      * Abstract method to ensure all planets have a method to get the Enum
-     * 
+     *
      * @return DimensionEnum of planet instance
      */
     public abstract DimensionEnum getPlanetEnum();
@@ -93,11 +93,11 @@ public abstract class BasePlanet {
             .rainfall(0.99F)
             .topBlock(new BlockMeta(block, meta))
             .fillerBlock(Blocks.brick_block)
-            .snowBlock(GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix), 144)
+            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix), 144)
             .terrain(terrain)
             .ocean(
                 new BlockMeta(Blocks.glass, 1),
-                GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix),
+                GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix),
                 64,
                 new BlockMeta(Blocks.obsidian, 0),
                 32)

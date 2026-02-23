@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.modules;
+package com.gtnewhorizons.galaxia.block.tileentities;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +10,9 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.modules.ModuleType;
+import com.gtnewhorizons.galaxia.modules.ModuleTypes;
 
 public class TileEntityModuleController extends TileEntity {
 
@@ -67,7 +69,7 @@ public class TileEntityModuleController extends TileEntity {
                     int wy = yCoord + dy;
                     int wz = zCoord + dz;
 
-                    worldObj.setBlock(wx, wy, wz, GalaxiaBlocks.MODULE_SHELL.get());
+                    worldObj.setBlock(wx, wy, wz, GalaxiaBlocksEnum.MODULE_SHELL.get());
                     shellPositions.add(new int[] { wx, wy, wz });
                 }
             }
@@ -77,7 +79,7 @@ public class TileEntityModuleController extends TileEntity {
 
     public void destroyStructure() {
         for (int[] p : shellPositions) {
-            if (worldObj.getBlock(p[0], p[1], p[2]) == GalaxiaBlocks.MODULE_SHELL.get()) {
+            if (worldObj.getBlock(p[0], p[1], p[2]) == GalaxiaBlocksEnum.MODULE_SHELL.get()) {
                 worldObj.setBlockToAir(p[0], p[1], p[2]);
             }
         }

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.provider;
 
 import java.util.function.Supplier;
 
@@ -6,6 +6,8 @@ import net.minecraft.util.Vec3;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
+
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 
 /**
  * A builder class to generate a world provider with configuration

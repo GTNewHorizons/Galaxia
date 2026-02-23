@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.biome;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +45,7 @@ public class BiomeGenBuilder {
 
     /**
      * Instantiates a builder for a given biome ID
-     * 
+     *
      * @param id The biome ID
      */
     public BiomeGenBuilder(int id) {
@@ -54,7 +54,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set name of biome in builder
-     * 
+     *
      * @param name The required biome name
      * @return Configured builder
      */
@@ -65,7 +65,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the height of the biome
-     * 
+     *
      * @param low  The lowest point of the biome to generate
      * @param high The highest point of the biome to generate
      * @return Configured builder
@@ -77,7 +77,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the temperature of the biome
-     * 
+     *
      * @param temp The required temperature of the biome
      * @return Configured builder
      */
@@ -88,7 +88,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the rainfall of the biome
-     * 
+     *
      * @param rain The required rainfall
      * @return Configured builder
      */
@@ -99,7 +99,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the top block of the biome
-     * 
+     *
      * @param block The required top block
      * @return Configured builder
      */
@@ -109,7 +109,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the top block of the biome (Where the block has meta-data)
-     * 
+     *
      * @param block The required top block (with meta)
      * @return Configured builder
      */
@@ -120,7 +120,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the filler block for the biome
-     * 
+     *
      * @param block The required filler block
      * @return Configured builder
      */
@@ -130,7 +130,7 @@ public class BiomeGenBuilder {
 
     /**
      * Set the filler block for the biome (Where the block has meta-data)
-     * 
+     *
      * @param block The required filler block (with meta)
      * @return Configured builder
      */
@@ -141,7 +141,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the snow block for the biome
-     * 
+     *
      * @param blockMeta  The block to be used for snow (with meta)
      * @param snowHeight The height of the snow to generate
      * @return Configured builder
@@ -154,7 +154,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the ocean for the bioome
-     * 
+     *
      * @param oceanFiller  The filler block for the ocean to use (with meta)
      * @param oceanSurface The surface block of the ocean (water, ice layer etc.) [with meta]
      * @param oceanHeight  The height of the ocean (sea-level)
@@ -174,7 +174,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets whether to generate bedrock
-     * 
+     *
      * @param generateBedrock True = bedrock layer
      * @return Configured builder
      */
@@ -185,7 +185,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the required terrain configuration for the biome
-     * 
+     *
      * @param terrain The terrain configuration to use in the biome
      * @return Configured builder
      */
@@ -196,7 +196,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the mobs able to spawn in this biome
-     * 
+     *
      * @param list The list of possible spawns
      * @return Configured builder
      */
@@ -210,7 +210,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the general (passive) mobs that can spawn in this biome
-     * 
+     *
      * @param list The list of general mobs that can spawn
      * @return Configured builder
      */
@@ -221,7 +221,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the monster (hostile mobs) mobs that can spawn in this biome
-     * 
+     *
      * @param list The list of monster mobs that can spawn
      * @return Configured builder
      */
@@ -232,7 +232,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the water (squids etc.) mobs that can spawn in this biome
-     * 
+     *
      * @param list The list of water mobs that can spawn
      * @return Configured builder
      */
@@ -243,7 +243,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the cave (bats etc.) mobs that can spawn in this biome
-     * 
+     *
      * @param list The list of cave mobs that can spawn
      * @return Configured builder
      */
@@ -254,7 +254,7 @@ public class BiomeGenBuilder {
 
     /**
      * Sets the flowers that can spawn in this biome
-     * 
+     *
      * @param list The list of flowers that can spawn
      * @return Configured builder
      */
@@ -265,7 +265,7 @@ public class BiomeGenBuilder {
 
     /**
      * Builds the BiomeGenSpace based on given fields
-     * 
+     *
      * @return BiomeGenSpace configured from previous chained methods
      */
     public BiomeGenSpace build() {

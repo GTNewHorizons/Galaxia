@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.builder;
 
 import com.github.bsideup.jabel.Desugar;
 

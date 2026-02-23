@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.block;
+package com.gtnewhorizons.galaxia.block.base;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -6,6 +6,7 @@ import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 
+import com.gtnewhorizons.galaxia.block.planet.BlockPlanetGalaxia;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
@@ -15,18 +16,18 @@ import cpw.mods.fml.common.registry.GameRegistry;
 /**
  * The basic base that all Galaxia Blocks/Variants follow
  */
-public class GalaxiaBlockBase {
+public class GalaxiaBlock {
 
     private static final Map<DimensionEnum, BlockPlanetGalaxia> planetBlocks = new HashMap<>();
     private static final Map<DimensionEnum, Item> planetDustMap = new HashMap<>();
 
     /**
      * Registers the given block variants for a given planet
-     * 
+     *
      * @param planet   The planet intended to generate the block variants
      * @param variants The BlockVariants to register
      */
-    static void reg(DimensionEnum planet, BlockVariant... variants) {
+    public static void reg(DimensionEnum planet, BlockVariant... variants) {
         // Ensure there are actual variants
         if (variants.length == 0) {
             throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
@@ -40,12 +41,12 @@ public class GalaxiaBlockBase {
 
     /**
      * Registers the given block variants and dust item for a given planet
-     * 
+     *
      * @param planet   The planet intended to generate the dust items
      * @param dustEnum The ENUM for the dust being registered
      * @param variants The BlockVariants to register
      */
-    static void reg(DimensionEnum planet, GalaxiaItemList dustEnum, BlockVariant... variants) {
+    public static void reg(DimensionEnum planet, GalaxiaItemList dustEnum, BlockVariant... variants) {
         // Ensure there are actual variants
         if (variants.length == 0) {
             throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
@@ -66,7 +67,7 @@ public class GalaxiaBlockBase {
 
     /**
      * Returns the BlockMeta for a given variant of the planet blocks
-     * 
+     *
      * @param planet  The planet from which the blocks generate
      * @param variant The specific variant to get the meta of
      * @return The BlockMeta of the variant

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.block;
+package com.gtnewhorizons.galaxia.block.planet;
 
 import java.util.Random;
 
@@ -11,6 +11,7 @@ import net.minecraft.util.IIcon;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
 public class BlockPlanetGalaxia extends BlockFalling {

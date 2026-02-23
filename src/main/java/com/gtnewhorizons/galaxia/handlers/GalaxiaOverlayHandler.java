@@ -11,7 +11,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.TextureEnum;
-import com.gtnewhorizons.galaxia.client.config.GalaxiaConfigOverlay;
+import com.gtnewhorizons.galaxia.core.config.GalaxiaConfigOverlay;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 

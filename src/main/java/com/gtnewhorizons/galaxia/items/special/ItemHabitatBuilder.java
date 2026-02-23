@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.items;
+package com.gtnewhorizons.galaxia.items.special;
 
 import java.util.List;
 
@@ -16,11 +16,11 @@ import com.cleanroommc.modularui.factory.GuiFactories;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
 import com.gtnewhorizons.galaxia.client.gui.HabitatBuilderGui;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
-import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 /**
  * Class to contain the HabitatBuilder and GUI
@@ -40,7 +40,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Gets the selected module if there is one, if not returns the default module
-     * 
+     *
      * @param stack The item stack for the item
      * @return The selected module's string
      */
@@ -55,7 +55,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Sets the selected module NBT
-     * 
+     *
      * @param stack The item stack for the item
      * @param id    The ID of the module to set
      */
@@ -67,7 +67,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Handler for the right click action of the item (opening GUI etc.)
-     * 
+     *
      * @param stack  The item stack for the item
      * @param world  The world it is used in
      * @param player The player using the item
@@ -84,7 +84,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * The handler for when the item has been used (i.e. GUI screen closed by submitting
-     * 
+     *
      * @param stack  The item stack for the builder item
      * @param player The player using the item
      * @param world  The world it is being used in
@@ -114,7 +114,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
             return false;
         }
 
-        world.setBlock(px, py, pz, GalaxiaBlocks.MODULE_CONTROLLER.get());
+        world.setBlock(px, py, pz, GalaxiaBlocksEnum.MODULE_CONTROLLER.get());
 
         TileEntityModuleController te = (TileEntityModuleController) world.getTileEntity(px, py, pz);
         if (te != null) {
@@ -127,7 +127,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Creates the UI as a ModularPanel
-     * 
+     *
      * @param guiData        Data about the context of the GUI creation
      * @param guiSyncManager Sync handler for where widgets register
      * @param uiSettings     General settings for all of UI, not specific to this module
@@ -140,7 +140,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
     /**
      * Adds information to the item based on selected modules etc.
-     * 
+     *
      * @param stack    The item stack for the item
      * @param player   The player entity using the item
      * @param list     The list of information to add to

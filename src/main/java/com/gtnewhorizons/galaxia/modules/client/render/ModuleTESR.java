@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.modules;
+package com.gtnewhorizons.galaxia.modules.client.render;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
@@ -9,7 +9,9 @@ import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
-import com.gtnewhorizons.galaxia.items.ItemModuleMover;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.items.special.ItemModuleMover;
+import com.gtnewhorizons.galaxia.modules.ModuleType;
 
 public class ModuleTESR extends TileEntitySpecialRenderer {
 

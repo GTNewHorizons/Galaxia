@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.client.config;
+package com.gtnewhorizons.galaxia.core.config;
 
 import com.gtnewhorizon.gtnhlib.config.Config;
 import com.gtnewhorizons.galaxia.core.Galaxia;

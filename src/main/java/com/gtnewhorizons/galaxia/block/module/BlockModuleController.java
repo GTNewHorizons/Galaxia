@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.modules;
+package com.gtnewhorizons.galaxia.block.module;
 
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
@@ -10,7 +10,11 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.items.ItemModuleMover;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.items.special.ItemModuleMover;
+import com.gtnewhorizons.galaxia.modules.ModuleConfig;
+import com.gtnewhorizons.galaxia.modules.ModuleType;
+import com.gtnewhorizons.galaxia.modules.ModuleTypes;
 
 public class BlockModuleController extends BlockContainer {
 

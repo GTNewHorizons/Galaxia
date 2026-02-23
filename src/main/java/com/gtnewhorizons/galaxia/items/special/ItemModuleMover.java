@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.items;
+package com.gtnewhorizons.galaxia.items.special;
 
 import java.util.List;
 
@@ -11,8 +11,8 @@ import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
-import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
 
 /**
  * Item to help with moving modules in world
@@ -27,7 +27,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Gets the coordinates of a selected module / null if none selected
-     * 
+     *
      * @param stack The item stack for the item
      * @return An integer array holding the position, or null if no selected
      */
@@ -44,7 +44,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Sets the selected position in the NBT data
-     * 
+     *
      * @param stack The item stack for the item
      * @param x     The x coordinate of the module
      * @param y     The y coordinate of the module
@@ -60,7 +60,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Clears the current selection from NBT data
-     * 
+     *
      * @param stack The item stack for the item
      */
     public static void clearSelected(ItemStack stack) {
@@ -74,7 +74,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Selects a module based on the given coordinates
-     * 
+     *
      * @param world  The world in which the item is used
      * @param x      The x coordinates to get the module from
      * @param y      The y coordinates to get the module from
@@ -89,7 +89,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Handler for when the item is used
-     * 
+     *
      * @param stack  The item stack for the item
      * @param player The player entity using the item
      * @param world  The world in which the item is used
@@ -142,7 +142,7 @@ public class ItemModuleMover extends Item {
             oldTe.destroyStructure();
             world.setBlockToAir(selected[0], selected[1], selected[2]);
 
-            world.setBlock(nx, ny, nz, GalaxiaBlocks.MODULE_CONTROLLER.get());
+            world.setBlock(nx, ny, nz, GalaxiaBlocksEnum.MODULE_CONTROLLER.get());
             TileEntityModuleController newTe = (TileEntityModuleController) world.getTileEntity(nx, ny, nz);
             if (newTe != null) {
                 newTe.setModule(moduleId);
@@ -159,7 +159,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Handler for the start of one of the blocks being broken - prevents player from destroying modules in survival
-     * 
+     *
      * @param itemstack The current ItemStack
      * @param x         The X Position
      * @param y         The Y Position
@@ -172,7 +172,7 @@ public class ItemModuleMover extends Item {
         if (!player.capabilities.isCreativeMode) return false;
 
         World world = player.worldObj;
-        if (world.getBlock(x, y, z) == GalaxiaBlocks.MODULE_CONTROLLER.get()) {
+        if (world.getBlock(x, y, z) == GalaxiaBlocksEnum.MODULE_CONTROLLER.get()) {
             selectModule(world, x, y, z, player, itemstack);
         }
         return true;
@@ -180,7 +180,7 @@ public class ItemModuleMover extends Item {
 
     /**
      * Adds information to the stat collector about the module
-     * 
+     *
      * @param stack    The item stack of the item
      * @param player   The player entity using the item
      * @param list     The list of information to add to

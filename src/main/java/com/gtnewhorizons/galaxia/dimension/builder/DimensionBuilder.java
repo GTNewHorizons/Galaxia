@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.builder;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -8,6 +8,8 @@ import java.util.Map;
 import net.minecraft.world.WorldProvider;
 import net.minecraftforge.common.DimensionManager;
 
+import com.gtnewhorizons.galaxia.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.builder;
 
 /**
  * Builder class to get a list of effects on each planet as required

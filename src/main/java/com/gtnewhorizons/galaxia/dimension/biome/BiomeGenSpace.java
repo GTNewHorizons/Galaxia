@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.dimension;
+package com.gtnewhorizons.galaxia.dimension.biome;
 
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -24,7 +24,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Creates a biome generator and configures it based on the provided builder
-     * 
+     *
      * @param id The biome ID
      * @param b  The configured (hopefully) biome builder
      */
@@ -63,7 +63,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for bedrock generation
-     * 
+     *
      * @return boolean - True => generate bedrock
      */
     public boolean generateBedrock() {
@@ -72,7 +72,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for top block meta
-     * 
+     *
      * @return the top block meta
      */
     public int getTopBlockMeta() {
@@ -81,7 +81,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for filler block meta
-     * 
+     *
      * @return the filler block meta
      */
     public int getFillerBlockMeta() {
@@ -90,7 +90,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for terrain configuration
-     * 
+     *
      * @return the terrain configuration
      */
     public TerrainConfiguration getTerrain() {
@@ -99,7 +99,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for the snow block
-     * 
+     *
      * @return the snow block
      */
     public BlockMeta getSnowBlock() {
@@ -108,7 +108,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for snow height
-     * 
+     *
      * @return the snow height
      */
     public int getSnowHeight() {
@@ -117,7 +117,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for ocean height
-     * 
+     *
      * @return the ocean height
      */
     public int getOceanHeight() {
@@ -126,7 +126,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for ocean filler block
-     * 
+     *
      * @return the ocean filler block
      */
     public BlockMeta getOceanFiller() {
@@ -135,7 +135,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for ocean surface block
-     * 
+     *
      * @return the ocean surface block
      */
     public BlockMeta getOceanSurface() {
@@ -144,7 +144,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for seabed block
-     * 
+     *
      * @return the seabed block
      */
     public BlockMeta getSeabed() {
@@ -153,7 +153,7 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     /**
      * Getter for seabed height
-     * 
+     *
      * @return the seabed height
      */
     public int getSeabedHeight() {

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.block;
+package com.gtnewhorizons.galaxia.block.base;
 
 import java.util.List;
 
@@ -9,6 +9,7 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 
+import com.gtnewhorizons.galaxia.block.planet.BlockPlanetGalaxia;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
 /**
@@ -27,7 +28,7 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Gets the metadata of the item block (damage)
-     * 
+     *
      * @param damage the damage to the item block
      * @return Metadata of the item block
      */
@@ -38,7 +39,7 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Adds all metadata variants of the item block to the given list (used in creative tab)
-     * 
+     *
      * @param item The base item block to register variants
      * @param tab  The creative tab for the galaxia blocks
      * @param list The list of all meta-variants
@@ -54,7 +55,7 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Gets the unlocalized name of the provided ItemStack for registry
-     * 
+     *
      * @param stack The item stack for which the name is required
      * @return Unlocalized name of the item stack
      */
@@ -67,7 +68,7 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
 
     /**
      * Capitalizes the first letter of a string
-     * 
+     *
      * @param s The string to capitalized
      * @return Capitalized string
      */
