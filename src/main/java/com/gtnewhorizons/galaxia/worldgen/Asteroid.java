@@ -10,8 +10,6 @@ import net.minecraft.world.gen.feature.WorldGenerator;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
-// TODO: GENERATE JAVADOCS - I don't quite understand this code and it is frankly too late to be pinging authors
-
 /**
  * World Generator for Asteroids
  */
@@ -25,7 +23,7 @@ public class Asteroid extends WorldGenerator {
 
     /**
      * Constructor to create a base world gen
-     * 
+     *
      * @param minimumSize     Minimum asteroid radius
      * @param maximumSize     Maximum asteroid radius
      * @param rarity          Sparsity of asteroids in worldgen
@@ -42,7 +40,7 @@ public class Asteroid extends WorldGenerator {
 
     /**
      * Generates an asteroid based on coordinates
-     * 
+     *
      * @param world  The world to create in
      * @param random Holds a Random instance
      * @param baseX  The asteroid's x origin
@@ -152,7 +150,7 @@ public class Asteroid extends WorldGenerator {
 
     /**
      * Sets block in the world at set coordinates
-     * 
+     *
      * @param world The world to place the block in
      * @param x     Target x coordinate
      * @param y     Target y coordinate
@@ -181,6 +179,14 @@ public class Asteroid extends WorldGenerator {
         chunk.isModified = true;
     }
 
+    /**
+     * Carves craters by generating a sphere used to cut out sections of the asteroid
+     * This process happens entirely within the data-generation stage
+     *
+     * @param data Existing asteroid block data
+     * @param rand Randomizer used to roughen the crater's outline
+     * @param diameter Diameter of the crater
+     */
     private void carveCraterInMemory(byte[][][] data, Random rand, int diameter) {
         int longAxis = rand.nextInt(3);
         int craterX = getCraterDistance(rand, diameter, 0, longAxis);
@@ -206,6 +212,18 @@ public class Asteroid extends WorldGenerator {
         }
     }
 
+    /**
+     * Calculates whether a block should be placed at a specific coordinate
+     * Adds all relevant interpolation values together to determine fullness
+     * Location counts as valid if fullness reaches one
+     *
+     * @param positions Coordinates of all interpolation values
+     * @param values Values of interpolation points
+     * @param x Target x coordinate
+     * @param y Target y coordinate
+     * @param z Target z coordinate
+     * @return Fullness value ranging between zero and one
+     */
     private float calculateFullness(int[][] positions, float[] values, int x, int y, int z) {
         float fullness = 0;
         for (int i = 0; i < values.length; i++) {
@@ -215,6 +233,15 @@ public class Asteroid extends WorldGenerator {
         return fullness;
     }
 
+    /**
+     * Calculates how relevant an interpolation point is based on distance
+     *
+     * @param loc Location of the interpolation point
+     * @param x Target x coordinate
+     * @param y Target y coordinate
+     * @param z Target z coordinate
+     * @return Significance multiplier between zero (exclusive) and one (inclusive)
+     */
     private float calculateInterpolationSignificance(int[] loc, int x, int y, int z) {
         int dx = Math.abs(loc[0] - x);
         if (dx > 16) return 0;
@@ -226,6 +253,18 @@ public class Asteroid extends WorldGenerator {
         return 1 / (dist + 1);
     }
 
+    /**
+     * Calculates a suitable distance value from the center of the asteroid along a single axis
+     * Can calculate position variation on the asteroid's surface or distance from the center
+     *
+     * @param random Randomizer needed for variation in the results
+     * @param craterDistance Distance from the center
+     * @param axis Determines which axis is being calculated (0 = x, 1 = y, 2 = z)
+     * @param longAxis Axis which should determine distance from center
+     *                 If the specified axis is not equal to this value, then it will be treated
+     *                 as position variation on the asteroid's surface
+     * @return Distance from the center
+     */
     private int getCraterDistance(Random random, int craterDistance, int axis, int longAxis) {
         if (axis == longAxis) {
             return getLongCraterDistance(random, craterDistance);
@@ -233,10 +272,24 @@ public class Asteroid extends WorldGenerator {
         return getShortCraterDistance(random, craterDistance);
     }
 
+    /**
+     * Calculates position variation on the asteroid's surface
+     *
+     * @param random Randomizer needed for variation in the results
+     * @param craterDistance Maximum distance from the center
+     * @return Position variation value
+     */
     private int getShortCraterDistance(Random random, int craterDistance) {
         return random.nextInt(1 + craterDistance);
     }
 
+    /**
+     * Calculates distance from the center of the asteroid
+     *
+     * @param random Randomizer needed for variation in the results
+     * @param craterDistance Minimum distance from the center
+     * @return Distance from the center
+     */
     private int getLongCraterDistance(Random random, int craterDistance) {
         if (random.nextBoolean()) {
             return random.nextInt(craterDistance / 16 + 1);
