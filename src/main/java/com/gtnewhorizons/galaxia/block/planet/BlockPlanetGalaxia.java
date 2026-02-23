@@ -52,19 +52,19 @@ public class BlockPlanetGalaxia extends BlockFalling {
     @Override
     public String getHarvestTool(int meta) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        return variants[meta].harvestTool;
+        return variants[meta].harvestTool();
     }
 
     @Override
     public int getHarvestLevel(int meta) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        return variants[meta].harvestLevel;
+        return variants[meta].harvestLevel();
     }
 
     @Override
     public Item getItemDropped(int meta, Random rand, int fortune) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        if (this.dust != null && variants[meta].dropsDust) {
+        if (this.dust != null && variants[meta].dropsDust()) {
             return this.dust;
         }
         return Item.getItemFromBlock(this);
@@ -73,7 +73,7 @@ public class BlockPlanetGalaxia extends BlockFalling {
     @Override
     public int quantityDropped(int meta, int fortune, Random random) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        if (this.dust != null && variants[meta].dropsDust) {
+        if (this.dust != null && variants[meta].dropsDust()) {
             return 2 + random.nextInt(3 + fortune);
         }
         return 1;
@@ -81,20 +81,20 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     public String getVariantSuffix(int meta) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        return variants[meta].suffix;
+        return variants[meta].suffix();
     }
 
     @Override
     public float getBlockHardness(World world, int x, int y, int z) {
         int meta = MathHelper.clamp_int(world.getBlockMetadata(x, y, z), 0, variants.length - 1);
-        return variants[meta].hardness;
+        return variants[meta].hardness();
     }
 
     @Override
     public void registerBlockIcons(IIconRegister reg) {
         icons = new IIcon[variants.length];
         for (int i = 0; i < variants.length; i++) {
-            String texture = "galaxia:" + planetName + capitalize(variants[i].suffix);
+            String texture = "galaxia:" + planetName + capitalize(variants[i].suffix());
             icons[i] = reg.registerIcon(texture);
         }
     }
@@ -107,7 +107,7 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     private boolean shouldFall(int meta) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        return variants[meta].falling;
+        return variants[meta].falling();
     }
 
     @Override

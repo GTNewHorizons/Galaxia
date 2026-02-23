@@ -1,26 +1,13 @@
 package com.gtnewhorizons.galaxia.block.base;
 
+import com.github.bsideup.jabel.Desugar;
+
 /**
  * Defines the different variants of a block, and the characteristics they should have
  */
-public class BlockVariant {
-
-    public final String suffix;
-    public final float hardness;
-    public final boolean falling;
-    public final String harvestTool;
-    public final int harvestLevel;
-    public final boolean dropsDust;
-
-    private BlockVariant(String suffix, float hardness, boolean falling, String harvestTool, int harvestLevel,
-        boolean dropsDust) {
-        this.suffix = suffix;
-        this.hardness = hardness;
-        this.falling = falling;
-        this.harvestTool = harvestTool;
-        this.harvestLevel = harvestLevel;
-        this.dropsDust = dropsDust;
-    }
+@Desugar
+public record BlockVariant(String suffix, float hardness, boolean falling, String harvestTool, int harvestLevel,
+    boolean dropsDust) {
 
     /**
      * Registers the block variant as having similar characteristics to vanilla stone

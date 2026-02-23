@@ -88,7 +88,7 @@ public class Hemateria extends BasePlanet {
             .biome(
                 createBiome(
                     "Hemateria Hills",
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix)
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -102,7 +102,7 @@ public class Hemateria extends BasePlanet {
             .biome(
                 createBiome(
                     "Hemateria Dune Hills",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)

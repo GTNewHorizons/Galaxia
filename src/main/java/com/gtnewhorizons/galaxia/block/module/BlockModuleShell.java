@@ -7,8 +7,6 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
-import com.gtnewhorizons.galaxia.modules.ModuleConfig;
-
 public class BlockModuleShell extends Block {
 
     public BlockModuleShell() {
@@ -21,22 +19,22 @@ public class BlockModuleShell extends Block {
 
     @Override
     public boolean renderAsNormalBlock() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
     public int getRenderType() {
-        return ModuleConfig.DEBUG_RENDER ? 0 : -1;
+        return -1;
     }
 
     @Override
     public boolean isOpaqueCube() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
     public boolean isNormalCube() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
