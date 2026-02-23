@@ -13,6 +13,11 @@ public enum Colors {
     SubTitle(0xAAAAFF),
     Value(0xFFFFFF),
 
+    OxygenBar(0x88FFFF),
+    TemperatureBarBlank(0xFFFFFF),
+    TemperatureBarHot(0xFF4444),
+    TemperatureBarCold(0x4488FF),
+
     IconGreen(0x55FF55);
     // Add more colors here
 

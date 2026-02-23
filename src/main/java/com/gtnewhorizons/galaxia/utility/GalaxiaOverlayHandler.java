@@ -67,7 +67,7 @@ public class GalaxiaOverlayHandler {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
         if (GalaxiaConfigOverlay.showOxygenBar) {
-            drawVerticalBar(ox, oy, oxygen, OXYGEN_BG, OXYGEN_FILL, 0x88FFFF);
+            drawVerticalBar(ox, oy, oxygen, OXYGEN_BG, OXYGEN_FILL, Colors.OxygenBar.getColor());
         }
         if (GalaxiaConfigOverlay.showTemperatureBar) {
             drawVerticalBar(tx, ty, temp, TEMP_BG, TEMP_FILL, getTempColor(temp));
@@ -97,9 +97,9 @@ public class GalaxiaOverlayHandler {
     }
 
     private int getTempColor(float temp) {
-        if (temp > 0.65f) return 0xFF4444;
-        if (temp < 0.35f) return 0x4488FF;
-        return 0xFFFFFF;
+        if (temp > 0.65f) return Colors.TemperatureBarHot.getColor();
+        if (temp < 0.35f) return Colors.TemperatureBarCold.getColor();
+        return Colors.TemperatureBarBlank.getColor();
     }
 
     private float getOxygenLevel(EntityPlayer p) {
