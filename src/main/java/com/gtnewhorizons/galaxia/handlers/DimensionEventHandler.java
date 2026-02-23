@@ -6,7 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.items.armor.ItemSpaceSuit;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.server.MinecraftServer;
@@ -56,6 +58,14 @@ public class DimensionEventHandler {
                     .effects(),
                 player);
         }
+    }
+
+    public static boolean isWearingFullSuit(EntityPlayer player) {
+        for (int i = 0; i < 4; i++) {
+            ItemStack piece = player.inventory.armorInventory[i];
+            if (piece == null || !(piece.getItem() instanceof ItemSpaceSuit)) return false;
+        }
+        return true;
     }
 
     /**
@@ -141,9 +151,20 @@ public class DimensionEventHandler {
      */
     private void applyTemperature(EffectDef def, EntityPlayer player) {
         // Temp until space suit added
-        int acceptableMin = 268; // -5 Celsius
-        int acceptableMax = 323; // 50 Celsius
+        final int DEFAULT_MIN = 268; // -5 Celsius
+        final int DEFAULT_MAX = 323; // 50 Celsius
 
+        int acceptableMax;
+        int acceptableMin;
+
+        if (isWearingFullSuit(player)) {
+            ItemStack helmet = player.inventory.armorInventory[0];
+            acceptableMin = ItemSpaceSuit.getMinTemp(helmet);
+            acceptableMax = ItemSpaceSuit.getMaxTemp(helmet);
+        } else {
+            acceptableMin = DEFAULT_MIN;
+            acceptableMax = DEFAULT_MAX;
+        }
         if (def.baseTemp() < acceptableMax && def.baseTemp() > acceptableMin) return;
 
         int diff;
