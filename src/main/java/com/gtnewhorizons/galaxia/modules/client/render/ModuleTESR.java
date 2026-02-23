@@ -13,8 +13,20 @@ import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
 import com.gtnewhorizons.galaxia.items.special.ItemModuleMover;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 
+/**
+ * Custom implementation of TESR for rocket modules specifically
+ */
 public class ModuleTESR extends TileEntitySpecialRenderer {
 
+    /**
+     * Renders a tile entity at a given position
+     * 
+     * @param tile         The tile entity to render
+     * @param x            TE x coordinate
+     * @param y            TE y coordinate
+     * @param z            TE z coordinate
+     * @param partialTicks How far through current tick
+     */
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (!(tile instanceof TileEntityModuleController ctrl)) return;
@@ -55,6 +67,12 @@ public class ModuleTESR extends TileEntitySpecialRenderer {
         }
     }
 
+    /**
+     * Gets if the tile entity is selected
+     * 
+     * @param ctrl The Tile Entity controller
+     * @return Boolean : True => is selected
+     */
     private boolean isSelected(TileEntityModuleController ctrl) {
         EntityPlayer player = Minecraft.getMinecraft().thePlayer;
         if (player == null) return false;

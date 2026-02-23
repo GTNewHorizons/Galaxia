@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.modules;
 
+/**
+ * Enum for module types
+ */
 public enum ModuleTypes {
 
     HUB_3X3(ModuleType.builder("hub_3x3")
@@ -28,10 +31,21 @@ public enum ModuleTypes {
         this.data = data;
     }
 
+    /**
+     * Get ID of ENUM
+     * 
+     * @return ID String
+     */
     public String getId() {
         return data.getId();
     }
 
+    /**
+     * Get the module type by ID
+     * 
+     * @param id The ID string
+     * @return Module Type defined by ID
+     */
     public static ModuleType byId(String id) {
         if (id == null) return null;
         for (ModuleTypes m : values()) {

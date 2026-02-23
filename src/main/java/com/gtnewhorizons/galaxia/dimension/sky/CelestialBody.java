@@ -5,6 +5,8 @@ import net.minecraft.util.ResourceLocation;
 import com.github.bsideup.jabel.Desugar;
 
 /**
+ * Record class to store a celestial body
+ * 
  * @param texture            object texture location
  * @param size               size on a skybox
  * @param distance           relative distance to player, only changes render order, shouldn't be negative
