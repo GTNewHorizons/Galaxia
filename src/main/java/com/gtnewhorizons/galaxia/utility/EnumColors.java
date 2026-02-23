@@ -9,7 +9,7 @@ import cpw.mods.fml.common.FMLLog;
 /**
  * ENUM for custom colours to be implemented in UIs and such
  */
-public enum Colors {
+public enum EnumColors {
 
     Transparent(0xFF),
     Title(0xFFFFFF),
@@ -24,7 +24,7 @@ public enum Colors {
     private static final String PREFIX = "galaxia.color.override.";
     private final int defaultColor;
 
-    Colors(int defaultColor) {
+    EnumColors(int defaultColor) {
         this.defaultColor = defaultColor;
     }
 

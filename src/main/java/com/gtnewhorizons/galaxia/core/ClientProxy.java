@@ -5,7 +5,7 @@ import net.minecraftforge.common.MinecraftForge;
 import com.gtnewhorizon.gtnhlib.config.ConfigException;
 import com.gtnewhorizon.gtnhlib.config.ConfigurationManager;
 import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
-import com.gtnewhorizons.galaxia.core.config.GalaxiaConfigOverlay;
+import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.modules.client.render.ModuleTESR;
 
@@ -21,7 +21,7 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         try {
-            ConfigurationManager.registerConfig(GalaxiaConfigOverlay.class);
+            ConfigurationManager.registerConfig(ConfigOverlay.class);
         } catch (ConfigException e) {
             throw new RuntimeException("Failed to register Galaxia config", e);
         }
