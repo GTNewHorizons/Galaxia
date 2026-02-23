@@ -12,6 +12,7 @@ public class ModuleRegistry {
 
     /**
      * Registers a new module type to the local registry
+     * 
      * @param type The module type to register
      */
     public static void register(ModuleType type) {
@@ -20,6 +21,7 @@ public class ModuleRegistry {
 
     /**
      * Gets the module from the registry with given ID
+     * 
      * @param id The ID to get
      * @return The Module Type with that ID
      */

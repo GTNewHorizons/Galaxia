@@ -20,10 +20,11 @@ public class ModuleTESR extends TileEntitySpecialRenderer {
 
     /**
      * Renders a tile entity at a given position
-     * @param tile The tile entity to render
-     * @param x TE x coordinate
-     * @param y TE y coordinate
-     * @param z TE z coordinate
+     * 
+     * @param tile         The tile entity to render
+     * @param x            TE x coordinate
+     * @param y            TE y coordinate
+     * @param z            TE z coordinate
      * @param partialTicks How far through current tick
      */
     @Override
@@ -68,6 +69,7 @@ public class ModuleTESR extends TileEntitySpecialRenderer {
 
     /**
      * Gets if the tile entity is selected
+     * 
      * @param ctrl The Tile Entity controller
      * @return Boolean : True => is selected
      */

@@ -44,6 +44,7 @@ public class ModuleType {
 
     /**
      * Creates a new builder for the module type to be created with
+     * 
      * @param id The ID of the new module
      * @return A new unconfigured builder
      */
@@ -53,6 +54,7 @@ public class ModuleType {
 
     /**
      * Getter for ID
+     * 
      * @return ID string
      */
     public String getId() {
@@ -61,6 +63,7 @@ public class ModuleType {
 
     /**
      * Getter for Internal X size
+     * 
      * @return Internal X size
      */
     public int getInternalSizeX() {
@@ -69,6 +72,7 @@ public class ModuleType {
 
     /**
      * Getter for Internal Y size
+     * 
      * @return Internal Y size
      */
     public int getInternalSizeY() {
@@ -77,6 +81,7 @@ public class ModuleType {
 
     /**
      * Getter for Internal Z size
+     * 
      * @return Internal Z size
      */
     public int getInternalSizeZ() {
@@ -85,6 +90,7 @@ public class ModuleType {
 
     /**
      * Getter for Wall Thickness
+     * 
      * @return Wall Thickness
      */
     public int getWallThickness() {
@@ -93,6 +99,7 @@ public class ModuleType {
 
     /**
      * Getter for the X offset
+     * 
      * @return The X offset
      */
     public double getOffsetX() {
@@ -101,6 +108,7 @@ public class ModuleType {
 
     /**
      * Getter for the Y offset
+     * 
      * @return The Y offset
      */
     public double getOffsetY() {
@@ -109,6 +117,7 @@ public class ModuleType {
 
     /**
      * Getter for the Z offset
+     * 
      * @return The Z offset
      */
     public double getOffsetZ() {
@@ -117,6 +126,7 @@ public class ModuleType {
 
     /**
      * Getter for the scale of the module
+     * 
      * @return The scale of the module
      */
     public float getScale() {
@@ -125,6 +135,7 @@ public class ModuleType {
 
     /**
      * Getter for the texture location
+     * 
      * @return The texture ResourceLocation
      */
     public ResourceLocation getTextureLocation() {
@@ -136,6 +147,7 @@ public class ModuleType {
 
     /**
      * Getter for the model of the type
+     * 
      * @return The model of the type
      */
     @SideOnly(Side.CLIENT)
@@ -148,6 +160,7 @@ public class ModuleType {
 
     /**
      * Getter for the bounding box of the model
+     * 
      * @return The bounding box of the model
      */
     public AxisAlignedBB getModelBounds() {
@@ -176,6 +189,7 @@ public class ModuleType {
 
         /**
          * Sets the internal size
+         * 
          * @param x X size
          * @param y Y size
          * @param z Z size
@@ -190,6 +204,7 @@ public class ModuleType {
 
         /**
          * Sets the wall thickness
+         * 
          * @param t Desired wall thickness
          * @return Configured builder
          */
@@ -200,6 +215,7 @@ public class ModuleType {
 
         /**
          * Sets the model of the module
+         * 
          * @param path Desired model path
          * @return Configured builder
          */
@@ -210,6 +226,7 @@ public class ModuleType {
 
         /**
          * Sets the texture path
+         * 
          * @param path The texture path
          * @return Configured builder
          */
@@ -220,6 +237,7 @@ public class ModuleType {
 
         /**
          * Sets the offset
+         * 
          * @param x The x offset
          * @param y The y offset
          * @param z The z offset
@@ -234,6 +252,7 @@ public class ModuleType {
 
         /**
          * Sets the scale of the model
+         * 
          * @param scale The desired scale multiplier
          * @return Configured builder
          */
@@ -244,6 +263,7 @@ public class ModuleType {
 
         /**
          * Sets the bounds of the model
+         * 
          * @param minX Minimum X bound
          * @param minY Minimum Y bound
          * @param minZ Minimum Z bound
@@ -264,6 +284,7 @@ public class ModuleType {
 
         /**
          * Builds the Module Type based on the builder fields
+         * 
          * @return ModuleType with configurations
          * @throws IllegalStateException - Model location or texture location are null
          */

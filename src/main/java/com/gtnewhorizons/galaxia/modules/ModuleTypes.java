@@ -33,6 +33,7 @@ public enum ModuleTypes {
 
     /**
      * Get ID of ENUM
+     * 
      * @return ID String
      */
     public String getId() {
@@ -41,6 +42,7 @@ public enum ModuleTypes {
 
     /**
      * Get the module type by ID
+     * 
      * @param id The ID string
      * @return Module Type defined by ID
      */
