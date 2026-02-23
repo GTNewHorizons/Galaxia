@@ -10,7 +10,7 @@ import org.lwjgl.input.Keyboard;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.utility.ColorEnum;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public class GuiPlanetTeleporter extends GuiScreen {
 
@@ -42,12 +42,12 @@ public class GuiPlanetTeleporter extends GuiScreen {
         for (int i = 0; i < planets.length; i++) {
             DimensionEnum planet = planets[i];
             GuiButton planetButton = new GuiButton(
-                i,
-                this.width / 2 - buttonWidth / 2,
-                startY + i * spacing,
-                buttonWidth,
-                buttonHeight,
-                planet.name());
+                    i,
+                    this.width / 2 - buttonWidth / 2,
+                    startY + i * spacing,
+                    buttonWidth,
+                    buttonHeight,
+                    planet.name());
             this.buttonList.add(planetButton);
         }
 
@@ -68,12 +68,12 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
         // Add the teleport button
         this.teleportButton = new GuiButton(
-            200,
-            this.width / 2 - 100,
-            fieldY + 80,
-            200,
-            20,
-            StatCollector.translateToLocal("galaxia.gui.planet_teleporter.teleport"));
+                200,
+                this.width / 2 - 100,
+                fieldY + 80,
+                200,
+                20,
+                StatCollector.translateToLocal("galaxia.gui.planet_teleporter.teleport"));
         this.buttonList.add(teleportButton);
     }
 
@@ -100,7 +100,8 @@ public class GuiPlanetTeleporter extends GuiScreen {
                     obj.enabled = planets[obj.id] != selectedPlanet;
                 }
             }
-            // If button is teleporter, set the desired coordinates and send a teleport request packet
+            // If button is teleporter, set the desired coordinates and send a teleport
+            // request packet
         } else if (button.id == 200) {
             try {
                 double x = Double.parseDouble(xField.getText());
@@ -109,7 +110,8 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
                 Galaxia.channel.sendToServer(new TeleportRequestPacket(selectedPlanet.getId(), x, y, z));
                 this.mc.displayGuiScreen(null);
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
     }
 
@@ -118,44 +120,46 @@ public class GuiPlanetTeleporter extends GuiScreen {
      * 
      * @param mouseX       Current cursor x position
      * @param mouseY       Current cursor y position
-     * @param partialTicks The current partial tick (how far user is between current game tick and next)
+     * @param partialTicks The current partial tick (how far user is between current
+     *                     game tick and next)
      */
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
 
         this.drawCenteredString(
-            this.fontRendererObj,
-            StatCollector.translateToLocal("galaxia.gui.planet_teleporter.title"),
-            this.width / 2,
-            15,
-            ColorEnum.Title.getColor());
+                this.fontRendererObj,
+                StatCollector.translateToLocal("galaxia.gui.planet_teleporter.title"),
+                this.width / 2,
+                15,
+                EnumColors.Title.getColor());
 
         this.drawCenteredString(
-            this.fontRendererObj,
-            StatCollector.translateToLocalFormatted("galaxia.gui.planet_teleporter.selected", selectedPlanet.name()),
-            this.width / 2,
-            30,
-            ColorEnum.SubTitle.getColor());
+                this.fontRendererObj,
+                StatCollector.translateToLocalFormatted("galaxia.gui.planet_teleporter.selected",
+                        selectedPlanet.name()),
+                this.width / 2,
+                30,
+                EnumColors.SubTitle.getColor());
 
         this.drawString(
-            this.fontRendererObj,
-            "X:",
-            this.width / 2 - 80,
-            xField.yPosition + 6,
-            ColorEnum.Value.getColor());
+                this.fontRendererObj,
+                "X:",
+                this.width / 2 - 80,
+                xField.yPosition + 6,
+                EnumColors.Value.getColor());
         this.drawString(
-            this.fontRendererObj,
-            "Y:",
-            this.width / 2 - 80,
-            yField.yPosition + 6,
-            ColorEnum.Value.getColor());
+                this.fontRendererObj,
+                "Y:",
+                this.width / 2 - 80,
+                yField.yPosition + 6,
+                EnumColors.Value.getColor());
         this.drawString(
-            this.fontRendererObj,
-            "Z:",
-            this.width / 2 - 80,
-            zField.yPosition + 6,
-            ColorEnum.Value.getColor());
+                this.fontRendererObj,
+                "Z:",
+                this.width / 2 - 80,
+                zField.yPosition + 6,
+                EnumColors.Value.getColor());
 
         xField.drawTextBox();
         yField.drawTextBox();
@@ -168,7 +172,8 @@ public class GuiPlanetTeleporter extends GuiScreen {
      * Handles keyboard presses for textfield entry
      * 
      * @param typedChar The character typed in the field
-     * @param keyCode   The keycode of non-alphanumeric commands (enter, return etc.)
+     * @param keyCode   The keycode of non-alphanumeric commands (enter, return
+     *                  etc.)
      */
     @Override
     protected void keyTyped(char typedChar, int keyCode) {

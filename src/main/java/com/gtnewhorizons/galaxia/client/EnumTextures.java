@@ -4,7 +4,7 @@ import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.Location
 
 import net.minecraft.util.ResourceLocation;
 
-public enum TextureEnum {
+public enum EnumTextures {
 
     OXYGEN_BG("textures/gui/oxygen_bar_bg.png"),
     OXYGEN_FILL("textures/gui/oxygen_bar_fill.png"),
@@ -16,7 +16,7 @@ public enum TextureEnum {
 
     private final ResourceLocation texture;
 
-    TextureEnum(String location) {
+    EnumTextures(String location) {
         this.texture = LocationGalaxia(location);
     }
 

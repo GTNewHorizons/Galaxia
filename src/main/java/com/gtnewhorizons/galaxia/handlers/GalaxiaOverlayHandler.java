@@ -10,7 +10,7 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.client.TextureEnum;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.core.config.GalaxiaConfigOverlay;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -27,11 +27,14 @@ public class GalaxiaOverlayHandler {
 
     @SubscribeEvent
     public void onRenderOverlay(RenderGameOverlayEvent.Post event) {
-        if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
-        if (mc.currentScreen != null) return;
+        if (event.type != RenderGameOverlayEvent.ElementType.ALL)
+            return;
+        if (mc.currentScreen != null)
+            return;
 
         EntityPlayer player = mc.thePlayer;
-        if (player == null) return;
+        if (player == null)
+            return;
 
         ScaledResolution res = event.resolution;
         int screenWidth = res.getScaledWidth();
@@ -48,31 +51,31 @@ public class GalaxiaOverlayHandler {
         if (GalaxiaConfigOverlay.showOxygenBar) {
             boolean oxygenCritical = oxygenLevel < GalaxiaConfigOverlay.lowOxygenThreshold;
             drawBar(
-                pos.oxygenX,
-                pos.oxygenY,
-                oxygenLevel,
-                TextureEnum.OXYGEN_BG.get(),
-                TextureEnum.OXYGEN_FILL.get(),
-                oxygenCritical,
-                GalaxiaConfigOverlay.oxygenTextureWidth,
-                GalaxiaConfigOverlay.oxygenTextureHeight,
-                GalaxiaConfigOverlay.barOrientation);
+                    pos.oxygenX,
+                    pos.oxygenY,
+                    oxygenLevel,
+                    EnumTextures.OXYGEN_BG.get(),
+                    EnumTextures.OXYGEN_FILL.get(),
+                    oxygenCritical,
+                    GalaxiaConfigOverlay.oxygenTextureWidth,
+                    GalaxiaConfigOverlay.oxygenTextureHeight,
+                    GalaxiaConfigOverlay.barOrientation);
         }
 
         if (GalaxiaConfigOverlay.showTemperatureBar) {
             boolean tempCritical = temperatureLevel < GalaxiaConfigOverlay.temperatureLowThreshold
-                || temperatureLevel > GalaxiaConfigOverlay.temperatureHighThreshold;
+                    || temperatureLevel > GalaxiaConfigOverlay.temperatureHighThreshold;
 
             drawBar(
-                pos.temperatureX,
-                pos.temperatureY,
-                temperatureLevel,
-                TextureEnum.TEMP_BG.get(),
-                TextureEnum.TEMP_FILL.get(),
-                tempCritical,
-                GalaxiaConfigOverlay.temperatureTextureWidth,
-                GalaxiaConfigOverlay.temperatureTextureHeight,
-                GalaxiaConfigOverlay.barOrientation);
+                    pos.temperatureX,
+                    pos.temperatureY,
+                    temperatureLevel,
+                    EnumTextures.TEMP_BG.get(),
+                    EnumTextures.TEMP_FILL.get(),
+                    tempCritical,
+                    GalaxiaConfigOverlay.temperatureTextureWidth,
+                    GalaxiaConfigOverlay.temperatureTextureHeight,
+                    GalaxiaConfigOverlay.barOrientation);
         }
 
         GL11.glDisable(GL11.GL_BLEND);
@@ -99,23 +102,24 @@ public class GalaxiaOverlayHandler {
     }
 
     private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex,
-        boolean pulsing, int texWidth, int texHeight, GalaxiaConfigOverlay.BarOrientation orientation) {
+            boolean pulsing, int texWidth, int texHeight, GalaxiaConfigOverlay.BarOrientation orientation) {
 
         // Background
         mc.getTextureManager()
-            .bindTexture(bgTex);
+                .bindTexture(bgTex);
         drawTexturedQuad(x, y, texWidth, texHeight, texWidth, texHeight);
 
-        if (fillPercent <= 0f) return;
+        if (fillPercent <= 0f)
+            return;
 
         // Fill
         mc.getTextureManager()
-            .bindTexture(fillTex);
+                .bindTexture(fillTex);
 
         float pulse = pulsing
-            ? (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
-                * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude))
-            : 1.0f;
+                ? (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
+                        * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude))
+                : 1.0f;
 
         GL11.glPushMatrix();
         GL11.glColor4f(pulse, pulse, pulse, 1.0f);
@@ -125,16 +129,16 @@ public class GalaxiaOverlayHandler {
             if (fillHeightPx > 0) {
                 int drawY = y + texHeight - fillHeightPx;
                 drawTexturedSubQuad(
-                    x,
-                    drawY,
-                    texWidth,
-                    fillHeightPx,
-                    0,
-                    texHeight - fillHeightPx,
-                    texWidth,
-                    fillHeightPx,
-                    texWidth,
-                    texHeight);
+                        x,
+                        drawY,
+                        texWidth,
+                        fillHeightPx,
+                        0,
+                        texHeight - fillHeightPx,
+                        texWidth,
+                        fillHeightPx,
+                        texWidth,
+                        texHeight);
             }
         } else {
             int fillWidthPx = Math.max(0, (int) (texWidth * clamp01(fillPercent)));
@@ -153,7 +157,7 @@ public class GalaxiaOverlayHandler {
 
     private int applyPulse() {
         float pulse = (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
-            * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude));
+                * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude));
 
         int r = (int) (255 * pulse);
         int g = (int) (255 * pulse);
@@ -181,7 +185,7 @@ public class GalaxiaOverlayHandler {
     }
 
     private void drawTexturedSubQuad(int x, int y, int w, int h, int srcX, int srcY, int srcW, int srcH, int texW,
-        int texH) {
+            int texH) {
         Tessellator t = Tessellator.instance;
         float u0 = srcX / (float) texW;
         float v0 = srcY / (float) texH;
@@ -197,19 +201,22 @@ public class GalaxiaOverlayHandler {
     }
 
     private float getOxygenLevel(EntityPlayer p) {
-        // Example: oscillating value in [0,1] based on world time. Replace with real logic as needed.
+        // Example: oscillating value in [0,1] based on world time. Replace with real
+        // logic as needed.
         float speed = 0.01f;
         long time = mc.theWorld != null ? mc.theWorld.getTotalWorldTime() : System.currentTimeMillis();
         return (float) ((Math.sin(time * speed) + 1.0) / 2.0);
     }
 
     private float getTemperature(EntityPlayer p) {
-        // Example: oscillating value shifted by phase so it differs from oxygen. Replace with real logic as needed.
+        // Example: oscillating value shifted by phase so it differs from oxygen.
+        // Replace with real logic as needed.
         float speed = 0.01f;
         long time = mc.theWorld != null ? mc.theWorld.getTotalWorldTime() : System.currentTimeMillis();
         return (float) ((Math.sin(time * speed + Math.PI / 2) + 1.0) / 2.0);
     }
 
     @Desugar
-    private record BarScreenPositions(int oxygenX, int oxygenY, int temperatureX, int temperatureY) {}
+    private record BarScreenPositions(int oxygenX, int oxygenY, int temperatureX, int temperatureY) {
+    }
 }

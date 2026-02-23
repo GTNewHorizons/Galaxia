@@ -21,7 +21,7 @@ import com.cleanroommc.modularui.widgets.layout.Row;
 import com.gtnewhorizons.galaxia.items.special.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
-import com.gtnewhorizons.galaxia.utility.ColorEnum;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 // TODO: JAVADOC
 public class HabitatBuilderGui {
@@ -40,20 +40,20 @@ public class HabitatBuilderGui {
         ItemStack held = player.inventory.getStackInSlot(slot);
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:habitat_builder")
-            .size(250, 240);
+                .size(250, 240);
 
         Column column = new Column();
         column.margin(15)
-            .padding(6);
+                .padding(6);
 
         IWidget text = new TextWidget(StatCollector.translateToLocal("galaxia.gui.select_module"));
         column.child(text)
-            .align(Alignment.Center)
-            .widthRel(1f);
+                .align(Alignment.Center)
+                .widthRel(1f);
         column.child(
-            IDrawable.EMPTY.asWidget()
-                .size(1, 6))
-            .widthRel(1f);
+                IDrawable.EMPTY.asWidget()
+                        .size(1, 6))
+                .widthRel(1f);
 
         for (ModuleTypes mt : ModuleTypes.values()) {
             ModuleType type = mt.data;
@@ -62,27 +62,27 @@ public class HabitatBuilderGui {
             boolean selected = id.equals(ItemHabitatBuilder.getSelectedModule(held));
 
             ButtonWidget button = new ButtonWidget<>().size(220, 36)
-                .tooltip(tooltip -> tooltip.add(IKey.str(getModuleTooltip(type))))
-                .onMousePressed((mouseButton) -> {
-                    if (mouseButton == 0) {
-                        ItemHabitatBuilder.setSelectedModule(held, id);
+                    .tooltip(tooltip -> tooltip.add(IKey.str(getModuleTooltip(type))))
+                    .onMousePressed((mouseButton) -> {
+                        if (mouseButton == 0) {
+                            ItemHabitatBuilder.setSelectedModule(held, id);
 
-                        player.inventory.setInventorySlotContents(slot, held);
-                        player.inventory.markDirty();
-                        if (player.inventoryContainer != null) {
-                            player.inventoryContainer.detectAndSendChanges();
+                            player.inventory.setInventorySlotContents(slot, held);
+                            player.inventory.markDirty();
+                            if (player.inventoryContainer != null) {
+                                player.inventoryContainer.detectAndSendChanges();
+                            }
+                            panel.closeIfOpen();
                         }
-                        panel.closeIfOpen();
-                    }
-                    return true;
-                });
+                        return true;
+                    });
 
             IDrawable markerDrawable = selected
-                ? IDrawable.of(GuiTextures.PLAY.withColorOverride(ColorEnum.IconGreen.getColor()))
-                : IDrawable.EMPTY;
+                    ? IDrawable.of(GuiTextures.PLAY.withColorOverride(EnumColors.IconGreen.getColor()))
+                    : IDrawable.EMPTY;
             IWidget marker = markerDrawable.asWidget()
-                .size(8, 8);
-            IWidget label = new TextWidget(IKey.str(name)).color(ColorEnum.Value.getColor());
+                    .size(8, 8);
+            IWidget label = new TextWidget(IKey.str(name)).color(EnumColors.Value.getColor());
 
             Row content = new Row();
             content.children(Arrays.asList(marker, label));
@@ -90,7 +90,7 @@ public class HabitatBuilderGui {
             content.crossAxisAlignment(Alignment.CrossAxis.CENTER);
             content.childPadding(4);
             content.widthRel(1f)
-                .heightRel(1f);
+                    .heightRel(1f);
 
             button.child(content);
             column.child(button);
@@ -102,14 +102,14 @@ public class HabitatBuilderGui {
 
     private String getModuleTooltip(ModuleType type) {
         return "§7Module: §f" + type.getId()
-            .replace("_", " ")
-            .toUpperCase()
-            + "\n\n"
-            + "§eBuilding Cost (Placeholder):\n"
-            + "§f• 24× Steel Plate\n"
-            + "§f• 12× Glass Pane\n"
-            + "§f• 8× Advanced Circuit\n"
-            + "§f• 4× Advanced Alloy\n\n"
-            + "§aYou have enough resources";
+                .replace("_", " ")
+                .toUpperCase()
+                + "\n\n"
+                + "§eBuilding Cost (Placeholder):\n"
+                + "§f• 24× Steel Plate\n"
+                + "§f• 12× Glass Pane\n"
+                + "§f• 8× Advanced Circuit\n"
+                + "§f• 4× Advanced Alloy\n\n"
+                + "§aYou have enough resources";
     }
 }
