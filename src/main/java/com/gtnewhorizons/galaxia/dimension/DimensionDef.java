@@ -6,15 +6,16 @@ import java.util.List;
 import net.minecraft.world.WorldProvider;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectDef;
 import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
 
+/**
+ * Record to hold characteristics of the dimension (effectively a posh dataclass)
+ */
 @Desugar
 public record DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded,
     double gravity, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
-    EffectDef effects,
-
-    // Orbital
-    double mass, double orbitalRadius, double radius) {
+    EffectDef effects, double mass, double orbitalRadius, double radius) {
 
     public DimensionDef {
         celestialBodies = celestialBodies == null ? null : Collections.unmodifiableList(celestialBodies);

@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.Tessellator;
@@ -12,18 +10,14 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.client.config.GalaxiaConfigOverlay;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class GalaxiaOverlayHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
-
-    private static final ResourceLocation OXYGEN_BG = LocationGalaxia("textures/gui/oxygen_bar_bg.png");
-    private static final ResourceLocation OXYGEN_FILL = LocationGalaxia("textures/gui/oxygen_bar_fill.png");
-    private static final ResourceLocation TEMP_BG = LocationGalaxia("textures/gui/temp_bar_bg.png");
-    private static final ResourceLocation TEMP_FILL = LocationGalaxia("textures/gui/temp_bar_fill.png");
 
     // HUD POSITIONING CONSTANTS
     private static final int HOTBAR_HALF_WIDTH = 91; // hotbar center = screenWidth/2 - 91
@@ -51,34 +45,34 @@ public class GalaxiaOverlayHandler {
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-        if (GalaxiaConfigOverlay.showOxygenBar) {
-            boolean oxygenCritical = oxygenLevel < GalaxiaConfigOverlay.lowOxygenThreshold;
+        if (ConfigOverlay.ConfigOverlayOxygenBar.showOxygenBar) {
+            boolean oxygenCritical = oxygenLevel < ConfigOverlay.ConfigOverlayOxygenBar.lowOxygenThreshold;
             drawBar(
                 pos.oxygenX,
                 pos.oxygenY,
                 oxygenLevel,
-                OXYGEN_BG,
-                OXYGEN_FILL,
+                EnumTextures.OXYGEN_BG.get(),
+                EnumTextures.OXYGEN_FILL.get(),
                 oxygenCritical,
-                GalaxiaConfigOverlay.oxygenTextureWidth,
-                GalaxiaConfigOverlay.oxygenTextureHeight,
-                GalaxiaConfigOverlay.barOrientation);
+                ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureWidth,
+                ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureHeight,
+                ConfigOverlay.ConfigOverlayGlobal.barOrientation);
         }
 
-        if (GalaxiaConfigOverlay.showTemperatureBar) {
-            boolean tempCritical = temperatureLevel < GalaxiaConfigOverlay.temperatureLowThreshold
-                || temperatureLevel > GalaxiaConfigOverlay.temperatureHighThreshold;
+        if (ConfigOverlay.ConfigOverlayTemperatureBar.showTemperatureBar) {
+            boolean tempCritical = temperatureLevel < ConfigOverlay.ConfigOverlayTemperatureBar.temperatureLowThreshold
+                || temperatureLevel > ConfigOverlay.ConfigOverlayTemperatureBar.temperatureHighThreshold;
 
             drawBar(
                 pos.temperatureX,
                 pos.temperatureY,
                 temperatureLevel,
-                TEMP_BG,
-                TEMP_FILL,
+                EnumTextures.TEMP_BG.get(),
+                EnumTextures.TEMP_FILL.get(),
                 tempCritical,
-                GalaxiaConfigOverlay.temperatureTextureWidth,
-                GalaxiaConfigOverlay.temperatureTextureHeight,
-                GalaxiaConfigOverlay.barOrientation);
+                ConfigOverlay.ConfigOverlayTemperatureBar.temperatureTextureWidth,
+                ConfigOverlay.ConfigOverlayTemperatureBar.temperatureTextureHeight,
+                ConfigOverlay.ConfigOverlayGlobal.barOrientation);
         }
 
         GL11.glDisable(GL11.GL_BLEND);
@@ -91,21 +85,25 @@ public class GalaxiaOverlayHandler {
 
         int centerX = screenWidth / 2;
         int hotbarLeft = centerX - HOTBAR_HALF_WIDTH;
-        int leftSideX = hotbarLeft - GalaxiaConfigOverlay.oxygenTextureWidth - HOTBAR_SIDE_PADDING;
+        int leftSideX = hotbarLeft - ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureWidth - HOTBAR_SIDE_PADDING;
         int rightSideX = hotbarLeft + HOTBAR_FULL_WIDTH + HOTBAR_SIDE_PADDING;
         int baseY = screenHeight - ABOVE_HOTBAR_BASE_Y;
 
-        oxygenX = leftSideX + GalaxiaConfigOverlay.hudOffsetX + GalaxiaConfigOverlay.oxygenOffsetX;
-        oxygenY = baseY + GalaxiaConfigOverlay.hudOffsetY + GalaxiaConfigOverlay.oxygenOffsetY;
+        oxygenX = leftSideX + ConfigOverlay.ConfigOverlayGlobal.hudOffsetX
+            + ConfigOverlay.ConfigOverlayOxygenBar.oxygenOffsetX;
+        oxygenY = baseY + ConfigOverlay.ConfigOverlayGlobal.hudOffsetY
+            + ConfigOverlay.ConfigOverlayOxygenBar.oxygenOffsetY;
 
-        temperatureX = rightSideX + GalaxiaConfigOverlay.hudOffsetX + GalaxiaConfigOverlay.temperatureOffsetX;
-        temperatureY = baseY + GalaxiaConfigOverlay.hudOffsetY + GalaxiaConfigOverlay.temperatureOffsetY;
+        temperatureX = rightSideX + ConfigOverlay.ConfigOverlayGlobal.hudOffsetX
+            + ConfigOverlay.ConfigOverlayTemperatureBar.temperatureOffsetX;
+        temperatureY = baseY + ConfigOverlay.ConfigOverlayGlobal.hudOffsetY
+            + ConfigOverlay.ConfigOverlayTemperatureBar.temperatureOffsetY;
 
         return new BarScreenPositions(oxygenX, oxygenY, temperatureX, temperatureY);
     }
 
     private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex,
-        boolean pulsing, int texWidth, int texHeight, GalaxiaConfigOverlay.BarOrientation orientation) {
+        boolean pulsing, int texWidth, int texHeight, ConfigOverlay.BarOrientation orientation) {
 
         // Background
         mc.getTextureManager()
@@ -119,14 +117,15 @@ public class GalaxiaOverlayHandler {
             .bindTexture(fillTex);
 
         float pulse = pulsing
-            ? (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
-                * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude))
+            ? (float) (Math.sin(System.currentTimeMillis() / ConfigOverlay.ConfigOverlayGlobal.pulseSpeed)
+                * ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude
+                + (1.0f - ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude))
             : 1.0f;
 
         GL11.glPushMatrix();
         GL11.glColor4f(pulse, pulse, pulse, 1.0f);
 
-        if (orientation == GalaxiaConfigOverlay.BarOrientation.VERTICAL) {
+        if (orientation == ConfigOverlay.BarOrientation.VERTICAL) {
             int fillHeightPx = Math.max(0, (int) (texHeight * clamp01(fillPercent)));
             if (fillHeightPx > 0) {
                 int drawY = y + texHeight - fillHeightPx;
@@ -158,8 +157,9 @@ public class GalaxiaOverlayHandler {
     }
 
     private int applyPulse() {
-        float pulse = (float) (Math.sin(System.currentTimeMillis() / GalaxiaConfigOverlay.pulseSpeed)
-            * GalaxiaConfigOverlay.pulseAmplitude + (1.0f - GalaxiaConfigOverlay.pulseAmplitude));
+        float pulse = (float) (Math.sin(System.currentTimeMillis() / ConfigOverlay.ConfigOverlayGlobal.pulseSpeed)
+            * ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude
+            + (1.0f - ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude));
 
         int r = (int) (255 * pulse);
         int g = (int) (255 * pulse);
@@ -203,14 +203,16 @@ public class GalaxiaOverlayHandler {
     }
 
     private float getOxygenLevel(EntityPlayer p) {
-        // Example: oscillating value in [0,1] based on world time. Replace with real logic as needed.
+        // Example: oscillating value in [0,1] based on world time. Replace with real
+        // logic as needed.
         float speed = 0.01f;
         long time = mc.theWorld != null ? mc.theWorld.getTotalWorldTime() : System.currentTimeMillis();
         return (float) ((Math.sin(time * speed) + 1.0) / 2.0);
     }
 
     private float getTemperature(EntityPlayer p) {
-        // Example: oscillating value shifted by phase so it differs from oxygen. Replace with real logic as needed.
+        // Example: oscillating value shifted by phase so it differs from oxygen.
+        // Replace with real logic as needed.
         float speed = 0.01f;
         long time = mc.theWorld != null ? mc.theWorld.getTotalWorldTime() : System.currentTimeMillis();
         return (float) ((Math.sin(time * speed + Math.PI / 2) + 1.0) / 2.0);

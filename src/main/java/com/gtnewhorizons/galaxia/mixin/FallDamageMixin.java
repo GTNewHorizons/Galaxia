@@ -8,9 +8,18 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import com.gtnewhorizons.galaxia.utility.PlanetAPI;
 
+/**
+ * Mixin to change fall damage based on gravity
+ */
 @Mixin(EntityLivingBase.class)
 public abstract class FallDamageMixin {
 
+    /**
+     * Modifies the fall distance used for damage based on gravity of the planets
+     * 
+     * @param distance The actual distance being fallen
+     * @return The "effective" distance to be used in damange calculations
+     */
     @ModifyVariable(method = "fall", at = @At("HEAD"), argsOnly = true)
     private float galaxia$modifyFallDistance(float distance) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;

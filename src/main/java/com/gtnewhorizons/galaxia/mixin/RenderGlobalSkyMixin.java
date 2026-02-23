@@ -23,6 +23,9 @@ import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 
+/**
+ * Mixin to alter the global sky rendering
+ */
 @Mixin(RenderGlobal.class)
 public abstract class RenderGlobalSkyMixin {
 
@@ -56,6 +59,12 @@ public abstract class RenderGlobalSkyMixin {
                 .phaseCount(8))
         .build();
 
+    /**
+     * Replaces the sun and moon in the skybox with custom based on Galaxia Registry
+     * 
+     * @param partialTicks How far through the current tick
+     * @param ci           The callback info (used in things like early cancels of methods etc.)
+     */
     @Inject(
         method = "renderSky",
         at = @At(
@@ -127,6 +136,14 @@ public abstract class RenderGlobalSkyMixin {
         ci.cancel();
     }
 
+    /**
+     * Draws a celestial body given certain parameters
+     * 
+     * @param t               The tesselator to use
+     * @param body            The body to be drawn
+     * @param angle           The angle in the sky
+     * @param primarySunAngle The angle of the primary light source (sun usually) in the sky
+     */
     private void drawCelestialBody(Tessellator t, CelestialBody body, float angle, float primarySunAngle) {
         GL11.glPushMatrix();
 
@@ -173,6 +190,9 @@ public abstract class RenderGlobalSkyMixin {
         GL11.glPopMatrix();
     }
 
+    /**
+     * Restores the GLState to regular levels
+     */
     private void restoreGLState() {
         GL11.glColor4f(1F, 1F, 1F, 1F);
         GL11.glEnable(GL11.GL_TEXTURE_2D);

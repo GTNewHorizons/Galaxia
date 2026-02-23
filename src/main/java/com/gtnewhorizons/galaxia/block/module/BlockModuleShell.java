@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.modules;
+package com.gtnewhorizons.galaxia.block.module;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -19,22 +19,22 @@ public class BlockModuleShell extends Block {
 
     @Override
     public boolean renderAsNormalBlock() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
     public int getRenderType() {
-        return ModuleConfig.DEBUG_RENDER ? 0 : -1;
+        return -1;
     }
 
     @Override
     public boolean isOpaqueCube() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
     public boolean isNormalCube() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override

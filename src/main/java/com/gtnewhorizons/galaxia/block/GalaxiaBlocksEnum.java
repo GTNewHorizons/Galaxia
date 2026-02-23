@@ -1,18 +1,23 @@
 package com.gtnewhorizons.galaxia.block;
 
-import static com.gtnewhorizons.galaxia.block.GalaxiaBlockBase.reg;
+import static com.gtnewhorizons.galaxia.block.base.GalaxiaBlock.reg;
 
 import net.minecraft.block.Block;
 
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.block.module.BlockModuleController;
+import com.gtnewhorizons.galaxia.block.module.BlockModuleShell;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.modules.BlockModuleController;
-import com.gtnewhorizons.galaxia.modules.BlockModuleShell;
-import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
-public enum GalaxiaBlocks {
+/**
+ * The ENUM used for all custom blocks in Galaxia. BlockVariants are used to change the planet the block can be found on
+ * for types of rock etc.
+ */
+public enum GalaxiaBlocksEnum {
     // spotless:off
 
     MODULE_CONTROLLER(new BlockModuleController(), "module_controller"),
@@ -21,8 +26,11 @@ public enum GalaxiaBlocks {
 
     // spotless:on
 
+    /**
+     * Registers all blocks in the ENUM into the game registry, including tile entity blocks
+     */
     public static void registerBlocks() {
-        for (GalaxiaBlocks block : values()) {
+        for (GalaxiaBlocksEnum block : values()) {
             GameRegistry.registerBlock(block.get(), block.name);
         }
 
@@ -30,6 +38,10 @@ public enum GalaxiaBlocks {
     }
 
     // spotless:off
+
+    /**
+     * Registers all block variants for each planet, alongside the relevant dust items
+     */
     public static void registerPlanetBlocks() {
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
@@ -59,7 +71,7 @@ public enum GalaxiaBlocks {
     private final Block theBlock;
     private final String name;
 
-    GalaxiaBlocks(Block block, String name) {
+    GalaxiaBlocksEnum(Block block, String name) {
         this.theBlock = block;
         this.name = name;
     }

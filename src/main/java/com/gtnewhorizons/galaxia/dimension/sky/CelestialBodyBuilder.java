@@ -4,6 +4,9 @@ import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.Location
 
 import net.minecraft.util.ResourceLocation;
 
+/**
+ * Builder class for Celestial Bodies
+ */
 public class CelestialBodyBuilder {
 
     protected ResourceLocation texture;

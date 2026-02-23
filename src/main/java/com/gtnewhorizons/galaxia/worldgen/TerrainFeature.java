@@ -5,6 +5,9 @@ import java.util.Map;
 
 import com.github.bsideup.jabel.Desugar;
 
+/**
+ * Data record holding terrain features
+ */
 @Desugar
 public record TerrainFeature(TerrainPreset preset, double frequency, double height, double width, int minHeight,
     int variation, int depth, Map<String, Object> customParams) {

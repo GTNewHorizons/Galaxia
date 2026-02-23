@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.items;
+package com.gtnewhorizons.galaxia.items.special;
 
 import java.util.List;
 
@@ -11,9 +11,12 @@ import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocks;
-import com.gtnewhorizons.galaxia.modules.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
 
+/**
+ * Item to help with moving modules in world
+ */
 public class ItemModuleMover extends Item {
 
     public ItemModuleMover() {
@@ -22,6 +25,12 @@ public class ItemModuleMover extends Item {
         setUnlocalizedName("moduleMover");
     }
 
+    /**
+     * Gets the coordinates of a selected module / null if none selected
+     *
+     * @param stack The item stack for the item
+     * @return An integer array holding the position, or null if no selected
+     */
     public static int[] getSelectedPos(ItemStack stack) {
         if (stack.hasTagCompound()) {
             NBTTagCompound nbt = stack.getTagCompound();
@@ -33,6 +42,14 @@ public class ItemModuleMover extends Item {
         return null;
     }
 
+    /**
+     * Sets the selected position in the NBT data
+     *
+     * @param stack The item stack for the item
+     * @param x     The x coordinate of the module
+     * @param y     The y coordinate of the module
+     * @param z     The z coordinate of the module
+     */
     public static void setSelectedPos(ItemStack stack, int x, int y, int z) {
         if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
         NBTTagCompound nbt = stack.getTagCompound();
@@ -41,6 +58,11 @@ public class ItemModuleMover extends Item {
         nbt.setInteger("selectedZ", z);
     }
 
+    /**
+     * Clears the current selection from NBT data
+     *
+     * @param stack The item stack for the item
+     */
     public static void clearSelected(ItemStack stack) {
         if (stack.hasTagCompound()) {
             NBTTagCompound nbt = stack.getTagCompound();
@@ -50,11 +72,36 @@ public class ItemModuleMover extends Item {
         }
     }
 
+    /**
+     * Selects a module based on the given coordinates
+     *
+     * @param world  The world in which the item is used
+     * @param x      The x coordinates to get the module from
+     * @param y      The y coordinates to get the module from
+     * @param z      The z coordinates to get the module from
+     * @param player The player entity using the item
+     * @param stack  The item stack for the item
+     */
     public void selectModule(World world, int x, int y, int z, EntityPlayer player, ItemStack stack) {
         setSelectedPos(stack, x, y, z);
         player.addChatComponentMessage(new ChatComponentTranslation("galaxia.module_mover.module_selected"));
     }
 
+    /**
+     * Handler for when the item is used
+     *
+     * @param stack  The item stack for the item
+     * @param player The player entity using the item
+     * @param world  The world in which the item is used
+     * @param x      The x coordinates used on
+     * @param y      The y coordinates used on
+     * @param z      The z coordinates used on
+     * @param side   The direction faced
+     * @param hitX   Not used in this implementation, required from original signature
+     * @param hitY   Not used in this implementation, required from original signature
+     * @param hitZ   Not used in this implementation, required from original signature
+     * @return Boolean : True => Successful use
+     */
     @Override
     public boolean onItemUse(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side,
         float hitX, float hitY, float hitZ) {
@@ -95,7 +142,7 @@ public class ItemModuleMover extends Item {
             oldTe.destroyStructure();
             world.setBlockToAir(selected[0], selected[1], selected[2]);
 
-            world.setBlock(nx, ny, nz, GalaxiaBlocks.MODULE_CONTROLLER.get());
+            world.setBlock(nx, ny, nz, GalaxiaBlocksEnum.MODULE_CONTROLLER.get());
             TileEntityModuleController newTe = (TileEntityModuleController) world.getTileEntity(nx, ny, nz);
             if (newTe != null) {
                 newTe.setModule(moduleId);
@@ -110,18 +157,35 @@ public class ItemModuleMover extends Item {
         return true;
     }
 
-    // prevent player from destroying module on left click
+    /**
+     * Handler for the start of one of the blocks being broken - prevents player from destroying modules in survival
+     *
+     * @param itemstack The current ItemStack
+     * @param x         The X Position
+     * @param y         The Y Position
+     * @param z         The Z Position
+     * @param player    The player entity holding the item
+     * @return Boolean : True => Successful break
+     */
     @Override
     public boolean onBlockStartBreak(ItemStack itemstack, int x, int y, int z, EntityPlayer player) {
         if (!player.capabilities.isCreativeMode) return false;
 
         World world = player.worldObj;
-        if (world.getBlock(x, y, z) == GalaxiaBlocks.MODULE_CONTROLLER.get()) {
+        if (world.getBlock(x, y, z) == GalaxiaBlocksEnum.MODULE_CONTROLLER.get()) {
             selectModule(world, x, y, z, player, itemstack);
         }
         return true;
     }
 
+    /**
+     * Adds information to the stat collector about the module
+     *
+     * @param stack    The item stack of the item
+     * @param player   The player entity using the item
+     * @param list     The list of information to add to
+     * @param advanced Not used in this implementation, required from original signature
+     */
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List list, boolean advanced) {
         int[] pos = getSelectedPos(stack);

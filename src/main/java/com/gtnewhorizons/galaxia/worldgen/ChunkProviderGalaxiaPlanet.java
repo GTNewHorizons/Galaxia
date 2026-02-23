@@ -15,10 +15,13 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.NoiseGeneratorPerlin;
 
-import com.gtnewhorizons.galaxia.dimension.BiomeGenSpace;
-import com.gtnewhorizons.galaxia.dimension.WorldChunkManagerSpace;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldChunkManagerSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
+/**
+ * ChunkProvider implementation for Galaxia Planets
+ */
 public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private final World worldObj;
@@ -33,6 +36,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final BlockMeta sand = new BlockMeta(Blocks.sand, 0);
     private final BlockMeta gravel = new BlockMeta(Blocks.gravel, 0);
 
+    /**
+     * Constructor to initialize the world and noise/random generators
+     *
+     * @param world The world to bind the chunk generator to
+     */
     public ChunkProviderGalaxiaPlanet(World world) {
         this.worldObj = world;
 
@@ -41,6 +49,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         if (showDebug) writeDebug();
     }
 
+    /**
+     * Provides a chunk to be loaded in the future
+     *
+     * @param chunkX The chunk x coordinate
+     * @param chunkZ The chunk z coordinate
+     * @return The provided chunk
+     */
     @Override
     public Chunk provideChunk(int chunkX, int chunkZ) {
         Chunk chunk = new Chunk(worldObj, chunkX, chunkZ);
@@ -219,63 +234,135 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return hm;
     }
 
+    /**
+     * Loads a chunk based on world coordinates
+     *
+     * @param x The target x coordinates
+     * @param z The target z coordinates
+     * @return The provided chunk at these coordinates
+     */
     @Override
     public Chunk loadChunk(int x, int z) {
         return provideChunk(x, z);
     }
 
+    /**
+     * Generates a random number generator used for populating chunks with features
+     *
+     * @param provider The Chunk provider being used
+     * @param cx       Chunk x coordinates
+     * @param cz       Chunk z coordinates
+     */
     @Override
     public void populate(IChunkProvider provider, int cx, int cz) {
         long seed = (cx * 341873128712L + cz * 132897987541L) ^ worldObj.getSeed();
         rand.setSeed(seed);
     }
 
+    /**
+     * Checks whether a chunk exists currently at given coordinates
+     *
+     * @param x Target x coordinates
+     * @param z Target z coordinates
+     * @return
+     */
     @Override
     public boolean chunkExists(int x, int z) {
         return true;
     }
 
+    /**
+     * Sets whether the chunk provider can save chunks
+     *
+     * @return Boolean : True => Can save
+     */
     @Override
     public boolean canSave() {
         return true;
     }
 
+    /**
+     * Gives a string form of the class
+     *
+     * @return The string form of this class
+     */
     @Override
     public String makeString() {
         return "GalaxiaPlanetChunkProvider";
     }
 
+    /**
+     * Gets the current loaded chunk count - Not used in this implementation
+     *
+     * @return The amount of currently loaded chunks (0)
+     */
     @Override
     public int getLoadedChunkCount() {
         return 0;
     }
 
+    /**
+     * Not used in this implementation
+     */
     @Override
     public void saveExtraData() {}
 
+    /**
+     * Not used in this implementation
+     *
+     * @param x Target x coordinates
+     * @param z Target z coordinates
+     */
     @Override
     public void recreateStructures(int x, int z) {}
 
+    /**
+     * Saves chunks to the game - Not used in this implementation
+     *
+     * @param all      Not used in this implementation
+     * @param progress Not used in this implementation
+     * @return true
+     */
     @Override
     public boolean saveChunks(boolean all, net.minecraft.util.IProgressUpdate progress) {
         return true;
     }
 
+    /**
+     * Gets whether to unloadQueuedChunks
+     *
+     * @return Boolean : True => Unloads queued
+     */
     @Override
     public boolean unloadQueuedChunks() {
         return false;
     }
 
+    /**
+     * Gets the list of possible spawn creatures at coordinates - Not used in this implementation
+     *
+     * @param type Not used in this implementation
+     * @param x    Not used in this implementation
+     * @param y    Not used in this implementation
+     * @param z    Not used in this implementation
+     * @return List of possible spawn creatures
+     */
     @Override
     public List<BiomeGenBase.SpawnListEntry> getPossibleCreatures(EnumCreatureType type, int x, int y, int z) {
         return Collections.emptyList();
     }
 
+    /**
+     * Not used in this implementation - required for interface
+     */
     @Override
     public ChunkPosition func_147416_a(World world, String structure, int x, int y, int z) {
         return null;
     }
 
+    /**
+     * Writes a debug message for testing purposes only
+     */
     public void writeDebug() {
         // TODO: Update debug to biome-specific terrain generation
         // System.out.println(

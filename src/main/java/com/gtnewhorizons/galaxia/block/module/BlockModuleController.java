@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.modules;
+package com.gtnewhorizons.galaxia.block.module;
 
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
@@ -10,7 +10,10 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.items.ItemModuleMover;
+import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.items.special.ItemModuleMover;
+import com.gtnewhorizons.galaxia.modules.ModuleType;
+import com.gtnewhorizons.galaxia.modules.ModuleTypes;
 
 public class BlockModuleController extends BlockContainer {
 
@@ -56,22 +59,22 @@ public class BlockModuleController extends BlockContainer {
 
     @Override
     public boolean renderAsNormalBlock() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
     public int getRenderType() {
-        return ModuleConfig.DEBUG_RENDER ? 0 : -1;
+        return -1;
     }
 
     @Override
     public boolean isOpaqueCube() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override
     public boolean isNormalCube() {
-        return ModuleConfig.DEBUG_RENDER;
+        return false;
     }
 
     @Override

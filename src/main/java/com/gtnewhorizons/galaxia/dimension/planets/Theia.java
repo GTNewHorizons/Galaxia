@@ -1,23 +1,41 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
-import com.gtnewhorizons.galaxia.dimension.*;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.block.BlockVariant;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.block.base.GalaxiaBlock;
+import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
+/**
+ * The class holding all data related to the dimension Theia
+ */
 public class Theia extends BasePlanet {
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
+    /**
+     * Getter for dimension Enum
+     *
+     * @return Dimension Enum
+     */
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
+    /**
+     * The configuration of the DimensionBuilder to configure the dimension
+     *
+     * @param builder The dimension builder to chain on
+     * @return The dimension Builder with all properties assigned
+     */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.gravity(2)
@@ -32,25 +50,35 @@ public class Theia extends BasePlanet {
                     .pressure(1));
     }
 
+    /**
+     * Configures the world provider to add the correct biomes and settings
+     *
+     * @param builder The world provider builder being configured
+     */
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .biome(
-                createBiome("Theia Surface", GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)),
+                createBiome("Theia Surface", GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())),
                 0,
                 0)
             .biome(
                 createBiome(
                     "Theia Rough Surface",
-                    GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix)),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix())),
                 1,
                 0)
             .name(ENUM)
             .build();
     }
 
+    /**
+     * Builds a skybox builder with required bodies in the sky
+     *
+     * @return The SkyBuilder configured with correct bodies
+     */
     protected SkyBuilder buildSky() {
         return SkyBuilder.builder()
             .addBody(
@@ -92,6 +120,11 @@ public class Theia extends BasePlanet {
                     .period(6000L));
     }
 
+    /**
+     * Creates a biome generator with specific requirements
+     *
+     * @return The BiomeGenBase used to generated biomes of that type
+     */
     protected static BiomeGenBase createBiome(String name, BlockMeta topBlock) {
         return new BiomeGenBuilder(100).name(name)
             .height(0.1F, 0.11F)

@@ -2,24 +2,38 @@ package com.gtnewhorizons.galaxia.dimension.planets;
 
 import net.minecraft.init.Blocks;
 
-import com.gtnewhorizons.galaxia.block.BlockVariant;
-import com.gtnewhorizons.galaxia.block.GalaxiaBlockBase;
-import com.gtnewhorizons.galaxia.dimension.DimensionBuilder;
+import com.gtnewhorizons.galaxia.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.block.base.GalaxiaBlock;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.dimension.EffectBuilder;
-import com.gtnewhorizons.galaxia.dimension.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 
+/**
+ * The class holding all data related to the dimension Hemateria
+ */
 public class Hemateria extends BasePlanet {
 
     public static final DimensionEnum ENUM = DimensionEnum.HEMATERIA;
 
+    /**
+     * Getter for dimension Enum
+     *
+     * @return Dimension Enum
+     */
     @Override
     public DimensionEnum getPlanetEnum() {
         return ENUM;
     }
 
+    /**
+     * The configuration of the DimensionBuilder to configure the dimension
+     *
+     * @param builder The dimension builder to chain on
+     * @return The dimension Builder with all properties assigned
+     */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.mass(0.1)
@@ -33,6 +47,11 @@ public class Hemateria extends BasePlanet {
                     .pressure(1));
     }
 
+    /**
+     * Configures the world provider to add the correct biomes and settings
+     *
+     * @param builder The world provider builder being configured
+     */
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
@@ -69,7 +88,7 @@ public class Hemateria extends BasePlanet {
             .biome(
                 createBiome(
                     "Hemateria Hills",
-                    GalaxiaBlockBase.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix)
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
@@ -83,7 +102,7 @@ public class Hemateria extends BasePlanet {
             .biome(
                 createBiome(
                     "Hemateria Dune Hills",
-                    GalaxiaBlockBase.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix)
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())
                         .block(),
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)

@@ -18,11 +18,12 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Row;
-import com.gtnewhorizons.galaxia.items.ItemHabitatBuilder;
+import com.gtnewhorizons.galaxia.items.special.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
-import com.gtnewhorizons.galaxia.utility.Colors;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
+// TODO: JAVADOC
 public class HabitatBuilderGui {
 
     private final GuiData guiData;
@@ -77,11 +78,11 @@ public class HabitatBuilderGui {
                 });
 
             IDrawable markerDrawable = selected
-                ? IDrawable.of(GuiTextures.PLAY.withColorOverride(Colors.IconGreen.getColor()))
+                ? IDrawable.of(GuiTextures.PLAY.withColorOverride(EnumColors.IconGreen.getColor()))
                 : IDrawable.EMPTY;
             IWidget marker = markerDrawable.asWidget()
                 .size(8, 8);
-            IWidget label = new TextWidget(IKey.str(name)).color(Colors.Value.getColor());
+            IWidget label = new TextWidget(IKey.str(name)).color(EnumColors.Value.getColor());
 
             Row content = new Row();
             content.children(Arrays.asList(marker, label));

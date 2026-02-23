@@ -1,7 +1,11 @@
 package com.gtnewhorizons.galaxia.dimension;
 
+/**
+ * ENUM for storing all dimensions
+ */
 public enum DimensionEnum {
 
+    // Format: ENUMNAME(int ID, String name)
     THEIA(20, "Theia"),
     HEMATERIA(21, "Hemateria"),
     FROZEN_BELT(22, "Frozen_Belt");

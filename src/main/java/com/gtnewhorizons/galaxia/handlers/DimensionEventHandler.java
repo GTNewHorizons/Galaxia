@@ -12,8 +12,8 @@ import net.minecraft.potion.PotionEffect;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
 
-import com.gtnewhorizons.galaxia.dimension.EffectDef;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectDef;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
