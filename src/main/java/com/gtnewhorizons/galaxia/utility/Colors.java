@@ -13,8 +13,15 @@ public enum Colors {
     SubTitle(0xAAAAFF),
     Value(0xFFFFFF),
 
-    IconGreen(0x55FF55);
-    // Add more colors here
+    IconGreen(0x55FF55),
+
+    OxygenDefault(0x88FFFF),
+    TemperatureHot(0xFF4444),
+    TemperatureCold(0x4488FF),
+    TemperatureNormal(0xFFFFFF)
+
+    ; // leave trailing semicolon
+      // Add more colors here
 
     private static final String PREFIX = "galaxia.color.override.";
     private final int defaultColor;
