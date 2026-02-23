@@ -93,6 +93,8 @@ galaxia.config.category.overlay.tooltip=Settings for the Galaxia HUD overlays
 galaxia.config.category.overlay_global=Global
 galaxia.config.category.overlay_global.tooltip=Global overlay settings for the Galaxia HUD
 
+galaxia.config.overlay.show_in_creative=Global bar show in creative
+galaxia.config.overlay.show_in_creative.tooltip=Defines if bars will render in creative mode\nTrue = will render
 galaxia.config.overlay.horizontal_offset=Global bars horizontal offset
 galaxia.config.overlay.horizontal_offset.tooltip=Moves HUD horizontally\nPositive = right
 galaxia.config.overlay.vertical_offset=Global bars vertical offset
