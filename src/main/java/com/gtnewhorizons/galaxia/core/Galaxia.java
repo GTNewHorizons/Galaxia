@@ -50,8 +50,8 @@ public class Galaxia {
     public void init(FMLInitializationEvent event) {
         int packetId = 0;
         channel
-            .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
-        channel.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, packetId, Side.SERVER);
+            .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, ++packetId, Side.SERVER);
+        channel.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, ++packetId, Side.SERVER);
         proxy.init(event);
     }
 
