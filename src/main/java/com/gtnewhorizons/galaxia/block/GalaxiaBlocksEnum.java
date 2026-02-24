@@ -65,6 +65,14 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.BASALT,
             BlockVariant.ANDESITE,
             BlockVariant.ANORTHOSITE);
+
+        reg(DimensionEnum.PANSPIRA,
+            BlockVariant.REGOLITH,
+            BlockVariant.ANDESITE,
+            BlockVariant.SNOW,
+            BlockVariant.STONE,
+            BlockVariant.SOIL,
+            BlockVariant.MAGMA);
     }
     //spotless:on
 
