@@ -50,7 +50,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
             return stack.getTagCompound()
                 .getString("selectedModule");
         }
-        return ModuleTypes.HUB_3X3.getId() + " FALLBACK";
+        return ModuleTypes.HUB_3X3.getId();
     }
 
     /**
