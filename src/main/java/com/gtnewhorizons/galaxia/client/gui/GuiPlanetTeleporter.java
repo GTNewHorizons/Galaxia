@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
@@ -7,7 +9,6 @@ import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
@@ -87,7 +88,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Defines the behaviour on button presses
-     * 
+     *
      * @param button The button pressed
      */
     @Override
@@ -108,7 +109,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
                 double y = Double.parseDouble(yField.getText());
                 double z = Double.parseDouble(zField.getText());
 
-                Galaxia.channel.sendToServer(new TeleportRequestPacket(selectedPlanet.getId(), x, y, z));
+                GALAXIA_NETWORK.sendToServer(new TeleportRequestPacket(selectedPlanet.getId(), x, y, z));
                 this.mc.displayGuiScreen(null);
             } catch (NumberFormatException ignored) {}
         }
@@ -116,7 +117,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Draws the screen of the GUI
-     * 
+     *
      * @param mouseX       Current cursor x position
      * @param mouseY       Current cursor y position
      * @param partialTicks The current partial tick (how far user is between current
@@ -168,7 +169,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Handles keyboard presses for textfield entry
-     * 
+     *
      * @param typedChar The character typed in the field
      * @param keyCode   The keycode of non-alphanumeric commands (enter, return
      *                  etc.)
@@ -190,7 +191,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
     /**
      * Handles mouse click events
-     * 
+     *
      * @param mouseX      Current cursor x position
      * @param mouseY      Current cursor y position
      * @param mouseButton The mouse button pressed (right click, left click etc)

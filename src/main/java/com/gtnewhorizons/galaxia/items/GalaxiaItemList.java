@@ -20,6 +20,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
  */
 public enum GalaxiaItemList {
 
+    GALAXIA_LOGO("galaxia_logo"),
     TELEPORTER("teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("galactic_map", ItemGalacticMap::new, 1),
     DUST_THEIA("theia_dust"),
