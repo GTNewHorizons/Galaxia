@@ -16,16 +16,17 @@ public class WorldGenCrater extends WorldGenGalaxia {
         if (!super.generate(world, random, x, y, z)) {
             return false;
         }
-        int diameter = 8 + random.nextInt(8);
+        int diameter = 16 + random.nextInt(16);
         int radius = diameter / 2;
         int squaredCraterRadius = radius*radius;
+        int heightOffset = radius / 2;
         for (int localX = -radius; localX <= radius; localX++) {
             for (int localY = -radius; localY <= radius; localY++) {
                 for (int localZ = -radius; localZ <= radius; localZ++) {
-                    if (world.isAirBlock(x + localX, y + localY, z + localZ)) continue;
+                    if (world.isAirBlock(x + localX, y + localY + heightOffset, z + localZ)) continue;
                     double squaredDistance = localX * localX + localY * localY + localZ * localZ;
-                    if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.3)) {
-                        setBlockFast(world, localX + x, localY + y, localZ + z, Blocks.air, 0);
+                    if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.1)) {
+                        setBlockFast(world, localX + x, localY + y + heightOffset, localZ + z, Blocks.air, 0);
                     }
                 }
             }
