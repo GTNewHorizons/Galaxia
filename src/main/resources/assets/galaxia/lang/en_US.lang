@@ -50,6 +50,7 @@ tile.module.shell.name=[?]Shell module
 tile.module.controller.name=[?]Controller module
 
 #### Items
+item.galaxia.galaxia_logo.name=Galaxia
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.module_placer.name=Module Builder
 item.galaxia.module_mover.name=Module Mover
