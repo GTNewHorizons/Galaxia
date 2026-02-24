@@ -4,7 +4,7 @@ import net.minecraft.entity.Entity;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
-import com.gtnewhorizons.galaxia.dimension.builder.EffectDef;
+import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
 
 /**
  * API underpinning planetary mechanics
@@ -31,10 +31,10 @@ public final class PlanetAPI {
      * @param e The entity to check effects on
      * @return Effects on the entity, or defaults if failed
      */
-    public static EffectDef getEffects(Entity e) {
-        if (e == null || e.worldObj == null) return new EffectDef();
+    public static EffectBuilder getEffects(Entity e) {
+        if (e == null || e.worldObj == null) return new EffectBuilder();
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
-        if (def == null) return new EffectDef();
+        if (def == null) return new EffectBuilder();
         return def.effects();
     }
 

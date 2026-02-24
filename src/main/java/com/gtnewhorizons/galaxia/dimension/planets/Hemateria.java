@@ -42,9 +42,11 @@ public class Hemateria extends BasePlanet {
             .gravity(0.5)
             .airResistance(0.7)
             .effects(
-                new EffectBuilder().baseTemp(67)
+                EffectBuilder.builder()
+                    .baseTemp(67)
                     .oxygenPercent(0)
-                    .pressure(1));
+                    .pressure(1)
+                    .build());
     }
 
     /**
