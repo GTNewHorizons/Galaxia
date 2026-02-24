@@ -53,7 +53,7 @@ public class DimensionBuilder {
     private double air_resistance = 1;
     private boolean removeSpeedCancelation = false;
     private List<CelestialBody> celestialBodies = Collections.emptyList();
-    private EffectDef effects;
+    private EffectBuilder effects;
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -195,7 +195,7 @@ public class DimensionBuilder {
      * @return Configured builder
      */
     public DimensionBuilder effects(EffectBuilder effects) {
-        this.effects = effects.build();
+        this.effects = effects;
         return this;
     }
 
