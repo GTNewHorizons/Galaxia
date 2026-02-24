@@ -1,8 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import static org.lwjgl.opengl.Display.getHeight;
-import static org.lwjgl.opengl.Display.getWidth;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 
@@ -17,39 +14,44 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
 
+import static org.lwjgl.opengl.Display.getHeight;
+import static org.lwjgl.opengl.Display.getWidth;
+
 public class OrbitalMapWidget extends Widget {
 
     private final OrbitalCelestialBody root;
 
     private double cameraX = 0, cameraY = 0;
     private double zoomLevel = -0.8;
+    private double targetCameraX = 0, targetCameraY = 0;
+    private double targetZoomLevel = -0.8;
+
     private boolean dragging = false;
     private double lastMouseX, lastMouseY;
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
+    private static final double LERP_SPEED = 0.16;
 
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
+        this.targetCameraX = cameraX;
+        this.targetCameraY = cameraY;
+        this.targetZoomLevel = zoomLevel;
     }
 
     @Override
     public void onInit() {
         super.onInit();
 
-        listenGuiAction(
-            (IGuiAction.MouseScroll) (direction,
-                amount) -> handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
+        listenGuiAction((IGuiAction.MouseScroll) (direction, amount) ->
+            handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
 
-        listenGuiAction(
-            (IGuiAction.MouseDrag) (mouseButton,
-                time) -> handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
+        listenGuiAction((IGuiAction.MouseDrag) (mouseButton, time) ->
+            handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
 
-        listenGuiAction(
-            (IGuiAction.MouseReleased) mouseButton -> handleMouseReleased(
-                getContext().getMouseX(),
-                getContext().getMouseY(),
-                mouseButton));
+        listenGuiAction((IGuiAction.MouseReleased) mouseButton ->
+            handleMouseReleased(getContext().getMouseX(), getContext().getMouseY(), mouseButton));
     }
 
     private boolean handleMouseWheel(UpOrDown direction, int mouseX, int mouseY) {
@@ -60,7 +62,6 @@ public class OrbitalMapWidget extends Widget {
 
         double oldScale = getScale();
         zoomLevel += multiplier * 0.78;
-
         zoomLevel = Math.max(-7.0, Math.min(14.0, zoomLevel));
 
         int localX = mouseX - (int) getArea().rx;
@@ -116,14 +117,20 @@ public class OrbitalMapWidget extends Widget {
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         super.drawBackground(context, widgetTheme);
 
+        cameraX = cameraX * (1 - LERP_SPEED) + targetCameraX * LERP_SPEED;
+        cameraY = cameraY * (1 - LERP_SPEED) + targetCameraY * LERP_SPEED;
+        zoomLevel = zoomLevel * (1 - LERP_SPEED) + targetZoomLevel * LERP_SPEED;
+
         Gui.drawRect(0, 0, getWidth(), getHeight(), 0xFF0F1621);
 
         GlStateManager.pushMatrix();
         GlStateManager.disableTexture2D();
         GlStateManager.enableBlend();
+        GL11.glEnable(GL11.GL_LINE_SMOOTH);
 
         drawTree(root, 0, 0);
 
+        GL11.glDisable(GL11.GL_LINE_SMOOTH);
         GlStateManager.enableTexture2D();
         GlStateManager.popMatrix();
 
@@ -132,9 +139,7 @@ public class OrbitalMapWidget extends Widget {
     }
 
     private void drawTree(OrbitalCelestialBody body, double parentWX, double parentWY) {
-        if (body != root) {
-            drawEllipse(body.orbitalParams(), parentWX, parentWY);
-        }
+        if (body != root) drawEllipse(body.orbitalParams(), parentWX, parentWY);
 
         double[] pos = calculatePosition(body.orbitalParams());
         double wx = parentWX + pos[0];
@@ -162,28 +167,6 @@ public class OrbitalMapWidget extends Widget {
         }
     }
 
-    private void drawEllipse(OrbitalParams p, double parentX, double parentY) {
-        double a = p.semiMajorAxis();
-        double e = p.eccentricity();
-        double b = a * Math.sqrt(Math.max(0, 1 - e * e));
-        double rot = p.argumentOfPeriapsis();
-
-        GL11.glBegin(GL11.GL_LINE_LOOP);
-        GL11.glColor4f(0.4f, 0.4f, 0.45f, 0.7f);
-
-        for (int i = 0; i <= 96; i++) {
-            double theta = i * Math.PI * 2 / 96;
-            double ex = a * Math.cos(theta);
-            double ey = b * Math.sin(theta);
-
-            double rx = ex * Math.cos(rot) - ey * Math.sin(rot);
-            double ry = ex * Math.sin(rot) + ey * Math.cos(rot);
-
-            GL11.glVertex2d(worldToScreenX(parentX + rx), worldToScreenY(parentY + ry));
-        }
-        GL11.glEnd();
-    }
-
     private double[] calculatePosition(OrbitalParams p) {
         double M = p.meanAnomalyAtEpoch();
         double e = p.eccentricity();
@@ -195,7 +178,7 @@ public class OrbitalMapWidget extends Widget {
         double r = p.semiMajorAxis() * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
         double angle = trueAnomaly + p.argumentOfPeriapsis();
 
-        return new double[] { r * Math.cos(angle), r * Math.sin(angle) };
+        return new double[]{r * Math.cos(angle), r * Math.sin(angle)};
     }
 
     private void drawFilledCircle(float x, float y, float r, int color) {
@@ -211,7 +194,53 @@ public class OrbitalMapWidget extends Widget {
 
     private void drawCenteredString(String text, float x, float y, int color) {
         Minecraft mc = Minecraft.getMinecraft();
-        mc.fontRenderer
-            .drawStringWithShadow(text, (int) (x - mc.fontRenderer.getStringWidth(text) / 2f), (int) y, color);
+        int w = mc.fontRenderer.getStringWidth(text);
+        mc.fontRenderer.drawStringWithShadow(text, (int) (x - w / 2f), (int) y, color);
+    }
+
+    private void drawEllipse(OrbitalParams p, double parentX, double parentY) {
+        double a = p.semiMajorAxis();
+        double e = p.eccentricity();
+        double b = a * Math.sqrt(Math.max(0, 1 - e * e));
+        double rot = p.argumentOfPeriapsis();
+
+        float lineWidth = (float) Math.max(1.8, getScale() * 0.035);
+        GL11.glLineWidth(lineWidth);
+        GL11.glColor4f(0.62f, 0.72f, 0.95f, 0.92f);
+
+        GL11.glBegin(GL11.GL_LINE_LOOP);
+        for (int i = 0; i <= 120; i++) {
+            double theta = i * Math.PI * 2 / 120;
+            double ex = a * Math.cos(theta);
+            double ey = b * Math.sin(theta);
+            double rx = ex * Math.cos(rot) - ey * Math.sin(rot);
+            double ry = ex * Math.sin(rot) + ey * Math.cos(rot);
+            GL11.glVertex2d(worldToScreenX(parentX + rx), worldToScreenY(parentY + ry));
+        }
+        GL11.glEnd();
+        GL11.glLineWidth(1f);
+    }
+
+    public void focusOn(OrbitalCelestialBody body) {
+        double[] pos = getAbsoluteWorldPos(body);
+        if (pos != null) {
+            targetCameraX = pos[0];
+            targetCameraY = pos[1];
+            targetZoomLevel = 3.8;
+        }
+    }
+
+    private double[] getAbsoluteWorldPos(OrbitalCelestialBody target) {
+        return getAbsoluteWorldPos(root, target, 0, 0);
+    }
+
+    private double[] getAbsoluteWorldPos(OrbitalCelestialBody current, OrbitalCelestialBody target, double wx, double wy) {
+        if (current == target) return new double[]{wx, wy};
+        for (OrbitalCelestialBody child : current.children()) {
+            double[] local = calculatePosition(child.orbitalParams());
+            double[] res = getAbsoluteWorldPos(child, target, wx + local[0], wy + local[1]);
+            if (res != null) return res;
+        }
+        return null;
     }
 }
