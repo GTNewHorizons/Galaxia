@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.client.gui.PacketSetModule;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
+import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -20,26 +21,22 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.relauncher.Side;
 
-@Mod(modid = Galaxia.MODID, version = Tags.VERSION, name = "Galaxia", acceptedMinecraftVersions = "[1.7.10]")
-public class Galaxia {
+@Mod(modid = Galaxia.MODID, name = Galaxia.NAME, version = Tags.VERSION, acceptedMinecraftVersions = "[1.7.10]")
+public final class Galaxia {
 
-    public static final SimpleNetworkWrapper channel = NetworkRegistry.INSTANCE.newSimpleChannel(Galaxia.MODID);
-    public static CreativeTabs creativeTab = new CreativeTabs(Galaxia.MODID) {
-
-        @Override
-        public Item getTabIconItem() {
-            return Item.getItemById(264);
-        }
-    };
-
-    public static final String UNLOCALIZED_PREFIX = "galaxia.";
+    // spotless:off
     public static final String MODID = "galaxia";
+    public static final String NAME = "Galaxia";
+    public static final String UNLOCALIZED_PREFIX = MODID + ".";
     public static final Logger LOG = LogManager.getLogger(MODID);
+    public static final SimpleNetworkWrapper GALAXIA_NETWORK = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
 
     @SidedProxy(
         clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy",
-        serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
+        serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy"
+    )
     public static CommonProxy proxy;
+    //spotless:on
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -48,10 +45,7 @@ public class Galaxia {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        int packetId = 0;
-        channel
-            .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, ++packetId, Side.SERVER);
-        channel.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, ++packetId, Side.SERVER);
+        registerNetwork();
         proxy.init(event);
     }
 
@@ -66,4 +60,20 @@ public class Galaxia {
     public void serverStarting(FMLServerStartingEvent event) {
         proxy.serverStarting(event);
     }
+
+    // spotless:off
+    private static void registerNetwork() {
+        int id = 0;
+        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, id++, Side.SERVER);
+    }
+    // spotless:on
+
+    public static final CreativeTabs creativeTab = new CreativeTabs(MODID) {
+
+        @Override
+        public Item getTabIconItem() {
+            return GalaxiaItemList.GALAXIA_LOGO.getItem();
+        }
+    };
 }

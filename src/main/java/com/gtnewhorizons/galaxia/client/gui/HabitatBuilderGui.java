@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.channel;
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
 import java.util.Arrays;
 
@@ -67,7 +67,7 @@ public class HabitatBuilderGui {
                 .tooltip(tooltip -> tooltip.add(IKey.str(getModuleTooltip(type))))
                 .onMousePressed((mouseButton) -> {
                     if (mouseButton == 0) {
-                        channel.sendToServer(new PacketSetModule(id)); // Must call to server, not directly
+                        GALAXIA_NETWORK.sendToServer(new PacketSetModule(id)); // Must call to server, not directly
 
                         player.inventory.setInventorySlotContents(slot, held);
                         player.inventory.markDirty();
