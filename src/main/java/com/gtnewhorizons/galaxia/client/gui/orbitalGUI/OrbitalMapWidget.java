@@ -18,6 +18,8 @@ import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
 public class OrbitalMapWidget extends Widget {
 
     private final OrbitalCelestialBody root;
+    private static final boolean DEBUG = true;
+    private long lastPositionDebug = 0;
 
     private double cameraX = 0, cameraY = 0;
     private double zoomLevel = -0.8;
@@ -152,23 +154,54 @@ public class OrbitalMapWidget extends Widget {
 
         Minecraft.getMinecraft().fontRenderer
             .drawStringWithShadow("Zoom: ×" + String.format("%.2f", getScale()), 12, 12, 0xAAFFFFFF);
+
+        if (DEBUG) {
+            drawDebugOverlay();
+        }
     }
 
     private void drawTree(OrbitalCelestialBody body, double parentWX, double parentWY) {
-        if (body != root) drawEllipse(body.orbitalParams(), parentWX, parentWY);
+        double wx, wy;
 
-        double[] pos = calculatePosition(body.orbitalParams());
-        double wx = parentWX + pos[0];
-        double wy = parentWY + pos[1];
+        if (body == root) {
+            wx = 0.0;
+            wy = 0.0;
+        } else {
+            drawEllipse(body.orbitalParams(), parentWX, parentWY);
+            double[] pos = calculatePosition(body.orbitalParams());
+            wx = parentWX + pos[0];
+            wy = parentWY + pos[1];
+        }
 
         float sx = worldToScreenX(wx);
         float sy = worldToScreenY(wy);
 
-        if (body.texture() != null) {
+        if (body.texture() != null && body.spriteSize() > 0.0001) {
             drawSprite(body.texture(), sx, sy, body.spriteSize());
+        } else {
+            int color = switch (body.type()) {
+                case BLACK_HOLE -> 0xFF111111;
+                case STAR -> 0xFFFFEE88;
+                case PLANET -> 0xFF44AAFF;
+                case MOON -> 0xFFEEEEEE;
+                default -> 0xFF00FF99;
+            };
+            drawFilledCircle(sx, sy, body == root ? 11 : 7, color);
         }
 
         drawCenteredString(body.name(), sx, sy + 14, 0xFFFFFFFF);
+
+        if (DEBUG && System.currentTimeMillis() - lastPositionDebug > 2000) {
+            System.out.printf(
+                "[DEBUG DRAW] %s | World: %.4f, %.4f | Screen: %.1f, %.1f | Scale: %.2f%n",
+                body.name(),
+                wx,
+                wy,
+                sx,
+                sy,
+                getScale());
+            lastPositionDebug = System.currentTimeMillis();
+        }
 
         for (OrbitalCelestialBody child : body.children()) {
             drawTree(child, wx, wy);
@@ -177,7 +210,7 @@ public class OrbitalMapWidget extends Widget {
 
     private void drawSprite(ResourceLocation texture, float x, float y, double worldRadius) {
         float radius = (float) (worldRadius * getScale());
-        if (radius < 6) radius = 6; // не исчезает при сильном зуме наружу
+        if (radius < 6) radius = 6;
 
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -261,14 +294,18 @@ public class OrbitalMapWidget extends Widget {
 
     public void focusOn(OrbitalCelestialBody body) {
         double[] pos = getAbsoluteWorldPos(body);
-        if (pos == null) return;
+        if (pos == null) {
+            System.out.println("§c[DEBUG] focusOn FAILED for " + body.name());
+            return;
+        }
 
-        // Летим ТОЧНО на текущее положение тела (никаких центров эллипса)
+        System.out.println("§6[DEBUG] === FOCUS ON: " + body.name() + " ===");
+        System.out.printf("   World position: %.4f, %.4f%n", pos[0], pos[1]);
+
         targetCameraX = pos[0];
         targetCameraY = pos[1];
 
         if (body == root) {
-            // Для чёрной дыры — показываем всю систему красиво
             double maxSize = 0;
             for (OrbitalCelestialBody child : body.children()) {
                 maxSize = Math.max(
@@ -283,11 +320,10 @@ public class OrbitalMapWidget extends Widget {
                 targetZoomLevel = -0.8;
             }
         } else {
-            // Для всех остальных — скейл именно «на тело»
             double apogee = body.orbitalParams()
                 .apogee();
             if (apogee > 1e-9) {
-                double desiredScale = 550.0 / apogee; // чем больше число — тем ближе/крупнее тело
+                double desiredScale = 650.0 / apogee;
                 targetZoomLevel = Math.log(desiredScale / BASE_SCALE) / Math.log(ZOOM_BASE);
             } else {
                 targetZoomLevel = 8.0;
@@ -296,20 +332,53 @@ public class OrbitalMapWidget extends Widget {
 
         targetZoomLevel = Math.max(-7000.0, Math.min(14000.0, targetZoomLevel));
         isFocusing = true;
+
+        System.out.printf(
+            "   → Camera target: %.4f, %.4f | ZoomLevel: %.3f | Scale ≈ %.1f%n",
+            targetCameraX,
+            targetCameraY,
+            targetZoomLevel,
+            BASE_SCALE * Math.pow(ZOOM_BASE, targetZoomLevel));
+        System.out.println("========================================");
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody target) {
-        return getAbsoluteWorldPos(root, target, 0, 0);
+        return getAbsoluteWorldPos(root, target, 0.0, 0.0);
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody current, OrbitalCelestialBody target, double wx,
         double wy) {
-        if (current == target) return new double[] { wx, wy };
+        if (current == target) {
+            return (current == root) ? new double[] { 0.0, 0.0 } : new double[] { wx, wy };
+        }
+
+        double currentX = (current == root) ? 0.0 : wx;
+        double currentY = (current == root) ? 0.0 : wy;
+
         for (OrbitalCelestialBody child : current.children()) {
             double[] local = calculatePosition(child.orbitalParams());
-            double[] res = getAbsoluteWorldPos(child, target, wx + local[0], wy + local[1]);
+            double[] res = getAbsoluteWorldPos(child, target, currentX + local[0], currentY + local[1]);
             if (res != null) return res;
         }
         return null;
+    }
+
+    private void drawDebugOverlay() {
+        Minecraft mc = Minecraft.getMinecraft();
+        int y = 40;
+        mc.fontRenderer.drawStringWithShadow("§6=== GALACTIC MAP DEBUG ===", 12, y, 0xFFFF5555);
+        y += 14;
+        mc.fontRenderer.drawStringWithShadow(String.format("Camera: %.4f, %.4f", cameraX, cameraY), 12, y, 0x88FF88);
+        y += 12;
+        mc.fontRenderer
+            .drawStringWithShadow(String.format("Target: %.4f, %.4f", targetCameraX, targetCameraY), 12, y, 0x88FF88);
+        y += 12;
+        mc.fontRenderer.drawStringWithShadow(
+            String.format("ZoomLevel: %.2f | Scale: %.2f", zoomLevel, getScale()),
+            12,
+            y,
+            0x88FF88);
+        y += 12;
+        mc.fontRenderer.drawStringWithShadow("Focusing: " + isFocusing + "  |  Dragging: " + dragging, 12, y, 0x88FF88);
     }
 }

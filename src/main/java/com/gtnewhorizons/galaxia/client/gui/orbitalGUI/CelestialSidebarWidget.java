@@ -60,12 +60,12 @@ public class CelestialSidebarWidget extends Widget {
 
         int localY = my - (int) getArea().ry - 52;
 
-        if (localY < 0) { // клик по полю поиска
+        if (localY < 0) {
             searchFocused = true;
-            return true; // фокус + ничего больше не делаем
+            return true;
         }
 
-        searchFocused = false; // клик по списку → снимаем фокус поиска
+        searchFocused = false;
 
         int index = (int) ((localY + scrollOffset) / LINE_HEIGHT);
         List<VisibleEntry> visible = getVisibleEntries();
@@ -88,13 +88,13 @@ public class CelestialSidebarWidget extends Widget {
         if (!searchFocused) return false;
 
         long now = System.currentTimeMillis();
-        if (now - lastKeyPressTime < 30) { // защита от двойного срабатывания
+        if (now - lastKeyPressTime < 30) {
             lastKeyPressTime = now;
             return true;
         }
         lastKeyPressTime = now;
 
-        if (keyCode == 14) { // backspace
+        if (keyCode == 14) {
             if (!searchQuery.isEmpty()) searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
             scrollOffset = 0;
             return true;
@@ -104,7 +104,7 @@ public class CelestialSidebarWidget extends Widget {
             scrollOffset = 0;
             return true;
         }
-        return false; // остальные клавиши (ESC и т.д.) — пропускаем, чтобы GUI закрывался
+        return false;
     }
 
     @Desugar
