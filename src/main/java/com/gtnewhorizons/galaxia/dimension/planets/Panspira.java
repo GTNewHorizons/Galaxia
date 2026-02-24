@@ -140,9 +140,9 @@ public class Panspira extends BasePlanet {
             .ocean(
                 new BlockMeta(Blocks.water, 1),
                 GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix()),
-                64,
+                96,
                 GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH.suffix()),
-                32)
+                64)
             .build();
     }
 }
