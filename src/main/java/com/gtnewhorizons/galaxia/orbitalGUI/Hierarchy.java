@@ -97,6 +97,12 @@ public class Hierarchy {
                 return this;
             }
 
+            public Builder textureAndSize(ResourceLocation path, double size) {
+                this.texture = path;
+                this.spriteSize = size;
+                return this;
+            }
+
             public Builder spriteSize(double size) {
                 this.spriteSize = size;
                 return this;

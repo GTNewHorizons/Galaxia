@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
@@ -30,9 +31,17 @@ public class OrbitalMapWidget extends Widget {
     private boolean dragging = false;
     private double lastMouseX, lastMouseY;
 
+    private double globalTime = 0.0;
+    private double timeScale = 42.0;
+    private boolean paused = false;
+    private long lastFrameTime = System.currentTimeMillis();
+    private OrbitalCelestialBody focusedBody = null;
+    private boolean isFollowing = false;
+
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
     private static final double LERP_SPEED = 0.18;
+    private static final double KEPLER_BASE = 0.42;
 
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
@@ -58,6 +67,56 @@ public class OrbitalMapWidget extends Widget {
                 getContext().getMouseX(),
                 getContext().getMouseY(),
                 mouseButton));
+
+        listenGuiAction((IGuiAction.KeyPressed) this::handleKeyPressed);
+    }
+
+    private boolean handleKeyPressed(char typedChar, int keyCode) {
+        if (keyCode == 57) {
+            paused = !paused;
+            return true;
+        }
+        if (typedChar == '+' || typedChar == '=') {
+            timeScale *= 1.35;
+            timeScale = Math.min(timeScale, 800000.0);
+            return true;
+        }
+        if (typedChar == '-') {
+            timeScale /= 1.35;
+            timeScale = Math.max(timeScale, 0.01);
+            return true;
+        }
+        return false;
+    }
+
+    private void updateSimulationTime() {
+        if (paused) return;
+
+        long now = System.currentTimeMillis();
+        double delta = (now - lastFrameTime) / 1000.0;
+        globalTime += delta * timeScale;
+        lastFrameTime = now;
+    }
+
+    private double[] calculatePosition(OrbitalParams p, double t) {
+        double a = p.semiMajorAxis();
+        if (a < 1e-8) return new double[] { 0.0, 0.0 };
+
+        double n = KEPLER_BASE * Math.pow(a, -1.5);
+        double M = p.meanAnomalyAtEpoch() + n * t;
+
+        double e = p.eccentricity();
+        double E = M;
+        for (int i = 0; i < 8; i++) {
+            E = M + e * Math.sin(E);
+        }
+
+        double trueAnomaly = 2 * Math.atan(Math.sqrt((1 + e) / (1 - e)) * Math.tan(E / 2));
+
+        double r = a * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
+        double angle = trueAnomaly + p.argumentOfPeriapsis();
+
+        return new double[] { r * Math.cos(angle), r * Math.sin(angle) };
     }
 
     private boolean handleMouseWheel(UpOrDown direction, int mouseX, int mouseY) {
@@ -68,8 +127,8 @@ public class OrbitalMapWidget extends Widget {
         zoomLevel += multiplier * 0.78;
         zoomLevel = Math.max(-7000.0, Math.min(14000.0, zoomLevel));
 
-        int localX = mouseX - (int) getArea().rx;
-        int localY = mouseY - (int) getArea().ry;
+        int localX = mouseX - getArea().rx;
+        int localY = mouseY - getArea().ry;
 
         double worldMouseX = cameraX + (localX - getArea().width / 2.0) / oldScale;
         double worldMouseY = cameraY + (localY - getArea().height / 2.0) / oldScale;
@@ -81,14 +140,14 @@ public class OrbitalMapWidget extends Widget {
         targetCameraX = cameraX;
         targetCameraY = cameraY;
         targetZoomLevel = zoomLevel;
-        isFocusing = false;
+        isFollowing = false;
         return true;
     }
 
     private boolean handleMouseDragged(int mouseX, int mouseY, int button, long time) {
         if (button == 0) {
-            int localX = mouseX - (int) getArea().rx;
-            int localY = mouseY - (int) getArea().ry;
+            int localX = mouseX - getArea().rx;
+            int localY = mouseY - getArea().ry;
 
             if (!dragging) {
                 dragging = true;
@@ -102,7 +161,7 @@ public class OrbitalMapWidget extends Widget {
 
             targetCameraX = cameraX;
             targetCameraY = cameraY;
-            isFocusing = false;
+            isFollowing = false;
             return true;
         }
         return false;
@@ -127,6 +186,16 @@ public class OrbitalMapWidget extends Widget {
 
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
+        updateSimulationTime();
+
+        if (isFollowing && focusedBody != null) {
+            double[] pos = getAbsoluteWorldPos(focusedBody);
+            if (pos != null) {
+                targetCameraX = pos[0];
+                targetCameraY = pos[1];
+            }
+        }
+
         super.drawBackground(context, widgetTheme);
 
         if (isFocusing) {
@@ -146,21 +215,23 @@ public class OrbitalMapWidget extends Widget {
         GlStateManager.enableBlend();
         GL11.glEnable(GL11.GL_LINE_SMOOTH);
 
-        drawTree(root, 0, 0);
+        drawTree(root, 0, 0, globalTime);
 
         GL11.glDisable(GL11.GL_LINE_SMOOTH);
         GlStateManager.enableTexture2D();
         GlStateManager.popMatrix();
 
-        Minecraft.getMinecraft().fontRenderer
-            .drawStringWithShadow("Zoom: ×" + String.format("%.2f", getScale()), 12, 12, 0xAAFFFFFF);
+        String speedText = paused ? "§cPAUSED" : String.format("§a×%.1f", timeScale);
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
+            "Zoom: ×" + String.format("%.2f", getScale()) + "   Speed: " + speedText,
+            12,
+            12,
+            0xAAFFFFFF);
 
-        if (DEBUG) {
-            drawDebugOverlay();
-        }
+        if (DEBUG) drawDebugOverlay();
     }
 
-    private void drawTree(OrbitalCelestialBody body, double parentWX, double parentWY) {
+    private void drawTree(OrbitalCelestialBody body, double parentWX, double parentWY, double t) {
         double wx, wy;
 
         if (body == root) {
@@ -168,7 +239,7 @@ public class OrbitalMapWidget extends Widget {
             wy = 0.0;
         } else {
             drawEllipse(body.orbitalParams(), parentWX, parentWY);
-            double[] pos = calculatePosition(body.orbitalParams());
+            double[] pos = calculatePosition(body.orbitalParams(), t);
             wx = parentWX + pos[0];
             wy = parentWY + pos[1];
         }
@@ -191,62 +262,34 @@ public class OrbitalMapWidget extends Widget {
 
         drawCenteredString(body.name(), sx, sy + 14, 0xFFFFFFFF);
 
-        if (DEBUG && System.currentTimeMillis() - lastPositionDebug > 2000) {
-            System.out.printf(
-                "[DEBUG DRAW] %s | World: %.4f, %.4f | Screen: %.1f, %.1f | Scale: %.2f%n",
-                body.name(),
-                wx,
-                wy,
-                sx,
-                sy,
-                getScale());
-            lastPositionDebug = System.currentTimeMillis();
-        }
-
         for (OrbitalCelestialBody child : body.children()) {
-            drawTree(child, wx, wy);
+            drawTree(child, wx, wy, t);
         }
     }
 
+    // TODO fix icon rendering (they are just invisible rn)
     private void drawSprite(ResourceLocation texture, float x, float y, double worldRadius) {
         float radius = (float) (worldRadius * getScale());
-        if (radius < 6) radius = 6;
+        if (radius < 12f) radius = 12f;
 
-        Minecraft.getMinecraft()
-            .getTextureManager()
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.getTextureManager()
             .bindTexture(texture);
 
         GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
 
         float half = radius;
+        Tessellator tess = Tessellator.instance;
 
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0.0f, 0.0f);
-        GL11.glVertex2f(x - half, y - half);
-        GL11.glTexCoord2f(1.0f, 0.0f);
-        GL11.glVertex2f(x + half, y - half);
-        GL11.glTexCoord2f(1.0f, 1.0f);
-        GL11.glVertex2f(x + half, y + half);
-        GL11.glTexCoord2f(0.0f, 1.0f);
-        GL11.glVertex2f(x - half, y + half);
-        GL11.glEnd();
-
-        GlStateManager.disableTexture2D();
-    }
-
-    private double[] calculatePosition(OrbitalParams p) {
-        double M = p.meanAnomalyAtEpoch();
-        double e = p.eccentricity();
-        double E = M;
-        for (int i = 0; i < 6; i++) E = M + e * Math.sin(E);
-
-        double trueAnomaly = 2 * Math.atan(Math.sqrt((1 + e) / (1 - e)) * Math.tan(E / 2));
-
-        double r = p.semiMajorAxis() * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
-        double angle = trueAnomaly + p.argumentOfPeriapsis();
-
-        return new double[] { r * Math.cos(angle), r * Math.sin(angle) };
+        tess.startDrawingQuads();
+        tess.addVertexWithUV(x - half, y - half, 0, 0, 0); // TL
+        tess.addVertexWithUV(x + half, y - half, 0, 1, 0); // TR
+        tess.addVertexWithUV(x + half, y + half, 0, 1, 1); // BR
+        tess.addVertexWithUV(x - half, y + half, 0, 0, 1); // BL
+        tess.draw();
     }
 
     private void drawFilledCircle(float x, float y, float r, int color) {
@@ -293,15 +336,11 @@ public class OrbitalMapWidget extends Widget {
     }
 
     public void focusOn(OrbitalCelestialBody body) {
+        this.focusedBody = body;
+        this.isFollowing = true;
+        this.isFocusing = true;
+
         double[] pos = getAbsoluteWorldPos(body);
-        if (pos == null) {
-            System.out.println("§c[DEBUG] focusOn FAILED for " + body.name());
-            return;
-        }
-
-        System.out.println("§6[DEBUG] === FOCUS ON: " + body.name() + " ===");
-        System.out.printf("   World position: %.4f, %.4f%n", pos[0], pos[1]);
-
         targetCameraX = pos[0];
         targetCameraY = pos[1];
 
@@ -331,33 +370,24 @@ public class OrbitalMapWidget extends Widget {
         }
 
         targetZoomLevel = Math.max(-7000.0, Math.min(14000.0, targetZoomLevel));
-        isFocusing = true;
-
-        System.out.printf(
-            "   → Camera target: %.4f, %.4f | ZoomLevel: %.3f | Scale ≈ %.1f%n",
-            targetCameraX,
-            targetCameraY,
-            targetZoomLevel,
-            BASE_SCALE * Math.pow(ZOOM_BASE, targetZoomLevel));
-        System.out.println("========================================");
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody target) {
-        return getAbsoluteWorldPos(root, target, 0.0, 0.0);
+        return getAbsoluteWorldPos(root, target, 0.0, 0.0, globalTime);
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody current, OrbitalCelestialBody target, double wx,
-        double wy) {
+        double wy, double t) {
         if (current == target) {
-            return (current == root) ? new double[] { 0.0, 0.0 } : new double[] { wx, wy };
+            return new double[] { wx, wy };
         }
 
-        double currentX = (current == root) ? 0.0 : wx;
-        double currentY = (current == root) ? 0.0 : wy;
+        double curX = (current == root) ? 0.0 : wx;
+        double curY = (current == root) ? 0.0 : wy;
 
         for (OrbitalCelestialBody child : current.children()) {
-            double[] local = calculatePosition(child.orbitalParams());
-            double[] res = getAbsoluteWorldPos(child, target, currentX + local[0], currentY + local[1]);
+            double[] local = calculatePosition(child.orbitalParams(), t);
+            double[] res = getAbsoluteWorldPos(child, target, curX + local[0], curY + local[1], t);
             if (res != null) return res;
         }
         return null;
@@ -368,17 +398,21 @@ public class OrbitalMapWidget extends Widget {
         int y = 40;
         mc.fontRenderer.drawStringWithShadow("§6=== GALACTIC MAP DEBUG ===", 12, y, 0xFFFF5555);
         y += 14;
-        mc.fontRenderer.drawStringWithShadow(String.format("Camera: %.4f, %.4f", cameraX, cameraY), 12, y, 0x88FF88);
+        mc.fontRenderer.drawStringWithShadow(String.format("Camera: %.3f, %.3f", cameraX, cameraY), 12, y, 0x88FF88);
         y += 12;
-        mc.fontRenderer
-            .drawStringWithShadow(String.format("Target: %.4f, %.4f", targetCameraX, targetCameraY), 12, y, 0x88FF88);
+        String follow = (isFollowing && focusedBody != null) ? focusedBody.name() : "none";
+        mc.fontRenderer.drawStringWithShadow("Following: " + follow + "  |  Paused: " + paused, 12, y, 0xFFDD88);
+        y += 12;
+        mc.fontRenderer.drawStringWithShadow(
+            String.format("Time: %.1fs  |  Speed: ×%.1f", globalTime, timeScale),
+            12,
+            y,
+            0x88FF88);
         y += 12;
         mc.fontRenderer.drawStringWithShadow(
             String.format("ZoomLevel: %.2f | Scale: %.2f", zoomLevel, getScale()),
             12,
             y,
             0x88FF88);
-        y += 12;
-        mc.fontRenderer.drawStringWithShadow("Focusing: " + isFocusing + "  |  Dragging: " + dragging, 12, y, 0x88FF88);
     }
 }
