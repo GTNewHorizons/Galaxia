@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.channel;
+
 import java.util.Arrays;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -65,7 +67,7 @@ public class HabitatBuilderGui {
                 .tooltip(tooltip -> tooltip.add(IKey.str(getModuleTooltip(type))))
                 .onMousePressed((mouseButton) -> {
                     if (mouseButton == 0) {
-                        ItemHabitatBuilder.setSelectedModule(held, id);
+                        channel.sendToServer(new PacketSetModule(id));
 
                         player.inventory.setInventorySlotContents(slot, held);
                         player.inventory.markDirty();

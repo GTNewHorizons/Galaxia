@@ -50,7 +50,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
             return stack.getTagCompound()
                 .getString("selectedModule");
         }
-        return ModuleTypes.HUB_3X3.getId();
+        return ModuleTypes.HUB_3X3.getId() + " FALLBACK";
     }
 
     /**
@@ -102,6 +102,8 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
         float hitX, float hitY, float hitZ) {
         if (world.isRemote) return true;
 
+        LOG.info("Server stack tag: {}", stack.getTagCompound());
+
         String moduleId = getSelectedModule(stack);
         ForgeDirection dir = ForgeDirection.getOrientation(side);
 
@@ -118,6 +120,7 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
         TileEntityModuleController te = (TileEntityModuleController) world.getTileEntity(px, py, pz);
         if (te != null) {
+            LOG.info(moduleId);
             te.setModule(moduleId);
             te.buildStructure();
         }
