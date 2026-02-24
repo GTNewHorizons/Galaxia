@@ -92,6 +92,7 @@ public abstract class BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(new BlockMeta(block, meta))
+            .topBlock(new BlockMeta(Blocks.wool, 5))
             .fillerBlock(Blocks.brick_block)
             .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix()), 144)
             .terrain(terrain)

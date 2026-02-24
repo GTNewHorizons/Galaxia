@@ -14,7 +14,7 @@ import java.util.List;
 public class BiomeGenSpace extends BiomeGenBase {
 
     private final boolean generateBedrock;
-    private final int topBlockMeta;
+    private final List<BlockMeta> topBlockMetas;
     private final int fillerBlockMeta;
     private final TerrainConfiguration terrain;
     private final int snowHeight;
@@ -40,9 +40,8 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setHeight(b.height);
         this.setTemperatureRainfall(b.temperature, b.rainfall);
 
-        this.topBlock = b.topBlock.block();
         this.fillerBlock = b.fillerBlock.block();
-        this.topBlockMeta = b.topBlock.meta();
+        this.topBlockMetas = b.topBlockMetas;
         this.fillerBlockMeta = b.fillerBlock.meta();
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
@@ -80,8 +79,8 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the top block meta
      */
-    public int getTopBlockMeta() {
-        return topBlockMeta;
+    public List<BlockMeta> getTopBlockMetas() {
+        return topBlockMetas;
     }
 
     /**

@@ -13,7 +13,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-import net.minecraft.world.gen.NoiseGeneratorPerlin;
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.dimension.provider.WorldChunkManagerSpace;
@@ -26,7 +26,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private final World worldObj;
     private final Random rand;
-    private final NoiseGeneratorPerlin baseNoise;
+    private final NoiseGeneratorOctaves baseNoise;
     private final boolean showDebug = false;
     private final BlockMeta bedrock = new BlockMeta(Blocks.bedrock, 0);
     private final BlockMeta grass = new BlockMeta(Blocks.grass, 0);
@@ -45,7 +45,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         this.worldObj = world;
 
         this.rand = new Random(world.getSeed());
-        this.baseNoise = new NoiseGeneratorPerlin(rand, 4);
+        this.baseNoise = new NoiseGeneratorOctaves(rand, 4);
         if (showDebug) writeDebug();
     }
 
@@ -178,7 +178,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 if (localBiome instanceof BiomeGenSpace) {
                     BiomeGenSpace spaceBiome = ((BiomeGenSpace) localBiome);
                     generateBedrock = spaceBiome.generateBedrock();
-                    topBlock = new BlockMeta(spaceBiome.topBlock, spaceBiome.getTopBlockMeta());
+                    topBlock = getSurfaceBlock(spaceBiome.getTopBlockMetas(), chunkX * 16 + localX, chunkZ * 16 + localZ);
                     fillerBlock = new BlockMeta(spaceBiome.fillerBlock, spaceBiome.getFillerBlockMeta());
                     snowHeight = spaceBiome.getSnowHeight();
                     snowBlock = spaceBiome.getSnowBlock();
@@ -222,6 +222,26 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
         chunk.generateSkylightMap();
         return chunk;
+    }
+
+    private BlockMeta getSurfaceBlock(List<BlockMeta> blockMetas, int x, int z) {
+        int surfaceBlockCount = blockMetas.size();
+        if (surfaceBlockCount == 1) {
+            return blockMetas.get(0);
+        }
+        BlockMeta surfaceBlock;
+        double noise = baseNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2, 0.2, 0)[0];
+        noise += 6;
+        noise *= surfaceBlockCount;
+        noise /= 12;
+        int pickedSurface = (int) Math.floor(noise);
+        if (pickedSurface >= surfaceBlockCount) {
+            pickedSurface = surfaceBlockCount - 1;
+        } else if (pickedSurface < 0) {
+            pickedSurface = 0;
+        }
+        surfaceBlock = blockMetas.get(pickedSurface);
+        return surfaceBlock;
     }
 
     private int[] generateBaseHeightmap(int cx, int cz) {

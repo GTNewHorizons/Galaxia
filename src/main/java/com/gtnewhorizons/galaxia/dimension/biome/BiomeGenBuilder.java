@@ -35,10 +35,10 @@ public class BiomeGenBuilder {
     BlockMeta oceanFiller = stone;
     BlockMeta oceanSurface = stone;
     BlockMeta seabed = stone;
-    BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
     BlockMeta snowBlock = stone;
     List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
+    List<BlockMeta> topBlockMetas = new ArrayList<>();
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -117,7 +117,7 @@ public class BiomeGenBuilder {
      * @return Configured builder
      */
     public BiomeGenBuilder topBlock(BlockMeta block) {
-        this.topBlock = block;
+        this.topBlockMetas.add(block);
         return this;
     }
 
