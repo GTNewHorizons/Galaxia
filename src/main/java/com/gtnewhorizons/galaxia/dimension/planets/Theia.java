@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
+import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -134,6 +135,7 @@ public class Theia extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(topBlock)
             .fillerBlock(Blocks.brick_block)
+            .surfaceFeature(new WorldGenCrater(4, GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())))
             .build();
     }
 }

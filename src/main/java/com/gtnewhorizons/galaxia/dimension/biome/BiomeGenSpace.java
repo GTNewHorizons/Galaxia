@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.dimension.biome;
 
+import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+
+import java.util.List;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -21,6 +24,7 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final BlockMeta oceanFiller;
     private final BlockMeta oceanSurface;
     private final BlockMeta seabed;
+    private final List<WorldGenGalaxia> surfaceFeatures;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -53,6 +57,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableMonsterList = b.mobsMonster;
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
+        surfaceFeatures = b.surfaceFeatures;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
@@ -158,5 +163,9 @@ public class BiomeGenSpace extends BiomeGenBase {
      */
     public int getSeabedHeight() {
         return seabedHeight;
+    }
+
+    public List<WorldGenGalaxia> getSurfaceFeatures() {
+        return surfaceFeatures;
     }
 }

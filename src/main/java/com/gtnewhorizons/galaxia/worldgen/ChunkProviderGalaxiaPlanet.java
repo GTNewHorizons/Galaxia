@@ -257,6 +257,26 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     public void populate(IChunkProvider provider, int cx, int cz) {
         long seed = (cx * 341873128712L + cz * 132897987541L) ^ worldObj.getSeed();
         rand.setSeed(seed);
+
+        // Convert chunk coordinates to 'regular' coordinates
+        int x = cx * 16;
+        int z = cz * 16;
+
+        // Get local biome
+        BiomeGenBase localBiome = worldObj.getWorldChunkManager().getBiomeGenAt(x, z);
+        if (localBiome instanceof BiomeGenSpace) {
+            BiomeGenSpace spaceBiome = ((BiomeGenSpace) localBiome);
+            if (spaceBiome.getSurfaceFeatures().isEmpty()) {
+                return;
+            }
+            // Generate features in locally random points within the chunk
+            for (WorldGenGalaxia feature : spaceBiome.getSurfaceFeatures()) {
+                int localX = x + this.rand.nextInt(16) + 8;
+                int localZ = z + this.rand.nextInt(16) + 8;
+                int localY = worldObj.getHeightValue(x, z);
+                feature.generate(worldObj, rand, localX, localY, localZ);
+            }
+        }
     }
 
     /**

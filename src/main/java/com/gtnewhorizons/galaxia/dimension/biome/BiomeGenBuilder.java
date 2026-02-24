@@ -1,8 +1,10 @@
 package com.gtnewhorizons.galaxia.dimension.biome;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
@@ -36,6 +38,7 @@ public class BiomeGenBuilder {
     BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
     BlockMeta snowBlock = stone;
+    List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -191,6 +194,11 @@ public class BiomeGenBuilder {
      */
     public BiomeGenBuilder terrain(TerrainConfiguration terrain) {
         this.terrain = terrain;
+        return this;
+    }
+
+    public BiomeGenBuilder surfaceFeature(WorldGenGalaxia feature) {
+        surfaceFeatures.add(feature);
         return this;
     }
 
