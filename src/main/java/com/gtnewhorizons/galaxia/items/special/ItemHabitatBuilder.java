@@ -102,7 +102,6 @@ public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
         float hitX, float hitY, float hitZ) {
         if (world.isRemote) return true;
 
-
         String moduleId = getSelectedModule(stack);
         ForgeDirection dir = ForgeDirection.getOrientation(side);
 
