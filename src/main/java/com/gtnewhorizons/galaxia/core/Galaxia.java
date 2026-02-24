@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
+import com.gtnewhorizons.galaxia.client.gui.PacketSetModule;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 
 import cpw.mods.fml.common.Mod;
@@ -50,7 +51,7 @@ public class Galaxia {
         int packetId = 0;
         channel
             .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, packetId, Side.SERVER);
-
+        channel.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, packetId, Side.SERVER);
         proxy.init(event);
     }
 

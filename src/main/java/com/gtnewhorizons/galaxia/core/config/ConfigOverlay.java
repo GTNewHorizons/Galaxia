@@ -16,19 +16,19 @@ public class ConfigOverlay {
     @Config.LangKey("galaxia.config.category.overlay_global")
     public static class ConfigOverlayGlobal {
 
+        @Config.LangKey("galaxia.config.overlay.show_in_creative")
+        @Config.DefaultBoolean(false)
+        public boolean showBarInCreative;
+
         @Config.LangKey("galaxia.config.overlay.horizontal_offset")
         @Config.DefaultInt(0)
         @Config.RangeInt(min = -200, max = 200)
         public int hudOffsetX;
 
         @Config.LangKey("galaxia.config.overlay.vertical_offset")
-        @Config.DefaultInt(0)
+        @Config.DefaultInt(-10)
         @Config.RangeInt(min = -200, max = 200)
         public int hudOffsetY;
-
-        @Config.LangKey("galaxia.config.overlay.bars_orientation")
-        @Config.DefaultEnum("HORIZONTAL")
-        public BarOrientation barOrientation;
 
         @Config.LangKey("galaxia.config.overlay.pulse.speed")
         @Config.DefaultDouble(150.0D)
@@ -73,7 +73,7 @@ public class ConfigOverlay {
         public int oxygenTextureWidth;
 
         @Config.LangKey("galaxia.config.overlay.texture.oxygen_bar_height")
-        @Config.DefaultInt(9)
+        @Config.DefaultInt(19)
         @Config.RangeInt(min = 1, max = 2048)
         public int oxygenTextureHeight;
 
@@ -100,14 +100,14 @@ public class ConfigOverlay {
         public int temperatureOffsetY;
 
         @Config.LangKey("galaxia.config.overlay.temperature_bar_too_cold")
-        @Config.DefaultDouble(0.35D)
-        @Config.RangeDouble(min = 0.0D, max = 1.0D)
-        public double temperatureLowThreshold;
+        @Config.DefaultFloat(0.35F)
+        @Config.RangeFloat(min = 0.0F, max = 1.0F)
+        public float temperatureLowThreshold;
 
         @Config.LangKey("galaxia.config.overlay.temperature_bar_too_hot")
-        @Config.DefaultDouble(0.65D)
-        @Config.RangeDouble(min = 0.0D, max = 1.0D)
-        public double temperatureHighThreshold;
+        @Config.DefaultFloat(0.65F)
+        @Config.RangeFloat(min = 0.0F, max = 1.0F)
+        public float temperatureHighThreshold;
 
         @Config.LangKey("galaxia.config.overlay.texture.temperature_bar_width")
         @Config.DefaultInt(81)
@@ -115,13 +115,8 @@ public class ConfigOverlay {
         public int temperatureTextureWidth;
 
         @Config.LangKey("galaxia.config.overlay.texture.temperature_bar_height")
-        @Config.DefaultInt(9)
+        @Config.DefaultInt(19)
         @Config.RangeInt(min = 1, max = 2048)
         public int temperatureTextureHeight;
-    }
-
-    public enum BarOrientation {
-        VERTICAL,
-        HORIZONTAL
     }
 }

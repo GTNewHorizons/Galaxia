@@ -32,6 +32,7 @@ public class GalaxiaOverlayHandler {
 
         EntityPlayer player = mc.thePlayer;
         if (player == null) return;
+        if (player.capabilities.isCreativeMode && !ConfigOverlay.ConfigOverlayGlobal.showBarInCreative) return;
 
         ScaledResolution res = event.resolution;
         int screenWidth = res.getScaledWidth();
@@ -53,26 +54,40 @@ public class GalaxiaOverlayHandler {
                 oxygenLevel,
                 EnumTextures.OXYGEN_BG.get(),
                 EnumTextures.OXYGEN_FILL.get(),
-                oxygenCritical,
                 ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureWidth,
-                ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureHeight,
-                ConfigOverlay.ConfigOverlayGlobal.barOrientation);
+                ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureHeight);
         }
 
         if (ConfigOverlay.ConfigOverlayTemperatureBar.showTemperatureBar) {
-            boolean tempCritical = temperatureLevel < ConfigOverlay.ConfigOverlayTemperatureBar.temperatureLowThreshold
-                || temperatureLevel > ConfigOverlay.ConfigOverlayTemperatureBar.temperatureHighThreshold;
+            float lowThresh = ConfigOverlay.ConfigOverlayTemperatureBar.temperatureLowThreshold;
+            float highThresh = ConfigOverlay.ConfigOverlayTemperatureBar.temperatureHighThreshold;
+            int x = pos.temperatureX;
+            int y = pos.temperatureY;
+            int w = ConfigOverlay.ConfigOverlayTemperatureBar.temperatureTextureWidth;
+            int h = ConfigOverlay.ConfigOverlayTemperatureBar.temperatureTextureHeight;
 
-            drawBar(
-                pos.temperatureX,
-                pos.temperatureY,
-                temperatureLevel,
-                EnumTextures.TEMP_BG.get(),
-                EnumTextures.TEMP_FILL.get(),
-                tempCritical,
-                ConfigOverlay.ConfigOverlayTemperatureBar.temperatureTextureWidth,
-                ConfigOverlay.ConfigOverlayTemperatureBar.temperatureTextureHeight,
-                ConfigOverlay.ConfigOverlayGlobal.barOrientation);
+            drawBar(x, y, 0f, EnumTextures.TEMP_BG.get(), EnumTextures.TEMP_FILL_HOT.get(), w, h);
+
+            if (temperatureLevel > highThresh) {
+                float fillPercent = (highThresh < 1.0f) ? (temperatureLevel - highThresh) / (1.0f - highThresh) : 0.0f;
+                fillPercent = clamp01(fillPercent);
+                if (fillPercent > 0f) {
+                    mc.getTextureManager()
+                        .bindTexture(EnumTextures.TEMP_FILL_HOT.get());
+                    GL11.glPushMatrix();
+                    GL11.glColor4f(1, 1, 1, 1.0f);
+                    int fillW = (int) (w * fillPercent);
+                    int startX = x + w - fillW;
+                    drawTexturedSubQuad(startX, y, fillW, h, w - fillW, 0, fillW, h, w, h);
+                    GL11.glPopMatrix();
+                }
+            } else if (temperatureLevel < lowThresh) {
+                float fillPercent = (lowThresh > 0.0f) ? (lowThresh - temperatureLevel) / lowThresh : 0.0f;
+                fillPercent = clamp01(fillPercent);
+                if (fillPercent > 0f) {
+                    drawBar(x, y, fillPercent, EnumTextures.TEMP_BG.get(), EnumTextures.TEMP_FILL_COLD.get(), w, h);
+                }
+            }
         }
 
         GL11.glDisable(GL11.GL_BLEND);
@@ -103,7 +118,7 @@ public class GalaxiaOverlayHandler {
     }
 
     private void drawBar(int x, int y, float fillPercent, ResourceLocation bgTex, ResourceLocation fillTex,
-        boolean pulsing, int texWidth, int texHeight, ConfigOverlay.BarOrientation orientation) {
+        int texWidth, int texHeight) {
 
         // Background
         mc.getTextureManager()
@@ -116,36 +131,12 @@ public class GalaxiaOverlayHandler {
         mc.getTextureManager()
             .bindTexture(fillTex);
 
-        float pulse = pulsing
-            ? (float) (Math.sin(System.currentTimeMillis() / ConfigOverlay.ConfigOverlayGlobal.pulseSpeed)
-                * ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude
-                + (1.0f - ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude))
-            : 1.0f;
-
         GL11.glPushMatrix();
-        GL11.glColor4f(pulse, pulse, pulse, 1.0f);
+        GL11.glColor4f(1, 1, 1, 1.0f);
 
-        if (orientation == ConfigOverlay.BarOrientation.VERTICAL) {
-            int fillHeightPx = Math.max(0, (int) (texHeight * clamp01(fillPercent)));
-            if (fillHeightPx > 0) {
-                int drawY = y + texHeight - fillHeightPx;
-                drawTexturedSubQuad(
-                    x,
-                    drawY,
-                    texWidth,
-                    fillHeightPx,
-                    0,
-                    texHeight - fillHeightPx,
-                    texWidth,
-                    fillHeightPx,
-                    texWidth,
-                    texHeight);
-            }
-        } else {
-            int fillWidthPx = Math.max(0, (int) (texWidth * clamp01(fillPercent)));
-            if (fillWidthPx > 0) {
-                drawTexturedSubQuad(x, y, fillWidthPx, texHeight, 0, 0, fillWidthPx, texHeight, texWidth, texHeight);
-            }
+        int fillWidthPx = Math.max(0, (int) (texWidth * clamp01(fillPercent)));
+        if (fillWidthPx > 0) {
+            drawTexturedSubQuad(x, y, fillWidthPx, texHeight, 0, 0, fillWidthPx, texHeight, texWidth, texHeight);
         }
 
         GL11.glPopMatrix();
