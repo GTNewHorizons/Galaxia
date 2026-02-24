@@ -10,6 +10,7 @@ import net.minecraftforge.common.DimensionManager;
 import com.gtnewhorizons.galaxia.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.dimension.planets.Hemateria;
+import com.gtnewhorizons.galaxia.dimension.planets.Panspira;
 import com.gtnewhorizons.galaxia.dimension.planets.Theia;
 
 import cpw.mods.fml.common.FMLLog;
@@ -36,13 +37,14 @@ public final class SolarSystemRegistry {
         registerDimensions(new Theia());
         registerDimensions(new Hemateria());
         registerDimensions(new FrozenBelt());
+        registerDimensions(new Panspira());
 
         FMLLog.info("[Galaxia] Registered %d celestial bodies", BODIES.size());
     }
 
     /**
      * Registers a given dimension
-     * 
+     *
      * @param planet The planet to register
      */
     private static void registerDimensions(BasePlanet planet) {
@@ -69,7 +71,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Getter for a specific dimension by ID
-     * 
+     *
      * @param id The ID of the dimension to get
      * @return The Dimension Definition of the planet or null if not found
      */
@@ -80,7 +82,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Getter for a specific dimension by name
-     * 
+     *
      * @param name The name of the dimension to get
      * @return The Dimension Definition of the planet or null if not found
      */
@@ -92,7 +94,7 @@ public final class SolarSystemRegistry {
 
     /**
      * Gets all planets currently in the registry
-     * 
+     *
      * @return ArrayList of all bodies in the system
      */
     public static List<BasePlanet> getAllPlanets() {
