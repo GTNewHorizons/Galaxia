@@ -61,20 +61,19 @@ public final class Galaxia {
         proxy.serverStarting(event);
     }
 
+    // spotless:off
     private static void registerNetwork() {
         int id = 0;
-
-        GALAXIA_NETWORK
-            .registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++, Side.SERVER);
-
+        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++, Side.SERVER);
         GALAXIA_NETWORK.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, id++, Side.SERVER);
     }
+    // spotless:on
 
     public static final CreativeTabs creativeTab = new CreativeTabs(MODID) {
 
         @Override
         public Item getTabIconItem() {
-            return GalaxiaItemList.MODULE_MOVER.getItem(); // diamond
+            return GalaxiaItemList.GALAXIA_LOGO.getItem();
         }
     };
 }
