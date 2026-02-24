@@ -135,7 +135,11 @@ public class Theia extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(topBlock)
             .fillerBlock(Blocks.brick_block)
-            .surfaceFeature(new WorldGenCrater(4, GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())))
+            .surfaceFeature(new WorldGenCrater(4,
+                new BlockMeta[] {
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix())
+                }))
             .build();
     }
 }

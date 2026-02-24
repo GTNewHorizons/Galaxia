@@ -7,8 +7,8 @@ import net.minecraft.world.World;
 import java.util.Random;
 
 public class WorldGenCrater extends WorldGenGalaxia {
-    public WorldGenCrater(int rarity, BlockMeta surfaceRequirement) {
-        super(rarity, surfaceRequirement);
+    public WorldGenCrater(int rarity, BlockMeta[] surfaceRequirements) {
+        super(rarity, surfaceRequirements);
     }
 
     @Override

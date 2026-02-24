@@ -11,12 +11,12 @@ import java.util.Random;
 
 public abstract class WorldGenGalaxia extends WorldGenerator {
     private final int rarity;
-    private final BlockMeta surfaceRequirement;
+    private final BlockMeta[] surfaceRequirements;
 
-    public WorldGenGalaxia(int rarity, BlockMeta surfaceRequirement) {
+    public WorldGenGalaxia(int rarity, BlockMeta[] surfaceRequirements) {
         super();
         this.rarity = rarity;
-        this.surfaceRequirement = surfaceRequirement;
+        this.surfaceRequirements = surfaceRequirements;
     }
 
     @Override
@@ -26,7 +26,12 @@ public abstract class WorldGenGalaxia extends WorldGenerator {
         }
         Block surfaceBlock = world.getBlock(x, y - 1, z);
         int surfaceMeta = world.getBlockMetadata(x, y - 1, z);
-        return surfaceBlock == surfaceRequirement.block() && surfaceMeta == surfaceRequirement.meta();
+        for (BlockMeta surfaceRequirement : surfaceRequirements) {
+            if (surfaceBlock == surfaceRequirement.block() && surfaceMeta == surfaceRequirement.meta()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
