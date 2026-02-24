@@ -19,7 +19,7 @@ public final class GalaxiaRegistry {
         .type(CelestialType.BLACK_HOLE)
         .textureAndSize(EnumTextures.EGORA.get(), 400)
         .addChild(star -> star
-                .dimension(DimensionEnum.SOL)
+                .dimension(DimensionEnum.PANSPIRA)
                 .apogeePerigee(.9 * earthRadiusToAU, .7 * earthRadiusToAU)
                 .type(CelestialType.STAR)
                 .textureAndSize(EnumTextures.EGORA.get(), 300)
