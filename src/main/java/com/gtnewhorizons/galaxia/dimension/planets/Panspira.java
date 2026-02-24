@@ -46,9 +46,11 @@ public class Panspira extends BasePlanet {
             .gravity(2.25)
             .airResistance(1)
             .effects(
-                new EffectBuilder().baseTemp(130)
+                EffectBuilder.builder()
+                    .baseTemp(423)
                     .oxygenPercent(0)
-                    .pressure(300));
+                    .pressure(300)
+                    .build());
     }
 
     @Override
