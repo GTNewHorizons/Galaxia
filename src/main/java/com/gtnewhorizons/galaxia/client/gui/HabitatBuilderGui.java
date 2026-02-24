@@ -67,7 +67,7 @@ public class HabitatBuilderGui {
                 .tooltip(tooltip -> tooltip.add(IKey.str(getModuleTooltip(type))))
                 .onMousePressed((mouseButton) -> {
                     if (mouseButton == 0) {
-                        channel.sendToServer(new PacketSetModule(id));
+                        channel.sendToServer(new PacketSetModule(id)); // Must call to server, not directly
 
                         player.inventory.setInventorySlotContents(slot, held);
                         player.inventory.markDirty();
