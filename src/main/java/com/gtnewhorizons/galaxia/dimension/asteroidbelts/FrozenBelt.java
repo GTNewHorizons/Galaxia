@@ -41,9 +41,11 @@ public class FrozenBelt extends BaseAsteroidBelt {
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         // super call adds basic asteroid belt stats - add on top as required
         return super.customizeDimension(builder).effects(
-            new EffectBuilder().baseTemp(67)
+            EffectBuilder.builder()
+                .baseTemp(67)
                 .oxygenPercent(0)
-                .pressure(1));
+                .pressure(1)
+                .build());
     }
 
     /**
