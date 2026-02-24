@@ -10,8 +10,8 @@ import net.minecraftforge.common.DimensionManager;
 import com.gtnewhorizons.galaxia.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.dimension.planets.Hemateria;
-import com.gtnewhorizons.galaxia.dimension.planets.Theia;
 import com.gtnewhorizons.galaxia.dimension.planets.Panspira;
+import com.gtnewhorizons.galaxia.dimension.planets.Theia;
 
 import cpw.mods.fml.common.FMLLog;
 

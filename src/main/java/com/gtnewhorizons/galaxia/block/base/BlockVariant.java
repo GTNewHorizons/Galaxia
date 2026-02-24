@@ -12,8 +12,8 @@ public record BlockVariant(String suffix, float hardness, boolean falling, Strin
     /**
      * Registers the block variant as having similar characteristics to vanilla stone
      *
-     * @param suffix   The suffix in the ENUM giving the type of rock, e.g. Andesite etc.
-     * @param hardness The desired hardness level of the block
+     * @param suffix       The suffix in the ENUM giving the type of rock, e.g. Andesite etc.
+     * @param hardness     The desired hardness level of the block
      * @param harvestLevel The desired minimum level of pickaxe used to mine the block
      * @return A BlockVariant with desired characteristics
      */

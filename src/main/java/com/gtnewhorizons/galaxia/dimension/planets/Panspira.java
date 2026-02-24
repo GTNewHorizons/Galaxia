@@ -1,19 +1,19 @@
 package com.gtnewhorizons.galaxia.dimension.planets;
 
-import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.block.base.BlockVariant;
 import com.gtnewhorizons.galaxia.block.base.GalaxiaBlock;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
-import net.minecraft.world.biome.BiomeGenBase;
 
 /**
  * The class holding all data related to the dimension Panspira
@@ -123,6 +123,7 @@ public class Panspira extends BasePlanet {
             .name(ENUM)
             .build();
     }
+
     protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain) {
         return createBiome(name, block, 0, terrain);
     }
