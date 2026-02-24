@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
@@ -14,9 +15,6 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
 
-import static org.lwjgl.opengl.Display.getHeight;
-import static org.lwjgl.opengl.Display.getWidth;
-
 public class OrbitalMapWidget extends Widget {
 
     private final OrbitalCelestialBody root;
@@ -26,12 +24,13 @@ public class OrbitalMapWidget extends Widget {
     private double targetCameraX = 0, targetCameraY = 0;
     private double targetZoomLevel = -0.8;
 
+    private boolean isFocusing = false;
     private boolean dragging = false;
     private double lastMouseX, lastMouseY;
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
-    private static final double LERP_SPEED = 0.16;
+    private static final double LERP_SPEED = 0.18;
 
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
@@ -44,36 +43,43 @@ public class OrbitalMapWidget extends Widget {
     public void onInit() {
         super.onInit();
 
-        listenGuiAction((IGuiAction.MouseScroll) (direction, amount) ->
-            handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
+        listenGuiAction(
+            (IGuiAction.MouseScroll) (direction,
+                amount) -> handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
 
-        listenGuiAction((IGuiAction.MouseDrag) (mouseButton, time) ->
-            handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
+        listenGuiAction(
+            (IGuiAction.MouseDrag) (mouseButton,
+                time) -> handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
 
-        listenGuiAction((IGuiAction.MouseReleased) mouseButton ->
-            handleMouseReleased(getContext().getMouseX(), getContext().getMouseY(), mouseButton));
+        listenGuiAction(
+            (IGuiAction.MouseReleased) mouseButton -> handleMouseReleased(
+                getContext().getMouseX(),
+                getContext().getMouseY(),
+                mouseButton));
     }
 
     private boolean handleMouseWheel(UpOrDown direction, int mouseX, int mouseY) {
-        int multiplier = 0;
-        if (direction.isDown()) multiplier = -1;
-        if (direction.isUp()) multiplier = 1;
+        int multiplier = direction.isUp() ? 1 : direction.isDown() ? -1 : 0;
         if (multiplier == 0) return false;
 
         double oldScale = getScale();
         zoomLevel += multiplier * 0.78;
-        zoomLevel = Math.max(-7.0, Math.min(14.0, zoomLevel));
+        zoomLevel = Math.max(-7000.0, Math.min(14000.0, zoomLevel));
 
         int localX = mouseX - (int) getArea().rx;
         int localY = mouseY - (int) getArea().ry;
 
-        double worldMouseX = cameraX + (localX - getWidth() / 2.0) / oldScale;
-        double worldMouseY = cameraY + (localY - getHeight() / 2.0) / oldScale;
+        double worldMouseX = cameraX + (localX - getArea().width / 2.0) / oldScale;
+        double worldMouseY = cameraY + (localY - getArea().height / 2.0) / oldScale;
 
         double newScale = getScale();
-        cameraX = worldMouseX - (localX - getWidth() / 2.0) / newScale;
-        cameraY = worldMouseY - (localY - getHeight() / 2.0) / newScale;
+        cameraX = worldMouseX - (localX - getArea().width / 2.0) / newScale;
+        cameraY = worldMouseY - (localY - getArea().height / 2.0) / newScale;
 
+        targetCameraX = cameraX;
+        targetCameraY = cameraY;
+        targetZoomLevel = zoomLevel;
+        isFocusing = false;
         return true;
     }
 
@@ -91,6 +97,10 @@ public class OrbitalMapWidget extends Widget {
             cameraY -= (localY - lastMouseY) / getScale();
             lastMouseX = localX;
             lastMouseY = localY;
+
+            targetCameraX = cameraX;
+            targetCameraY = cameraY;
+            isFocusing = false;
             return true;
         }
         return false;
@@ -106,22 +116,28 @@ public class OrbitalMapWidget extends Widget {
     }
 
     private float worldToScreenX(double wx) {
-        return (float) ((wx - cameraX) * getScale() + getWidth() / 2.0);
+        return (float) ((wx - cameraX) * getScale() + getArea().width / 2.0);
     }
 
     private float worldToScreenY(double wy) {
-        return (float) ((wy - cameraY) * getScale() + getHeight() / 2.0);
+        return (float) ((wy - cameraY) * getScale() + getArea().height / 2.0);
     }
 
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         super.drawBackground(context, widgetTheme);
 
-        cameraX = cameraX * (1 - LERP_SPEED) + targetCameraX * LERP_SPEED;
-        cameraY = cameraY * (1 - LERP_SPEED) + targetCameraY * LERP_SPEED;
-        zoomLevel = zoomLevel * (1 - LERP_SPEED) + targetZoomLevel * LERP_SPEED;
+        if (isFocusing) {
+            cameraX = cameraX * (1 - LERP_SPEED) + targetCameraX * LERP_SPEED;
+            cameraY = cameraY * (1 - LERP_SPEED) + targetCameraY * LERP_SPEED;
+            zoomLevel = zoomLevel * (1 - LERP_SPEED) + targetZoomLevel * LERP_SPEED;
+        } else {
+            cameraX = targetCameraX;
+            cameraY = targetCameraY;
+            zoomLevel = targetZoomLevel;
+        }
 
-        Gui.drawRect(0, 0, getWidth(), getHeight(), 0xFF0F1621);
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xFF0F1621);
 
         GlStateManager.pushMatrix();
         GlStateManager.disableTexture2D();
@@ -148,23 +164,42 @@ public class OrbitalMapWidget extends Widget {
         float sx = worldToScreenX(wx);
         float sy = worldToScreenY(wy);
 
-        int color = switch (body.type()) {
-            case BLACK_HOLE -> 0xFF111111;
-            case STAR -> 0xFFFFEE88;
-            case PLANET -> 0xFF44AAFF;
-            case MOON -> 0xFFEEEEEE;
-            default -> 0xFF00FF99;
-        };
-
-        drawFilledCircle(sx, sy, body == root ? 11 : 7, color);
-
-        if (getScale() > 0.6) {
-            drawCenteredString(body.name(), sx, sy + 14, 0xFFFFFFFF);
+        if (body.texture() != null) {
+            drawSprite(body.texture(), sx, sy, body.spriteSize());
         }
+
+        drawCenteredString(body.name(), sx, sy + 14, 0xFFFFFFFF);
 
         for (OrbitalCelestialBody child : body.children()) {
             drawTree(child, wx, wy);
         }
+    }
+
+    private void drawSprite(ResourceLocation texture, float x, float y, double worldRadius) {
+        float radius = (float) (worldRadius * getScale());
+        if (radius < 6) radius = 6; // не исчезает при сильном зуме наружу
+
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(texture);
+
+        GlStateManager.enableTexture2D();
+        GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+
+        float half = radius;
+
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glTexCoord2f(0.0f, 0.0f);
+        GL11.glVertex2f(x - half, y - half);
+        GL11.glTexCoord2f(1.0f, 0.0f);
+        GL11.glVertex2f(x + half, y - half);
+        GL11.glTexCoord2f(1.0f, 1.0f);
+        GL11.glVertex2f(x + half, y + half);
+        GL11.glTexCoord2f(0.0f, 1.0f);
+        GL11.glVertex2f(x - half, y + half);
+        GL11.glEnd();
+
+        GlStateManager.disableTexture2D();
     }
 
     private double[] calculatePosition(OrbitalParams p) {
@@ -178,7 +213,7 @@ public class OrbitalMapWidget extends Widget {
         double r = p.semiMajorAxis() * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
         double angle = trueAnomaly + p.argumentOfPeriapsis();
 
-        return new double[]{r * Math.cos(angle), r * Math.sin(angle)};
+        return new double[] { r * Math.cos(angle), r * Math.sin(angle) };
     }
 
     private void drawFilledCircle(float x, float y, float r, int color) {
@@ -206,13 +241,16 @@ public class OrbitalMapWidget extends Widget {
 
         float lineWidth = (float) Math.max(1.8, getScale() * 0.035);
         GL11.glLineWidth(lineWidth);
-        GL11.glColor4f(0.62f, 0.72f, 0.95f, 0.92f);
+
+        GlStateManager.disableTexture2D();
+        GlStateManager.color(1.0f, 1.0f, 1.0f, 0.92f);
 
         GL11.glBegin(GL11.GL_LINE_LOOP);
-        for (int i = 0; i <= 120; i++) {
-            double theta = i * Math.PI * 2 / 120;
-            double ex = a * Math.cos(theta);
-            double ey = b * Math.sin(theta);
+        for (int i = 0; i <= 360; i++) {
+            double E = i * Math.PI * 2.0 / 360.0;
+            double ex = a * (Math.cos(E) - e);
+            double ey = b * Math.sin(E);
+
             double rx = ex * Math.cos(rot) - ey * Math.sin(rot);
             double ry = ex * Math.sin(rot) + ey * Math.cos(rot);
             GL11.glVertex2d(worldToScreenX(parentX + rx), worldToScreenY(parentY + ry));
@@ -223,19 +261,50 @@ public class OrbitalMapWidget extends Widget {
 
     public void focusOn(OrbitalCelestialBody body) {
         double[] pos = getAbsoluteWorldPos(body);
-        if (pos != null) {
-            targetCameraX = pos[0];
-            targetCameraY = pos[1];
-            targetZoomLevel = 3.8;
+        if (pos == null) return;
+
+        // Летим ТОЧНО на текущее положение тела (никаких центров эллипса)
+        targetCameraX = pos[0];
+        targetCameraY = pos[1];
+
+        if (body == root) {
+            // Для чёрной дыры — показываем всю систему красиво
+            double maxSize = 0;
+            for (OrbitalCelestialBody child : body.children()) {
+                maxSize = Math.max(
+                    maxSize,
+                    child.orbitalParams()
+                        .apogee());
+            }
+            if (maxSize > 1e-9) {
+                double desiredScale = 420.0 / maxSize;
+                targetZoomLevel = Math.log(desiredScale / BASE_SCALE) / Math.log(ZOOM_BASE);
+            } else {
+                targetZoomLevel = -0.8;
+            }
+        } else {
+            // Для всех остальных — скейл именно «на тело»
+            double apogee = body.orbitalParams()
+                .apogee();
+            if (apogee > 1e-9) {
+                double desiredScale = 550.0 / apogee; // чем больше число — тем ближе/крупнее тело
+                targetZoomLevel = Math.log(desiredScale / BASE_SCALE) / Math.log(ZOOM_BASE);
+            } else {
+                targetZoomLevel = 8.0;
+            }
         }
+
+        targetZoomLevel = Math.max(-7000.0, Math.min(14000.0, targetZoomLevel));
+        isFocusing = true;
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody target) {
         return getAbsoluteWorldPos(root, target, 0, 0);
     }
 
-    private double[] getAbsoluteWorldPos(OrbitalCelestialBody current, OrbitalCelestialBody target, double wx, double wy) {
-        if (current == target) return new double[]{wx, wy};
+    private double[] getAbsoluteWorldPos(OrbitalCelestialBody current, OrbitalCelestialBody target, double wx,
+        double wy) {
+        if (current == target) return new double[] { wx, wy };
         for (OrbitalCelestialBody child : current.children()) {
             double[] local = calculatePosition(child.orbitalParams());
             double[] res = getAbsoluteWorldPos(child, target, wx + local[0], wy + local[1]);

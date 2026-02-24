@@ -14,8 +14,15 @@ public class GalacticChartGui {
         OrbitalMapWidget map = new OrbitalMapWidget(GalaxiaRegistry.ROOT);
         CelestialSidebarWidget sidebar = new CelestialSidebarWidget(GalaxiaRegistry.ROOT, map);
 
-        return panel
-            .child((IWidget) sidebar.left(0).top(0).width(280).bottom(0))
-            .child((IWidget) map.left(280).top(0).right(0).bottom(0));
+        return panel.child(
+            (IWidget) sidebar.left(0)
+                .top(0)
+                .width(280)
+                .bottom(0))
+            .child(
+                (IWidget) map.left(280)
+                    .top(0)
+                    .right(0)
+                    .bottom(0));
     }
 }

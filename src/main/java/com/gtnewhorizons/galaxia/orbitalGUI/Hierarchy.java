@@ -1,10 +1,14 @@
 package com.gtnewhorizons.galaxia.orbitalGUI;
 
+import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
@@ -36,7 +40,7 @@ public class Hierarchy {
     /** Main Recursive record */
     @Desugar
     public record OrbitalCelestialBody(String name, int dimensionId, DimensionEnum dimensionEnum, CelestialType type,
-        OrbitalParams orbitalParams, List<OrbitalCelestialBody> children) {
+        OrbitalParams orbitalParams, ResourceLocation texture, double spriteSize, List<OrbitalCelestialBody> children) {
 
         public static Builder builder() {
             return new Builder();
@@ -49,6 +53,8 @@ public class Hierarchy {
             private int dimensionId;
             private CelestialType type = CelestialType.PLANET;
             private OrbitalParams orbitalParams = new OrbitalParams(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            private ResourceLocation texture = null;
+            private double spriteSize = 0.0;
             private final List<Builder> childBuilders = new ArrayList<>();
 
             public Builder dimension(DimensionEnum de) {
@@ -75,6 +81,27 @@ public class Hierarchy {
                 return this;
             }
 
+            public Builder texture(String modid, String path) {
+                this.texture = new ResourceLocation(modid, path);
+                return this;
+            }
+
+            public Builder texture(String path) {
+                this.texture = LocationGalaxia(path);
+                return this;
+            }
+
+            public Builder textureAndSize(String path, double size) {
+                this.texture = LocationGalaxia(path);
+                this.spriteSize = size;
+                return this;
+            }
+
+            public Builder spriteSize(double size) {
+                this.spriteSize = size;
+                return this;
+            }
+
             public Builder addChild(Consumer<Builder> childConfig) {
                 Builder child = new Builder();
                 childConfig.accept(child);
@@ -87,7 +114,15 @@ public class Hierarchy {
                     .map(Builder::build)
                     .collect(Collectors.toList());
 
-                return new OrbitalCelestialBody(name, dimensionId, dimensionEnum, type, orbitalParams, children);
+                return new OrbitalCelestialBody(
+                    name,
+                    dimensionId,
+                    dimensionEnum,
+                    type,
+                    orbitalParams,
+                    texture,
+                    spriteSize,
+                    children);
             }
         }
     }

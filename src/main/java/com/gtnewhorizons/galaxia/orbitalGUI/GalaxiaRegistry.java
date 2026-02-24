@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.orbitalGUI;
 
+import static com.gtnewhorizons.galaxia.dimension.planets.BasePlanet.earthRadiusToAU;
+
 import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.CelestialType;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
 
 public final class GalaxiaRegistry {
 
@@ -13,18 +14,20 @@ public final class GalaxiaRegistry {
     public static final OrbitalCelestialBody ROOT =
         OrbitalCelestialBody.builder()
         .dimension(DimensionEnum.FROZEN_BELT)
+        .apogeePerigee(2 * earthRadiusToAU, 2.6 * earthRadiusToAU)
         .type(CelestialType.BLACK_HOLE)
         .addChild(star -> star
                 .dimension(DimensionEnum.SOL)
+                .apogeePerigee(.9 * earthRadiusToAU, .7 * earthRadiusToAU)
                 .type(CelestialType.STAR)
                 .addChild(planet -> planet
                     .dimension(DimensionEnum.HEMATERIA)
                     .type(CelestialType.PLANET)
-                    .orbital(new OrbitalParams(1.0, 0.0167, 0, 0, 0, 0))
+                    .apogeePerigee(.3 * earthRadiusToAU, .02 * earthRadiusToAU)
                     .addChild(moon -> moon
                         .dimension(DimensionEnum.THEIA)
                         .type(CelestialType.MOON)
-                        .apogeePerigee(405_000, 363_000)
+                        .apogeePerigee(.01 * earthRadiusToAU, .005 * earthRadiusToAU)
                     )
                 )
         )
