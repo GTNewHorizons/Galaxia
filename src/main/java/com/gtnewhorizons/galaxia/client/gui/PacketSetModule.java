@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.items.special.ItemHabitatBuilder;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemHabitatBuilder;
 
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;

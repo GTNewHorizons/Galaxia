@@ -85,6 +85,20 @@ galaxia.module_mover.no_module_selected=§cFirst left-click on a module!§r
 galaxia.module_mover.cannot_place_here=§cCannot place here!§r
 galaxia.module_mover.module_moved=§aModule successfully moved!§r
 
+# Elements - Orbital GUI
+galaxia.gui.orbital.search=Search
+galaxia.gui.orbital.search.placeholder=Enter name...
+galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
+galaxia.gui.orbital.paused=§cPAUSED§r
+galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
+
+galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===
+galaxia.gui.orbital.debug.camera=Camera: %.3f, %.3f
+galaxia.gui.orbital.debug.following=Following: %s  |  Paused: %b
+galaxia.gui.orbital.debug.time=Time: %.1fs  |  Speed: ×%.1f
+galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
+galaxia.gui.orbital.debug.none=none
+
 #### Config
 ### Config - "Overlay"
 galaxia.config.category.overlay=Overlay

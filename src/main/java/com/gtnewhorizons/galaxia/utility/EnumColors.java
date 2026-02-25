@@ -18,6 +18,33 @@ public enum EnumColors {
 
     IconGreen(0x55FF55),
 
+    // Sidebar
+    SidebarBackground(0xE60F1621),
+    SearchBarBackground(0xFF1A2638),
+    SearchLabelColor(0x99FFFFFF),
+    SearchInputColor(0xFFFFFFFF),
+    SidebarListNormal(0xFFCCEEFF),
+    SidebarListHovered(0xFF88EEFF),
+
+    // Map
+    MapBackground(0xFF0F1621),
+    CelestialBlackHole(0xFF111111),
+    CelestialStar(0xFFFFEE88),
+    CelestialPlanet(0xFF44AAFF),
+    CelestialMoon(0xFFEEEEEE),
+    CelestialDefault(0xFF00FF99),
+    CelestialLabelText(0xFFFFFFFF),
+    StatusTextColor(0xAAFFFFFF),
+
+    // Debug overlay
+    DebugOverlayTitle(0xFFFF5555),
+    DebugOverlayInfo(0x88FF88),
+    DebugOverlayFollow(0xFFDD88),
+
+    // Other UI elements
+    OrbitEllipse(0xEBFFFFFF), // 0.92 alpha white
+    SpriteTint(0xFFFFFFFF);
+
     // Add more colors here
     ; // leave trailing semicolon
 
@@ -39,7 +66,7 @@ public enum EnumColors {
      * Examples (lowercase):
      * - galaxia.color.override.title=FFFFFF
      * - galaxia.color.override.subtitle=CD7F32
-     * 
+     *
      * @return Parsed colour from ENUM, or default
      */
     public int getColor() {
@@ -53,7 +80,7 @@ public enum EnumColors {
 
     /**
      * Gets the unlocalized colour name
-     * 
+     *
      * @return Unlocalized colour name
      */
     public String getUnlocalized() {
@@ -62,7 +89,7 @@ public enum EnumColors {
 
     /**
      * Colour parser given a colour string
-     * 
+     *
      * @param raw      The string to parse
      * @param fallback A default colour if parsing failed
      * @return Color parsed, or fallback if failed

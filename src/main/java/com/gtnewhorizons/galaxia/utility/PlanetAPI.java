@@ -2,9 +2,9 @@ package com.gtnewhorizons.galaxia.utility;
 
 import net.minecraft.entity.Entity;
 
-import com.gtnewhorizons.galaxia.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
-import com.gtnewhorizons.galaxia.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 
 /**
  * API underpinning planetary mechanics

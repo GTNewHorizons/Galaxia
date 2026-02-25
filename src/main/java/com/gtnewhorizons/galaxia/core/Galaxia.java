@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.client.gui.PacketSetModule;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
-import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -28,6 +28,7 @@ public final class Galaxia {
     public static final String MODID = "galaxia";
     public static final String NAME = "Galaxia";
     public static final String UNLOCALIZED_PREFIX = MODID + ".";
+    public static final String TEXTURE_PREFIX = MODID + ":";
     public static final Logger LOG = LogManager.getLogger(MODID);
     public static final SimpleNetworkWrapper GALAXIA_NETWORK = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
 
