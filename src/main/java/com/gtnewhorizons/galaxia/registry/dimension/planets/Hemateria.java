@@ -70,7 +70,8 @@ public class Hemateria extends BasePlanet {
                         .width(1.5)
                         .height(2)
                         .endFeature()
-                        .build()),
+                        .build(),
+                    true),
                 0,
                 0)
             .biome(
@@ -84,7 +85,8 @@ public class Hemateria extends BasePlanet {
                         .height(0.5)
                         .width(2)
                         .endFeature()
-                        .build()),
+                        .build(),
+                    false),
                 0,
                 1)
             .biome(
@@ -98,7 +100,8 @@ public class Hemateria extends BasePlanet {
                         .height(4)
                         .width(2)
                         .endFeature()
-                        .build()),
+                        .build(),
+                    true),
                 1,
                 0)
             .biome(
@@ -117,7 +120,8 @@ public class Hemateria extends BasePlanet {
                         .width(1.5)
                         .height(2)
                         .endFeature()
-                        .build()),
+                        .build(),
+                    false),
                 1,
                 1)
             .name(ENUM)

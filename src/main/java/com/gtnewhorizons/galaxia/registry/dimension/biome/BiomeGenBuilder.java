@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -11,6 +12,7 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The builder for biome generation
@@ -33,9 +35,11 @@ public class BiomeGenBuilder {
     BlockMeta oceanFiller = stone;
     BlockMeta oceanSurface = stone;
     BlockMeta seabed = stone;
-    BlockMeta topBlock = stone;
     BlockMeta fillerBlock = stone;
     BlockMeta snowBlock = stone;
+    List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
+    List<BlockMeta> topBlockMetas = new ArrayList<>();
+    boolean generateCaves = false;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -114,7 +118,7 @@ public class BiomeGenBuilder {
      * @return Configured builder
      */
     public BiomeGenBuilder topBlock(BlockMeta block) {
-        this.topBlock = block;
+        this.topBlockMetas.add(block);
         return this;
     }
 
@@ -191,6 +195,16 @@ public class BiomeGenBuilder {
      */
     public BiomeGenBuilder terrain(TerrainConfiguration terrain) {
         this.terrain = terrain;
+        return this;
+    }
+
+    public BiomeGenBuilder surfaceFeature(WorldGenGalaxia feature) {
+        surfaceFeatures.add(feature);
+        return this;
+    }
+
+    public BiomeGenBuilder generateCaves(boolean generateCaves) {
+        this.generateCaves = generateCaves;
         return this;
     }
 

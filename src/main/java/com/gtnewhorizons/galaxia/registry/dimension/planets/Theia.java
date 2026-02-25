@@ -11,12 +11,16 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 
 /**
  * The class holding all data related to the dimension Theia
  */
 public class Theia extends BasePlanet {
+
+    private static int biomeIdOffset = 0;
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
@@ -63,13 +67,17 @@ public class Theia extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .biome(
-                createBiome("Theia Surface", GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())),
+                createBiome(
+                    "Theia Surface",
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                    true),
                 0,
                 0)
             .biome(
                 createBiome(
                     "Theia Rough Surface",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix())),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix()),
+                    false),
                 1,
                 0)
             .name(ENUM)
@@ -127,13 +135,19 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock) {
-        return new BiomeGenBuilder(100).name(name)
+    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, boolean generateCaves) {
+        return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(topBlock)
             .fillerBlock(Blocks.brick_block)
+            .generateCaves(generateCaves)
+            .surfaceFeature(
+                new WorldGenCrater(
+                    4,
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix()) }))
             .build();
     }
 }

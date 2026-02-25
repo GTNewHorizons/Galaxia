@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 
@@ -82,34 +83,34 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     64,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix()) },
-                    6),
+                    3),
                 new Asteroid(
                     20,
                     32,
                     128,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix()) },
-                    8),
+                    4),
                 new Asteroid(
-                    32,
-                    64,
+                    24,
+                    48,
                     512,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix()) },
-                    12),
+                    6),
                 new Asteroid(
-                    32,
-                    64,
+                    24,
+                    48,
                     512,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix()) },
-                    4) };
+                    2) };
             // Configure the world provider for this dimension
             WorldProviderBuilder.configure(this)
                 .sky(true)
                 .skyColor(0, 0.1, 0.3)
                 .fog(0, 0.1f, 0.3f)
-                .biome(new BiomeGenFrozenBelt(100), 0, 0)
+                .biome(new BiomeGenFrozenBelt(BiomeIdOffsetter.getBiomeId()), 0, 0)
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)
                 .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed(), asteroids))

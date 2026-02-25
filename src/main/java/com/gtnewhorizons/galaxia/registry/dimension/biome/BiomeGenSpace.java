@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
+import java.util.List;
+
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -11,7 +14,7 @@ import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 public class BiomeGenSpace extends BiomeGenBase {
 
     private final boolean generateBedrock;
-    private final int topBlockMeta;
+    private final List<BlockMeta> topBlockMetas;
     private final int fillerBlockMeta;
     private final TerrainConfiguration terrain;
     private final int snowHeight;
@@ -21,6 +24,8 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final BlockMeta oceanFiller;
     private final BlockMeta oceanSurface;
     private final BlockMeta seabed;
+    private final List<WorldGenGalaxia> surfaceFeatures;
+    private final boolean generateCaves;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -36,9 +41,8 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setHeight(b.height);
         this.setTemperatureRainfall(b.temperature, b.rainfall);
 
-        this.topBlock = b.topBlock.block();
         this.fillerBlock = b.fillerBlock.block();
-        this.topBlockMeta = b.topBlock.meta();
+        this.topBlockMetas = b.topBlockMetas;
         this.fillerBlockMeta = b.fillerBlock.meta();
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
@@ -53,6 +57,8 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableMonsterList = b.mobsMonster;
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
+        surfaceFeatures = b.surfaceFeatures;
+        this.generateCaves = b.generateCaves;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
@@ -75,8 +81,8 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the top block meta
      */
-    public int getTopBlockMeta() {
-        return topBlockMeta;
+    public List<BlockMeta> getTopBlockMetas() {
+        return topBlockMetas;
     }
 
     /**
@@ -158,5 +164,13 @@ public class BiomeGenSpace extends BiomeGenBase {
      */
     public int getSeabedHeight() {
         return seabedHeight;
+    }
+
+    public List<WorldGenGalaxia> getSurfaceFeatures() {
+        return surfaceFeatures;
+    }
+
+    public boolean generateCaves() {
+        return generateCaves;
     }
 }
