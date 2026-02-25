@@ -103,15 +103,6 @@ public class HabitatBuilderGui {
     }
 
     private String getModuleTooltip(ModuleType type) {
-        return "§7Module: §f" + type.getId()
-            .replace("_", " ")
-            .toUpperCase()
-            + "\n\n"
-            + "§eBuilding Cost (Placeholder):\n"
-            + "§f• 24× Steel Plate\n"
-            + "§f• 12× Glass Pane\n"
-            + "§f• 8× Advanced Circuit\n"
-            + "§f• 4× Advanced Alloy\n\n"
-            + "§aYou have enough resources";
+        return "";
     }
 }

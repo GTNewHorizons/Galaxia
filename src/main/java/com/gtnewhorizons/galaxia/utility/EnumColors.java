@@ -18,23 +18,22 @@ public enum EnumColors {
 
     IconGreen(0x55FF55),
 
-    // Sidebar
-    SidebarBackground(0xE60F1621),
-    SearchBarBackground(0xFF1A2638),
-    SearchLabelColor(0x99FFFFFF),
-    SearchInputColor(0xFFFFFFFF),
-    SidebarListNormal(0xFFCCEEFF),
-    SidebarListHovered(0xFF88EEFF),
+    // Map Sidebar
+    MapSidebarBackground(0xE60F1621),
+    MapSidebaSearchLabel(0x99FFFFFF),
+    MapSidebarSearchInput(0xFFFFFFFF),
+    MapSidebarListNormal(0xFFCCEEFF),
+    MapSidebarListHovered(0xFF88EEFF),
 
     // Map
     MapBackground(0xFF0F1621),
-    CelestialBlackHole(0xFF111111),
-    CelestialStar(0xFFFFEE88),
-    CelestialPlanet(0xFF44AAFF),
-    CelestialMoon(0xFFEEEEEE),
-    CelestialDefault(0xFF00FF99),
-    CelestialLabelText(0xFFFFFFFF),
-    StatusTextColor(0xAAFFFFFF),
+    MapCelestialLabelText(0xFFFFFFFF),
+    MapStatusText(0xAAFFFFFF),
+    MapCelestialBlackHole(0xFF111111),
+    MapCelestialStar(0xFFFFEE88),
+    MapCelestialPlanet(0xFF44AAFF),
+    MapCelestialMoon(0xFFEEEEEE),
+    MapCelestialDefault(0xFF00FF99),
 
     // Debug overlay
     DebugOverlayTitle(0xFFFF5555),

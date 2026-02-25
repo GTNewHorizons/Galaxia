@@ -14,7 +14,6 @@ public enum EnumTextures {
     TEMP_FILL_COLD("textures/gui/temp_bar_fill_cold.png"),
 
     // Space Objects
-
     AMBERGRIS("textures/environment/ambergris.png"),
     ANAMNESIS("textures/environment/anamnesis.png"),
     ATARAXIA("textures/environment/ataraxia.png"),
