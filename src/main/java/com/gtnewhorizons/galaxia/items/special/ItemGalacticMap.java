@@ -15,12 +15,6 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticChartGui;
 
 public class ItemGalacticMap extends Item implements IGuiHolder<GuiData> {
 
-    public ItemGalacticMap() {
-        setMaxStackSize(1);
-        setUnlocalizedName("galacticMap");
-        // setTextureName("galaxia:items/galactic_map");
-    }
-
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (!world.isRemote) {

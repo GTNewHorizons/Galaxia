@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.items;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.TEXTURE_PREFIX;
 import static com.gtnewhorizons.galaxia.core.Galaxia.UNLOCALIZED_PREFIX;
 
 import java.util.function.Supplier;
@@ -24,12 +25,14 @@ public enum GalaxiaItemList {
     TELEPORTER("teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("galactic_map", ItemGalacticMap::new, 1),
     DUST_THEIA("theia_dust"),
-    MODULE_PLACER("module_placer", ItemHabitatBuilder::new),
-    MODULE_MOVER("module_mover", ItemModuleMover::new),
+    MODULE_PLACER("module_placer", ItemHabitatBuilder::new, 1),
+    MODULE_MOVER("module_mover", ItemModuleMover::new, 1),
     SPACESUIT_HELMET("spacesuit_helmet", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
     SPACESUIT_CHESTPLATE("spacesuit_chestplate", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
     SPACESUIT_LEGGINGS("spacesuit_leggings", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
-    SPACESUIT_BOOTS("spacesuit_boots", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1);
+    SPACESUIT_BOOTS("spacesuit_boots", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1),
+
+    ; // leave trailing semicolon
 
     private final String registryName;
     private final int maxStackSize;
@@ -74,7 +77,7 @@ public enum GalaxiaItemList {
     public void register() {
         Item item = itemFactory.get();
         item.setUnlocalizedName(UNLOCALIZED_PREFIX + registryName);
-        item.setTextureName("galaxia:" + registryName);
+        item.setTextureName(TEXTURE_PREFIX + registryName);
         item.setMaxStackSize(maxStackSize);
         item.setCreativeTab(Galaxia.creativeTab);
 

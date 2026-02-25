@@ -27,17 +27,6 @@ import com.gtnewhorizons.galaxia.modules.ModuleTypes;
  */
 public class ItemHabitatBuilder extends Item implements IGuiHolder<GuiData> {
 
-    // TODO fix builder not working in survival mode because of not updating held item
-
-    /**
-     * Constructor to set max stack of 1 and name
-     */
-    public ItemHabitatBuilder() {
-        super();
-        setMaxStackSize(1);
-        setUnlocalizedName("habitatBuilder");
-    }
-
     /**
      * Gets the selected module if there is one, if not returns the default module
      *

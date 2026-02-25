@@ -16,7 +16,6 @@ public class ItemSpaceSuit extends ItemArmor {
 
     public ItemSpaceSuit(ArmorMaterial material, int renderIndex, int armorType) {
         super(material, renderIndex, armorType);
-        setMaxStackSize(1);
     }
 
     public static ItemStack createSuitPiece(Item item) {

@@ -17,11 +17,6 @@ import cpw.mods.fml.relauncher.SideOnly;
  */
 public class ItemTeleporter extends Item {
 
-    public ItemTeleporter() {
-        super();
-        this.setMaxStackSize(1);
-    }
-
     /**
      * Defines the right click behaviour to open the teleportation GUI
      *

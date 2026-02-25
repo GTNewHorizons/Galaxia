@@ -28,6 +28,7 @@ public final class Galaxia {
     public static final String MODID = "galaxia";
     public static final String NAME = "Galaxia";
     public static final String UNLOCALIZED_PREFIX = MODID + ".";
+    public static final String TEXTURE_PREFIX = MODID + ":";
     public static final Logger LOG = LogManager.getLogger(MODID);
     public static final SimpleNetworkWrapper GALAXIA_NETWORK = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
 

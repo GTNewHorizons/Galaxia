@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.block.planet;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.TEXTURE_PREFIX;
+
 import java.util.Random;
 
 import net.minecraft.block.Block;
@@ -93,7 +95,7 @@ public class BlockPlanetGalaxia extends BlockFalling {
     public void registerBlockIcons(IIconRegister reg) {
         icons = new IIcon[variants.length];
         for (int i = 0; i < variants.length; i++) {
-            String texture = "galaxia:" + planetName + capitalize(variants[i].suffix());
+            String texture = TEXTURE_PREFIX + planetName + capitalize(variants[i].suffix());
             icons[i] = reg.registerIcon(texture);
         }
     }

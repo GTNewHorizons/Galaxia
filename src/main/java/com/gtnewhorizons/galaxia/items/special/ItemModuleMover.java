@@ -19,12 +19,6 @@ import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
  */
 public class ItemModuleMover extends Item {
 
-    public ItemModuleMover() {
-        super();
-        setMaxStackSize(1);
-        setUnlocalizedName("moduleMover");
-    }
-
     /**
      * Gets the coordinates of a selected module / null if none selected
      *
