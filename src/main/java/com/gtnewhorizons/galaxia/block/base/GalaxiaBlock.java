@@ -19,7 +19,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
 public class GalaxiaBlock {
 
     private static final Map<DimensionEnum, BlockPlanetGalaxia> planetBlocks = new HashMap<>();
-    private static final Map<DimensionEnum, Item> planetDustMap = new HashMap<>();
+    private static final Map<DimensionEnum, Item> planetDropMap = new HashMap<>();
 
     /**
      * Registers the given block variants for a given planet
@@ -43,22 +43,22 @@ public class GalaxiaBlock {
      * Registers the given block variants and dust item for a given planet
      *
      * @param planet   The planet intended to generate the dust items
-     * @param dustEnum The ENUM for the dust being registered
+     * @param dropItem The ENUM for the drop item being registered
      * @param variants The BlockVariants to register
      */
-    public static void reg(DimensionEnum planet, GalaxiaItemList dustEnum, BlockVariant... variants) {
+    public static void reg(DimensionEnum planet, GalaxiaItemList dropItem, BlockVariant... variants) {
         // Ensure there are actual variants
         if (variants.length == 0) {
             throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
         }
 
         // Registers the blocks variants and dust item, and adds to planet hashmaps
-        Item dustItem = dustEnum.getItem();
+        Item dustItem = dropItem.getItem();
         BlockPlanetGalaxia block = new BlockPlanetGalaxia(planet.getName(), dustItem, variants);
         GameRegistry.registerBlock(block, ItemBlockGalaxiaPlanet.class, planet.getName());
 
         planetBlocks.put(planet, block);
-        planetDustMap.put(planet, dustItem);
+        planetDropMap.put(planet, dustItem);
     }
 
     public static Block get(DimensionEnum planet) {

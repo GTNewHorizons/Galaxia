@@ -25,9 +25,9 @@ public class CommonProxy {
             .bus()
             .register(new DimensionEventHandler());
 
+        GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
-        GalaxiaItemList.registerAll();
     }
 
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)

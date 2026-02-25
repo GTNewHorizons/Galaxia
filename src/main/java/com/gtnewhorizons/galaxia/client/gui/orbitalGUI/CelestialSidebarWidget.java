@@ -155,7 +155,7 @@ public class CelestialSidebarWidget extends Widget {
             EnumColors.SearchLabelColor.getColor());
 
         String placeholder = StatCollector.translateToLocal("galaxia.gui.orbital.search.placeholder");
-        String disp = searchQuery.isEmpty() ? placeholder + "..." : searchQuery + "█";
+        String disp = searchQuery.isEmpty() ? placeholder : searchQuery + "█";
         Minecraft.getMinecraft().fontRenderer
             .drawStringWithShadow(disp, 18, 30, EnumColors.SearchInputColor.getColor());
 

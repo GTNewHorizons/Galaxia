@@ -63,7 +63,6 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     @Override
     public Item getItemDropped(int meta, Random rand, int fortune) {
-        meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
         if (this.dust != null && variants[meta].dropsDust()) {
             return this.dust;
         }
@@ -71,12 +70,12 @@ public class BlockPlanetGalaxia extends BlockFalling {
     }
 
     @Override
-    public int quantityDropped(int meta, int fortune, Random random) {
+    public int damageDropped(int meta) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
         if (this.dust != null && variants[meta].dropsDust()) {
-            return 2 + random.nextInt(3 + fortune);
+            return 0;
         }
-        return 1;
+        return meta;
     }
 
     public String getVariantSuffix(int meta) {

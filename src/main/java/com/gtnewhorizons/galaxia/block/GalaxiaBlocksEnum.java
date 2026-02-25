@@ -40,7 +40,8 @@ public enum GalaxiaBlocksEnum {
     // spotless:off
 
     /**
-     * Registers all block variants for each planet, alongside the relevant dust items
+     * Registers all block variants for each planet, alongside the relevant drop items
+     * if drop item is not selected, blocks will drop themselves by default
      */
     public static void registerPlanetBlocks() {
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
