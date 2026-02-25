@@ -18,9 +18,9 @@ public class ModuleRegistry {
 
     private static final Map<Integer, ModuleInfo> MODULES = new HashMap<>();
 
-    public static void registerModule(int id, String modelPath, String texturePath, double height) {
-        ResourceLocation modelLoc = LocationGalaxia(modelPath);
-        ResourceLocation texLoc = LocationGalaxia(texturePath);
+    public static void registerModule(int id, String name, double height) {
+        ResourceLocation modelLoc = LocationGalaxia(String.format("textures/model/modules/%s/model.obj", name));
+        ResourceLocation texLoc = LocationGalaxia(String.format("textures/model/modules/%s/texture.png", name));
         IModelCustom model = AdvancedModelLoader.loadModel(modelLoc);
         MODULES.put(id, new ModuleInfo(model, texLoc, height));
     }
@@ -30,10 +30,8 @@ public class ModuleRegistry {
     }
 
     static {
-        registerModule(
-            0,
-            "textures/model/modules/hub_3x3/model.obj",
-            "textures/model/modules/hub_3x3/texture.png",
-            5.0);
+        registerModule(0, "fuel_tank_3x5x3", 5.0);
+        registerModule(1, "capsule_3x2.5x3", 2.5);
+        registerModule(2, "storage_unit_3x4x3", 4);
     }
 }

@@ -45,15 +45,9 @@ tile.Frozen_BeltBasalt.name=Frozen Belt Basalt
 tile.Frozen_BeltAndesite.name=Frozen Belt Andesite
 tile.Frozen_BeltAnorthosite.name=Frozen Belt Anorthosite
 
-# Blocks - "Modules"
-tile.module.shell.name=[?]Shell module
-tile.module.controller.name=[?]Controller module
-
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
 item.galaxia.teleporter.name=Teleporter
-item.galaxia.module_placer.name=Module Builder
-item.galaxia.module_mover.name=Module Mover
 
 # Items - "Planet stone dust"
 item.galaxia.theia_dust.name=Theia stone dust
@@ -63,27 +57,6 @@ item.galaxia.theia_dust.name=Theia stone dust
 galaxia.gui.planet_teleporter.title=Planet Teleporter
 galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
-
-# Elements - "Habitat Builder (Placer)"
-galaxia.gui.habitat_builder=Habitat Builder
-galaxia.gui.select_module=§l§nSelect Module§r
-
-galaxia.gui.module.hub_3x3.name=Hub 3x3
-galaxia.gui.module.capsule_3x3.name=Capsule 3x3
-
-galaxia.tooltip.habitat_builder.selected=§bSelected: §f%s§r
-galaxia.tooltip.habitat_builder.open=§eRight-click - open module menu§r
-galaxia.tooltip.habitat_builder.build=§7Right-click block - build selected module
-
-# Elements - "Module Mover"
-galaxia.tooltip.module_mover.selected=§bSelected: §f%d, %d, %d§r
-galaxia.tooltip.module_mover.instruction_left=§eLeft-click on module - select§r
-galaxia.tooltip.module_mover.instruction_right=§7Right-click on new location - move
-
-galaxia.module_mover.module_selected=§aModule selected for moving!§r
-galaxia.module_mover.no_module_selected=§cFirst left-click on a module!§r
-galaxia.module_mover.cannot_place_here=§cCannot place here!§r
-galaxia.module_mover.module_moved=§aModule successfully moved!§r
 
 # Elements - Orbital GUI
 galaxia.gui.orbital.search=Search
