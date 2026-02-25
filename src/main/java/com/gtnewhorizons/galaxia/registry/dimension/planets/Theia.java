@@ -64,13 +64,15 @@ public class Theia extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .biome(
-                createBiome("Theia Surface", GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())),
+                createBiome("Theia Surface", GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                    true),
                 0,
                 0)
             .biome(
                 createBiome(
                     "Theia Rough Surface",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix())),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix()),
+                    false),
                 1,
                 0)
             .name(ENUM)
@@ -128,13 +130,14 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock) {
+    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, boolean generateCaves) {
         return new BiomeGenBuilder(100).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(topBlock)
             .fillerBlock(Blocks.brick_block)
+            .generateCaves(generateCaves)
             .surfaceFeature(new WorldGenCrater(4,
                 new BlockMeta[] {
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),

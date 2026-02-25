@@ -25,6 +25,7 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final BlockMeta oceanSurface;
     private final BlockMeta seabed;
     private final List<WorldGenGalaxia> surfaceFeatures;
+    private final boolean generateCaves;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -57,6 +58,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
         surfaceFeatures = b.surfaceFeatures;
+        this.generateCaves = b.generateCaves;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
@@ -166,5 +168,9 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public List<WorldGenGalaxia> getSurfaceFeatures() {
         return surfaceFeatures;
+    }
+
+    public boolean generateCaves() {
+        return generateCaves;
     }
 }

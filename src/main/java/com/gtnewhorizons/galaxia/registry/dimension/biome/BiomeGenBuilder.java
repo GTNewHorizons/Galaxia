@@ -39,6 +39,7 @@ public class BiomeGenBuilder {
     BlockMeta snowBlock = stone;
     List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
     List<BlockMeta> topBlockMetas = new ArrayList<>();
+    boolean generateCaves = false;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -199,6 +200,11 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder surfaceFeature(WorldGenGalaxia feature) {
         surfaceFeatures.add(feature);
+        return this;
+    }
+
+    public BiomeGenBuilder generateCaves(boolean generateCaves) {
+        this.generateCaves = generateCaves;
         return this;
     }
 

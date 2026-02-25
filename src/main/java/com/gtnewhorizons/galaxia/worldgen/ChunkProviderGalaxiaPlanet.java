@@ -177,6 +177,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         int snowHeight = 512;
         int oceanHeight = 0;
         int seabedHeight = 0;
+        boolean generateCaves = false;
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
@@ -193,6 +194,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     oceanSurface = spaceBiome.getOceanSurface();
                     seabed = spaceBiome.getSeabed();
                     seabedHeight = spaceBiome.getSeabedHeight();
+                    generateCaves = spaceBiome.generateCaves();
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
@@ -218,7 +220,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
-                    if ((blockMeta == fillerBlock || blockMeta == topBlock || blockMeta == snowBlock) && generateCave(localX, y, localZ, height)) {
+                    if (generateCaves && (blockMeta == fillerBlock || blockMeta == topBlock || blockMeta == snowBlock) && generateCave(localX, y, localZ, height)) {
                         blockMeta = air;
                     }
                     if (blockMeta.block() != null) {
