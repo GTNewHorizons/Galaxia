@@ -7,7 +7,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
-import com.gtnewhorizons.galaxia.client.gui.PacketSetModule;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
@@ -69,7 +68,6 @@ public final class Galaxia {
     private static void registerNetwork() {
         int id = 0;
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++, Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(PacketSetModule.Handler.class, PacketSetModule.class, id++, Side.SERVER);
     }
     // spotless:on
 

@@ -10,8 +10,6 @@ import net.minecraft.item.Item;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
-import com.gtnewhorizons.galaxia.registry.items.special.ItemHabitatBuilder;
-import com.gtnewhorizons.galaxia.registry.items.special.ItemModuleMover;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -25,8 +23,6 @@ public enum GalaxiaItemList {
     TELEPORTER("teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("galactic_map", ItemGalacticMap::new, 1),
     DUST_THEIA("theia_dust"),
-    MODULE_PLACER("module_placer", ItemHabitatBuilder::new, 1),
-    MODULE_MOVER("module_mover", ItemModuleMover::new, 1),
     SPACESUIT_HELMET("spacesuit_helmet", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
     SPACESUIT_CHESTPLATE("spacesuit_chestplate", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
     SPACESUIT_LEGGINGS("spacesuit_leggings", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
