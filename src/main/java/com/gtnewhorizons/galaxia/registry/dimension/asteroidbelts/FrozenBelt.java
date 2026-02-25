@@ -83,28 +83,28 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     64,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix()) },
-                    6),
+                    3),
                 new Asteroid(
                     20,
                     32,
                     128,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix()) },
-                    8),
+                    4),
                 new Asteroid(
-                    32,
-                    64,
+                    24,
+                    48,
                     512,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT.suffix()) },
-                    12),
+                    6),
                 new Asteroid(
-                    32,
-                    64,
+                    24,
+                    48,
                     512,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE.suffix()),
                         GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA.suffix()) },
-                    4) };
+                    2) };
             // Configure the world provider for this dimension
             WorldProviderBuilder.configure(this)
                 .sky(true)
