@@ -261,7 +261,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             return false;
         }
         double localNoise = caveCache[localX + localZ * 16][localY];
-        return localNoise < 0.5 && localNoise > 0.45;
+        double boundTightening;
+        if (localY > 4) {
+            boundTightening = 1;
+        } else {
+            boundTightening = (double) localY / 2;
+        }
+        double lowerBound = 0.45;
+        double upperBound = 0.5 * boundTightening;
+        return localNoise < upperBound && localNoise > lowerBound;
     }
 
     private BlockMeta getSurfaceBlock(List<BlockMeta> blockMetas, int x, int z) {
