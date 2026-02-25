@@ -1,6 +1,9 @@
 package com.gtnewhorizons.galaxia.core;
 
-import com.gtnewhorizons.galaxia.client.render.RocketWorldRenderer;
+import com.gtnewhorizons.galaxia.client.render.RocketRenderer;
+import com.gtnewhorizons.galaxia.client.render.SiloRenderer;
+import com.gtnewhorizons.galaxia.registry.block.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.entity.rocket.EntityRocket;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraftforge.common.MinecraftForge;
 
@@ -10,7 +13,6 @@ import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.modules.client.render.ModuleTESR;
 import com.gtnewhorizons.galaxia.registry.block.tileentities.TileEntityModuleController;
-import com.gtnewhorizons.galaxia.registry.entity.rocket.RocketEntity;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
@@ -36,7 +38,9 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityModuleController.class, new ModuleTESR());
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
-        RocketWorldRenderer.register();
+
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
+        RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
     }
 
     @Override
