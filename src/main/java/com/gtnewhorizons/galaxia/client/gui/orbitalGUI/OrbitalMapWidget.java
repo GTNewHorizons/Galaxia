@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 
@@ -15,6 +16,7 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public class OrbitalMapWidget extends Widget {
 
@@ -208,7 +210,7 @@ public class OrbitalMapWidget extends Widget {
             zoomLevel = targetZoomLevel;
         }
 
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xFF0F1621);
+        Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapBackground.getColor());
 
         GlStateManager.pushMatrix();
         GlStateManager.disableTexture2D();
@@ -221,12 +223,13 @@ public class OrbitalMapWidget extends Widget {
         GlStateManager.enableTexture2D();
         GlStateManager.popMatrix();
 
-        String speedText = paused ? "§cPAUSED" : String.format("§a×%.1f", timeScale);
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            "Zoom: ×" + String.format("%.2f", getScale()) + "   Speed: " + speedText,
-            12,
-            12,
-            0xAAFFFFFF);
+        String speedText = paused ? StatCollector.translateToLocal("galaxia.gui.orbital.paused")
+            : StatCollector.translateToLocalFormatted("galaxia.gui.orbital.speed_multiplier", timeScale);
+
+        String status = StatCollector.translateToLocalFormatted("galaxia.gui.orbital.status", getScale(), speedText);
+
+        Minecraft.getMinecraft().fontRenderer
+            .drawStringWithShadow(status, 12, 12, EnumColors.StatusTextColor.getColor());
 
         if (DEBUG) drawDebugOverlay();
     }
@@ -396,23 +399,42 @@ public class OrbitalMapWidget extends Widget {
     private void drawDebugOverlay() {
         Minecraft mc = Minecraft.getMinecraft();
         int y = 40;
-        mc.fontRenderer.drawStringWithShadow("§6=== GALACTIC MAP DEBUG ===", 12, y, 0xFFFF5555);
+
+        mc.fontRenderer.drawStringWithShadow(
+            StatCollector.translateToLocal("galaxia.gui.orbital.debug.title"),
+            12,
+            y,
+            EnumColors.DebugOverlayTitle.getColor());
         y += 14;
-        mc.fontRenderer.drawStringWithShadow(String.format("Camera: %.3f, %.3f", cameraX, cameraY), 12, y, 0x88FF88);
-        y += 12;
-        String follow = (isFollowing && focusedBody != null) ? focusedBody.name() : "none";
-        mc.fontRenderer.drawStringWithShadow("Following: " + follow + "  |  Paused: " + paused, 12, y, 0xFFDD88);
-        y += 12;
+
         mc.fontRenderer.drawStringWithShadow(
-            String.format("Time: %.1fs  |  Speed: ×%.1f", globalTime, timeScale),
+            StatCollector.translateToLocalFormatted("galaxia.gui.orbital.debug.camera", cameraX, cameraY),
             12,
             y,
-            0x88FF88);
+            EnumColors.DebugOverlayInfo.getColor());
         y += 12;
+
+        String follow = (isFollowing && focusedBody != null) ? focusedBody.name()
+            : StatCollector.translateToLocal("galaxia.gui.orbital.debug.none");
+
         mc.fontRenderer.drawStringWithShadow(
-            String.format("ZoomLevel: %.2f | Scale: %.2f", zoomLevel, getScale()),
+            StatCollector.translateToLocalFormatted("galaxia.gui.orbital.debug.following", follow, paused),
             12,
             y,
-            0x88FF88);
+            EnumColors.DebugOverlayFollow.getColor());
+        y += 12;
+
+        mc.fontRenderer.drawStringWithShadow(
+            StatCollector.translateToLocalFormatted("galaxia.gui.orbital.debug.time", globalTime, timeScale),
+            12,
+            y,
+            EnumColors.DebugOverlayInfo.getColor());
+        y += 12;
+
+        mc.fontRenderer.drawStringWithShadow(
+            StatCollector.translateToLocalFormatted("galaxia.gui.orbital.debug.zoom", zoomLevel, getScale()),
+            12,
+            y,
+            EnumColors.DebugOverlayInfo.getColor());
     }
 }

@@ -7,6 +7,7 @@ import java.util.Set;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -14,6 +15,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public class CelestialSidebarWidget extends Widget {
 
@@ -58,7 +60,7 @@ public class CelestialSidebarWidget extends Widget {
     private boolean handleClick(int mx, int my, int button) {
         if (button != 0) return false;
 
-        int localY = my - (int) getArea().ry - 52;
+        int localY = my - getArea().ry - 52;
 
         if (localY < 0) {
             searchFocused = true;
@@ -72,7 +74,7 @@ public class CelestialSidebarWidget extends Widget {
         if (index < 0 || index >= visible.size()) return false;
 
         VisibleEntry entry = visible.get(index);
-        int localX = mx - (int) getArea().rx;
+        int localX = mx - getArea().rx;
 
         if (entry.hasChildren && localX < ARROW_ZONE + entry.depth * 24) {
             if (expanded.contains(entry.body)) expanded.remove(entry.body);
@@ -143,17 +145,24 @@ public class CelestialSidebarWidget extends Widget {
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         super.drawBackground(context, widgetTheme);
 
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xE60F1621);
+        Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.SidebarBackground.getColor());
 
-        Gui.drawRect(8, 8, getArea().width - 8, 44, 0xFF1A2638);
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow("Search", 18, 16, 0x99FFFFFF);
-        String disp = searchQuery.isEmpty() ? "Enter name..." : searchQuery + "█";
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(disp, 18, 30, 0xFFFFFFFF);
+        Gui.drawRect(8, 8, getArea().width - 8, 44, EnumColors.SearchBarBackground.getColor());
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
+            StatCollector.translateToLocal("galaxia.gui.orbital.search"),
+            18,
+            16,
+            EnumColors.SearchLabelColor.getColor());
+
+        String placeholder = StatCollector.translateToLocal("galaxia.gui.orbital.search.placeholder");
+        String disp = searchQuery.isEmpty() ? placeholder + "..." : searchQuery + "█";
+        Minecraft.getMinecraft().fontRenderer
+            .drawStringWithShadow(disp, 18, 30, EnumColors.SearchInputColor.getColor());
 
         List<VisibleEntry> visible = getVisibleEntries();
         int y = 56 - (int) scrollOffset;
 
-        int mouseLocalY = getContext().getMouseY() - (int) getArea().ry - 52;
+        int mouseLocalY = getContext().getMouseY() - getArea().ry - 52;
         int hovered = (mouseLocalY >= 0) ? (int) ((mouseLocalY + scrollOffset) / LINE_HEIGHT) : -1;
 
         for (int i = 0; i < visible.size(); i++) {
@@ -165,7 +174,9 @@ public class CelestialSidebarWidget extends Widget {
             String prefix = e.hasChildren ? (expanded.contains(e.body) ? "▼ " : "▶ ") : "  ";
             String text = prefix + e.body.name();
 
-            int color = (i == hovered) ? 0xFF88EEFF : 0xFFCCEEFF;
+            int color = (i == hovered) ? EnumColors.SidebarListHovered.getColor()
+                : EnumColors.SidebarListNormal.getColor();
+
             Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(text, indent, sy + 6, color);
         }
     }
