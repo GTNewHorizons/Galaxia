@@ -9,9 +9,9 @@ import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
-import com.gtnewhorizons.galaxia.block.tileentities.TileEntityModuleController;
-import com.gtnewhorizons.galaxia.items.special.ItemModuleMover;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
+import com.gtnewhorizons.galaxia.registry.block.tileentities.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemModuleMover;
 
 /**
  * Custom implementation of TESR for rocket modules specifically
@@ -20,7 +20,7 @@ public class ModuleTESR extends TileEntitySpecialRenderer {
 
     /**
      * Renders a tile entity at a given position
-     * 
+     *
      * @param tile         The tile entity to render
      * @param x            TE x coordinate
      * @param y            TE y coordinate
@@ -69,7 +69,7 @@ public class ModuleTESR extends TileEntitySpecialRenderer {
 
     /**
      * Gets if the tile entity is selected
-     * 
+     *
      * @param ctrl The Tile Entity controller
      * @return Boolean : True => is selected
      */

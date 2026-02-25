@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.utility;
 
-import com.gtnewhorizons.galaxia.dimension.planets.BasePlanet;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 
 public class OrbitalCalculatorHelper {
     /*

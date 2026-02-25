@@ -18,10 +18,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.gtnewhorizons.galaxia.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
-import com.gtnewhorizons.galaxia.dimension.sky.CelestialBody;
-import com.gtnewhorizons.galaxia.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
+import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 
 /**
  * Mixin to alter the global sky rendering
@@ -61,7 +61,7 @@ public abstract class RenderGlobalSkyMixin {
 
     /**
      * Replaces the sun and moon in the skybox with custom based on Galaxia Registry
-     * 
+     *
      * @param partialTicks How far through the current tick
      * @param ci           The callback info (used in things like early cancels of methods etc.)
      */
@@ -138,7 +138,7 @@ public abstract class RenderGlobalSkyMixin {
 
     /**
      * Draws a celestial body given certain parameters
-     * 
+     *
      * @param t               The tesselator to use
      * @param body            The body to be drawn
      * @param angle           The angle in the sky

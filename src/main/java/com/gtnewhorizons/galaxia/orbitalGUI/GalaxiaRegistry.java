@@ -1,13 +1,13 @@
 package com.gtnewhorizons.galaxia.orbitalGUI;
 
-import static com.gtnewhorizons.galaxia.dimension.planets.BasePlanet.earthRadiusToAU;
+import static com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet.earthRadiusToAU;
 
 import java.util.Optional;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.CelestialType;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 public final class GalaxiaRegistry {
 

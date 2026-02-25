@@ -10,7 +10,7 @@ import net.minecraft.util.StatCollector;
 import org.lwjgl.input.Keyboard;
 
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
-import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public class GuiPlanetTeleporter extends GuiScreen {

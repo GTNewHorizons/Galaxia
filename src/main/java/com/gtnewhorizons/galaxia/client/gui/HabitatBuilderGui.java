@@ -20,9 +20,9 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Row;
-import com.gtnewhorizons.galaxia.items.special.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.modules.ModuleType;
 import com.gtnewhorizons.galaxia.modules.ModuleTypes;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemHabitatBuilder;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 // TODO: JAVADOC
