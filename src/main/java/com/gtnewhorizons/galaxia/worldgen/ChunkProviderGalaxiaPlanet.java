@@ -218,7 +218,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
-                    if ((blockMeta == fillerBlock || blockMeta == topBlock || blockMeta == snowBlock) && generateCave(localX, y, localZ)) {
+                    if ((blockMeta == fillerBlock || blockMeta == topBlock || blockMeta == snowBlock) && generateCave(localX, y, localZ, height)) {
                         blockMeta = air;
                     }
                     if (blockMeta.block() != null) {
@@ -256,19 +256,22 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         }
     }
 
-    private boolean generateCave(int localX, int localY, int localZ) {
+    private boolean generateCave(int localX, int localY, int localZ, int height) {
         if (localY >= 256) {
             return false;
         }
         double localNoise = caveCache[localX + localZ * 16][localY];
         double boundTightening;
-        if (localY > 4) {
-            boundTightening = 1;
+        int ceilingDistance = height - localY;
+        if (ceilingDistance > 0 && ceilingDistance < 16) {
+            boundTightening = 0.75 / ceilingDistance;
+        } else if (localY > 4) {
+            boundTightening = 0;
         } else {
-            boundTightening = (double) localY / 2;
+            boundTightening = (double) 1 / (Math.max(localY - 1, 1));
         }
         double lowerBound = 0.45;
-        double upperBound = 0.5 * boundTightening;
+        double upperBound = 0.5 - 0.05 * boundTightening;
         return localNoise < upperBound && localNoise > lowerBound;
     }
 
