@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.client.gui.PacketSetModule;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
-import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;

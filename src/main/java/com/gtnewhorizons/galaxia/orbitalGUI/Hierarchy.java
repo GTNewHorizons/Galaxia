@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 public class Hierarchy {
 

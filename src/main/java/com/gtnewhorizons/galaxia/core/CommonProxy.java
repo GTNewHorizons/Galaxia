@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.core;
 
-import com.gtnewhorizons.galaxia.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
-import com.gtnewhorizons.galaxia.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.modules.ModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;

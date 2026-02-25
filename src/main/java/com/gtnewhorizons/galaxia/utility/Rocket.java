@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.utility;
 
 // THIS CLASS IS TEMPORARY TO ACT AS A DATACLASS UNTIL ROCKETS ARE WORKING AS A FULL CLASS
-
+// TODO remove after rockets are implemented
 /**
  * Temporary base class to create an example rocket
  */

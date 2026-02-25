@@ -15,8 +15,8 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.NoiseGeneratorPerlin;
 
-import com.gtnewhorizons.galaxia.dimension.biome.BiomeGenSpace;
-import com.gtnewhorizons.galaxia.dimension.provider.WorldChunkManagerSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
