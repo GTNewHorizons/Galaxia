@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -24,6 +25,8 @@ public abstract class BasePlanet {
     public static final double earthRadiusToAU = 23481;
 
     protected final DimensionDef DEF;
+
+    private static int biomeIdOffset = 0;
 
     /**
      * Create a dimension def on instantiation of super object
@@ -95,7 +98,7 @@ public abstract class BasePlanet {
     }
 
     protected static BiomeGenBase createBiome(String name, Block block, int meta, TerrainConfiguration terrain, boolean generateCaves) {
-        return new BiomeGenBuilder(100).name(name)
+        return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)

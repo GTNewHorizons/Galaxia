@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts;
 
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -109,7 +110,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                 .sky(true)
                 .skyColor(0, 0.1, 0.3)
                 .fog(0, 0.1f, 0.3f)
-                .biome(new BiomeGenFrozenBelt(100), 0, 0)
+                .biome(new BiomeGenFrozenBelt(BiomeIdOffsetter.getBiomeId()), 0, 0)
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)
                 .chunkGen(() -> new ChunkProviderAsteroidBelt(worldObj, worldObj.getSeed(), asteroids))

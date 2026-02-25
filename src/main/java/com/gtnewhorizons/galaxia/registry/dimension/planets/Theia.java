@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -18,6 +19,7 @@ import com.gtnewhorizons.galaxia.utility.BlockMeta;
  * The class holding all data related to the dimension Theia
  */
 public class Theia extends BasePlanet {
+    private static int biomeIdOffset = 0;
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
@@ -131,7 +133,7 @@ public class Theia extends BasePlanet {
      * @return The BiomeGenBase used to generated biomes of that type
      */
     protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, boolean generateCaves) {
-        return new BiomeGenBuilder(100).name(name)
+        return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
