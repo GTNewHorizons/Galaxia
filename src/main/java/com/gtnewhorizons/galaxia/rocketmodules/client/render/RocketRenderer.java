@@ -27,7 +27,7 @@ public class RocketRenderer extends Render {
         List<Integer> types = rocket.getModuleTypes();
         if (types.isEmpty()) return;
 
-        double yOff = -0.5;
+        double yOff = 0.75;
 
         for (int type : types) {
             ModuleInfo info = getModule(type);
@@ -39,7 +39,7 @@ public class RocketRenderer extends Render {
             bindTexture(info.texture());
 
             GL11.glPushMatrix();
-            GL11.glTranslated(x + 0.5, y + yOff, z + 0.5);
+            GL11.glTranslated(x, y + yOff, z);
             info.model()
                 .renderAll();
             GL11.glPopMatrix();

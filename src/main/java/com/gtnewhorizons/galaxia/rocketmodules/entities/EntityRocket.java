@@ -1,15 +1,16 @@
 package com.gtnewhorizons.galaxia.rocketmodules.entities;
 
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry.ModuleInfo;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
+import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry.ModuleInfo;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 public class EntityRocket extends Entity {
 
@@ -24,7 +25,9 @@ public class EntityRocket extends Entity {
         this.setSize(3.0F, 1.0F);
     }
 
-    public void bindSilo(TileEntitySilo silo) { this.silo = silo; }
+    public void bindSilo(TileEntitySilo silo) {
+        this.silo = silo;
+    }
 
     public void setCapsuleIndex(int index) {
         this.capsuleIndex = index;
@@ -54,8 +57,8 @@ public class EntityRocket extends Entity {
     @Override
     protected void entityInit() {
         dataWatcher.addObject(10, (byte) 0); // launched
-        dataWatcher.addObject(11, "");       // modules
-        dataWatcher.addObject(12, -1);       // capsuleIndex
+        dataWatcher.addObject(11, ""); // modules
+        dataWatcher.addObject(12, -1); // capsuleIndex
     }
 
     public boolean shouldRender() {
@@ -69,7 +72,9 @@ public class EntityRocket extends Entity {
             String[] parts = ser.split(",");
             List<Integer> list = new ArrayList<>(parts.length);
             for (String p : parts) {
-                try { list.add(Integer.parseInt(p.trim())); } catch (Exception ignored) {}
+                try {
+                    list.add(Integer.parseInt(p.trim()));
+                } catch (Exception ignored) {}
             }
             return list;
         }
@@ -139,7 +144,9 @@ public class EntityRocket extends Entity {
         modules.clear();
         NBTTagList list = tag.getTagList("modules", 10);
         for (int i = 0; i < list.tagCount(); i++) {
-            modules.add(list.getCompoundTagAt(i).getInteger("type"));
+            modules.add(
+                list.getCompoundTagAt(i)
+                    .getInteger("type"));
         }
         capsuleIndex = tag.getInteger("capsuleIndex");
     }

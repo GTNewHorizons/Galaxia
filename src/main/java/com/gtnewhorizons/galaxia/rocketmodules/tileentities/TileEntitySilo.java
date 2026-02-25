@@ -1,5 +1,17 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
+
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiFactories;
@@ -13,17 +25,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.Packet;
-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.AxisAlignedBB;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
 
@@ -34,55 +35,62 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        return new ModularPanel("galaxia:rocket_silo")
-            .size(210, 130)
-            .child(IKey.str("§lRocket Silo").asWidget().pos(8, 8))
-            .child(Flow.row()
-                .coverChildren()
-                .child(createModuleButton(0, "Fuel Tank"))
-                .child(createModuleButton(1, "Capsule"))
-                .child(createModuleButton(2, "Storage Unit"))
-                .pos(10, 35)
-            )
-            .child(new ButtonWidget<>()
-                .size(190, 30)
-                .pos(10, 85)
-                .overlay(IKey.str("§aEnter Rocket").alignment(Alignment.CENTER))
-                .tooltip(t -> t.add(hasCapsule()
-                    ? "Sit in the capsule and launch"
-                    : "§cRequires Capsule module"))
-                .syncHandler(new InteractionSyncHandler()
-                    .setOnMousePressed(mouseData -> {
+        return new ModularPanel("galaxia:rocket_silo").size(210, 130)
+            .child(
+                IKey.str("§lRocket Silo")
+                    .asWidget()
+                    .pos(8, 8))
+            .child(
+                Flow.row()
+                    .coverChildren()
+                    .child(createModuleButton(0, "Fuel Tank"))
+                    .child(createModuleButton(1, "Capsule"))
+                    .child(createModuleButton(2, "Storage Unit"))
+                    .pos(10, 35))
+            .child(
+                new ButtonWidget<>().size(190, 30)
+                    .pos(10, 85)
+                    .overlay(
+                        IKey.str("§aEnter Rocket")
+                            .alignment(Alignment.CENTER))
+                    .tooltip(
+                        t -> t.add(
+                            hasCapsule() ? "Sit in the capsule and launch the rocket" : "§cRequires Capsule module"))
+                    .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                         if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
-                        if (!hasCapsule()) return;
-                        EntityRocket rocket = getEntityRocket();
-                        if (rocket == null || rocket.isDead) return;
-                        EntityPlayer player = data.getPlayer();
-                        rocket.setCapsuleIndex(getFirstCapsuleIndex());
-                        player.mountEntity(rocket);
-                        if (!rocket.shouldRender()) {rocket.launch();}
-                    }))
-            );
+                        enterRocket(data);
+                    })));
+    }
+
+    private void enterRocket(PosGuiData data) {
+        if (!hasCapsule()) return;
+        EntityRocket rocket = getEntityRocket();
+        if (rocket == null || rocket.isDead) return;
+        EntityPlayer player = data.getPlayer();
+        rocket.setCapsuleIndex(getFirstCapsuleIndex());
+        player.mountEntity(rocket);
+        if (!rocket.shouldRender()) {
+            rocket.launch();
+        }
     }
 
     private ButtonWidget<?> createModuleButton(int id, String name) {
         ModuleRegistry.ModuleInfo info = ModuleRegistry.getModule(id);
         String heightStr = info != null ? String.format("%.1fm", info.height()) : "??m";
 
-        return new ButtonWidget<>()
-            .syncHandler(new InteractionSyncHandler()
-                .setOnMousePressed(mouseData -> {
-                    if (mouseData.mouseButton == 0) {
-                        addModule(id);
-                    }
-                }))
+        return new ButtonWidget<>().syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
+            if (mouseData.mouseButton == 0) {
+                addModule(id);
+            }
+        }))
             .size(62, 20)
             .overlay(IKey.str(name))
             .tooltip((t) -> t.add("Add " + name + " (" + heightStr + ")"));
     }
 
     public void openUI(EntityPlayer player) {
-        GuiFactories.tileEntity().open(player, xCoord, yCoord, zCoord);
+        GuiFactories.tileEntity()
+            .open(player, xCoord, yCoord, zCoord);
     }
 
     public boolean hasCapsule() {
@@ -101,7 +109,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     @Override
     public void updateEntity() {
         if (!worldObj.isRemote) {
-            if (entityRocket == null || entityRocket.isDead) {
+            if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
                 spawnSeat();
             }
         }
@@ -109,6 +117,11 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     public void launch() {
         shouldRender = false;
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+        entityRocket = null;
     }
 
     private void spawnSeat() {
