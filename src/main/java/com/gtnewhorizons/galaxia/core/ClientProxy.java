@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.core;
 
+import com.gtnewhorizons.galaxia.client.render.RocketWorldRenderer;
+import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizon.gtnhlib.config.ConfigException;
@@ -8,8 +10,10 @@ import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.modules.client.render.ModuleTESR;
 import com.gtnewhorizons.galaxia.registry.block.tileentities.TileEntityModuleController;
+import com.gtnewhorizons.galaxia.registry.entity.rocket.RocketEntity;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
+import cpw.mods.fml.client.registry.RenderingRegistry;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
@@ -32,6 +36,7 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityModuleController.class, new ModuleTESR());
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
+        RocketWorldRenderer.register();
     }
 
     @Override
