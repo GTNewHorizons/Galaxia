@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -12,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;

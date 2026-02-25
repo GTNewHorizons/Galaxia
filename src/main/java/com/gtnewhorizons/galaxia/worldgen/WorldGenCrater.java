@@ -1,12 +1,14 @@
 package com.gtnewhorizons.galaxia.worldgen;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import java.util.Random;
+
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 
-import java.util.Random;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 public class WorldGenCrater extends WorldGenGalaxia {
+
     public WorldGenCrater(int rarity, BlockMeta[] surfaceRequirements) {
         super(rarity, surfaceRequirements);
     }
@@ -18,7 +20,7 @@ public class WorldGenCrater extends WorldGenGalaxia {
         }
         int diameter = 16 + random.nextInt(16);
         int radius = diameter / 2;
-        int squaredCraterRadius = radius*radius;
+        int squaredCraterRadius = radius * radius;
         int heightOffset = radius / 2;
         for (int localX = -radius; localX <= radius; localX++) {
             for (int localY = -radius; localY <= radius; localY++) {

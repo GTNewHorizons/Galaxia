@@ -1,12 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
-import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
+import java.util.List;
+
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-
-import java.util.List;
+import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The class holding all generation fields for Biome generation

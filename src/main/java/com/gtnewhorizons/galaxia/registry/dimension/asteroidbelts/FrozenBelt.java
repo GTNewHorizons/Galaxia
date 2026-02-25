@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts;
 
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -12,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 

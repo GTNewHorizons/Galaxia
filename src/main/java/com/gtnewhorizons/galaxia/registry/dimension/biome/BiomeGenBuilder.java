@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
@@ -13,6 +12,7 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The builder for biome generation

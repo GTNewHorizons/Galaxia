@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -13,12 +11,15 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 
 /**
  * The class holding all data related to the dimension Theia
  */
 public class Theia extends BasePlanet {
+
     private static int biomeIdOffset = 0;
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
@@ -66,7 +67,9 @@ public class Theia extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .avgGround(80)
             .biome(
-                createBiome("Theia Surface", GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                createBiome(
+                    "Theia Surface",
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
                     true),
                 0,
                 0)
@@ -140,11 +143,11 @@ public class Theia extends BasePlanet {
             .topBlock(topBlock)
             .fillerBlock(Blocks.brick_block)
             .generateCaves(generateCaves)
-            .surfaceFeature(new WorldGenCrater(4,
-                new BlockMeta[] {
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix())
-                }))
+            .surfaceFeature(
+                new WorldGenCrater(
+                    4,
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix()) }))
             .build();
     }
 }
