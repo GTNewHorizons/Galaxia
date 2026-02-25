@@ -6,6 +6,7 @@ import com.gtnewhorizon.gtnhlib.config.ConfigException;
 import com.gtnewhorizon.gtnhlib.config.ConfigurationManager;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
+import com.gtnewhorizons.galaxia.handlers.RocketCameraHandler;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.SiloRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
@@ -37,6 +38,7 @@ public class ClientProxy extends CommonProxy {
 
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
+        RocketCameraHandler.register();
     }
 
     @Override

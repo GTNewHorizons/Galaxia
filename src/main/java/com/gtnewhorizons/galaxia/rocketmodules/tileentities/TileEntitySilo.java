@@ -116,12 +116,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     public void launch() {
-        shouldRender = false;
+        modules.clear();
+        shouldRender = true;
+        entityRocket = null;
+
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
-        entityRocket = null;
     }
 
     private void spawnSeat() {

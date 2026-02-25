@@ -28,7 +28,7 @@ public class RocketRenderer extends Render {
         if (types.isEmpty()) return;
 
         double yOff = 0.75;
-
+        GL11.glDisable(GL11.GL_CULL_FACE);
         for (int type : types) {
             ModuleInfo info = getModule(type);
             if (info == null) {
@@ -46,6 +46,7 @@ public class RocketRenderer extends Render {
 
             yOff += info.height();
         }
+        GL11.glEnable(GL11.GL_CULL_FACE);
     }
 
     @Override

@@ -11,6 +11,7 @@
     "JumpMixin"
   ],
   "client": [
+    "MixinEntityRenderer"
   ],
   "server": [
   ]
