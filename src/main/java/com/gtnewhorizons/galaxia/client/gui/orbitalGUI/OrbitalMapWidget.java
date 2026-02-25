@@ -228,8 +228,7 @@ public class OrbitalMapWidget extends Widget {
 
         String status = StatCollector.translateToLocalFormatted("galaxia.gui.orbital.status", getScale(), speedText);
 
-        Minecraft.getMinecraft().fontRenderer
-            .drawStringWithShadow(status, 12, 12, EnumColors.StatusTextColor.getColor());
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(status, 12, 12, EnumColors.MapStatusText.getColor());
 
         if (DEBUG) drawDebugOverlay();
     }
@@ -254,16 +253,16 @@ public class OrbitalMapWidget extends Widget {
             drawSprite(body.texture(), sx, sy, body.spriteSize());
         } else {
             int color = switch (body.type()) {
-                case BLACK_HOLE -> 0xFF111111;
-                case STAR -> 0xFFFFEE88;
-                case PLANET -> 0xFF44AAFF;
-                case MOON -> 0xFFEEEEEE;
-                default -> 0xFF00FF99;
+                case BLACK_HOLE -> EnumColors.MapCelestialBlackHole.getColor();
+                case STAR -> EnumColors.MapCelestialStar.getColor();
+                case PLANET -> EnumColors.MapCelestialPlanet.getColor();
+                case MOON -> EnumColors.MapCelestialMoon.getColor();
+                default -> EnumColors.MapCelestialDefault.getColor();
             };
             drawFilledCircle(sx, sy, body == root ? 11 : 7, color);
         }
 
-        drawCenteredString(body.name(), sx, sy + 14, 0xFFFFFFFF);
+        drawCenteredString(body.name(), sx, sy + 14, EnumColors.MapCelestialLabelText.getColor());
 
         for (OrbitalCelestialBody child : body.children()) {
             drawTree(child, wx, wy, t);
@@ -296,7 +295,11 @@ public class OrbitalMapWidget extends Widget {
     }
 
     private void drawFilledCircle(float x, float y, float r, int color) {
-        GlStateManager.color(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, 1f);
+        GlStateManager.color(
+            ((color >> 16) & EnumColors.Transparent.getColor()) / 255f,
+            ((color >> 8) & EnumColors.Transparent.getColor()) / 255f,
+            (color & EnumColors.Transparent.getColor()) / 255f,
+            1f);
         GL11.glBegin(GL11.GL_TRIANGLE_FAN);
         GL11.glVertex2f(x, y);
         for (int i = 0; i <= 32; i++) {
