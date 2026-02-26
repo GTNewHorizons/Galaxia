@@ -47,13 +47,7 @@ public final class TerrainFeatureApplier {
                 applyCentralPeakCraters(heightMap, height, depth, localRand);
                 break;
             case MOUNTAIN_RANGES:
-                applyMountainRanges(
-                    heightMap,
-                    height,
-                    width,
-                    chunkX,
-                    chunkZ,
-                    terrainRelevance);
+                applyMountainRanges(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
             case CANYONS:
                 applyCanyons(heightMap, height, depth, localRand);
@@ -75,13 +69,7 @@ public final class TerrainFeatureApplier {
                 break;
             case MULTI_RING_BASINS:
             case SHIELD_VOLCANOES:
-                applyShieldVolcanoes(
-                    heightMap,
-                    height,
-                    width,
-                    chunkX,
-                    chunkZ,
-                    terrainRelevance);
+                applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
             case PLATEAUS_AND_ESCARPMENTS:
             case TECTONIC_RIFTS:
@@ -106,7 +94,7 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applySandDunes(int[] hm, double height, double width, int chunkX, int chunkZ,
-                                       double[] terrainRelevance) {
+        double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         chunkX *= 16;
         chunkZ *= 16;
@@ -174,8 +162,8 @@ public final class TerrainFeatureApplier {
      * @param chunkZ           Chunk z coordinates
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applyMountainRanges(int[] hm, double height, double width,
-                                            int chunkX, int chunkZ, double[] terrainRelevance) {
+    private static void applyMountainRanges(int[] hm, double height, double width, int chunkX, int chunkZ,
+        double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
@@ -265,8 +253,8 @@ public final class TerrainFeatureApplier {
      * @param chunkZ           Chunk z coordinates
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applyShieldVolcanoes(int[] hm, double height, double width,
-                                            int chunkX, int chunkZ, double[] terrainRelevance) {
+    private static void applyShieldVolcanoes(int[] hm, double height, double width, int chunkX, int chunkZ,
+        double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {

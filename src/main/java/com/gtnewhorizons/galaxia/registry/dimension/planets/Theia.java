@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -15,6 +13,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 
 /**
@@ -74,8 +74,7 @@ public class Theia extends BasePlanet {
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE.suffix()),
                     true,
-                    TerrainConfiguration
-                        .builder()
+                    TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
                         .endFeature()
@@ -94,8 +93,7 @@ public class Theia extends BasePlanet {
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE.suffix()),
                     true,
-                    TerrainConfiguration
-                        .builder()
+                    TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
                         .endFeature()
@@ -118,8 +116,7 @@ public class Theia extends BasePlanet {
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                     false,
-                    TerrainConfiguration
-                        .builder()
+                    TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(32)
                         .endFeature()
@@ -138,8 +135,7 @@ public class Theia extends BasePlanet {
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                     false,
-                    TerrainConfiguration
-                        .builder()
+                    TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(32)
                         .endFeature()
@@ -207,7 +203,8 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, BlockMeta fillerBlock, boolean generateCaves, TerrainConfiguration terrainConfiguration, int craterRarity, int oceanHeight) {
+    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, BlockMeta fillerBlock,
+        boolean generateCaves, TerrainConfiguration terrainConfiguration, int craterRarity, int oceanHeight) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
@@ -221,7 +218,12 @@ public class Theia extends BasePlanet {
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
                         GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) }))
             .terrain(terrainConfiguration)
-            .ocean(OBSIDIAN, GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()), oceanHeight, OBSIDIAN, 1)
+            .ocean(
+                OBSIDIAN,
+                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                oceanHeight,
+                OBSIDIAN,
+                1)
             .build();
     }
 }
