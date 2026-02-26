@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -42,8 +44,8 @@ public class Theia extends BasePlanet {
      */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.gravity(2)
-            .airResistance(1.7)
+        return builder.gravity(0.25)
+            .airResistance(0.01)
             .mass(0.012)
             .radius(0.27)
             .orbitalRadius(1 * earthRadiusToAU)
@@ -68,16 +70,40 @@ public class Theia extends BasePlanet {
             .avgGround(80)
             .biome(
                 createBiome(
-                    "Theia Surface",
+                    "Theia Hills",
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                    true),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE.suffix()),
+                    true,
+                    TerrainConfiguration
+                        .builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .width(32)
+                        .height(8)
+                        .endFeature()
+                        .build(),
+                    2),
                 0,
                 0)
             .biome(
                 createBiome(
-                    "Theia Rough Surface",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix()),
-                    false),
+                    "Theia Hardened Ocean",
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                    false,
+                    TerrainConfiguration
+                        .builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(32)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .width(32)
+                        .height(2)
+                        .endFeature()
+                        .build(),
+                    8),
                 1,
                 0)
             .name(ENUM)
@@ -135,19 +161,20 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, boolean generateCaves) {
+    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, BlockMeta fillerBlock, boolean generateCaves, TerrainConfiguration terrainConfiguration, int craterRarity) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(topBlock)
-            .fillerBlock(Blocks.brick_block)
+            .fillerBlock(fillerBlock)
             .generateCaves(generateCaves)
             .surfaceFeature(
                 new WorldGenCrater(
-                    4,
+                    craterRarity,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANORTHOSITE.suffix()) }))
+                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) }))
+            .terrain(terrainConfiguration)
             .build();
     }
 }

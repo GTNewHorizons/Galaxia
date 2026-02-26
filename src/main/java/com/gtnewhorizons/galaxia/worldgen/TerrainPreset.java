@@ -11,6 +11,7 @@ public enum TerrainPreset {
     LAVA_PLATEAUS(Scale.MACRO, 0.65, 1.05, 1.05, 18, 55),
     PLATEAUS_AND_ESCARPMENTS(Scale.MACRO, 0.52, 1.55, 1.55, 28, 115),
     TECTONIC_RIFTS(Scale.MACRO, 0.28, 1.85, 1.85, -45, 85),
+    BASE_HEIGHT(Scale.MACRO, 1, 1, 1, 1, 0),
 
     // ====================== MESO ======================
     IMPACT_CRATERS(Scale.MESO, 0.28, 1.05, 1.05, 48, 195),

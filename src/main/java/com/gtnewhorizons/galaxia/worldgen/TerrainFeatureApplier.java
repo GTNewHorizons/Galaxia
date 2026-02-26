@@ -15,7 +15,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies features to height map provided in given chunks
-     * 
+     *
      * @param feature          The feature to apply
      * @param heightMap        The current height map
      * @param chunkX           The chunk x coordinate
@@ -51,9 +51,6 @@ public final class TerrainFeatureApplier {
                     heightMap,
                     height,
                     width,
-                    feature.minHeight(),
-                    feature.variation(),
-                    localRand,
                     chunkX,
                     chunkZ,
                     terrainRelevance);
@@ -73,6 +70,9 @@ public final class TerrainFeatureApplier {
             case SALT_FLATS:
                 applySaltFlats(heightMap, height, localRand);
                 break;
+            case BASE_HEIGHT:
+                applyBaseHeight(heightMap, height, terrainRelevance);
+                break;
             case MULTI_RING_BASINS:
             case SHIELD_VOLCANOES:
             case PLATEAUS_AND_ESCARPMENTS:
@@ -89,7 +89,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies sand dunes to a height map
-     * 
+     *
      * @param hm               The current height map
      * @param height           The height of the sand dunes
      * @param width            The width of the sand dunes
@@ -118,7 +118,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies impact craters as a terrain feature
-     * 
+     *
      * @param hm    Current height map
      * @param size  Size of the craters (radius)
      * @param depth Depth of the craters
@@ -139,7 +139,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies Central Peak Craters to the height map
-     * 
+     *
      * @param hm    Current height map
      * @param size  Size of the craters (radius)
      * @param depth Depth of the craters
@@ -159,19 +159,16 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies mountain ranges to the height map
-     * 
+     *
      * @param hm               The height map
      * @param height           Target mountain range height
      * @param width            Target mountain range width
-     * @param minH             Minimum height for the range
-     * @param var              Variance in heightmap
-     * @param r                Random instance
      * @param chunkX           Chunk x coordinates
      * @param chunkZ           Chunk z coordinates
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applyMountainRanges(int[] hm, double height, double width, int minH, int var, Random r,
-        int chunkX, int chunkZ, double[] terrainRelevance) {
+    private static void applyMountainRanges(int[] hm, double height, double width,
+                                            int chunkX, int chunkZ, double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 15; x >= 0; x--) {
             for (int z = 15; z >= 0; z--) {
@@ -179,14 +176,14 @@ public final class TerrainFeatureApplier {
                 if (localRelevance == 0) {
                     continue;
                 }
-                hm[x + z * 16] += (int) ((minH + noise[x + z * 16] * height) * localRelevance);
+                hm[x + z * 16] += (int) ((noise[x + z * 16] * height) * localRelevance);
             }
         }
     }
 
     /**
      * Applies canyons to the height map
-     * 
+     *
      * @param hm    The height map
      * @param size  The canyon size
      * @param depth The depth of the canyon
@@ -200,7 +197,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies lava plateaus to the height map
-     * 
+     *
      * @param hm   The height map
      * @param size The plateau size
      * @param r    Random instance
@@ -211,7 +208,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies river valleys to the height map
-     * 
+     *
      * @param hm    The height map
      * @param size  The river valley size
      * @param depth The depth of the river valley
@@ -225,7 +222,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies yardangs to the heightmap
-     * 
+     *
      * @param hm   The height map
      * @param size The size of the yardangs
      * @param r    Random instance
@@ -236,7 +233,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Applies salt flats to the heightmap
-     * 
+     *
      * @param hm   The height map
      * @param size The size of the salt flats
      * @param r    Random instance
@@ -245,9 +242,15 @@ public final class TerrainFeatureApplier {
         for (int i = 0; i < 256; i++) hm[i] = Math.max(2, hm[i] - 3);
     }
 
+    private static void applyBaseHeight(int[] hm, double height, double[] terrainRelevance) {
+        for (int i = 0; i < 256; i++) {
+            hm[i] += (int) (height * terrainRelevance[i]);
+        }
+    }
+
     /**
      * Applies generic noise to the height map
-     * 
+     *
      * @param hm     The current height map
      * @param preset The terrain preset to use
      * @param size   The size of the noise application
@@ -262,7 +265,7 @@ public final class TerrainFeatureApplier {
 
     /**
      * Generates Perlin noise for a given chunk
-     * 
+     *
      * @param chunkX Chunk x coordinates
      * @param chunkZ Chunk y coordinates
      * @param scale  the scale of the perlin noise effect
