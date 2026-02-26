@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
+import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -22,6 +23,7 @@ import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 public class Theia extends BasePlanet {
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
+    private static final BlockMeta OBSIDIAN = new BlockMeta(Blocks.obsidian, 0);
 
     /**
      * Getter for dimension Enum
@@ -82,7 +84,8 @@ public class Theia extends BasePlanet {
                         .height(32)
                         .endFeature()
                         .build(),
-                    2),
+                    2,
+                    1),
                 0,
                 0)
             .biome(
@@ -105,7 +108,8 @@ public class Theia extends BasePlanet {
                         .height(64)
                         .endFeature()
                         .build(),
-                    2),
+                    2,
+                    1),
                 0,
                 1)
             .biome(
@@ -119,16 +123,13 @@ public class Theia extends BasePlanet {
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(32)
                         .endFeature()
-                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .width(32)
-                        .height(32)
-                        .endFeature()
                         .feature(TerrainPreset.SHIELD_VOLCANOES)
                         .width(2)
                         .height(8)
                         .endFeature()
                         .build(),
-                    8),
+                    8,
+                    41),
                 1,
                 0)
             .biome(
@@ -147,7 +148,8 @@ public class Theia extends BasePlanet {
                         .height(32)
                         .endFeature()
                         .build(),
-                    8),
+                    8,
+                    41),
                 1,
                 1)
             .name(ENUM)
@@ -205,7 +207,7 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, BlockMeta fillerBlock, boolean generateCaves, TerrainConfiguration terrainConfiguration, int craterRarity) {
+    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, BlockMeta fillerBlock, boolean generateCaves, TerrainConfiguration terrainConfiguration, int craterRarity, int oceanHeight) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
@@ -219,6 +221,7 @@ public class Theia extends BasePlanet {
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
                         GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) }))
             .terrain(terrainConfiguration)
+            .ocean(OBSIDIAN, GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()), oceanHeight, OBSIDIAN, 1)
             .build();
     }
 }
