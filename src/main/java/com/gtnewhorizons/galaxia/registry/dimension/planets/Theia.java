@@ -22,8 +22,6 @@ import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
  */
 public class Theia extends BasePlanet {
 
-    private static int biomeIdOffset = 0;
-
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
 
     /**
@@ -66,7 +64,8 @@ public class Theia extends BasePlanet {
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
-            .fog(0.15f, 0.1f, 0.3f)
+            .fog(0.03f, 0.02f, 0.06f)
+            .skyColor(0.015f, 0.01f, 0.03f)
             .avgGround(80)
             .biome(
                 createBiome(
