@@ -16,7 +16,13 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.orbitalGUI.flightplan.Maneuver;
+import com.gtnewhorizons.galaxia.orbitalGUI.flightplan.MissionPlan;
+import com.gtnewhorizons.galaxia.orbitalGUI.flightplan.Spacecraft;
+import com.gtnewhorizons.galaxia.orbitalGUI.flightplan.TrajectoryCalculator;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
+
+import java.util.List;
 
 public class OrbitalMapWidget extends Widget {
 
@@ -45,11 +51,25 @@ public class OrbitalMapWidget extends Widget {
     private static final double LERP_SPEED = 0.18;
     private static final double KEPLER_BASE = 0.42;
 
+    // === FLIGHT PLANNING ===
+    private Spacecraft currentSpacecraft;
+    private MissionPlan currentPlan;
+    private boolean planningMode = false;
+    private Maneuver previewManeuver;
+    private double dragStartWorldX, dragStartWorldY;
+    private boolean burnDragging = false;
+
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
         this.targetCameraX = cameraX;
         this.targetCameraY = cameraY;
         this.targetZoomLevel = zoomLevel;
+    }
+
+    public void setSpacecraft(Spacecraft spacecraft) {
+        this.currentSpacecraft = spacecraft;
+        this.currentPlan = new MissionPlan(spacecraft);
+        this.planningMode = true;
     }
 
     @Override
@@ -58,17 +78,22 @@ public class OrbitalMapWidget extends Widget {
 
         listenGuiAction(
             (IGuiAction.MouseScroll) (direction,
-                amount) -> handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
+                                      amount) -> handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
 
         listenGuiAction(
             (IGuiAction.MouseDrag) (mouseButton,
-                time) -> handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
+                                    time) -> handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
 
         listenGuiAction(
             (IGuiAction.MouseReleased) mouseButton -> handleMouseReleased(
                 getContext().getMouseX(),
                 getContext().getMouseY(),
                 mouseButton));
+
+        listenGuiAction((IGuiAction.MousePressed) button -> handleMousePressed(
+            getContext().getMouseX(),
+            getContext().getMouseY(),
+            button));
 
         listenGuiAction((IGuiAction.KeyPressed) this::handleKeyPressed);
     }
@@ -146,7 +171,39 @@ public class OrbitalMapWidget extends Widget {
         return true;
     }
 
+    private boolean handleMousePressed(int mouseX, int mouseY, int button) {
+        if (button != 0 || !planningMode || currentSpacecraft == null) return false;
+
+        int localX = mouseX - getArea().rx;
+        int localY = mouseY - getArea().ry;
+        double worldX = cameraX + (localX - getArea().width / 2.0) / getScale();
+        double worldY = cameraY + (localY - getArea().height / 2.0) / getScale();
+
+        double dx = worldX - currentSpacecraft.getPosX();
+        double dy = worldY - currentSpacecraft.getPosY();
+        if (Math.hypot(dx, dy) < 30.0 / getScale()) {
+            burnDragging = true;
+            dragStartWorldX = currentSpacecraft.getPosX();
+            dragStartWorldY = currentSpacecraft.getPosY();
+            return true;
+        }
+        return false;
+    }
+
     private boolean handleMouseDragged(int mouseX, int mouseY, int button, long time) {
+        if (burnDragging && planningMode && currentSpacecraft != null) {
+            int localX = mouseX - getArea().rx;
+            int localY = mouseY - getArea().ry;
+            double worldX = cameraX + (localX - getArea().width / 2.0) / getScale();
+            double worldY = cameraY + (localY - getArea().height / 2.0) / getScale();
+
+            double dx = worldX - dragStartWorldX;
+            double dy = worldY - dragStartWorldY;
+            double sensitivity = 0.0008 / getScale();
+            previewManeuver = new Maneuver(globalTime, dx * sensitivity, dy * sensitivity, currentSpacecraft.getCurrentParent());
+            return true;
+        }
+
         if (button == 0) {
             int localX = mouseX - getArea().rx;
             int localY = mouseY - getArea().ry;
@@ -170,6 +227,14 @@ public class OrbitalMapWidget extends Widget {
     }
 
     private boolean handleMouseReleased(int mouseX, int mouseY, int button) {
+        if (burnDragging) {
+            if (previewManeuver != null) {
+                currentPlan.addManeuver(previewManeuver);
+                previewManeuver = null;
+            }
+            burnDragging = false;
+            return true;
+        }
         dragging = false;
         return false;
     }
@@ -219,6 +284,14 @@ public class OrbitalMapWidget extends Widget {
 
         drawTree(root, 0, 0, globalTime);
 
+        if (currentPlan != null) {
+            drawMissionTrajectory();
+        }
+        if (previewManeuver != null) {
+            drawPreviewTrajectory();
+        }
+        drawSpacecraftMarker();
+
         GL11.glDisable(GL11.GL_LINE_SMOOTH);
         GlStateManager.enableTexture2D();
         GlStateManager.popMatrix();
@@ -229,6 +302,10 @@ public class OrbitalMapWidget extends Widget {
         String status = StatCollector.translateToLocalFormatted("galaxia.gui.orbital.status", getScale(), speedText);
 
         Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(status, 12, 12, EnumColors.MapStatusText.getColor());
+
+        if (planningMode) {
+            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow("PLANNING MODE - drag from rocket", 12, 30, 0xFF00FF00);
+        }
 
         if (DEBUG) drawDebugOverlay();
     }
@@ -269,14 +346,12 @@ public class OrbitalMapWidget extends Widget {
         }
     }
 
-    // TODO fix icon rendering (they are just invisible rn)
     private void drawSprite(ResourceLocation texture, float x, float y, double worldRadius) {
         float radius = (float) (worldRadius * getScale());
         if (radius < 12f) radius = 12f;
 
         Minecraft mc = Minecraft.getMinecraft();
-        mc.getTextureManager()
-            .bindTexture(texture);
+        mc.getTextureManager().bindTexture(texture);
 
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
@@ -287,19 +362,21 @@ public class OrbitalMapWidget extends Widget {
         Tessellator tess = Tessellator.instance;
 
         tess.startDrawingQuads();
-        tess.addVertexWithUV(x - half, y - half, 0, 0, 0); // TL
-        tess.addVertexWithUV(x + half, y - half, 0, 1, 0); // TR
-        tess.addVertexWithUV(x + half, y + half, 0, 1, 1); // BR
-        tess.addVertexWithUV(x - half, y + half, 0, 0, 1); // BL
+        tess.addVertexWithUV(x - half, y - half, 0, 0, 0);
+        tess.addVertexWithUV(x + half, y - half, 0, 1, 0);
+        tess.addVertexWithUV(x + half, y + half, 0, 1, 1);
+        tess.addVertexWithUV(x - half, y + half, 0, 0, 1);
         tess.draw();
+        GlStateManager.disableTexture2D();
     }
 
     private void drawFilledCircle(float x, float y, float r, int color) {
-        GlStateManager.color(
-            ((color >> 16) & EnumColors.Transparent.getColor()) / 255f,
-            ((color >> 8) & EnumColors.Transparent.getColor()) / 255f,
-            (color & EnumColors.Transparent.getColor()) / 255f,
-            1f);
+        float red   = ((color >> 16) & 0xFF) / 255f;
+        float green = ((color >>  8) & 0xFF) / 255f;
+        float blue  = ( color        & 0xFF) / 255f;
+
+        GlStateManager.color(red, green, blue, 1f);
+
         GL11.glBegin(GL11.GL_TRIANGLE_FAN);
         GL11.glVertex2f(x, y);
         for (int i = 0; i <= 32; i++) {
@@ -383,7 +460,7 @@ public class OrbitalMapWidget extends Widget {
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody current, OrbitalCelestialBody target, double wx,
-        double wy, double t) {
+                                         double wy, double t) {
         if (current == target) {
             return new double[] { wx, wy };
         }
@@ -397,6 +474,49 @@ public class OrbitalMapWidget extends Widget {
             if (res != null) return res;
         }
         return null;
+    }
+
+    private void drawSpacecraftMarker() {
+        if (currentSpacecraft == null) return;
+
+        float sx = worldToScreenX(currentSpacecraft.getPosX());
+        float sy = worldToScreenY(currentSpacecraft.getPosY());
+
+        int mx = getContext().getMouseX() - getArea().rx;
+        int my = getContext().getMouseY() - getArea().ry;
+        double worldMouseX = cameraX + (mx - getArea().width / 2.0) / getScale();
+        double worldMouseY = cameraY + (my - getArea().height / 2.0) / getScale();
+
+        double dx = worldMouseX - currentSpacecraft.getPosX();
+        double dy = worldMouseY - currentSpacecraft.getPosY();
+        boolean hovered = Math.hypot(dx, dy) < 50.0 / getScale();
+
+        if (hovered) {
+            GlStateManager.color(1.0f, 1.0f, 0.0f, 0.35f);
+            drawFilledCircle(sx, sy, 45, 0);  // жёлтый ореол
+        }
+        drawFilledCircle(sx, sy, 14, 0xFFFF5500);
+        drawCenteredString("ROCKET", sx, sy + 22, hovered ? 0xFFFFFF00 : 0xFFFFFFFF);
+        if (hovered && !burnDragging) {
+            drawCenteredString("DRAG TO BURN →", sx, sy - 28, 0xFF88FF88);
+        }
+    }
+
+    private void drawMissionTrajectory() {
+        // TODO v2: full segmented trajectory with maneuvers
+    }
+
+    private void drawPreviewTrajectory() {
+        if (previewManeuver == null || currentSpacecraft == null) return;
+        List<double[]> points = TrajectoryCalculator.getTrajectoryPreview(currentSpacecraft, previewManeuver, 10000, 180);
+        GlStateManager.color(0.0f, 1.0f, 0.3f, 0.9f);
+        GL11.glLineWidth(3.5f);
+        GL11.glBegin(GL11.GL_LINE_STRIP);
+        for (double[] p : points) {
+            GL11.glVertex2d(worldToScreenX(p[0]), worldToScreenY(p[1]));
+        }
+        GL11.glEnd();
+        GL11.glLineWidth(1f);
     }
 
     private void drawDebugOverlay() {
