@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.rocketmodules.client.render;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
 
@@ -8,9 +11,6 @@ import org.lwjgl.opengl.GL11;
 import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Class to deal with specifics of rendering Rockets on Silo
  */
@@ -18,10 +18,11 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
 
     /**
      * TE renderer that works on a step-through process to build a solid model matrix and render
-     * @param te Silo tile entity
-     * @param x X position of tile entity
-     * @param y Y position of tile entity
-     * @param z Z position of tile entity
+     * 
+     * @param te           Silo tile entity
+     * @param x            X position of tile entity
+     * @param y            Y position of tile entity
+     * @param z            Z position of tile entity
      * @param partialTicks How far through current tick world is
      */
     @Override
@@ -77,10 +78,12 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
 
                 double orbitRadius;
                 if (orbitalCount > 0) {
-                    double clearCentre = (fuelTanks.get(tankIndex).width() / 2.0) + (fuelTanks.get(tankIndex + 1).width() / 2.0);
-                    double clearEachOther = orbitalCount > 1
-                        ? (fuelTanks.get(tankIndex + 1).width()) / (2.0 * Math.sin(Math.PI / orbitalCount))
-                        : 0;
+                    double clearCentre = (fuelTanks.get(tankIndex)
+                        .width() / 2.0)
+                        + (fuelTanks.get(tankIndex + 1)
+                            .width() / 2.0);
+                    double clearEachOther = orbitalCount > 1 ? (fuelTanks.get(tankIndex + 1)
+                        .width()) / (2.0 * Math.sin(Math.PI / orbitalCount)) : 0;
                     orbitRadius = Math.max(clearCentre, clearEachOther) + 0.1;
                 } else {
                     orbitRadius = 0;
@@ -138,19 +141,21 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
 
     /**
      * Helper function to push a new model onto the matrix and render
-     * @param info ModuleInfo used to get type of module etc.
-     * @param x x position of render
-     * @param y y position of render
-     * @param z z position of render
+     * 
+     * @param info    ModuleInfo used to get type of module etc.
+     * @param x       x position of render
+     * @param y       y position of render
+     * @param z       z position of render
      * @param offsetX x offset from TE origin
      * @param offsetZ z offset from TE origin
      */
-    private void renderModule(ModuleRegistry.ModuleInfo info, double x, double y, double z,
-                              double offsetX, double offsetZ) {
+    private void renderModule(ModuleRegistry.ModuleInfo info, double x, double y, double z, double offsetX,
+        double offsetZ) {
         bindTexture(info.texture());
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5 + offsetX, y, z + 0.5 + offsetZ);
-        info.model().renderAll();
+        info.model()
+            .renderAll();
         GL11.glPopMatrix();
     }
 }

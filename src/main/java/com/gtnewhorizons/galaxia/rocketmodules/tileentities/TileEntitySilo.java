@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.cleanroommc.modularui.widgets.ValueWidget;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -56,12 +55,15 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                     .overlay(
                         IKey.str("§aEnter Rocket")
                             .alignment(Alignment.CENTER))
-                    .tooltip(
-                        t -> {
-                            if (!hasCapsule()) { t.add("§cRequires Capsule module");}
-                            else if (!hasCorrectEngines()) {t.add("§cRequires 1 engine per tank stack");}
-                            else {t.add("Sit in the capsule and launch the rocket");}
-                        })
+                    .tooltip(t -> {
+                        if (!hasCapsule()) {
+                            t.add("§cRequires Capsule module");
+                        } else if (!hasCorrectEngines()) {
+                            t.add("§cRequires 1 engine per tank stack");
+                        } else {
+                            t.add("Sit in the capsule and launch the rocket");
+                        }
+                    })
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                         if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
                         enterRocket(data);
@@ -104,8 +106,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     public boolean hasCorrectEngines() {
-        return ((double) getTankCount() / getEngineCount())
-            - (Math.floor((double) getTankCount() / getEngineCount())) == 0;
+        return ((double) getTankCount() / getEngineCount()) - (Math.floor((double) getTankCount() / getEngineCount()))
+            == 0;
     }
 
     public int getFirstCapsuleIndex() {
@@ -124,7 +126,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         modules.add(type);
         markDirty();
     }
-
 
     @Override
     public void updateEntity() {
