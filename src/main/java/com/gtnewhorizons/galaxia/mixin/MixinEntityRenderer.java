@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
 
 @Mixin(EntityRenderer.class)
@@ -34,8 +35,8 @@ public abstract class MixinEntityRenderer {
                 originalThirdPersonDistance = this.thirdPersonDistance;
             }
 
-            this.thirdPersonDistance = 22.0F;
-            this.thirdPersonDistanceTemp = 22.0F;
+            this.thirdPersonDistance = ConfigRocket.ConfigRocketGlobal.rocketCameraDistance;
+            this.thirdPersonDistanceTemp = ConfigRocket.ConfigRocketGlobal.rocketCameraDistance;
 
         } else {
             if (originalThirdPersonDistance >= 0) {

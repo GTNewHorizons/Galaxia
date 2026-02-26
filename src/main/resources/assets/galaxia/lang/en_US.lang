@@ -90,6 +90,18 @@ galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
 galaxia.gui.orbital.debug.none=none
 
 #### Config
+
+### Config - "Rocket"
+galaxia.config.category.rocket=Rocket
+galaxia.config.category.rocket.tooltip=Settings for the Galaxia rockets
+
+### Config - Rocket - "Global"
+galaxia.config.category.rocket_global=Global
+galaxia.config.category.rocket_global.tooltip=Global settings for the Galaxia rockets
+
+galaxia.config.rocket.camera_distance=Third person view distance
+galaxia.config.rocket.camera_distance.tooltip=Defines distance in third person view when sitting in rocket
+
 ### Config - "Overlay"
 galaxia.config.category.overlay=Overlay
 galaxia.config.category.overlay.tooltip=Settings for the Galaxia HUD overlays
