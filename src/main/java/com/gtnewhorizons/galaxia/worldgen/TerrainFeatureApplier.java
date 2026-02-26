@@ -75,6 +75,14 @@ public final class TerrainFeatureApplier {
                 break;
             case MULTI_RING_BASINS:
             case SHIELD_VOLCANOES:
+                applyShieldVolcanoes(
+                    heightMap,
+                    height,
+                    width,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance);
+                break;
             case PLATEAUS_AND_ESCARPMENTS:
             case TECTONIC_RIFTS:
             case GLACIAL_VALLEYS:
@@ -244,6 +252,34 @@ public final class TerrainFeatureApplier {
     private static void applyBaseHeight(int[] hm, double height, double[] terrainRelevance) {
         for (int i = 0; i < 256; i++) {
             hm[i] += (int) (height * terrainRelevance[i]);
+        }
+    }
+
+    /**
+     * Applies mountain ranges to the height map
+     *
+     * @param hm               The height map
+     * @param height           Target mountain range height
+     * @param width            Target mountain range width
+     * @param chunkX           Chunk x coordinates
+     * @param chunkZ           Chunk z coordinates
+     * @param terrainRelevance Matrix holding the terrain precedence
+     */
+    private static void applyShieldVolcanoes(int[] hm, double height, double width,
+                                            int chunkX, int chunkZ, double[] terrainRelevance) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                double localRelevance = terrainRelevance[x + z * 16];
+                if (localRelevance == 0) {
+                    continue;
+                }
+                double localNoise = noise[x + z * 16];
+                if (localNoise > 0.75) {
+                    continue;
+                }
+                hm[x + z * 16] += (int) ((localNoise * height) * localRelevance);
+            }
         }
     }
 

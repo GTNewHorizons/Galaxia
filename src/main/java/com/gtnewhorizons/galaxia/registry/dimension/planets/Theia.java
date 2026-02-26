@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
-import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -100,6 +99,10 @@ public class Theia extends BasePlanet {
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
                         .width(32)
                         .height(32)
+                        .endFeature()
+                        .feature(TerrainPreset.SHIELD_VOLCANOES)
+                        .width(2)
+                        .height(8)
                         .endFeature()
                         .build(),
                     8),
