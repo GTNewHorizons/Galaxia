@@ -131,7 +131,11 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
     public double[] getAdjacentBiomeSignificance() {
         double xDeviation = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 0.95) * 20;
         double zDeviation = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 0.95) * 20;
-        double diagonalDeviation = Math.sqrt(xDeviation * xDeviation + zDeviation * zDeviation) / 1.25;
+        double diagonalDeviation = Math.sqrt((xDeviation * xDeviation + zDeviation * zDeviation)/2);
+        if (diagonalDeviation > 0.9) {
+            xDeviation *= 0.9;
+            zDeviation *= 0.9;
+        }
         return new double[] { xDeviation, zDeviation, diagonalDeviation };
     }
 
