@@ -29,7 +29,7 @@ public class WorldProviderSpace extends WorldProvider {
     private BiomeGenBase[][] biomes;
 
     protected boolean hasSky = true;
-    protected float cloudHeight = 8.0F;
+    protected float cloudHeight = Float.MIN_VALUE;
     protected boolean isSurface = true;
     protected int avgGround = 64;
     protected Vec3 fogColor = Vec3.createVectorHelper(0.2D, 0.1D, 0.4D);
