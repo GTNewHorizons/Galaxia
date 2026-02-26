@@ -18,7 +18,7 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
 
     /**
      * TE renderer that works on a step-through process to build a solid model matrix and render
-     * 
+     *
      * @param te           Silo tile entity
      * @param x            X position of tile entity
      * @param y            Y position of tile entity
@@ -44,9 +44,9 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
             if (info == null) continue;
 
             switch (type) {
+                case 0 -> fuelTanks.add(info);
                 case 1 -> commandModules.add(info);
                 case 2 -> storageModules.add(info);
-                case 0 -> fuelTanks.add(info);
                 case 3 -> engines.add(info);
             }
         }
@@ -141,7 +141,7 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
 
     /**
      * Helper function to push a new model onto the matrix and render
-     * 
+     *
      * @param info    ModuleInfo used to get type of module etc.
      * @param x       x position of render
      * @param y       y position of render
