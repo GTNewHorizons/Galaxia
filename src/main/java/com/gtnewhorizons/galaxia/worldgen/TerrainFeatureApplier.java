@@ -48,7 +48,7 @@ public final class TerrainFeatureApplier {
                 applyMountainRanges(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
             case CANYONS:
-                applyCanyons(heightMap, width, height, localRand);
+                applyCanyons(heightMap, width, height, chunkX, chunkZ, terrainRelevance);
                 break;
             case LAVA_PLATEAUS:
                 applyLavaPlateaus(heightMap, height, localRand);
@@ -180,11 +180,24 @@ public final class TerrainFeatureApplier {
      * @param hm      The height map
      * @param width   The canyon size
      * @param height  The depth of the canyon
-     * @param r       Random instance
      */
-    private static void applyCanyons(int[] hm, double width, double height, Random r) {
-        for (int i = 0; i < 256; i++) {
-            if ((i & 15) % 5 == 0) hm[i] -= (int) (height * width);
+    private static void applyCanyons(int[] hm, double width, double height, int chunkX, int chunkZ,
+                                     double[] terrainRelevance) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                double localRelevance = terrainRelevance[x + z * 16];
+                if (localRelevance == 0) {
+                    continue;
+                }
+                double localNoise = noise[x + z * 16];
+                localNoise = Math.abs(localNoise - 0.5);
+                localNoise *= 10;
+                if (localNoise < 3 && localNoise > 2) {
+                    localNoise = 0.5 - Math.abs(localNoise - 2.5);
+                    hm[x + z * 16] -= (int) (((localNoise) * 2 * height) * localRelevance);
+                }
+            }
         }
     }
 

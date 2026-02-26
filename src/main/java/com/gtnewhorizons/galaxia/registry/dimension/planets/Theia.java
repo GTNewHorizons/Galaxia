@@ -82,6 +82,10 @@ public class Theia extends BasePlanet {
                         .width(32)
                         .height(32)
                         .endFeature()
+                        .feature(TerrainPreset.CANYONS)
+                        .width(4)
+                        .height(32)
+                        .endFeature()
                         .build(),
                     2,
                     1),
