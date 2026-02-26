@@ -17,7 +17,7 @@ public class Hierarchy {
 
     @Desugar
     public record OrbitalParams(double semiMajorAxis, double eccentricity, double inclination,
-                                double longitudeOfAscendingNode, double argumentOfPeriapsis, double meanAnomalyAtEpoch) {
+        double longitudeOfAscendingNode, double argumentOfPeriapsis, double meanAnomalyAtEpoch) {
 
         public double apogee() {
             return semiMajorAxis * (1 + eccentricity);
@@ -37,10 +37,10 @@ public class Hierarchy {
         COMET
     }
 
+    /** Main Recursive record */
     @Desugar
     public record OrbitalCelestialBody(String name, int dimensionId, DimensionEnum dimensionEnum, CelestialType type,
-                                       OrbitalParams orbitalParams, ResourceLocation texture, double spriteSize, double soiRadius,
-                                       List<OrbitalCelestialBody> children) {
+        OrbitalParams orbitalParams, ResourceLocation texture, double spriteSize, List<OrbitalCelestialBody> children) {
 
         public static Builder builder() {
             return new Builder();
@@ -55,7 +55,6 @@ public class Hierarchy {
             private OrbitalParams orbitalParams = new OrbitalParams(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             private ResourceLocation texture = null;
             private double spriteSize = 0.0;
-            private double soiRadius = 0.0;
             private final List<Builder> childBuilders = new ArrayList<>();
 
             public Builder dimension(DimensionEnum de) {
@@ -109,11 +108,6 @@ public class Hierarchy {
                 return this;
             }
 
-            public Builder soiRadius(double radius) {
-                this.soiRadius = radius;
-                return this;
-            }
-
             public Builder addChild(Consumer<Builder> childConfig) {
                 Builder child = new Builder();
                 childConfig.accept(child);
@@ -134,7 +128,6 @@ public class Hierarchy {
                     orbitalParams,
                     texture,
                     spriteSize,
-                    soiRadius,
                     children);
             }
         }
