@@ -78,8 +78,8 @@ public class Theia extends BasePlanet {
                         .height(64)
                         .endFeature()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .width(8)
-                        .height(48)
+                        .width(32)
+                        .height(32)
                         .endFeature()
                         .build(),
                     2),
@@ -87,7 +87,30 @@ public class Theia extends BasePlanet {
                 0)
             .biome(
                 createBiome(
-                    "Theia Hardened Ocean",
+                    "Theia Mountains",
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE.suffix()),
+                    true,
+                    TerrainConfiguration
+                        .builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .width(3)
+                        .height(16)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .width(12)
+                        .height(64)
+                        .endFeature()
+                        .build(),
+                    2),
+                0,
+                1)
+            .biome(
+                createBiome(
+                    "Theia Small Volcanoes",
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                     GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                     false,
@@ -108,6 +131,25 @@ public class Theia extends BasePlanet {
                     8),
                 1,
                 0)
+            .biome(
+                createBiome(
+                    "Theia Big Volcanoes",
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                    false,
+                    TerrainConfiguration
+                        .builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(32)
+                        .endFeature()
+                        .feature(TerrainPreset.SHIELD_VOLCANOES)
+                        .width(4)
+                        .height(32)
+                        .endFeature()
+                        .build(),
+                    8),
+                1,
+                1)
             .name(ENUM)
             .build();
     }
