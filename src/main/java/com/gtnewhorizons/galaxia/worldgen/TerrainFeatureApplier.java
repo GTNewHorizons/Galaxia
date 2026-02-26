@@ -38,7 +38,7 @@ public final class TerrainFeatureApplier {
 
         switch (preset) {
             case SAND_DUNES:
-                applySandDunes(heightMap, height, width, localRand, chunkX, chunkZ, terrainRelevance);
+                applySandDunes(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
             case IMPACT_CRATERS:
                 applyImpactCraters(heightMap, height, depth, localRand);
@@ -93,13 +93,12 @@ public final class TerrainFeatureApplier {
      * @param hm               The current height map
      * @param height           The height of the sand dunes
      * @param width            The width of the sand dunes
-     * @param r                Random instance
      * @param chunkX           The chunk x coordinate
      * @param chunkZ           The chunk z coordinate
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applySandDunes(int[] hm, double height, double width, Random r, int chunkX, int chunkZ,
-        double[] terrainRelevance) {
+    private static void applySandDunes(int[] hm, double height, double width, int chunkX, int chunkZ,
+                                       double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         chunkX *= 16;
         chunkZ *= 16;
@@ -110,7 +109,7 @@ public final class TerrainFeatureApplier {
                     continue;
                 }
                 double localNoise = (noise[x + z * 16] + 5) / 10;
-                double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (width * 4)) * height * localNoise;
+                double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (width * 4)) * localNoise;
                 hm[x + z * 16] += (int) (wave * height * localRelevance);
             }
         }
@@ -274,6 +273,18 @@ public final class TerrainFeatureApplier {
     private static double[] generatePerlinNoise(int chunkX, int chunkZ, double scale) {
         chunkX *= 16;
         chunkZ *= 16;
-        return generationNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, scale, scale, 0);
+        double[] noise = generationNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, scale, scale, 0);
+        for (int i = 0; i < noise.length; i++) {
+            double localNoise = noise[i];
+            localNoise += 6;
+            localNoise /= 12;
+            if (localNoise < 0) {
+                localNoise = 0;
+            } else if (localNoise > 1) {
+                localNoise = 1;
+            }
+            noise[i] = localNoise;
+        }
+        return noise;
     }
 }
