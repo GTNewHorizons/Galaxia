@@ -79,7 +79,7 @@ public class Theia extends BasePlanet {
                         .height(64)
                         .endFeature()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .width(32)
+                        .width(8)
                         .height(48)
                         .endFeature()
                         .build(),
@@ -99,7 +99,7 @@ public class Theia extends BasePlanet {
                         .endFeature()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
                         .width(32)
-                        .height(16)
+                        .height(32)
                         .endFeature()
                         .build(),
                     8),
