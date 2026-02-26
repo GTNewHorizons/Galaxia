@@ -102,8 +102,8 @@ public final class TerrainFeatureApplier {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         chunkX *= 16;
         chunkZ *= 16;
-        for (int x = 15; x >= 0; x--) {
-            for (int z = 15; z >= 0; z--) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
                 double localRelevance = terrainRelevance[x + z * 16];
                 if (localRelevance == 0) {
                     continue;
@@ -169,8 +169,8 @@ public final class TerrainFeatureApplier {
     private static void applyMountainRanges(int[] hm, double height, double width,
                                             int chunkX, int chunkZ, double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
-        for (int x = 15; x >= 0; x--) {
-            for (int z = 15; z >= 0; z--) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
                 double localRelevance = terrainRelevance[x + z * 16];
                 if (localRelevance == 0) {
                     continue;
