@@ -316,7 +316,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         int[] hm = new int[256];
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                hm[x + (z << 4)] = 42;
+                hm[x + (z << 4)] = 8;
             }
         }
         return hm;
