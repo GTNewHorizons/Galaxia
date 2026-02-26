@@ -82,6 +82,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 if (!biomeList.contains(localBiome)) {
                     biomeList.add(localBiome);
                 }
+                int localBiomeIndex = biomeList.indexOf(localBiome);
                 BiomeGenBase[] adjacentBiomes = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager())
                     .getAdjacentBiomes();
                 double[] adjacentBiomeSignificance = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager())
@@ -94,10 +95,21 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         dominantSignificance = adjacentBiomeSignificance[index];
                     }
                 }
+                BiomeGenBase adjacentBiome = adjacentBiomes[dominanceIndex];
+                if (!biomeList.contains(adjacentBiome)) {
+                    biomeList.add(adjacentBiome);
+                }
+                boolean blendingWithSameBiome = false;
+                int adjacentBiomeIndex = biomeList.indexOf(adjacentBiome);
+                if (adjacentBiomeIndex == localBiomeIndex) {
+                    blendingWithSameBiome = true;
+                }
                 double localBiomeSignificance = 1 - dominantSignificance;
+                if (blendingWithSameBiome) {
+                    localBiomeSignificance = 1;
+                }
 
                 // Set blending value for local biome
-                int localBiomeIndex = biomeList.indexOf(localBiome);
                 double[] localBiomeSignificanceArray;
                 if (biomeSignificances[localBiomeIndex] == null) {
                     localBiomeSignificanceArray = new double[256];
@@ -108,11 +120,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 biomeSignificances[localBiomeIndex] = localBiomeSignificanceArray;
 
                 // Set blending value for adjacent biome
-                BiomeGenBase adjacentBiome = adjacentBiomes[dominanceIndex];
-                if (!biomeList.contains(adjacentBiome)) {
-                    biomeList.add(adjacentBiome);
+                if (blendingWithSameBiome) {
+                    continue;
                 }
-                int adjacentBiomeIndex = biomeList.indexOf(adjacentBiome);
                 double[] adjacentBiomeSignificanceArray;
                 if (biomeSignificances[adjacentBiomeIndex] == null) {
                     adjacentBiomeSignificanceArray = new double[256];
