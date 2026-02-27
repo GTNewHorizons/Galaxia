@@ -208,6 +208,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     seabed = spaceBiome.getSeabed();
                     seabedHeight = spaceBiome.getSeabedHeight();
                     generateCaves = spaceBiome.generateCaves();
+                    surfaceDepth = spaceBiome.getSurfaceThickness();
                 }
                 int height = Math.max(1, heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {

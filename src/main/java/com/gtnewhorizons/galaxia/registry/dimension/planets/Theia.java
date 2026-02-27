@@ -228,6 +228,7 @@ public class Theia extends BasePlanet {
                 oceanHeight,
                 OBSIDIAN,
                 1)
+            .surfaceThickness(4)
             .build();
     }
 }
