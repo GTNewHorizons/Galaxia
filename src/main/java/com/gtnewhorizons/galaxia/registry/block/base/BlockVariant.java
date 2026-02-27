@@ -56,4 +56,5 @@ public record BlockVariant(String suffix, float hardness, boolean falling, Strin
     public static final BlockVariant ICE = stoneLike("ice", 1.0F, 0);
     public static final BlockVariant STONE = stoneLike("stone", 2.0F, 0);
     public static final BlockVariant SOIL = dirtLike("soil", 0.5F);
+    public static final BlockVariant OBSIDIAN = stoneLike("obsidian", 16F, 3);
 }

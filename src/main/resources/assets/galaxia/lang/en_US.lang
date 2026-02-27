@@ -29,6 +29,7 @@ tile.TheiaBasalt.name=Theia Basalt
 tile.TheiaAnorthosite.name=Theia Anorthosite
 tile.TheiaAndesite.name=Theia Andesite
 tile.TheiaTektite.name=Theia Tektite
+tile.TheiaObsidian.name=Theia Obsidian
 
 # Blocks - "Hemateria"
 tile.HemateriaRegolith.name=Hemateria Regolith
