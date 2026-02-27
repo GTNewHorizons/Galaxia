@@ -12,6 +12,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -40,30 +41,48 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         return new ModularPanel("galaxia:rocket_silo").size(210, 130)
             .child(
-                IKey.str("§lRocket Silo")
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(
                 Flow.row()
                     .coverChildren()
-                    .child(createModuleButton(0, "Fuel Tank"))
-                    .child(createModuleButton(1, "Capsule"))
-                    .child(createModuleButton(2, "Storage Unit"))
-                    .child(createModuleButton(3, "Engine"))
+                    .child(
+                        createModuleButton(
+                            0,
+                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.fuel_tank")))
+                    .child(
+                        createModuleButton(
+                            1,
+                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.capsule")))
+                    .child(
+                        createModuleButton(
+                            2,
+                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.storage_unit")))
+                    .child(
+                        createModuleButton(
+                            3,
+                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.engine")))
                     .pos(10, 35))
             .child(
                 new ButtonWidget<>().size(190, 30)
                     .pos(10, 85)
                     .overlay(
-                        IKey.str("§aEnter Rocket")
+                        IKey.str(StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.enter_rocket"))
                             .alignment(Alignment.CENTER))
                     .tooltip(t -> {
                         if (!hasCapsule()) {
-                            t.add("§cRequires Capsule module");
+                            t.add(
+                                StatCollector.translateToLocalFormatted(
+                                    "galaxia.gui.rocket_silo.enter_rocket.tooltip.has_capsule"));
                         } else if (!hasCorrectEngines()) {
-                            t.add("§cRequires 1 engine per tank stack");
+                            t.add(
+                                StatCollector.translateToLocalFormatted(
+                                    "galaxia.gui.rocket_silo.enter_rocket.tooltip.has_correct_engine"));
                         } else {
-                            t.add("Sit in the capsule and launch the rocket");
+                            t.add(
+                                StatCollector
+                                    .translateToLocalFormatted("galaxia.gui.rocket_silo.enter_rocket.tooltip.correct"));
                         }
                     })
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
@@ -91,11 +110,15 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         return new ButtonWidget<>().syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
             if (mouseData.mouseButton == 0) {
                 addModule(id);
+
             }
         }))
             .size(48, 20)
             .overlay(IKey.str(name))
-            .tooltip((t) -> t.add("Add " + name + " (" + heightStr + ")"));
+            .tooltip(
+                (t) -> t.add(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.rocket_silo.button.tooltip.add") + " " + name + " (" + heightStr + ")"));
     }
 
     public void openUI(EntityPlayer player) {

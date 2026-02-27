@@ -75,14 +75,28 @@ galaxia.gui.planet_teleporter.title=Planet Teleporter
 galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
 
-# Elements - Orbital GUI
+# Elements - "Orbital GUI"
 galaxia.gui.orbital.search=Search
 galaxia.gui.orbital.search.placeholder=Enter name...
 galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
 galaxia.gui.orbital.paused=§cPAUSED§r
 galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
 
-galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===
+# Elements - "Rocket Silo"
+galaxia.gui.rocket_silo.title=§lRocket Silo§r
+galaxia.gui.rocket_silo.button.fuel_tank=Fuel Tank
+galaxia.gui.rocket_silo.button.capsule=Capsule
+galaxia.gui.rocket_silo.button.storage_unit=Storage Unit
+galaxia.gui.rocket_silo.button.engine=Engine
+galaxia.gui.rocket_silo.button.tooltip.add=Add
+
+galaxia.gui.rocket_silo.enter_rocket=§aEnter Rocket§r
+galaxia.gui.rocket_silo.enter_rocket.tooltip.has_capsule=§cRequires Capsule module§r
+galaxia.gui.rocket_silo.enter_rocket.tooltip.has_correct_engine=§cRequires 1 engine per tank stack§r
+galaxia.gui.rocket_silo.enter_rocket.tooltip.correct=Sit in the capsule and launch the rocket
+
+# Elements - "Debug"
+galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===§r
 galaxia.gui.orbital.debug.camera=Camera: %.3f, %.3f
 galaxia.gui.orbital.debug.following=Following: %s  |  Paused: %b
 galaxia.gui.orbital.debug.time=Time: %.1fs  |  Speed: ×%.1f
@@ -90,7 +104,6 @@ galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
 galaxia.gui.orbital.debug.none=none
 
 #### Config
-
 ### Config - "Rocket"
 galaxia.config.category.rocket=Rocket
 galaxia.config.category.rocket.tooltip=Settings for the Galaxia rockets
