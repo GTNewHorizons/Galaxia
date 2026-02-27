@@ -13,7 +13,6 @@ public class BlockSilo extends Block implements ITileEntityProvider {
 
     public BlockSilo() {
         super(Material.rock);
-        this.setBlockName("silo");
         this.setBlockTextureName("stone");
         this.setHardness(1.5F);
     }

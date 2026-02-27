@@ -24,12 +24,14 @@ import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
+import com.gtnewhorizons.galaxia.rocketmodules.ModuleType;
+import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
 
 public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
 
     private EntityRocket entityRocket;
+    private RocketAssembly assembly;
 
     private final List<Integer> modules = new ArrayList<>();
     public boolean shouldRender = true;
@@ -83,8 +85,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     private ButtonWidget<?> createModuleButton(int id, String name) {
-        ModuleRegistry.ModuleInfo info = ModuleRegistry.getModule(id);
-        String heightStr = info != null ? String.format("%.1fm", info.height()) : "??m";
+        ModuleType type = ModuleType.fromId(id);
+        String heightStr = type != null ? String.format("%.1fm", type.getHeight()) : "??m";
 
         return new ButtonWidget<>().syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
             if (mouseData.mouseButton == 0) {
@@ -124,7 +126,15 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     public void addModule(int type) {
         modules.add(type);
+        assembly = null;
         markDirty();
+    }
+
+    public RocketAssembly getAssembly() {
+        if (assembly == null) {
+            assembly = new RocketAssembly(getModules());
+        }
+        return assembly;
     }
 
     @Override
