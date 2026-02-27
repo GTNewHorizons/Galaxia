@@ -81,13 +81,115 @@ public class EntityRocket extends Entity {
         return new ArrayList<>(modules);
     }
 
-    private double getTotalHeight() {
+    private double computeVisualFuelAndEngineHeight() {
+        List<ModuleInfo> fuelTanks = new ArrayList<>();
+        List<ModuleInfo> engines = new ArrayList<>();
+        List<Integer> types = getModuleTypes();
+
+        for (int type : types) {
+            ModuleInfo info = ModuleRegistry.getModule(type);
+            if (info == null) continue;
+            if (type == 0) fuelTanks.add(info);
+            else if (type == 3) engines.add(info);
+        }
+
+        double yOff = 0.0;
+        int totalTanks = fuelTanks.size();
+        int tankIndex = 0;
+        int tanksRemaining = totalTanks;
+        int engineIndex = 0;
+
+        if (totalTanks <= 2) {
+            double tierEngineHeight = 0;
+            if (engineIndex < engines.size()) {
+                ModuleInfo engine = engines.get(engineIndex++);
+                tierEngineHeight = engine.height();
+            }
+            yOff += tierEngineHeight;
+            for (ModuleInfo info : fuelTanks) {
+                yOff += info.height();
+            }
+        } else {
+            while (tanksRemaining > 0) {
+                int orbitalCount = Math.min(tanksRemaining - 1, 6);
+
+                double tierEngineHeight = 0;
+                if (engineIndex < engines.size()) {
+                    ModuleInfo engine = engines.get(engineIndex++);
+                    tierEngineHeight = engine.height();
+                }
+
+                ModuleInfo centreTank = fuelTanks.get(tankIndex);
+                double centreHeight = centreTank.height();
+                tankIndex++;
+                tanksRemaining--;
+
+                for (int o = 0; o < orbitalCount; o++) {
+                    if (engineIndex < engines.size()) {
+                        engineIndex++;
+                    }
+                    tankIndex++;
+                    tanksRemaining--;
+                }
+
+                yOff += tierEngineHeight + centreHeight;
+            }
+        }
+        return yOff;
+    }
+
+    private double computeVisualStorageHeight() {
         double h = 0.0;
-        for (int t : modules) {
-            ModuleInfo info = ModuleRegistry.getModule(t);
-            h += info != null ? info.height() : 2.0;
+        for (int type : getModuleTypes()) {
+            if (type == 2) {
+                ModuleInfo info = ModuleRegistry.getModule(type);
+                if (info != null) h += info.height();
+            }
         }
         return h;
+    }
+
+    private double computeVisualCommandHeight() {
+        double h = 0.0;
+        for (int type : getModuleTypes()) {
+            if (type == 1) {
+                ModuleInfo info = ModuleRegistry.getModule(type);
+                if (info != null) h += info.height();
+            }
+        }
+        return h;
+    }
+
+    private double getTotalHeight() {
+        return computeVisualFuelAndEngineHeight() + computeVisualStorageHeight() + computeVisualCommandHeight();
+    }
+
+    @Override
+    public double getMountedYOffset() {
+        int cIdx = getCapsuleIndex();
+        if (cIdx < 0) return this.height * 0.75D;
+
+        List<Integer> types = getModuleTypes();
+        if (cIdx >= types.size()) return this.height * 0.75D;
+
+        ModuleInfo capInfo = ModuleRegistry.getModule(types.get(cIdx));
+        double capH = capInfo != null ? capInfo.height() : 2.5;
+
+        double fuelEngHeight = computeVisualFuelAndEngineHeight();
+        double storageHeight = computeVisualStorageHeight();
+
+        double commandsBeforeHeight = 0.0;
+        for (int i = 0; i < cIdx; i++) {
+            if (types.get(i) == 1) {
+                ModuleInfo info = ModuleRegistry.getModule(types.get(i));
+                if (info != null) {
+                    commandsBeforeHeight += info.height();
+                }
+            }
+        }
+
+        double capStartY = fuelEngHeight + storageHeight + commandsBeforeHeight;
+        return capStartY + capH * 0.4D;
     }
 
     @Override
@@ -108,23 +210,6 @@ public class EntityRocket extends Entity {
         if (Math.abs(this.height - newH) > 0.05F) {
             this.setSize(3.0F, newH);
         }
-    }
-
-    @Override
-    public double getMountedYOffset() {
-        int cIdx = getCapsuleIndex();
-        if (cIdx < 0) return this.height * 0.75D;
-
-        List<Integer> types = getModuleTypes();
-        double offset = 0.0;
-        for (int i = 0; i < cIdx && i < types.size(); i++) {
-            ModuleInfo info = ModuleRegistry.getModule(types.get(i));
-            offset += info != null ? info.height() : 2.0;
-        }
-
-        ModuleInfo capInfo = ModuleRegistry.getModule(types.get(cIdx));
-        double capH = capInfo != null ? capInfo.height() : 2.5;
-        return offset + capH * 0.4D;
     }
 
     @Override
