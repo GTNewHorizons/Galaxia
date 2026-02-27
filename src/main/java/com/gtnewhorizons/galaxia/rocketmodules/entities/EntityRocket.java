@@ -8,13 +8,13 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry.ModuleInfo;
+import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 public class EntityRocket extends Entity {
 
     private TileEntitySilo silo;
+    private RocketAssembly assembly;
     private final List<Integer> modules = new ArrayList<>();
     private int capsuleIndex = -1;
 
@@ -27,6 +27,13 @@ public class EntityRocket extends Entity {
 
     public void bindSilo(TileEntitySilo silo) {
         this.silo = silo;
+    }
+
+    public RocketAssembly getAssembly() {
+        if (assembly == null) {
+            assembly = new RocketAssembly(getModuleTypes());
+        }
+        return assembly;
     }
 
     public void setCapsuleIndex(int index) {
@@ -43,6 +50,7 @@ public class EntityRocket extends Entity {
 
         modules.clear();
         modules.addAll(silo.getModules());
+        assembly = new RocketAssembly(modules);
 
         StringBuilder sb = new StringBuilder();
         for (int t : modules) {
@@ -81,13 +89,9 @@ public class EntityRocket extends Entity {
         return new ArrayList<>(modules);
     }
 
-    private double getTotalHeight() {
-        double h = 0.0;
-        for (int t : modules) {
-            ModuleInfo info = ModuleRegistry.getModule(t);
-            h += info != null ? info.height() : 2.0;
-        }
-        return h;
+    @Override
+    public double getMountedYOffset() {
+        return getAssembly().getMountedYOffset();
     }
 
     @Override
@@ -103,28 +107,10 @@ public class EntityRocket extends Entity {
             this.moveEntity(this.motionX, this.motionY, this.motionZ);
         }
 
-        double totalH = getTotalHeight();
-        float newH = (float) (totalH + 0.5);
+        float newH = (float) (getAssembly().getTotalHeight() + 0.5);
         if (Math.abs(this.height - newH) > 0.05F) {
             this.setSize(3.0F, newH);
         }
-    }
-
-    @Override
-    public double getMountedYOffset() {
-        int cIdx = getCapsuleIndex();
-        if (cIdx < 0) return this.height * 0.75D;
-
-        List<Integer> types = getModuleTypes();
-        double offset = 0.0;
-        for (int i = 0; i < cIdx && i < types.size(); i++) {
-            ModuleInfo info = ModuleRegistry.getModule(types.get(i));
-            offset += info != null ? info.height() : 2.0;
-        }
-
-        ModuleInfo capInfo = ModuleRegistry.getModule(types.get(cIdx));
-        double capH = capInfo != null ? capInfo.height() : 2.5;
-        return offset + capH * 0.4D;
     }
 
     @Override
@@ -149,5 +135,6 @@ public class EntityRocket extends Entity {
                     .getInteger("type"));
         }
         capsuleIndex = tag.getInteger("capsuleIndex");
+        assembly = null;
     }
 }
