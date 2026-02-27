@@ -20,7 +20,7 @@ public enum ModuleType {
     private final String modelName;
     private final double height;
     private final double width;
-    private double sitOffset = 0;
+    private final double sitOffset;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
