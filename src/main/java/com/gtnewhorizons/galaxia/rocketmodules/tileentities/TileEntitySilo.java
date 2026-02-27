@@ -52,17 +52,13 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                             0,
                             StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.fuel_tank")))
                     .child(
-                        createModuleButton(
-                            1,
-                            StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.capsule")))
+                        createModuleButton(1, StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.capsule")))
                     .child(
                         createModuleButton(
                             2,
                             StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.storage_unit")))
                     .child(
-                        createModuleButton(
-                            3,
-                            StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.engine")))
+                        createModuleButton(3, StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.engine")))
                     .pos(10, 35))
             .child(
                 new ButtonWidget<>().size(190, 30)
@@ -73,16 +69,15 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                     .tooltip(t -> {
                         if (!hasCapsule()) {
                             t.add(
-                                StatCollector.translateToLocal(
-                                    "galaxia.gui.rocket_silo.enter_rocket.tooltip.has_capsule"));
+                                StatCollector
+                                    .translateToLocal("galaxia.gui.rocket_silo.enter_rocket.tooltip.has_capsule"));
                         } else if (!hasCorrectEngines()) {
                             t.add(
                                 StatCollector.translateToLocal(
                                     "galaxia.gui.rocket_silo.enter_rocket.tooltip.has_correct_engine"));
                         } else {
                             t.add(
-                                StatCollector
-                                    .translateToLocal("galaxia.gui.rocket_silo.enter_rocket.tooltip.correct"));
+                                StatCollector.translateToLocal("galaxia.gui.rocket_silo.enter_rocket.tooltip.correct"));
                         }
                     })
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
