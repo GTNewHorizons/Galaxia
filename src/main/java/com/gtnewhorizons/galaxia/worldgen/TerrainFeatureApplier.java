@@ -112,10 +112,10 @@ public final class TerrainFeatureApplier {
     /**
      * Applies impact craters as a terrain feature
      *
-     * @param hm      Current height map
-     * @param width   Size of the craters (radius)
-     * @param height  Depth of the craters
-     * @param r       Random instance
+     * @param hm     Current height map
+     * @param width  Size of the craters (radius)
+     * @param height Depth of the craters
+     * @param r      Random instance
      */
     private static void applyImpactCraters(int[] hm, double width, double height, Random r) {
         int cx = 8 + r.nextInt(4) - 2;
@@ -133,10 +133,10 @@ public final class TerrainFeatureApplier {
     /**
      * Applies Central Peak Craters to the height map
      *
-     * @param hm      Current height map
-     * @param width   Size of the craters (radius)
-     * @param height  Depth of the craters
-     * @param r       Random instance
+     * @param hm     Current height map
+     * @param width  Size of the craters (radius)
+     * @param height Depth of the craters
+     * @param r      Random instance
      */
     private static void applyCentralPeakCraters(int[] hm, double width, double height, Random r) {
         applyImpactCraters(hm, width, height, r);
@@ -177,12 +177,12 @@ public final class TerrainFeatureApplier {
     /**
      * Applies canyons to the height map
      *
-     * @param hm      The height map
-     * @param width   The canyon size
-     * @param height  The depth of the canyon
+     * @param hm     The height map
+     * @param width  The canyon size
+     * @param height The depth of the canyon
      */
     private static void applyCanyons(int[] hm, double width, double height, int chunkX, int chunkZ,
-                                     double[] terrainRelevance) {
+        double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {

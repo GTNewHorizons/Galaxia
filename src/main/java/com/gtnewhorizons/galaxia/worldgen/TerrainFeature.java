@@ -26,6 +26,6 @@ public record TerrainFeature(TerrainPreset preset, double height, double width, 
 
     @Override
     public String toString() {
-        return "TerrainFeature{" + preset  + ", height=" + height + "}";
+        return "TerrainFeature{" + preset + ", height=" + height + "}";
     }
 }

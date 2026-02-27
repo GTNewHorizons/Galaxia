@@ -197,11 +197,7 @@ public final class TerrainConfiguration {
             double finalHeight = (height > 0 ? height : 1) * scaleMultiplier;
             double finalWidth = (width > 0 ? width : 1) * scaleMultiplier;
 
-            TerrainFeature feature = new TerrainFeature(
-                preset,
-                finalHeight,
-                finalWidth,
-                custom);
+            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom);
 
             parent.features.add(feature);
             return parent;

@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
