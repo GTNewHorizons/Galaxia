@@ -50,39 +50,39 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                     .child(
                         createModuleButton(
                             0,
-                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.fuel_tank")))
+                            StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.fuel_tank")))
                     .child(
                         createModuleButton(
                             1,
-                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.capsule")))
+                            StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.capsule")))
                     .child(
                         createModuleButton(
                             2,
-                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.storage_unit")))
+                            StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.storage_unit")))
                     .child(
                         createModuleButton(
                             3,
-                            StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.button.engine")))
+                            StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.engine")))
                     .pos(10, 35))
             .child(
                 new ButtonWidget<>().size(190, 30)
                     .pos(10, 85)
                     .overlay(
-                        IKey.str(StatCollector.translateToLocalFormatted("galaxia.gui.rocket_silo.enter_rocket"))
+                        IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.enter_rocket"))
                             .alignment(Alignment.CENTER))
                     .tooltip(t -> {
                         if (!hasCapsule()) {
                             t.add(
-                                StatCollector.translateToLocalFormatted(
+                                StatCollector.translateToLocal(
                                     "galaxia.gui.rocket_silo.enter_rocket.tooltip.has_capsule"));
                         } else if (!hasCorrectEngines()) {
                             t.add(
-                                StatCollector.translateToLocalFormatted(
+                                StatCollector.translateToLocal(
                                     "galaxia.gui.rocket_silo.enter_rocket.tooltip.has_correct_engine"));
                         } else {
                             t.add(
                                 StatCollector
-                                    .translateToLocalFormatted("galaxia.gui.rocket_silo.enter_rocket.tooltip.correct"));
+                                    .translateToLocal("galaxia.gui.rocket_silo.enter_rocket.tooltip.correct"));
                         }
                     })
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
@@ -117,7 +117,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             .overlay(IKey.str(name))
             .tooltip(
                 (t) -> t.add(
-                    StatCollector.translateToLocalFormatted(
+                    StatCollector.translateToLocal(
                         "galaxia.gui.rocket_silo.button.tooltip.add") + " " + name + " (" + heightStr + ")"));
     }
 
