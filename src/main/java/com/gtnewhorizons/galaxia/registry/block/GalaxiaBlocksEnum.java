@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block;
 
 import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
 
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import net.minecraft.block.Block;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -33,6 +34,7 @@ public enum GalaxiaBlocksEnum {
         }
 
         GameRegistry.registerTileEntity(TileEntitySilo.class, "galaxia_silo_controller");
+        GameRegistry.registerTileEntity(TileEntityModuleAssembler.class, "galaxia_ma_controller");
     }
 
     // spotless:off

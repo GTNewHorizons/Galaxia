@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -38,6 +39,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
+    private HashMap<Integer, Integer> moduleMap = new HashMap<>();
     private final List<Integer> modules = new ArrayList<>();
     public boolean shouldRender = true;
 
@@ -91,7 +93,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
             .syncHandler(
                 new InteractionSyncHandler()
-                    .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));
+                    .setOnMousePressed(md -> {
+                        if (md.mouseButton == 0) {
+                            if (hasRemaining(m.getId())) {
+                                addModule(m.getId());
+                            }
+
+                        }
+                    }));
     }
 
     private void enterRocket(PosGuiData data) {
@@ -108,9 +117,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     public void addModule(int id) {
         modules.add(id);
+        moduleMap.put(id, moduleMap.get(id) - 1);
         assembly = null;
         markDirty();
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    public boolean hasRemaining(int id) {
+        return moduleMap.getOrDefault(id, 0) > 0;
     }
 
     public RocketAssembly getAssembly() {
@@ -152,7 +166,11 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         return entityRocket;
     }
 
-    public List<Integer> getModules() {
+    public void receiveModules(HashMap<Integer, Integer> moduleMap) {
+        this.moduleMap = moduleMap;
+    }
+
+    public ArrayList<Integer> getModules() {
         return new ArrayList<>(modules);
     }
 
