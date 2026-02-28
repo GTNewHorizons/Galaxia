@@ -3,7 +3,10 @@ package com.gtnewhorizons.galaxia.rocketmodules.entities;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.client.gui.GuiPlanetTeleporter;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
@@ -17,6 +20,8 @@ public class EntityRocket extends Entity {
     private RocketAssembly assembly;
     private final List<Integer> modules = new ArrayList<>();
     private int capsuleIndex = -1;
+
+    public boolean guiOpened = false;
 
     public EntityRocket(World world) {
         super(world);
@@ -100,6 +105,14 @@ public class EntityRocket extends Entity {
 
         if (!worldObj.isRemote) {
             if (riddenByEntity == null) this.setDead();
+        }
+
+        if (this.posY >= 500 && riddenByEntity instanceof EntityPlayer) {
+            EntityPlayer player = (EntityPlayer) riddenByEntity;
+            if (player == Minecraft.getMinecraft().thePlayer && !guiOpened) {
+                Minecraft.getMinecraft().displayGuiScreen(new GuiPlanetTeleporter());
+                guiOpened = true;
+            }
         }
 
         if (dataWatcher.getWatchableObjectByte(10) == 1) {
