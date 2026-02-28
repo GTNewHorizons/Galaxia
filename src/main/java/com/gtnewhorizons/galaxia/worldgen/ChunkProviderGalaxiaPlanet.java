@@ -255,15 +255,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             .generateNoiseOctaves(new double[256], chunkZ * 16, chunkX * 16, 16, 16, 0.1, 0.1, 0);
         for (int i = 0; i < horizontalLayer.length; i++) {
             double noise = horizontalLayer[i];
-            noise += 6;
-            noise /= 12;
+            noise += 8;
+            noise /= 16;
             caveCache[i][0] = noise;
         }
         double[] verticalSlice = caveNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 256, 1, 0.1, 0.1, 0);
         for (int i = 0; i < verticalSlice.length; i++) {
             double noise = verticalSlice[i];
-            noise += 6;
-            noise /= 12;
+            noise += 8;
+            noise /= 16;
             verticalSlice[i] = noise;
         }
         for (int i = 0; i < caveCache.length; i++) {

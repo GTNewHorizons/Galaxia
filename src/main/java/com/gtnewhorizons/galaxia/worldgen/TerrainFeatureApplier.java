@@ -310,8 +310,8 @@ public final class TerrainFeatureApplier {
         double[] noise = generationNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, scale, scale, 0);
         for (int i = 0; i < noise.length; i++) {
             double localNoise = noise[i];
-            localNoise += 6;
-            localNoise /= 12;
+            localNoise += 8;
+            localNoise /= 16;
             if (localNoise < 0) {
                 localNoise = 0;
             } else if (localNoise > 1) {

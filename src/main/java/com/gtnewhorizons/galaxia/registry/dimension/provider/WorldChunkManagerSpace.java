@@ -83,9 +83,9 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
     private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator,
         boolean firstIndex) {
         double noise = noiseGenerator.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.02, 0.02, 0)[0];
-        noise += 6;
+        noise += 8;
         noise *= matrixLength;
-        noise /= 12;
+        noise /= 16;
         if (firstIndex) {
             cacheNoiseX = noise;
         } else {
