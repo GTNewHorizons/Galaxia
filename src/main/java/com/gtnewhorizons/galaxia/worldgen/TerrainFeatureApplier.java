@@ -31,8 +31,6 @@ public final class TerrainFeatureApplier {
         TerrainPreset preset = feature.preset();
         double height = feature.height();
         double width = feature.width();
-        double freq = feature.frequency();
-        int depth = feature.depth();
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
         Random localRand = new Random(seed);
 
@@ -41,22 +39,22 @@ public final class TerrainFeatureApplier {
                 applySandDunes(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
             case IMPACT_CRATERS:
-                applyImpactCraters(heightMap, height, depth, localRand);
+                applyImpactCraters(heightMap, width, height, localRand);
                 break;
             case CENTRAL_PEAK_CRATERS:
-                applyCentralPeakCraters(heightMap, height, depth, localRand);
+                applyCentralPeakCraters(heightMap, width, height, localRand);
                 break;
             case MOUNTAIN_RANGES:
                 applyMountainRanges(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
             case CANYONS:
-                applyCanyons(heightMap, height, depth, localRand);
+                applyCanyons(heightMap, width, height, chunkX, chunkZ, terrainRelevance);
                 break;
             case LAVA_PLATEAUS:
                 applyLavaPlateaus(heightMap, height, localRand);
                 break;
             case RIVER_VALLEYS:
-                applyRiverValleys(heightMap, height, depth, localRand);
+                applyRiverValleys(heightMap, width, height, localRand);
                 break;
             case YARDANGS:
                 applyYardangs(heightMap, height, localRand);
@@ -67,10 +65,10 @@ public final class TerrainFeatureApplier {
             case BASE_HEIGHT:
                 applyBaseHeight(heightMap, height, terrainRelevance);
                 break;
-            case MULTI_RING_BASINS:
             case SHIELD_VOLCANOES:
                 applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
                 break;
+            case MULTI_RING_BASINS:
             case PLATEAUS_AND_ESCARPMENTS:
             case TECTONIC_RIFTS:
             case GLACIAL_VALLEYS:
@@ -114,20 +112,20 @@ public final class TerrainFeatureApplier {
     /**
      * Applies impact craters as a terrain feature
      *
-     * @param hm    Current height map
-     * @param size  Size of the craters (radius)
-     * @param depth Depth of the craters
-     * @param r     Random instance
+     * @param hm     Current height map
+     * @param width  Size of the craters (radius)
+     * @param height Depth of the craters
+     * @param r      Random instance
      */
-    private static void applyImpactCraters(int[] hm, double size, int depth, Random r) {
+    private static void applyImpactCraters(int[] hm, double width, double height, Random r) {
         int cx = 8 + r.nextInt(4) - 2;
         int cz = 8 + r.nextInt(4) - 2;
         for (int i = 0; i < 256; i++) {
             int x = i & 15, z = i >> 4;
             double dist = Math.hypot(x - cx, z - cz);
-            if (dist < 7 * size) {
-                double falloff = 1 - dist / (7 * size);
-                hm[i] -= (int) (depth * falloff * falloff);
+            if (dist < 7 * width) {
+                double falloff = 1 - dist / (7 * width);
+                hm[i] -= (int) (height * falloff * falloff);
             }
         }
     }
@@ -135,19 +133,19 @@ public final class TerrainFeatureApplier {
     /**
      * Applies Central Peak Craters to the height map
      *
-     * @param hm    Current height map
-     * @param size  Size of the craters (radius)
-     * @param depth Depth of the craters
-     * @param r     Random instance
+     * @param hm     Current height map
+     * @param width  Size of the craters (radius)
+     * @param height Depth of the craters
+     * @param r      Random instance
      */
-    private static void applyCentralPeakCraters(int[] hm, double size, int depth, Random r) {
-        applyImpactCraters(hm, size, depth, r);
+    private static void applyCentralPeakCraters(int[] hm, double width, double height, Random r) {
+        applyImpactCraters(hm, width, height, r);
         int px = 7 + r.nextInt(2);
         int pz = 7 + r.nextInt(2);
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 int i = (px + dx) + (pz + dz) * 16;
-                if (i >= 0 && i < 256) hm[i] += (int) (18 * size);
+                if (i >= 0 && i < 256) hm[i] += (int) (18 * width);
             }
         }
     }
@@ -179,14 +177,27 @@ public final class TerrainFeatureApplier {
     /**
      * Applies canyons to the height map
      *
-     * @param hm    The height map
-     * @param size  The canyon size
-     * @param depth The depth of the canyon
-     * @param r     Random instance
+     * @param hm     The height map
+     * @param width  The canyon size
+     * @param height The depth of the canyon
      */
-    private static void applyCanyons(int[] hm, double size, int depth, Random r) {
-        for (int i = 0; i < 256; i++) {
-            if ((i & 15) % 5 == 0) hm[i] -= (int) (depth * size);
+    private static void applyCanyons(int[] hm, double width, double height, int chunkX, int chunkZ,
+        double[] terrainRelevance) {
+        double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                double localRelevance = terrainRelevance[x + z * 16];
+                if (localRelevance == 0) {
+                    continue;
+                }
+                double localNoise = noise[x + z * 16];
+                localNoise = Math.abs(localNoise - 0.5);
+                localNoise *= 10;
+                if (localNoise < 3 && localNoise > 2) {
+                    localNoise = 0.5 - Math.abs(localNoise - 2.5);
+                    hm[x + z * 16] -= (int) (((localNoise) * 2 * height) * localRelevance);
+                }
+            }
         }
     }
 
@@ -204,14 +215,14 @@ public final class TerrainFeatureApplier {
     /**
      * Applies river valleys to the height map
      *
-     * @param hm    The height map
-     * @param size  The river valley size
-     * @param depth The depth of the river valley
-     * @param r     Random instance
+     * @param hm     The height map
+     * @param width  The river valley size
+     * @param height The depth of the river valley
+     * @param r      Random instance
      */
-    private static void applyRiverValleys(int[] hm, double size, int depth, Random r) {
+    private static void applyRiverValleys(int[] hm, double width, double height, Random r) {
         for (int i = 0; i < 256; i++) {
-            if ((i & 15) > 5 && (i & 15) < 11) hm[i] -= (int) (depth * size * 0.7);
+            if ((i & 15) > 5 && (i & 15) < 11) hm[i] -= (int) (height * width * 0.7);
         }
     }
 
@@ -277,10 +288,9 @@ public final class TerrainFeatureApplier {
      * @param hm     The current height map
      * @param preset The terrain preset to use
      * @param size   The size of the noise application
-     * @param freq   The frequency of the noise
      * @param r      Random instance
      */
-    private static void applyGenericNoise(int[] hm, TerrainPreset preset, double size, double freq, Random r) {
+    private static void applyGenericNoise(int[] hm, TerrainPreset preset, double size, Random r) {
         for (int i = 0; i < 256; i++) {
             hm[i] += (int) (r.nextGaussian() * 6 * size);
         }
@@ -300,8 +310,8 @@ public final class TerrainFeatureApplier {
         double[] noise = generationNoise.generateNoiseOctaves(new double[256], chunkZ, chunkX, 16, 16, scale, scale, 0);
         for (int i = 0; i < noise.length; i++) {
             double localNoise = noise[i];
-            localNoise += 6;
-            localNoise /= 12;
+            localNoise += 8;
+            localNoise /= 16;
             if (localNoise < 0) {
                 localNoise = 0;
             } else if (localNoise > 1) {

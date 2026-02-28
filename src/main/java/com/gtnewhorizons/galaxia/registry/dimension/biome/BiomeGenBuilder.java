@@ -40,6 +40,7 @@ public class BiomeGenBuilder {
     List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
     List<BlockMeta> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
+    int surfaceThickness = 1;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -205,6 +206,11 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder generateCaves(boolean generateCaves) {
         this.generateCaves = generateCaves;
+        return this;
+    }
+
+    public BiomeGenBuilder surfaceThickness(int surfaceThickness) {
+        this.surfaceThickness = surfaceThickness;
         return this;
     }
 

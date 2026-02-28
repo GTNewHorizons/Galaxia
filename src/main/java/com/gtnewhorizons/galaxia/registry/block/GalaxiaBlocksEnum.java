@@ -50,7 +50,8 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.BRECCIA,
             BlockVariant.BASALT,
             BlockVariant.ANORTHOSITE,
-            BlockVariant.ANDESITE);
+            BlockVariant.ANDESITE,
+            BlockVariant.OBSIDIAN);
 
         reg(DimensionEnum.HEMATERIA,
             BlockVariant.REGOLITH,

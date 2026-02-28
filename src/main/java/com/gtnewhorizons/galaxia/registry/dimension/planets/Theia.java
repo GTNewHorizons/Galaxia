@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -23,7 +22,6 @@ import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 public class Theia extends BasePlanet {
 
     public static final DimensionEnum ENUM = DimensionEnum.THEIA;
-    private static final BlockMeta OBSIDIAN = new BlockMeta(Blocks.obsidian, 0);
 
     /**
      * Getter for dimension Enum
@@ -80,6 +78,10 @@ public class Theia extends BasePlanet {
                         .endFeature()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
                         .width(32)
+                        .height(32)
+                        .endFeature()
+                        .feature(TerrainPreset.CANYONS)
+                        .width(4)
                         .height(32)
                         .endFeature()
                         .build(),
@@ -219,11 +221,12 @@ public class Theia extends BasePlanet {
                         GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) }))
             .terrain(terrainConfiguration)
             .ocean(
-                OBSIDIAN,
+                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN.suffix()),
                 GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
                 oceanHeight,
-                OBSIDIAN,
+                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN.suffix()),
                 1)
+            .surfaceThickness(4)
             .build();
     }
 }

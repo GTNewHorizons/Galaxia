@@ -9,8 +9,7 @@ import com.github.bsideup.jabel.Desugar;
  * Data record holding terrain features
  */
 @Desugar
-public record TerrainFeature(TerrainPreset preset, double frequency, double height, double width, int minHeight,
-    int variation, int depth, Map<String, Object> customParams) {
+public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams) {
 
     public TerrainFeature {
         customParams = Collections.unmodifiableMap(customParams);
@@ -27,6 +26,6 @@ public record TerrainFeature(TerrainPreset preset, double frequency, double heig
 
     @Override
     public String toString() {
-        return "TerrainFeature{" + preset + ", freq=" + frequency + ", height=" + height + ", depth=" + depth + "}";
+        return "TerrainFeature{" + preset + ", height=" + height + "}";
     }
 }
