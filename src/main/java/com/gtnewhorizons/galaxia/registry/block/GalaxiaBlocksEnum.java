@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block;
 
 import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
 
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import net.minecraft.block.Block;
 
@@ -21,6 +22,7 @@ public enum GalaxiaBlocksEnum {
     // spotless:off
 
     SILO_CONTROLLER(new BlockSilo(), "silo_controller"),
+    ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), "module_assembler_controller")
     ; // leave trailing semicolon
 
     // spotless:on

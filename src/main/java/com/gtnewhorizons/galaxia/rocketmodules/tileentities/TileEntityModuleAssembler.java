@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
+
 public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData> {
     private HashMap<Integer, Integer> moduleMap = new HashMap<>();
     private boolean hasSilo = false;
@@ -49,12 +51,21 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
 
         Flow row = Flow.row()
             .coverChildren()
-            .pos(10, 35)
             .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
             row.child(createModuleButton(m));
         }
         panel.child(row);
+
+        Flow row2 = Flow.row()
+                .coverChildren()
+                .pos(10, 100)
+                .padding(4);
+        for (RocketModule m : ModuleRegistry.getAll()) {
+            row2.child(IKey.str(m.getName() + " : " + moduleMap.getOrDefault(m.getId(), 0)).asWidget().padding(4).size(40, 20));
+        }
+        panel.child(row2);
+
 
         panel.child(
             new ButtonWidget<>().size(220, 30)
@@ -115,6 +126,7 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
     public void addModule(int id) {
         moduleMap.put(id, moduleMap.getOrDefault(id, 0) + 1);
         markDirty();
+        LOG.info("ID: " + id + " | Count: " + moduleMap.get(id));
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 

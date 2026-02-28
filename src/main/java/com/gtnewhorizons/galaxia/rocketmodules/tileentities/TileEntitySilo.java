@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import com.cleanroommc.modularui.widgets.TextWidget;
+import com.gtnewhorizons.galaxia.utility.Rocket;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -62,6 +64,11 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             row.child(createModuleButton(m));
         }
         panel.child(row);
+
+        for (RocketModule m : ModuleRegistry.getAll()) {
+            row.child(IKey.str(m.getName() + " : " + moduleMap.getOrDefault(m.getId(), 0)).asWidget().padding(4));
+        }
+
 
         panel.child(
             new ButtonWidget<>().size(220, 30)
