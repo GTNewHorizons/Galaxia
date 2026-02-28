@@ -9,6 +9,8 @@ import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
@@ -27,6 +29,13 @@ public enum GalaxiaItemList {
     SPACESUIT_CHESTPLATE("spacesuit_chestplate", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
     SPACESUIT_LEGGINGS("spacesuit_leggings", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
     SPACESUIT_BOOTS("spacesuit_boots", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1),
+
+    OXYGEN_TANK_T1("oxygen_tank_1", () -> new ItemOxygenTank(1000), 1),
+    OXYGEN_TANK_T2("oxygen_tank_2", () -> new ItemOxygenTank(4000), 1),
+    OXYGEN_TANK_T3("oxygen_tank_3", () -> new ItemOxygenTank(16000), 1),
+    OXYGEN_TANK_T4("oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
+    THERMAL_PROTECTION_COLD("thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
+    THERMAL_PROTECTION_HOT("thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1)
 
     ; // leave trailing semicolon
 
