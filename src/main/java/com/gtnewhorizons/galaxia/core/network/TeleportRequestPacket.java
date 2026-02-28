@@ -30,7 +30,7 @@ public class TeleportRequestPacket implements IMessage {
 
     /**
      * Writes the dimension and coordinates to the byte buffer
-     * 
+     *
      * @param buf The buffer to write to
      */
     @Override
@@ -43,7 +43,7 @@ public class TeleportRequestPacket implements IMessage {
 
     /**
      * Reads the dimension and coordinates to the byte buffer
-     * 
+     *
      * @param buf The buffer to read from
      */
     @Override
@@ -61,7 +61,7 @@ public class TeleportRequestPacket implements IMessage {
 
         /**
          * Handler for on sending a new packet request
-         * 
+         *
          * @param message The message being sent
          * @param ctx     The message context
          * @return null - signature can be ignored, only there due to override
@@ -86,12 +86,13 @@ public class TeleportRequestPacket implements IMessage {
                 return null;
             }
 
+            player.mountEntity(null);
             server.getConfigurationManager()
                 .transferPlayerToDimension(player, message.dim, new Teleporter(targetWorld) {
 
                     /**
                      * Overriding the method to place entity in a new location (portal)
-                     * 
+                     *
                      * @param entity The entity to move
                      * @param px     Portal x coordinate
                      * @param py     Portal y coordinate
@@ -112,7 +113,7 @@ public class TeleportRequestPacket implements IMessage {
 
                     /**
                      * Can ignore - just required for override
-                     * 
+                     *
                      * @param entity Entity to transport
                      * @return true
                      */
