@@ -15,6 +15,28 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
 
     public ItemOxygenTank(int oxygenStorage) {
         this.oxygenStorage = oxygenStorage;
+        setMaxDamage(oxygenStorage);
+    }
+
+    /**
+     * Drain oxygen from an ItemStack containing an ItemOxygenTank. If the full amount cannot be drained, it will
+     * drain as much as possible!
+     * @param amount Amount of oxygen to consume.
+     * @return If the full amount was successfully drained.
+     */
+    public boolean drainOxygen(ItemStack stackIn, int amount) {
+        int damage = stackIn.getItemDamage();
+        if (damage < amount) {
+            stackIn.setItemDamage(0);
+            return false;
+        }
+        stackIn.setItemDamage(damage - amount);
+        return true;
+    }
+
+    @Override
+    public boolean isDamageable() {
+        return true;
     }
 
     @Override

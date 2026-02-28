@@ -34,6 +34,10 @@ public final class Galaxia {
     @Mod.Instance(MODID)
     public static Galaxia instance;
 
+    // Caches for baubles inventory indices. Set no earlier than postInit.
+    public static int[] oxygenSlots;
+    public static int[] thermalSlot;
+
     @SidedProxy(
         clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy",
         serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy"

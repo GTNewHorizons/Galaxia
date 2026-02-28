@@ -6,6 +6,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import baubles.api.BaublesApi;
+import baubles.api.expanded.BaubleExpandedSlots;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
@@ -190,6 +194,8 @@ public class DimensionEventHandler {
 
     }
 
+
+
     /**
      * Applies the effects of low oxygen to the player
      *
@@ -197,10 +203,19 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyLowOxygen(EffectBuilder def, EntityPlayer player) {
-        if (def.getOxygenPercent(player) == 100) return;
-        // Temp until oxygen gear added
-        boolean hasOxygenGear = false;
-        if (hasOxygenGear) return;
+        int oxygenPercent = def.getOxygenPercent(player);
+        if (oxygenPercent == 100) return;
+
+        boolean couldDrainOxygen = false;
+        for (int index : Galaxia.oxygenSlots) {
+            ItemStack tank = BaublesApi.getBaubles(player).getStackInSlot(index);
+            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) continue;
+            if (tankItem.drainOxygen(tank, 100 - oxygenPercent)) {
+                couldDrainOxygen = true;
+                break;
+            }
+        }
+        if (couldDrainOxygen) return;
         player.attackEntityFrom(this.noOxygen, 3.0f);
     }
 
