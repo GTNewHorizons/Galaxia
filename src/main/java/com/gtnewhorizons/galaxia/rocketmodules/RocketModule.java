@@ -9,46 +9,36 @@ import net.minecraftforge.client.model.IModelCustom;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public enum ModuleType {
-
-    FUEL_TANK(0, "fuel_tank_3x5x3", 5.0, 3.0, 0),
-    CAPSULE(1, "capsule_3x2.5x3", 2.5, 3.0, -1.75),
-    STORAGE(2, "storage_unit_3x4x3", 4.0, 3.0, 0),
-    ENGINE(3, "engine_3x1x3", 0.5, 3.0, 0);
+public abstract class RocketModule {
 
     private final int id;
-    private final String modelName;
+    private final String name;
     private final double height;
     private final double width;
-    private final double sitOffset;
+    private final double weight;
+    private final String modelName;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
-
     @SideOnly(Side.CLIENT)
     private ResourceLocation texture;
 
-    ModuleType(int id, String modelName, double height, double width, double sitOffset) {
+    protected RocketModule(int id, String name, double height, double width, double weight, String modelName) {
         this.id = id;
-        this.modelName = modelName;
+        this.name = name;
         this.height = height;
         this.width = width;
-        this.sitOffset = sitOffset;
-    }
-
-    public static ModuleType fromId(int id) {
-        for (ModuleType t : values()) {
-            if (t.id == id) return t;
-        }
-        return null;
+        this.weight = weight;
+        this.modelName = modelName;
+        ModuleRegistry.register(this);
     }
 
     public int getId() {
         return id;
     }
 
-    public String getModelName() {
-        return modelName;
+    public String getName() {
+        return name;
     }
 
     public double getHeight() {
@@ -59,14 +49,34 @@ public enum ModuleType {
         return width;
     }
 
+    public double getWeight() {
+        return weight;
+    }
+
     public double getSitOffset() {
-        return sitOffset;
+        return 0;
+    }
+
+    public String getModelName() {
+        return modelName;
+    }
+
+    public double getFuelCapacity() {
+        return 0;
+    }
+
+    public double getThrust() {
+        return 0;
+    }
+
+    public int getPassengerCapacity() {
+        return 0;
     }
 
     @SideOnly(Side.CLIENT)
     public IModelCustom getModel() {
         if (model == null) {
-            ResourceLocation loc = LocationGalaxia(String.format("textures/model/modules/%s/model.obj", modelName));
+            ResourceLocation loc = LocationGalaxia("textures/model/modules/" + modelName + "/model.obj");
             model = AdvancedModelLoader.loadModel(loc);
         }
         return model;
@@ -75,8 +85,12 @@ public enum ModuleType {
     @SideOnly(Side.CLIENT)
     public ResourceLocation getTexture() {
         if (texture == null) {
-            texture = LocationGalaxia(String.format("textures/model/modules/%s/texture.png", modelName));
+            texture = LocationGalaxia("textures/model/modules/" + modelName + "/texture.png");
         }
         return texture;
+    }
+
+    public boolean isStackableWith(RocketModule other) {
+        return getClass() == other.getClass();
     }
 }

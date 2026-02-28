@@ -47,18 +47,15 @@ public class EntityRocket extends Entity {
 
     public void launch() {
         dataWatcher.updateObject(10, (byte) 1);
-
         modules.clear();
         modules.addAll(silo.getModules());
         assembly = new RocketAssembly(modules);
-
         StringBuilder sb = new StringBuilder();
         for (int t : modules) {
             if (sb.length() > 0) sb.append(",");
             sb.append(t);
         }
         dataWatcher.updateObject(11, sb.toString());
-
         silo.launch();
     }
 
@@ -97,10 +94,7 @@ public class EntityRocket extends Entity {
     @Override
     public void onUpdate() {
         super.onUpdate();
-
-        if (!worldObj.isRemote) {
-            if (riddenByEntity == null) this.setDead();
-        }
+        if (!worldObj.isRemote && riddenByEntity == null) this.setDead();
 
         if (dataWatcher.getWatchableObjectByte(10) == 1) {
             this.motionY += 0.01D;

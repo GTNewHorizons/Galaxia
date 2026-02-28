@@ -4,6 +4,7 @@ import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -27,6 +28,7 @@ public class CommonProxy {
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
+        ModuleRegistry.registerAllModules();
     }
 
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
