@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.rocketmodules.entities;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.client.gui.GuiPlanetTeleporter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -11,6 +10,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.client.gui.GuiPlanetTeleporter;
 import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
@@ -110,7 +110,8 @@ public class EntityRocket extends Entity {
         if (this.posY >= 500 && riddenByEntity instanceof EntityPlayer) {
             EntityPlayer player = (EntityPlayer) riddenByEntity;
             if (player == Minecraft.getMinecraft().thePlayer && !guiOpened) {
-                Minecraft.getMinecraft().displayGuiScreen(new GuiPlanetTeleporter());
+                Minecraft.getMinecraft()
+                    .displayGuiScreen(new GuiPlanetTeleporter());
                 guiOpened = true;
             }
         }
