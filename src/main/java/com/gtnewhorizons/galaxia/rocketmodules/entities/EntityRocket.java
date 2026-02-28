@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.rocketmodules.entities;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
@@ -14,12 +15,16 @@ import com.gtnewhorizons.galaxia.client.gui.GuiPlanetTeleporter;
 import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 public class EntityRocket extends Entity {
 
     private TileEntitySilo silo;
     private RocketAssembly assembly;
     private final List<Integer> modules = new ArrayList<>();
     private int capsuleIndex = -1;
+    private int launchTicks = 0;
 
     public boolean guiOpened = false;
 
@@ -101,8 +106,7 @@ public class EntityRocket extends Entity {
         super.onUpdate();
         if (!worldObj.isRemote && riddenByEntity == null) this.setDead();
 
-        if (this.posY >= 500 && riddenByEntity instanceof EntityPlayer) {
-            EntityPlayer player = (EntityPlayer) riddenByEntity;
+        if (this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
             if (player == Minecraft.getMinecraft().thePlayer && !guiOpened) {
                 Minecraft.getMinecraft()
                     .displayGuiScreen(new GuiPlanetTeleporter());
@@ -110,14 +114,91 @@ public class EntityRocket extends Entity {
             }
         }
 
-        if (dataWatcher.getWatchableObjectByte(10) == 1) {
-            this.motionY += 0.01D;
-            this.moveEntity(this.motionX, this.motionY, this.motionZ);
+        byte launched = dataWatcher.getWatchableObjectByte(10);
+        if (launched == 1) {
+            launchTicks++;
+            float t = launchTicks / 200f;
+            float accel = 0.004f * (1 - (float) Math.exp(-t * 3.5));
+            this.motionY += accel;
+            this.moveEntity(0, motionY, 0);
+            if (worldObj.isRemote) {
+                spawnRocketParticles();
+            }
         }
 
         float newH = (float) (getAssembly().getTotalHeight() + 0.5);
         if (Math.abs(this.height - newH) > 0.05F) {
             this.setSize(3.0F, newH);
+        }
+    }
+
+    // TODO move to thruster code so particles are emitted by engines
+    @SideOnly(Side.CLIENT)
+    private void spawnRocketParticles() {
+        if (launchTicks < 3) return;
+
+        double x = this.posX;
+        double z = this.posZ;
+        double bottomY = this.posY - 0.65;
+
+        float heightFactor = (float) Math.min(4.0, this.posY / 160.0);
+        float nozzleSpread = 0.25f;
+        float exhaustExpansion = 0.02f + heightFactor * 0.08f;
+        float downSpeedBase = -0.28f * (1.0f - heightFactor * 0.75f);
+        float intensity = Math.min(1.2f, launchTicks / 35f) * Math.max(0.2f, 1.0f - (float) this.posY / 650f);
+
+        Random rand = this.worldObj.rand;
+
+        // flame
+        for (int i = 0; i < 7 + (int) (intensity * 11); i++) {
+            double px = x + rand.nextGaussian() * nozzleSpread;
+            double pz = z + rand.nextGaussian() * nozzleSpread;
+            double py = bottomY - rand.nextFloat() * 0.4;
+
+            double mx = rand.nextGaussian() * exhaustExpansion;
+            double mz = rand.nextGaussian() * exhaustExpansion;
+            double my = downSpeedBase * (1.4f + rand.nextFloat() * 0.4f);
+
+            this.worldObj.spawnParticle("flame", px, py, pz, mx, my, mz);
+            this.worldObj.spawnParticle("largesmoke", px, py - 0.2, pz, mx * 0.7f, my * 0.85f, mz * 0.7f);
+        }
+
+        // main smoke
+        for (int i = 0; i < 9 + (int) (intensity * 18); i++) {
+            double px = x + rand.nextGaussian() * nozzleSpread;
+            double pz = z + rand.nextGaussian() * nozzleSpread;
+            double py = bottomY - rand.nextFloat() * 0.8;
+
+            double mx = rand.nextGaussian() * (exhaustExpansion * 1.2f);
+            double mz = rand.nextGaussian() * (exhaustExpansion * 1.2f);
+            double my = downSpeedBase * (0.9f + rand.nextFloat() * 0.6f);
+
+            this.worldObj.spawnParticle("largesmoke", px, py, pz, mx, my, mz);
+        }
+
+        // plasma trail
+        if (this.posY > 220 && rand.nextFloat() < 0.65f) {
+            for (int i = 0; i < 4; i++) {
+                double px = x + rand.nextGaussian() * nozzleSpread;
+                double pz = z + rand.nextGaussian() * nozzleSpread;
+                double py = bottomY - 1.5 - rand.nextFloat() * 2.5;
+
+                double mx = rand.nextGaussian() * (exhaustExpansion * 1.8f);
+                double mz = rand.nextGaussian() * (exhaustExpansion * 1.8f);
+                double my = downSpeedBase * 0.5f - rand.nextFloat() * 0.1f;
+
+                this.worldObj.spawnParticle(
+                    "reddust",
+                    px,
+                    py,
+                    pz,
+                    0.8 + rand.nextFloat() * 0.4,
+                    0.9 + rand.nextFloat() * 0.6,
+                    1.0 + rand.nextFloat() * 0.3);
+
+                if (rand.nextFloat() < 0.4f)
+                    this.worldObj.spawnParticle("magicCrit", px, py, pz, mx * 0.5f, my * 0.3f, mz * 0.5f);
+            }
         }
     }
 
