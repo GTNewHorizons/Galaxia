@@ -33,7 +33,7 @@ public class CommonProxy {
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
-      
+
         if (Loader.isModLoaded("Baubles|Expanded")) {
             BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
             BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
@@ -41,7 +41,7 @@ public class CommonProxy {
             BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
             BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         }
-      
+
         ModuleRegistry.registerAllModules();
     }
 
