@@ -2,14 +2,14 @@ package com.gtnewhorizons.galaxia.registry.block;
 
 import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
 
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import net.minecraft.block.Block;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockSilo;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.common.registry.GameRegistry;
