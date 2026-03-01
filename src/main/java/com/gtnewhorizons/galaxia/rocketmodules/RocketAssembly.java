@@ -1,123 +1,69 @@
 package com.gtnewhorizons.galaxia.rocketmodules;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.rocketmodules.rules.ClusteredPlacementRule;
+import com.gtnewhorizons.galaxia.rocketmodules.rules.LinearPlacementRule;
+import com.gtnewhorizons.galaxia.rocketmodules.rules.PropulsionPlacementRule;
 
 public final class RocketAssembly {
 
     @Desugar
-    public record ModulePlacement(ModuleType type, double x, double y, double z) {}
+    public record ModulePlacement(RocketModule type, double x, double y, double z) {}
 
-    private final List<ModuleType> modules;
+    private final List<RocketModule> modules;
+    private List<ModulePlacement> placements;
 
     public RocketAssembly(List<Integer> moduleIds) {
         this.modules = moduleIds.stream()
-            .map(ModuleType::fromId)
+            .map(ModuleRegistry::fromId)
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     }
 
     public List<ModulePlacement> getPlacements() {
-        List<ModulePlacement> placements = new ArrayList<>();
+        if (placements == null) {
+            placements = new ArrayList<>();
+            double y = 0.0;
 
-        List<ModuleType> fuelTanks = filter(ModuleType.FUEL_TANK);
-        List<ModuleType> engines = filter(ModuleType.ENGINE);
-        List<ModuleType> storages = filter(ModuleType.STORAGE);
-        List<ModuleType> capsules = filter(ModuleType.CAPSULE);
+            List<RocketModule> propulsion = modules.stream()
+                .filter(m -> m.getFuelCapacity() > 0 || m.getThrust() > 0)
+                .collect(Collectors.toList());
 
-        double yOff = 0.0;
+            placements.addAll(new PropulsionPlacementRule().apply(propulsion, y));
 
-        yOff += buildFuelAndEngines(placements, fuelTanks, engines, yOff);
+            double afterPropulsion = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(0.0);
 
-        for (ModuleType s : storages) {
-            placements.add(new ModulePlacement(s, 0, yOff, 0));
-            yOff += s.getHeight();
+            List<RocketModule> otherStackables = modules.stream()
+                .filter(m -> m instanceof IStackableModule && m.getFuelCapacity() == 0 && m.getThrust() == 0)
+                .collect(Collectors.toList());
+
+            placements.addAll(new ClusteredPlacementRule().apply(otherStackables, afterPropulsion));
+
+            double afterClustered = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(afterPropulsion);
+
+            List<RocketModule> linears = modules.stream()
+                .filter(m -> !(m instanceof IStackableModule))
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(linears, afterClustered));
         }
-
-        for (ModuleType c : capsules) {
-            placements.add(new ModulePlacement(c, 0, yOff, 0));
-            yOff += c.getHeight();
-        }
-
         return placements;
-    }
-
-    private List<ModuleType> filter(ModuleType type) {
-        return modules.stream()
-            .filter(m -> m == type)
-            .collect(Collectors.toList());
-    }
-
-    private double buildFuelAndEngines(List<ModulePlacement> placements, List<ModuleType> tanks,
-        List<ModuleType> engines, double startY) {
-        double y = startY;
-        int tankIdx = 0, engineIdx = 0;
-        int remaining = tanks.size();
-
-        if (remaining <= 2) {
-            if (engineIdx < engines.size()) {
-                ModuleType e = engines.get(engineIdx++);
-                placements.add(new ModulePlacement(e, 0, y, 0));
-                y += e.getHeight();
-            }
-            for (ModuleType t : tanks) {
-                placements.add(new ModulePlacement(t, 0, y, 0));
-                y += t.getHeight();
-            }
-        } else {
-            while (remaining > 0) {
-                int orbitalCount = Math.min(remaining - 1, 6);
-                double radius = calculateOrbitRadius(tanks, tankIdx, orbitalCount);
-
-                double tierEngineH = 0.0;
-                if (engineIdx < engines.size()) {
-                    ModuleType e = engines.get(engineIdx++);
-                    placements.add(new ModulePlacement(e, 0, y, 0));
-                    tierEngineH = e.getHeight();
-                }
-
-                ModuleType centre = tanks.get(tankIdx);
-                placements.add(new ModulePlacement(centre, 0, y + tierEngineH, 0));
-                tankIdx++;
-                remaining--;
-
-                for (int o = 0; o < orbitalCount; o++) {
-                    double angle = (2 * Math.PI / orbitalCount) * o;
-                    double ox = Math.cos(angle) * radius;
-                    double oz = Math.sin(angle) * radius;
-
-                    double orbEngineH = 0.0;
-                    if (engineIdx < engines.size()) {
-                        ModuleType e = engines.get(engineIdx++);
-                        placements.add(new ModulePlacement(e, ox, y, oz));
-                        orbEngineH = e.getHeight();
-                    }
-
-                    ModuleType orbTank = tanks.get(tankIdx);
-                    placements.add(new ModulePlacement(orbTank, ox, y + orbEngineH, oz));
-                    tankIdx++;
-                    remaining--;
-                }
-
-                y += tierEngineH + centre.getHeight();
-            }
-        }
-        return y - startY;
-    }
-
-    private double calculateOrbitRadius(List<ModuleType> tanks, int startIdx, int count) {
-        if (count == 0) return 0;
-        double r1 = tanks.get(startIdx)
-            .getWidth() / 2.0
-            + tanks.get(startIdx + 1)
-                .getWidth() / 2.0;
-        double r2 = count > 1 ? tanks.get(startIdx + 1)
-            .getWidth() / (2 * Math.sin(Math.PI / count)) : 0;
-        return Math.max(r1, r2) + 0.1;
     }
 
     public double getTotalHeight() {
@@ -129,13 +75,24 @@ public final class RocketAssembly {
             .orElse(0.0);
     }
 
-    // capsule index is redundant as capsule is always on top
-    public double getMountedYOffset() {
-        double seatOffsetInCapsule = ModuleType.CAPSULE.getSitOffset();
-        return getTotalHeight() + seatOffsetInCapsule;
+    public double getTotalWeight() {
+        return modules.stream()
+            .mapToDouble(RocketModule::getWeight)
+            .sum();
     }
 
-    public List<ModuleType> getModules() {
-        return modules;
+    public double getMountedYOffset() {
+        for (int i = modules.size() - 1; i >= 0; i--) {
+            if (modules.get(i)
+                .getPassengerCapacity() > 0) {
+                return getTotalHeight() + modules.get(i)
+                    .getSitOffset();
+            }
+        }
+        return getTotalHeight();
+    }
+
+    public List<RocketModule> getModules() {
+        return Collections.unmodifiableList(modules);
     }
 }

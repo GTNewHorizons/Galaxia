@@ -4,6 +4,11 @@ import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
 
 import net.minecraft.block.Block;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockNoduleController;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceAir;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceStation;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -20,6 +25,10 @@ public enum GalaxiaBlocksEnum {
     // spotless:off
 
     SILO_CONTROLLER(new BlockSilo(), "silo_controller"),
+    NODULE_CONTROLLER(new BlockNoduleController(), "nodule_controller"),
+    SPACE_STATION_BLOCK(new BlockSpaceStation(), "space_station_block"),
+    SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),
+    SPACE_AIR(new BlockSpaceAir(), "space_air"),
     ; // leave trailing semicolon
 
     // spotless:on
@@ -30,6 +39,7 @@ public enum GalaxiaBlocksEnum {
     public static void registerBlocks() {
         for (GalaxiaBlocksEnum block : values()) {
             GameRegistry.registerBlock(block.get(), block.name);
+            block.theBlock.setCreativeTab(Galaxia.creativeTab);
         }
 
         GameRegistry.registerTileEntity(TileEntitySilo.class, "galaxia_silo_controller");

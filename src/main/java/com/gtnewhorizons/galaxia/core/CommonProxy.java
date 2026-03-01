@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
 
 import baubles.api.expanded.BaubleExpandedSlots;
@@ -32,7 +33,7 @@ public class CommonProxy {
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
-
+      
         if (Loader.isModLoaded("Baubles|Expanded")) {
             BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
             BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
@@ -40,6 +41,8 @@ public class CommonProxy {
             BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
             BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         }
+      
+        ModuleRegistry.registerAllModules();
     }
 
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)

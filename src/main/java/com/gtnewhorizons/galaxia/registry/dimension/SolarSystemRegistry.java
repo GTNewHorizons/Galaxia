@@ -34,6 +34,7 @@ public final class SolarSystemRegistry {
         if (registered) return;
         registered = true;
 
+        registerDimensions(new SpaceStation());
         registerDimensions(new Theia());
         registerDimensions(new Hemateria());
         registerDimensions(new FrozenBelt());
