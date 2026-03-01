@@ -33,15 +33,9 @@ public class CommonProxy {
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
-      
-        if (Loader.isModLoaded("Baubles|Expanded")) {
-            BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
-            BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
-            BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
-            BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
-            BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
-        }
-      
+
+        if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
+
         ModuleRegistry.registerAllModules();
     }
 
@@ -58,4 +52,12 @@ public class CommonProxy {
 
     // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {}
+
+    private void registerBaublesSlots() {
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+    }
 }
