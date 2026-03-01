@@ -25,6 +25,7 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
 
     /**
      * The UI builder for the Tile Entity GUI
+     * 
      * @param data        information about the creation context
      * @param syncManager sync handler where widget sync handlers should be registered
      * @param settings    settings which apply to the whole ui and not just this panel
@@ -68,6 +69,7 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
 
     /**
      * Creates a button to add a new module
+     * 
      * @param m The rocket module this button handles
      * @return The ButtonWidget needed in the main panel
      */
@@ -84,15 +86,14 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound tag) {
-    }
+    public void readFromNBT(NBTTagCompound tag) {}
 
     @Override
-    public void writeToNBT(NBTTagCompound tag) {
-    }
+    public void writeToNBT(NBTTagCompound tag) {}
 
     /**
      * Adds a new module to the internal storage
+     * 
      * @param id The ID of the module being added
      */
     public void addModule(int id) {

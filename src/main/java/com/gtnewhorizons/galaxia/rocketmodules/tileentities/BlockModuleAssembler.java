@@ -25,8 +25,9 @@ public class BlockModuleAssembler extends Block implements ITileEntityProvider {
 
     /**
      * Creates a tile entity bound to this block
+     * 
      * @param worldIn The world the tile entity is in (i.e. world of this block)
-     * @param meta The metadata of the tile entity
+     * @param meta    The metadata of the tile entity
      * @return TileEntity (in this case the MA)
      */
     @Override
@@ -36,15 +37,16 @@ public class BlockModuleAssembler extends Block implements ITileEntityProvider {
 
     /**
      * Handler for the logic of the block being activated (Right click by player)
-     * @param world The world the block is in
-     * @param x X coordinate of the block
-     * @param y Y coordinate of the block
-     * @param z Z coordinate of the block
+     * 
+     * @param world  The world the block is in
+     * @param x      X coordinate of the block
+     * @param y      Y coordinate of the block
+     * @param z      Z coordinate of the block
      * @param player The player activating the block
-     * @param side The side the player interacted with (not relevant here as of yet)
-     * @param hitX The hitbox X coordinate (Not used in this implementation)
-     * @param hitY The hitbox Y coordinate (Not used in this implementation)
-     * @param hitZ The hitbox Z coordinate (Not used in this implementation)
+     * @param side   The side the player interacted with (not relevant here as of yet)
+     * @param hitX   The hitbox X coordinate (Not used in this implementation)
+     * @param hitY   The hitbox Y coordinate (Not used in this implementation)
+     * @param hitZ   The hitbox Z coordinate (Not used in this implementation)
      * @return Boolean : True => activated
      */
     @Override
