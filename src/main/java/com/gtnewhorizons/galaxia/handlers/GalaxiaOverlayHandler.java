@@ -1,8 +1,5 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import baubles.api.BaublesApi;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.Tessellator;
@@ -15,8 +12,11 @@ import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 
+import baubles.api.BaublesApi;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class GalaxiaOverlayHandler {
@@ -198,16 +198,18 @@ public class GalaxiaOverlayHandler {
     }
 
     private float getOxygenLevel(EntityPlayer player) {
-        int maximum = 0;
-        int current = 0;
+        float maximum = 0;
+        float current = 0;
         for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player).getStackInSlot(index);
+            ItemStack tank = BaublesApi.getBaubles(player)
+                .getStackInSlot(index);
             if (tank != null && tank.getItem() instanceof ItemOxygenTank tankItem) {
-                maximum += tankItem.getMaxDamage();
-                current += tankItem.getDamage(tank);
+                maximum += 1;
+                current += tankItem.getPercentFull(tank);
             }
         }
-        return (float) (current / maximum);
+        if (maximum == 0) return 0;
+        return current / maximum;
     }
 
     private float getTemperature(EntityPlayer p) {

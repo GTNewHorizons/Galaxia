@@ -72,6 +72,7 @@ item.galaxia.oxygen_tank_4.name=Unlimited Oxygen Tank
 item.galaxia.thermal_protection_cold.name=Cold Protection
 item.galaxia.thermal_protection_hot.name=Heat Protection
 
+item.galaxia.oxygen_tank.desc=Oxygen: %s/%s
 item.galaxia.thermal_protection.desc.cold=+%s Cold Resistance
 item.galaxia.thermal_protection.desc.hot=+%s Heat Resistance
 

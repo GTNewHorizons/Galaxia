@@ -1,26 +1,28 @@
 package com.gtnewhorizons.galaxia.handlers;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import baubles.api.BaublesApi;
-import baubles.api.expanded.BaubleExpandedSlots;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 
+import baubles.api.BaublesApi;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
@@ -194,8 +196,6 @@ public class DimensionEventHandler {
 
     }
 
-
-
     /**
      * Applies the effects of low oxygen to the player
      *
@@ -208,10 +208,13 @@ public class DimensionEventHandler {
 
         boolean couldDrainOxygen = false;
         for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player).getStackInSlot(index);
+            ItemStack tank = BaublesApi.getBaubles(player)
+                .getStackInSlot(index);
             if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) continue;
-            if (tankItem.drainOxygen(tank, 100 - oxygenPercent)) {
+            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
                 couldDrainOxygen = true;
+                GALAXIA_NETWORK
+                    .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
                 break;
             }
         }
