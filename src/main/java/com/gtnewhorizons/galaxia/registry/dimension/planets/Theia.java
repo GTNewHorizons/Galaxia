@@ -218,7 +218,8 @@ public class Theia extends BasePlanet {
                 new WorldGenCrater(
                     craterRarity,
                     new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) }))
+                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) },
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.TEKTITE.suffix())))
             .terrain(terrainConfiguration)
             .ocean(
                 GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN.suffix()),
