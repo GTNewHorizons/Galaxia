@@ -46,7 +46,7 @@ public enum GalaxiaBlocksEnum {
         }
 
         GameRegistry.registerTileEntity(TileEntitySilo.class, "galaxia_silo_controller");
-        GameRegistry.registerTileEntity(TileEntityModuleAssembler.class, "galaxia_ma_controller");
+        GameRegistry.registerTileEntity(TileEntityModuleAssembler.class, "galaxia_module_assembler_controller");
     }
 
     // spotless:off
