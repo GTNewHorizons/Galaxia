@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 
@@ -11,8 +12,11 @@ import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 
+import baubles.api.BaublesApi;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class GalaxiaOverlayHandler {
@@ -193,12 +197,19 @@ public class GalaxiaOverlayHandler {
         t.draw();
     }
 
-    private float getOxygenLevel(EntityPlayer p) {
-        // Example: oscillating value in [0,1] based on world time. Replace with real
-        // logic as needed.
-        float speed = 0.01f;
-        long time = mc.theWorld != null ? mc.theWorld.getTotalWorldTime() : System.currentTimeMillis();
-        return (float) ((Math.sin(time * speed) + 1.0) / 2.0);
+    private float getOxygenLevel(EntityPlayer player) {
+        float maximum = 0;
+        float current = 0;
+        for (int index : Galaxia.oxygenSlots) {
+            ItemStack tank = BaublesApi.getBaubles(player)
+                .getStackInSlot(index);
+            if (tank != null && tank.getItem() instanceof ItemOxygenTank tankItem) {
+                maximum += 1;
+                current += tankItem.getPercentFull(tank);
+            }
+        }
+        if (maximum == 0) return 0;
+        return current / maximum;
     }
 
     private float getTemperature(EntityPlayer p) {

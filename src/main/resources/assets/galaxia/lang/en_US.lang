@@ -64,6 +64,22 @@ item.galaxia.spacesuit_boots.name=Space Suit Boots
 item.galaxia.spacesuit_helmet.name=Space Suit Helmet
 item.galaxia.spacesuit_chestplate.name=Space Suit Chestplate
 
+# Items - "Baubles"
+item.galaxia.oxygen_tank_1.name=Basic Oxygen Tank
+item.galaxia.oxygen_tank_2.name=Advanced Oxygen Tank
+item.galaxia.oxygen_tank_3.name=Elite Oxygen Tank
+item.galaxia.oxygen_tank_4.name=Unlimited Oxygen Tank
+item.galaxia.thermal_protection_cold.name=Cold Protection
+item.galaxia.thermal_protection_hot.name=Heat Protection
+
+item.galaxia.oxygen_tank.desc=Oxygen: %s/%s
+item.galaxia.thermal_protection.desc.cold=+%s Cold Resistance
+item.galaxia.thermal_protection.desc.hot=+%s Heat Resistance
+
+# Baubles Extended Slots
+slot.oxygen_tank=§aOxygen Tank§7
+slot.thermal_protection=§aThermal Protection§7
+
 # Items - "Planet stone dust"
 item.galaxia.theia_dust.name=Theia stone dust
 

@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.core;
 
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
+
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
@@ -7,7 +10,9 @@ import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
 
+import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
@@ -28,6 +33,9 @@ public class CommonProxy {
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
+
+        if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
+
         ModuleRegistry.registerAllModules();
     }
 
@@ -37,8 +45,19 @@ public class CommonProxy {
     }
 
     // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
-    public void postInit(FMLPostInitializationEvent event) {}
+    public void postInit(FMLPostInitializationEvent event) {
+        Galaxia.oxygenSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_TANK);
+        Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+    }
 
     // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {}
+
+    private void registerBaublesSlots() {
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+    }
 }
