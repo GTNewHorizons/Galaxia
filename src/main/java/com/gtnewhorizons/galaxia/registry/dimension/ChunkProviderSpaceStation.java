@@ -18,7 +18,7 @@ public class ChunkProviderSpaceStation implements IChunkProvider {
 
     private final World worldObj;
 
-    public ChunkProviderSpaceStation(World world, long seed) {
+    public ChunkProviderSpaceStation(World world) {
         this.worldObj = world;
     }
 

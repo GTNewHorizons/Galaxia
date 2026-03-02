@@ -41,6 +41,7 @@ public class BiomeGenBuilder {
     List<BlockMeta> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
     int surfaceThickness = 1;
+    boolean enableRain = false;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();

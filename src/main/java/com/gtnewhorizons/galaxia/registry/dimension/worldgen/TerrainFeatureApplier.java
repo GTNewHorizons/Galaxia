@@ -23,7 +23,7 @@ public final class TerrainFeatureApplier {
      * @param rand             Random instance
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    public static void applyToHeightmap(TerrainFeature feature, int[] heightMap, int chunkX, int chunkZ, Random rand,
+    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, int chunkX, int chunkZ, Random rand,
         double[] terrainRelevance) {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
@@ -91,7 +91,7 @@ public final class TerrainFeatureApplier {
      * @param chunkZ           The chunk z coordinate
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applySandDunes(int[] hm, double height, double width, int chunkX, int chunkZ,
+    private static void applySandDunes(double[] hm, double height, double width, int chunkX, int chunkZ,
         double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         chunkX *= 16;
@@ -104,7 +104,7 @@ public final class TerrainFeatureApplier {
                 }
                 double localNoise = (noise[x + z * 16] + 5) / 10;
                 double wave = Math.sin(((chunkX + x) * 0.7 + (chunkZ + z) * 0.4) / (width * 4)) * localNoise;
-                hm[x + z * 16] += (int) (wave * height * localRelevance);
+                hm[x + z * 16] += wave * height * localRelevance;
             }
         }
     }
@@ -117,7 +117,7 @@ public final class TerrainFeatureApplier {
      * @param height Depth of the craters
      * @param r      Random instance
      */
-    private static void applyImpactCraters(int[] hm, double width, double height, Random r) {
+    private static void applyImpactCraters(double[] hm, double width, double height, Random r) {
         int cx = 8 + r.nextInt(4) - 2;
         int cz = 8 + r.nextInt(4) - 2;
         for (int i = 0; i < 256; i++) {
@@ -125,7 +125,7 @@ public final class TerrainFeatureApplier {
             double dist = Math.hypot(x - cx, z - cz);
             if (dist < 7 * width) {
                 double falloff = 1 - dist / (7 * width);
-                hm[i] -= (int) (height * falloff * falloff);
+                hm[i] -= height * falloff * falloff;
             }
         }
     }
@@ -138,14 +138,14 @@ public final class TerrainFeatureApplier {
      * @param height Depth of the craters
      * @param r      Random instance
      */
-    private static void applyCentralPeakCraters(int[] hm, double width, double height, Random r) {
+    private static void applyCentralPeakCraters(double[] hm, double width, double height, Random r) {
         applyImpactCraters(hm, width, height, r);
         int px = 7 + r.nextInt(2);
         int pz = 7 + r.nextInt(2);
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 int i = (px + dx) + (pz + dz) * 16;
-                if (i >= 0 && i < 256) hm[i] += (int) (18 * width);
+                if (i >= 0 && i < 256) hm[i] += (18 * width);
             }
         }
     }
@@ -160,7 +160,7 @@ public final class TerrainFeatureApplier {
      * @param chunkZ           Chunk z coordinates
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applyMountainRanges(int[] hm, double height, double width, int chunkX, int chunkZ,
+    private static void applyMountainRanges(double[] hm, double height, double width, int chunkX, int chunkZ,
         double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
@@ -169,7 +169,7 @@ public final class TerrainFeatureApplier {
                 if (localRelevance == 0) {
                     continue;
                 }
-                hm[x + z * 16] += (int) ((noise[x + z * 16] * height) * localRelevance);
+                hm[x + z * 16] += ((noise[x + z * 16] * height) * localRelevance);
             }
         }
     }
@@ -181,7 +181,7 @@ public final class TerrainFeatureApplier {
      * @param width  The canyon size
      * @param height The depth of the canyon
      */
-    private static void applyCanyons(int[] hm, double width, double height, int chunkX, int chunkZ,
+    private static void applyCanyons(double[] hm, double width, double height, int chunkX, int chunkZ,
         double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
@@ -195,7 +195,7 @@ public final class TerrainFeatureApplier {
                 localNoise *= 10;
                 if (localNoise < 3 && localNoise > 2) {
                     localNoise = 0.5 - Math.abs(localNoise - 2.5);
-                    hm[x + z * 16] -= (int) (((localNoise) * 2 * height) * localRelevance);
+                    hm[x + z * 16] -= (((localNoise) * 2 * height) * localRelevance);
                 }
             }
         }
@@ -208,8 +208,8 @@ public final class TerrainFeatureApplier {
      * @param size The plateau size
      * @param r    Random instance
      */
-    private static void applyLavaPlateaus(int[] hm, double size, Random r) {
-        for (int i = 0; i < 256; i++) hm[i] += (int) (12 * size);
+    private static void applyLavaPlateaus(double[] hm, double size, Random r) {
+        for (int i = 0; i < 256; i++) hm[i] += (12 * size);
     }
 
     /**
@@ -220,9 +220,9 @@ public final class TerrainFeatureApplier {
      * @param height The depth of the river valley
      * @param r      Random instance
      */
-    private static void applyRiverValleys(int[] hm, double width, double height, Random r) {
+    private static void applyRiverValleys(double[] hm, double width, double height, Random r) {
         for (int i = 0; i < 256; i++) {
-            if ((i & 15) > 5 && (i & 15) < 11) hm[i] -= (int) (height * width * 0.7);
+            if ((i & 15) > 5 && (i & 15) < 11) hm[i] -= (height * width * 0.7);
         }
     }
 
@@ -233,8 +233,8 @@ public final class TerrainFeatureApplier {
      * @param size The size of the yardangs
      * @param r    Random instance
      */
-    private static void applyYardangs(int[] hm, double size, Random r) {
-        for (int i = 0; i < 256; i++) hm[i] += (int) (Math.sin((i & 15) * 1.8) * 4 * size);
+    private static void applyYardangs(double[] hm, double size, Random r) {
+        for (int i = 0; i < 256; i++) hm[i] += (Math.sin((i & 15) * 1.8) * 4 * size);
     }
 
     /**
@@ -244,13 +244,13 @@ public final class TerrainFeatureApplier {
      * @param size The size of the salt flats
      * @param r    Random instance
      */
-    private static void applySaltFlats(int[] hm, double size, Random r) {
+    private static void applySaltFlats(double[] hm, double size, Random r) {
         for (int i = 0; i < 256; i++) hm[i] = Math.max(2, hm[i] - 3);
     }
 
-    private static void applyBaseHeight(int[] hm, double height, double[] terrainRelevance) {
+    private static void applyBaseHeight(double[] hm, double height, double[] terrainRelevance) {
         for (int i = 0; i < 256; i++) {
-            hm[i] += (int) (height * terrainRelevance[i]);
+            hm[i] += (height * terrainRelevance[i]);
         }
     }
 
@@ -264,7 +264,7 @@ public final class TerrainFeatureApplier {
      * @param chunkZ           Chunk z coordinates
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    private static void applyShieldVolcanoes(int[] hm, double height, double width, int chunkX, int chunkZ,
+    private static void applyShieldVolcanoes(double[] hm, double height, double width, int chunkX, int chunkZ,
         double[] terrainRelevance) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
@@ -277,7 +277,7 @@ public final class TerrainFeatureApplier {
                 if (localNoise > 0.75) {
                     continue;
                 }
-                hm[x + z * 16] += (int) ((localNoise * height) * localRelevance);
+                hm[x + z * 16] += ((localNoise * height) * localRelevance);
             }
         }
     }
@@ -290,9 +290,9 @@ public final class TerrainFeatureApplier {
      * @param size   The size of the noise application
      * @param r      Random instance
      */
-    private static void applyGenericNoise(int[] hm, TerrainPreset preset, double size, Random r) {
+    private static void applyGenericNoise(double[] hm, TerrainPreset preset, double size, Random r) {
         for (int i = 0; i < 256; i++) {
-            hm[i] += (int) (r.nextGaussian() * 6 * size);
+            hm[i] += r.nextGaussian() * 6 * size;
         }
     }
 

@@ -41,6 +41,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setBiomeName(b.name);
         this.setHeight(b.height);
         this.setTemperatureRainfall(b.temperature, b.rainfall);
+        this.enableRain = b.enableRain;
 
         this.fillerBlock = b.fillerBlock.block();
         this.topBlockMetas = b.topBlockMetas;
