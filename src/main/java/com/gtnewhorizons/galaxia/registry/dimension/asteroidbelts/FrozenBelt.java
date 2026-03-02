@@ -11,9 +11,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.Asteroid;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.Asteroid;
 
 /**
  * The class holding all data related to the dimension FrozenBelt

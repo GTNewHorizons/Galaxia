@@ -12,8 +12,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import net.minecraft.world.biome.BiomeGenBase;
 
 /**
