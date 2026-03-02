@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -187,9 +185,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      */
     public void returnModules(TileEntityModuleAssembler ma) {
         for (Integer id : modules) {
-            LOG.info("Adding " + id);
             ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
-            LOG.info("Fuel tanks: " + ma.moduleMap.getOrDefault(id, 0));
         }
         assembly = null;
         markDirty();
