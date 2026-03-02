@@ -3,8 +3,6 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
 import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
