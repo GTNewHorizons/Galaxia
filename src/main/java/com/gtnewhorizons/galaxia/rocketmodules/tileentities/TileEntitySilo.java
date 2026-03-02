@@ -41,7 +41,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public boolean shouldRender = true;
     // Validation rules for rocket systems
     private final List<IRocketValidator> validators = Arrays
-            .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator());
+        .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator());
 
     /**
      * The UI builder for the tile entity
@@ -58,66 +58,58 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         ModularPanel panel = new ModularPanel("galaxia:rocket_silo").size(240, 160);
         TileEntityModuleAssembler ma = findAssemblerToLink();
         // If no linked MA,
-        if (ma == null)
-            return panel.child(
+        if (ma == null) return panel.child(
 
-                    IKey.str("§Couldn't find Assembler")
-                            .asWidget()
-                            .pos(10, 35));
+            IKey.str("§Couldn't find Assembler")
+                .asWidget()
+                .pos(10, 35));
         // Title
         panel.child(
-                IKey.str("§lRocket Silo")
-                        .asWidget()
-                        .pos(8, 8));
+            IKey.str("§lRocket Silo")
+                .asWidget()
+                .pos(8, 8));
         // Module addition buttons
         Flow row = Flow.row()
-                .coverChildren()
-                .pos(10, 35)
-                .padding(4);
+            .coverChildren()
+            .pos(10, 35)
+            .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
             row.child(createModuleButton(m, ma));
         }
         panel.child(row);
 
         panel.child(
-                new ButtonWidget<>().size(220, 30)
-                        .pos(10, 80)
-                        .overlay(
-                                IKey.str("Return Modules")
-                                        .alignment(Alignment.Center))
-                        .tooltip(t -> t.addLine("Disassemble Rocket"))
-                        .syncHandler(
-                                new InteractionSyncHandler().setOnMousePressed(
-                                        md -> {
-                                            if (md.mouseButton == 0 && !worldObj.isRemote)
-                                                returnModules(ma);
-                                        })));
+            new ButtonWidget<>().size(220, 30)
+                .pos(10, 80)
+                .overlay(
+                    IKey.str("Return Modules")
+                        .alignment(Alignment.Center))
+                .tooltip(t -> t.addLine("Disassemble Rocket"))
+                .syncHandler(
+                    new InteractionSyncHandler().setOnMousePressed(
+                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(ma); })));
 
         // Build Rocket and enter button
         panel.child(
-                new ButtonWidget<>().size(220, 30)
-                        .pos(10, 120)
-                        .overlay(
-                                IKey.str("§aEnter Rocket")
-                                        .alignment(Alignment.CENTER))
-                        .tooltipDynamic(t -> {
-                            if (getAssembly().getModules()
-                                    .isEmpty()) {
-                                t.addLine("§7Add some modules first");
-                                return;
-                            }
-                            for (IRocketValidator v : validators) {
-                                ValidationResult r = v.validate(getAssembly());
-                                if (!r.valid())
-                                    t.addLine("§c" + r.message());
-                            }
-                        })
-                        .syncHandler(
-                                new InteractionSyncHandler().setOnMousePressed(
-                                        md -> {
-                                            if (md.mouseButton == 0 && !worldObj.isRemote)
-                                                enterRocket(data);
-                                        })));
+            new ButtonWidget<>().size(220, 30)
+                .pos(10, 120)
+                .overlay(
+                    IKey.str("§aEnter Rocket")
+                        .alignment(Alignment.CENTER))
+                .tooltipDynamic(t -> {
+                    if (getAssembly().getModules()
+                        .isEmpty()) {
+                        t.addLine("§7Add some modules first");
+                        return;
+                    }
+                    for (IRocketValidator v : validators) {
+                        ValidationResult r = v.validate(getAssembly());
+                        if (!r.valid()) t.addLine("§c" + r.message());
+                    }
+                })
+                .syncHandler(
+                    new InteractionSyncHandler().setOnMousePressed(
+                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); })));
 
         return panel;
     }
@@ -131,16 +123,16 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      */
     private ButtonWidget<?> createModuleButton(RocketModule m, TileEntityModuleAssembler ma) {
         return new ButtonWidget<>().size(48, 20)
-                .overlay(IKey.str(m.getName()))
-                .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
-                .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                    if (md.mouseButton == 0) {
-                        if (hasRemaining(m.getId(), ma)) {
-                            addModule(m.getId(), ma);
-                        }
-
+            .overlay(IKey.str(m.getName()))
+            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
+            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
+                if (md.mouseButton == 0) {
+                    if (hasRemaining(m.getId(), ma)) {
+                        addModule(m.getId(), ma);
                     }
-                }));
+
+                }
+            }));
     }
 
     /**
@@ -150,17 +142,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      */
     private void enterRocket(PosGuiData data) {
         if (getAssembly().getModules()
-                .stream()
-                .noneMatch(m -> m.getPassengerCapacity() > 0))
-            return;
+            .stream()
+            .noneMatch(m -> m.getPassengerCapacity() > 0)) return;
         EntityRocket rocket = getEntityRocket();
-        if (rocket == null || rocket.isDead)
-            return;
+        if (rocket == null || rocket.isDead) return;
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
         data.getPlayer()
-                .mountEntity(rocket);
-        if (!rocket.shouldRender())
-            rocket.launch();
+            .mountEntity(rocket);
+        if (!rocket.shouldRender()) rocket.launch();
     }
 
     /**
@@ -175,8 +164,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         ma.moduleMap.put(id, ma.moduleMap.get(id) - 1);
         assembly = null;
         markDirty();
-        if (worldObj != null)
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
     /**
@@ -215,8 +203,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * @return RocketAssembly
      */
     public RocketAssembly getAssembly() {
-        if (assembly == null)
-            assembly = new RocketAssembly(getModules());
+        if (assembly == null) assembly = new RocketAssembly(getModules());
         return assembly;
     }
 
@@ -229,8 +216,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         List<RocketModule> list = getAssembly().getModules();
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i)
-                    .getPassengerCapacity() > 0)
-                return i;
+                .getPassengerCapacity() > 0) return i;
         }
         return -1;
     }
@@ -244,8 +230,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         entityRocket = null;
         assembly = null;
         markDirty();
-        if (worldObj != null)
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
     /**
