@@ -64,7 +64,7 @@ public class SpaceStation extends BasePlanet {
                 .biome(new SpaceStation.BiomeGenSpaceStation(BiomeIdOffsetter.getBiomeId()), 0, 0)
                 .name(ENUM)
                 .cloudHeight(Integer.MIN_VALUE)
-                .chunkGen(() -> new ChunkProviderSpaceStation(worldObj, worldObj.getSeed()))
+                .chunkGen(() -> new ChunkProviderSpaceStation(worldObj))
                 .build();
         }
     }

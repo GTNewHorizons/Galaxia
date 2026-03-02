@@ -11,7 +11,7 @@ import net.minecraft.world.gen.NoiseGeneratorOctaves;
  */
 public class WorldChunkManagerSpace extends WorldChunkManager {
 
-    private BiomeGenBase[][] biomeGenerator;
+    private BiomeGenBase[][] biomeGeneratorMatrix;
     private NoiseGeneratorOctaves xBiomeNoise;
     private NoiseGeneratorOctaves zBiomeNoise;
 
@@ -43,10 +43,10 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * @param biomes The matrix of biome gen bases to be used
      */
     public void provideBiomes(BiomeGenBase[][] biomes) {
-        if (biomeGenerator != null) {
+        if (biomeGeneratorMatrix != null) {
             return;
         }
-        biomeGenerator = biomes;
+        biomeGeneratorMatrix = biomes;
     }
 
     /**
@@ -57,17 +57,14 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * @return The BiomeGenBase at that coordinate point on planet
      */
     public BiomeGenBase getBiomeGenAt(int x, int z) {
-        if (cacheCreated && x == cacheX && z == cacheZ) {
-            return biomeGenerator[cacheBiomeIndexX][cacheBiomeIndexZ];
+        if (!(cacheCreated && x == cacheX && z == cacheZ)) {
+            cacheBiomeIndexX = getBiomeIndex(x, z, biomeGeneratorMatrix.length, xBiomeNoise, true);
+            cacheBiomeIndexZ = getBiomeIndex(x, z, biomeGeneratorMatrix[0].length, zBiomeNoise, false);
+            cacheX = x;
+            cacheZ = z;
+            cacheCreated = true;
         }
-        int xIndex = getBiomeIndex(x, z, biomeGenerator.length, xBiomeNoise, true);
-        int zIndex = getBiomeIndex(x, z, biomeGenerator[0].length, zBiomeNoise, false);
-        cacheCreated = true;
-        cacheX = x;
-        cacheZ = z;
-        cacheBiomeIndexX = xIndex;
-        cacheBiomeIndexZ = zIndex;
-        return this.biomeGenerator[xIndex][zIndex];
+        return biomeGeneratorMatrix[cacheBiomeIndexX][cacheBiomeIndexZ];
     }
 
     /**
@@ -82,66 +79,45 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      */
     private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator,
         boolean firstIndex) {
-        double noise = noiseGenerator.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.02, 0.02, 0)[0];
-        noise += 8;
+        double noise = noiseGenerator.generateNoiseOctaves(null, z, x, 1, 1, 0.02, 0.02, 0)[0];
+        // normalize
+        noise = (noise + 8) / 16;
         noise *= matrixLength;
-        noise /= 16;
         if (firstIndex) {
             cacheNoiseX = noise;
         } else {
             cacheNoiseZ = noise;
         }
-        int pickedBiome = (int) Math.floor(noise);
-        if (pickedBiome >= matrixLength) {
-            double correctedNoise = noise - pickedBiome;
-            pickedBiome = matrixLength - 1;
-            correctedNoise += pickedBiome;
-            if (firstIndex) {
-                cacheNoiseX = correctedNoise;
-            } else {
-                cacheNoiseZ = correctedNoise;
-            }
-        } else if (pickedBiome < 0) {
-            pickedBiome = 0;
-        }
-        return pickedBiome;
+        return (int) Math.floor(noise);
     }
 
     /**
-     * Gets the adjacent biomes for use in smoothing methods
+     * Gets all contributing biomes for use in smoothing methods
      *
      * @return An array of BiomeGenBases storing neighbouring biomes
      */
-    public BiomeGenBase[] getAdjacentBiomes() {
-        int adjacentIndexX = cacheBiomeIndexX + 1;
-        int adjacentIndexZ = cacheBiomeIndexZ + 1;
-        if (adjacentIndexX >= biomeGenerator.length) {
-            adjacentIndexX = 0;
-        }
-        if (adjacentIndexZ >= biomeGenerator[0].length) {
-            adjacentIndexZ = 0;
-        }
-        BiomeGenBase[] adjacentBiomes = new BiomeGenBase[3];
-        adjacentBiomes[0] = biomeGenerator[adjacentIndexX][cacheBiomeIndexZ];
-        adjacentBiomes[1] = biomeGenerator[cacheBiomeIndexX][adjacentIndexZ];
-        adjacentBiomes[2] = biomeGenerator[adjacentIndexX][adjacentIndexZ];
-        return adjacentBiomes;
+    public BiomeGenBase[] getLocalBiomes(int x, int z) {
+        BiomeGenBase[] localBiomes = new BiomeGenBase[4];
+        localBiomes[0] = this.getBiomeGenAt(x, z);
+        int adjacentIndexX = cacheBiomeIndexX + 1 >= biomeGeneratorMatrix.length ? 0 : cacheBiomeIndexX + 1;
+        int adjacentIndexZ = cacheBiomeIndexZ + 1 >= biomeGeneratorMatrix[0].length ? 0 : cacheBiomeIndexZ + 1;
+        localBiomes[1] = biomeGeneratorMatrix[adjacentIndexX][cacheBiomeIndexZ];
+        localBiomes[2] = biomeGeneratorMatrix[cacheBiomeIndexX][adjacentIndexZ];
+        localBiomes[3] = biomeGeneratorMatrix[adjacentIndexX][adjacentIndexZ];
+        return localBiomes;
     }
 
-    public double[] getAdjacentBiomeSignificance() {
-        double xDeviation = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 0.95) * 20;
-        double zDeviation = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 0.95) * 20;
-        double diagonalDeviation = Math.sqrt((xDeviation * xDeviation + zDeviation * zDeviation) / 2);
-        if (diagonalDeviation > 0.9) {
-            xDeviation *= 0.9;
-            zDeviation *= 0.9;
-        }
-        return new double[] { xDeviation, zDeviation, diagonalDeviation };
+    public double[] getLocalBiomeSignificance(double divergence) {
+        if (divergence == 0) return new double[] { 1, 0, 0, 0 };
+        double d1 = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 1 + divergence) / divergence;
+        double d2 = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + divergence) / divergence;
+        // four ways normalized symmetric blending in the corner
+        return new double[] { d1 * d2, (1 - d1) * d2, d1 * (1 - d2), (1 - d1) * (1 - d2) };
     }
 
     public int getBiomeCount() {
-        int matrixLength = biomeGenerator.length;
-        int matrixWidth = biomeGenerator[0].length;
+        int matrixLength = biomeGeneratorMatrix.length;
+        int matrixWidth = biomeGeneratorMatrix[0].length;
         return matrixLength * matrixWidth;
     }
 }
