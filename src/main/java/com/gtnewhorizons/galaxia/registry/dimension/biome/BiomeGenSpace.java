@@ -4,9 +4,9 @@ import java.util.List;
 
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The class holding all generation fields for Biome generation

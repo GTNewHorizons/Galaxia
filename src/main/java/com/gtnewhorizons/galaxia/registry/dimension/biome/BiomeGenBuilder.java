@@ -10,9 +10,9 @@ import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The builder for biome generation

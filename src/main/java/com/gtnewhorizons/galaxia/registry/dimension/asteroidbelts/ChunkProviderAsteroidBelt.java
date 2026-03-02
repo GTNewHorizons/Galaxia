@@ -11,7 +11,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 
-import com.gtnewhorizons.galaxia.worldgen.Asteroid;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.Asteroid;
 
 /**
  * A chunk provider implementation specific to Asteroid Belts

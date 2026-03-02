@@ -10,11 +10,11 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenCrater;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
-import com.gtnewhorizons.galaxia.worldgen.WorldGenCrater;
 
 /**
  * The class holding all data related to the dimension Theia
