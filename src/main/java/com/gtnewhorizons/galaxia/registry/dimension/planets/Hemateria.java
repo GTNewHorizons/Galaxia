@@ -1,5 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
@@ -10,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.worldgen.TerrainPreset;
+import net.minecraft.world.biome.BiomeGenBase;
 
 /**
  * The class holding all data related to the dimension Hemateria
@@ -36,11 +41,11 @@ public class Hemateria extends BasePlanet {
      */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.mass(0.1)
+        return builder.mass(0.25)
             .orbitalRadius(1.52 * earthRadiusToAU)
             .radius(0.53)
-            .gravity(0.5)
-            .airResistance(0.7)
+            .gravity(0.25)
+            .airResistance(0.1)
             .effects(
                 EffectBuilder.builder()
                     .baseTemp(67)
@@ -58,73 +63,88 @@ public class Hemateria extends BasePlanet {
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
-            .avgGround(80)
-            // These biome names are mostly just for testing
             .biome(
                 createBiome(
                     "Hemateria Dunes",
-                    Blocks.brick_block,
                     TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
                         .feature(TerrainPreset.SAND_DUNES)
-                        .scale(4)
+                        .height(16)
                         .width(1.5)
-                        .height(2)
                         .endFeature()
                         .build(),
-                    true),
+                    true,
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())),
                 0,
                 0)
             .biome(
                 createBiome(
                     "Hemateria Mountains",
-                    Blocks.wool,
-                    4,
                     TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .scale(4)
-                        .height(0.5)
+                        .height(64)
                         .width(2)
                         .endFeature()
                         .build(),
-                    false),
+                    false,
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())),
                 0,
                 1)
             .biome(
                 createBiome(
-                    "Hemateria Hills",
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())
-                        .block(),
+                    "Hemateria Flatlands",
                     TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
+                        .feature(TerrainPreset.SAND_DUNES)
+                        .width(0.5)
+                        .height(6)
+                        .endFeature()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .scale(0.25)
-                        .height(4)
+                        .height(8)
                         .width(2)
                         .endFeature()
                         .build(),
-                    true),
+                    true,
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())),
                 1,
                 0)
             .biome(
                 createBiome(
-                    "Hemateria Dune Hills",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix())
-                        .block(),
+                    "Hemateria Basins",
                     TerrainConfiguration.builder()
-                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .scale(4)
-                        .height(0.5)
-                        .width(2)
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(16)
                         .endFeature()
-                        .feature(TerrainPreset.SAND_DUNES)
-                        .scale(4)
-                        .width(1.5)
-                        .height(2)
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .height(8)
+                        .width(0.5)
                         .endFeature()
                         .build(),
-                    false),
+                    false,
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.GABBRO.suffix())),
                 1,
                 1)
             .name(ENUM)
+            .build();
+    }
+
+    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain,
+                                              boolean generateCaves, BlockMeta surfaceBlock) {
+        return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
+            .temperature(0.4F)
+            .rainfall(0.99F)
+            .topBlock(surfaceBlock)
+            .fillerBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.ANDESITE.suffix()))
+            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix()), 144)
+            .terrain(terrain)
+            .generateCaves(generateCaves)
             .build();
     }
 }

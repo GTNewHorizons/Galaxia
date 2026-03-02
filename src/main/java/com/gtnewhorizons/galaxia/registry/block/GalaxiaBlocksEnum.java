@@ -70,6 +70,7 @@ public enum GalaxiaBlocksEnum {
         reg(DimensionEnum.HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
+            BlockVariant.GABBRO,
             BlockVariant.SNOW);
 
         reg(DimensionEnum.FROZEN_BELT,
