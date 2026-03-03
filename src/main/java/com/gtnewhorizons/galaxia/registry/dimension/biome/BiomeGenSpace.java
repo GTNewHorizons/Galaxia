@@ -4,9 +4,9 @@ import java.util.List;
 
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
-import com.gtnewhorizons.galaxia.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.worldgen.WorldGenGalaxia;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -41,6 +41,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setBiomeName(b.name);
         this.setHeight(b.height);
         this.setTemperatureRainfall(b.temperature, b.rainfall);
+        this.enableRain = b.enableRain;
 
         this.fillerBlock = b.fillerBlock.block();
         this.topBlockMetas = b.topBlockMetas;
