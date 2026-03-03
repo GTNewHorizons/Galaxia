@@ -18,24 +18,37 @@ import cpw.mods.fml.common.registry.GameRegistry;
 
 /**
  * ENUM for all Items in Galaxia
+ * you can use folders for textures for example gear/oxygen_tank_1 will expect oxygen_tank_1 in folder gear
+ * this doesn't affect registry name which in this example will still be oxygen_tank_1
  */
 public enum GalaxiaItemList {
 
     GALAXIA_LOGO("galaxia_logo"),
-    TELEPORTER("teleporter", ItemTeleporter::new, 1),
-    ITEM_GALACTIC_MAP("galactic_map", ItemGalacticMap::new, 1),
-    DUST_THEIA("theia_dust"),
+
+    // TOOLS
+    TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
+    ITEM_GALACTIC_MAP("tool/galactic_map", ItemGalacticMap::new, 1),
+
+    // Worldgen dust & ores
+    DUST_THEIA("ore/theia_dust"),
+    DUST_HEMATERIA("ore/hemateria_dust"),
+    THEIA_TEKTITE_SHARD("ore/theia_tektite_shard"),
+    CINNABAR_SCALE("ore/cinnabar_scale"),
+    ENCHANTED_CINNABAR_SCALE("ore/enchanted_cinnabar_scale"),
+
+    // SUIT
     SPACESUIT_HELMET("spacesuit_helmet", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
     SPACESUIT_CHESTPLATE("spacesuit_chestplate", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
     SPACESUIT_LEGGINGS("spacesuit_leggings", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
     SPACESUIT_BOOTS("spacesuit_boots", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1),
 
-    OXYGEN_TANK_T1("oxygen_tank_1", () -> new ItemOxygenTank(1000), 1),
-    OXYGEN_TANK_T2("oxygen_tank_2", () -> new ItemOxygenTank(4000), 1),
-    OXYGEN_TANK_T3("oxygen_tank_3", () -> new ItemOxygenTank(16000), 1),
-    OXYGEN_TANK_T4("oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
-    THERMAL_PROTECTION_COLD("thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
-    THERMAL_PROTECTION_HOT("thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1)
+    // GEAR
+    OXYGEN_TANK_T1("gear/oxygen_tank_1", () -> new ItemOxygenTank(1000), 1),
+    OXYGEN_TANK_T2("gear/oxygen_tank_2", () -> new ItemOxygenTank(4000), 1),
+    OXYGEN_TANK_T3("gear/oxygen_tank_3", () -> new ItemOxygenTank(16000), 1),
+    OXYGEN_TANK_T4("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
+    THERMAL_PROTECTION_COLD("gear/thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
+    THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
 
     ; // leave trailing semicolon
 
@@ -43,16 +56,23 @@ public enum GalaxiaItemList {
     private final int maxStackSize;
     private final Supplier<Item> itemFactory;
     private Item itemInstance;
+    private final String texturePath;
+    /**
+     * NOT AN ENUM VALE, USED FOR PLANET BLOCK REGISTRATION
+     */
+    public static final GalaxiaItemList DROP_SELF = null;
 
     /**
      * Constructor to initialize factory and registry
      *
-     * @param registryName Name of the registry
-     * @param itemFactory  The Item Factory
-     * @param maxStackSize The max stack size of the item
+     * @param textureAndName Name of the registry
+     * @param itemFactory    The Item Factory
+     * @param maxStackSize   The max stack size of the item
      */
-    GalaxiaItemList(String registryName, Supplier<Item> itemFactory, int maxStackSize) {
-        this.registryName = registryName;
+    GalaxiaItemList(String textureAndName, Supplier<Item> itemFactory, int maxStackSize) {
+        this.texturePath = textureAndName;
+        int last = textureAndName.lastIndexOf('/');
+        this.registryName = (last >= 0) ? textureAndName.substring(last + 1) : textureAndName;
         this.maxStackSize = maxStackSize;
         this.itemFactory = itemFactory;
     }
@@ -82,7 +102,7 @@ public enum GalaxiaItemList {
     public void register() {
         Item item = itemFactory.get();
         item.setUnlocalizedName(UNLOCALIZED_PREFIX + registryName);
-        item.setTextureName(TEXTURE_PREFIX + registryName);
+        item.setTextureName(TEXTURE_PREFIX + texturePath);
         item.setMaxStackSize(maxStackSize);
         item.setCreativeTab(Galaxia.creativeTab);
 

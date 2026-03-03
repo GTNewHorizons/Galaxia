@@ -76,7 +76,7 @@ public class BlockSpaceStation extends Block {
     public void registerBlockIcons(IIconRegister reg) {
         icons = new IIcon[METAS];
         for (int i = 0; i < METAS; ++i) {
-            icons[i] = reg.registerIcon("galaxia:space_station_block_" + i);
+            icons[i] = reg.registerIcon("galaxia:space_station/space_station_block_" + i);
         }
     }
 }

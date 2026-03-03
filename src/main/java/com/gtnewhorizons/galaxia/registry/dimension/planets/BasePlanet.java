@@ -107,12 +107,12 @@ public abstract class BasePlanet {
             .topBlock(new BlockMeta(block, meta))
             .topBlock(new BlockMeta(Blocks.wool, 5))
             .fillerBlock(Blocks.brick_block)
-            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix()), 144)
+            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW), 144)
             .terrain(terrain)
             .generateCaves(generateCaves)
             .ocean(
                 new BlockMeta(Blocks.glass, 1),
-                GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix()),
+                GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH),
                 64,
                 new BlockMeta(Blocks.obsidian, 0),
                 32)

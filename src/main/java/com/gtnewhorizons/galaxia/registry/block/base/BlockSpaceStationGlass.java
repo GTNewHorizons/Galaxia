@@ -25,7 +25,7 @@ public class BlockSpaceStationGlass extends BlockGlass {
     @SideOnly(Side.CLIENT)
     @Override
     public void registerBlockIcons(IIconRegister reg) {
-        this.blockIcon = reg.registerIcon("galaxia:space_station_glass");
+        this.blockIcon = reg.registerIcon("galaxia:space_station/space_station_glass");
     }
 
     @Override

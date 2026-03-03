@@ -65,22 +65,25 @@ public enum GalaxiaBlocksEnum {
         // THEIA
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
-            BlockVariant.TEKTITE,
             BlockVariant.MAGMA,
             BlockVariant.GABBRO,
             BlockVariant.BRECCIA,
             BlockVariant.BASALT,
             BlockVariant.ANORTHOSITE,
             BlockVariant.ANDESITE,
-            BlockVariant.OBSIDIAN);
+            GalaxiaItemList.DROP_SELF,
+            BlockVariant.OBSIDIAN,
+            GalaxiaItemList.THEIA_TEKTITE_SHARD,
+            BlockVariant.TEKTITE);
 
         // HEMATERIA
-        reg(DimensionEnum.HEMATERIA,
+        reg(DimensionEnum.HEMATERIA, GalaxiaItemList.DUST_HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
             BlockVariant.SNOW,
             BlockVariant.ICE,
-            BlockVariant.MAGMA);
+            BlockVariant.MAGMA,
+            sandLike("rhyolite", 0.7F));
 
         // FROZEN_BELT
         reg(DimensionEnum.FROZEN_BELT,
@@ -113,7 +116,8 @@ public enum GalaxiaBlocksEnum {
             sandLike("rhyolite", 0.7F),
             sandLike("sulfuricRegolith", 0.7F),
             stoneLike("latite", 2),
-            stoneLike("brimstone", 2));
+            stoneLike("brimstone", 2),
+            stoneLike("fumarole", 2));
     }
     //spotless:on
 
