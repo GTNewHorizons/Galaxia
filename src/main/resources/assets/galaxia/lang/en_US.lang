@@ -37,6 +37,7 @@ tile.HemateriaRock.name=Hemateria Ash
 tile.HemateriaAndesite.name=Hemateria Andesite
 tile.HemateriaSand.name=Hemateria Sand
 tile.HemateriaSnow.name=Hemateria Snow
+tile.fumarole.name=Fumarole
 
 # Blocks - "Frozen Belt"
 tile.Frozen_BeltIce.name=Frozen Belt Ice
