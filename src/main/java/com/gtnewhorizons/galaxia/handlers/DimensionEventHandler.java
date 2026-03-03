@@ -1,7 +1,8 @@
 package com.gtnewhorizons.galaxia.handlers;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPlayerOxygenLevel;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.isInGalaxiaDimension;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
+import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
 import baubles.api.BaublesApi;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -33,6 +35,7 @@ public class DimensionEventHandler {
 
     public int counter;
     public final int BASE_EFFECT_DURATION = 40;
+    int lowOxygenDuration = 0; // defines duration of player being low on oxygen in SECONDS
 
     DamageSource temperature = new DamageSource("galaxia.temperature").setDamageBypassesArmor()
         .setMagicDamage();
@@ -57,7 +60,7 @@ public class DimensionEventHandler {
         if (event.phase != TickEvent.Phase.END) return;
         for (EntityPlayer player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
-            if (!GALAXIA_DIMENSIONS.contains(player.dimension)) continue;
+            if (!isInGalaxiaDimension(player)) continue;
             if (player.ticksExisted % 20 != 0) continue;
             applyEffects(
                 SolarSystemRegistry.getById(player.dimension)
@@ -210,7 +213,9 @@ public class DimensionEventHandler {
         for (int index : Galaxia.oxygenSlots) {
             ItemStack tank = BaublesApi.getBaubles(player)
                 .getStackInSlot(index);
-            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) continue;
+            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
+                continue;
+            }
             if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
                 couldDrainOxygen = true;
                 GALAXIA_NETWORK
@@ -218,8 +223,28 @@ public class DimensionEventHandler {
                 break;
             }
         }
+
+        float oxygenLevel = getPlayerOxygenLevel(player);
+        if (oxygenLevel > 0.1) lowOxygenDuration = 0;
+        else lowOxygenDuration++;
+
+        // Apply low oxygen effects if oxygen is too low
+        // java8 doesn't support switches for stuff like this and i don't want to make it look messy so here it is
+        if (oxygenLevel < 0.02)
+            player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 4));
+        else if (oxygenLevel < 0.04)
+            player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 3));
+        else if (oxygenLevel < 0.06)
+            player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 2));
+        else if (oxygenLevel < 0.08)
+            player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 1));
+        else if (oxygenLevel < 0.1)
+            player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 0));
+
         if (couldDrainOxygen) return;
-        player.attackEntityFrom(this.noOxygen, 3.0f);
+        // Apply damage if no tank could be drained (tank is empty or no tanks available)
+        // damage scaled linearly so it can't be bypassed long-term by most of armors
+        player.attackEntityFrom(this.noOxygen, lowOxygenDuration * 2);
     }
 
     /**

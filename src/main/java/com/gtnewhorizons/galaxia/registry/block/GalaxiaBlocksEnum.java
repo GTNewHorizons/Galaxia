@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
+import static com.gtnewhorizons.galaxia.registry.block.base.BlockVariant.sandLike;
+import static com.gtnewhorizons.galaxia.registry.block.base.BlockVariant.stoneLike;
 import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
 
 import net.minecraft.block.Block;
@@ -10,9 +12,12 @@ import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceAir;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceStation;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileNoduleController;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockSilo;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -29,6 +34,7 @@ public enum GalaxiaBlocksEnum {
     SPACE_STATION_BLOCK(new BlockSpaceStation(), "space_station_block"),
     SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),
     SPACE_AIR(new BlockSpaceAir(), "space_air"),
+    ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), "module_assembler_controller")
     ; // leave trailing semicolon
 
     // spotless:on
@@ -43,6 +49,8 @@ public enum GalaxiaBlocksEnum {
         }
 
         GameRegistry.registerTileEntity(TileEntitySilo.class, "galaxia_silo_controller");
+        GameRegistry.registerTileEntity(TileNoduleController.class, "galaxia_nodule_controller");
+        GameRegistry.registerTileEntity(TileEntityModuleAssembler.class, "galaxia_module_assembler_controller");
     }
 
     // spotless:off
@@ -52,6 +60,7 @@ public enum GalaxiaBlocksEnum {
      * if drop item is not selected, blocks will drop themselves by default
      */
     public static void registerPlanetBlocks() {
+        // THEIA
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
             BlockVariant.TEKTITE,
@@ -63,11 +72,17 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.ANDESITE,
             BlockVariant.OBSIDIAN);
 
+        // HEMATERIA
         reg(DimensionEnum.HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
-            BlockVariant.SNOW);
+            BlockVariant.GABBRO,
+            BlockVariant.SNOW,
+            BlockVariant.ICE,
+            BlockVariant.MAGMA,
+            sandLike("rhyolite", 0.7F));
 
+        // FROZEN_BELT
         reg(DimensionEnum.FROZEN_BELT,
             BlockVariant.ICE,
             BlockVariant.BRECCIA,
@@ -76,6 +91,7 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.ANDESITE,
             BlockVariant.ANORTHOSITE);
 
+        // PANSPIRA
         reg(DimensionEnum.PANSPIRA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
@@ -83,6 +99,21 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.STONE,
             BlockVariant.SOIL,
             BlockVariant.MAGMA);
+
+        // TENEBRAE
+        reg(DimensionEnum.TENEBRAE,
+            BlockVariant.BASALT,
+            BlockVariant.MAGMA,
+            BlockVariant.ANDESITE,
+            BlockVariant.REGOLITH,
+            BlockVariant.ASH,
+            // unique blocks, no reason to create separate enum value for them
+            sandLike("pyriteRegolith", 0.7F),
+            sandLike("sulfuricRegolith", 0.7F),
+            sandLike("rhyolite", 0.7F),
+            sandLike("sulfuricRegolith", 0.7F),
+            stoneLike("latite", 2),
+            stoneLike("brimstone", 2));
     }
     //spotless:on
 

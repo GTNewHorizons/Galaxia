@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 /**
  * ENUM to hold all terrain presets

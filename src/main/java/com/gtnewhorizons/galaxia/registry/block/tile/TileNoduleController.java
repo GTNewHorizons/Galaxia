@@ -27,34 +27,15 @@ public class TileNoduleController extends TileEntity implements IGuiHolder<PosGu
     }
 
     public void repressurize() {
-        // if (!isDepressurized) return;
+        if (!isDepressurized) return;
         this.isDepressurized = false;
-        int x = this.xCoord;
-        int y = this.yCoord;
-        int z = this.zCoord;
-        if (BlockSpaceAir.isBlockDepressurized(this.worldObj, x + 1, y, z)) {
-            this.worldObj.setBlock(x + 1, y, z, Block.getBlockFromName("galaxia:space_air"), 2, 2);
-            this.worldObj.notifyBlockOfNeighborChange(x + 1, y, z, Block.getBlockFromName("galaxia:space_air"));
-        }
-        if (BlockSpaceAir.isBlockDepressurized(this.worldObj, x - 1, y, z)) {
-            this.worldObj.setBlock(x - 1, y, z, Block.getBlockFromName("galaxia:space_air"), 2, 2);
-            this.worldObj.notifyBlockOfNeighborChange(x - 1, y, z, Block.getBlockFromName("galaxia:space_air"));
-        }
-        if (BlockSpaceAir.isBlockDepressurized(this.worldObj, x, y, z + 1)) {
-            this.worldObj.setBlock(x, y, z + 1, Block.getBlockFromName("galaxia:space_air"), 2, 2);
-            this.worldObj.notifyBlockOfNeighborChange(x, y, z + 1, Block.getBlockFromName("galaxia:space_air"));
-        }
-        if (BlockSpaceAir.isBlockDepressurized(this.worldObj, x, y, z - 1)) {
-            this.worldObj.setBlock(x, y, z - 1, Block.getBlockFromName("galaxia:space_air"), 2, 2);
-            this.worldObj.notifyBlockOfNeighborChange(x, y, z - 1, Block.getBlockFromName("galaxia:space_air"));
-        }
-        if (BlockSpaceAir.isBlockDepressurized(this.worldObj, x, y + 1, z)) {
-            this.worldObj.setBlock(x, y + 1, z, Block.getBlockFromName("galaxia:space_air"), 2, 2);
-            this.worldObj.notifyBlockOfNeighborChange(x, y + 1, z, Block.getBlockFromName("galaxia:space_air"));
-        }
-        if (BlockSpaceAir.isBlockDepressurized(this.worldObj, x, y - 1, z)) {
-            this.worldObj.setBlock(x, y - 1, z, Block.getBlockFromName("galaxia:space_air"), 2, 2);
-            this.worldObj.notifyBlockOfNeighborChange(x, y - 1, z, Block.getBlockFromName("galaxia:space_air"));
+        int x = this.xCoord, y = this.yCoord, z = this.zCoord;
+        Block spaceAir = Block.getBlockFromName("galaxia:space_air");
+        for (int[] d : BlockSpaceAir.adjacents) {
+            if (BlockSpaceAir.isDepressurized(this.worldObj, x + d[0], y + d[1], z + d[2])) {
+                this.worldObj.setBlock(x + d[0], y + d[1], z + d[2], spaceAir, 2, 2);
+                this.worldObj.notifyBlockOfNeighborChange(x + d[0], y + d[1], z + d[2], spaceAir);
+            }
         }
     }
 
@@ -62,7 +43,7 @@ public class TileNoduleController extends TileEntity implements IGuiHolder<PosGu
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         return new ModularPanel("galaxia:rocket_silo").size(210, 130)
             .child(
-                IKey.str("§lnodule_controller")
+                IKey.str("nodule_controller")
                     .asWidget()
                     .pos(8, 8))
             .child(
@@ -93,7 +74,7 @@ public class TileNoduleController extends TileEntity implements IGuiHolder<PosGu
     public Packet getDescriptionPacket() {
         NBTTagCompound nbt = new NBTTagCompound();
         this.writeToNBT(nbt);
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, nbt);
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 0, nbt);
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.Collections;
 import java.util.Map;

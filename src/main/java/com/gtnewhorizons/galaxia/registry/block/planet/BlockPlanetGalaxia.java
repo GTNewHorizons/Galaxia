@@ -95,9 +95,14 @@ public class BlockPlanetGalaxia extends BlockFalling {
     public void registerBlockIcons(IIconRegister reg) {
         icons = new IIcon[variants.length];
         for (int i = 0; i < variants.length; i++) {
-            String texture = TEXTURE_PREFIX + planetName + capitalize(variants[i].suffix());
+            String texture = TEXTURE_PREFIX + planetName.toLowerCase() + "_" + toSnakeCase(variants[i].suffix());
             icons[i] = reg.registerIcon(texture);
         }
+    }
+
+    private static String toSnakeCase(String s) {
+        return s.replaceAll("([a-z])([A-Z])", "$1_$2")
+            .toLowerCase();
     }
 
     @Override
