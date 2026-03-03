@@ -96,7 +96,7 @@ public enum GalaxiaBlocksEnum {
 
             GalaxiaItemList.HEMATERIA_ICE_CUBES,
             BlockVariant.ICE,
-            stoneLike("dense_ice", 0.3F),
+            BlockVariant.DENSE_ICE,
 
             GalaxiaItemList.HEMATERIA_TEKTITE_SHARD,
             BlockVariant.TEKTITE
