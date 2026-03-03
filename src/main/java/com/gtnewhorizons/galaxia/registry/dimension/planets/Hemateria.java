@@ -74,7 +74,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     true,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())),
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH)),
                 0,
                 0)
             .biome(
@@ -90,7 +90,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     false,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())),
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH)),
                 0,
                 1)
             .biome(
@@ -110,7 +110,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     true,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH.suffix())),
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH)),
                 1,
                 0)
             .biome(
@@ -139,8 +139,8 @@ public class Hemateria extends BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(surfaceBlock)
-            .fillerBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.ANDESITE.suffix()))
-            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW.suffix()), 144)
+            .fillerBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.ANDESITE))
+            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW), 144)
             .terrain(terrain)
             .generateCaves(generateCaves)
             .build();
