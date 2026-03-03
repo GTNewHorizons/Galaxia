@@ -126,7 +126,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     false,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.GABBRO.suffix())),
+                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, "rhyolite")),
                 1,
                 1)
             .name(ENUM)
