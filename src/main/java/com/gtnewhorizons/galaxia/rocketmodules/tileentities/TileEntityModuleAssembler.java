@@ -1,9 +1,13 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -25,10 +29,12 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
 
     /**
      * The UI builder for the Tile Entity GUI
-     * 
+     *
      * @param data        information about the creation context
-     * @param syncManager sync handler where widget sync handlers should be registered
-     * @param settings    settings which apply to the whole ui and not just this panel
+     * @param syncManager sync handler where widget sync handlers should be
+     *                    registered
+     * @param settings    settings which apply to the whole ui and not just this
+     *                    panel
      * @return
      */
     @Override
@@ -69,7 +75,7 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
 
     /**
      * Creates a button to add a new module
-     * 
+     *
      * @param m The rocket module this button handles
      * @return The ButtonWidget needed in the main panel
      */
@@ -92,8 +98,44 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
     public void writeToNBT(NBTTagCompound tag) {}
 
     /**
+     * Writes an NBT packet to the server
+     *
+     * @return Packet holding the nbt update
+     */
+    @Override
+    public Packet getDescriptionPacket() {
+        NBTTagCompound nbt = new NBTTagCompound();
+
+        NBTTagCompound mapNbt = new NBTTagCompound();
+        for (Map.Entry<Integer, Integer> e : moduleMap.entrySet()) {
+            mapNbt.setInteger(
+                e.getKey()
+                    .toString(),
+                e.getValue());
+        }
+        nbt.setTag("moduleMap", mapNbt);
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 0, nbt);
+    }
+
+    /**
+     * Receives a data packet and updates NBT data
+     *
+     * @param net    The network manager of the server
+     * @param packet The incoming packet from the server
+     */
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        NBTTagCompound nbt = packet.func_148857_g();
+        moduleMap.clear();
+        NBTTagCompound mapNbt = nbt.getCompoundTag("moduleMap");
+        for (Object key : mapNbt.func_150296_c()) {
+            moduleMap.put(Integer.parseInt((String) key), mapNbt.getInteger((String) key));
+        }
+    }
+
+    /**
      * Adds a new module to the internal storage
-     * 
+     *
      * @param id The ID of the module being added
      */
     public void addModule(int id) {
