@@ -35,7 +35,6 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
      *                    registered
      * @param settings    settings which apply to the whole ui and not just this
      *                    panel
-     * @return
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
@@ -128,8 +127,8 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
         NBTTagCompound nbt = packet.func_148857_g();
         moduleMap.clear();
         NBTTagCompound mapNbt = nbt.getCompoundTag("moduleMap");
-        for (Object key : mapNbt.func_150296_c()) {
-            moduleMap.put(Integer.parseInt((String) key), mapNbt.getInteger((String) key));
+        for (String key : mapNbt.func_150296_c()) {
+            moduleMap.put(Integer.parseInt(key), mapNbt.getInteger(key));
         }
     }
 

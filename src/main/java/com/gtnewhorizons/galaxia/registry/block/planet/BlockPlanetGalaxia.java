@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.block.planet;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.TEXTURE_PREFIX;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.toSnakeCase;
 
 import java.util.Random;
 
@@ -93,11 +94,6 @@ public class BlockPlanetGalaxia extends BlockFalling {
             String texturePath = TEXTURE_PREFIX + planetFolder + "/" + planetFolder + "_" + suffixSnake;
             icons[i] = reg.registerIcon(texturePath);
         }
-    }
-
-    private static String toSnakeCase(String s) {
-        return s.replaceAll("([a-z])([A-Z])", "$1_$2")
-            .toLowerCase();
     }
 
     @Override

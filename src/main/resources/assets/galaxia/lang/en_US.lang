@@ -20,91 +20,114 @@
 itemGroup.galaxia=§9Galaxia§r
 
 #### Blocks
-# Blocks - "Theia"
-tile.TheiaRegolith.name=Theia Regolith
-tile.TheiaMagma.name=Theia Magma
-tile.TheiaGabbro.name=Theia Gabbro
-tile.TheiaBreccia.name=Theia Breccia
-tile.TheiaBasalt.name=Theia Basalt
-tile.TheiaAnorthosite.name=Theia Anorthosite
-tile.TheiaAndesite.name=Theia Andesite
-tile.TheiaTektite.name=Theia Tektite
-tile.TheiaObsidian.name=Theia Obsidian
 
-# Blocks - "Hemateria"
-tile.HemateriaRegolith.name=Hemateria Regolith
-tile.HemateriaRock.name=Hemateria Ash
-tile.HemateriaAndesite.name=Hemateria Andesite
-tile.HemateriaSand.name=Hemateria Sand
-tile.HemateriaSnow.name=Hemateria Snow
+# Blocks Theia
+tile.theia_regolith.name=Theia Regolith
+tile.theia_magma.name=Theia Magma
+tile.theia_gabbro.name=Theia Gabbro
+tile.theia_breccia.name=Theia Breccia
+tile.theia_basalt.name=Theia Basalt
+tile.theia_anorthosite.name=Theia Anorthosite
+tile.theia_andesite.name=Theia Andesite
+tile.theia_tektite.name=Theia Tektite
+tile.theia_obsidian.name=Theia Obsidian
 
-# Blocks - "Frozen Belt"
-tile.Frozen_BeltIce.name=Frozen Belt Ice
-tile.Frozen_BeltBreccia.name=Frozen Belt Breccia
-tile.Frozen_BeltGabbro.name=Frozen Belt Gabbro
-tile.Frozen_BeltBasalt.name=Frozen Belt Basalt
-tile.Frozen_BeltAndesite.name=Frozen Belt Andesite
-tile.Frozen_BeltAnorthosite.name=Frozen Belt Anorthosite
+# Blocks Hemateria
+tile.hemateria_regolith.name=Hemateria Regolith
+tile.hemateria_andesite.name=Hemateria Andesite
+tile.hemateria_basalt.name=Hemateria Basalt
+tile.hemateria_snow.name=Hemateria Snow
+tile.hemateria_magma.name=Hemateria Magma
+tile.hemateria_rhyolite.name=Hemateria Rhyolite
+tile.hemateria_ice.name=Hemateria Ice
+tile.hemateria_dense_ice.name=Hemateria Dense Ice
+tile.hemateria_peridotite.name=Hemateria Peridotite
+tile.hemateria_sand.name=Hemateria Sand
+tile.hemateria_sandstone.name=Hemateria Sandstone
+tile.hemateria_tuff.name=Hemateria Tuff
+tile.hemateria_tektite.name=Hemateria Tektite
 
-# Blocks - "Panspira"
-tile.PanspiraRegolith.name=Panspira Regolith
-tile.PanspiraAndesite.name=Panspira Andesite
-tile.PanspiraSnow.name=Panspira Snow
-tile.PanspiraStone.name=Panspira Stone
-tile.PanspiraSoil.name=Panspira Soil
-tile.PanspiraMagma.name=Panspira Magma
+# Blocks Frozen Belt
+tile.frozen_belt_ice.name=Frozen Belt Ice
+tile.frozen_belt_breccia.name=Frozen Belt Breccia
+tile.frozen_belt_gabbro.name=Frozen Belt Gabbro
+tile.frozen_belt_basalt.name=Frozen Belt Basalt
+tile.frozen_belt_andesite.name=Frozen Belt Andesite
+tile.frozen_belt_anorthosite.name=Frozen Belt Anorthosite
+
+# Blocks Panspira
+tile.panspira_regolith.name=Panspira Regolith
+tile.panspira_andesite.name=Panspira Andesite
+tile.panspira_snow.name=Panspira Snow
+tile.panspira_stone.name=Panspira Stone
+tile.panspira_soil.name=Panspira Soil
+tile.panspira_magma.name=Panspira Magma
+
+# Blocks Tenebrae
+tile.tenebrae_basalt.name=Tenebrae Basalt
+tile.tenebrae_magma.name=Tenebrae Magma
+tile.tenebrae_andesite.name=Tenebrae Andesite
+tile.tenebrae_regolith.name=Tenebrae Regolith
+tile.tenebrae_ash.name=Tenebrae Ash
+tile.tenebrae_pyrite_regolith.name=Tenebrae Pyrite Regolith
+tile.tenebrae_sulfuric_regolith.name=Tenebrae Sulfuric Regolith
+tile.tenebrae_rhyolite.name=Tenebrae Rhyolite
+tile.tenebrae_latite.name=Tenebrae Latite
+tile.tenebrae_brimstone.name=Tenebrae Brimstone
+tile.tenebrae_fumarole.name=Tenebrae Fumarole
+
+# Blocks Space Station
+tile.space_station_block.name=Space Insulation Block
+tile.space_station_glass.name=Space glass
+tile.nodule_controller.name=Station Module Controller
+tile.space_air.name=Space Air
+tile.module_assembler_controller.name=Module Assembler
+tile.silo_controller.name=Rocket Silo
+
+# Miscellaneous / Resource blocks
+tile.block_of_pyrite.name=Block of Pyrite
+tile.block_of_cheese.name=Block of Cheese
+tile.block_of_cinnabar.name=Block of Cinnabar
+tile.meteoric_iron_block.name=Meteoric Iron Block
+tile.raw_sulfur_block.name=Raw Sulfur Block
+tile.enchanted_block_of_cinnabar.name=Enchanted Block of Cinnabar
+tile.rusty_iron_block.name=Rusty Iron Block
+tile.bleeding_obsidian.name=Bleeding Obsidian
+tile.rusty_scaffolding.name=Rusty Scaffolding
+tile.rusty_panel.name=Rusty Panel
 
 #### Items
-item.galaxia.galaxia_logo.name=Galaxia
+item.galaxia.galaxia_logo.name=Galaxia Logo
+
+# Tools
 item.galaxia.teleporter.name=Teleporter
-
-# Items - "Armor"
-item.galaxia.spacesuit_leggings.name=Space Suit Leggins
-item.galaxia.spacesuit_boots.name=Space Suit Boots
-item.galaxia.spacesuit_helmet.name=Space Suit Helmet
-item.galaxia.spacesuit_chestplate.name=Space Suit Chestplate
-
-# Items - "Baubles"
-item.galaxia.oxygen_tank_1.name=Basic Oxygen Tank
-item.galaxia.oxygen_tank_2.name=Advanced Oxygen Tank
-item.galaxia.oxygen_tank_3.name=Elite Oxygen Tank
-item.galaxia.oxygen_tank_4.name=Unlimited Oxygen Tank
-item.galaxia.thermal_protection_cold.name=Cold Protection
-item.galaxia.thermal_protection_hot.name=Heat Protection
-
-item.galaxia.oxygen_tank.desc=Oxygen: %s/%s
-item.galaxia.thermal_protection.desc.cold=+%s Cold Resistance
-item.galaxia.thermal_protection.desc.hot=+%s Heat Resistance
-
-# Baubles Extended Slots
-slot.oxygen_tank=§aOxygen Tank§7
-slot.thermal_protection=§aThermal Protection§7
-
-# Items - "Planet stone dust"
-item.galaxia.theia_dust.name=Theia stone dust
-
-# Items - "Other"
 item.galaxia.galactic_map.name=Galactic Map
 
-#### Elements
-# Elements - "Planet Teleporter"
-galaxia.gui.planet_teleporter.title=Planet Teleporter
-galaxia.gui.planet_teleporter.teleport=Teleport
-galaxia.gui.planet_teleporter.selected=Selected: %s
+# Worldgen / Ores
+item.galaxia.theia_dust.name=Theia Dust
+item.galaxia.theia_tektite_shard.name=Theia Tektite Shard
+item.galaxia.cinnabar_scale.name=Cinnabar Scale
+item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
+item.galaxia.hemateria_dust.name=Hemateria Dust
+item.galaxia.hemateria_tektite_shard.name=Hemateria Tektite Shard
+item.galaxia.hemateria_ice_cubes.name=Hemateria Ice Cubes
 
-# Elements - Orbital GUI
-galaxia.gui.orbital.search=Search
-galaxia.gui.orbital.search.placeholder=Enter name...
-galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
-galaxia.gui.orbital.paused=§cPAUSED§r
-galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
+# Armor
+item.galaxia.spacesuit_helmet.name=Space Suit Helmet
+item.galaxia.spacesuit_chestplate.name=Space Suit Chestplate
+item.galaxia.spacesuit_leggings.name=Space Suit Leggings
+item.galaxia.spacesuit_boots.name=Space Suit Boots
 
-galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===
-galaxia.gui.orbital.debug.camera=Camera: %.3f, %.3f
-galaxia.gui.orbital.debug.following=Following: %s  |  Paused: %b
-galaxia.gui.orbital.debug.time=Time: %.1fs  |  Speed: ×%.1f
-galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
-galaxia.gui.orbital.debug.none=none
+# Gear / Baubles
+item.galaxia.oxygen_tank_1.name=Small Oxygen Tank
+item.galaxia.oxygen_tank_2.name=Medium Oxygen Tank
+item.galaxia.oxygen_tank_3.name=Large Oxygen Tank
+item.galaxia.oxygen_tank_4.name=§6Creative Oxygen Tank
+item.galaxia.oxygen_tank.desc=Oxygen Level: %s
+item.galaxia.thermal_protection_cold.name=Cold Thermal Protection
+item.galaxia.thermal_protection_hot.name=Hot Thermal Protection
+item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
+item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 
 #### Config
 
@@ -167,7 +190,7 @@ galaxia.config.overlay.temperature_bar_vertical_offset=Temperature bar vertical 
 galaxia.config.overlay.temperature_bar_vertical_offset.tooltip=Additional vertical offset for temperature bar in pixels
 galaxia.config.overlay.temperature_bar_too_cold=Temperature bar low threshold
 galaxia.config.overlay.temperature_bar_too_cold.tooltip=Temperature level below which it is considered too cold
-galaxia.config.overlay.temperature_bar_too_hot=Temperature bar high hreshold
+galaxia.config.overlay.temperature_bar_too_hot=Temperature bar high threshold
 galaxia.config.overlay.temperature_bar_too_hot.tooltip=Temperature level above which it is considered too hot
 galaxia.config.overlay.texture.temperature_bar_width=Temperature bar texture width
 galaxia.config.overlay.texture.temperature_bar_width.tooltip=Temperature bar texture width in pixels

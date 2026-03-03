@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.block.base;
 
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.toSnakeCase;
+
 import java.util.List;
 
 import net.minecraft.block.Block;
@@ -63,7 +65,11 @@ public class ItemBlockGalaxiaPlanet extends ItemBlock {
     public String getUnlocalizedName(ItemStack stack) {
         int meta = MathHelper.clamp_int(stack.getItemDamage(), 0, planetBlock.getVariantCount() - 1);
         String suffix = planetBlock.getVariantSuffix(meta);
-        return "tile." + planetBlock.getPlanetName() + capitalize(suffix);
+        return "tile." + String.format(
+            "%s_%s",
+            planetBlock.getPlanetName()
+                .toLowerCase(),
+            toSnakeCase(suffix));
     }
 
     /**

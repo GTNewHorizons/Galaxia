@@ -44,6 +44,7 @@ public enum GalaxiaBlocksEnum {
      */
     public static void registerBlocks() {
         for (GalaxiaBlocksEnum block : values()) {
+            block.theBlock.setBlockName(block.name);
             GameRegistry.registerBlock(block.get(), block.name);
             block.theBlock.setCreativeTab(Galaxia.creativeTab);
         }
@@ -58,10 +59,12 @@ public enum GalaxiaBlocksEnum {
     /**
      * Registers all block variants for each planet, alongside the relevant drop items
      * if drop item is not selected, blocks will drop themselves by default
+     * there are some unique blocks, no reason to create separate enum value for them
      */
     public static void registerPlanetBlocks() {
         // THEIA
-        reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
+        reg(DimensionEnum.THEIA,
+            GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
             BlockVariant.MAGMA,
             BlockVariant.GABBRO,
@@ -71,17 +74,33 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.ANDESITE,
             GalaxiaItemList.DROP_SELF,
             BlockVariant.OBSIDIAN,
+
             GalaxiaItemList.THEIA_TEKTITE_SHARD,
-            BlockVariant.TEKTITE);
+            BlockVariant.TEKTITE
+        );
 
         // HEMATERIA
-        reg(DimensionEnum.HEMATERIA, GalaxiaItemList.DUST_HEMATERIA,
+        reg(DimensionEnum.HEMATERIA,
+            GalaxiaItemList.DUST_HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
+            BlockVariant.BASALT,
             BlockVariant.SNOW,
-            BlockVariant.ICE,
             BlockVariant.MAGMA,
-            sandLike("rhyolite", 0.7F));
+            BlockVariant.SAND,
+            BlockVariant.SANDSTONE,
+            BlockVariant.SNOW,
+            BlockVariant.TUFF,
+            stoneLike("peridotite", 2.7F),
+            sandLike("rhyolite", 0.7F),
+
+            GalaxiaItemList.HEMATERIA_ICE_CUBES,
+            BlockVariant.ICE,
+            stoneLike("dense_ice", 0.3F),
+
+            GalaxiaItemList.HEMATERIA_TEKTITE_SHARD,
+            BlockVariant.TEKTITE
+        );
 
         // FROZEN_BELT
         reg(DimensionEnum.FROZEN_BELT,
@@ -90,7 +109,8 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.GABBRO,
             BlockVariant.BASALT,
             BlockVariant.ANDESITE,
-            BlockVariant.ANORTHOSITE);
+            BlockVariant.ANORTHOSITE
+        );
 
         // PANSPIRA
         reg(DimensionEnum.PANSPIRA,
@@ -99,7 +119,8 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.SNOW,
             BlockVariant.STONE,
             BlockVariant.SOIL,
-            BlockVariant.MAGMA);
+            BlockVariant.MAGMA
+        );
 
         // TENEBRAE
         reg(DimensionEnum.TENEBRAE,
@@ -108,7 +129,6 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.ANDESITE,
             BlockVariant.REGOLITH,
             BlockVariant.ASH,
-            // unique blocks, no reason to create separate enum value for them
             sandLike("pyriteRegolith", 0.7F),
             sandLike("sulfuricRegolith", 0.7F),
             sandLike("rhyolite", 0.7F),
