@@ -11,6 +11,7 @@ import net.minecraft.world.chunk.Chunk;
 import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 public class WorldGenCrater extends WorldGenGalaxia {
+
     private final BlockMeta tektite;
 
     public WorldGenCrater(int rarity, BlockMeta[] surfaceRequirements, BlockMeta tektite) {
@@ -36,9 +37,15 @@ public class WorldGenCrater extends WorldGenGalaxia {
                 for (int rimY = -10; rimY <= 10; rimY++) {
                     if (rimDistance >= squaredCraterRadius - random.nextInt(96)
                         && rimDistance < squaredCraterRadius + random.nextInt(64)
-                    && !world.isAirBlock(x + localX, y + rimY + heightOffset, z + localZ)
-                    && world.isAirBlock(x + localX, y + rimY + heightOffset + 1, z + localZ)) {
-                        setBlockFast(world, x + localX, y + rimY + heightOffset + 1, z + localZ, tektite.block(), tektite.meta());
+                        && !world.isAirBlock(x + localX, y + rimY + heightOffset, z + localZ)
+                        && world.isAirBlock(x + localX, y + rimY + heightOffset + 1, z + localZ)) {
+                        setBlockFast(
+                            world,
+                            x + localX,
+                            y + rimY + heightOffset + 1,
+                            z + localZ,
+                            tektite.block(),
+                            tektite.meta());
                         break;
                     }
                 }

@@ -1,18 +1,18 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
+import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
 import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
-import net.minecraft.world.biome.BiomeGenBase;
+import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
+import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The class holding all data related to the dimension Hemateria
@@ -133,8 +133,8 @@ public class Hemateria extends BasePlanet {
             .build();
     }
 
-    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain,
-                                              boolean generateCaves, BlockMeta surfaceBlock) {
+    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain, boolean generateCaves,
+        BlockMeta surfaceBlock) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .temperature(0.4F)
             .rainfall(0.99F)
