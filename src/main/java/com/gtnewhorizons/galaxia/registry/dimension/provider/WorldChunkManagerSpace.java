@@ -58,6 +58,14 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      */
     public BiomeGenBase getBiomeGenAt(int x, int z) {
         if (!(cacheCreated && x == cacheX && z == cacheZ)) {
+            if (biomeGeneratorMatrix.length == 1 && biomeGeneratorMatrix[0].length == 1) {
+                cacheX = x;
+                cacheZ = z;
+                cacheCreated = true;
+                cacheBiomeIndexX = 0;
+                cacheBiomeIndexZ = 0;
+                return biomeGeneratorMatrix[cacheBiomeIndexX][cacheBiomeIndexZ];
+            }
             cacheBiomeIndexX = getBiomeIndex(x, z, biomeGeneratorMatrix.length, xBiomeNoise, true);
             cacheBiomeIndexZ = getBiomeIndex(x, z, biomeGeneratorMatrix[0].length, zBiomeNoise, false);
             cacheX = x;

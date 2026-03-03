@@ -22,6 +22,17 @@ public record BlockVariant(String suffix, float hardness, boolean falling, Strin
     }
 
     /**
+     * Registers the block variant as having similar characteristics to vanilla stone
+     *
+     * @param suffix   The suffix in the ENUM giving the type of rock, e.g. Andesite etc.
+     * @param hardness The desired hardness level of the block
+     * @return A BlockVariant with desired characteristics
+     */
+    public static BlockVariant stoneLike(String suffix, float hardness) {
+        return new BlockVariant(suffix, hardness, false, "pickaxe", 0, true);
+    }
+
+    /**
      * Registers the block variant as having similar characteristics to vanilla sand
      *
      * @param suffix   The suffix in the ENUM giving the type of rock, e.g. Regolith etc.
@@ -44,6 +55,7 @@ public record BlockVariant(String suffix, float hardness, boolean falling, Strin
     }
 
     // Creating block variants for all ENUM requirements
+    public static final BlockVariant ASH = sandLike("ash", 0.5F);
     public static final BlockVariant REGOLITH = sandLike("regolith", 0.7F);
     public static final BlockVariant ANDESITE = stoneLike("andesite", 2F, 0);
     public static final BlockVariant ANORTHOSITE = stoneLike("anorthosite", 2F, 1);

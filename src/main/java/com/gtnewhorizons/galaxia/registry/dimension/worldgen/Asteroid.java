@@ -19,6 +19,7 @@ public class Asteroid extends WorldGenerator {
     private final int maximumSize;
     private final int rarity;
     private final BlockMeta[] blockPalette;
+    private final BlockMeta[] surfaceBlockPalette;
     private final int craterFrequency;
 
     /**
@@ -30,11 +31,13 @@ public class Asteroid extends WorldGenerator {
      * @param blockPalette    Block paletter to be used in creation
      * @param craterFrequency Frequency of craters on asteroids
      */
-    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette, int craterFrequency) {
+    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette,
+        BlockMeta[] surfaceBlockPalette, int craterFrequency) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
         this.rarity = rarity;
         this.blockPalette = blockPalette;
+        this.surfaceBlockPalette = surfaceBlockPalette;
         this.craterFrequency = Math.max(1, craterFrequency);
     }
 
@@ -99,6 +102,77 @@ public class Asteroid extends WorldGenerator {
             }
         }
 
+        // Paint surfaces
+        // Paint z surfaces
+        for (int localX = 0; localX < diameter; localX++) {
+            for (int localY = 0; localY < diameter; localY++) {
+                for (int localZ = 0; localZ < halfDiameter; localZ++) {
+                    if (blockData[localX][localY][localZ] > 0) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(surfaceBlockPalette.length)
+                            + blockPalette.length);
+                        break;
+                    }
+                }
+            }
+        }
+        for (int localX = 0; localX < diameter; localX++) {
+            for (int localY = 0; localY < diameter; localY++) {
+                for (int localZ = diameter - 1; localZ >= halfDiameter; localZ--) {
+                    if (blockData[localX][localY][localZ] > 0) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(surfaceBlockPalette.length)
+                            + blockPalette.length);
+                        break;
+                    }
+                }
+            }
+        }
+        // Paint x surfaces
+        for (int localY = 0; localY < diameter; localY++) {
+            for (int localZ = 0; localZ < diameter; localZ++) {
+                for (int localX = 0; localX < halfDiameter; localX++) {
+                    if (blockData[localX][localY][localZ] > 0) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(surfaceBlockPalette.length)
+                            + blockPalette.length);
+                        break;
+                    }
+                }
+            }
+        }
+        for (int localY = 0; localY < diameter; localY++) {
+            for (int localZ = 0; localZ < diameter; localZ++) {
+                for (int localX = diameter - 1; localX >= halfDiameter; localX--) {
+                    if (blockData[localX][localY][localZ] > 0) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(surfaceBlockPalette.length)
+                            + blockPalette.length);
+                        break;
+                    }
+                }
+            }
+        }
+        // Paint y surfaces
+        for (int localX = 0; localX < diameter; localX++) {
+            for (int localZ = 0; localZ < diameter; localZ++) {
+                for (int localY = 0; localY < halfDiameter; localY++) {
+                    if (blockData[localX][localY][localZ] > 0) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(surfaceBlockPalette.length)
+                            + blockPalette.length);
+                        break;
+                    }
+                }
+            }
+        }
+        for (int localX = 0; localX < diameter; localX++) {
+            for (int localZ = 0; localZ < diameter; localZ++) {
+                for (int localY = diameter - 1; localY >= halfDiameter; localY--) {
+                    if (blockData[localX][localY][localZ] > 0) {
+                        blockData[localX][localY][localZ] = (byte) (1 + random.nextInt(surfaceBlockPalette.length)
+                            + blockPalette.length);
+                        break;
+                    }
+                }
+            }
+        }
+
         // Add craters to shape
         int craterCount = Math.max(8, 2 + size * craterFrequency);
         for (int i = 0; i < craterCount; i++) {
@@ -114,7 +188,12 @@ public class Asteroid extends WorldGenerator {
                     int combinedZ = z + localZ - halfDiameter;
                     byte localBlockValue = blockData[localX][localY][localZ];
                     if (localBlockValue > 0) {
-                        BlockMeta blockMeta = blockPalette[localBlockValue - 1];
+                        BlockMeta blockMeta;
+                        if (localBlockValue <= blockPalette.length) {
+                            blockMeta = blockPalette[localBlockValue - 1];
+                        } else {
+                            blockMeta = surfaceBlockPalette[localBlockValue - 1 - blockPalette.length];
+                        }
                         setBlockFast(world, combinedX, combinedY, combinedZ, blockMeta.block(), blockMeta.meta());
                     }
                 }

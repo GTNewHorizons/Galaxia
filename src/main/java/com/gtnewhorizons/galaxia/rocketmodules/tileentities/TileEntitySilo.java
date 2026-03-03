@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -46,10 +45,12 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * The UI builder for the tile entity
-     * 
+     *
      * @param data        information about the creation context
-     * @param syncManager sync handler where widget sync handlers should be registered
-     * @param settings    settings which apply to the whole ui and not just this panel
+     * @param syncManager sync handler where widget sync handlers should be
+     *                    registered
+     * @param settings    settings which apply to the whole ui and not just this
+     *                    panel
      * @return The ModularPanel to display as UI
      */
     @Override
@@ -77,20 +78,16 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
         panel.child(row);
 
-        // Assembler count indicators
-        Flow row2 = Flow.row()
-            .coverChildren()
-            .pos(10, 70)
-            .padding(4);
-        for (RocketModule m : ModuleRegistry.getAll()) {
-            Supplier<String> stringSupplier = () -> m.getName() + " : " + ma.moduleMap.getOrDefault(m.getId(), 0);
-            row2.child(
-                IKey.dynamic(stringSupplier)
-                    .asWidget()
-                    .padding(4)
-                    .size(40, 20));
-        }
-        panel.child(row2);
+        panel.child(
+            new ButtonWidget<>().size(220, 30)
+                .pos(10, 80)
+                .overlay(
+                    IKey.str("Return Modules")
+                        .alignment(Alignment.Center))
+                .tooltip(t -> t.addLine("Disassemble Rocket"))
+                .syncHandler(
+                    new InteractionSyncHandler().setOnMousePressed(
+                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(ma); })));
 
         // Build Rocket and enter button
         panel.child(
@@ -119,7 +116,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Creates the button for adding a module
-     * 
+     *
      * @param m  The Rocket module this button is responsible for
      * @param ma The Module Assembler this is linked to
      * @return ButtonWidget to add to the panel
@@ -140,7 +137,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Enters the rocket and starts launch cycle (cycle = GO currently)
-     * 
+     *
      * @param data The data from the GUI
      */
     private void enterRocket(PosGuiData data) {
@@ -156,8 +153,9 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     /**
-     * Adds a module to the render stack and eventual entity, and removes 1 from associated Assembler map
-     * 
+     * Adds a module to the render stack and eventual entity, and removes 1 from
+     * associated Assembler map
+     *
      * @param id The module ID to add
      * @param ma The linked Module Assembler
      */
@@ -171,7 +169,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Checks to see if the linked assembler has the module requested
-     * 
+     *
      * @param id The ID of the module to check
      * @param ma The linked assembler to check from
      * @return Boolean : True -> has the module
@@ -181,8 +179,27 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     /**
+     * Returns the modules back to the linked assembler
+     *
+     * @param ma The Module Assembler tile entity
+     */
+    public void returnModules(TileEntityModuleAssembler ma) {
+        for (Integer id : modules) {
+            ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
+        }
+        assembly = null;
+        markDirty();
+        ma.markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            worldObj.markBlockForUpdate(ma.xCoord, ma.yCoord, ma.zCoord);
+        }
+        modules.clear();
+    }
+
+    /**
      * Gets the RocketAssmebly for this silo or creates a new one
-     * 
+     *
      * @return RocketAssembly
      */
     public RocketAssembly getAssembly() {
@@ -192,7 +209,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Gets the first capsule index from the modules list
-     * 
+     *
      * @return The index of the first capsule
      */
     public int getFirstCapsuleIndex() {
@@ -228,7 +245,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Getter for the rocket entity
-     * 
+     *
      * @return Rocket entity
      */
     public EntityRocket getEntityRocket() {
@@ -237,7 +254,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Gets all modules in the current stack
-     * 
+     *
      * @return ArrayList of modules
      */
     public ArrayList<Integer> getModules() {
@@ -246,7 +263,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Gets the number of modules in the stack
-     * 
+     *
      * @return Number of modules in stack
      */
     public int getNumModules() {
@@ -278,7 +295,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Returns rendering bounding box
-     * 
+     *
      * @return Bounding box
      */
     @Override
@@ -288,7 +305,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Gets the max render distance squared
-     * 
+     *
      * @return Max RDS
      */
     @Override
@@ -298,7 +315,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Writes TE data to NBT taq
-     * 
+     *
      * @param nbt Tag to write to NBT
      */
     @Override
@@ -317,7 +334,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Reads from NBT tag and updates TE state
-     * 
+     *
      * @param nbt Tag to read from
      */
     @Override
@@ -336,7 +353,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Description packet method used for server side syncing
-     * 
+     *
      * @return The update packet
      */
     @Override
@@ -348,7 +365,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Receiver for the packet
-     * 
+     *
      * @param net The NetworkManager the packet came from
      * @param pkt The packet
      */
@@ -359,7 +376,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Finds a module assembler within a 10x10 plane on same height
-     * 
+     *
      * @return ModuleAssembler TE if found, else null
      */
     public TileEntityModuleAssembler findAssemblerToLink() {

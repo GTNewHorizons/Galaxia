@@ -69,8 +69,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Hills",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE),
                     true,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -92,8 +92,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Mountains",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE),
                     true,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -115,8 +115,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Small Volcanoes",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
                     false,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -124,18 +124,18 @@ public class Theia extends BasePlanet {
                         .endFeature()
                         .feature(TerrainPreset.SHIELD_VOLCANOES)
                         .width(2)
-                        .height(8)
+                        .height(16)
                         .endFeature()
                         .build(),
                     8,
-                    41),
+                    56),
                 1,
                 0)
             .biome(
                 createBiome(
                     "Theia Big Volcanoes",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
                     false,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -143,11 +143,11 @@ public class Theia extends BasePlanet {
                         .endFeature()
                         .feature(TerrainPreset.SHIELD_VOLCANOES)
                         .width(4)
-                        .height(32)
+                        .height(64)
                         .endFeature()
                         .build(),
                     8,
-                    41),
+                    56),
                 1,
                 1)
             .name(ENUM)
@@ -217,14 +217,15 @@ public class Theia extends BasePlanet {
             .surfaceFeature(
                 new WorldGenCrater(
                     craterRarity,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH.suffix()),
-                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()) }))
+                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH),
+                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT) },
+                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.TEKTITE)))
             .terrain(terrainConfiguration)
             .ocean(
-                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN.suffix()),
-                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT.suffix()),
+                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN),
+                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
                 oceanHeight,
-                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN.suffix()),
+                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN),
                 1)
             .surfaceThickness(4)
             .build();

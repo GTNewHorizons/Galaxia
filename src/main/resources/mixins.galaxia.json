@@ -8,7 +8,8 @@
     "ParticleGravityMixin",
     "UnifiedGravityMixin",
     "FallDamageMixin",
-    "JumpMixin"
+    "JumpMixin",
+    "RelativeMovementMixin"
   ],
   "client": [
     "MixinEntityRenderer"

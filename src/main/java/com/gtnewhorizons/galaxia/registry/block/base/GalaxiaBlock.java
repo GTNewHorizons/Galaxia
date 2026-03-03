@@ -73,26 +73,48 @@ public class GalaxiaBlock {
      * @return The BlockMeta of the variant
      */
     public static BlockMeta get(DimensionEnum planet, String variant) {
-        // Check that the given planet exists and has blocks to generate
         BlockPlanetGalaxia block = planetBlocks.get(planet);
-        if (block == null) {
-            throw new IllegalArgumentException("Planet not registered: " + planet);
-        }
 
-        // Check that the variant exists, and return the BlockMeta
-        boolean found = false;
-        int meta = 0;
-        for (int i = 0; i < block.getVariantCount(); i++) {
-            if (block.getVariantSuffix(i)
+        for (int meta = 0; meta < block.getVariantCount(); meta++) {
+            if (block.getVariantSuffix(meta)
                 .equalsIgnoreCase(variant)) {
-                meta = i;
-                found = true;
-                break;
+                return new BlockMeta(block, meta);
             }
         }
-        if (!found) {
-            throw new IllegalArgumentException("Variant '" + variant + "' not found for planet " + planet.getName());
-        }
-        return new BlockMeta(block, meta);
+        throw new IllegalArgumentException(
+            String.format("Variant '%s' not found for planet %s", variant, planet.getName()));
+    }
+
+    /**
+     * Returns the BlockMeta for a given planet and variant
+     *
+     * @param planet  The planet from which the blocks generate
+     * @param variant The specific BlockVariant instance
+     * @return The BlockMeta corresponding to the variant
+     */
+    public static BlockMeta get(DimensionEnum planet, BlockVariant variant) {
+        return get(planet, variant.suffix());
+    }
+
+    /**
+     * Returns the metadata value for a given planet and variant
+     *
+     * @param planet  The planet from which the blocks generate
+     * @param variant The specific BlockVariant instance
+     * @return The metadata value of the variant
+     */
+    public static int getMeta(DimensionEnum planet, BlockVariant variant) {
+        return get(planet, variant).meta();
+    }
+
+    /**
+     * Returns the Block instance for a given planet and variant enum.
+     *
+     * @param planet  The planet from which the blocks generate
+     * @param variant The specific BlockVariant instance
+     * @return The BlockPlanetGalaxia instance for the planet
+     */
+    public static Block getBlock(DimensionEnum planet, BlockVariant variant) {
+        return get(planet, variant).block();
     }
 }
