@@ -5,6 +5,7 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtec
 
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksMiscEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
@@ -34,6 +35,7 @@ public class CommonProxy {
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerPlanetBlocks();
         GalaxiaBlocksEnum.registerBlocks();
+        GalaxiaBlocksMiscEnum.registerBlocksMisc();
         GalaxiaEffects.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
