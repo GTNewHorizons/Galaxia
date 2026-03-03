@@ -25,9 +25,6 @@ public enum GalaxiaBlocksMiscEnum {
     RUSTY_SCAFFOLDING(new BlockConfigurable("rusty_scaffolding")
         .opaque()),
     RUSTY_PANEL(new BlockConfigurable("rusty_panel")),
-    RUSTY_IRON_BLOCK(new BlockConfigurable("rusty_iron_block")),
-    RAW_SULFUR_BLOCK(new BlockConfigurable("raw_sulfur_block")),
-    METEORIC_IRON_BLOCK(new BlockConfigurable("meteoric_iron_block")),
     FUMAROLE(new BlockFumarole()),;
     //spotless:on
 
