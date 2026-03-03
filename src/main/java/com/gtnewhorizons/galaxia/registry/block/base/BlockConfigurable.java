@@ -24,10 +24,12 @@ public class BlockConfigurable extends Block {
 
     public BlockConfigurable(String name) {
         super(Material.rock);
-        this.name = name;
+        int last = name.lastIndexOf('/');
+        String registryName = (last >= 0) ? name.substring(last + 1) : name;
+        this.name = registryName;
         this.textureName = name;
 
-        setBlockName(name);
+        setBlockName(registryName);
         setStepSound(soundTypeStone);
     }
 
