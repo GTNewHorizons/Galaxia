@@ -9,18 +9,22 @@ import cpw.mods.fml.common.registry.GameRegistry;
 
 public enum GalaxiaBlocksMiscEnum {
 
+    // spotless:off
     BLOCK_OF_PYRITE(new BlockConfigurable("block_of_pyrite")),
     BLOCK_OF_CHEESE(new BlockConfigurable("block_of_cheese")),
     BLOCK_OF_CINNABAR(new BlockConfigurable("block_of_cinnabar")),
     ENCHANTED_BLOCK_OF_CINNABAR(new BlockConfigurable("enchanted_block_of_cinnabar")),
-    BLEEDING_OBSIDIAN(new BlockConfigurable("bleeding_obsidian").hardnessAndResistance(16, 500)
+    BLEEDING_OBSIDIAN(new BlockConfigurable("bleeding_obsidian")
+        .hardnessAndResistance(16, 500)
         .harvest("pickaxe", 3)),
-    RUSTY_SCAFFOLDING(new BlockConfigurable("rusty_scaffolding")),
+    RUSTY_SCAFFOLDING(new BlockConfigurable("rusty_scaffolding")
+        .opaque()),
     RUSTY_PANEL(new BlockConfigurable("rusty_panel")),
     RUSTY_IRON_BLOCK(new BlockConfigurable("rusty_iron_block")),
     RAW_SULFUR_BLOCK(new BlockConfigurable("raw_sulfur_block")),
     METEORIC_IRON_BLOCK(new BlockConfigurable("meteoric_iron_block")),
     FUMAROLE(new BlockConfigurable("fumarole")),;
+    //spotless:on
 
     private final Block theBlock;
 

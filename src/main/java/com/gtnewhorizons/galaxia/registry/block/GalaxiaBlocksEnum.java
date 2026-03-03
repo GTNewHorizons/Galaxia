@@ -63,20 +63,21 @@ public enum GalaxiaBlocksEnum {
         // THEIA
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
-            BlockVariant.TEKTITE,
             BlockVariant.MAGMA,
             BlockVariant.GABBRO,
             BlockVariant.BRECCIA,
             BlockVariant.BASALT,
             BlockVariant.ANORTHOSITE,
             BlockVariant.ANDESITE,
-            BlockVariant.OBSIDIAN);
+            GalaxiaItemList.DROP_SELF,
+            BlockVariant.OBSIDIAN,
+            GalaxiaItemList.THEIA_TEKTITE_SHARD,
+            BlockVariant.TEKTITE);
 
         // HEMATERIA
-        reg(DimensionEnum.HEMATERIA,
+        reg(DimensionEnum.HEMATERIA, GalaxiaItemList.DUST_HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
-            BlockVariant.GABBRO,
             BlockVariant.SNOW,
             BlockVariant.ICE,
             BlockVariant.MAGMA,

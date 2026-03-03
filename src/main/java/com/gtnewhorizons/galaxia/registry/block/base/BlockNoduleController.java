@@ -15,7 +15,7 @@ public class BlockNoduleController extends Block implements ITileEntityProvider 
     public BlockNoduleController() {
         super(Material.iron);
         this.setBlockName("nodule_controller");
-        this.setBlockTextureName("galaxia:space_station_block_1");
+        this.setBlockTextureName("galaxia:space_station/space_station_block_1");
     }
 
     @Override

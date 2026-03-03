@@ -20,24 +20,18 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     private final String planetName;
     private final BlockVariant[] variants;
-    private final Item dust;
+    private final Item[] drops;
     private IIcon[] icons;
 
-    public BlockPlanetGalaxia(String planetName, Item dust, BlockVariant... variants) {
+    public BlockPlanetGalaxia(String planetName, Item[] drops, BlockVariant... variants) {
         super(Material.rock);
         this.planetName = planetName;
         this.variants = variants;
-        this.dust = dust;
+        this.drops = drops;
 
-        setStepSound(soundTypeStone);
-        setCreativeTab(Galaxia.creativeTab);
-    }
-
-    public BlockPlanetGalaxia(String planetName, BlockVariant... variants) {
-        super(Material.rock);
-        this.planetName = planetName;
-        this.variants = variants;
-        this.dust = null;
+        if (drops.length != variants.length) {
+            throw new IllegalArgumentException("Drops array must match variants length");
+        }
 
         setStepSound(soundTypeStone);
         setCreativeTab(Galaxia.creativeTab);
@@ -65,8 +59,10 @@ public class BlockPlanetGalaxia extends BlockFalling {
 
     @Override
     public Item getItemDropped(int meta, Random rand, int fortune) {
-        if (this.dust != null && variants[meta].dropsDust()) {
-            return this.dust;
+        meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
+        Item dropItem = drops[meta];
+        if (dropItem != null && variants[meta].dropsDust()) {
+            return dropItem;
         }
         return Item.getItemFromBlock(this);
     }
@@ -74,10 +70,7 @@ public class BlockPlanetGalaxia extends BlockFalling {
     @Override
     public int damageDropped(int meta) {
         meta = MathHelper.clamp_int(meta, 0, variants.length - 1);
-        if (this.dust != null && variants[meta].dropsDust()) {
-            return 0;
-        }
-        return meta;
+        return drops[meta] != null && variants[meta].dropsDust() ? 0 : meta;
     }
 
     public String getVariantSuffix(int meta) {
@@ -94,9 +87,11 @@ public class BlockPlanetGalaxia extends BlockFalling {
     @Override
     public void registerBlockIcons(IIconRegister reg) {
         icons = new IIcon[variants.length];
+        String planetFolder = planetName.toLowerCase();
         for (int i = 0; i < variants.length; i++) {
-            String texture = TEXTURE_PREFIX + planetName.toLowerCase() + "_" + toSnakeCase(variants[i].suffix());
-            icons[i] = reg.registerIcon(texture);
+            String suffixSnake = toSnakeCase(variants[i].suffix());
+            String texturePath = TEXTURE_PREFIX + planetFolder + "/" + planetFolder + "_" + suffixSnake;
+            icons[i] = reg.registerIcon(texturePath);
         }
     }
 

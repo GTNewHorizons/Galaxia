@@ -20,6 +20,7 @@ public class BlockConfigurable extends Block {
     private int dropMeta = 0;
 
     private IIcon icon;
+    private boolean opaque = true;
 
     public BlockConfigurable(String name) {
         super(Material.rock);
@@ -43,7 +44,7 @@ public class BlockConfigurable extends Block {
         return this;
     }
 
-    public BlockConfigurable customSound(SoundType sound) {
+    public BlockConfigurable customStepSound(SoundType sound) {
         setStepSound(sound);
         return this;
     }
@@ -51,6 +52,11 @@ public class BlockConfigurable extends Block {
     public BlockConfigurable drop(Item item, int meta) {
         this.dropItem = item;
         this.dropMeta = meta;
+        return this;
+    }
+
+    public BlockConfigurable opaque() {
+        this.opaque = false;
         return this;
     }
 
@@ -72,5 +78,10 @@ public class BlockConfigurable extends Block {
     @Override
     public IIcon getIcon(int side, int meta) {
         return icon;
+    }
+
+    @Override
+    public boolean isOpaqueCube() {
+        return opaque;
     }
 }

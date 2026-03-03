@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.block.base;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.block.Block;
@@ -22,43 +24,55 @@ public class GalaxiaBlock {
     private static final Map<DimensionEnum, Item> planetDropMap = new HashMap<>();
 
     /**
-     * Registers the given block variants for a given planet
+     * Registers the given block variants for a given planet, with optional default and per-variant drops
+     * Usage: reg(planet, [defaultDrop,] variant1, variant2, ..., [customDrop, variantN], ...)
+     * If defaultDrop is provided (as first arg after planet), it applies to all until overridden
+     * customDrop can be inserted before a variant to change drop for it and subsequent
+     * Use GalaxiaItemList.NULL for "drop self"
      *
-     * @param planet   The planet intended to generate the block variants
-     * @param variants The BlockVariants to register
+     * @param planet The planet intended the block variants is generated on
+     * @param args   Varargs of BlockVariant and optional GalaxiaItemList for drops
      */
-    public static void reg(DimensionEnum planet, BlockVariant... variants) {
-        // Ensure there are actual variants
-        if (variants.length == 0) {
-            throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
+    public static void reg(DimensionEnum planet, Object... args) {
+        List<BlockVariant> variantsList = new ArrayList<>();
+        List<Item> dropsList = new ArrayList<>();
+
+        int index = 0;
+        GalaxiaItemList defaultDropItem = null;
+        if (args.length > 0 && args[0] instanceof GalaxiaItemList) {
+            defaultDropItem = (GalaxiaItemList) args[0];
+            index = 1;
         }
 
-        // Registers the blocks variants, and adds to planet hashmap
-        BlockPlanetGalaxia block = new BlockPlanetGalaxia(planet.getName(), variants);
-        GameRegistry.registerBlock(block, ItemBlockGalaxiaPlanet.class, planet.getName());
-        planetBlocks.put(planet, block);
-    }
+        Item currentDrop = defaultDropItem == null ? null : defaultDropItem.getItem();
 
-    /**
-     * Registers the given block variants and dust item for a given planet
-     *
-     * @param planet   The planet intended to generate the dust items
-     * @param dropItem The ENUM for the drop item being registered
-     * @param variants The BlockVariants to register
-     */
-    public static void reg(DimensionEnum planet, GalaxiaItemList dropItem, BlockVariant... variants) {
-        // Ensure there are actual variants
-        if (variants.length == 0) {
-            throw new IllegalArgumentException("Invalid variant count for " + planet.getName());
+        for (; index < args.length; index++) {
+            Object arg = args[index];
+            if (arg == null) {
+                currentDrop = null;
+            } else if (arg instanceof GalaxiaItemList) {
+                currentDrop = ((GalaxiaItemList) arg).getItem();
+            } else if (arg instanceof BlockVariant) {
+                variantsList.add((BlockVariant) arg);
+                dropsList.add(currentDrop);
+            } else {
+                throw new IllegalArgumentException(
+                    "Invalid argument type: " + arg.getClass()
+                        .getName());
+            }
         }
 
-        // Registers the blocks variants and dust item, and adds to planet hashmaps
-        Item dustItem = dropItem.getItem();
-        BlockPlanetGalaxia block = new BlockPlanetGalaxia(planet.getName(), dustItem, variants);
-        GameRegistry.registerBlock(block, ItemBlockGalaxiaPlanet.class, planet.getName());
+        BlockPlanetGalaxia block = new BlockPlanetGalaxia(
+            planet.getName(),
+            dropsList.toArray(new Item[0]),
+            variantsList.toArray(new BlockVariant[0]));
 
+        GameRegistry.registerBlock(block, ItemBlockGalaxiaPlanet.class, planet.getName());
         planetBlocks.put(planet, block);
-        planetDropMap.put(planet, dustItem);
+
+        if (defaultDropItem != null) {
+            planetDropMap.put(planet, defaultDropItem.getItem());
+        }
     }
 
     public static Block get(DimensionEnum planet) {
