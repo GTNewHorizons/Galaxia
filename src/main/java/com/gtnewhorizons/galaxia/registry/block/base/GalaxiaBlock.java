@@ -81,7 +81,8 @@ public class GalaxiaBlock {
                 return new BlockMeta(block, meta);
             }
         }
-        throw new IllegalArgumentException("Variant '%s' not found for planet %s".formatted(variant, planet.getName()));
+        throw new IllegalArgumentException(
+            String.format("Variant '%s' not found for planet %s", variant, planet.getName()));
     }
 
     /**
