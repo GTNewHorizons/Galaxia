@@ -11,8 +11,7 @@ public enum DimensionEnum {
     HEMATERIA(21, "Hemateria"),
     FROZEN_BELT(22, "Frozen_Belt"),
     PANSPIRA(23, "Panspira"),
-
-    ;
+    TENEBRAE(24, "Tenebrae");
 
     final int id;
     final String name;

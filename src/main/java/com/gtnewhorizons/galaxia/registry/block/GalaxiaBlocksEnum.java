@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
+import static com.gtnewhorizons.galaxia.registry.block.base.BlockVariant.sandLike;
+import static com.gtnewhorizons.galaxia.registry.block.base.BlockVariant.stoneLike;
 import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
 
 import net.minecraft.block.Block;
@@ -58,6 +60,7 @@ public enum GalaxiaBlocksEnum {
      * if drop item is not selected, blocks will drop themselves by default
      */
     public static void registerPlanetBlocks() {
+        // THEIA
         reg(DimensionEnum.THEIA, GalaxiaItemList.DUST_THEIA,
             BlockVariant.REGOLITH,
             BlockVariant.TEKTITE,
@@ -69,11 +72,15 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.ANDESITE,
             BlockVariant.OBSIDIAN);
 
+        // HEMATERIA
         reg(DimensionEnum.HEMATERIA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
-            BlockVariant.SNOW);
+            BlockVariant.SNOW,
+            BlockVariant.ICE,
+            BlockVariant.MAGMA);
 
+        // FROZEN_BELT
         reg(DimensionEnum.FROZEN_BELT,
             BlockVariant.ICE,
             BlockVariant.BRECCIA,
@@ -82,6 +89,7 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.ANDESITE,
             BlockVariant.ANORTHOSITE);
 
+        // PANSPIRA
         reg(DimensionEnum.PANSPIRA,
             BlockVariant.REGOLITH,
             BlockVariant.ANDESITE,
@@ -89,6 +97,21 @@ public enum GalaxiaBlocksEnum {
             BlockVariant.STONE,
             BlockVariant.SOIL,
             BlockVariant.MAGMA);
+
+        // TENEBRAE
+        reg(DimensionEnum.TENEBRAE,
+            BlockVariant.BASALT,
+            BlockVariant.MAGMA,
+            BlockVariant.ANDESITE,
+            BlockVariant.REGOLITH,
+            BlockVariant.ASH,
+            // unique blocks, no reason to create separate enum value for them
+            sandLike("pyriteRegolith", 0.7F),
+            sandLike("sulfuricRegolith", 0.7F),
+            sandLike("rhyolite", 0.7F),
+            sandLike("sulfuricRegolith", 0.7F),
+            stoneLike("latite", 2),
+            stoneLike("brimstone", 2));
     }
     //spotless:on
 
