@@ -40,8 +40,8 @@ public class BlockFumarole extends Block implements ITileEntityProvider {
     @SideOnly(Side.CLIENT)
     @Override
     public void registerBlockIcons(IIconRegister reg) {
-        top = reg.registerIcon("galaxia:fumarole");
-        side = reg.registerIcon("galaxia:raw_sulfur_block");
+        top = reg.registerIcon("galaxia:tenebrae/tenebrae_fumarole");
+        side = reg.registerIcon("galaxia:resource/raw_sulfur_block");
     }
 
     @SideOnly(Side.CLIENT)

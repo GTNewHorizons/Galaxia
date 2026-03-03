@@ -136,8 +136,7 @@ public enum GalaxiaBlocksEnum {
             sandLike("rhyolite", 0.7F),
             sandLike("sulfuricRegolith", 0.7F),
             stoneLike("latite", 2),
-            stoneLike("brimstone", 2),
-            stoneLike("fumarole", 2));
+            stoneLike("brimstone", 2));
     }
     //spotless:on
 
