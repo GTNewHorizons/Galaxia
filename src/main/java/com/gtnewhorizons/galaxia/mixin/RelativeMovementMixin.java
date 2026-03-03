@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import com.gtnewhorizons.galaxia.utility.PlanetAPI;
+import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 
 /**
  * Mixin that changes regular WASD motion with relative motion
@@ -20,7 +20,7 @@ public abstract class RelativeMovementMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/EntityLivingBase;moveFlying(FFF)V"))
     private void galaxia$redirectMoveFlying(EntityLivingBase self, float strafe, float forward, float friction) {
         // use vanilla method if gravity is not 0
-        if (PlanetAPI.getGravity(self) != 0) {
+        if (GalaxiaAPI.getGravity(self) != 0) {
             self.moveFlying(strafe, forward, friction);
             return;
         }
