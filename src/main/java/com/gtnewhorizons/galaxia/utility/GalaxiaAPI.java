@@ -103,4 +103,9 @@ public final class GalaxiaAPI {
     public static boolean isInGalaxiaDimension(EntityPlayer player) {
         return GALAXIA_DIMENSIONS.contains(player.dimension);
     }
+
+    public static String toSnakeCase(String s) {
+        return s.replaceAll("([a-z])([A-Z])", "$1_$2")
+            .toLowerCase();
+    }
 }

@@ -31,10 +31,13 @@ public enum GalaxiaItemList {
 
     // Worldgen dust & ores
     DUST_THEIA("ore/theia_dust"),
-    DUST_HEMATERIA("ore/hemateria_dust"),
     THEIA_TEKTITE_SHARD("ore/theia_tektite_shard"),
     CINNABAR_SCALE("ore/cinnabar_scale"),
     ENCHANTED_CINNABAR_SCALE("ore/enchanted_cinnabar_scale"),
+
+    DUST_HEMATERIA("ore/hemateria_dust"),
+    HEMATERIA_TEKTITE_SHARD("ore/hemateria_tektite_shard"),
+    HEMATERIA_ICE_CUBES("ore/hemateria_ice_cubes"),
 
     // SUIT
     SPACESUIT_HELMET("spacesuit_helmet", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
