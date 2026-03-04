@@ -84,7 +84,7 @@ public class Theia extends BasePlanet {
                         .height(32)
                         .endFeature()
                         .build(),
-                    2,
+                    8,
                     1),
                 0,
                 0)
@@ -107,7 +107,7 @@ public class Theia extends BasePlanet {
                         .height(64)
                         .endFeature()
                         .build(),
-                    2,
+                    8,
                     1),
                 0,
                 1)
@@ -126,7 +126,7 @@ public class Theia extends BasePlanet {
                         .height(16)
                         .endFeature()
                         .build(),
-                    8,
+                    32,
                     56),
                 1,
                 0)
@@ -145,7 +145,7 @@ public class Theia extends BasePlanet {
                         .height(64)
                         .endFeature()
                         .build(),
-                    8,
+                    32,
                     56),
                 1,
                 1)
