@@ -45,6 +45,7 @@ public class BiomeGenBuilder {
     boolean enableRain = false;
     Block oceanCrackBlock;
     float oceanCrackThickness;
+    int oceanCrackComplexity;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -161,9 +162,10 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder oceanCracks(float oceanCrackThickness, Block oceanCrackBlock) {
+    public BiomeGenBuilder oceanCracks(float oceanCrackThickness, Block oceanCrackBlock, int oceanCrackComplexity) {
         this.oceanCrackThickness = oceanCrackThickness;
         this.oceanCrackBlock = oceanCrackBlock;
+        this.oceanCrackComplexity = oceanCrackComplexity;
         return this;
     }
 

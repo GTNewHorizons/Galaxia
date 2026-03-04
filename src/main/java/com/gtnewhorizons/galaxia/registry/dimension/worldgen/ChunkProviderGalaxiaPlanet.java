@@ -26,6 +26,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private final World worldObj;
     private final Random rand;
+    private final NoiseGeneratorOctaves crackNoise;
     private final NoiseGeneratorOctaves baseNoise;
     private final NoiseGeneratorOctaves caveNoise;
     private final boolean showDebug = false;
@@ -43,6 +44,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         this.rand = new Random(world.getSeed());
         this.baseNoise = new NoiseGeneratorOctaves(rand, 4);
         this.caveNoise = new NoiseGeneratorOctaves(rand, 4);
+        this.crackNoise = new NoiseGeneratorOctaves(rand, 2);
         if (showDebug) writeDebug();
     }
 
@@ -132,6 +134,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         int snowHeight = 512;
         int oceanHeight = 0;
         int seabedHeight = 0;
+        int oceanCrackComplexity = 1;
         float oceanCrackThickness = 0.5F;
         boolean generateCaves = false;
         for (int localX = 0; localX < 16; localX++) {
@@ -156,6 +159,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     surfaceDepth = spaceBiome.getSurfaceThickness();
                     oceanCrackBlock = spaceBiome.getOceanCrackBlock();
                     oceanCrackThickness = spaceBiome.getOceanCrackThickness();
+                    oceanCrackComplexity = spaceBiome.getOceanCrackComplexity();
                 }
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
@@ -173,7 +177,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
                             if (y == oceanHeight - 1) {
-                                block = getOceanSurfaceBlock(oceanFiller, oceanCrackBlock, oceanCrackThickness, chunkX * 16 + localX, chunkZ * 16 + localZ);
+                                block = getOceanSurfaceBlock(oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, chunkX * 16 + localX, chunkZ * 16 + localZ);
                             } else {
                                 block = oceanFiller;
                             }
@@ -263,12 +267,16 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return surfaceBlock;
     }
 
-    private Block getOceanSurfaceBlock(Block mainBlock, Block crackBlock, float crackThickness, int x, int z) {
+    private Block getOceanSurfaceBlock(Block mainBlock, Block crackBlock, float crackThickness, int oceanCrackComplexity, int x, int z) {
         if (crackBlock == null || crackThickness == 0) {
             return mainBlock;
         }
-        double noise = baseNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2, 0.2, 0)[0];
-        return Math.abs(noise) < crackThickness ? crackBlock : mainBlock;
+        double noise = 0;
+        for (int octave = 0; octave < oceanCrackComplexity; octave++) {
+            double octaveExponent = Math.pow(2, octave);
+            noise += Math.abs(crackNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2/octaveExponent, 0.2/octaveExponent, 0)[0]/octaveExponent);
+        }
+        return noise < crackThickness ? crackBlock : mainBlock;
     }
 
     private double[] generateBaseHeightmap(int cx, int cz) {

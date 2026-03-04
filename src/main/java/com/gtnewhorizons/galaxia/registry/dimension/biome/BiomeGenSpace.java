@@ -30,6 +30,7 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final int surfaceThickness;
     private final Block oceanCrackBlock;
     private final float oceanCrackThickness;
+    private final int oceanCrackComplexity;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -67,6 +68,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.surfaceThickness = b.surfaceThickness;
         this.oceanCrackThickness = b.oceanCrackThickness;
         this.oceanCrackBlock = b.oceanCrackBlock;
+        this.oceanCrackComplexity = b.oceanCrackComplexity;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
@@ -187,5 +189,9 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public float getOceanCrackThickness() {
         return oceanCrackThickness;
+    }
+
+    public int getOceanCrackComplexity() {
+        return oceanCrackComplexity;
     }
 }

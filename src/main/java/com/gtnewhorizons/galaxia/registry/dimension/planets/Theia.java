@@ -238,7 +238,7 @@ public class Theia extends BasePlanet {
                     PlanetBlocks.THEIA_TEKTITE))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 56, PlanetBlocks.THEIA_OBSIDIAN, 1)
-            .oceanCracks(0.1F, PlanetBlocks.THEIA_MAGMA)
+            .oceanCracks(0.3F, PlanetBlocks.THEIA_MAGMA, 4)
             .surfaceThickness(4)
             .build();
     }
