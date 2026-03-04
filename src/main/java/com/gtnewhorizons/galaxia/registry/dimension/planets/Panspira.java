@@ -4,8 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
-import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
@@ -14,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The class holding all data related to the dimension Panspira
@@ -63,8 +61,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Dunes",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SOIL)
-                        .block(),
+                    PlanetBlocks.PANSPIRA_SOIL,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.SAND_DUNES)
                         .scale(1)
@@ -77,8 +74,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Mountains",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.STONE)
-                        .block(),
+                    PlanetBlocks.PANSPIRA_STONE,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
                         .scale(0.6)
@@ -91,8 +87,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Hills",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH)
-                        .block(),
+                    PlanetBlocks.PANSPIRA_REGOLITH,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
                         .scale(0.125)
@@ -105,8 +100,7 @@ public class Panspira extends BasePlanet {
             .biome(
                 createBiome(
                     "Panspira Plains",
-                    GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SOIL)
-                        .block(),
+                    PlanetBlocks.PANSPIRA_SOIL,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.MOUNTAIN_RANGES)
                         .scale(0.5)
@@ -126,24 +120,15 @@ public class Panspira extends BasePlanet {
     }
 
     protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain) {
-        return createBiome(name, block, 0, terrain);
-    }
-
-    protected static BiomeGenBase createBiome(String name, Block block, int meta, TerrainConfiguration terrain) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(new BlockMeta(block, meta))
-            .fillerBlock(GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.STONE))
-            .snowBlock(GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.SNOW), 144)
+            .topBlock(block)
+            .fillerBlock(PlanetBlocks.PANSPIRA_STONE)
+            .snowBlock(PlanetBlocks.PANSPIRA_SNOW, 144)
             .terrain(terrain)
-            .ocean(
-                new BlockMeta(Blocks.water, 1),
-                GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH),
-                96,
-                GalaxiaBlock.get(DimensionEnum.PANSPIRA, BlockVariant.REGOLITH),
-                64)
+            .ocean(Blocks.water, PlanetBlocks.PANSPIRA_REGOLITH, 96, PlanetBlocks.PANSPIRA_REGOLITH, 64)
             .build();
     }
 }

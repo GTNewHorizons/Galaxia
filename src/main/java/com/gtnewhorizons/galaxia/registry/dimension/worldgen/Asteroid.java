@@ -8,8 +8,6 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
-
 /**
  * World Generator for Asteroids
  */
@@ -18,8 +16,8 @@ public class Asteroid extends WorldGenerator {
     private final int minimumSize;
     private final int maximumSize;
     private final int rarity;
-    private final BlockMeta[] blockPalette;
-    private final BlockMeta[] surfaceBlockPalette;
+    private final Block[] blockPalette;
+    private final Block[] surfaceBlockPalette;
     private final int craterFrequency;
 
     /**
@@ -31,8 +29,8 @@ public class Asteroid extends WorldGenerator {
      * @param blockPalette    Block paletter to be used in creation
      * @param craterFrequency Frequency of craters on asteroids
      */
-    public Asteroid(int minimumSize, int maximumSize, int rarity, BlockMeta[] blockPalette,
-        BlockMeta[] surfaceBlockPalette, int craterFrequency) {
+    public Asteroid(int minimumSize, int maximumSize, int rarity, Block[] blockPalette, Block[] surfaceBlockPalette,
+        int craterFrequency) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
         this.rarity = rarity;
@@ -188,13 +186,13 @@ public class Asteroid extends WorldGenerator {
                     int combinedZ = z + localZ - halfDiameter;
                     byte localBlockValue = blockData[localX][localY][localZ];
                     if (localBlockValue > 0) {
-                        BlockMeta blockMeta;
+                        Block block;
                         if (localBlockValue <= blockPalette.length) {
-                            blockMeta = blockPalette[localBlockValue - 1];
+                            block = blockPalette[localBlockValue - 1];
                         } else {
-                            blockMeta = surfaceBlockPalette[localBlockValue - 1 - blockPalette.length];
+                            block = surfaceBlockPalette[localBlockValue - 1 - blockPalette.length];
                         }
-                        setBlockFast(world, combinedX, combinedY, combinedZ, blockMeta.block(), blockMeta.meta());
+                        setBlockFast(world, combinedX, combinedY, combinedZ, block, 0);
                     }
                 }
             }

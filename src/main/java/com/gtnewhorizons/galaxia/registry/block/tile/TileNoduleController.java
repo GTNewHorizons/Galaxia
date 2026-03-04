@@ -16,7 +16,7 @@ import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceAir;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceAir;
 
 public class TileNoduleController extends TileEntity implements IGuiHolder<PosGuiData> {
 

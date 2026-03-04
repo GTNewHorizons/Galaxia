@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
-import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The class holding all data related to the dimension Hemateria
@@ -74,7 +73,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     true,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH)),
+                    PlanetBlocks.HEMATERIA_REGOLITH),
                 0,
                 0)
             .biome(
@@ -90,7 +89,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     false,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH)),
+                    PlanetBlocks.HEMATERIA_REGOLITH),
                 0,
                 1)
             .biome(
@@ -110,7 +109,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     true,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH)),
+                    PlanetBlocks.HEMATERIA_REGOLITH),
                 1,
                 0)
             .biome(
@@ -126,7 +125,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     false,
-                    GalaxiaBlock.get(DimensionEnum.HEMATERIA, "rhyolite")),
+                    PlanetBlocks.HEMATERIA_RHYOLITE),
                 1,
                 1)
             .name(ENUM)
@@ -134,13 +133,13 @@ public class Hemateria extends BasePlanet {
     }
 
     protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain, boolean generateCaves,
-        BlockMeta surfaceBlock) {
+        Block surfaceBlock) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(surfaceBlock)
-            .fillerBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.ANDESITE))
-            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW), 144)
+            .fillerBlock(PlanetBlocks.HEMATERIA_ANDESITE)
+            .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)
             .build();

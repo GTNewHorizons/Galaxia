@@ -1,21 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
-import static com.gtnewhorizons.galaxia.registry.block.base.BlockVariant.sandLike;
-import static com.gtnewhorizons.galaxia.registry.block.base.BlockVariant.stoneLike;
-import static com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock.reg;
-
 import net.minecraft.block.Block;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockNoduleController;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceAir;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceStation;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockSpaceStationGlass;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockNoduleController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceAir;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStation;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileNoduleController;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockSilo;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
@@ -55,90 +48,6 @@ public enum GalaxiaBlocksEnum {
         GameRegistry.registerTileEntity(TileEntityModuleAssembler.class, "galaxia_module_assembler_controller");
         GameRegistry.registerTileEntity(TileEntityFumarole.class, "galaxia_fumarole");
     }
-
-    // spotless:off
-
-    /**
-     * Registers all block variants for each planet, alongside the relevant drop items
-     * if drop item is not selected, blocks will drop themselves by default
-     * there are some unique blocks, no reason to create separate enum value for them
-     */
-    public static void registerPlanetBlocks() {
-        // THEIA
-        reg(DimensionEnum.THEIA,
-            GalaxiaItemList.DUST_THEIA,
-            BlockVariant.REGOLITH,
-            BlockVariant.MAGMA,
-            BlockVariant.GABBRO,
-            BlockVariant.BRECCIA,
-            BlockVariant.BASALT,
-            BlockVariant.ANORTHOSITE,
-            BlockVariant.ANDESITE,
-            GalaxiaItemList.DROP_SELF,
-            BlockVariant.OBSIDIAN,
-
-            GalaxiaItemList.THEIA_TEKTITE_SHARD,
-            BlockVariant.TEKTITE
-        );
-
-        // HEMATERIA
-        reg(DimensionEnum.HEMATERIA,
-            GalaxiaItemList.DUST_HEMATERIA,
-            BlockVariant.REGOLITH,
-            BlockVariant.ANDESITE,
-            BlockVariant.BASALT,
-            BlockVariant.SNOW,
-            BlockVariant.MAGMA,
-            BlockVariant.SAND,
-            BlockVariant.SANDSTONE,
-            BlockVariant.SNOW,
-            BlockVariant.TUFF,
-            stoneLike("peridotite", 2.7F),
-            sandLike("rhyolite", 0.7F),
-
-            GalaxiaItemList.HEMATERIA_ICE_CUBES,
-            BlockVariant.ICE,
-            BlockVariant.DENSE_ICE,
-
-            GalaxiaItemList.HEMATERIA_TEKTITE_SHARD,
-            BlockVariant.TEKTITE
-        );
-
-        // FROZEN_BELT
-        reg(DimensionEnum.FROZEN_BELT,
-            BlockVariant.ICE,
-            BlockVariant.BRECCIA,
-            BlockVariant.GABBRO,
-            BlockVariant.BASALT,
-            BlockVariant.ANDESITE,
-            BlockVariant.ANORTHOSITE
-        );
-
-        // PANSPIRA
-        reg(DimensionEnum.PANSPIRA,
-            BlockVariant.REGOLITH,
-            BlockVariant.ANDESITE,
-            BlockVariant.SNOW,
-            BlockVariant.STONE,
-            BlockVariant.SOIL,
-            BlockVariant.MAGMA
-        );
-
-        // TENEBRAE
-        reg(DimensionEnum.TENEBRAE,
-            BlockVariant.BASALT,
-            BlockVariant.MAGMA,
-            BlockVariant.ANDESITE,
-            BlockVariant.REGOLITH,
-            BlockVariant.ASH,
-            sandLike("pyriteRegolith", 0.7F),
-            sandLike("sulfuricRegolith", 0.7F),
-            sandLike("rhyolite", 0.7F),
-            sandLike("sulfuricRegolith", 0.7F),
-            stoneLike("latite", 2),
-            stoneLike("brimstone", 2));
-    }
-    //spotless:on
 
     private final Block theBlock;
     private final String name;

@@ -5,7 +5,7 @@ import net.minecraft.item.ItemBlock;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockFumarole;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 

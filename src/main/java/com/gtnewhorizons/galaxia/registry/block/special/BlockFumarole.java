@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.base;
+package com.gtnewhorizons.galaxia.registry.block.special;
 
 import java.util.List;
 

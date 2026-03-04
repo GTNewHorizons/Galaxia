@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.ChunkPosition;
@@ -17,7 +18,6 @@ import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * ChunkProvider implementation for Galaxia Planets
@@ -29,14 +29,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private final NoiseGeneratorOctaves baseNoise;
     private final NoiseGeneratorOctaves caveNoise;
     private final boolean showDebug = false;
-    private final BlockMeta air = new BlockMeta(Blocks.air, 0);
-    private final BlockMeta bedrock = new BlockMeta(Blocks.bedrock, 0);
-    private final BlockMeta grass = new BlockMeta(Blocks.grass, 0);
-    private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
-    private final BlockMeta snow = new BlockMeta(Blocks.snow, 0);
-    private final BlockMeta water = new BlockMeta(Blocks.water, 0);
-    private final BlockMeta sand = new BlockMeta(Blocks.sand, 0);
-    private final BlockMeta gravel = new BlockMeta(Blocks.gravel, 0);
 
     private double[][] caveCache = new double[256][256];
 
@@ -129,12 +121,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         }
 
         // Generate blocks
-        BlockMeta topBlock = grass;
-        BlockMeta fillerBlock = stone;
-        BlockMeta snowBlock = snow;
-        BlockMeta oceanFiller = water;
-        BlockMeta oceanSurface = sand;
-        BlockMeta seabed = gravel;
+        Block topBlock = Blocks.grass;
+        Block fillerBlock = Blocks.stone;
+        Block snowBlock = Blocks.snow;
+        Block oceanFiller = Blocks.water;
+        Block oceanSurface = Blocks.sand;
+        Block seabed = Blocks.gravel;
         int surfaceDepth = 1;
         int snowHeight = 512;
         int oceanHeight = 0;
@@ -150,7 +142,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         spaceBiome.getTopBlockMetas(),
                         chunkX * 16 + localX,
                         chunkZ * 16 + localZ);
-                    fillerBlock = new BlockMeta(spaceBiome.fillerBlock, spaceBiome.getFillerBlockMeta());
+                    fillerBlock = spaceBiome.fillerBlock;
                     snowHeight = spaceBiome.getSnowHeight();
                     snowBlock = spaceBiome.getSnowBlock();
                     oceanHeight = spaceBiome.getOceanHeight();
@@ -167,31 +159,30 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
-                    BlockMeta blockMeta = (y >= height - surfaceDepth) ? topBlock : fillerBlock;
-                    if (blockMeta == topBlock && y >= snowHeight) {
-                        blockMeta = snowBlock;
+                    Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlock;
+                    if (block == topBlock && y >= snowHeight) {
+                        block = snowBlock;
                     }
                     if (generateBedrock && y == 0) {
-                        blockMeta = bedrock;
+                        block = Blocks.bedrock;
                     }
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
-                            blockMeta = oceanFiller;
+                            block = oceanFiller;
                         } else if (y == height - 1) {
                             if (y > seabedHeight) {
-                                blockMeta = oceanSurface;
+                                block = oceanSurface;
                             } else {
-                                blockMeta = seabed;
+                                block = seabed;
                             }
                         }
                     }
-                    if (generateCaves && (blockMeta == fillerBlock || blockMeta == topBlock || blockMeta == snowBlock)
+                    if (generateCaves && (block == fillerBlock || block == topBlock || block == snowBlock)
                         && generateCave(localX, y, localZ, height)) {
-                        blockMeta = air;
+                        block = Blocks.air;
                     }
-                    if (blockMeta.block() != null) {
-                        storage[sy].func_150818_a(localX, y & 15, localZ, blockMeta.block());
-                        storage[sy].setExtBlockMetadata(localX, y & 15, localZ, blockMeta.meta());
+                    if (block != null) {
+                        storage[sy].func_150818_a(localX, y & 15, localZ, block);
                     }
                 }
             }
@@ -244,12 +235,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return localNoise < upperBound && localNoise > lowerBound;
     }
 
-    private BlockMeta getSurfaceBlock(List<BlockMeta> blockMetas, int x, int z) {
+    private Block getSurfaceBlock(List<Block> blockMetas, int x, int z) {
         int surfaceBlockCount = blockMetas.size();
         if (surfaceBlockCount == 1) {
             return blockMetas.get(0);
         }
-        BlockMeta surfaceBlock;
+        Block surfaceBlock;
         double noise = baseNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2, 0.2, 0)[0];
         noise += 8;
         noise *= surfaceBlockCount;

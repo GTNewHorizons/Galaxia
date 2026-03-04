@@ -8,14 +8,12 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
-
 public abstract class WorldGenGalaxia extends WorldGenerator {
 
     private final int rarity;
-    private final BlockMeta[] surfaceRequirements;
+    private final Block[] surfaceRequirements;
 
-    public WorldGenGalaxia(int rarity, BlockMeta[] surfaceRequirements) {
+    public WorldGenGalaxia(int rarity, Block[] surfaceRequirements) {
         super();
         this.rarity = rarity;
         this.surfaceRequirements = surfaceRequirements;
@@ -26,10 +24,9 @@ public abstract class WorldGenGalaxia extends WorldGenerator {
         if (random.nextInt(rarity) > 0) {
             return false;
         }
-        Block surfaceBlock = world.getBlock(x, y - 1, z);
-        int surfaceMeta = world.getBlockMetadata(x, y - 1, z);
-        for (BlockMeta surfaceRequirement : surfaceRequirements) {
-            if (surfaceBlock == surfaceRequirement.block() && surfaceMeta == surfaceRequirement.meta()) {
+        net.minecraft.block.Block surfaceBlock = world.getBlock(x, y - 1, z);
+        for (Block surfaceRequirement : surfaceRequirements) {
+            if (surfaceBlock == surfaceRequirement) {
                 return true;
             }
         }
@@ -46,7 +43,7 @@ public abstract class WorldGenGalaxia extends WorldGenerator {
      * @param block The block to place
      * @param meta  Metadata of the block to place
      */
-    protected void setBlockFast(World world, int x, int y, int z, Block block, int meta) {
+    protected void setBlockFast(World world, int x, int y, int z, net.minecraft.block.Block block, int meta) {
         if (y < 0 || y > 255) return;
 
         Chunk chunk = world.getChunkFromChunkCoords(x >> 4, z >> 4);

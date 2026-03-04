@@ -4,17 +4,16 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
-
 public class WorldGenCrater extends WorldGenGalaxia {
 
-    private final BlockMeta tektite;
+    private final Block tektite;
 
-    public WorldGenCrater(int rarity, BlockMeta[] surfaceRequirements, BlockMeta tektite) {
+    public WorldGenCrater(int rarity, Block[] surfaceRequirements, Block tektite) {
         super(rarity, surfaceRequirements);
         this.tektite = tektite;
     }
@@ -39,13 +38,7 @@ public class WorldGenCrater extends WorldGenGalaxia {
                         && rimDistance < squaredCraterRadius + random.nextInt(64)
                         && !world.isAirBlock(x + localX, y + rimY + heightOffset, z + localZ)
                         && world.isAirBlock(x + localX, y + rimY + heightOffset + 1, z + localZ)) {
-                        setBlockFast(
-                            world,
-                            x + localX,
-                            y + rimY + heightOffset + 1,
-                            z + localZ,
-                            tektite.block(),
-                            tektite.meta());
+                        setBlockFast(world, x + localX, y + rimY + heightOffset + 1, z + localZ, tektite, 0);
                         break;
                     }
                 }

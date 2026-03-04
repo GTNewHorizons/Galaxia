@@ -12,7 +12,6 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The builder for biome generation
@@ -21,7 +20,7 @@ public class BiomeGenBuilder {
 
     // Setting basic fields for generation
     private final int id;
-    private final BlockMeta stone = new BlockMeta(Blocks.stone, 0);
+    private final Block stone = Blocks.stone;
 
     String name = "unset";
     Height height = new Height(0, 0);
@@ -32,13 +31,13 @@ public class BiomeGenBuilder {
     int snowHeight = 512;
     int oceanHeight = 0;
     int seabedHeight = 0;
-    BlockMeta oceanFiller = stone;
-    BlockMeta oceanSurface = stone;
-    BlockMeta seabed = stone;
-    BlockMeta fillerBlock = stone;
-    BlockMeta snowBlock = stone;
+    Block oceanFiller = stone;
+    Block oceanSurface = stone;
+    Block seabed = stone;
+    Block fillerBlock = stone;
+    Block snowBlock = stone;
     List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
-    List<BlockMeta> topBlockMetas = new ArrayList<>();
+    List<Block> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
     int surfaceThickness = 1;
     boolean enableRain = false;
@@ -104,34 +103,14 @@ public class BiomeGenBuilder {
     }
 
     /**
-     * Set the top block of the biome
-     *
-     * @param block The required top block
-     * @return Configured builder
-     */
-    public BiomeGenBuilder topBlock(Block block) {
-        return topBlock(new BlockMeta(block, 0));
-    }
-
-    /**
      * Set the top block of the biome (Where the block has meta-data)
      *
      * @param block The required top block (with meta)
      * @return Configured builder
      */
-    public BiomeGenBuilder topBlock(BlockMeta block) {
+    public BiomeGenBuilder topBlock(Block block) {
         this.topBlockMetas.add(block);
         return this;
-    }
-
-    /**
-     * Set the filler block for the biome
-     *
-     * @param block The required filler block
-     * @return Configured builder
-     */
-    public BiomeGenBuilder fillerBlock(Block block) {
-        return fillerBlock(new BlockMeta(block, 0));
     }
 
     /**
@@ -140,7 +119,7 @@ public class BiomeGenBuilder {
      * @param block The required filler block (with meta)
      * @return Configured builder
      */
-    public BiomeGenBuilder fillerBlock(BlockMeta block) {
+    public BiomeGenBuilder fillerBlock(Block block) {
         this.fillerBlock = block;
         return this;
     }
@@ -152,7 +131,7 @@ public class BiomeGenBuilder {
      * @param snowHeight The height of the snow to generate
      * @return Configured builder
      */
-    public BiomeGenBuilder snowBlock(BlockMeta blockMeta, int snowHeight) {
+    public BiomeGenBuilder snowBlock(Block blockMeta, int snowHeight) {
         this.snowBlock = blockMeta;
         this.snowHeight = snowHeight;
         return this;
@@ -168,7 +147,7 @@ public class BiomeGenBuilder {
      * @param seabedHeight The height of the seabed
      * @return Configured builder
      */
-    public BiomeGenBuilder ocean(BlockMeta oceanFiller, BlockMeta oceanSurface, int oceanHeight, BlockMeta seabed,
+    public BiomeGenBuilder ocean(Block oceanFiller, Block oceanSurface, int oceanHeight, Block seabed,
         int seabedHeight) {
         this.oceanFiller = oceanFiller;
         this.oceanSurface = oceanSurface;

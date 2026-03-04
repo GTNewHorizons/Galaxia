@@ -4,8 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
-import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
@@ -14,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * An abstract class that all planets should derive from
@@ -104,18 +102,12 @@ public abstract class BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(new BlockMeta(block, meta))
-            .topBlock(new BlockMeta(Blocks.wool, 5))
+            .topBlock(block)
             .fillerBlock(Blocks.brick_block)
-            .snowBlock(GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.SNOW), 144)
+            .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)
-            .ocean(
-                new BlockMeta(Blocks.glass, 1),
-                GalaxiaBlock.get(DimensionEnum.HEMATERIA, BlockVariant.REGOLITH),
-                64,
-                new BlockMeta(Blocks.obsidian, 0),
-                32)
+            .ocean(Blocks.glass, PlanetBlocks.HEMATERIA_REGOLITH, 64, Blocks.obsidian, 32)
             .build();
     }
 }
