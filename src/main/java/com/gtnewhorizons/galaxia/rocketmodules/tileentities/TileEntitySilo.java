@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,10 +20,18 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.PageButton;
+import com.cleanroommc.modularui.widgets.PagedWidget;
+import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
+import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
@@ -42,6 +52,11 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     // Validation rules for rocket systems
     private final List<IRocketValidator> validators = Arrays
         .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator());
+    private int destination = 0;
+    private IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
+        destination = v;
+        GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
+    });
 
     /**
      * The UI builder for the tile entity
@@ -55,7 +70,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        ModularPanel panel = new ModularPanel("galaxia:rocket_silo").size(240, 160);
+        PagedWidget.Controller tabController = new PagedWidget.Controller();
+
+        ModularPanel panel = ModularPanel.defaultPanel("galaxia:roclet_silo_main")
+            .size(240, 160);
         TileEntityModuleAssembler ma = findAssemblerToLink();
         // If no linked MA,
         if (ma == null) return panel.child(
@@ -63,55 +81,84 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             IKey.str("§Couldn't find Assembler")
                 .asWidget()
                 .pos(10, 35));
+
+        panel.child(
+            new PageButton(0, tabController).size(120, 28)
+                .pos(0, -28)
+                .overlay(IKey.str("Build Rocket")))
+            .child(
+                new PageButton(1, tabController).size(120, 28)
+                    .pos(120, -28)
+                    .overlay(IKey.str("Launch Rocket")));
+
         // Title
         panel.child(
             IKey.str("§lRocket Silo")
                 .asWidget()
                 .pos(8, 8));
         // Module addition buttons
-        Flow row = Flow.row()
+        Flow moduleRow = Flow.row()
             .coverChildren()
             .pos(10, 35)
             .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
-            row.child(createModuleButton(m, ma));
+            moduleRow.child(createModuleButton(m, ma));
         }
-        panel.child(row);
 
-        panel.child(
-            new ButtonWidget<>().size(220, 30)
-                .pos(10, 80)
-                .overlay(
-                    IKey.str("Return Modules")
-                        .alignment(Alignment.Center))
-                .tooltip(t -> t.addLine("Disassemble Rocket"))
-                .syncHandler(
-                    new InteractionSyncHandler().setOnMousePressed(
-                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(ma); })));
+        Flow destRow = Flow.row()
+            .coverChildren()
+            .pos(10, 35)
+            .padding(4);
 
-        // Build Rocket and enter button
+        for (BasePlanet dim : SolarSystemRegistry.getAllPlanets()) {
+            destRow.child(createDestinationButton(dim));
+        }
+
+        // Builder Page
         panel.child(
-            new ButtonWidget<>().size(220, 30)
-                .pos(10, 120)
-                .overlay(
-                    IKey.str("§aEnter Rocket")
-                        .alignment(Alignment.CENTER))
-                .tooltipDynamic(t -> {
-                    if (getAssembly().getModules()
-                        .isEmpty()) {
-                        t.addLine("§7Add some modules first");
-                        return;
-                    }
-                    for (IRocketValidator v : validators) {
-                        ValidationResult r = v.validate(getAssembly());
-                        if (!r.valid()) t.addLine("§c" + r.message());
-                    }
-                })
-                .syncHandler(
-                    new InteractionSyncHandler().setOnMousePressed(
-                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); })));
+            new PagedWidget<>().controller(tabController)
+                .addPage(
+                    new ParentWidget<>().size(240, 160)
+                        .child(moduleRow)
+                        .child(
+                            new ButtonWidget<>().size(220, 30)
+                                .pos(10, 80)
+                                .overlay(
+                                    IKey.str("Return Modules")
+                                        .alignment(Alignment.Center))
+                                .tooltip(t -> t.addLine("Disassemble Rocket"))
+                                .syncHandler(
+                                    new InteractionSyncHandler().setOnMousePressed(
+                                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(ma); }))))
+                // Launch Page
+                .addPage(
+                    new ParentWidget<>().size(240, 160)
+                        .child(destRow)
+                        .child(
+                            new ButtonWidget<>().size(220, 30)
+                                .pos(10, 120)
+                                .overlay(
+                                    IKey.str("§aEnter Rocket")
+                                        .alignment(Alignment.CENTER))
+                                .tooltipDynamic(t -> {
+                                    if (getAssembly().getModules()
+                                        .isEmpty()) {
+                                        t.addLine("§7Add some modules first");
+                                        return;
+                                    }
+                                    for (IRocketValidator v : validators) {
+                                        ValidationResult r = v.validate(getAssembly());
+                                        if (!r.valid()) t.addLine("§c" + r.message());
+                                    }
+                                })
+                                .syncHandler(
+                                    new InteractionSyncHandler().setOnMousePressed(
+                                        md -> {
+                                            if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data);
+                                        })))));
 
         return panel;
+
     }
 
     /**
@@ -135,6 +182,18 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             }));
     }
 
+    private ToggleButton createDestinationButton(BasePlanet dim) {
+        return new ToggleButton().size(48, 20)
+            .overlay(
+                IKey.str(
+                    dim.getPlanetEnum()
+                        .getName()))
+            .valueWrapped(
+                selectedDim,
+                dim.getPlanetEnum()
+                    .getId());
+    }
+
     /**
      * Enters the rocket and starts launch cycle (cycle = GO currently)
      *
@@ -147,13 +206,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         EntityRocket rocket = getEntityRocket();
         if (rocket == null || rocket.isDead) return;
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
+        rocket.setDesination(destination);
         data.getPlayer()
             .mountEntity(rocket);
         if (!rocket.shouldRender()) rocket.launch();
     }
 
     /**
-     * Adds a module to the render stack and eventual entity, and removes 1 from
+     * Adds a module to the render stack and eventual entity, and removes from
      * associated Assembler map
      *
      * @param id The module ID to add
@@ -176,6 +236,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      */
     public boolean hasRemaining(int id, TileEntityModuleAssembler ma) {
         return ma.moduleMap.getOrDefault(id, 0) > 0;
+    }
+
+    public void setDesination(int dim) {
+        this.destination = dim;
     }
 
     /**

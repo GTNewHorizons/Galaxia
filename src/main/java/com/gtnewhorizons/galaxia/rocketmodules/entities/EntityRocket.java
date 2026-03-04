@@ -1,18 +1,19 @@
 package com.gtnewhorizons.galaxia.rocketmodules.entities;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.client.gui.GuiPlanetTeleporter;
+import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
@@ -26,14 +27,17 @@ public class EntityRocket extends Entity {
     private final List<Integer> modules = new ArrayList<>();
     private int capsuleIndex = -1;
     private int launchTicks = 0;
-
-    public boolean guiOpened = false;
+    private int destination;
 
     public EntityRocket(World world) {
         super(world);
         this.noClip = true;
         this.preventEntitySpawning = true;
         this.setSize(3.0F, 1.0F);
+    }
+
+    public void setDesination(int dim) {
+        this.destination = dim;
     }
 
     public void bindSilo(TileEntitySilo silo) {
@@ -108,11 +112,8 @@ public class EntityRocket extends Entity {
         if (!worldObj.isRemote && riddenByEntity == null) this.setDead();
 
         if (this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
-            if (player == Minecraft.getMinecraft().thePlayer && !guiOpened) {
-                Minecraft.getMinecraft()
-                    .displayGuiScreen(new GuiPlanetTeleporter());
-                guiOpened = true;
-            }
+            player.mountEntity(null);
+            GALAXIA_NETWORK.sendToServer(new TeleportRequestPacket(destination, player.posX, posY, posZ));
         }
 
         byte launched = dataWatcher.getWatchableObjectByte(10);

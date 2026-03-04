@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
+import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -39,12 +40,9 @@ public final class Galaxia {
     public static int[] oxygenSlots;
     public static int[] thermalSlot;
 
-    @SidedProxy(
-        clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy",
-        serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy"
-    )
+    @SidedProxy(clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy", serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
     public static CommonProxy proxy;
-    //spotless:on
+    // spotless:on
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -58,7 +56,8 @@ public final class Galaxia {
     }
 
     @Mod.EventHandler
-    // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
+    // postInit "Handle interaction with other mods, complete your setup based on
+    // this." (Remove if not needed)
     public void postInit(FMLPostInitializationEvent event) {
         proxy.postInit(event);
     }
@@ -72,8 +71,11 @@ public final class Galaxia {
     // spotless:off
     private static void registerNetwork() {
         int id = 0;
-        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
+                Side.SERVER);
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
+                Side.SERVER);
     }
     // spotless:on
 
