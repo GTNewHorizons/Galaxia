@@ -301,12 +301,22 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 .isEmpty()) {
                 return;
             }
-            // Generate features in locally random points within the chunk
+            // Generate surface features in locally random points within the chunk
             for (WorldGenGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
                 int localX = x + this.rand.nextInt(16) - 8;
                 int localZ = z + this.rand.nextInt(16) - 8;
                 int localY = worldObj.getHeightValue(x, z);
                 feature.generate(worldObj, rand, localX, localY, localZ);
+            }
+            // Generate cave features
+            for (WorldGenGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
+                int maximumHeight = feature.getMaximumHeight();
+                for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
+                    int localX = x + this.rand.nextInt(16) - 8;
+                    int localZ = z + this.rand.nextInt(16) - 8;
+                    int localY = rand.nextInt(Math.min(worldObj.getHeightValue(x, z), maximumHeight) + 1) + 4;
+                    feature.generate(worldObj, rand, localX, localY, localZ);
+                }
             }
         }
     }

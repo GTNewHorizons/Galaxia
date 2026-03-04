@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -24,6 +25,7 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final Block oceanSurface;
     private final Block seabed;
     private final List<WorldGenGalaxiaSurface> surfaceFeatures;
+    private final List<WorldGenGalaxiaCave> caveFeatures;
     private final boolean generateCaves;
     private final int surfaceThickness;
 
@@ -57,9 +59,10 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableMonsterList = b.mobsMonster;
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
-        surfaceFeatures = b.surfaceFeatures;
+        this.surfaceFeatures = b.surfaceFeatures;
+        this.caveFeatures = b.caveFeatures;
         this.generateCaves = b.generateCaves;
-        surfaceThickness = b.surfaceThickness;
+        this.surfaceThickness = b.surfaceThickness;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
@@ -164,6 +167,10 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public List<WorldGenGalaxiaSurface> getSurfaceFeatures() {
         return surfaceFeatures;
+    }
+
+    public List<WorldGenGalaxiaCave> getCaveFeatures() {
+        return caveFeatures;
     }
 
     public boolean generateCaves() {
