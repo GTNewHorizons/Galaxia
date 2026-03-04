@@ -8,12 +8,12 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
-public abstract class WorldGenGalaxia extends WorldGenerator {
+public abstract class WorldGenGalaxiaSurface extends WorldGenerator {
 
     private final int rarity;
     private final Block[] surfaceRequirements;
 
-    public WorldGenGalaxia(int rarity, Block[] surfaceRequirements) {
+    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements) {
         super();
         this.rarity = rarity;
         this.surfaceRequirements = surfaceRequirements;

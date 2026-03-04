@@ -6,7 +6,7 @@ import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -23,7 +23,7 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final Block oceanFiller;
     private final Block oceanSurface;
     private final Block seabed;
-    private final List<WorldGenGalaxia> surfaceFeatures;
+    private final List<WorldGenGalaxiaSurface> surfaceFeatures;
     private final boolean generateCaves;
     private final int surfaceThickness;
 
@@ -162,7 +162,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         return surfaceThickness;
     }
 
-    public List<WorldGenGalaxia> getSurfaceFeatures() {
+    public List<WorldGenGalaxiaSurface> getSurfaceFeatures() {
         return surfaceFeatures;
     }
 

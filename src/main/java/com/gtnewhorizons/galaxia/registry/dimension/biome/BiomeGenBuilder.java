@@ -11,7 +11,7 @@ import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
 
 /**
  * The builder for biome generation
@@ -36,7 +36,7 @@ public class BiomeGenBuilder {
     Block seabed = stone;
     Block fillerBlock = stone;
     Block snowBlock = stone;
-    List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
+    List<WorldGenGalaxiaSurface> surfaceFeatures = new ArrayList<>();
     List<Block> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
     int surfaceThickness = 1;
@@ -179,7 +179,7 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder surfaceFeature(WorldGenGalaxia feature) {
+    public BiomeGenBuilder surfaceFeature(WorldGenGalaxiaSurface feature) {
         surfaceFeatures.add(feature);
         return this;
     }
