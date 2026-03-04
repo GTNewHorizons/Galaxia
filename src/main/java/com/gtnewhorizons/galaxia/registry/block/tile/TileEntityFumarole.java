@@ -80,11 +80,9 @@ public class TileEntityFumarole extends TileEntity {
             case 1:
                 if (t % 5 == 0) applyFireDamage(2.5f);
                 break;
-
             case 0:
                 if (t % 5 == 0) applyFireDamage(1.5f);
                 break;
-
         }
     }
 
