@@ -17,6 +17,8 @@ public abstract class RocketModule {
     private final double width;
     private final double weight;
     private final String modelName;
+    private double thrust = 0;
+    private double fuelCapacity = 0;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
@@ -62,11 +64,11 @@ public abstract class RocketModule {
     }
 
     public double getFuelCapacity() {
-        return 0;
+        return fuelCapacity;
     }
 
     public double getThrust() {
-        return 0;
+        return thrust;
     }
 
     public int getPassengerCapacity() {
@@ -92,5 +94,13 @@ public abstract class RocketModule {
 
     public boolean isStackableWith(RocketModule other) {
         return getClass() == other.getClass();
+    }
+
+    public void setThrust(double thrust) {
+        this.thrust = thrust;
+    }
+
+    public void setFuelCapacity(double fc) {
+        this.fuelCapacity = fc;
     }
 }
