@@ -7,6 +7,7 @@ public class FuelTankModule extends RocketModule implements IStackableModule {
 
     public FuelTankModule() {
         super(0, "Fuel Tank", 5.0, 3.0, 1200.0, "fuel_tank_3x5x3");
+        this.setFuelCapacity(8000);
     }
 
     @Override
