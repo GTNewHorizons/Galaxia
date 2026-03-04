@@ -28,6 +28,8 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final List<WorldGenGalaxiaCave> caveFeatures;
     private final boolean generateCaves;
     private final int surfaceThickness;
+    private final Block oceanCrackBlock;
+    private final float oceanCrackThickness;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -63,6 +65,8 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.caveFeatures = b.caveFeatures;
         this.generateCaves = b.generateCaves;
         this.surfaceThickness = b.surfaceThickness;
+        this.oceanCrackThickness = b.oceanCrackThickness;
+        this.oceanCrackBlock = b.oceanCrackBlock;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
@@ -175,5 +179,13 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public boolean generateCaves() {
         return generateCaves;
+    }
+
+    public Block getOceanCrackBlock() {
+        return oceanCrackBlock;
+    }
+
+    public float getOceanCrackThickness() {
+        return oceanCrackThickness;
     }
 }

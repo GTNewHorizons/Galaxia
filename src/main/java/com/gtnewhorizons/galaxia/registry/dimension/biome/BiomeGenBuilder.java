@@ -43,6 +43,8 @@ public class BiomeGenBuilder {
     boolean generateCaves = false;
     int surfaceThickness = 1;
     boolean enableRain = false;
+    Block oceanCrackBlock;
+    float oceanCrackThickness;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -156,6 +158,12 @@ public class BiomeGenBuilder {
         this.oceanHeight = oceanHeight;
         this.seabed = seabed;
         this.seabedHeight = seabedHeight;
+        return this;
+    }
+
+    public BiomeGenBuilder oceanCracks(float oceanCrackThickness, Block oceanCrackBlock) {
+        this.oceanCrackThickness = oceanCrackThickness;
+        this.oceanCrackBlock = oceanCrackBlock;
         return this;
     }
 

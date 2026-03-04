@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenMagmaZone;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenTheiaStalactite;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -224,8 +223,7 @@ public class Theia extends BasePlanet {
             .build();
     }
 
-    protected static BiomeGenBase createBiome(String name,
-                                              TerrainConfiguration terrainConfiguration) {
+    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrainConfiguration) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
@@ -238,16 +236,9 @@ public class Theia extends BasePlanet {
                     32,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     PlanetBlocks.THEIA_TEKTITE))
-            .surfaceFeature(
-                new WorldGenMagmaZone(
-                    512,
-                    new Block[]{PlanetBlocks.THEIA_OBSIDIAN},
-                    PlanetBlocks.THEIA_MAGMA,
-                    PlanetBlocks.THEIA_OBSIDIAN,
-                    56)
-            )
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 56, PlanetBlocks.THEIA_OBSIDIAN, 1)
+            .oceanCracks(0.1F, PlanetBlocks.THEIA_MAGMA)
             .surfaceThickness(4)
             .build();
     }
