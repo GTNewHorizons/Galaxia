@@ -176,8 +176,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     }
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
-                            if (y == oceanHeight - 1) {
+                            if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
                                 block = getOceanSurfaceBlock(oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, chunkX * 16 + localX, chunkZ * 16 + localZ);
+                            } else if (y == oceanHeight - 1 && oceanHeight - height >= 2) {
+                                block = getOceanSurfaceBlock(oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, chunkX * 16 + localX, chunkZ * 16 + localZ);
+                                if (block != oceanFiller) {
+                                    block = Blocks.air;
+                                }
                             } else {
                                 block = oceanFiller;
                             }
