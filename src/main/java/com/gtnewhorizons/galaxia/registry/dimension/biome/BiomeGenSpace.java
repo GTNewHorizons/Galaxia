@@ -2,11 +2,11 @@ package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.List;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -14,16 +14,15 @@ import com.gtnewhorizons.galaxia.utility.BlockMeta;
 public class BiomeGenSpace extends BiomeGenBase {
 
     private final boolean generateBedrock;
-    private final List<BlockMeta> topBlockMetas;
-    private final int fillerBlockMeta;
+    private final List<Block> topBlockMetas;
     private final TerrainConfiguration terrain;
     private final int snowHeight;
-    private final BlockMeta snowBlock;
+    private final Block snowBlock;
     private final int oceanHeight;
     private final int seabedHeight;
-    private final BlockMeta oceanFiller;
-    private final BlockMeta oceanSurface;
-    private final BlockMeta seabed;
+    private final Block oceanFiller;
+    private final Block oceanSurface;
+    private final Block seabed;
     private final List<WorldGenGalaxia> surfaceFeatures;
     private final boolean generateCaves;
     private final int surfaceThickness;
@@ -43,9 +42,8 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setTemperatureRainfall(b.temperature, b.rainfall);
         this.enableRain = b.enableRain;
 
-        this.fillerBlock = b.fillerBlock.block();
+        this.fillerBlock = b.fillerBlock;
         this.topBlockMetas = b.topBlockMetas;
-        this.fillerBlockMeta = b.fillerBlock.meta();
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
         this.oceanHeight = b.oceanHeight;
@@ -84,17 +82,8 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the top block meta
      */
-    public List<BlockMeta> getTopBlockMetas() {
+    public List<Block> getTopBlockMetas() {
         return topBlockMetas;
-    }
-
-    /**
-     * Getter for filler block meta
-     *
-     * @return the filler block meta
-     */
-    public int getFillerBlockMeta() {
-        return fillerBlockMeta;
     }
 
     /**
@@ -111,7 +100,7 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the snow block
      */
-    public BlockMeta getSnowBlock() {
+    public Block getSnowBlock() {
         return snowBlock;
     }
 
@@ -138,7 +127,7 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the ocean filler block
      */
-    public BlockMeta getOceanFiller() {
+    public Block getOceanFiller() {
         return oceanFiller;
     }
 
@@ -147,7 +136,7 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the ocean surface block
      */
-    public BlockMeta getOceanSurface() {
+    public Block getOceanSurface() {
         return oceanSurface;
     }
 
@@ -156,7 +145,7 @@ public class BiomeGenSpace extends BiomeGenBase {
      *
      * @return the seabed block
      */
-    public BlockMeta getSeabed() {
+    public Block getSeabed() {
         return seabed;
     }
 

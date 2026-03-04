@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.WorldProvider;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
-import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
@@ -13,7 +13,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.Asteroid;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The class holding all data related to the dimension FrozenBelt
@@ -74,46 +73,39 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     12,
                     16,
                     32,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANDESITE),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ANORTHOSITE) },
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA) },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_ANDESITE, PlanetBlocks.FROZEN_BELT_ANORTHOSITE },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_ICE, PlanetBlocks.FROZEN_BELT_BRECCIA },
                     1),
                 new Asteroid(
                     16,
                     20,
                     64,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT) },
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA) },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_ICE, PlanetBlocks.FROZEN_BELT_BASALT },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_GABBRO, PlanetBlocks.FROZEN_BELT_BRECCIA },
                     3),
+
                 new Asteroid(
                     20,
                     32,
                     128,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA) },
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT) },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_GABBRO, PlanetBlocks.FROZEN_BELT_BRECCIA },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_ICE, PlanetBlocks.FROZEN_BELT_BASALT },
                     4),
+
                 new Asteroid(
                     24,
                     48,
                     512,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT) },
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA) },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_GABBRO, PlanetBlocks.FROZEN_BELT_BASALT },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_BASALT, PlanetBlocks.FROZEN_BELT_BRECCIA },
                     6),
+
                 new Asteroid(
                     24,
                     48,
                     512,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.ICE),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BRECCIA) },
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.GABBRO),
-                        GalaxiaBlock.get(DimensionEnum.FROZEN_BELT, BlockVariant.BASALT) },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_ICE, PlanetBlocks.FROZEN_BELT_BRECCIA },
+                    new Block[] { PlanetBlocks.FROZEN_BELT_GABBRO, PlanetBlocks.FROZEN_BELT_BASALT },
                     2) };
             // Configure the world provider for this dimension
             WorldProviderBuilder.configure(this)

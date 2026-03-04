@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockVariant;
-import com.gtnewhorizons.galaxia.registry.block.base.GalaxiaBlock;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguratio
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenCrater;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
-import com.gtnewhorizons.galaxia.utility.BlockMeta;
 
 /**
  * The class holding all data related to the dimension Theia
@@ -69,8 +68,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Hills",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE),
+                    PlanetBlocks.THEIA_REGOLITH,
+                    PlanetBlocks.THEIA_ANDESITE,
                     true,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -92,8 +91,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Mountains",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.ANDESITE),
+                    PlanetBlocks.THEIA_REGOLITH,
+                    PlanetBlocks.THEIA_ANDESITE,
                     true,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -115,8 +114,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Small Volcanoes",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
+                    PlanetBlocks.THEIA_BASALT,
+                    PlanetBlocks.THEIA_BASALT,
                     false,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -134,8 +133,8 @@ public class Theia extends BasePlanet {
             .biome(
                 createBiome(
                     "Theia Big Volcanoes",
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
+                    PlanetBlocks.THEIA_BASALT,
+                    PlanetBlocks.THEIA_BASALT,
                     false,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -205,8 +204,8 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, BlockMeta topBlock, BlockMeta fillerBlock,
-        boolean generateCaves, TerrainConfiguration terrainConfiguration, int craterRarity, int oceanHeight) {
+    protected static BiomeGenBase createBiome(String name, Block topBlock, Block fillerBlock, boolean generateCaves,
+        TerrainConfiguration terrainConfiguration, int craterRarity, int oceanHeight) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
@@ -217,16 +216,10 @@ public class Theia extends BasePlanet {
             .surfaceFeature(
                 new WorldGenCrater(
                     craterRarity,
-                    new BlockMeta[] { GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.REGOLITH),
-                        GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT) },
-                    GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.TEKTITE)))
+                    new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
+                    PlanetBlocks.THEIA_TEKTITE))
             .terrain(terrainConfiguration)
-            .ocean(
-                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN),
-                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.BASALT),
-                oceanHeight,
-                GalaxiaBlock.get(DimensionEnum.THEIA, BlockVariant.OBSIDIAN),
-                1)
+            .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, oceanHeight, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();
     }
