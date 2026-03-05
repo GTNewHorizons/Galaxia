@@ -84,8 +84,7 @@ public class SpaceStation extends BasePlanet {
                 id,
                 new BiomeGenBuilder(id).name("Space")
                     .temperature(1.0F)
-                    .rainfall(0)
-                    .generateBedrock(false));
+                    .rainfall(0));
         }
     }
 }

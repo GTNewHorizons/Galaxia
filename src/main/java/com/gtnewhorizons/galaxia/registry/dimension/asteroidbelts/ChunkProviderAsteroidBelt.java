@@ -11,7 +11,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.Asteroid;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenAsteroid;
 
 /**
  * A chunk provider implementation specific to Asteroid Belts
@@ -20,9 +20,9 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     private final Random rand;
     private final World worldObj;
-    private final Asteroid[] asteroids;
+    private final WorldGenAsteroid[] asteroids;
 
-    public ChunkProviderAsteroidBelt(World world, long seed, Asteroid[] asteroids) {
+    public ChunkProviderAsteroidBelt(World world, long seed, WorldGenAsteroid[] asteroids) {
         this.worldObj = world;
         this.rand = new Random(seed);
         this.asteroids = asteroids;
@@ -79,7 +79,7 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
         int z = chunkZ * 16;
 
         // Create asteroids in locally random points within the chunk
-        for (Asteroid asteroid : asteroids) {
+        for (WorldGenAsteroid asteroid : asteroids) {
             int localX = x + this.rand.nextInt(16) + 8;
             int localY = this.rand.nextInt(176) + 16;
             int localZ = z + this.rand.nextInt(16) + 8;

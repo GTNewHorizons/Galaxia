@@ -96,7 +96,13 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         } else {
             cacheNoiseZ = noise;
         }
-        return (int) Math.floor(noise);
+        int flooredNoise = (int) Math.floor(noise);
+        if (flooredNoise < 0) {
+            flooredNoise = 0;
+        } else if (flooredNoise >= matrixLength) {
+            flooredNoise = matrixLength - 1;
+        }
+        return flooredNoise;
     }
 
     /**

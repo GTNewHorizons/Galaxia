@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
@@ -103,7 +104,7 @@ public abstract class BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(block)
-            .fillerBlock(Blocks.brick_block)
+            .fillerBlocks(new StratificationPreset(Blocks.brick_block).addStrataLayer(Blocks.bedrock, 0, 0))
             .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)

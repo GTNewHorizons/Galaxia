@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlocks;
@@ -9,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
@@ -138,7 +140,9 @@ public class Hemateria extends BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(surfaceBlock)
-            .fillerBlock(PlanetBlocks.HEMATERIA_ANDESITE)
+            .fillerBlocks(
+                new StratificationPreset(PlanetBlocks.HEMATERIA_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.HEMATERIA_ANORTHOSITE, 1, 32))
             .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)

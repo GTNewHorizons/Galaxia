@@ -275,7 +275,7 @@ public final class TerrainFeatureApplier {
                 }
                 double localNoise = noise[x + z * 16];
                 if (localNoise > 0.75) {
-                    continue;
+                    localNoise = (0.75 - localNoise) * 16;
                 }
                 hm[x + z * 16] += ((localNoise * height) * localRelevance);
             }
