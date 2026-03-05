@@ -21,8 +21,6 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
@@ -77,15 +75,6 @@ public class DimensionEventHandler {
                             .effects(),
                     player);
         }
-    }
-
-    public static boolean isWearingFullSuit(EntityPlayer player) {
-        for (int i = 0; i < 4; i++) {
-            ItemStack piece = player.inventory.armorInventory[i];
-            if (piece == null || !(piece.getItem() instanceof ItemSpaceSuit))
-                return false;
-        }
-        return true;
     }
 
     /**

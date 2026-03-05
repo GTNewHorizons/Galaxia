@@ -10,8 +10,10 @@ import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
 
 /**
  * The builder for biome generation
@@ -26,7 +28,6 @@ public class BiomeGenBuilder {
     Height height = new Height(0, 0);
     float temperature = 0.4F;
     float rainfall = 0.0F;
-    boolean generateBedrock = true;
     TerrainConfiguration terrain;
     int snowHeight = 512;
     int oceanHeight = 0;
@@ -34,13 +35,17 @@ public class BiomeGenBuilder {
     Block oceanFiller = stone;
     Block oceanSurface = stone;
     Block seabed = stone;
-    Block fillerBlock = stone;
     Block snowBlock = stone;
-    List<WorldGenGalaxia> surfaceFeatures = new ArrayList<>();
+    List<WorldGenGalaxiaSurface> surfaceFeatures = new ArrayList<>();
+    List<WorldGenGalaxiaCave> caveFeatures = new ArrayList<>();
     List<Block> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
     int surfaceThickness = 1;
     boolean enableRain = false;
+    Block oceanCrackBlock;
+    float oceanCrackThickness;
+    int oceanCrackComplexity;
+    StratificationPreset fillerBlocks;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -113,14 +118,8 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    /**
-     * Set the filler block for the biome (Where the block has meta-data)
-     *
-     * @param block The required filler block (with meta)
-     * @return Configured builder
-     */
-    public BiomeGenBuilder fillerBlock(Block block) {
-        this.fillerBlock = block;
+    public BiomeGenBuilder fillerBlocks(StratificationPreset fillerBlocks) {
+        this.fillerBlocks = fillerBlocks;
         return this;
     }
 
@@ -157,14 +156,10 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    /**
-     * Sets whether to generate bedrock
-     *
-     * @param generateBedrock True = bedrock layer
-     * @return Configured builder
-     */
-    public BiomeGenBuilder generateBedrock(boolean generateBedrock) {
-        this.generateBedrock = generateBedrock;
+    public BiomeGenBuilder oceanCracks(float oceanCrackThickness, Block oceanCrackBlock, int oceanCrackComplexity) {
+        this.oceanCrackThickness = oceanCrackThickness;
+        this.oceanCrackBlock = oceanCrackBlock;
+        this.oceanCrackComplexity = oceanCrackComplexity;
         return this;
     }
 
@@ -179,8 +174,13 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder surfaceFeature(WorldGenGalaxia feature) {
+    public BiomeGenBuilder surfaceFeature(WorldGenGalaxiaSurface feature) {
         surfaceFeatures.add(feature);
+        return this;
+    }
+
+    public BiomeGenBuilder caveFeature(WorldGenGalaxiaCave feature) {
+        caveFeatures.add(feature);
         return this;
     }
 

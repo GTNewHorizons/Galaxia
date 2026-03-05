@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.utility;
 
 import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -11,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 
 import baubles.api.BaublesApi;
 
@@ -100,8 +103,34 @@ public final class GalaxiaAPI {
         return .5f;
     }
 
-    public static boolean isInGalaxiaDimension(EntityPlayer player) {
-        return GALAXIA_DIMENSIONS.contains(player.dimension);
+    public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return false;
+
+        for (int slot : Galaxia.oxygenSlots) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ItemOxygenTank) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasThermalProtection(@Nonnull EntityPlayer player) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return false;
+
+        for (int slot : Galaxia.thermalSlot) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ItemThermalProtection) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isInGalaxiaDimension(Entity e) {
+        return GALAXIA_DIMENSIONS.contains(e.dimension);
     }
 
     public static String toSnakeCase(String s) {

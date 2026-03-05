@@ -7,6 +7,7 @@ public class EngineModule extends RocketModule implements IStackableModule {
 
     public EngineModule() {
         super(3, "Engine", 0.5, 3.0, 250.0, "engine_3x1x3");
+        super.setThrust(10);
     }
 
     @Override

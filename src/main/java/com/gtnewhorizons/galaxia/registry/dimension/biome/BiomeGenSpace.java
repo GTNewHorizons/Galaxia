@@ -5,15 +5,16 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxia;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
 
 /**
  * The class holding all generation fields for Biome generation
  */
 public class BiomeGenSpace extends BiomeGenBase {
 
-    private final boolean generateBedrock;
     private final List<Block> topBlockMetas;
     private final TerrainConfiguration terrain;
     private final int snowHeight;
@@ -23,9 +24,14 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final Block oceanFiller;
     private final Block oceanSurface;
     private final Block seabed;
-    private final List<WorldGenGalaxia> surfaceFeatures;
+    private final List<WorldGenGalaxiaSurface> surfaceFeatures;
+    private final List<WorldGenGalaxiaCave> caveFeatures;
     private final boolean generateCaves;
     private final int surfaceThickness;
+    private final Block oceanCrackBlock;
+    private final float oceanCrackThickness;
+    private final int oceanCrackComplexity;
+    private final StratificationPreset fillerBlocks;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -42,7 +48,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setTemperatureRainfall(b.temperature, b.rainfall);
         this.enableRain = b.enableRain;
 
-        this.fillerBlock = b.fillerBlock;
+        this.fillerBlocks = b.fillerBlocks;
         this.topBlockMetas = b.topBlockMetas;
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
@@ -57,24 +63,22 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.spawnableMonsterList = b.mobsMonster;
         this.spawnableWaterCreatureList = b.mobsWater;
         this.flowers = b.flowers;
-        surfaceFeatures = b.surfaceFeatures;
+        this.surfaceFeatures = b.surfaceFeatures;
+        this.caveFeatures = b.caveFeatures;
         this.generateCaves = b.generateCaves;
-        surfaceThickness = b.surfaceThickness;
+        this.surfaceThickness = b.surfaceThickness;
+        this.oceanCrackThickness = b.oceanCrackThickness;
+        this.oceanCrackBlock = b.oceanCrackBlock;
+        this.oceanCrackComplexity = b.oceanCrackComplexity;
 
         // Set terrain if there is one, if not build a default
         this.terrain = b.terrain != null ? b.terrain
             : TerrainConfiguration.builder()
                 .build();
-        this.generateBedrock = b.generateBedrock;
     }
 
-    /**
-     * Getter for bedrock generation
-     *
-     * @return boolean - True => generate bedrock
-     */
-    public boolean generateBedrock() {
-        return generateBedrock;
+    public StratificationPreset getFillerBlocks() {
+        return fillerBlocks;
     }
 
     /**
@@ -162,11 +166,27 @@ public class BiomeGenSpace extends BiomeGenBase {
         return surfaceThickness;
     }
 
-    public List<WorldGenGalaxia> getSurfaceFeatures() {
+    public List<WorldGenGalaxiaSurface> getSurfaceFeatures() {
         return surfaceFeatures;
+    }
+
+    public List<WorldGenGalaxiaCave> getCaveFeatures() {
+        return caveFeatures;
     }
 
     public boolean generateCaves() {
         return generateCaves;
+    }
+
+    public Block getOceanCrackBlock() {
+        return oceanCrackBlock;
+    }
+
+    public float getOceanCrackThickness() {
+        return oceanCrackThickness;
+    }
+
+    public int getOceanCrackComplexity() {
+        return oceanCrackComplexity;
     }
 }

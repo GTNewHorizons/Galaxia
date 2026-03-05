@@ -9,7 +9,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 
-public class WorldGenCrater extends WorldGenGalaxia {
+public class WorldGenCrater extends WorldGenGalaxiaSurface {
 
     private final Block tektite;
 

@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts;
 import net.minecraft.block.Block;
 import net.minecraft.world.WorldProvider;
 
-import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
@@ -11,7 +11,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.Asteroid;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenAsteroid;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
 /**
@@ -68,15 +68,15 @@ public class FrozenBelt extends BaseAsteroidBelt {
          */
         public WorldProviderFrozenBelt() {
             // Generates an array of asteroids for use in generation
-            Asteroid[] asteroids = new Asteroid[] {
-                new Asteroid(
+            WorldGenAsteroid[] asteroids = new WorldGenAsteroid[] {
+                new WorldGenAsteroid(
                     12,
                     16,
                     32,
                     new Block[] { PlanetBlocks.FROZEN_BELT_ANDESITE, PlanetBlocks.FROZEN_BELT_ANORTHOSITE },
                     new Block[] { PlanetBlocks.FROZEN_BELT_ICE, PlanetBlocks.FROZEN_BELT_BRECCIA },
                     1),
-                new Asteroid(
+                new WorldGenAsteroid(
                     16,
                     20,
                     64,
@@ -84,7 +84,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     new Block[] { PlanetBlocks.FROZEN_BELT_GABBRO, PlanetBlocks.FROZEN_BELT_BRECCIA },
                     3),
 
-                new Asteroid(
+                new WorldGenAsteroid(
                     20,
                     32,
                     128,
@@ -92,7 +92,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     new Block[] { PlanetBlocks.FROZEN_BELT_ICE, PlanetBlocks.FROZEN_BELT_BASALT },
                     4),
 
-                new Asteroid(
+                new WorldGenAsteroid(
                     24,
                     48,
                     512,
@@ -100,7 +100,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                     new Block[] { PlanetBlocks.FROZEN_BELT_BASALT, PlanetBlocks.FROZEN_BELT_BRECCIA },
                     6),
 
-                new Asteroid(
+                new WorldGenAsteroid(
                     24,
                     48,
                     512,
@@ -135,8 +135,7 @@ public class FrozenBelt extends BaseAsteroidBelt {
                 id,
                 new BiomeGenBuilder(id).name("Frozen Belt")
                     .temperature(1.0F)
-                    .rainfall(0)
-                    .generateBedrock(false));
+                    .rainfall(0));
         }
     }
 }

@@ -1,37 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.Random;
-
-import net.minecraft.block.Block;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
-public abstract class WorldGenGalaxia extends WorldGenerator {
-
-    private final int rarity;
-    private final Block[] surfaceRequirements;
-
-    public WorldGenGalaxia(int rarity, Block[] surfaceRequirements) {
-        super();
-        this.rarity = rarity;
-        this.surfaceRequirements = surfaceRequirements;
-    }
-
-    @Override
-    public boolean generate(World world, Random random, int x, int y, int z) {
-        if (random.nextInt(rarity) > 0) {
-            return false;
-        }
-        net.minecraft.block.Block surfaceBlock = world.getBlock(x, y - 1, z);
-        for (Block surfaceRequirement : surfaceRequirements) {
-            if (surfaceBlock == surfaceRequirement) {
-                return true;
-            }
-        }
-        return false;
-    }
+public abstract class WorldGenGalaxiaBase extends WorldGenerator {
 
     /**
      * Sets block in the world at set coordinates

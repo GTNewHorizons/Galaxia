@@ -26,11 +26,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private final World worldObj;
     private final Random rand;
+    private final NoiseGeneratorOctaves crackNoise;
     private final NoiseGeneratorOctaves baseNoise;
     private final NoiseGeneratorOctaves caveNoise;
     private final boolean showDebug = false;
 
-    private double[][] caveCache = new double[256][256];
+    private final double[][] caveCache = new double[256][256];
 
     /**
      * Constructor to initialize the world and noise/random generators
@@ -43,6 +44,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         this.rand = new Random(world.getSeed());
         this.baseNoise = new NoiseGeneratorOctaves(rand, 4);
         this.caveNoise = new NoiseGeneratorOctaves(rand, 4);
+        this.crackNoise = new NoiseGeneratorOctaves(rand, 2);
         if (showDebug) writeDebug();
     }
 
@@ -122,27 +124,28 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
         // Generate blocks
         Block topBlock = Blocks.grass;
-        Block fillerBlock = Blocks.stone;
+        StratificationPreset fillerBlocks = new StratificationPreset(Blocks.stone);
         Block snowBlock = Blocks.snow;
         Block oceanFiller = Blocks.water;
         Block oceanSurface = Blocks.sand;
         Block seabed = Blocks.gravel;
+        Block oceanCrackBlock = Blocks.lava;
         int surfaceDepth = 1;
         int snowHeight = 512;
         int oceanHeight = 0;
         int seabedHeight = 0;
+        int oceanCrackComplexity = 1;
+        float oceanCrackThickness = 0.5F;
         boolean generateCaves = false;
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
-                boolean generateBedrock = false;
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
-                    generateBedrock = spaceBiome.generateBedrock();
                     topBlock = getSurfaceBlock(
                         spaceBiome.getTopBlockMetas(),
                         chunkX * 16 + localX,
                         chunkZ * 16 + localZ);
-                    fillerBlock = spaceBiome.fillerBlock;
+                    fillerBlocks = spaceBiome.getFillerBlocks();
                     snowHeight = spaceBiome.getSnowHeight();
                     snowBlock = spaceBiome.getSnowBlock();
                     oceanHeight = spaceBiome.getOceanHeight();
@@ -152,6 +155,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     seabedHeight = spaceBiome.getSeabedHeight();
                     generateCaves = spaceBiome.generateCaves();
                     surfaceDepth = spaceBiome.getSurfaceThickness();
+                    oceanCrackBlock = spaceBiome.getOceanCrackBlock();
+                    oceanCrackThickness = spaceBiome.getOceanCrackThickness();
+                    oceanCrackComplexity = spaceBiome.getOceanCrackComplexity();
                 }
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
@@ -159,16 +165,34 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
-                    Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlock;
+                    Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlocks.getStrataBlock(y);
                     if (block == topBlock && y >= snowHeight) {
                         block = snowBlock;
                     }
-                    if (generateBedrock && y == 0) {
-                        block = Blocks.bedrock;
-                    }
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
-                            block = oceanFiller;
+                            if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
+                                block = getOceanSurfaceBlock(
+                                    oceanFiller,
+                                    oceanCrackBlock,
+                                    oceanCrackThickness,
+                                    oceanCrackComplexity,
+                                    chunkX * 16 + localX,
+                                    chunkZ * 16 + localZ);
+                            } else if (y == oceanHeight - 1 && oceanHeight - height >= 2) {
+                                block = getOceanSurfaceBlock(
+                                    oceanFiller,
+                                    oceanCrackBlock,
+                                    oceanCrackThickness,
+                                    oceanCrackComplexity,
+                                    chunkX * 16 + localX,
+                                    chunkZ * 16 + localZ);
+                                if (block != oceanFiller) {
+                                    block = Blocks.air;
+                                }
+                            } else {
+                                block = oceanFiller;
+                            }
                         } else if (y == height - 1) {
                             if (y > seabedHeight) {
                                 block = oceanSurface;
@@ -177,7 +201,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
-                    if (generateCaves && (block == fillerBlock || block == topBlock || block == snowBlock)
+                    if (generateCaves
+                        && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
                         && generateCave(localX, y, localZ, height)) {
                         block = Blocks.air;
                     }
@@ -255,6 +280,22 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return surfaceBlock;
     }
 
+    private Block getOceanSurfaceBlock(Block mainBlock, Block crackBlock, float crackThickness,
+        int oceanCrackComplexity, int x, int z) {
+        if (crackBlock == null || crackThickness == 0) {
+            return mainBlock;
+        }
+        double noise = 0;
+        for (int octave = 0; octave < oceanCrackComplexity; octave++) {
+            double octaveExponent = Math.pow(2, octave);
+            noise += Math.abs(
+                crackNoise
+                    .generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2 / octaveExponent, 0.2 / octaveExponent, 0)[0]
+                    / octaveExponent);
+        }
+        return noise < crackThickness ? crackBlock : mainBlock;
+    }
+
     private double[] generateBaseHeightmap(int cx, int cz) {
         double[] hm = new double[256];
         for (int x = 0; x < 16; x++) {
@@ -301,12 +342,22 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 .isEmpty()) {
                 return;
             }
-            // Generate features in locally random points within the chunk
-            for (WorldGenGalaxia feature : spaceBiome.getSurfaceFeatures()) {
+            // Generate surface features in locally random points within the chunk
+            for (WorldGenGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
                 int localX = x + this.rand.nextInt(16) - 8;
                 int localZ = z + this.rand.nextInt(16) - 8;
                 int localY = worldObj.getHeightValue(x, z);
                 feature.generate(worldObj, rand, localX, localY, localZ);
+            }
+            // Generate cave features
+            for (WorldGenGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
+                int maximumHeight = feature.getMaximumHeight();
+                for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
+                    int localX = x + this.rand.nextInt(16) - 8;
+                    int localZ = z + this.rand.nextInt(16) - 8;
+                    int localY = rand.nextInt(Math.min(worldObj.getHeightValue(x, z), maximumHeight) + 1) + 4;
+                    feature.generate(worldObj, rand, localX, localY, localZ);
+                }
             }
         }
     }

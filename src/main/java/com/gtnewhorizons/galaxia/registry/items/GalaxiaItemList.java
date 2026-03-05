@@ -8,8 +8,6 @@ import java.util.function.Supplier;
 import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
@@ -37,18 +35,26 @@ public enum GalaxiaItemList {
     // Worldgen dust & ores
     DUST_THEIA("ore/theia_dust"),
     THEIA_TEKTITE_SHARD("ore/theia_tektite_shard"),
-    CINNABAR_SCALE("ore/cinnabar_scale"),
-    ENCHANTED_CINNABAR_SCALE("ore/enchanted_cinnabar_scale"),
-
     DUST_HEMATERIA("ore/hemateria_dust"),
     HEMATERIA_TEKTITE_SHARD("ore/hemateria_tektite_shard"),
     HEMATERIA_ICE_CUBES("ore/hemateria_ice_cubes"),
 
-    // SUIT
-    SPACESUIT_HELMET("spacesuit_helmet", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 0), 1),
-    SPACESUIT_CHESTPLATE("spacesuit_chestplate", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 1), 1),
-    SPACESUIT_LEGGINGS("spacesuit_leggings", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 2), 1),
-    SPACESUIT_BOOTS("spacesuit_boots", () -> new ItemSpaceSuit(ItemSpaceSuit.SUIT_MATERIAL, 0, 3), 1),
+    CINNABAR_SCALE("ore/cinnabar_scale"),
+    ENCHANTED_CINNABAR_SCALE("ore/enchanted_cinnabar_scale"),
+    AMBER_SHARD("ore/amber_shard"),
+    ENCHANTED_AMBER_SHARD("ore/psychedelic_amber_shard"),
+
+    PYRITE_CUBES("ore/pyrite_cubes"),
+    HEMATITE_DUST("ore/hematite_dust"),
+    HEMATITE_INGOT("ore/hematite_ingot"),
+    METEORIC_IRON_INGOT("ore/meteoric_iron_ingot"),
+    METEORIC_IRON_SHARD("ore/meteoric_iron_shard"),
+    RAW_METEORIC_IRON("ore/raw_meteoric_iron"),
+
+    // PARTS
+    HEAVY_DUTY_PLATE_BASE("parts/heavy_duty_plate_base"),
+    satellite_dish("parts/satellite_dish"),
+    BOROSILICATE_GLASS_BAR("parts/borosilicate_glass_bar"),
 
     // GEAR
     OXYGEN_TANK_T1("gear/oxygen_tank_1", () -> new ItemOxygenTank(1000), 1),
