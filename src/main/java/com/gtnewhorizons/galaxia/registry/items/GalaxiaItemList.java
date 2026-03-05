@@ -55,7 +55,7 @@ public enum GalaxiaItemList {
     OXYGEN_TANK_T4("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
     THERMAL_PROTECTION_COLD("gear/thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
     THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
-    OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1);
+    OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1),
     // TODO: Add programmer art for oxygen mask
 
     ; // leave trailing semicolon
