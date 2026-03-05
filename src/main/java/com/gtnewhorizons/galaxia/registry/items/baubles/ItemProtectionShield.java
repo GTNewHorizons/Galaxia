@@ -33,16 +33,21 @@ public class ItemProtectionShield extends Item implements IBaubleExpanded {
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
-        if (pressureProtectionHigh > 0) tooltip.add(
-            StatCollector.translateToLocalFormatted(
-                "item.galaxia.protection_shield_pressure.desc.high",
-                pressureProtectionHigh));
-        if (pressureProtectionLow > 0) tooltip.add(
-            StatCollector
-                .translateToLocalFormatted("item.galaxia.protection_shield_pressure.desc.low", pressureProtectionLow));
-        if (radiationProtection > 0) tooltip.add(
-            StatCollector
-                .translateToLocalFormatted("item.galaxia.protection_shield_radiation.desc", radiationProtection));
+        if (pressureProtectionHigh > 0)
+            tooltip.add(
+                    StatCollector.translateToLocalFormatted(
+                            "item.galaxia.protection_shield_pressure.desc.high",
+                            pressureProtectionHigh));
+        if (pressureProtectionLow > 0)
+            tooltip.add(
+                    StatCollector
+                            .translateToLocalFormatted("item.galaxia.protection_shield_pressure.desc.low",
+                                    pressureProtectionLow));
+        if (radiationProtection > 0)
+            tooltip.add(
+                    StatCollector
+                            .translateToLocalFormatted("item.galaxia.protection_shield_radiation.desc",
+                                    radiationProtection));
     }
 
     @Override
@@ -52,15 +57,18 @@ public class ItemProtectionShield extends Item implements IBaubleExpanded {
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote) return stack;
-        if (!canEquip(stack, player)) return stack;
+        if (world.isRemote)
+            return stack;
+        if (!canEquip(stack, player))
+            return stack;
 
         boolean equipped = tryEquipOrReplace(player, stack);
 
         if (equipped && !player.capabilities.isCreativeMode) {
             player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
+            if (player.openContainer != null)
+                player.openContainer.detectAndSendChanges();
         }
 
         return stack;
@@ -69,20 +77,10 @@ public class ItemProtectionShield extends Item implements IBaubleExpanded {
     private boolean tryEquipOrReplace(EntityPlayer player, ItemStack stack) {
         InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
 
+        // First look for empty slots
         for (int i : Galaxia.shieldSlots) {
-            if (!baubles.isItemValidForSlot(i, stack)) continue;
-
-            int freeSlot = -1;
-
-            for (int j : Galaxia.shieldSlots) {
-                if (!baubles.isItemValidForSlot(j, stack)) continue;
-
-                ItemStack inSlotTryTwo = baubles.getStackInSlot(j);
-                if (inSlotTryTwo == null) {
-                    freeSlot = j;
-                    break;
-                }
-            }
+            if (!baubles.isItemValidForSlot(i, stack))
+                continue;
 
             ItemStack inSlot = baubles.getStackInSlot(i);
 
@@ -93,21 +91,23 @@ public class ItemProtectionShield extends Item implements IBaubleExpanded {
                 return true;
             }
 
-            if (freeSlot != -1) {
-                baubles.setInventorySlotContents(freeSlot, stack.copy());
-                baubles.markDirty();
-                onEquipped(stack, player);
-                return true;
-            }
+        }
 
+        // No slots found - Look for potential swap
+        for (int i : Galaxia.shieldSlots) {
+            if (!baubles.isItemValidForSlot(i, stack))
+                continue;
+            ItemStack inSlot = baubles.getStackInSlot(i);
             boolean added = player.inventory.addItemStackToInventory(inSlot.copy());
-            if (!added) return false;
+            if (!added)
+                return false;
             baubles.setInventorySlotContents(i, stack.copy());
             baubles.markDirty();
             onEquipped(stack, player);
             return true;
         }
 
+        // No swaps or empty slots
         return false;
     }
 

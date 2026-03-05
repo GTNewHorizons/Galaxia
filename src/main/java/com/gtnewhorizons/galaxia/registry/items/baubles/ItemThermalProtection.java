@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.items.baubles;
 
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
+
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
@@ -29,23 +31,30 @@ public class ItemThermalProtection extends Item implements IBaubleExpanded {
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
-        if (coldProtection > 0) tooltip
-            .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.cold", coldProtection));
-        if (heatProtection > 0) tooltip
-            .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.hot", heatProtection));
+        if (coldProtection > 0)
+            tooltip
+                    .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.cold",
+                            coldProtection));
+        if (heatProtection > 0)
+            tooltip
+                    .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.hot",
+                            heatProtection));
     }
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote) return stack;
-        if (!canEquip(stack, player)) return stack;
+        if (world.isRemote)
+            return stack;
+        if (!canEquip(stack, player))
+            return stack;
 
         boolean equipped = tryEquipOrReplace(player, stack);
 
         if (equipped && !player.capabilities.isCreativeMode) {
             player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
+            if (player.openContainer != null)
+                player.openContainer.detectAndSendChanges();
         }
 
         return stack;
@@ -54,8 +63,10 @@ public class ItemThermalProtection extends Item implements IBaubleExpanded {
     private boolean tryEquipOrReplace(EntityPlayer player, ItemStack stack) {
         InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
 
-        for (int i = 0; i < baubles.getSizeInventory(); i++) {
-            if (!baubles.isItemValidForSlot(i, stack)) continue;
+        // First look for empty slots
+        for (int i : Galaxia.thermalSlot) {
+            if (!baubles.isItemValidForSlot(i, stack))
+                continue;
 
             ItemStack inSlot = baubles.getStackInSlot(i);
 
@@ -66,14 +77,23 @@ public class ItemThermalProtection extends Item implements IBaubleExpanded {
                 return true;
             }
 
+        }
+
+        // No slots found - Look for potential swap
+        for (int i : Galaxia.thermalSlot) {
+            if (!baubles.isItemValidForSlot(i, stack))
+                continue;
+            ItemStack inSlot = baubles.getStackInSlot(i);
             boolean added = player.inventory.addItemStackToInventory(inSlot.copy());
-            if (!added) return false;
+            if (!added)
+                return false;
             baubles.setInventorySlotContents(i, stack.copy());
             baubles.markDirty();
             onEquipped(stack, player);
             return true;
         }
 
+        // No swaps or empty slots
         return false;
     }
 
