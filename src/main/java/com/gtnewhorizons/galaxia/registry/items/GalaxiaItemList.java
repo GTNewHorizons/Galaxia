@@ -9,6 +9,7 @@ import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
@@ -18,8 +19,10 @@ import cpw.mods.fml.common.registry.GameRegistry;
 
 /**
  * ENUM for all Items in Galaxia
- * you can use folders for textures for example gear/oxygen_tank_1 will expect oxygen_tank_1 in folder gear
- * this doesn't affect registry name which in this example will still be oxygen_tank_1
+ * you can use folders for textures for example gear/oxygen_tank_1 will expect
+ * oxygen_tank_1 in folder gear
+ * this doesn't affect registry name which in this example will still be
+ * oxygen_tank_1
  */
 public enum GalaxiaItemList {
 
@@ -52,6 +55,8 @@ public enum GalaxiaItemList {
     OXYGEN_TANK_T4("gear/oxygen_tank_4", () -> new ItemOxygenTank(Integer.MAX_VALUE), 1),
     THERMAL_PROTECTION_COLD("gear/thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
     THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
+    OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1);
+    // TODO: Add programmer art for oxygen mask
 
     ; // leave trailing semicolon
 
@@ -81,7 +86,8 @@ public enum GalaxiaItemList {
     }
 
     /**
-     * Constructor to initialize factory and registry, with maxStackSize defaulted to 64
+     * Constructor to initialize factory and registry, with maxStackSize defaulted
+     * to 64
      *
      * @param registryName Name of the registry
      * @param itemFactory  The Item Factory
@@ -91,7 +97,8 @@ public enum GalaxiaItemList {
     }
 
     /**
-     * Constructor to initalize the registry using default item factory and stack size of 64
+     * Constructor to initalize the registry using default item factory and stack
+     * size of 64
      *
      * @param registryName Name of the registry
      */

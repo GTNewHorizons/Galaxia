@@ -38,6 +38,7 @@ public final class Galaxia {
 
     // Caches for baubles inventory indices. Set no earlier than postInit.
     public static int[] oxygenSlots;
+    public static int[] oxygenMaskSlots;
     public static int[] thermalSlot;
 
     @SidedProxy(clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy", serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")

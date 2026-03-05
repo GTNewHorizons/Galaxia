@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core;
 
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 
@@ -24,7 +25,8 @@ import cpw.mods.fml.common.registry.EntityRegistry;
 
 public class CommonProxy {
 
-    // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the
+    // preInit "Run before anything else. Read your config, create blocks, items,
+    // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
         SolarSystemRegistry.registerAll();
@@ -44,15 +46,18 @@ public class CommonProxy {
         ModuleRegistry.registerAllModules();
     }
 
-    // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
+    // load "Do your mod setup. Build whatever data structures you care about.
+    // Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
     }
 
-    // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
+    // postInit "Handle interaction with other mods, complete your setup based on
+    // this." (Remove if not needed)
     public void postInit(FMLPostInitializationEvent event) {
         Galaxia.oxygenSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_TANK);
         Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        Galaxia.oxygenMaskSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_MASK);
     }
 
     // register server commands in this event handler (Remove if not needed)
@@ -64,5 +69,7 @@ public class CommonProxy {
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_MASK);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_MASK);
     }
 }

@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
@@ -226,6 +227,7 @@ public class DimensionEventHandler {
         int oxygenPercent = def.getOxygenPercent(player);
         if (oxygenPercent == 100) return;
 
+        ItemStack oxygenMask = null;
         boolean couldDrainOxygen = false;
         for (int index : Galaxia.oxygenSlots) {
             ItemStack tank = BaublesApi.getBaubles(player)
@@ -233,7 +235,15 @@ public class DimensionEventHandler {
             if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
                 continue;
             }
-            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
+            for (int j : Galaxia.oxygenMaskSlots) {
+                ItemStack item = BaublesApi.getBaubles(player)
+                    .getStackInSlot(j);
+                if (item != null && item.getItem() instanceof ItemOxygenMask) {
+                    oxygenMask = item;
+                }
+            }
+
+            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5) && oxygenMask != null) {
                 couldDrainOxygen = true;
                 GALAXIA_NETWORK
                     .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
@@ -242,7 +252,7 @@ public class DimensionEventHandler {
         }
 
         float oxygenLevel = getPlayerOxygenLevel(player);
-        if (oxygenLevel > 0.1) lowOxygenDuration = 0;
+        if (oxygenLevel > 0.1 && oxygenMask != null) lowOxygenDuration = 0;
         else lowOxygenDuration++;
 
         // Apply low oxygen effects if oxygen is too low
