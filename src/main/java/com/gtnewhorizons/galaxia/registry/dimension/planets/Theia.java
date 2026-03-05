@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
-import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
@@ -40,7 +40,7 @@ public class Theia extends BasePlanet {
      */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.gravity(0.25)
+        return builder.gravity(0.2)
             .airResistance(0.01)
             .mass(0.012)
             .radius(0.27)

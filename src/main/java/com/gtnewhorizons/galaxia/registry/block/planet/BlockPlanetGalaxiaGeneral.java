@@ -16,9 +16,13 @@ public class BlockPlanetGalaxiaGeneral extends Block {
     protected final Item drop;
     protected final int harvestLevel;
     protected final float hardness;
+    protected final float slipperiness;
     protected final String harvestTool;
+    protected final int minDrop;
+    protected final int maxDrop;
 
-    public BlockPlanetGalaxiaGeneral(String name, Item drop, float hardness, int harvestLevel, String harvestTool) {
+    public BlockPlanetGalaxiaGeneral(String name, Item drop, int minDrop, int maxDrop, float hardness, int harvestLevel,
+        String harvestTool, float slipperiness) {
         super(Material.rock);
 
         this.texturePath = name;
@@ -29,6 +33,9 @@ public class BlockPlanetGalaxiaGeneral extends Block {
         this.harvestLevel = harvestLevel;
         this.harvestTool = harvestTool;
         this.hardness = hardness;
+        this.slipperiness = slipperiness;
+        this.minDrop = minDrop;
+        this.maxDrop = maxDrop;
 
         this.setBlockName(blockName);
         this.setBlockTextureName(Galaxia.TEXTURE_PREFIX + texturePath);
@@ -53,6 +60,11 @@ public class BlockPlanetGalaxiaGeneral extends Block {
     @Override
     public Item getItemDropped(int meta, Random rand, int fortune) {
         return drop != null ? drop : Item.getItemFromBlock(this);
+    }
+
+    @Override
+    public int quantityDropped(int meta, int fortune, Random random) {
+        return random.nextInt() % (maxDrop - minDrop + 1) + minDrop;
     }
 
     @Override
