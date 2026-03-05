@@ -15,8 +15,7 @@ public class ItemSporeFilter extends Item implements IBaubleExpanded {
 
     public static final String BAUBLE_TYPE_SPORE_FILTER = "spore_filter";
 
-    public ItemSporeFilter() {
-    }
+    public ItemSporeFilter() {}
 
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {

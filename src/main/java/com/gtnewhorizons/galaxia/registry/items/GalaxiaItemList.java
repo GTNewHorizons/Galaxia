@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 import net.minecraft.item.Item;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;

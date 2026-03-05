@@ -25,16 +25,15 @@ import com.github.bsideup.jabel.Desugar;
  */
 @Desugar
 public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
-        int pressure,
+    int pressure,
 
-        BiFunction<Integer, EntityPlayer, Integer> tempModifier,
-        BiFunction<Integer, EntityPlayer, Integer> oxygenModifier,
-        BiFunction<Integer, EntityPlayer, Integer> radiationModifier,
-        BiFunction<Integer, EntityPlayer, Integer> pressureModifier) {
+    BiFunction<Integer, EntityPlayer, Integer> tempModifier, BiFunction<Integer, EntityPlayer, Integer> oxygenModifier,
+    BiFunction<Integer, EntityPlayer, Integer> radiationModifier,
+    BiFunction<Integer, EntityPlayer, Integer> pressureModifier) {
 
     /** Constructor without modifiers */
     public EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
-            int pressure) {
+        int pressure) {
         this(baseTemp, withering, oxygenPercent, radiation, spores, pressure, null, null, null, null);
     }
 
@@ -160,16 +159,16 @@ public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, 
 
         public EffectBuilder build() {
             return new EffectBuilder(
-                    baseTemp,
-                    withering,
-                    oxygenPercent,
-                    radiation,
-                    spores,
-                    pressure,
-                    tempMod,
-                    oxygenMod,
-                    radiationMod,
-                    pressureMod);
+                baseTemp,
+                withering,
+                oxygenPercent,
+                radiation,
+                spores,
+                pressure,
+                tempMod,
+                oxygenMod,
+                radiationMod,
+                pressureMod);
         }
     }
 }

@@ -34,8 +34,8 @@ public class CommonProxy {
         SolarSystemRegistry.registerAll();
 
         FMLCommonHandler.instance()
-                .bus()
-                .register(new DimensionEventHandler());
+            .bus()
+            .register(new DimensionEventHandler());
 
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
@@ -43,8 +43,7 @@ public class CommonProxy {
         PlanetBlocks.init();
         GalaxiaEffects.init();
 
-        if (Loader.isModLoaded("Baubles|Expanded"))
-            registerBaublesSlots();
+        if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
 
         ModuleRegistry.registerAllModules();
     }
@@ -66,8 +65,7 @@ public class CommonProxy {
     }
 
     // register server commands in this event handler (Remove if not needed)
-    public void serverStarting(FMLServerStartingEvent event) {
-    }
+    public void serverStarting(FMLServerStartingEvent event) {}
 
     private void registerBaublesSlots() {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
