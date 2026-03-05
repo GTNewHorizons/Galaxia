@@ -68,12 +68,10 @@ public class ItemSporeFilter extends Item implements IBaubleExpanded {
 
         // No slots found - Look for potential swap
         for (int i : Galaxia.sporeFilterSlots) {
-            if (!baubles.isItemValidForSlot(i, stack))
-                continue;
+            if (!baubles.isItemValidForSlot(i, stack)) continue;
             ItemStack inSlot = baubles.getStackInSlot(i);
             boolean added = player.inventory.addItemStackToInventory(inSlot.copy());
-            if (!added)
-                return false;
+            if (!added) return false;
             baubles.setInventorySlotContents(i, stack.copy());
             baubles.markDirty();
             onEquipped(stack, player);

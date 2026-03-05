@@ -41,10 +41,8 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote)
-            return stack;
-        if (!canEquip(stack, player))
-            return stack;
+        if (world.isRemote) return stack;
+        if (!canEquip(stack, player)) return stack;
 
         boolean equipped = tryEquipOrReplace(player, stack);
 
@@ -52,8 +50,7 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
         if (equipped && !player.capabilities.isCreativeMode) {
             player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != null)
-                player.openContainer.detectAndSendChanges();
+            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
         }
 
         return stack;
@@ -72,17 +69,14 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
             slotsToCheck = oxygenSlots;
         } else {
             slotsToCheck = new int[baubles.getSizeInventory()];
-            for (int i = 0; i < slotsToCheck.length; i++)
-                slotsToCheck[i] = i;
+            for (int i = 0; i < slotsToCheck.length; i++) slotsToCheck[i] = i;
         }
 
         for (int idx : slotsToCheck) {
-            if (idx < 0 || idx >= baubles.getSizeInventory())
-                continue;
+            if (idx < 0 || idx >= baubles.getSizeInventory()) continue;
 
             // slot must accept this item
-            if (!baubles.isItemValidForSlot(idx, stack))
-                continue;
+            if (!baubles.isItemValidForSlot(idx, stack)) continue;
 
             ItemStack inSlot = baubles.getStackInSlot(idx);
 
@@ -96,14 +90,12 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
                 onEquipped(stack, player);
 
                 player.inventoryContainer.detectAndSendChanges();
-                if (player.openContainer != null)
-                    player.openContainer.detectAndSendChanges();
+                if (player.openContainer != null) player.openContainer.detectAndSendChanges();
                 return true;
             }
 
             // only consider other oxygen tanks for replacement
-            if (!isOxygenTank(inSlot))
-                continue;
+            if (!isOxygenTank(inSlot)) continue;
 
             int oxygen = getOxygenSafe(inSlot);
             if (oxygen < worstOxygen) {
@@ -131,8 +123,7 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
             onEquipped(stack, player);
 
             player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != null)
-                player.openContainer.detectAndSendChanges();
+            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
             return true;
         }
 
@@ -144,8 +135,7 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
     }
 
     private int getOxygenSafe(ItemStack stack) {
-        if (!(stack.getItem() instanceof ItemOxygenTank tank))
-            return Integer.MAX_VALUE;
+        if (!(stack.getItem() instanceof ItemOxygenTank tank)) return Integer.MAX_VALUE;
         return tank.getCurrentOxygen(stack);
     }
 
@@ -164,10 +154,9 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
     }
 
     public int getCurrentOxygen(ItemStack stack) {
-        if (!stack.hasTagCompound())
-            return 0;
+        if (!stack.hasTagCompound()) return 0;
         return stack.getTagCompound()
-                .getInteger(NBT_OXYGEN);
+            .getInteger(NBT_OXYGEN);
     }
 
     public float getPercentFull(ItemStack stack) {
@@ -175,13 +164,11 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
     }
 
     public void fillTank(ItemStack stack, int amount) {
-        if (isInfinite())
-            return;
-        if (!stack.hasTagCompound())
-            stack.setTagCompound(new NBTTagCompound());
+        if (isInfinite()) return;
+        if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
         int newAmount = Math.min(getCurrentOxygen(stack) + amount, oxygenStorage);
         stack.getTagCompound()
-                .setInteger(NBT_OXYGEN, newAmount);
+            .setInteger(NBT_OXYGEN, newAmount);
     }
 
     /**
@@ -193,15 +180,13 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
      * @return If the full amount was successfully drained.
      */
     public boolean drainTank(ItemStack stack, int amount) {
-        if (isInfinite())
-            return true;
+        if (isInfinite()) return true;
 
         int current = getCurrentOxygen(stack);
         int drained = Math.min(current, amount);
-        if (!stack.hasTagCompound())
-            stack.setTagCompound(new NBTTagCompound());
+        if (!stack.hasTagCompound()) stack.setTagCompound(new NBTTagCompound());
         stack.getTagCompound()
-                .setInteger(NBT_OXYGEN, current - drained);
+            .setInteger(NBT_OXYGEN, current - drained);
         return drained == amount;
     }
 
@@ -212,21 +197,17 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
 
     @Override
     public boolean showDurabilityBar(ItemStack stack) {
-        if (isInfinite())
-            return false;
+        if (isInfinite()) return false;
         return getDurabilityForDisplay(stack) != 0;
     }
 
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
-        if (isInfinite())
-            tooltip.add(StatCollector.translateToLocal("item.galaxia.oxygen_tank.infinite"));
-        else
-            tooltip.add(
-                    StatCollector
-                            .translateToLocalFormatted("item.galaxia.oxygen_tank.desc", getCurrentOxygen(stack),
-                                    oxygenStorage));
+        if (isInfinite()) tooltip.add(StatCollector.translateToLocal("item.galaxia.oxygen_tank.infinite"));
+        else tooltip.add(
+            StatCollector
+                .translateToLocalFormatted("item.galaxia.oxygen_tank.desc", getCurrentOxygen(stack), oxygenStorage));
     }
 
     @Override
@@ -240,16 +221,13 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
     }
 
     @Override
-    public void onWornTick(ItemStack itemstack, EntityLivingBase player) {
-    }
+    public void onWornTick(ItemStack itemstack, EntityLivingBase player) {}
 
     @Override
-    public void onEquipped(ItemStack itemstack, EntityLivingBase player) {
-    }
+    public void onEquipped(ItemStack itemstack, EntityLivingBase player) {}
 
     @Override
-    public void onUnequipped(ItemStack itemstack, EntityLivingBase player) {
-    }
+    public void onUnequipped(ItemStack itemstack, EntityLivingBase player) {}
 
     @Override
     public boolean canEquip(ItemStack itemstack, EntityLivingBase player) {
