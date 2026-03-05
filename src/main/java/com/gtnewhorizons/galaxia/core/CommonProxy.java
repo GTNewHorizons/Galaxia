@@ -2,9 +2,9 @@ package com.gtnewhorizons.galaxia.core;
 
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
-import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
-import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemPressureShield.BAUBLE_TYPE_PRESSURE_PROTECTION;
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield.BAUBLE_TYPE_PROTECTION_SHIELD;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.BAUBLE_TYPE_SPORE_FILTER;
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -59,11 +59,10 @@ public class CommonProxy {
     // this." (Remove if not needed)
     public void postInit(FMLPostInitializationEvent event) {
         Galaxia.oxygenSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_TANK);
-        Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        Galaxia.shieldSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
         Galaxia.oxygenMaskSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_MASK);
         Galaxia.sporeFilterSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_SPORE_FILTER);
-        Galaxia.pressureShieldSlots = BaubleExpandedSlots
-                .getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_PRESSURE_PROTECTION);
+        Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
     }
 
     // register server commands in this event handler (Remove if not needed)
@@ -74,14 +73,15 @@ public class CommonProxy {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
-        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
-        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_PROTECTION_SHIELD);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_MASK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_MASK);
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_SPORE_FILTER);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_SPORE_FILTER);
-        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_PRESSURE_PROTECTION);
-        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PRESSURE_PROTECTION);
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
 
     }
 }

@@ -11,7 +11,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemPressureShield;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
@@ -59,8 +59,9 @@ public enum GalaxiaItemList {
     THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
     OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1),
     SPORE_FILTER("gear/spore_filter", () -> new ItemSporeFilter(), 1),
-    PRESSURE_PROTECTION_HIGH("gear/pressure_protection_high", () -> new ItemPressureShield(4, 0)),
-    PRESSURE_PROTECTION_LOW("gear/pressure_protection_low", () -> new ItemPressureShield(0, 1)),
+    PRESSURE_PROTECTION_HIGH("gear/protection_shield_pressure_high", () -> new ItemProtectionShield(4, 0, 0), 1),
+    PRESSURE_PROTECTION_LOW("gear/protection_shield_pressure_low", () -> new ItemProtectionShield(0, 1, 0), 1),
+    RADIATION_PROTECTION("gear/protection_shield_radiation", () -> new ItemProtectionShield(0, 0, 10), 1),
 
     ; // leave trailing semicolon
 

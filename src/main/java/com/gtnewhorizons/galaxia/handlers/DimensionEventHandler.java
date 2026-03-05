@@ -26,7 +26,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemPressureShield;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
 import baubles.api.BaublesApi;
@@ -244,11 +244,11 @@ public class DimensionEventHandler {
 
         for (int i = 0; i < baubles.getSizeInventory(); i++) {
             ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemPressureShield))
+            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield))
                 continue;
 
-            ItemPressureShield item = (ItemPressureShield) stack.getItem();
-            protection += highPressure ? item.getHighPressureProtection() : item.getLowPressureProtection();
+            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
+            protection += highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow();
         }
         return protection;
     }
@@ -333,8 +333,6 @@ public class DimensionEventHandler {
         acceptableMax += getPressureProtection(player, true);
         acceptableMin -= getPressureProtection(player, false);
 
-        // TODO: Implement actual effects of low/high gravity
-
         if (pressure <= acceptableMax && pressure >= acceptableMin)
             return;
         if (player.isPotionActive(Potion.moveSlowdown))
@@ -356,9 +354,18 @@ public class DimensionEventHandler {
         int radiation = def.getRadiation(player);
         if (radiation == 0)
             return;
-        // Temp until radiation suit added
-        boolean hasRadSuit = false;
-        if (hasRadSuit)
+        final int DEFAULT_MAX = 0;
+        int acceptableMax = DEFAULT_MAX;
+        for (int i : Galaxia.shieldSlots) {
+            ItemStack stack = BaublesApi.getBaubles(player).getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) {
+                continue;
+            }
+
+            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
+            acceptableMax += item.getRadiationProtection();
+        }
+        if (radiation <= acceptableMax)
             return;
         player.attackEntityFrom(this.radiation, 5.0f);
     }

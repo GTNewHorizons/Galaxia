@@ -26,10 +26,14 @@ public class ItemThermalProtection extends Item implements IBaubleExpanded {
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
-        if (coldProtection > 0) tooltip
-            .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.cold", coldProtection));
-        if (heatProtection > 0) tooltip
-            .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.hot", heatProtection));
+        if (coldProtection > 0)
+            tooltip
+                    .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.cold",
+                            coldProtection));
+        if (heatProtection > 0)
+            tooltip
+                    .add(StatCollector.translateToLocalFormatted("item.galaxia.thermal_protection.desc.hot",
+                            heatProtection));
     }
 
     @Override
