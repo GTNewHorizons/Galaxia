@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenTheiaStalactite;
 import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlocks;
@@ -67,11 +69,8 @@ public class Theia extends BasePlanet {
             .skyColor(0.015f, 0.01f, 0.03f)
             .avgGround(80)
             .biome(
-                createBiome(
+                createLandBiome(
                     "Theia Hills",
-                    PlanetBlocks.THEIA_REGOLITH,
-                    PlanetBlocks.THEIA_ANDESITE,
-                    true,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
@@ -84,17 +83,13 @@ public class Theia extends BasePlanet {
                         .width(4)
                         .height(32)
                         .endFeature()
-                        .build(),
-                    8,
-                    1),
+                        .build()
+                ),
                 0,
                 0)
             .biome(
-                createBiome(
+                createLandBiome(
                     "Theia Mountains",
-                    PlanetBlocks.THEIA_REGOLITH,
-                    PlanetBlocks.THEIA_ANDESITE,
-                    true,
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
@@ -107,13 +102,12 @@ public class Theia extends BasePlanet {
                         .width(12)
                         .height(64)
                         .endFeature()
-                        .build(),
-                    8,
-                    1),
+                        .build()
+                ),
                 0,
                 1)
             .biome(
-                createBiome(
+                createOceanBiome(
                     "Theia Small Volcanoes",
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -128,7 +122,7 @@ public class Theia extends BasePlanet {
                 1,
                 0)
             .biome(
-                createBiome(
+                createOceanBiome(
                     "Theia Big Volcanoes",
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
@@ -197,39 +191,44 @@ public class Theia extends BasePlanet {
      *
      * @return The BiomeGenBase used to generated biomes of that type
      */
-    protected static BiomeGenBase createBiome(String name, Block topBlock, Block fillerBlock, boolean generateCaves,
-        TerrainConfiguration terrainConfiguration, int craterRarity, int oceanHeight) {
+    protected static BiomeGenBase createLandBiome(String name, TerrainConfiguration terrainConfiguration) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(topBlock)
-            .fillerBlock(fillerBlock)
-            .generateCaves(generateCaves)
+            .topBlock(PlanetBlocks.THEIA_REGOLITH)
+            .fillerBlocks(
+                new StratificationPreset(PlanetBlocks.THEIA_ANDESITE)
+                    .addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.THEIA_ANORTHOSITE, 1, 32))
+            .generateCaves(true)
             .surfaceFeature(
                 new WorldGenCrater(
-                    craterRarity,
+                    8,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     PlanetBlocks.THEIA_TEKTITE))
             .caveFeature(
                 new WorldGenTheiaStalactite(
                     64,
-                    new Block[] { PlanetBlocks.THEIA_ANDESITE }
+                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }
                 )
             )
             .terrain(terrainConfiguration)
-            .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, oceanHeight, PlanetBlocks.THEIA_OBSIDIAN, 1)
+            .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();
     }
 
-    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrainConfiguration) {
+    protected static BiomeGenBase createOceanBiome(String name, TerrainConfiguration terrainConfiguration) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(PlanetBlocks.THEIA_BASALT)
-            .fillerBlock(PlanetBlocks.THEIA_BASALT)
+            .fillerBlocks(
+                new StratificationPreset(PlanetBlocks.THEIA_BASALT)
+                    .addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.THEIA_GABBRO, 1, 32))
             .generateCaves(false)
             .surfaceFeature(
                 new WorldGenCrater(

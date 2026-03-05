@@ -124,7 +124,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
         // Generate blocks
         Block topBlock = Blocks.grass;
-        Block fillerBlock = Blocks.stone;
+        StratificationPreset fillerBlocks = new StratificationPreset(Blocks.stone);
         Block snowBlock = Blocks.snow;
         Block oceanFiller = Blocks.water;
         Block oceanSurface = Blocks.sand;
@@ -140,14 +140,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
-                boolean generateBedrock = false;
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
-                    generateBedrock = spaceBiome.generateBedrock();
                     topBlock = getSurfaceBlock(
                         spaceBiome.getTopBlockMetas(),
                         chunkX * 16 + localX,
                         chunkZ * 16 + localZ);
-                    fillerBlock = spaceBiome.fillerBlock;
+                    fillerBlocks = spaceBiome.getFillerBlocks();
                     snowHeight = spaceBiome.getSnowHeight();
                     snowBlock = spaceBiome.getSnowBlock();
                     oceanHeight = spaceBiome.getOceanHeight();
@@ -167,12 +165,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
-                    Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlock;
+                    Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlocks.getStrataBlock(y);
                     if (block == topBlock && y >= snowHeight) {
                         block = snowBlock;
-                    }
-                    if (generateBedrock && y == 0) {
-                        block = Blocks.bedrock;
                     }
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
@@ -194,7 +189,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
-                    if (generateCaves && (block == fillerBlock || block == topBlock || block == snowBlock)
+                    if (generateCaves && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
                         && generateCave(localX, y, localZ, height)) {
                         block = Blocks.air;
                     }

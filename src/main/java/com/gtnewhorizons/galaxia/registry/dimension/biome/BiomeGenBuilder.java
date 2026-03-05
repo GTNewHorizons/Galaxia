@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -46,6 +47,7 @@ public class BiomeGenBuilder {
     Block oceanCrackBlock;
     float oceanCrackThickness;
     int oceanCrackComplexity;
+    StratificationPreset fillerBlocks;
 
     List<FlowerEntry> flowers = Collections.emptyList();
     List<SpawnListEntry> mobsWater = Collections.emptyList();
@@ -126,6 +128,11 @@ public class BiomeGenBuilder {
      */
     public BiomeGenBuilder fillerBlock(Block block) {
         this.fillerBlock = block;
+        return this;
+    }
+
+    public BiomeGenBuilder fillerBlocks(StratificationPreset fillerBlocks) {
+        this.fillerBlocks = fillerBlocks;
         return this;
     }
 

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -31,6 +32,7 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final Block oceanCrackBlock;
     private final float oceanCrackThickness;
     private final int oceanCrackComplexity;
+    private final StratificationPreset fillerBlocks;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -47,6 +49,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.setTemperatureRainfall(b.temperature, b.rainfall);
         this.enableRain = b.enableRain;
 
+        this.fillerBlocks = b.fillerBlocks;
         this.fillerBlock = b.fillerBlock;
         this.topBlockMetas = b.topBlockMetas;
         this.snowBlock = b.snowBlock;
@@ -84,6 +87,10 @@ public class BiomeGenSpace extends BiomeGenBase {
      */
     public boolean generateBedrock() {
         return generateBedrock;
+    }
+
+    public StratificationPreset getFillerBlocks() {
+        return fillerBlocks;
     }
 
     /**
