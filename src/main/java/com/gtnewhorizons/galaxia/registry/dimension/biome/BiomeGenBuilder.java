@@ -28,7 +28,6 @@ public class BiomeGenBuilder {
     Height height = new Height(0, 0);
     float temperature = 0.4F;
     float rainfall = 0.0F;
-    boolean generateBedrock = true;
     TerrainConfiguration terrain;
     int snowHeight = 512;
     int oceanHeight = 0;
@@ -36,7 +35,6 @@ public class BiomeGenBuilder {
     Block oceanFiller = stone;
     Block oceanSurface = stone;
     Block seabed = stone;
-    Block fillerBlock = stone;
     Block snowBlock = stone;
     List<WorldGenGalaxiaSurface> surfaceFeatures = new ArrayList<>();
     List<WorldGenGalaxiaCave> caveFeatures = new ArrayList<>();
@@ -120,17 +118,6 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    /**
-     * Set the filler block for the biome (Where the block has meta-data)
-     *
-     * @param block The required filler block (with meta)
-     * @return Configured builder
-     */
-    public BiomeGenBuilder fillerBlock(Block block) {
-        this.fillerBlock = block;
-        return this;
-    }
-
     public BiomeGenBuilder fillerBlocks(StratificationPreset fillerBlocks) {
         this.fillerBlocks = fillerBlocks;
         return this;
@@ -173,17 +160,6 @@ public class BiomeGenBuilder {
         this.oceanCrackThickness = oceanCrackThickness;
         this.oceanCrackBlock = oceanCrackBlock;
         this.oceanCrackComplexity = oceanCrackComplexity;
-        return this;
-    }
-
-    /**
-     * Sets whether to generate bedrock
-     *
-     * @param generateBedrock True = bedrock layer
-     * @return Configured builder
-     */
-    public BiomeGenBuilder generateBedrock(boolean generateBedrock) {
-        this.generateBedrock = generateBedrock;
         return this;
     }
 

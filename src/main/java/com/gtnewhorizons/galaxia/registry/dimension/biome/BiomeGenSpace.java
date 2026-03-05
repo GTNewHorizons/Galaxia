@@ -15,7 +15,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurf
  */
 public class BiomeGenSpace extends BiomeGenBase {
 
-    private final boolean generateBedrock;
     private final List<Block> topBlockMetas;
     private final TerrainConfiguration terrain;
     private final int snowHeight;
@@ -50,7 +49,6 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.enableRain = b.enableRain;
 
         this.fillerBlocks = b.fillerBlocks;
-        this.fillerBlock = b.fillerBlock;
         this.topBlockMetas = b.topBlockMetas;
         this.snowBlock = b.snowBlock;
         this.snowHeight = b.snowHeight;
@@ -77,16 +75,6 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.terrain = b.terrain != null ? b.terrain
             : TerrainConfiguration.builder()
                 .build();
-        this.generateBedrock = b.generateBedrock;
-    }
-
-    /**
-     * Getter for bedrock generation
-     *
-     * @return boolean - True => generate bedrock
-     */
-    public boolean generateBedrock() {
-        return generateBedrock;
     }
 
     public StratificationPreset getFillerBlocks() {

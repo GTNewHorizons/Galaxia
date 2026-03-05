@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -103,7 +104,8 @@ public abstract class BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(block)
-            .fillerBlock(Blocks.brick_block)
+            .fillerBlocks(new StratificationPreset(Blocks.brick_block)
+                .addStrataLayer(Blocks.bedrock, 0,0 ))
             .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)

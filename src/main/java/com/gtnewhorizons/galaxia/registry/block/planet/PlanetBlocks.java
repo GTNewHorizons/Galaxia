@@ -96,6 +96,12 @@ public final class PlanetBlocks {
         .harvest(0)
         .build();
 
+    public static final Block HEMATERIA_ANORTHOSITE = PlanetBlockBuilder.create("hemateria/hemateria_anorthosite")
+        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .hardness(1.5F)
+        .harvest(1)
+        .build();
+
     public static final Block HEMATERIA_TEKTITE = PlanetBlockBuilder.create("hemateria/hemateria_tektite")
         .drop(GalaxiaItemList.HEMATERIA_TEKTITE_SHARD)
         .hardness(2.0F)
