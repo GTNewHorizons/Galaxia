@@ -100,8 +100,8 @@ public final class GalaxiaAPI {
         return .5f;
     }
 
-    public static boolean isInGalaxiaDimension(EntityPlayer player) {
-        return GALAXIA_DIMENSIONS.contains(player.dimension);
+    public static boolean isInGalaxiaDimension(Entity e) {
+        return GALAXIA_DIMENSIONS.contains(e.dimension);
     }
 
     public static String toSnakeCase(String s) {
