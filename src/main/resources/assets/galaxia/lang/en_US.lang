@@ -137,6 +137,20 @@ item.galaxia.thermal_protection_hot.name=Hot Thermal Protection
 item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
 item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 
+#$$$ Liquids
+
+# buckets
+item.lahar_bucket.name=Bucket of Lahar
+item.molten_resin_bucket.name=Bucket of Molten Resin
+item.tenebrae_lava_bucket.name=Bucket of Tenebrae Lava
+item.liquid_mercury_bucket.name=Bucket of Liquid Mercury
+
+# blocks
+tile.lahar.name=Lahar
+tile.molten_resin.name=Molten Resin
+tile.tenebrae_lava.name=Tenebrae Lava
+tile.liquid_mercury.name=Liquid Mercury
+
 #$$$ Config
 
 ### Config - "Rocket"

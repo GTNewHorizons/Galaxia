@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -174,25 +175,25 @@ public class Theia extends BasePlanet {
                     .period(23151L)
                     .hasPhases())
             .addBody(
-                m -> m.textureGalaxia("textures/environment/phobos.png")
+                m -> m.texture(EnumTextures.HEMATERIA.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(10.0f)
                     .period(3000L))
             .addBody(
-                m -> m.textureGalaxia("textures/environment/phobos.png")
+                m -> m.texture(EnumTextures.HEMATERIA.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(20.0f)
                     .period(1200L))
             .addBody(
-                m -> m.textureGalaxia("textures/environment/phobos.png")
+                m -> m.texture(EnumTextures.HEMATERIA.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(40.0f)
                     .period(12000L))
             .addBody(
-                m -> m.textureGalaxia("textures/environment/phobos.png")
+                m -> m.texture(EnumTextures.HEMATERIA.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(30.0f)

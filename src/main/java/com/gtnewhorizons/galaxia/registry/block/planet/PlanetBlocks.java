@@ -1,14 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.block.planet;
 
+import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
 import net.minecraft.block.Block;
 
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import net.minecraft.block.material.Material;
+import net.minecraftforge.fluids.Fluid;
 
 public final class PlanetBlocks {
 
     // spotless:off
     /*
-     THEIA blocks
+        THEIA blocks
      */
     public static final Block THEIA_REGOLITH = PlanetBlockBuilder.create("theia/theia_regolith")
         .falling()
@@ -66,7 +69,7 @@ public final class PlanetBlocks {
         .build();
 
     /*
-     HEMATERIA blocks
+        HEMATERIA blocks
      */
     public static final Block HEMATERIA_REGOLITH = PlanetBlockBuilder.create("hemateria/hemateria_regolith")
         .falling()
@@ -159,7 +162,7 @@ public final class PlanetBlocks {
         .build();
 
     /*
-     PANSPIRA blocks
+        PANSPIRA blocks
      */
     public static final Block PANSPIRA_REGOLITH = PlanetBlockBuilder.create("panspira/panspira_regolith")
         .falling()
@@ -203,7 +206,7 @@ public final class PlanetBlocks {
         .build();
 
     /*
-    TENEBRAE blocks
+        TENEBRAE blocks
      */
 
     public static final Block TENEBRAE_BASALT = PlanetBlockBuilder.create("tenebrae/tenebrae_basalt")
@@ -277,7 +280,7 @@ public final class PlanetBlocks {
         .build();
 
     /*
-    FROZEN BELT blocks
+        FROZEN BELT blocks
      */
 
     public static final Block FROZEN_BELT_ICE = PlanetBlockBuilder.create("frozen_belt/frozen_belt_ice")
@@ -315,6 +318,28 @@ public final class PlanetBlocks {
         .hardness(1.5F)
         .harvest(1)
         .build();
+
+    /*
+        FLUIDS
+     */
+
+    public static final Fluid LIQUID_LAHAR = FluidFiniteBuilder.create("fluids/lahar/lahar")
+        .buildAndRegister()
+        .getFluid();
+
+    public static final Fluid LIQUID_MERCURY = FluidFiniteBuilder.create("fluids/mercury/liquid_mercury")
+        .buildAndRegister()
+        .getFluid();
+
+    public static final Fluid LIQUID_RESIN = FluidFiniteBuilder.create("fluids/resin/molten_resin")
+        .buildAndRegister()
+        .getFluid();
+
+    public static final Fluid LAVA_TENEBRAE = FluidFiniteBuilder.create("fluids/tenebrae_lava/tenebrae_lava")
+        .lightLevel(1)
+        .material(Material.lava)
+        .buildAndRegister()
+        .getFluid();
 
     //spotless:on
 
