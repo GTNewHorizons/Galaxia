@@ -20,8 +20,7 @@ public class ItemOxygenMask extends Item implements IBaubleExpanded {
 
     public static final String BAUBLE_TYPE_OXYGEN_MASK = "oxygen_mask";
 
-    public ItemOxygenMask() {
-    }
+    public ItemOxygenMask() {}
 
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
@@ -31,18 +30,15 @@ public class ItemOxygenMask extends Item implements IBaubleExpanded {
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote)
-            return stack;
-        if (!canEquip(stack, player))
-            return stack;
+        if (world.isRemote) return stack;
+        if (!canEquip(stack, player)) return stack;
 
         boolean equipped = tryEquipOrReplace(player, stack);
 
         if (equipped && !player.capabilities.isCreativeMode) {
             player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != null)
-                player.openContainer.detectAndSendChanges();
+            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
         }
 
         return stack;
@@ -51,10 +47,8 @@ public class ItemOxygenMask extends Item implements IBaubleExpanded {
     private boolean tryEquipOrReplace(EntityPlayer player, ItemStack stack) {
         InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
 
-        // First look for empty slots
         for (int i : Galaxia.oxygenMaskSlots) {
-            if (!baubles.isItemValidForSlot(i, stack))
-                continue;
+            if (!baubles.isItemValidForSlot(i, stack)) continue;
 
             ItemStack inSlot = baubles.getStackInSlot(i);
 
