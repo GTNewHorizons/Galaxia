@@ -37,7 +37,8 @@ public class ItemThermalProtection extends Item implements IBaubleExpanded {
         return new String[] { BAUBLE_TYPE_THERMAL_PROTECTION };
     }
 
-    // This is for the old Baubles system that I am forced to implement. We dep Baubles-Extended anyways so this will
+    // This is for the old Baubles system that I am forced to implement. We dep
+    // Baubles-Extended anyways so this will
     // never be used.
     @Override
     public BaubleType getBaubleType(ItemStack itemstack) {
@@ -67,5 +68,13 @@ public class ItemThermalProtection extends Item implements IBaubleExpanded {
     @Override
     public boolean canUnequip(ItemStack itemstack, EntityLivingBase player) {
         return true;
+    }
+
+    public int getColdProtection() {
+        return this.coldProtection;
+    }
+
+    public int getHeatProtection() {
+        return this.heatProtection;
     }
 }

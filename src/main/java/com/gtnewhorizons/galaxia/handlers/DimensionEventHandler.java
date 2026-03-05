@@ -10,6 +10,7 @@ import java.util.Random;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
@@ -22,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
 import baubles.api.BaublesApi;
@@ -49,8 +51,10 @@ public class DimensionEventHandler {
     }
 
     /**
-     * Event Handler method that runs every tick, primarily used at the moment to apply dimensional transfer effects
-     * USE WITH CAUTION - this method runs every player tick on the server, use guard clauses where possible to not
+     * Event Handler method that runs every tick, primarily used at the moment to
+     * apply dimensional transfer effects
+     * USE WITH CAUTION - this method runs every player tick on the server, use
+     * guard clauses where possible to not
      * waste computation
      *
      * @param event The player tick event
@@ -84,8 +88,6 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyEffects(EffectBuilder def, EntityPlayer player) {
-        // TODO: Implement equipment - currently assumes base player with no inventory
-        // Temperature Handling
         applyTemperature(def, player);
 
         // Pressure Handling
@@ -164,17 +166,15 @@ public class DimensionEventHandler {
         final int DEFAULT_MAX = 323; // 50 Celsius
 
         int temp = def.getTemperature(player);
-        int acceptableMax;
-        int acceptableMin;
+        int acceptableMax = DEFAULT_MAX;
+        int acceptableMin = DEFAULT_MIN;
 
-        if (isWearingFullSuit(player)) {
-            ItemStack helmet = player.inventory.armorInventory[0];
-            acceptableMin = ItemSpaceSuit.getMinTemp(helmet);
-            acceptableMax = ItemSpaceSuit.getMaxTemp(helmet);
-        } else {
-            acceptableMin = DEFAULT_MIN;
-            acceptableMax = DEFAULT_MAX;
-        }
+        int heatProtection = getThermalProtection(player, true);
+        int coldProtection = getThermalProtection(player, false);
+
+        acceptableMax += heatProtection;
+        acceptableMin -= coldProtection;
+
         if (temp < acceptableMax && temp > acceptableMin) return;
 
         int diff;
@@ -197,6 +197,23 @@ public class DimensionEventHandler {
             player.attackEntityFrom(this.temperature, 2.0f);
         }
 
+    }
+
+    public static int getThermalProtection(EntityPlayer player, boolean heat) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        int protection = 0;
+        if (baubles == null) {
+            return protection;
+        }
+
+        for (int i = 0; i < baubles.getSizeInventory(); i++) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemThermalProtection)) continue;
+
+            ItemThermalProtection item = (ItemThermalProtection) stack.getItem();
+            protection += heat ? item.getHeatProtection() : item.getColdProtection();
+        }
+        return protection;
     }
 
     /**
@@ -229,7 +246,8 @@ public class DimensionEventHandler {
         else lowOxygenDuration++;
 
         // Apply low oxygen effects if oxygen is too low
-        // java8 doesn't support switches for stuff like this and i don't want to make it look messy so here it is
+        // java8 doesn't support switches for stuff like this and i don't want to make
+        // it look messy so here it is
         if (oxygenLevel < 0.02)
             player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 4));
         else if (oxygenLevel < 0.04)
@@ -242,7 +260,8 @@ public class DimensionEventHandler {
             player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 0));
 
         if (couldDrainOxygen) return;
-        // Apply damage if no tank could be drained (tank is empty or no tanks available)
+        // Apply damage if no tank could be drained (tank is empty or no tanks
+        // available)
         // damage scaled linearly so it can't be bypassed long-term by most of armors
         player.attackEntityFrom(this.noOxygen, lowOxygenDuration * 2);
     }
