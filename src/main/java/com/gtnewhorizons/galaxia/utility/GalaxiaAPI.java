@@ -1,18 +1,25 @@
 package com.gtnewhorizons.galaxia.utility;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 
 import javax.annotation.Nonnull;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 
 import baubles.api.BaublesApi;
@@ -77,7 +84,8 @@ public final class GalaxiaAPI {
 
     /**
      * @param player player
-     * @return average amount of oxygen in all of player's tanks (synced with HUD bars)
+     * @return average amount of oxygen in all of player's tanks (synced with HUD
+     *         bars)
      */
     public static float getPlayerOxygenLevel(EntityPlayer player) {
         float maximum = 0;
@@ -116,6 +124,54 @@ public final class GalaxiaAPI {
         return false;
     }
 
+    public static boolean hasOxygenmask(@Nonnull EntityPlayer player) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return false;
+
+        for (int slot : Galaxia.oxygenMaskSlots) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ItemOxygenMask) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int getRadiationProtection(@Nonnull EntityPlayer player) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        int protection = 0;
+        if (baubles == null) {
+            return protection;
+        }
+
+        for (int i : Galaxia.shieldSlots) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) {
+                continue;
+            }
+            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
+            protection += item.getRadiationProtection();
+        }
+        return protection;
+    }
+
+    public static boolean hasSporeFilter(@Nonnull EntityPlayer player) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) {
+            return false;
+        }
+
+        for (int i : Galaxia.sporeFilterSlots) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemSporeFilter)) {
+                continue;
+            }
+            return true;
+
+        }
+        return false;
+    }
+
     public static boolean hasThermalProtection(@Nonnull EntityPlayer player) {
         var baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return false;
@@ -127,6 +183,61 @@ public final class GalaxiaAPI {
             }
         }
         return false;
+    }
+
+    public static int getThermalProtection(@Nonnull EntityPlayer player, boolean heat) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        int protection = 0;
+        if (baubles == null) {
+            return protection;
+        }
+
+        for (int i : Galaxia.thermalSlot) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemThermalProtection)) continue;
+
+            ItemThermalProtection item = (ItemThermalProtection) stack.getItem();
+            protection += heat ? item.getHeatProtection() : item.getColdProtection();
+        }
+        return protection;
+    }
+
+    public static int getPressureProtection(@Nonnull EntityPlayer player, boolean highPressure) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        int protection = 0;
+        if (baubles == null) {
+            return protection;
+        }
+
+        for (int i : Galaxia.shieldSlots) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) continue;
+
+            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
+            protection += highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow();
+        }
+        return protection;
+    }
+
+    public static boolean checkOxygenAndDrain(@Nonnull EntityPlayer player, int oxygenPercent) {
+        boolean found = false;
+
+        for (int index : Galaxia.oxygenSlots) {
+            ItemStack tank = BaublesApi.getBaubles(player)
+                .getStackInSlot(index);
+            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
+                continue;
+            }
+
+            found = true;
+
+            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
+                GALAXIA_NETWORK
+                    .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
+                break;
+            }
+        }
+        return found;
     }
 
     public static boolean isInGalaxiaDimension(Entity e) {

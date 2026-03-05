@@ -7,9 +7,14 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
+import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.core.Galaxia;
 
 import baubles.api.BaubleType;
 import baubles.api.expanded.IBaubleExpanded;
+import baubles.common.container.InventoryBaubles;
+import baubles.common.lib.PlayerHandler;
 
 public class ItemProtectionShield extends Item implements IBaubleExpanded {
 
@@ -43,6 +48,67 @@ public class ItemProtectionShield extends Item implements IBaubleExpanded {
     @Override
     public String[] getBaubleTypes(ItemStack itemstack) {
         return new String[] { BAUBLE_TYPE_PROTECTION_SHIELD };
+    }
+
+    @Override
+    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
+        if (world.isRemote) return stack;
+        if (!canEquip(stack, player)) return stack;
+
+        boolean equipped = tryEquipOrReplace(player, stack);
+
+        if (equipped && !player.capabilities.isCreativeMode) {
+            player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
+            player.inventoryContainer.detectAndSendChanges();
+            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
+        }
+
+        return stack;
+    }
+
+    private boolean tryEquipOrReplace(EntityPlayer player, ItemStack stack) {
+        InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
+
+        for (int i : Galaxia.shieldSlots) {
+            if (!baubles.isItemValidForSlot(i, stack)) continue;
+
+            int freeSlot = -1;
+
+            for (int j : Galaxia.shieldSlots) {
+                if (!baubles.isItemValidForSlot(j, stack)) continue;
+
+                ItemStack inSlotTryTwo = baubles.getStackInSlot(j);
+                if (inSlotTryTwo == null) {
+                    freeSlot = j;
+                    break;
+                }
+            }
+
+            ItemStack inSlot = baubles.getStackInSlot(i);
+
+            if (inSlot == null) {
+                baubles.setInventorySlotContents(i, stack.copy());
+                baubles.markDirty();
+                onEquipped(stack, player);
+                return true;
+            }
+
+            if (freeSlot != -1) {
+                baubles.setInventorySlotContents(freeSlot, stack.copy());
+                baubles.markDirty();
+                onEquipped(stack, player);
+                return true;
+            }
+
+            boolean added = player.inventory.addItemStackToInventory(inSlot.copy());
+            if (!added) return false;
+            baubles.setInventorySlotContents(i, stack.copy());
+            baubles.markDirty();
+            onEquipped(stack, player);
+            return true;
+        }
+
+        return false;
     }
 
     // This is for the old Baubles system that I am forced to implement. We dep

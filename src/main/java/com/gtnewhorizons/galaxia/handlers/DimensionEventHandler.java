@@ -1,7 +1,12 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.checkOxygenAndDrain;
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPlayerOxygenLevel;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPressureProtection;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getRadiationProtection;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getThermalProtection;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.hasOxygenmask;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.hasSporeFilter;
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.isInGalaxiaDimension;
 
 import java.util.Arrays;
@@ -9,26 +14,15 @@ import java.util.List;
 import java.util.Random;
 
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
-import baubles.api.BaublesApi;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
@@ -120,15 +114,7 @@ public class DimensionEventHandler {
      */
     private void applySpores(EffectBuilder def, EntityPlayer player) {
         if (!def.getSpore(player)) return;
-        IInventory baubles = BaublesApi.getBaubles(player);
-        boolean hasFilter = false;
-        for (int i = 0; i < baubles.getSizeInventory(); i++) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemSporeFilter)) {
-                continue;
-            }
-            hasFilter = true;
-        }
+        boolean hasFilter = hasSporeFilter(player);
 
         if (hasFilter) return;
         List<Integer> possibleEffects = Arrays.asList(2, 4, 15, 17, 18, 19, 20);
@@ -199,40 +185,6 @@ public class DimensionEventHandler {
 
     }
 
-    public static int getThermalProtection(EntityPlayer player, boolean heat) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        int protection = 0;
-        if (baubles == null) {
-            return protection;
-        }
-
-        for (int i = 0; i < baubles.getSizeInventory(); i++) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemThermalProtection)) continue;
-
-            ItemThermalProtection item = (ItemThermalProtection) stack.getItem();
-            protection += heat ? item.getHeatProtection() : item.getColdProtection();
-        }
-        return protection;
-    }
-
-    public static int getPressureProtection(EntityPlayer player, boolean highPressure) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        int protection = 0;
-        if (baubles == null) {
-            return protection;
-        }
-
-        for (int i = 0; i < baubles.getSizeInventory(); i++) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) continue;
-
-            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
-            protection += highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow();
-        }
-        return protection;
-    }
-
     /**
      * Applies the effects of low oxygen to the player
      *
@@ -243,32 +195,14 @@ public class DimensionEventHandler {
         int oxygenPercent = def.getOxygenPercent(player);
         if (oxygenPercent == 100) return;
 
-        ItemStack oxygenMask = null;
-        boolean couldDrainOxygen = false;
-        for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player)
-                .getStackInSlot(index);
-            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
-                continue;
-            }
-            for (int j : Galaxia.oxygenMaskSlots) {
-                ItemStack item = BaublesApi.getBaubles(player)
-                    .getStackInSlot(j);
-                if (item != null && item.getItem() instanceof ItemOxygenMask) {
-                    oxygenMask = item;
-                }
-            }
-
-            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5) && oxygenMask != null) {
-                couldDrainOxygen = true;
-                GALAXIA_NETWORK
-                    .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
-                break;
-            }
+        boolean hasOxygenToDrain = false;
+        boolean hasMask = hasOxygenmask(player);
+        if (hasMask) {
+            hasOxygenToDrain = checkOxygenAndDrain(player, oxygenPercent);
         }
 
         float oxygenLevel = getPlayerOxygenLevel(player);
-        if (oxygenLevel > 0.1 && oxygenMask != null) lowOxygenDuration = 0;
+        if (oxygenLevel > 0.1 && hasMask) lowOxygenDuration = 0;
         else lowOxygenDuration++;
 
         // Apply low oxygen effects if oxygen is too low
@@ -285,7 +219,7 @@ public class DimensionEventHandler {
         else if (oxygenLevel < 0.1)
             player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 0));
 
-        if (couldDrainOxygen) return;
+        if (hasOxygenToDrain) return;
         // Apply damage if no tank could be drained (tank is empty or no tanks
         // available)
         // damage scaled linearly so it can't be bypassed long-term by most of armors
@@ -328,16 +262,8 @@ public class DimensionEventHandler {
         if (radiation == 0) return;
         final int DEFAULT_MAX = 0;
         int acceptableMax = DEFAULT_MAX;
-        for (int i : Galaxia.shieldSlots) {
-            ItemStack stack = BaublesApi.getBaubles(player)
-                .getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) {
-                continue;
-            }
 
-            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
-            acceptableMax += item.getRadiationProtection();
-        }
+        acceptableMax += getRadiationProtection(player);
         if (radiation <= acceptableMax) return;
         player.attackEntityFrom(this.radiation, 5.0f);
     }
