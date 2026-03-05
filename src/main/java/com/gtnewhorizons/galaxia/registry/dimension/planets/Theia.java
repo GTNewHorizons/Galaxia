@@ -40,7 +40,7 @@ public class Theia extends BasePlanet {
      */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
-        return builder.gravity(0.25)
+        return builder.gravity(0.2)
             .airResistance(0.01)
             .mass(0.012)
             .radius(0.27)

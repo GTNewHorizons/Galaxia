@@ -96,6 +96,26 @@ public final class PlanetBlocks {
         .harvest(0)
         .build();
 
+    public static final Block HEMATERIA_TEKTITE = PlanetBlockBuilder.create("hemateria/hemateria_tektite")
+        .drop(GalaxiaItemList.HEMATERIA_TEKTITE_SHARD)
+        .hardness(2.0F)
+        .harvest(1)
+        .build();
+
+    public static final Block HEMATERIA_ICE = PlanetBlockBuilder.create("hemateria/hemateria_ice")
+        .transparent()
+        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .hardness(0.5F)
+        .harvest(1)
+        .build();
+
+    public static final Block HEMATERIA_DENSE_ICE = PlanetBlockBuilder.create("hemateria/hemateria_dense_ice")
+        .transparent()
+        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .hardness(0.5F)
+        .harvest(1)
+        .build();
+
     public static final Block HEMATERIA_MAGMA = PlanetBlockBuilder.create("hemateria/hemateria_magma")
         .drop(GalaxiaItemList.DUST_HEMATERIA)
         .hardness(0.5F)
