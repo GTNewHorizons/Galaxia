@@ -12,43 +12,43 @@ public final class PlanetBlocks {
      */
     public static final Block THEIA_REGOLITH = PlanetBlockBuilder.create("theia/theia_regolith")
         .falling()
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(1.0F)
         .harvest(1)
         .build();
 
     public static final Block THEIA_MAGMA = PlanetBlockBuilder.create("theia/theia_magma")
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(0.5F)
         .harvest(0)
         .build();
 
     public static final Block THEIA_GABBRO = PlanetBlockBuilder.create("theia/theia_gabbro")
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block THEIA_BRECCIA = PlanetBlockBuilder.create("theia/theia_breccia")
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block THEIA_BASALT = PlanetBlockBuilder.create("theia/theia_basalt")
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block THEIA_ANORTHOSITE = PlanetBlockBuilder.create("theia/theia_anorthosite")
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block THEIA_ANDESITE = PlanetBlockBuilder.create("theia/theia_andesite")
-        .drop(GalaxiaItemList.DUST_THEIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
@@ -70,27 +70,27 @@ public final class PlanetBlocks {
      */
     public static final Block HEMATERIA_REGOLITH = PlanetBlockBuilder.create("hemateria/hemateria_regolith")
         .falling()
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(0.5F)
         .shovel()
         .harvest(0)
         .build();
 
     public static final Block HEMATERIA_ANDESITE = PlanetBlockBuilder.create("hemateria/hemateria_andesite")
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block HEMATERIA_BASALT = PlanetBlockBuilder.create("hemateria/hemateria_basalt")
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block HEMATERIA_SNOW = PlanetBlockBuilder.create("hemateria/hemateria_snow")
         .falling()
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(0.1F)
         .shovel()
         .harvest(0)
@@ -104,53 +104,55 @@ public final class PlanetBlocks {
 
     public static final Block HEMATERIA_ICE = PlanetBlockBuilder.create("hemateria/hemateria_ice")
         .transparent()
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .drop(GalaxiaItemList.HEMATERIA_ICE_CUBES)
+        .dropAmount(2, 4)
         .hardness(0.5F)
         .harvest(1)
         .build();
 
     public static final Block HEMATERIA_DENSE_ICE = PlanetBlockBuilder.create("hemateria/hemateria_dense_ice")
         .transparent()
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .drop(GalaxiaItemList.HEMATERIA_ICE_CUBES)
+        .dropAmount(4, 7)
         .hardness(0.5F)
         .harvest(1)
         .build();
 
     public static final Block HEMATERIA_MAGMA = PlanetBlockBuilder.create("hemateria/hemateria_magma")
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(0.5F)
         .harvest(0)
         .build();
 
     public static final Block HEMATERIA_SAND = PlanetBlockBuilder.create("hemateria/hemateria_sand")
         .falling()
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(0.5F)
         .shovel()
         .harvest(0)
         .build();
 
     public static final Block HEMATERIA_SANDSTONE = PlanetBlockBuilder.create("hemateria/hemateria_sandstone")
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(0.8F)
         .harvest(0)
         .build();
 
     public static final Block HEMATERIA_TUFF = PlanetBlockBuilder.create("hemateria/hemateria_tuff")
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(1.5F)
         .harvest(1)
         .build();
 
     public static final Block HEMATERIA_PERIDOTITE = PlanetBlockBuilder.create("hemateria/hemateria_peridotite")
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(2.7F)
         .harvest(1)
         .build();
 
     public static final Block HEMATERIA_RHYOLITE = PlanetBlockBuilder.create("hemateria/hemateria_rhyolite")
         .falling()
-        .drop(GalaxiaItemList.DUST_HEMATERIA)
+        .dropSelf()
         .hardness(0.7F)
         .shovel()
         .harvest(0)

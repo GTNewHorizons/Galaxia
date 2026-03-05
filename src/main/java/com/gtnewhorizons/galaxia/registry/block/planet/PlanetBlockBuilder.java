@@ -23,6 +23,8 @@ public class PlanetBlockBuilder {
     private int harvestLevel = 1;
     // pickaxe by default
     private String harvestTool = "pickaxe";
+    private int dropAmountMax = 1;
+    private int dropAmountMin = 1;
 
     private PlanetBlockBuilder(String fullPath) {
         this.fullPath = fullPath;
@@ -60,6 +62,12 @@ public class PlanetBlockBuilder {
         return drop(drop != null ? drop.getItem() : null);
     }
 
+    public PlanetBlockBuilder dropAmount(int min, int max) {
+        this.dropAmountMin = min;
+        this.dropAmountMax = max;
+        return this;
+    }
+
     public PlanetBlockBuilder dropSelf() {
         this.dropItem = null;
         return this;
@@ -87,6 +95,8 @@ public class PlanetBlockBuilder {
             block = new BlockPlanetGalaxiaFalling(
                 fullPath,
                 dropItem,
+                dropAmountMin,
+                dropAmountMax,
                 hardness,
                 harvestLevel,
                 harvestTool,
@@ -95,6 +105,8 @@ public class PlanetBlockBuilder {
             block = new BlockPlanetTransparentGalaxia(
                 fullPath,
                 dropItem,
+                dropAmountMin,
+                dropAmountMax,
                 hardness,
                 harvestLevel,
                 harvestTool,
@@ -103,6 +115,8 @@ public class PlanetBlockBuilder {
             block = new BlockPlanetGalaxiaGeneral(
                 fullPath,
                 dropItem,
+                dropAmountMin,
+                dropAmountMax,
                 hardness,
                 harvestLevel,
                 harvestTool,
