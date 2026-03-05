@@ -172,9 +172,21 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
                             if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
-                                block = getOceanSurfaceBlock(oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, chunkX * 16 + localX, chunkZ * 16 + localZ);
+                                block = getOceanSurfaceBlock(
+                                    oceanFiller,
+                                    oceanCrackBlock,
+                                    oceanCrackThickness,
+                                    oceanCrackComplexity,
+                                    chunkX * 16 + localX,
+                                    chunkZ * 16 + localZ);
                             } else if (y == oceanHeight - 1 && oceanHeight - height >= 2) {
-                                block = getOceanSurfaceBlock(oceanFiller, oceanCrackBlock, oceanCrackThickness, oceanCrackComplexity, chunkX * 16 + localX, chunkZ * 16 + localZ);
+                                block = getOceanSurfaceBlock(
+                                    oceanFiller,
+                                    oceanCrackBlock,
+                                    oceanCrackThickness,
+                                    oceanCrackComplexity,
+                                    chunkX * 16 + localX,
+                                    chunkZ * 16 + localZ);
                                 if (block != oceanFiller) {
                                     block = Blocks.air;
                                 }
@@ -189,7 +201,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
-                    if (generateCaves && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
+                    if (generateCaves
+                        && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
                         && generateCave(localX, y, localZ, height)) {
                         block = Blocks.air;
                     }
@@ -267,14 +280,18 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return surfaceBlock;
     }
 
-    private Block getOceanSurfaceBlock(Block mainBlock, Block crackBlock, float crackThickness, int oceanCrackComplexity, int x, int z) {
+    private Block getOceanSurfaceBlock(Block mainBlock, Block crackBlock, float crackThickness,
+        int oceanCrackComplexity, int x, int z) {
         if (crackBlock == null || crackThickness == 0) {
             return mainBlock;
         }
         double noise = 0;
         for (int octave = 0; octave < oceanCrackComplexity; octave++) {
             double octaveExponent = Math.pow(2, octave);
-            noise += Math.abs(crackNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2/octaveExponent, 0.2/octaveExponent, 0)[0]/octaveExponent);
+            noise += Math.abs(
+                crackNoise
+                    .generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2 / octaveExponent, 0.2 / octaveExponent, 0)[0]
+                    / octaveExponent);
         }
         return noise < crackThickness ? crackBlock : mainBlock;
     }

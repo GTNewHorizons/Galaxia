@@ -1,10 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import net.minecraft.block.Block;
-
 import java.util.HashMap;
 
+import net.minecraft.block.Block;
+
 public class StratificationPreset {
+
     private final Block defaultBlock;
     private final HashMap<Integer, Block> strataMap = new HashMap<>();
 

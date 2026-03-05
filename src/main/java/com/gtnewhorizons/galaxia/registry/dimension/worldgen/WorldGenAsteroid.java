@@ -29,8 +29,8 @@ public class WorldGenAsteroid extends WorldGenerator {
      * @param blockPalette    Block paletter to be used in creation
      * @param craterFrequency Frequency of craters on asteroids
      */
-    public WorldGenAsteroid(int minimumSize, int maximumSize, int rarity, Block[] blockPalette, Block[] surfaceBlockPalette,
-                            int craterFrequency) {
+    public WorldGenAsteroid(int minimumSize, int maximumSize, int rarity, Block[] blockPalette,
+        Block[] surfaceBlockPalette, int craterFrequency) {
         this.minimumSize = minimumSize;
         this.maximumSize = maximumSize;
         this.rarity = rarity;

@@ -1,12 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Random;
+
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 
-import java.util.Random;
-
 public class WorldGenTheiaStalactite extends WorldGenGalaxiaCave {
+
     public WorldGenTheiaStalactite(int frequency, Block[] surfaceRequirements) {
         super(frequency, 32, surfaceRequirements);
     }

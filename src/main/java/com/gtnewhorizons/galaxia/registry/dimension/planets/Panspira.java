@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -11,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
@@ -126,9 +126,7 @@ public class Panspira extends BasePlanet {
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(block)
-            .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.PANSPIRA_STONE)
-                    .addStrataLayer(Blocks.bedrock, 0, 0))
+            .fillerBlocks(new StratificationPreset(PlanetBlocks.PANSPIRA_STONE).addStrataLayer(Blocks.bedrock, 0, 0))
             .snowBlock(PlanetBlocks.PANSPIRA_SNOW, 144)
             .terrain(terrain)
             .ocean(Blocks.water, PlanetBlocks.PANSPIRA_REGOLITH, 96, PlanetBlocks.PANSPIRA_REGOLITH, 64)

@@ -6,6 +6,7 @@ import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
 public abstract class WorldGenGalaxiaBase extends WorldGenerator {
+
     /**
      * Sets block in the world at set coordinates
      *

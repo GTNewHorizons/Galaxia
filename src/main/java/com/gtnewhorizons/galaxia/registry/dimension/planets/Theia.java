@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenTheiaStalactite;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -13,9 +11,11 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenCrater;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenTheiaStalactite;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
 /**
@@ -83,8 +83,7 @@ public class Theia extends BasePlanet {
                         .width(4)
                         .height(32)
                         .endFeature()
-                        .build()
-                ),
+                        .build()),
                 0,
                 0)
             .biome(
@@ -102,8 +101,7 @@ public class Theia extends BasePlanet {
                         .width(12)
                         .height(64)
                         .endFeature()
-                        .build()
-                ),
+                        .build()),
                 0,
                 1)
             .biome(
@@ -117,8 +115,7 @@ public class Theia extends BasePlanet {
                         .width(2)
                         .height(16)
                         .endFeature()
-                        .build()
-                ),
+                        .build()),
                 1,
                 0)
             .biome(
@@ -132,8 +129,7 @@ public class Theia extends BasePlanet {
                         .width(4)
                         .height(64)
                         .endFeature()
-                        .build()
-                ),
+                        .build()),
                 1,
                 1)
             .name(ENUM)
@@ -198,8 +194,7 @@ public class Theia extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(PlanetBlocks.THEIA_REGOLITH)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.THEIA_ANDESITE)
-                    .addStrataLayer(Blocks.bedrock, 0, 0)
+                new StratificationPreset(PlanetBlocks.THEIA_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(PlanetBlocks.THEIA_ANORTHOSITE, 1, 32))
             .generateCaves(true)
             .surfaceFeature(
@@ -207,12 +202,7 @@ public class Theia extends BasePlanet {
                     8,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     PlanetBlocks.THEIA_TEKTITE))
-            .caveFeature(
-                new WorldGenTheiaStalactite(
-                    64,
-                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }
-                )
-            )
+            .caveFeature(new WorldGenTheiaStalactite(64, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
@@ -226,8 +216,7 @@ public class Theia extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(PlanetBlocks.THEIA_BASALT)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.THEIA_BASALT)
-                    .addStrataLayer(Blocks.bedrock, 0, 0)
+                new StratificationPreset(PlanetBlocks.THEIA_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(PlanetBlocks.THEIA_GABBRO, 1, 32))
             .generateCaves(false)
             .surfaceFeature(
