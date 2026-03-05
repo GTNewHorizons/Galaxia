@@ -26,6 +26,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemPressureShield;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
 import baubles.api.BaublesApi;
@@ -234,6 +235,24 @@ public class DimensionEventHandler {
         return protection;
     }
 
+    public static int getPressureProtection(EntityPlayer player, boolean highPressure) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        int protection = 0;
+        if (baubles == null) {
+            return protection;
+        }
+
+        for (int i = 0; i < baubles.getSizeInventory(); i++) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemPressureShield))
+                continue;
+
+            ItemPressureShield item = (ItemPressureShield) stack.getItem();
+            protection += highPressure ? item.getHighPressureProtection() : item.getLowPressureProtection();
+        }
+        return protection;
+    }
+
     /**
      * Applies the effects of low oxygen to the player
      *
@@ -304,10 +323,18 @@ public class DimensionEventHandler {
      * @param player The Player entity
      */
     private void applyPressure(EffectBuilder def, EntityPlayer player) {
+        int DEFAULT_MIN = 1;
+        int DEFAULT_MAX = 2;
         // Temp until space suit added:
-        int acceptableMin = 1;
-        int acceptableMax = 2;
+        int acceptableMin = DEFAULT_MIN;
+        int acceptableMax = DEFAULT_MAX;
         int pressure = def.getPressure(player);
+
+        acceptableMax += getPressureProtection(player, true);
+        acceptableMin -= getPressureProtection(player, false);
+
+        // TODO: Implement actual effects of low/high gravity
+
         if (pressure <= acceptableMax && pressure >= acceptableMin)
             return;
         if (player.isPotionActive(Potion.moveSlowdown))
