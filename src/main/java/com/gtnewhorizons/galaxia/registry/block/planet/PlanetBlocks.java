@@ -1,11 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.block.planet;
 
-import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
 import net.minecraft.block.Block;
-
-import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import net.minecraft.block.material.Material;
 import net.minecraftforge.fluids.Fluid;
+
+import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 public final class PlanetBlocks {
 

@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.planet.fluid;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.item.Item;
@@ -9,6 +7,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidRegistry;
+
+import cpw.mods.fml.common.registry.GameRegistry;
 
 public class FluidFiniteBuilder {
 
@@ -116,11 +116,8 @@ public class FluidFiniteBuilder {
             bucket = new ItemBucketCustom(block);
             GameRegistry.registerItem(bucket, name + "_bucket");
 
-            FluidContainerRegistry.registerFluidContainer(
-                fluid,
-                new ItemStack(bucket),
-                FluidContainerRegistry.EMPTY_BUCKET
-            );
+            FluidContainerRegistry
+                .registerFluidContainer(fluid, new ItemStack(bucket), FluidContainerRegistry.EMPTY_BUCKET);
         }
 
         return this;
