@@ -83,6 +83,17 @@ tile.tenebrae_latite.name=Tenebrae Latite
 tile.tenebrae_brimstone.name=Tenebrae Brimstone
 tile.tenebrae_fumarole.name=Tenebrae Fumarole
 
+# Asteroid Belt
+
+tile.naquadah_asteroid_shell.name=Naquadah Asteroid Shell
+tile.olivine_asteroid_shell.name=Olivine Asteroid Shell
+tile.frozen_asteroid_shell.name=Frozen Asteroid Shell
+tile.red_asteroid_shell.name=[?]Red Asteroid Shell
+tile.black_asteroid_shell.name=[?]Black Asteroid Shell
+tile.rocky_asteroid_shell.name=Rocky Asteroid Shell
+tile.grey_asteroid_shell.name=[?]Grey Asteroid Shell
+tile.silver_asteroid_shell.name=Silver Asteroid Shell
+
 # Blocks Space Station
 tile.space_station_block.name=Space Insulation Block
 tile.space_station_glass.name=Space glass
@@ -113,11 +124,21 @@ item.galaxia.galactic_map.name=Galactic Map
 # Worldgen / Ores
 item.galaxia.theia_dust.name=Theia Dust
 item.galaxia.theia_tektite_shard.name=Theia Tektite Shard
-item.galaxia.cinnabar_scale.name=Cinnabar Scale
-item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
+
 item.galaxia.hemateria_dust.name=Hemateria Dust
 item.galaxia.hemateria_tektite_shard.name=Hemateria Tektite Shard
 item.galaxia.hemateria_ice_cubes.name=Hemateria Ice Cubes
+
+item.galaxia.cinnabar_scale.name=Cinnabar Scale
+item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
+item.galaxia.meteoric_iron_shard.name=Meteoric Iron Shard
+item.galaxia.meteoric_iron_ingot.name=Meteoric Iron Ingot
+item.galaxia.raw_meteoric_iron.name=Raw Meteoric Iron
+item.galaxia.hematite_dust.name=Hematite Dust
+item.galaxia.hematite_ingot.name=Hematite Ingot
+item.galaxia.amber_shard.name=Amber Shard
+item.galaxia.psychedelic_amber_shard.name=[?] Enchanted Amber Shard
+item.galaxia.pyrite_cubes.name=Pyrite Cubes
 
 # Armor
 item.galaxia.spacesuit_helmet.name=Space Suit Helmet
@@ -137,6 +158,11 @@ item.galaxia.thermal_protection_hot.name=Hot Thermal Protection
 item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
 item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 
+# Parts
+item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
+item.galaxia.heavy_duty_plate_base.name=Heavy Duty Plate
+item.galaxia.satellite_dish.name=Satellite Transmitter Dish
+
 #$$$ Liquids
 
 # buckets
@@ -145,7 +171,7 @@ item.molten_resin_bucket.name=Bucket of Molten Resin
 item.tenebrae_lava_bucket.name=Bucket of Tenebrae Lava
 item.liquid_mercury_bucket.name=Bucket of Liquid Mercury
 
-# blocks
+# liquid blocks
 tile.lahar.name=Lahar
 tile.molten_resin.name=Molten Resin
 tile.tenebrae_lava.name=Tenebrae Lava

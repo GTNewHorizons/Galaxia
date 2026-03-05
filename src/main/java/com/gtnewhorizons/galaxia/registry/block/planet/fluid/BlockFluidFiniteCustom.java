@@ -1,24 +1,23 @@
 package com.gtnewhorizons.galaxia.registry.block.planet.fluid;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.util.IIcon;
 import net.minecraftforge.fluids.BlockFluidClassic;
-import net.minecraftforge.fluids.BlockFluidFinite;
 import net.minecraftforge.fluids.Fluid;
+
+import com.gtnewhorizons.galaxia.core.Galaxia;
 
 public class BlockFluidFiniteCustom extends BlockFluidClassic {
 
     protected IIcon stillIcon;
     protected IIcon flowingIcon;
 
-    protected final String texturePrefix;  // textures: galaxia:prefix_still / prefix_flow
+    protected final String texturePrefix; // textures: galaxia:prefix_still / prefix_flow
     protected final boolean distinctStillAndFlowTextures;
 
-    public BlockFluidFiniteCustom(Fluid fluid, Material material, String texturePrefix, boolean distinctStillAndFlowTextures) {
+    public BlockFluidFiniteCustom(Fluid fluid, Material material, String texturePrefix,
+        boolean distinctStillAndFlowTextures) {
         super(fluid, material);
         this.texturePrefix = texturePrefix;
         this.distinctStillAndFlowTextures = distinctStillAndFlowTextures;
@@ -29,9 +28,9 @@ public class BlockFluidFiniteCustom extends BlockFluidClassic {
     // effect on touch
     // @Override
     // public void onEntityCollidedWithBlock(World world, int x, int y, int z, Entity entity) {
-    //     if (entity instanceof EntityLivingBase) {
-    //         ((EntityLivingBase) entity).addPotionEffect(new PotionEffect(Potion.poison.id, 20, 1));
-    //     }
+    // if (entity instanceof EntityLivingBase) {
+    // ((EntityLivingBase) entity).addPotionEffect(new PotionEffect(Potion.poison.id, 20, 1));
+    // }
     // }
 
     @Override

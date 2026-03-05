@@ -1,11 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.block.planet;
 
-import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
 import net.minecraft.block.Block;
-
-import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import net.minecraft.block.material.Material;
 import net.minecraftforge.fluids.Fluid;
+
+import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 public final class PlanetBlocks {
 
@@ -320,6 +320,58 @@ public final class PlanetBlocks {
         .build();
 
     /*
+        ASTEROIDS
+     */
+
+    public static final Block ASTEROID_SHELL_BLACK = PlanetBlockBuilder.create("asteroid_belt/black_asteroid_shell")
+        .dropSelf()
+        .hardness(2F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_FROZEN = PlanetBlockBuilder.create("asteroid_belt/frozen_asteroid_shell")
+        .dropSelf()
+        .hardness(2F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_GREY = PlanetBlockBuilder.create("asteroid_belt/grey_asteroid_shell")
+        .dropSelf()
+        .hardness(2F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_NAQUADAH = PlanetBlockBuilder.create("asteroid_belt/naquadah_asteroid_shell")
+        .dropSelf()
+        .hardness(4F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_OLIVINE = PlanetBlockBuilder.create("asteroid_belt/olivine_asteroid_shell")
+        .dropSelf()
+        .hardness(3F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_RED = PlanetBlockBuilder.create("asteroid_belt/red_asteroid_shell")
+        .dropSelf()
+        .hardness(2F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_ROCKY = PlanetBlockBuilder.create("asteroid_belt/rocky_asteroid_shell")
+        .dropSelf()
+        .hardness(2F)
+        .harvest(2)
+        .build();
+
+    public static final Block ASTEROID_SHELL_SILVER = PlanetBlockBuilder.create("asteroid_belt/silver_asteroid_shell")
+        .dropSelf()
+        .hardness(2F)
+        .harvest(2)
+        .build();
+
+    /*
         FLUIDS
      */
 
@@ -332,6 +384,8 @@ public final class PlanetBlocks {
         .getFluid();
 
     public static final Fluid LIQUID_RESIN = FluidFiniteBuilder.create("fluids/resin/molten_resin")
+        .lightLevel(1)
+        .material(Material.lava)
         .buildAndRegister()
         .getFluid();
 
