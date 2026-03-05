@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
@@ -41,11 +42,11 @@ public class DimensionEventHandler {
     int lowOxygenDuration = 0; // defines duration of player being low on oxygen in SECONDS
 
     DamageSource temperature = new DamageSource("galaxia.temperature").setDamageBypassesArmor()
-        .setMagicDamage();
+            .setMagicDamage();
     DamageSource noOxygen = new DamageSource("galaxia.noOxygen").setDamageBypassesArmor()
-        .setMagicDamage();
+            .setMagicDamage();
     DamageSource radiation = new DamageSource("galaxia.radiation").setDamageBypassesArmor()
-        .setMagicDamage();
+            .setMagicDamage();
 
     public DimensionEventHandler() {
         this.counter = 0;
@@ -62,22 +63,26 @@ public class DimensionEventHandler {
      */
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END)
+            return;
         for (EntityPlayer player : MinecraftServer.getServer()
-            .getConfigurationManager().playerEntityList) {
-            if (!isInGalaxiaDimension(player)) continue;
-            if (player.ticksExisted % 20 != 0) continue;
+                .getConfigurationManager().playerEntityList) {
+            if (!isInGalaxiaDimension(player))
+                continue;
+            if (player.ticksExisted % 20 != 0)
+                continue;
             applyEffects(
-                SolarSystemRegistry.getById(player.dimension)
-                    .effects(),
-                player);
+                    SolarSystemRegistry.getById(player.dimension)
+                            .effects(),
+                    player);
         }
     }
 
     public static boolean isWearingFullSuit(EntityPlayer player) {
         for (int i = 0; i < 4; i++) {
             ItemStack piece = player.inventory.armorInventory[i];
-            if (piece == null || !(piece.getItem() instanceof ItemSpaceSuit)) return false;
+            if (piece == null || !(piece.getItem() instanceof ItemSpaceSuit))
+                return false;
         }
         return true;
     }
@@ -114,8 +119,10 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyWithering(EffectBuilder def, EntityPlayer player) {
-        if (!def.getWithering(player)) return;
-        if (player.isPotionActive(Potion.wither)) return;
+        if (!def.getWithering(player))
+            return;
+        if (player.isPotionActive(Potion.wither))
+            return;
         player.addPotionEffect(new PotionEffect(Potion.wither.id, BASE_EFFECT_DURATION, 1));
     }
 
@@ -126,7 +133,20 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applySpores(EffectBuilder def, EntityPlayer player) {
-        if (!def.getSpore(player)) return;
+        if (!def.getSpore(player))
+            return;
+        IInventory baubles = BaublesApi.getBaubles(player);
+        boolean hasFilter = false;
+        for (int i = 0; i < baubles.getSizeInventory(); i++) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack == null || !(stack.getItem() instanceof ItemSporeFilter)) {
+                continue;
+            }
+            hasFilter = true;
+        }
+
+        if (hasFilter)
+            return;
         List<Integer> possibleEffects = Arrays.asList(2, 4, 15, 17, 18, 19, 20);
         /*
          * 2 = Slowness
@@ -139,11 +159,6 @@ public class DimensionEventHandler {
          */
 
         // Check if one of above conditions already applied
-        for (PotionEffect effect : player.getActivePotionEffects()) {
-            if (possibleEffects.contains(effect.getPotionID())) {
-                return;
-            }
-        }
 
         // Add a random effect from list
         Random random = new Random();
@@ -176,7 +191,8 @@ public class DimensionEventHandler {
         acceptableMax += heatProtection;
         acceptableMin -= coldProtection;
 
-        if (temp < acceptableMax && temp > acceptableMin) return;
+        if (temp < acceptableMax && temp > acceptableMin)
+            return;
 
         int diff;
         if (temp < acceptableMin) {
@@ -209,7 +225,8 @@ public class DimensionEventHandler {
 
         for (int i = 0; i < baubles.getSizeInventory(); i++) {
             ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemThermalProtection)) continue;
+            if (stack == null || !(stack.getItem() instanceof ItemThermalProtection))
+                continue;
 
             ItemThermalProtection item = (ItemThermalProtection) stack.getItem();
             protection += heat ? item.getHeatProtection() : item.getColdProtection();
@@ -225,19 +242,20 @@ public class DimensionEventHandler {
      */
     private void applyLowOxygen(EffectBuilder def, EntityPlayer player) {
         int oxygenPercent = def.getOxygenPercent(player);
-        if (oxygenPercent == 100) return;
+        if (oxygenPercent == 100)
+            return;
 
         ItemStack oxygenMask = null;
         boolean couldDrainOxygen = false;
         for (int index : Galaxia.oxygenSlots) {
             ItemStack tank = BaublesApi.getBaubles(player)
-                .getStackInSlot(index);
+                    .getStackInSlot(index);
             if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
                 continue;
             }
             for (int j : Galaxia.oxygenMaskSlots) {
                 ItemStack item = BaublesApi.getBaubles(player)
-                    .getStackInSlot(j);
+                        .getStackInSlot(j);
                 if (item != null && item.getItem() instanceof ItemOxygenMask) {
                     oxygenMask = item;
                 }
@@ -246,14 +264,16 @@ public class DimensionEventHandler {
             if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5) && oxygenMask != null) {
                 couldDrainOxygen = true;
                 GALAXIA_NETWORK
-                    .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
+                        .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
                 break;
             }
         }
 
         float oxygenLevel = getPlayerOxygenLevel(player);
-        if (oxygenLevel > 0.1 && oxygenMask != null) lowOxygenDuration = 0;
-        else lowOxygenDuration++;
+        if (oxygenLevel > 0.1 && oxygenMask != null)
+            lowOxygenDuration = 0;
+        else
+            lowOxygenDuration++;
 
         // Apply low oxygen effects if oxygen is too low
         // java8 doesn't support switches for stuff like this and i don't want to make
@@ -269,7 +289,8 @@ public class DimensionEventHandler {
         else if (oxygenLevel < 0.1)
             player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, 0));
 
-        if (couldDrainOxygen) return;
+        if (couldDrainOxygen)
+            return;
         // Apply damage if no tank could be drained (tank is empty or no tanks
         // available)
         // damage scaled linearly so it can't be bypassed long-term by most of armors
@@ -287,9 +308,12 @@ public class DimensionEventHandler {
         int acceptableMin = 1;
         int acceptableMax = 2;
         int pressure = def.getPressure(player);
-        if (pressure <= acceptableMax && pressure >= acceptableMin) return;
-        if (player.isPotionActive(Potion.moveSlowdown)) return;
-        if (player.isPotionActive(Potion.digSlowdown)) return;
+        if (pressure <= acceptableMax && pressure >= acceptableMin)
+            return;
+        if (player.isPotionActive(Potion.moveSlowdown))
+            return;
+        if (player.isPotionActive(Potion.digSlowdown))
+            return;
         player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION, 1));
         player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, BASE_EFFECT_DURATION, 1));
 
@@ -303,10 +327,12 @@ public class DimensionEventHandler {
      */
     private void applyRadiation(EffectBuilder def, EntityPlayer player) {
         int radiation = def.getRadiation(player);
-        if (radiation == 0) return;
+        if (radiation == 0)
+            return;
         // Temp until radiation suit added
         boolean hasRadSuit = false;
-        if (hasRadSuit) return;
+        if (hasRadSuit)
+            return;
         player.attackEntityFrom(this.radiation, 5.0f);
     }
 

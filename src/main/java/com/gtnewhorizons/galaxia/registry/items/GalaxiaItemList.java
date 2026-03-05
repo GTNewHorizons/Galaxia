@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.items.armor.ItemSpaceSuit;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
@@ -56,7 +57,7 @@ public enum GalaxiaItemList {
     THERMAL_PROTECTION_COLD("gear/thermal_protection_cold", () -> new ItemThermalProtection(0, 100), 1),
     THERMAL_PROTECTION_HOT("gear/thermal_protection_hot", () -> new ItemThermalProtection(100, 0), 1),
     OXYGEN_MASK("gear/oxygen_mask", () -> new ItemOxygenMask(), 1),
-    // TODO: Add programmer art for oxygen mask
+    SPORE_FILTER("gear/spore_filter", () -> new ItemSporeFilter(), 1),
 
     ; // leave trailing semicolon
 

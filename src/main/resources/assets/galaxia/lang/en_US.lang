@@ -132,6 +132,9 @@ item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
 item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 item.galaxia.oxygen_mask.name=Oxygen Mask
 item.galaxia.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
+item.galaxia.spore_filter.name=Spore Filter
+item.galaxia.spore_filter.desc=Filters out any atmospheric spores
+
 
 #### Config
 

@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.BAUBLE_TYPE_SPORE_FILTER;
 
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -32,8 +33,8 @@ public class CommonProxy {
         SolarSystemRegistry.registerAll();
 
         FMLCommonHandler.instance()
-            .bus()
-            .register(new DimensionEventHandler());
+                .bus()
+                .register(new DimensionEventHandler());
 
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
@@ -41,7 +42,8 @@ public class CommonProxy {
         PlanetBlocks.init();
         GalaxiaEffects.init();
 
-        if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
+        if (Loader.isModLoaded("Baubles|Expanded"))
+            registerBaublesSlots();
 
         ModuleRegistry.registerAllModules();
     }
@@ -58,10 +60,12 @@ public class CommonProxy {
         Galaxia.oxygenSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_TANK);
         Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         Galaxia.oxygenMaskSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_MASK);
+        Galaxia.sporeFilterSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_SPORE_FILTER);
     }
 
     // register server commands in this event handler (Remove if not needed)
-    public void serverStarting(FMLServerStartingEvent event) {}
+    public void serverStarting(FMLServerStartingEvent event) {
+    }
 
     private void registerBaublesSlots() {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
@@ -71,5 +75,8 @@ public class CommonProxy {
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_MASK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_MASK);
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_SPORE_FILTER);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_SPORE_FILTER);
+
     }
 }
