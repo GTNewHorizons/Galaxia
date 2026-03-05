@@ -101,6 +101,7 @@ tile.nodule_controller.name=Station Module Controller
 tile.space_air.name=Space Air
 tile.module_assembler_controller.name=Module Assembler
 tile.silo_controller.name=Rocket Silo
+tile.space_station_panel.name=Space Station Panel
 
 # Miscellaneous / Resource blocks
 tile.block_of_pyrite.name=Block of Pyrite
@@ -113,6 +114,9 @@ tile.rusty_iron_block.name=Rusty Iron Block
 tile.bleeding_obsidian.name=Bleeding Obsidian
 tile.rusty_scaffolding.name=Rusty Scaffolding
 tile.rusty_panel.name=Rusty Panel
+tile.rusty_sheetmetal.name=Rusty Sheetmetal
+tile.launchpad.name=Launchpad Casing
+tile.research_outpost_casing.name=Research Outpost Casing
 
 #$$$ Items
 item.galaxia.galaxia_logo.name=Galaxia Logo
