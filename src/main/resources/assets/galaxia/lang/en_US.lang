@@ -5,9 +5,11 @@
 ## Use StatCollector and localized enum Colors
 ## Have "§r" (color reset) at the end of colored string
 ## Keep the lang file nice and clean '='
+## major groups are marked with $ sign for easier ctrl+f search
 #
 ## Sort like:
 # Creative tab
+# Baubles
 # Block
 # Items
 # Elements
@@ -16,10 +18,14 @@
  #- Other
 # Config
 
-#### Creative tab
+#$$$ Creative tab
 itemGroup.galaxia=§9Galaxia§r
 
-#### Blocks
+#$$$ Baubles
+slot.oxygen_tank=Oxygen Tank
+slot.thermal_protection=Thermal Protection
+
+#$$$ Blocks
 
 # Blocks Theia
 tile.theia_regolith.name=Theia Regolith
@@ -97,7 +103,7 @@ tile.bleeding_obsidian.name=Bleeding Obsidian
 tile.rusty_scaffolding.name=Rusty Scaffolding
 tile.rusty_panel.name=Rusty Panel
 
-#### Items
+#$$$ Items
 item.galaxia.galaxia_logo.name=Galaxia Logo
 
 # Tools
@@ -123,15 +129,15 @@ item.galaxia.spacesuit_boots.name=Space Suit Boots
 item.galaxia.oxygen_tank_1.name=Small Oxygen Tank
 item.galaxia.oxygen_tank_2.name=Medium Oxygen Tank
 item.galaxia.oxygen_tank_3.name=Large Oxygen Tank
-item.galaxia.oxygen_tank_4.name=§6Creative Oxygen Tank
+item.galaxia.oxygen_tank_4.name=§6Creative Oxygen Tank§r
 item.galaxia.oxygen_tank.desc=Capacity: %s / %s
-item.galaxia.oxygen_tank.infinite=Capacity: §cInfinite
+item.galaxia.oxygen_tank.infinite=Capacity: §cInfinite§r
 item.galaxia.thermal_protection_cold.name=Cold Thermal Protection
 item.galaxia.thermal_protection_hot.name=Hot Thermal Protection
 item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
 item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 
-#### Config
+#$$$ Config
 
 ### Config - "Rocket"
 galaxia.config.category.rocket=Rocket

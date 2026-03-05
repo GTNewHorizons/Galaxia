@@ -15,6 +15,7 @@ import org.lwjgl.opengl.GL11;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
+import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -49,7 +50,7 @@ public class GalaxiaOverlayHandler {
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-        if (ConfigOverlay.ConfigOverlayOxygenBar.showOxygenBar) {
+        if (ConfigOverlay.ConfigOverlayOxygenBar.showOxygenBar && GalaxiaAPI.hasOxygenTank(player)) {
             boolean oxygenCritical = oxygenLevel < ConfigOverlay.ConfigOverlayOxygenBar.lowOxygenThreshold;
             drawBar(
                 pos.oxygenX,
@@ -61,7 +62,7 @@ public class GalaxiaOverlayHandler {
                 ConfigOverlay.ConfigOverlayOxygenBar.oxygenTextureHeight);
         }
 
-        if (ConfigOverlay.ConfigOverlayTemperatureBar.showTemperatureBar) {
+        if (ConfigOverlay.ConfigOverlayTemperatureBar.showTemperatureBar && GalaxiaAPI.hasThermalProtection(player)) {
             float lowThresh = ConfigOverlay.ConfigOverlayTemperatureBar.temperatureLowThreshold;
             float highThresh = ConfigOverlay.ConfigOverlayTemperatureBar.temperatureHighThreshold;
             int x = pos.temperatureX;
@@ -148,23 +149,6 @@ public class GalaxiaOverlayHandler {
 
     private float clamp01(float v) {
         return Math.max(0f, Math.min(1f, v));
-    }
-
-    private int applyPulse() {
-        float pulse = (float) (Math.sin(System.currentTimeMillis() / ConfigOverlay.ConfigOverlayGlobal.pulseSpeed)
-            * ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude
-            + (1.0f - ConfigOverlay.ConfigOverlayGlobal.pulseAmplitude));
-
-        int r = (int) (255 * pulse);
-        int g = (int) (255 * pulse);
-        int b = (int) (255 * pulse);
-
-        // Clamp components so we don't get negative values due to rounding
-        r = Math.max(0, Math.min(255, r));
-        g = Math.max(0, Math.min(255, g));
-        b = Math.max(0, Math.min(255, b));
-
-        return (r << 16) | (g << 8) | b;
     }
 
     private void drawTexturedQuad(int x, int y, int w, int h, int texW, int texH) {
