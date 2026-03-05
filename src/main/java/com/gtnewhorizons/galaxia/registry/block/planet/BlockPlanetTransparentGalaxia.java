@@ -11,8 +11,8 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class BlockPlanetTransparentGalaxia extends BlockPlanetGalaxiaGeneral {
 
     public BlockPlanetTransparentGalaxia(String blockName, Item drop, float hardness, int harvestLevel,
-        String harvestTool) {
-        super(blockName, drop, hardness, harvestLevel, harvestTool);
+        String harvestTool, float slipperiness) {
+        super(blockName, drop, hardness, harvestLevel, harvestTool, slipperiness);
     }
 
     @Override
