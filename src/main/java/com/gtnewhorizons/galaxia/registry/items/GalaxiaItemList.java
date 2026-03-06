@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
@@ -69,6 +70,7 @@ public enum GalaxiaItemList {
     PRESSURE_PROTECTION_HIGH("gear/protection_shield_pressure_high", () -> new ItemProtectionShield(4, 0, 0), 1),
     PRESSURE_PROTECTION_LOW("gear/protection_shield_pressure_low", () -> new ItemProtectionShield(0, 1, 0), 1),
     RADIATION_PROTECTION("gear/protection_shield_radiation", () -> new ItemProtectionShield(0, 0, 10), 1),
+    WITHER_PROTECTION("gear/wither_protection", () -> new ItemWitherProtection(), 1),
 
     ; // leave trailing semicolon
 

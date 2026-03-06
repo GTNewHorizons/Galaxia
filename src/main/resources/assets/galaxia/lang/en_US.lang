@@ -24,6 +24,10 @@ itemGroup.galaxia=§9Galaxia§r
 #$$$ Baubles
 slot.oxygen_tank=Oxygen Tank
 slot.thermal_protection=Thermal Protection
+slot.protection_shield=Protection Shielding
+slot.wither_protection=Wither Protection
+slot.spore_filter=Spore Filter
+slot.oxygen_mask=Oxygen Mask
 
 #$$$ Blocks
 
@@ -171,6 +175,9 @@ item.galaxia.oxygen_mask.name=Oxygen Mask
 item.galaxia.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
 item.galaxia.spore_filter.name=Spore Filter
 item.galaxia.spore_filter.desc=Filters out any atmospheric spores
+item.galaxia.wither_protection.name=Wither Protection
+item.galaxia.wither_protection.desc=Provides protection from atmospheric withering effects
+
 
 
 # Parts

@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
 
 import baubles.api.BaublesApi;
 
@@ -168,6 +169,19 @@ public final class GalaxiaAPI {
             }
             return true;
 
+        }
+        return false;
+    }
+
+    public static boolean hasWitherProtection(@Nonnull EntityPlayer player) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return false;
+
+        for (int slot : Galaxia.witherSlots) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ItemWitherProtection) {
+                return true;
+            }
         }
         return false;
     }
