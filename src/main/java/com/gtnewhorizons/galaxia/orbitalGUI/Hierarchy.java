@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.orbitalGUI;
 
-import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
 
 import java.util.ArrayList;
 import java.util.List;

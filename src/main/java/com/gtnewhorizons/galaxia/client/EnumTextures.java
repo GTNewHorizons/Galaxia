@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client;
 
-import static com.gtnewhorizons.galaxia.utility.ResourceLocationGalaxia.LocationGalaxia;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
 
 import net.minecraft.util.ResourceLocation;
 

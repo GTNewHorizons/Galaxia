@@ -10,6 +10,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ResourceLocation;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
@@ -244,8 +245,13 @@ public final class GalaxiaAPI {
         return GALAXIA_DIMENSIONS.contains(e.dimension);
     }
 
-    public static String toSnakeCase(String s) {
-        return s.replaceAll("([a-z])([A-Z])", "$1_$2")
-            .toLowerCase();
+    /**
+     * static ResourceLocation overload that doesn't require "galaxia" as input
+     *
+     * @param location file location in galaxia folder
+     * @return file location
+     */
+    public static ResourceLocation LocationGalaxia(String location) {
+        return new ResourceLocation(Galaxia.MODID, location);
     }
 }
