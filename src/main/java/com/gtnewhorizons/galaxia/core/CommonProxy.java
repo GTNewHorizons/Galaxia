@@ -73,15 +73,20 @@ public class CommonProxy {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_PROTECTION_SHIELD);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_MASK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_MASK);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_SPORE_FILTER);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_SPORE_FILTER);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_WITHER_PROTECTION);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_WITHER_PROTECTION);
 
