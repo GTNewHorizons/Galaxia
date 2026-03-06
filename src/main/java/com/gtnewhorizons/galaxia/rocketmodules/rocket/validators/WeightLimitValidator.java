@@ -1,7 +1,7 @@
-package com.gtnewhorizons.galaxia.rocketmodules.validators;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.validators;
 
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class WeightLimitValidator implements IRocketValidator {
 

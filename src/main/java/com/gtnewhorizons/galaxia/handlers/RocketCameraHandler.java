@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.handlers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.EntityRenderer;
 
-import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;

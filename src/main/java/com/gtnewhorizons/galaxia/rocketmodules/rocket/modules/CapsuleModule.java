@@ -1,6 +1,6 @@
-package com.gtnewhorizons.galaxia.rocketmodules.modules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class CapsuleModule extends RocketModule {
 

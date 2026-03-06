@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.rocketmodules.validators;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.validators;
 
 import com.github.bsideup.jabel.Desugar;
 

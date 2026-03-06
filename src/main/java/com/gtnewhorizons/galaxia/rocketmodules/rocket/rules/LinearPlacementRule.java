@@ -1,10 +1,10 @@
-package com.gtnewhorizons.galaxia.rocketmodules.rules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.rules;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class LinearPlacementRule implements IPlacementRule {
 

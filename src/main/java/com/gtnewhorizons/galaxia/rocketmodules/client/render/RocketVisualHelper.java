@@ -4,9 +4,9 @@ import net.minecraft.client.Minecraft;
 
 import org.lwjgl.opengl.GL11;
 
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly.ModulePlacement;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly.ModulePlacement;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public final class RocketVisualHelper {
 

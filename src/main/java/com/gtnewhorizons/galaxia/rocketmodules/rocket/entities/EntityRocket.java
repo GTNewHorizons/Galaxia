@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.rocketmodules.entities;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.entities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
@@ -14,7 +14,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.relauncher.Side;

@@ -13,6 +13,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChunkCoordinates;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -32,17 +33,18 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
-import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.rocketmodules.validators.CapsuleRequiredValidator;
-import com.gtnewhorizons.galaxia.rocketmodules.validators.EngineToTankRatioValidator;
-import com.gtnewhorizons.galaxia.rocketmodules.validators.IRocketValidator;
-import com.gtnewhorizons.galaxia.rocketmodules.validators.ValidationResult;
-import com.gtnewhorizons.galaxia.rocketmodules.validators.WeightLimitValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.CapsuleRequiredValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRatioValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
 
-public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
+public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>, ILinkable {
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
@@ -53,10 +55,55 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     private final List<IRocketValidator> validators = Arrays
         .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator());
     private int destination = 0;
-    private IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
+    private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
+
+    /**
+     * Stored position of the linked master (ModuleAssembler).
+     * Persisted in NBT so the link survives chunk unload / world restart.
+     * Null = not linked.
+     */
+    private ChunkCoordinates masterPos = null;
+
+    @Override
+    public String getLinkableName() {
+        return "Rocket Silo";
+    }
+
+    @Override
+    public boolean canBeSlave() {
+        return true;
+    }
+
+    @Override
+    public Class<? extends TileEntity> acceptedMasterClass() {
+        return TileEntityModuleAssembler.class;
+    }
+
+    @Override
+    public void setMasterPos(ChunkCoordinates pos) {
+        this.masterPos = pos;
+        markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    public ChunkCoordinates getMasterPos() {
+        return masterPos;
+    }
+
+    /**
+     * resolves and casts master to TileEntityModuleAssembler.
+     * 
+     * @return Linked assembler, or null if not linked / unloaded.
+     */
+    public TileEntityModuleAssembler getLinkedAssembler() {
+        TileEntity te = resolveMaster();
+        if (te instanceof TileEntityModuleAssembler) return (TileEntityModuleAssembler) te;
+        return null;
+    }
 
     /**
      * The UI builder for the tile entity
@@ -72,15 +119,16 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         PagedWidget.Controller tabController = new PagedWidget.Controller();
 
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia:roclet_silo_main")
+        ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(240, 160);
-        TileEntityModuleAssembler ma = findAssemblerToLink();
-        // If no linked MA,
-        if (ma == null) return panel.child(
 
-            IKey.str("§Couldn't find Assembler")
-                .asWidget()
-                .pos(10, 35));
+        TileEntityModuleAssembler ma = getLinkedAssembler();
+        if (ma == null) {
+            return panel.child(
+                IKey.str("§cNo Module Assembler linked.\nUse the Linking Tool to connect one.")
+                    .asWidget()
+                    .pos(10, 35));
+        }
 
         panel.child(
             new PageButton(0, tabController).size(120, 28)
@@ -172,14 +220,9 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         return new ButtonWidget<>().size(48, 20)
             .overlay(IKey.str(m.getName()))
             .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
-            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) {
-                    if (hasRemaining(m.getId(), ma)) {
-                        addModule(m.getId(), ma);
-                    }
-
-                }
-            }));
+            .syncHandler(
+                new InteractionSyncHandler().setOnMousePressed(
+                    md -> { if (md.mouseButton == 0 && hasRemaining(m.getId(), ma)) addModule(m.getId(), ma); }));
     }
 
     private ToggleButton createDestinationButton(BasePlanet dim) {
@@ -252,13 +295,13 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
         }
         assembly = null;
+        modules.clear();
         markDirty();
         ma.markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             worldObj.markBlockForUpdate(ma.xCoord, ma.yCoord, ma.zCoord);
         }
-        modules.clear();
     }
 
     /**
@@ -352,9 +395,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     @Override
     public void invalidate() {
         super.invalidate();
-        if (entityRocket != null && !entityRocket.isDead) {
-            entityRocket.setDead();
-        }
+        if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
     }
 
     /**
@@ -387,6 +428,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         super.writeToNBT(nbt);
         nbt.setBoolean("shouldRender", shouldRender);
 
+        // modules list
         NBTTagList list = new NBTTagList();
         for (int type : modules) {
             NBTTagCompound entry = new NBTTagCompound();
@@ -394,6 +436,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             list.appendTag(entry);
         }
         nbt.setTag("modules", list);
+
+        // link data — always write so readFromNBT can detect absence
+        nbt.setBoolean("hasLink", masterPos != null);
+        if (masterPos != null) {
+            nbt.setInteger("masterX", masterPos.posX);
+            nbt.setInteger("masterY", masterPos.posY);
+            nbt.setInteger("masterZ", masterPos.posZ);
+        }
     }
 
     /**
@@ -409,10 +459,21 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         modules.clear();
         NBTTagList list = nbt.getTagList("modules", 10);
         for (int i = 0; i < list.tagCount(); i++) {
-            NBTTagCompound entry = list.getCompoundTagAt(i);
-            modules.add(entry.getInteger("type"));
+            modules.add(
+                list.getCompoundTagAt(i)
+                    .getInteger("type"));
         }
         assembly = null;
+
+        // link data
+        if (nbt.getBoolean("hasLink")) {
+            masterPos = new ChunkCoordinates(
+                nbt.getInteger("masterX"),
+                nbt.getInteger("masterY"),
+                nbt.getInteger("masterZ"));
+        } else {
+            masterPos = null;
+        }
     }
 
     /**
@@ -436,23 +497,5 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
         this.readFromNBT(pkt.func_148857_g());
-    }
-
-    /**
-     * Finds a module assembler within a 10x10 plane on same height
-     *
-     * @return ModuleAssembler TE if found, else null
-     */
-    public TileEntityModuleAssembler findAssemblerToLink() {
-        for (int dx = -10; dx <= 10; dx++) {
-            for (int dz = -10; dz <= 10; dz++) {
-                TileEntity te = worldObj.getTileEntity(xCoord + dx, yCoord, zCoord + dz);
-
-                if (te instanceof TileEntityModuleAssembler) {
-                    return (TileEntityModuleAssembler) te;
-                }
-            }
-        }
-        return null;
     }
 }

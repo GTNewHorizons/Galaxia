@@ -4,7 +4,7 @@ import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
 
-import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 
 public class RocketRenderer extends Render {
 

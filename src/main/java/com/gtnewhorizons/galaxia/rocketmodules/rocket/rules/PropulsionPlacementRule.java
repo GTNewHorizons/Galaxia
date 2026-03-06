@@ -1,12 +1,12 @@
-package com.gtnewhorizons.galaxia.rocketmodules.rules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.rules;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.gtnewhorizons.galaxia.rocketmodules.IStackableModule;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.IStackableModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class PropulsionPlacementRule implements IPlacementRule {
 

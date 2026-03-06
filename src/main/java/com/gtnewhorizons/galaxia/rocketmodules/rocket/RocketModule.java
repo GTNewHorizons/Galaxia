@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.rocketmodules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
 

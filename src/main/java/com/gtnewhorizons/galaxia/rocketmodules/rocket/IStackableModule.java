@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.rocketmodules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
 /**
  * any module that can be stacked in one layer

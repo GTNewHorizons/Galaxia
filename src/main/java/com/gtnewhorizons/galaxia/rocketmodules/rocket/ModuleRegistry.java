@@ -1,14 +1,14 @@
-package com.gtnewhorizons.galaxia.rocketmodules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.rocketmodules.modules.CapsuleModule;
-import com.gtnewhorizons.galaxia.rocketmodules.modules.EngineModule;
-import com.gtnewhorizons.galaxia.rocketmodules.modules.FuelTankModule;
-import com.gtnewhorizons.galaxia.rocketmodules.modules.StorageModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.FuelTankModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.StorageModule;
 
 public final class ModuleRegistry {
 

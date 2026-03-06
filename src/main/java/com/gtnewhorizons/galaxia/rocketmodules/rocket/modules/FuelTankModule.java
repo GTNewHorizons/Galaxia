@@ -1,7 +1,7 @@
-package com.gtnewhorizons.galaxia.rocketmodules.modules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
-import com.gtnewhorizons.galaxia.rocketmodules.IStackableModule;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.IStackableModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class FuelTankModule extends RocketModule implements IStackableModule {
 

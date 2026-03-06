@@ -4,11 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChunkCoordinates;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -19,13 +21,40 @@ import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.gtnewhorizons.galaxia.rocketmodules.ModuleRegistry;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
-public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData> {
+public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData>, ILinkable {
 
     // Hashmap stores <Module ID, Count>
     public HashMap<Integer, Integer> moduleMap = new HashMap<>();
+
+    @Override
+    public String getLinkableName() {
+        return "Module Assembler";
+    }
+
+    @Override
+    public boolean canBeMaster() {
+        return true;
+    }
+
+    /**
+     * Override to add custom master-side behaviour
+     */
+    @Override
+    public void onSlaveLinked(TileEntity slave, EntityPlayer player) {
+        // Currently just a hook
+    }
+
+    @Override
+    public void setMasterPos(ChunkCoordinates pos) { /* master-only TE */ }
+
+    @Override
+    public ChunkCoordinates getMasterPos() {
+        return null;
+    }
 
     /**
      * The UI builder for the Tile Entity GUI
@@ -82,19 +111,33 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
         return new ButtonWidget<>().size(48, 20)
             .overlay(IKey.str(m.getName()))
             .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
-            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) {
-                    addModule(m.getId());
-
-                }
-            }));
+            .syncHandler(
+                new InteractionSyncHandler()
+                    .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound tag) {}
+    public void readFromNBT(NBTTagCompound tag) {
+        super.readFromNBT(tag);
+        moduleMap.clear();
+        NBTTagCompound mapNbt = tag.getCompoundTag("moduleMap");
+        for (String key : mapNbt.func_150296_c()) {
+            moduleMap.put(Integer.parseInt(key), mapNbt.getInteger(key));
+        }
+    }
 
     @Override
-    public void writeToNBT(NBTTagCompound tag) {}
+    public void writeToNBT(NBTTagCompound tag) {
+        super.writeToNBT(tag);
+        NBTTagCompound mapNbt = new NBTTagCompound();
+        for (Map.Entry<Integer, Integer> e : moduleMap.entrySet()) {
+            mapNbt.setInteger(
+                e.getKey()
+                    .toString(),
+                e.getValue());
+        }
+        tag.setTag("moduleMap", mapNbt);
+    }
 
     /**
      * Writes an NBT packet to the server
@@ -104,15 +147,7 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
     @Override
     public Packet getDescriptionPacket() {
         NBTTagCompound nbt = new NBTTagCompound();
-
-        NBTTagCompound mapNbt = new NBTTagCompound();
-        for (Map.Entry<Integer, Integer> e : moduleMap.entrySet()) {
-            mapNbt.setInteger(
-                e.getKey()
-                    .toString(),
-                e.getValue());
-        }
-        nbt.setTag("moduleMap", mapNbt);
+        writeToNBT(nbt);
         return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 0, nbt);
     }
 
@@ -124,12 +159,7 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
      */
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
-        NBTTagCompound nbt = packet.func_148857_g();
-        moduleMap.clear();
-        NBTTagCompound mapNbt = nbt.getCompoundTag("moduleMap");
-        for (String key : mapNbt.func_150296_c()) {
-            moduleMap.put(Integer.parseInt(key), mapNbt.getInteger(key));
-        }
+        readFromNBT(packet.func_148857_g());
     }
 
     /**

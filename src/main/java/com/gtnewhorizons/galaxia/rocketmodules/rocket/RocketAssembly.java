@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.rocketmodules;
+package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,9 +7,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.rocketmodules.rules.ClusteredPlacementRule;
-import com.gtnewhorizons.galaxia.rocketmodules.rules.LinearPlacementRule;
-import com.gtnewhorizons.galaxia.rocketmodules.rules.PropulsionPlacementRule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.ClusteredPlacementRule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.LinearPlacementRule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.PropulsionPlacementRule;
 
 public final class RocketAssembly {
 

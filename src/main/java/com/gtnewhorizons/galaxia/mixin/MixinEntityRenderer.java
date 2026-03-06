@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
-import com.gtnewhorizons.galaxia.rocketmodules.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 
 @Mixin(EntityRenderer.class)
 public abstract class MixinEntityRenderer {
