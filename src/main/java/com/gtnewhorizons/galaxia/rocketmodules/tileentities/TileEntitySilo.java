@@ -31,8 +31,10 @@ import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
+import com.gtnewhorizons.galaxia.core.network.MonorailAnimPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
+import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailAnimationState;
 import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
@@ -43,6 +45,10 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRat
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
+
+import cpw.mods.fml.common.network.NetworkRegistry;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>, ILinkable {
 
@@ -66,6 +72,17 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * Null = not linked.
      */
     private ChunkCoordinates masterPos = null;
+
+    private double monorailYOffset = 3.0;
+
+    @SideOnly(Side.CLIENT)
+    private MonorailAnimationState animationState;
+
+    @SideOnly(Side.CLIENT)
+    public MonorailAnimationState getAnimationState() {
+        if (animationState == null) animationState = new MonorailAnimationState();
+        return animationState;
+    }
 
     @Override
     public String getLinkableName() {
@@ -94,9 +111,19 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         return masterPos;
     }
 
+    public double getMonorailYOffset() {
+        return monorailYOffset;
+    }
+
+    public void setMonorailYOffset(double offset) {
+        this.monorailYOffset = offset;
+        markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
     /**
      * resolves and casts master to TileEntityModuleAssembler.
-     * 
+     *
      * @return Linked assembler, or null if not linked / unloaded.
      */
     public TileEntityModuleAssembler getLinkedAssembler() {
@@ -267,7 +294,14 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         ma.moduleMap.put(id, ma.moduleMap.get(id) - 1);
         assembly = null;
         markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            if (!worldObj.isRemote) {
+                GALAXIA_NETWORK.sendToAllAround(
+                    new MonorailAnimPacket(xCoord, yCoord, zCoord, id, MonorailAnimPacket.DIR_TO_SILO),
+                    new NetworkRegistry.TargetPoint(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, 512));
+            }
+        }
     }
 
     /**
@@ -287,10 +321,25 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
 
     /**
      * Returns the modules back to the linked assembler
+     * Sends a Silo->MA animation packet to clients for each returned module
      *
      * @param ma The Module Assembler tile entity
      */
     public void returnModules(TileEntityModuleAssembler ma) {
+        if (!worldObj.isRemote) {
+            // Send animation packets BEFORE clearing the list so we still have IDs.
+            for (Integer id : modules) {
+                GALAXIA_NETWORK.sendToAllAround(
+                    new MonorailAnimPacket(xCoord, yCoord, zCoord, id, MonorailAnimPacket.DIR_TO_MA),
+                    new cpw.mods.fml.common.network.NetworkRegistry.TargetPoint(
+                        worldObj.provider.dimensionId,
+                        xCoord,
+                        yCoord,
+                        zCoord,
+                        512));
+            }
+        }
+
         for (Integer id : modules) {
             ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
         }
@@ -386,6 +435,16 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
                 spawnRocket();
             }
+        } else {
+            // Tick the monorail transit animation every client tick.
+            // Path length is needed to convert world-space module spacing into progress-unit gaps
+            if (masterPos != null) {
+                double dx = masterPos.posX - xCoord;
+                double dy = masterPos.posY - yCoord;
+                double dz = masterPos.posZ - zCoord;
+                float pathLength = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                getAnimationState().tick(pathLength);
+            }
         }
     }
 
@@ -437,13 +496,15 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
         nbt.setTag("modules", list);
 
-        // link data — always write so readFromNBT can detect absence
+        // link data - always write so readFromNBT can detect absence
         nbt.setBoolean("hasLink", masterPos != null);
         if (masterPos != null) {
             nbt.setInteger("masterX", masterPos.posX);
             nbt.setInteger("masterY", masterPos.posY);
             nbt.setInteger("masterZ", masterPos.posZ);
         }
+
+        nbt.setDouble("monorailYOffset", monorailYOffset);
     }
 
     /**
@@ -474,6 +535,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         } else {
             masterPos = null;
         }
+
+        monorailYOffset = nbt.hasKey("monorailYOffset") ? nbt.getDouble("monorailYOffset") : 3.0;
     }
 
     /**

@@ -1,10 +1,11 @@
 package com.gtnewhorizons.galaxia.core;
 
+import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
-import com.gtnewhorizons.galaxia.handlers.RocketCameraHandler;
+import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.SiloRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
@@ -30,9 +31,19 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
 
-        ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
+        final SiloRenderer siloRenderer = new SiloRenderer();
+        final MonorailRenderer monorailRenderer = new MonorailRenderer();
+
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new TileEntitySpecialRenderer() {
+
+            @Override
+            public void renderTileEntityAt(net.minecraft.tileentity.TileEntity te, double x, double y, double z,
+                float partialTick) {
+                siloRenderer.renderTileEntityAt(te, x, y, z, partialTick);
+                monorailRenderer.renderTileEntityAt(te, x, y, z, partialTick);
+            }
+        });
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
-        RocketCameraHandler.register();
     }
 
     @Override
