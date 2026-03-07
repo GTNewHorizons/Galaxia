@@ -7,6 +7,7 @@ import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getRadiationProtectio
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getThermalProtection;
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.hasOxygenmask;
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.hasSporeFilter;
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.hasWitherProtection;
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.isInGalaxiaDimension;
 
 import java.util.Arrays;
@@ -102,6 +103,7 @@ public class DimensionEventHandler {
      */
     private void applyWithering(EffectBuilder def, EntityPlayer player) {
         if (!def.getWithering(player)) return;
+        if (hasWitherProtection(player)) return;
         if (player.isPotionActive(Potion.wither)) return;
         player.addPotionEffect(new PotionEffect(Potion.wither.id, BASE_EFFECT_DURATION, 1));
     }

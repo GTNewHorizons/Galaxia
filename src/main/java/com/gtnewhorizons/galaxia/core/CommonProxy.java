@@ -5,6 +5,7 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BA
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield.BAUBLE_TYPE_PROTECTION_SHIELD;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.BAUBLE_TYPE_SPORE_FILTER;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -66,6 +67,7 @@ public class CommonProxy {
         Galaxia.oxygenMaskSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_OXYGEN_MASK);
         Galaxia.sporeFilterSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_SPORE_FILTER);
         Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+        Galaxia.witherSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_WITHER_PROTECTION);
     }
 
     // register server commands in this event handler (Remove if not needed)
@@ -75,15 +77,22 @@ public class CommonProxy {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_TANK);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_PROTECTION_SHIELD);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_PROTECTION_SHIELD);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_MASK);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_OXYGEN_MASK);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_SPORE_FILTER);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_SPORE_FILTER);
+
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_THERMAL_PROTECTION);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
+
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_WITHER_PROTECTION);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_WITHER_PROTECTION);
 
     }
 
