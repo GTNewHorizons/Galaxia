@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemLinkingTool;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -30,8 +31,9 @@ public enum GalaxiaItemList {
     GALAXIA_LOGO("galaxia_logo"),
 
     // TOOLS
-    TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
+    ITEM_TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("tool/galactic_map", ItemGalacticMap::new, 1),
+    ITEM_LINKING_TOOL("tool/linking_tool", ItemLinkingTool::new, 1),
 
     // Worldgen dust & ores
     DUST_THEIA("ore/theia_dust"),

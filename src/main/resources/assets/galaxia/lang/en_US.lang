@@ -5,7 +5,6 @@
 ## Use StatCollector and localized enum Colors
 ## Have "§r" (color reset) at the end of colored string
 ## Keep the lang file nice and clean '='
-## major groups are marked with $ sign for easier ctrl+f search
 #
 ## Sort like:
 # Creative tab
@@ -18,14 +17,14 @@
  #- Other
 # Config
 
-#$$$ Creative tab
+#### Creative tab
 itemGroup.galaxia=§9Galaxia§r
 
-#$$$ Baubles
+#### Baubles
 slot.oxygen_tank=Oxygen Tank
 slot.thermal_protection=Thermal Protection
 
-#$$$ Blocks
+#### Blocks
 
 # Blocks Theia
 tile.theia_regolith.name=Theia Regolith
@@ -118,12 +117,13 @@ tile.rusty_sheetmetal.name=Rusty Sheetmetal
 tile.launchpad.name=Launchpad Casing
 tile.research_outpost_casing.name=Research Outpost Casing
 
-#$$$ Items
+#### Items
 item.galaxia.galaxia_logo.name=Galaxia Logo
 
 # Tools
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.galactic_map.name=Galactic Map
+item.galaxia.linking_tool.name=Linking tool
 
 # Worldgen / Ores
 item.galaxia.theia_dust.name=Theia Dust
@@ -178,7 +178,7 @@ item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
 item.galaxia.heavy_duty_plate_base.name=Heavy Duty Plate
 item.galaxia.satellite_dish.name=Satellite Transmitter Dish
 
-#$$$ Liquids
+#### Liquids
 
 # buckets
 item.lahar_bucket.name=Bucket of Lahar
@@ -192,7 +192,7 @@ tile.molten_resin.name=Molten Resin
 tile.tenebrae_lava.name=Tenebrae Lava
 tile.liquid_mercury.name=Liquid Mercury
 
-#$$$ Config
+#### Config
 
 ### Config - "Rocket"
 galaxia.config.category.rocket=Rocket
@@ -259,3 +259,24 @@ galaxia.config.overlay.texture.temperature_bar_width=Temperature bar texture wid
 galaxia.config.overlay.texture.temperature_bar_width.tooltip=Temperature bar texture width in pixels
 galaxia.config.overlay.texture.temperature_bar_height=Temperature bar texture height
 galaxia.config.overlay.texture.temperature_bar_height.tooltip=Temperature bar texture height in pixels
+
+#### GUI
+
+# Linking Tool messages
+galaxia.linking_tool.not_linkable_master=§cThis block cannot be a master.§r
+galaxia.linking_tool.not_master=§c%s cannot be a master.§r
+galaxia.linking_tool.bound=§a%s §7@ %d,%d,%d §abound as master.§r
+galaxia.linking_tool.no_master=§eNo master bound. Shift+Right-click a master block first.§r
+galaxia.linking_tool.not_linkable_slave=§cThis block cannot be linked.§r
+galaxia.linking_tool.not_slave=§c%s cannot be a slave.§r
+galaxia.linking_tool.master_gone=§cBound master is gone. Please re-bind.§r
+galaxia.linking_tool.incompatible=§c%s is not compatible with %s.§r
+galaxia.linking_tool.linked=§a%s §7@ %d,%d,%d §alinked to §7%s §a@ %d,%d,%d.§r
+galaxia.linking_tool.cleared=§7Master binding cleared.§r
+
+item.galaxia.linking_tool.desc.usage=§7Used to link machines together§r
+item.galaxia.linking_tool.desc.shift_rmb_air=§8Shift+RMB on air§7 - unbind§r
+item.galaxia.linking_tool.desc.shift_rmb=§8Shift+RMB§7 - bind master§r
+item.galaxia.linking_tool.desc.rmb=§8RMB§7 - connect slave§r
+item.galaxia.linking_tool.desc.bound_to=§7Bound to: §a%s §8[%d, %d, %d]§r
+item.galaxia.linking_tool.desc.not_bound=§8Not bound§r

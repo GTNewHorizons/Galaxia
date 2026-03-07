@@ -4,10 +4,12 @@ import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemLinkingTool;
 
 /**
  * Block for the Module Assembler
@@ -25,7 +27,7 @@ public class BlockModuleAssembler extends Block implements ITileEntityProvider {
 
     /**
      * Creates a tile entity bound to this block
-     * 
+     *
      * @param worldIn The world the tile entity is in (i.e. world of this block)
      * @param meta    The metadata of the tile entity
      * @return TileEntity (in this case the MA)
@@ -37,7 +39,7 @@ public class BlockModuleAssembler extends Block implements ITileEntityProvider {
 
     /**
      * Handler for the logic of the block being activated (Right click by player)
-     * 
+     *
      * @param world  The world the block is in
      * @param x      X coordinate of the block
      * @param y      Y coordinate of the block
@@ -53,6 +55,12 @@ public class BlockModuleAssembler extends Block implements ITileEntityProvider {
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
+
+        ItemStack held = player.getHeldItem();
+        if (held != null && held.getItem() instanceof ItemLinkingTool) {
+            return false;
+        }
+
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityModuleAssembler) GuiFactories.tileEntity()
             .open(player, x, y, z);

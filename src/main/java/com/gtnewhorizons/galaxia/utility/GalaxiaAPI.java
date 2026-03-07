@@ -11,6 +11,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
@@ -253,5 +254,13 @@ public final class GalaxiaAPI {
      */
     public static ResourceLocation LocationGalaxia(String location) {
         return new ResourceLocation(Galaxia.MODID, location);
+    }
+
+    public static String translate(String key) {
+        return StatCollector.translateToLocal(key);
+    }
+
+    public static String format(String key, Object... objects) {
+        return StatCollector.translateToLocalFormatted(key, objects);
     }
 }
