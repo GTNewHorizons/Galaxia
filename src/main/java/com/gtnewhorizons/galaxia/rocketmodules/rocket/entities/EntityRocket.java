@@ -15,6 +15,7 @@ import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.relauncher.Side;
@@ -67,7 +68,8 @@ public class EntityRocket extends Entity {
         assembly = new RocketAssembly(modules);
         StringBuilder sb = new StringBuilder();
         for (int t : modules) {
-            if (sb.length() > 0) sb.append(",");
+            if (sb.length() > 0)
+                sb.append(",");
             sb.append(t);
         }
         dataWatcher.updateObject(11, sb.toString());
@@ -88,13 +90,15 @@ public class EntityRocket extends Entity {
     public List<Integer> getModuleTypes() {
         if (worldObj.isRemote) {
             String ser = dataWatcher.getWatchableObjectString(11);
-            if (ser == null || ser.isEmpty()) return new ArrayList<>();
+            if (ser == null || ser.isEmpty())
+                return new ArrayList<>();
             String[] parts = ser.split(",");
             List<Integer> list = new ArrayList<>(parts.length);
             for (String p : parts) {
                 try {
                     list.add(Integer.parseInt(p.trim()));
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
             return list;
         }
@@ -109,7 +113,8 @@ public class EntityRocket extends Entity {
     @Override
     public void onUpdate() {
         super.onUpdate();
-        if (!worldObj.isRemote && riddenByEntity == null) this.setDead();
+        if (!worldObj.isRemote && riddenByEntity == null)
+            this.setDead();
 
         if (this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
             player.mountEntity(null);
@@ -148,11 +153,9 @@ public class EntityRocket extends Entity {
 
         // Get all engine placements
         List<RocketAssembly.ModulePlacement> engines = getAssembly().getPlacements()
-            .stream()
-            .filter(
-                p -> p.type()
-                    .getThrust() > 0)
-            .collect(Collectors.toList());
+                .stream()
+                .filter(p -> p.type() instanceof EngineModule)
+                .collect(Collectors.toList());
 
         if (engines.isEmpty()) {
             // Fallback to center if no engines
@@ -208,7 +211,8 @@ public class EntityRocket extends Entity {
                 double mz = Math.sin(angle) * (0.15 + rand.nextFloat() * 0.25);
                 double my = 0.05 + rand.nextFloat() * 0.18;
                 worldObj.spawnParticle("largesmoke", px, py, pz, mx, my, mz);
-                if (rand.nextFloat() < 0.25f) worldObj.spawnParticle("flame", px, py, pz, mx * 0.3, my * 0.1, mz * 0.3);
+                if (rand.nextFloat() < 0.25f)
+                    worldObj.spawnParticle("flame", px, py, pz, mx * 0.3, my * 0.1, mz * 0.3);
             }
         }
     }
@@ -231,8 +235,8 @@ public class EntityRocket extends Entity {
         NBTTagList list = tag.getTagList("modules", 10);
         for (int i = 0; i < list.tagCount(); i++) {
             modules.add(
-                list.getCompoundTagAt(i)
-                    .getInteger("type"));
+                    list.getCompoundTagAt(i)
+                            .getInteger("type"));
         }
         capsuleIndex = tag.getInteger("capsuleIndex");
         assembly = null;
