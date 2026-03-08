@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 
 /**
  * Builder class to configure dimensions properly
@@ -54,7 +55,7 @@ public class DimensionBuilder {
     private boolean removeSpeedCancelation = false;
     private List<CelestialBody> celestialBodies = Collections.emptyList();
     private EffectBuilder effects;
-    private int tier = 1;
+    private EnumTiers tier = EnumTiers.TIER_1;
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -81,7 +82,7 @@ public class DimensionBuilder {
         return this;
     }
 
-    public DimensionBuilder tier(int tier) {
+    public DimensionBuilder tier(EnumTiers tier) {
         this.tier = tier;
         return this;
     }

@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
 /**
@@ -51,7 +52,7 @@ public class Hemateria extends BasePlanet {
                                 .oxygenPercent(0)
                                 .pressure(1)
                                 .build())
-                .tier(2);
+                .tier(EnumTiers.TIER_2);
     }
 
     /**

@@ -44,6 +44,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.CapsuleRequiredValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRatioValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ModulesFitInCoreValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.SingleRocketCoreValidator;
@@ -63,7 +64,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     // Validation rules for rocket systems
     private final List<IRocketValidator> validators = Arrays
             .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator(),
-                    new TierMatchesDestinationValidator(), new SingleRocketCoreValidator());
+                    new TierMatchesDestinationValidator(), new SingleRocketCoreValidator(),
+                    new ModulesFitInCoreValidator());
     private int destination = 0;
     private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;

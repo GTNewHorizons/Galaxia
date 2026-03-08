@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
@@ -13,6 +14,7 @@ public class CapsuleModule extends RocketModule {
         super(id, name, height, width, weight, modelName);
         this.sitOffset = sitOffset;
         this.capacity = capacity;
+        setCategory(EnumModuleCategory.PAYLOAD);
         ModuleRegistry.register(this);
     }
 

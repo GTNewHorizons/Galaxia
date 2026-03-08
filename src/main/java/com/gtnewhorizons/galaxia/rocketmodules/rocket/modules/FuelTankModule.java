@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.IStackableModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
@@ -11,6 +12,7 @@ public class FuelTankModule extends RocketModule implements IStackableModule {
             double capacity) {
         super(id, name, height, width, weight, modelName);
         this.capacity = capacity;
+        setCategory(EnumModuleCategory.FUEL_TANK);
     }
 
     public double getFuelCapacity() {

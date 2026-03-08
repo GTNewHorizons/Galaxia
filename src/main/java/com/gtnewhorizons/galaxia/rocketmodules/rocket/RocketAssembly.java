@@ -131,4 +131,12 @@ public final class RocketAssembly {
         return getModules().stream().filter(RocketCoreModule.class::isInstance).map(RocketCoreModule.class::cast)
                 .collect(Collectors.toList());
     }
+
+    public List<RocketModule> getFunctionalModules() {
+        return new ArrayList<>();
+    }
+
+    public List<RocketModule> getStructuralModules() {
+        return new ArrayList<>();
+    }
 }

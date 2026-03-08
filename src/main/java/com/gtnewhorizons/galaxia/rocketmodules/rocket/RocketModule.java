@@ -17,6 +17,7 @@ public abstract class RocketModule {
     private final double width;
     private final double weight;
     private final String modelName;
+    private EnumModuleCategory category;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
@@ -31,6 +32,14 @@ public abstract class RocketModule {
         this.weight = weight;
         this.modelName = modelName;
         ModuleRegistry.register(this);
+    }
+
+    public EnumModuleCategory getCategory() {
+        return this.category;
+    }
+
+    public void setCategory(EnumModuleCategory cat) {
+        this.category = cat;
     }
 
     public int getId() {
