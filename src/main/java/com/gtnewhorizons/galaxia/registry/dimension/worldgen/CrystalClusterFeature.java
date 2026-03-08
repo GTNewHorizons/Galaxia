@@ -21,8 +21,10 @@ public class CrystalClusterFeature extends Feature {
 
     private void generateCrystal(World world, Random random, int x, int y, int z) {
         int height = random.nextInt(16) + 4;
-        int straightness = random.nextInt(4) + 1;
-        int straightnessIterator;
+        int xStraightness = random.nextInt(4) + 1;
+        int zStraightness = random.nextInt(4) + 1;
+        int xStraightnessIterator;
+        int zStraightnessIterator;
         int xTilt = random.nextInt(3) - 1;
         int zTilt = random.nextInt(3) - 1;
         int xOffset;
@@ -36,18 +38,23 @@ public class CrystalClusterFeature extends Feature {
         }
         for (int xThickness = -thickness; xThickness <= thickness; xThickness++) {
             for (int zThickness = -thickness; zThickness <= thickness; zThickness++) {
-                straightnessIterator = 0;
+                xStraightnessIterator = 0;
+                zStraightnessIterator = 0;
                 xOffset = 0;
                 zOffset = 0;
                 for (int yOffset = 0; yOffset < height; yOffset++) {
-                    straightnessIterator++;
+                    xStraightnessIterator++;
+                    zStraightnessIterator++;
                     int combinedX = x + xOffset + xThickness;
                     int combinedY = y + yOffset;
                     int combinedZ = z + zOffset + zThickness;
-                    if (straightnessIterator >= straightness) {
+                    if (xStraightnessIterator >= xStraightness) {
                         xOffset += xTilt;
+                        xStraightnessIterator = 0;
+                    }
+                    if (zStraightnessIterator >= zStraightness) {
                         zOffset += zTilt;
-                        straightnessIterator = 0;
+                        zStraightnessIterator = 0;
                     }
                     if (!world.isAirBlock(combinedX, combinedY, combinedZ) && world.getBlock(combinedX, combinedY, combinedZ) != crystalBlock) {
                         break;
