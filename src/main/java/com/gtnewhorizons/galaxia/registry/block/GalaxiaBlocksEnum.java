@@ -13,8 +13,10 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileNoduleController;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockMonorailPole;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockSilo;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityMonorailPole;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -31,6 +33,7 @@ public enum GalaxiaBlocksEnum {
     SILO_CONTROLLER(new BlockSilo(), TileEntitySilo.class, "silo_controller"),
     NODULE_CONTROLLER(new BlockNoduleController(), TileNoduleController.class, "nodule_controller"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
+    MONORAIL_POLE(new BlockMonorailPole(), TileEntityMonorailPole.class, "monorail_pole"),
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "fumarole"),
 
     // NON-TE
