@@ -12,8 +12,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class MonorailAnimationState {
 
-    public static final int TRANSIT_TICKS = 60;
-    private static final float SPEED = 1.0f / TRANSIT_TICKS;
+    public static final float BLOCKS_PER_SECOND = 4.5f;
     private static final float GAP_BLOCKS = 1.0f;
 
     public enum Direction {
@@ -25,14 +24,26 @@ public class MonorailAnimationState {
 
         public final int moduleId;
         public final Direction direction;
-        public float progress;
-        public float prevProgress;
+        public float hook1, hook2;
+        public float prevHook1, prevHook2;
 
-        TransitEntry(int moduleId, Direction direction) {
+        TransitEntry(int moduleId, Direction direction, float hook1, float hook2) {
             this.moduleId = moduleId;
             this.direction = direction;
-            this.progress = (direction == Direction.TO_SILO) ? 1.0f : 0.0f;
-            this.prevProgress = progress;
+            this.hook1 = this.prevHook1 = hook1;
+            this.hook2 = this.prevHook2 = hook2;
+        }
+
+        public float lerpHook1(float pt) {
+            return prevHook1 + (hook1 - prevHook1) * pt;
+        }
+
+        public float lerpHook2(float pt) {
+            return prevHook2 + (hook2 - prevHook2) * pt;
+        }
+
+        public float lerpMid(float pt) {
+            return (lerpHook1(pt) + lerpHook2(pt)) * 0.5f;
         }
     }
 
@@ -41,46 +52,60 @@ public class MonorailAnimationState {
 
     public void tick(float pathLength) {
         if (toSilo.isEmpty() && toMA.isEmpty()) return;
-
-        tickDirection(toSilo, pathLength, true);
-        tickDirection(toMA, pathLength, false);
+        float speed = BLOCKS_PER_SECOND / (20f * pathLength);
+        tickDirection(toSilo, pathLength, speed, true);
+        tickDirection(toMA, pathLength, speed, false);
         removeCompleted();
     }
 
-    private void tickDirection(List<TransitEntry> list, float pathLength, boolean toSiloDir) {
+    private void tickDirection(List<TransitEntry> list, float pathLength, float speed, boolean toSiloDir) {
         for (int i = 0; i < list.size(); i++) {
             TransitEntry e = list.get(i);
-            e.prevProgress = e.progress;
+            e.prevHook1 = e.hook1;
+            e.prevHook2 = e.hook2;
 
             TransitEntry leader = (i > 0) ? list.get(i - 1) : null;
-            float minGap = calculateMinGap(e.moduleId, pathLength);
+            float gap = GAP_BLOCKS / pathLength;
+            float span = hookSpan(e.moduleId, pathLength);
 
-            float candidate = toSiloDir ? e.progress - SPEED : e.progress + SPEED;
-            if (leader != null) {
-                candidate = toSiloDir ? Math.max(candidate, leader.progress + minGap)
-                    : Math.min(candidate, leader.progress - minGap);
+            if (toSiloDir) {
+                float c1 = e.hook1 + speed;
+                if (leader != null) c1 = Math.min(c1, leader.hook2 - gap);
+                e.hook1 = Math.min(c1, 1f + span); // let hook1 go past 1 until hook2 clears
+                e.hook2 = e.hook1 - span;
+            } else {
+                float c1 = e.hook1 - speed;
+                if (leader != null) c1 = Math.max(c1, leader.hook2 + gap);
+                e.hook1 = Math.max(c1, -span); // let hook1 go past 0 until hook2 clears
+                e.hook2 = e.hook1 + span;
             }
-
-            e.progress = toSiloDir ? Math.max(candidate, 0.0f) : Math.min(candidate, 1.0f);
         }
     }
 
-    private float calculateMinGap(int moduleId, float pathLength) {
+    private float hookSpan(int moduleId, float pathLength) {
         float height = moduleHeight(moduleId);
-        return (pathLength > 1e-3f) ? (height + GAP_BLOCKS) / pathLength : 0.15f;
+        return pathLength > 1e-3f ? height / pathLength : 0.1f;
     }
 
     private void removeCompleted() {
-        toSilo.removeIf(e -> e.progress <= 0.0f);
-        toMA.removeIf(e -> e.progress >= 1.0f);
+        toSilo.removeIf(e -> e.hook2 > 1f - 1e-4f);
+        toMA.removeIf(e -> e.hook2 < 1e-4f);
+    }
+
+    public void enqueueToSilo(int moduleId, float pathLength) {
+        toSilo.add(new TransitEntry(moduleId, Direction.TO_SILO, 0f, 0f));
     }
 
     public void enqueueToSilo(int moduleId) {
-        toSilo.add(new TransitEntry(moduleId, Direction.TO_SILO));
+        enqueueToSilo(moduleId, 10f);
+    }
+
+    public void enqueueToMA(int moduleId, float pathLength) {
+        toMA.add(new TransitEntry(moduleId, Direction.TO_MA, 1f, 1f));
     }
 
     public void enqueueToMA(int moduleId) {
-        toMA.add(new TransitEntry(moduleId, Direction.TO_MA));
+        enqueueToMA(moduleId, 10f);
     }
 
     public void clear() {

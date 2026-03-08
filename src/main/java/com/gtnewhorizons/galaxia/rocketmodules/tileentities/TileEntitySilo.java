@@ -95,11 +95,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     @Override
-    public Class<? extends TileEntity> acceptedMasterClass() {
-        return TileEntityModuleAssembler.class;
-    }
-
-    @Override
     public void setMasterPos(ChunkCoordinates pos) {
         this.masterPos = pos;
         markDirty();
@@ -127,8 +122,15 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * @return Linked assembler, or null if not linked / unloaded.
      */
     public TileEntityModuleAssembler getLinkedAssembler() {
-        TileEntity te = resolveMaster();
-        if (te instanceof TileEntityModuleAssembler) return (TileEntityModuleAssembler) te;
+        // Walk the chain upstream until we reach the MA
+        ChunkCoordinates cursor = masterPos;
+        int safety = 64;
+        while (cursor != null && safety-- > 0) {
+            TileEntity te = worldObj.getTileEntity(cursor.posX, cursor.posY, cursor.posZ);
+            if (te instanceof TileEntityModuleAssembler ma) return ma;
+            if (te instanceof TileEntityMonorailPole pole) cursor = pole.getPrevPos();
+            else return null;
+        }
         return null;
     }
 
@@ -436,16 +438,32 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                 spawnRocket();
             }
         } else {
-            // Tick the monorail transit animation every client tick.
-            // Path length is needed to convert world-space module spacing into progress-unit gaps
             if (masterPos != null) {
-                double dx = masterPos.posX - xCoord;
-                double dy = masterPos.posY - yCoord;
-                double dz = masterPos.posZ - zCoord;
-                float pathLength = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-                getAnimationState().tick(pathLength);
+                getAnimationState().tick(calcPathLength());
             }
         }
+    }
+
+    @SideOnly(Side.CLIENT)
+    private float calcPathLength() {
+        float total = 0f;
+        int prevX = xCoord, prevY = yCoord, prevZ = zCoord;
+        ChunkCoordinates cursor = masterPos;
+        int safety = 64;
+        while (cursor != null && safety-- > 0) {
+            float dx = cursor.posX - prevX;
+            float dy = cursor.posY - prevY;
+            float dz = cursor.posZ - prevZ;
+            total += (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            prevX = cursor.posX;
+            prevY = cursor.posY;
+            prevZ = cursor.posZ;
+            TileEntity te = worldObj.getTileEntity(cursor.posX, cursor.posY, cursor.posZ);
+            if (te instanceof TileEntityModuleAssembler) break;
+            else if (te instanceof TileEntityMonorailPole pole) cursor = pole.getPrevPos();
+            else break;
+        }
+        return total;
     }
 
     /**
