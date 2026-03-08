@@ -5,23 +5,18 @@ import net.minecraft.world.World;
 
 import java.util.Random;
 
-public class WorldGenCrystalCluster extends WorldGenGalaxiaCave {
+public class CrystalClusterFeature extends Feature {
     private final Block crystalBlock;
 
-    public WorldGenCrystalCluster(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements, Block crystalBlock) {
-        super(frequency, minimumHeight, maximumHeight, surfaceRequirements);
+    public CrystalClusterFeature(Block crystalBlock) {
         this.crystalBlock = crystalBlock;
     }
 
     @Override
-    public boolean generate(World world, Random random, int x, int y, int z) {
-        if (!super.generate(world, random, x, y, z)) {
-            return false;
-        }
+    public void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
         for (int crystalCount = 0; crystalCount < random.nextInt(12) + 1; crystalCount++) {
             generateCrystal(world, random, x, y, z);
         }
-        return true;
     }
 
     private void generateCrystal(World world, Random random, int x, int y, int z) {

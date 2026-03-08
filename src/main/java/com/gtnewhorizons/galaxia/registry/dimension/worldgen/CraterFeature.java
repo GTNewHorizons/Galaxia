@@ -9,20 +9,16 @@ import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 
-public class WorldGenCrater extends WorldGenGalaxiaSurface {
+public class CraterFeature extends Feature {
 
     private final Block tektite;
 
-    public WorldGenCrater(int rarity, Block[] surfaceRequirements, Block tektite) {
-        super(rarity, surfaceRequirements);
+    public CraterFeature(Block tektite) {
         this.tektite = tektite;
     }
 
     @Override
-    public boolean generate(World world, Random random, int x, int y, int z) {
-        if (!super.generate(world, random, x, y, z)) {
-            return false;
-        }
+    public void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
         int diameter = 16 + random.nextInt(16);
         int radius = diameter / 2;
         int squaredCraterRadius = radius * radius;
@@ -62,7 +58,5 @@ public class WorldGenCrater extends WorldGenGalaxiaSurface {
         for (Chunk chunk : touchedChunks) {
             chunk.generateSkylightMap();
         }
-
-        return true;
     }
 }

@@ -11,19 +11,19 @@ public class WorldGenGalaxiaCave extends WorldGenGalaxiaSurface {
     private final int minimumHeight;
     private final int maximumHeight;
 
-    public WorldGenGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements) {
-        super(1, surfaceRequirements);
+    public WorldGenGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements, Feature feature) {
+        super(1, surfaceRequirements, feature);
         this.frequency = frequency;
         this.minimumHeight = minimumHeight;
         this.maximumHeight = maximumHeight;
     }
 
     @Override
-    public boolean generate(World world, Random random, int x, int y, int z) {
-        if (!super.generate(world, random, x, y, z)) {
-            return false;
+    public boolean stopGeneration(World world, Random random, int x, int y, int z) {
+        if (super.stopGeneration(world, random, x, y, z)) {
+            return true;
         }
-        return world.isAirBlock(x, y, z);
+        return !world.isAirBlock(x, y, z);
     }
 
     public int getFrequency() {
