@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.rocketmodules.link;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.tileentity.TileEntity;
 
@@ -13,7 +15,7 @@ import com.gtnewhorizons.galaxia.core.CommonProxy;
  * Register your pairs during mod init in {@link CommonProxy} before any linking tool is used.
  * <p>
  * Example:
- * 
+ *
  * <pre>
  * LinkRegistry.register(TileEntityModuleAssembler.class, TileEntitySilo.class);
  * </pre>
@@ -24,7 +26,7 @@ import com.gtnewhorizons.galaxia.core.CommonProxy;
  */
 public class LinkRegistry {
 
-    private static final Map<Class<? extends TileEntity>, Class<? extends TileEntity>> SLAVE_TO_MASTER = new HashMap<>();
+    private static final Map<Class<? extends TileEntity>, Set<Class<? extends TileEntity>>> SLAVE_TO_MASTERS = new HashMap<>();
 
     private LinkRegistry() {}
 
@@ -35,7 +37,8 @@ public class LinkRegistry {
      * @param slaveClass  The TileEntity class that acts as slave.
      */
     public static void register(Class<? extends TileEntity> masterClass, Class<? extends TileEntity> slaveClass) {
-        SLAVE_TO_MASTER.put(slaveClass, masterClass);
+        SLAVE_TO_MASTERS.computeIfAbsent(slaveClass, k -> new HashSet<>())
+            .add(masterClass);
     }
 
     /**
@@ -51,11 +54,14 @@ public class LinkRegistry {
 
         if (!lMaster.canBeMaster() || !lSlave.canBeSlave()) return false;
 
-        Class<? extends TileEntity> expectedMaster = SLAVE_TO_MASTER.get(slave.getClass());
-        if (expectedMaster == null) return false;
-        if (!expectedMaster.isInstance(master)) return false;
+        Set<Class<? extends TileEntity>> acceptedMasters = SLAVE_TO_MASTERS.get(slave.getClass());
+        if (acceptedMasters == null) return false;
 
-        return lSlave.acceptedMasterClass()
-            .isInstance(master);
+        boolean registryMatch = acceptedMasters.stream()
+            .anyMatch(mc -> mc.isInstance(master));
+        if (!registryMatch) return false;
+
+        Class<? extends TileEntity> slaveAccepted = lSlave.acceptedMasterClass();
+        return slaveAccepted.equals(TileEntity.class) || slaveAccepted.isInstance(master);
     }
 }
