@@ -10,12 +10,13 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 
 /**
- * Record to hold characteristics of the dimension (effectively a posh dataclass)
+ * Record to hold characteristics of the dimension (effectively a posh
+ * dataclass)
  */
 @Desugar
 public record DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded,
-    double gravity, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
-    EffectBuilder effects, double mass, double orbitalRadius, double radius) {
+        double gravity, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
+        EffectBuilder effects, double mass, double orbitalRadius, double radius, int tier) {
 
     public DimensionDef {
         celestialBodies = celestialBodies == null ? null : Collections.unmodifiableList(celestialBodies);

@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -12,6 +10,7 @@ import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.FuelTankModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.ClusteredPlacementRule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.LinearPlacementRule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.PropulsionPlacementRule;
@@ -24,12 +23,21 @@ public final class RocketAssembly {
 
     private final List<RocketModule> modules;
     private List<ModulePlacement> placements;
+    private int destination = 0;
 
     public RocketAssembly(List<Integer> moduleIds) {
         this.modules = moduleIds.stream()
                 .map(ModuleRegistry::fromId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    public void updateDestination(int dim) {
+        this.destination = dim;
+    }
+
+    public int getDestination() {
+        return this.destination;
     }
 
     public List<ModulePlacement> getPlacements() {
@@ -74,8 +82,6 @@ public final class RocketAssembly {
     }
 
     public double getTotalHeight() {
-        LOG.info("Total Height: "
-                + getPlacements().stream().mapToDouble(p -> p.y() + p.type().getHeight()).max().orElse(0.0));
         return getPlacements().stream()
                 .mapToDouble(
                         p -> p.y() + p.type()
@@ -104,5 +110,25 @@ public final class RocketAssembly {
 
     public List<RocketModule> getModules() {
         return Collections.unmodifiableList(modules);
+    }
+
+    public List<EngineModule> getEngineModules() {
+        return getModules().stream().filter(EngineModule.class::isInstance).map(EngineModule.class::cast)
+                .collect(Collectors.toList());
+    }
+
+    public List<FuelTankModule> getFuelTankModules() {
+        return getModules().stream().filter(FuelTankModule.class::isInstance).map(FuelTankModule.class::cast)
+                .collect(Collectors.toList());
+    }
+
+    public List<CapsuleModule> getCapsuleModules() {
+        return getModules().stream().filter(CapsuleModule.class::isInstance).map(CapsuleModule.class::cast)
+                .collect(Collectors.toList());
+    }
+
+    public List<RocketCoreModule> getCoreModules() {
+        return getModules().stream().filter(RocketCoreModule.class::isInstance).map(RocketCoreModule.class::cast)
+                .collect(Collectors.toList());
     }
 }

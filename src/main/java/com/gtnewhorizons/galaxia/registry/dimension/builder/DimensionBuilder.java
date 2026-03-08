@@ -54,6 +54,7 @@ public class DimensionBuilder {
     private boolean removeSpeedCancelation = false;
     private List<CelestialBody> celestialBodies = Collections.emptyList();
     private EffectBuilder effects;
+    private int tier = 1;
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -62,7 +63,8 @@ public class DimensionBuilder {
      * @return Configured Builder
      */
     public DimensionBuilder enumValue(DimensionEnum planet) {
-        if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
+        if (planet == null)
+            throw new IllegalArgumentException("PlanetEnum cannot be null");
         this.name = planet.getName();
         this.id = planet.getId();
         return this;
@@ -76,6 +78,11 @@ public class DimensionBuilder {
      */
     public DimensionBuilder name(String name) {
         this.name = name;
+        return this;
+    }
+
+    public DimensionBuilder tier(int tier) {
+        this.tier = tier;
         return this;
     }
 
@@ -167,7 +174,8 @@ public class DimensionBuilder {
     }
 
     /**
-     * Sets the radius of the planet (used in orbital calculation, does not affect world generation)
+     * Sets the radius of the planet (used in orbital calculation, does not affect
+     * world generation)
      *
      * @param radius The required planetary radius
      * @return Configured builder
@@ -178,8 +186,10 @@ public class DimensionBuilder {
     }
 
     /**
-     * Sets whether to remove speed cancellation on the planet. All entities by default
-     * reduce their speed by 9% every tick. Override this to cancel (useful in low gravity dimensions)
+     * Sets whether to remove speed cancellation on the planet. All entities by
+     * default
+     * reduce their speed by 9% every tick. Override this to cancel (useful in low
+     * gravity dimensions)
      *
      * @return Configured builder
      */
@@ -206,8 +216,10 @@ public class DimensionBuilder {
      */
     public DimensionDef build() {
         // Basic checks for provider and name
-        if (name == null) throw new IllegalStateException("Name required");
-        if (providerClass == null) throw new IllegalStateException("Provider required");
+        if (name == null)
+            throw new IllegalStateException("Name required");
+        if (providerClass == null)
+            throw new IllegalStateException("Provider required");
 
         // Register the dimension
         DimensionManager.registerProviderType(id, providerClass, keepLoaded);
@@ -217,18 +229,19 @@ public class DimensionBuilder {
 
         // Create DEF with given fields
         DimensionDef def = new DimensionDef(
-            name,
-            id,
-            providerClass,
-            keepLoaded,
-            gravity,
-            air_resistance,
-            removeSpeedCancelation,
-            celestialBodies,
-            effects,
-            mass,
-            orbitalRadius,
-            radius);
+                name,
+                id,
+                providerClass,
+                keepLoaded,
+                gravity,
+                air_resistance,
+                removeSpeedCancelation,
+                celestialBodies,
+                effects,
+                mass,
+                orbitalRadius,
+                radius,
+                tier);
 
         // Add dimension to hashmaps
         BY_NAME.put(name.toLowerCase(), def);

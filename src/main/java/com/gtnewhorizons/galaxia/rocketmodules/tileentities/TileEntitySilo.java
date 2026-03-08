@@ -46,6 +46,8 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRat
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.SingleRocketCoreValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.TierMatchesDestinationValidator;
 
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.relauncher.Side;
@@ -60,7 +62,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public boolean shouldRender = true;
     // Validation rules for rocket systems
     private final List<IRocketValidator> validators = Arrays
-            .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator());
+            .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator(),
+                    new TierMatchesDestinationValidator(), new SingleRocketCoreValidator());
     private int destination = 0;
     private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;
@@ -225,6 +228,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                                                                 IKey.str("§aEnter Rocket")
                                                                         .alignment(Alignment.CENTER))
                                                         .tooltipDynamic(t -> {
+                                                            boolean validFlag = true;
+                                                            getAssembly().updateDestination(destination);
                                                             if (getAssembly().getModules()
                                                                     .isEmpty()) {
                                                                 t.addLine("§7Add some modules first");
@@ -234,8 +239,11 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                                                                 ValidationResult r = v.validate(getAssembly());
                                                                 if (!r.valid())
                                                                     t.addLine("§c" + r.message());
+                                                                validFlag = false;
                                                             }
-                                                        })
+                                                            if (!validFlag)
+                                                                return;
+                                                        }).tooltipAutoUpdate(true)
                                                         .syncHandler(
                                                                 new InteractionSyncHandler().setOnMousePressed(
                                                                         md -> {

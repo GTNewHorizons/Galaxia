@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +24,6 @@ public final class ModuleRegistry {
     }
 
     public static List<RocketModule> getAll() {
-        LOG.info(MODULES);
         return new ArrayList<>(MODULES.values());
     }
 
