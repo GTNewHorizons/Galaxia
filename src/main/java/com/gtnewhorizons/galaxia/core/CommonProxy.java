@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.link.LinkRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityMonorailPole;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
@@ -96,5 +97,8 @@ public class CommonProxy {
 
     private void registerLinks() {
         LinkRegistry.register(TileEntityModuleAssembler.class, TileEntitySilo.class);
+        LinkRegistry.register(TileEntityModuleAssembler.class, TileEntityMonorailPole.class);
+        LinkRegistry.register(TileEntityMonorailPole.class, TileEntityMonorailPole.class);
+        LinkRegistry.register(TileEntityMonorailPole.class, TileEntitySilo.class);
     }
 }

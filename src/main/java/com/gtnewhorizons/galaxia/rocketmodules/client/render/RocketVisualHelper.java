@@ -18,7 +18,7 @@ public final class RocketVisualHelper {
             RocketModule type = p.type();
             if (type == null) continue;
             double x = baseX + (isSilo ? 0.5 : 0) + p.x();
-            double y = baseY + p.y();
+            double y = baseY + p.y() + type.getHeight() / 2.0; // + H/2 as models' origin are centered now
             double z = baseZ + (isSilo ? 0.5 : 0) + p.z();
 
             Minecraft.getMinecraft()
