@@ -10,7 +10,7 @@ public class RocketCoreModule extends RocketModule {
     private EnumTiers tier;
 
     public RocketCoreModule(int id, String name, double height, double width, double weight, String modelName,
-            EnumTiers tier) {
+        EnumTiers tier) {
         super(id, name, height, width, weight, modelName);
         this.tier = tier;
         setCategory(EnumModuleCategory.CORE);

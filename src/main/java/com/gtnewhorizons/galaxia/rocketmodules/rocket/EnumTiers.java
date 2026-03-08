@@ -6,18 +6,31 @@ import java.util.Map;
 
 // TODO: Add more tier caps
 public enum EnumTiers {
-    TIER_1(1, limitsMap(
-            EnumModuleCategory.PAYLOAD, 1,
-            EnumModuleCategory.FUEL_TANK, 1,
-            EnumModuleCategory.FUNCTIONAL, 1,
-            EnumModuleCategory.ENGINE, 1,
-            EnumModuleCategory.STRUCTURAL, 0)),
-    TIER_2(2, limitsMap(
-            EnumModuleCategory.PAYLOAD, 1,
-            EnumModuleCategory.FUEL_TANK, 3,
-            EnumModuleCategory.FUNCTIONAL, 2,
-            EnumModuleCategory.ENGINE, 3,
-            EnumModuleCategory.STRUCTURAL, 1));
+
+    TIER_1(1,
+        limitsMap(
+            EnumModuleCategory.PAYLOAD,
+            1,
+            EnumModuleCategory.FUEL_TANK,
+            1,
+            EnumModuleCategory.FUNCTIONAL,
+            1,
+            EnumModuleCategory.ENGINE,
+            1,
+            EnumModuleCategory.STRUCTURAL,
+            0)),
+    TIER_2(2,
+        limitsMap(
+            EnumModuleCategory.PAYLOAD,
+            1,
+            EnumModuleCategory.FUEL_TANK,
+            3,
+            EnumModuleCategory.FUNCTIONAL,
+            2,
+            EnumModuleCategory.ENGINE,
+            3,
+            EnumModuleCategory.STRUCTURAL,
+            1));
 
     private int tier;
     private final Map<EnumModuleCategory, Integer> limits;

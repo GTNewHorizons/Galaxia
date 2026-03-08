@@ -9,7 +9,7 @@ public class FuelTankModule extends RocketModule implements IStackableModule {
     private double capacity;
 
     public FuelTankModule(int id, String name, double height, double width, double weight, String modelName,
-            double capacity) {
+        double capacity) {
         super(id, name, height, width, weight, modelName);
         this.capacity = capacity;
         setCategory(EnumModuleCategory.FUEL_TANK);

@@ -42,17 +42,17 @@ public class Hemateria extends BasePlanet {
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
         return builder.mass(0.25)
-                .orbitalRadius(1.52 * earthRadiusToAU)
-                .radius(0.53)
-                .gravity(0.25)
-                .airResistance(0.1)
-                .effects(
-                        EffectBuilder.builder()
-                                .baseTemp(67)
-                                .oxygenPercent(0)
-                                .pressure(1)
-                                .build())
-                .tier(EnumTiers.TIER_2);
+            .orbitalRadius(1.52 * earthRadiusToAU)
+            .radius(0.53)
+            .gravity(0.25)
+            .airResistance(0.1)
+            .effects(
+                EffectBuilder.builder()
+                    .baseTemp(67)
+                    .oxygenPercent(0)
+                    .pressure(1)
+                    .build())
+            .tier(EnumTiers.TIER_2);
     }
 
     /**
@@ -63,91 +63,91 @@ public class Hemateria extends BasePlanet {
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
-                .fog(0.15f, 0.1f, 0.3f)
-                .biome(
-                        createBiome(
-                                "Hemateria Dunes",
-                                TerrainConfiguration.builder()
-                                        .feature(TerrainPreset.BASE_HEIGHT)
-                                        .height(64)
-                                        .endFeature()
-                                        .feature(TerrainPreset.SAND_DUNES)
-                                        .height(16)
-                                        .width(1.5)
-                                        .endFeature()
-                                        .build(),
-                                true,
-                                PlanetBlocks.HEMATERIA_REGOLITH),
-                        0,
-                        0)
-                .biome(
-                        createBiome(
-                                "Hemateria Mountains",
-                                TerrainConfiguration.builder()
-                                        .feature(TerrainPreset.BASE_HEIGHT)
-                                        .height(64)
-                                        .endFeature()
-                                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                                        .height(64)
-                                        .width(2)
-                                        .endFeature()
-                                        .build(),
-                                false,
-                                PlanetBlocks.HEMATERIA_REGOLITH),
-                        0,
-                        1)
-                .biome(
-                        createBiome(
-                                "Hemateria Flatlands",
-                                TerrainConfiguration.builder()
-                                        .feature(TerrainPreset.BASE_HEIGHT)
-                                        .height(64)
-                                        .endFeature()
-                                        .feature(TerrainPreset.SAND_DUNES)
-                                        .width(0.5)
-                                        .height(6)
-                                        .endFeature()
-                                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                                        .height(8)
-                                        .width(2)
-                                        .endFeature()
-                                        .build(),
-                                true,
-                                PlanetBlocks.HEMATERIA_REGOLITH),
-                        1,
-                        0)
-                .biome(
-                        createBiome(
-                                "Hemateria Basins",
-                                TerrainConfiguration.builder()
-                                        .feature(TerrainPreset.BASE_HEIGHT)
-                                        .height(16)
-                                        .endFeature()
-                                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                                        .height(8)
-                                        .width(0.5)
-                                        .endFeature()
-                                        .build(),
-                                false,
-                                PlanetBlocks.HEMATERIA_RHYOLITE),
-                        1,
-                        1)
-                .name(ENUM)
-                .build();
+            .fog(0.15f, 0.1f, 0.3f)
+            .biome(
+                createBiome(
+                    "Hemateria Dunes",
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
+                        .feature(TerrainPreset.SAND_DUNES)
+                        .height(16)
+                        .width(1.5)
+                        .endFeature()
+                        .build(),
+                    true,
+                    PlanetBlocks.HEMATERIA_REGOLITH),
+                0,
+                0)
+            .biome(
+                createBiome(
+                    "Hemateria Mountains",
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .height(64)
+                        .width(2)
+                        .endFeature()
+                        .build(),
+                    false,
+                    PlanetBlocks.HEMATERIA_REGOLITH),
+                0,
+                1)
+            .biome(
+                createBiome(
+                    "Hemateria Flatlands",
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(64)
+                        .endFeature()
+                        .feature(TerrainPreset.SAND_DUNES)
+                        .width(0.5)
+                        .height(6)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .height(8)
+                        .width(2)
+                        .endFeature()
+                        .build(),
+                    true,
+                    PlanetBlocks.HEMATERIA_REGOLITH),
+                1,
+                0)
+            .biome(
+                createBiome(
+                    "Hemateria Basins",
+                    TerrainConfiguration.builder()
+                        .feature(TerrainPreset.BASE_HEIGHT)
+                        .height(16)
+                        .endFeature()
+                        .feature(TerrainPreset.MOUNTAIN_RANGES)
+                        .height(8)
+                        .width(0.5)
+                        .endFeature()
+                        .build(),
+                    false,
+                    PlanetBlocks.HEMATERIA_RHYOLITE),
+                1,
+                1)
+            .name(ENUM)
+            .build();
     }
 
     protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain, boolean generateCaves,
-            Block surfaceBlock) {
+        Block surfaceBlock) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
-                .temperature(0.4F)
-                .rainfall(0.99F)
-                .topBlock(surfaceBlock)
-                .fillerBlocks(
-                        new StratificationPreset(PlanetBlocks.HEMATERIA_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
-                                .addStrataLayer(PlanetBlocks.HEMATERIA_ANORTHOSITE, 1, 32))
-                .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
-                .terrain(terrain)
-                .generateCaves(generateCaves)
-                .build();
+            .temperature(0.4F)
+            .rainfall(0.99F)
+            .topBlock(surfaceBlock)
+            .fillerBlocks(
+                new StratificationPreset(PlanetBlocks.HEMATERIA_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.HEMATERIA_ANORTHOSITE, 1, 32))
+            .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
+            .terrain(terrain)
+            .generateCaves(generateCaves)
+            .build();
     }
 }

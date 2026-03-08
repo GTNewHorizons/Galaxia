@@ -64,8 +64,7 @@ public class DimensionBuilder {
      * @return Configured Builder
      */
     public DimensionBuilder enumValue(DimensionEnum planet) {
-        if (planet == null)
-            throw new IllegalArgumentException("PlanetEnum cannot be null");
+        if (planet == null) throw new IllegalArgumentException("PlanetEnum cannot be null");
         this.name = planet.getName();
         this.id = planet.getId();
         return this;
@@ -217,10 +216,8 @@ public class DimensionBuilder {
      */
     public DimensionDef build() {
         // Basic checks for provider and name
-        if (name == null)
-            throw new IllegalStateException("Name required");
-        if (providerClass == null)
-            throw new IllegalStateException("Provider required");
+        if (name == null) throw new IllegalStateException("Name required");
+        if (providerClass == null) throw new IllegalStateException("Provider required");
 
         // Register the dimension
         DimensionManager.registerProviderType(id, providerClass, keepLoaded);
@@ -230,19 +227,19 @@ public class DimensionBuilder {
 
         // Create DEF with given fields
         DimensionDef def = new DimensionDef(
-                name,
-                id,
-                providerClass,
-                keepLoaded,
-                gravity,
-                air_resistance,
-                removeSpeedCancelation,
-                celestialBodies,
-                effects,
-                mass,
-                orbitalRadius,
-                radius,
-                tier);
+            name,
+            id,
+            providerClass,
+            keepLoaded,
+            gravity,
+            air_resistance,
+            removeSpeedCancelation,
+            celestialBodies,
+            effects,
+            mass,
+            orbitalRadius,
+            radius,
+            tier);
 
         // Add dimension to hashmaps
         BY_NAME.put(name.toLowerCase(), def);

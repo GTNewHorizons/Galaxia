@@ -10,7 +10,7 @@ public class CapsuleModule extends RocketModule {
     private int capacity;
 
     public CapsuleModule(int id, String name, double height, double width, double weight, String modelName,
-            double sitOffset, int capacity) {
+        double sitOffset, int capacity) {
         super(id, name, height, width, weight, modelName);
         this.sitOffset = sitOffset;
         this.capacity = capacity;

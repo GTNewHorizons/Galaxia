@@ -7,17 +7,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.RocketCoreModule;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 
 public class ModulesFitInCoreValidator implements IRocketValidator {
+
     // Map of form:
     // <int Tier: {int EngineSlots, int TankSlots, int FunctionalSlots, int
     // StructuralSlots}
     HashMap<Integer, ArrayList<Integer>> moduleSlotMap = new HashMap<>() {
+
         {
             put(1, new ArrayList<>(Arrays.asList(1, 1, 1, 0)));
             put(2, new ArrayList<>(Arrays.asList(3, 3, 2, 1)));
@@ -25,6 +27,7 @@ public class ModulesFitInCoreValidator implements IRocketValidator {
     };
 
     HashMap<EnumModuleCategory, String> moduleConversions = new HashMap<>() {
+
         {
             put(EnumModuleCategory.FUEL_TANK, "Fuel Tanks");
             put(EnumModuleCategory.ENGINE, "Engines");
@@ -34,6 +37,7 @@ public class ModulesFitInCoreValidator implements IRocketValidator {
     };
 
     HashMap<EnumTiers, String> tierConversions = new HashMap<>() {
+
         {
             put(EnumTiers.TIER_1, "Tier 1");
             put(EnumTiers.TIER_2, "Tier 2");
@@ -43,18 +47,23 @@ public class ModulesFitInCoreValidator implements IRocketValidator {
     @Override
     public ValidationResult validate(RocketAssembly assembly) {
         List<RocketCoreModule> cores = assembly.getCoreModules();
-        if (cores.size() == 0)
-            return ValidationResult.success();
+        if (cores.size() == 0) return ValidationResult.success();
         RocketCoreModule core = cores.get(0);
 
-        Map<EnumModuleCategory, Integer> counts = assembly.getModules().stream()
-                .collect(Collectors.groupingBy(RocketModule::getCategory, Collectors.summingInt(m -> 1)));
+        Map<EnumModuleCategory, Integer> counts = assembly.getModules()
+            .stream()
+            .collect(Collectors.groupingBy(RocketModule::getCategory, Collectors.summingInt(m -> 1)));
 
         for (Map.Entry<EnumModuleCategory, Integer> entry : counts.entrySet()) {
-            int limit = core.getTier().getLimitFor(entry.getKey());
-            if (entry.getValue() > limit)
-                return new ValidationResult(false, String.format("Only %d %s allowed in a %s rocket", limit,
-                        moduleConversions.get(entry.getKey()), tierConversions.get(core.getTier())));
+            int limit = core.getTier()
+                .getLimitFor(entry.getKey());
+            if (entry.getValue() > limit) return new ValidationResult(
+                false,
+                String.format(
+                    "Only %d %s allowed in a %s rocket",
+                    limit,
+                    moduleConversions.get(entry.getKey()),
+                    tierConversions.get(core.getTier())));
         }
         return ValidationResult.success();
     }

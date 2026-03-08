@@ -9,11 +9,11 @@ public class WeightLimitValidator implements IRocketValidator {
     public ValidationResult validate(RocketAssembly assembly) {
         double weight = assembly.getTotalWeight();
         double thrust = assembly.getModules()
-                .stream()
-                .filter(EngineModule.class::isInstance)
-                .map(EngineModule.class::cast)
-                .mapToDouble(EngineModule::getThrust)
-                .sum();
+            .stream()
+            .filter(EngineModule.class::isInstance)
+            .map(EngineModule.class::cast)
+            .mapToDouble(EngineModule::getThrust)
+            .sum();
         boolean ok = thrust > 0 && weight <= thrust;
         return ok ? ValidationResult.success() : new ValidationResult(false, "This rocket is too heavy to lift off");
     }

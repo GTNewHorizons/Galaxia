@@ -9,7 +9,7 @@ public class EngineModule extends RocketModule implements IStackableModule {
     private double thrust;
 
     public EngineModule(int id, String name, double height, double width, double weight, String modelName,
-            double thrust) {
+        double thrust) {
         super(id, name, height, width, weight, modelName);
         this.thrust = thrust;
         setCategory(EnumModuleCategory.ENGINE);

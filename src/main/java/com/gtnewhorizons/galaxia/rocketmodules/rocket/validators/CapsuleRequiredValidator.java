@@ -8,9 +8,9 @@ public class CapsuleRequiredValidator implements IRocketValidator {
     @Override
     public ValidationResult validate(RocketAssembly assembly) {
         boolean hasCapsule = assembly.getModules()
-                .stream()
-                .anyMatch(m -> m instanceof CapsuleModule);
+            .stream()
+            .anyMatch(m -> m instanceof CapsuleModule);
         return hasCapsule ? ValidationResult.success()
-                : new ValidationResult(false, "Requires at least one Capsule module");
+            : new ValidationResult(false, "Requires at least one Capsule module");
     }
 }

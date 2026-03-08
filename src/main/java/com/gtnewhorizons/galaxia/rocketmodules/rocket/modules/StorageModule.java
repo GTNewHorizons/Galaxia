@@ -8,7 +8,7 @@ public class StorageModule extends RocketModule {
     private int capacity;
 
     public StorageModule(int id, String name, double height, double width, double weight, String modelName,
-            int capacity) {
+        int capacity) {
         super(id, name, height, width, weight, modelName);
         this.capacity = capacity;
         setCategory(EnumModuleCategory.FUNCTIONAL);

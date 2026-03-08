@@ -15,12 +15,12 @@ public class PropulsionPlacementRule implements IPlacementRule {
     @Override
     public List<RocketAssembly.ModulePlacement> apply(List<RocketModule> allModules, double startY) {
         List<RocketModule> tanks = allModules.stream()
-                .filter(m -> m instanceof FuelTankModule)
-                .collect(Collectors.toList());
+            .filter(m -> m instanceof FuelTankModule)
+            .collect(Collectors.toList());
 
         List<RocketModule> engines = allModules.stream()
-                .filter(m -> m instanceof EngineModule)
-                .collect(Collectors.toList());
+            .filter(m -> m instanceof EngineModule)
+            .collect(Collectors.toList());
 
         List<RocketAssembly.ModulePlacement> placements = new ArrayList<>();
         double y = startY;
@@ -30,8 +30,7 @@ public class PropulsionPlacementRule implements IPlacementRule {
         while (tankIdx < tanks.size()) {
             RocketModule centreTank = tanks.get(tankIdx++);
             int orbitalCount = Math
-                    .min(tanks.size() - tankIdx,
-                            (centreTank instanceof IStackableModule s) ? s.getMaxStackSize() - 1 : 0);
+                .min(tanks.size() - tankIdx, (centreTank instanceof IStackableModule s) ? s.getMaxStackSize() - 1 : 0);
 
             double clusterBaseY = y;
 
@@ -54,7 +53,7 @@ public class PropulsionPlacementRule implements IPlacementRule {
             double centreEngineOffset = centreEngine != null ? maxEngineH - centreEngine.getHeight() : 0;
             if (centreEngine != null) {
                 placements
-                        .add(new RocketAssembly.ModulePlacement(centreEngine, 0, clusterBaseY + centreEngineOffset, 0));
+                    .add(new RocketAssembly.ModulePlacement(centreEngine, 0, clusterBaseY + centreEngineOffset, 0));
             }
 
             double tankY = clusterBaseY + maxEngineH;
@@ -73,7 +72,7 @@ public class PropulsionPlacementRule implements IPlacementRule {
                 double orbEngineOffset = orbEngine != null ? maxEngineH - orbEngine.getHeight() : 0;
                 if (orbEngine != null) {
                     placements
-                            .add(new RocketAssembly.ModulePlacement(orbEngine, ox, clusterBaseY + orbEngineOffset, oz));
+                        .add(new RocketAssembly.ModulePlacement(orbEngine, ox, clusterBaseY + orbEngineOffset, oz));
                 }
 
                 placements.add(new RocketAssembly.ModulePlacement(orbTank, ox, tankY, oz));
@@ -92,8 +91,7 @@ public class PropulsionPlacementRule implements IPlacementRule {
     }
 
     private double calculateOrbitRadius(RocketModule m, int count) {
-        if (count == 0)
-            return 0;
+        if (count == 0) return 0;
         double r1 = m.getWidth();
         double r2 = count > 1 ? m.getWidth() / (2 * Math.sin(Math.PI / count)) : 0;
         return Math.max(r1, r2) + 0.1;

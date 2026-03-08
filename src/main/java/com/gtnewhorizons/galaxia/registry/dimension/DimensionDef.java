@@ -16,8 +16,8 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
  */
 @Desugar
 public record DimensionDef(String name, int id, Class<? extends WorldProvider> provider, boolean keepLoaded,
-        double gravity, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
-        EffectBuilder effects, double mass, double orbitalRadius, double radius, EnumTiers tier) {
+    double gravity, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
+    EffectBuilder effects, double mass, double orbitalRadius, double radius, EnumTiers tier) {
 
     public DimensionDef {
         celestialBodies = celestialBodies == null ? null : Collections.unmodifiableList(celestialBodies);
