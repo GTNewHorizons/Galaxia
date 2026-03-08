@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenCrystalCluster;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -206,7 +207,7 @@ public class Theia extends BasePlanet {
                     PlanetBlocks.THEIA_TEKTITE))
             .caveFeature(new WorldGenStalactite(64, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, PlanetBlocks.THEIA_ANORTHOSITE))
             .caveFeature(new WorldGenStalactite(64, 32, 64, new Block[] { PlanetBlocks.THEIA_ANDESITE }, PlanetBlocks.THEIA_ANDESITE))
-            .caveFeature(new WorldGenCrystalCluster(32, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, Blocks.glass))
+            .caveFeature(new WorldGenCrystalCluster(32, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get()))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
