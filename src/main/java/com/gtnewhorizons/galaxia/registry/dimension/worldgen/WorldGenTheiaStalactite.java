@@ -3,13 +3,14 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 import java.util.Random;
 
 import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 
 public class WorldGenTheiaStalactite extends WorldGenGalaxiaCave {
+    private final Block stalactiteBlock;
 
-    public WorldGenTheiaStalactite(int frequency, Block[] surfaceRequirements) {
-        super(frequency, 32, surfaceRequirements);
+    public WorldGenTheiaStalactite(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements, Block stalactiteBlock) {
+        super(frequency, minimumHeight, maximumHeight, surfaceRequirements);
+        this.stalactiteBlock = stalactiteBlock;
     }
 
     @Override
@@ -22,7 +23,7 @@ public class WorldGenTheiaStalactite extends WorldGenGalaxiaCave {
             if (!world.isAirBlock(x, y + yOffset, z)) {
                 break;
             }
-            setBlockFast(world, x, y + yOffset, z, Blocks.redstone_block, 0);
+            setBlockFast(world, x, y + yOffset, z, stalactiteBlock, 0);
         }
         return true;
     }

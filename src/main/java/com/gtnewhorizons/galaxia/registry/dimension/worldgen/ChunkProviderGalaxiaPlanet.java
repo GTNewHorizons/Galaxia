@@ -352,10 +352,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             // Generate cave features
             for (WorldGenGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
                 int maximumHeight = feature.getMaximumHeight();
+                int minimumHeight = feature.getMinimumHeight();
                 for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
                     int localX = x + this.rand.nextInt(16) - 8;
                     int localZ = z + this.rand.nextInt(16) - 8;
-                    int localY = rand.nextInt(Math.min(worldObj.getHeightValue(x, z), maximumHeight) + 1) + 4;
+                    int localY = rand.nextInt(Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
                 }
             }

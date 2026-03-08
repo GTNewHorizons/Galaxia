@@ -8,11 +8,13 @@ import net.minecraft.world.World;
 public class WorldGenGalaxiaCave extends WorldGenGalaxiaSurface {
 
     private final int frequency;
+    private final int minimumHeight;
     private final int maximumHeight;
 
-    public WorldGenGalaxiaCave(int frequency, int maximumHeight, Block[] surfaceRequirements) {
+    public WorldGenGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements) {
         super(1, surfaceRequirements);
         this.frequency = frequency;
+        this.minimumHeight = minimumHeight;
         this.maximumHeight = maximumHeight;
     }
 
@@ -26,6 +28,10 @@ public class WorldGenGalaxiaCave extends WorldGenGalaxiaSurface {
 
     public int getFrequency() {
         return frequency;
+    }
+
+    public int getMinimumHeight() {
+        return minimumHeight;
     }
 
     public int getMaximumHeight() {
