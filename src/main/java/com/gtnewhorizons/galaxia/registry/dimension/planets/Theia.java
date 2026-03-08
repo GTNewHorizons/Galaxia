@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPrese
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenCrater;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenTheiaStalactite;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenStalactite;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
 /**
@@ -203,8 +203,8 @@ public class Theia extends BasePlanet {
                     8,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     PlanetBlocks.THEIA_TEKTITE))
-            .caveFeature(new WorldGenTheiaStalactite(64, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, PlanetBlocks.THEIA_ANORTHOSITE))
-            .caveFeature(new WorldGenTheiaStalactite(64, 32, 64, new Block[] { PlanetBlocks.THEIA_ANDESITE }, PlanetBlocks.THEIA_ANDESITE))
+            .caveFeature(new WorldGenStalactite(64, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, PlanetBlocks.THEIA_ANORTHOSITE))
+            .caveFeature(new WorldGenStalactite(64, 32, 64, new Block[] { PlanetBlocks.THEIA_ANDESITE }, PlanetBlocks.THEIA_ANDESITE))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
