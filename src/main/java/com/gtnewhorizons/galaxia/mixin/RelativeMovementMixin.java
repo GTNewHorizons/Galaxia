@@ -50,7 +50,8 @@ public abstract class RelativeMovementMixin {
             forward /= len;
         }
 
-        float speed = 0.02F;
+        // allow sprinting in space
+        float speed = 0.02F * (self.isSprinting() ? 2 : 1);
 
         self.motionX += (lookX * forward + (double) cosYaw * strafe) * speed;
         self.motionY += lookY * forward * speed;
