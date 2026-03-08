@@ -9,8 +9,7 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtect
 
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksMiscEnum;
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.rocketmodules.link.LinkRegistry;
@@ -43,7 +42,6 @@ public class CommonProxy {
 
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
-        GalaxiaBlocksMiscEnum.registerBlocksMisc();
         PlanetBlocks.init();
         GalaxiaEffects.init();
         registerLinks();

@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts;
 import net.minecraft.block.Block;
 import net.minecraft.world.WorldProvider;
 
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
