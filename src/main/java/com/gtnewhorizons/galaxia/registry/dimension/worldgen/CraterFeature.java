@@ -24,8 +24,6 @@ public class CraterFeature extends Feature {
         int squaredCraterRadius = radius * radius;
         int heightOffset = radius / 2;
 
-        Set<Chunk> touchedChunks = new HashSet<>();
-
         for (int localX = -radius; localX <= radius; localX++) {
             for (int localZ = -radius; localZ <= radius; localZ++) {
                 double rimDistance = localX * localX + localZ * localZ;
@@ -44,19 +42,9 @@ public class CraterFeature extends Feature {
                     if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.1)) {
                         int wx = localX + x, wy = localY + y + heightOffset, wz = localZ + z;
                         setBlockFast(world, wx, wy, wz, Blocks.air, 0);
-                        int cx = wx >> 4;
-                        int cz = wz >> 4;
-                        if (world.getChunkProvider()
-                            .chunkExists(cx, cz)) {
-                            touchedChunks.add(world.getChunkFromChunkCoords(cx, cz));
-                        }
                     }
                 }
             }
-        }
-
-        for (Chunk chunk : touchedChunks) {
-            chunk.generateSkylightMap();
         }
     }
 }

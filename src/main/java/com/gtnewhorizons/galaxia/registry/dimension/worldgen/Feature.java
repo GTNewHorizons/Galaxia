@@ -5,9 +5,16 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 public abstract class Feature {
+
+    private final Set<Chunk> touchedChunks = new HashSet<>();
+    private final List<Integer[]> coordinateTriplets = new ArrayList<>();
 
     public abstract void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements);
 
@@ -40,5 +47,31 @@ public abstract class Feature {
         currentBlockStorage.func_150818_a(lx, ly, lz, block);
         currentBlockStorage.setExtBlockMetadata(lx, ly, lz, meta);
         chunk.isModified = true;
+
+        // Add chunks for updating
+        int cx = x >> 4;
+        int cz = z >> 4;
+        if (world.getChunkProvider()
+            .chunkExists(cx, cz)) {
+            Chunk chunkToAdd = world.getChunkFromChunkCoords(cx, cz);
+            if (!touchedChunks.contains(chunkToAdd)) {
+                touchedChunks.add(chunkToAdd);
+                coordinateTriplets.add(new Integer[]{x, y, z});
+            }
+        }
+    }
+
+    public void finishGeneration(World world) {
+        for (Chunk chunk : touchedChunks) {
+            chunk.generateSkylightMap();
+        }
+        for (Integer[] triplet : coordinateTriplets) {
+            int x = triplet[0];
+            int y = triplet[1];
+            int z = triplet[2];
+            Block originalBlock = world.getBlock(x, y, z);
+            int originalMeta = world.getBlockMetadata(x, y, z);
+            world.setBlock(x, y, z, originalBlock, originalMeta, 3);
+        }
     }
 }

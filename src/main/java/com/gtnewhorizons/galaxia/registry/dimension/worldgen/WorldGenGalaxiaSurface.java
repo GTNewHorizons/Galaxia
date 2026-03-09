@@ -36,6 +36,7 @@ public class WorldGenGalaxiaSurface extends WorldGenGalaxiaBase {
             return false;
         }
         feature.generateFeature(world, random, x, y, z, surfaceRequirements);
+        feature.finishGeneration(world);
         return true;
     }
 }
