@@ -35,7 +35,7 @@ public class WorldGenGalaxiaWall extends WorldGenGalaxiaBase {
             return false;
         }
         feature.generateFeature(world, random, x, y, z, wallRequirements);
-        feature.finishGeneration(world);
+        feature.finishGeneration();
         return true;
     }
 }

@@ -14,7 +14,7 @@ import java.util.Set;
 public abstract class Feature {
 
     private final Set<Chunk> touchedChunks = new HashSet<>();
-    private final List<Integer[]> coordinateTriplets = new ArrayList<>();
+    private final List<Integer[]> updateCoordinates = new ArrayList<>();
 
     public abstract void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements);
 
@@ -56,22 +56,18 @@ public abstract class Feature {
             Chunk chunkToAdd = world.getChunkFromChunkCoords(cx, cz);
             if (!touchedChunks.contains(chunkToAdd)) {
                 touchedChunks.add(chunkToAdd);
-                coordinateTriplets.add(new Integer[]{x, y, z});
+                updateCoordinates.add(new Integer[]{cx << 4, cz << 4});
             }
         }
     }
 
-    public void finishGeneration(World world) {
+    public void finishGeneration() {
         for (Chunk chunk : touchedChunks) {
             chunk.generateSkylightMap();
         }
-        for (Integer[] triplet : coordinateTriplets) {
-            int x = triplet[0];
-            int y = triplet[1];
-            int z = triplet[2];
-            Block originalBlock = world.getBlock(x, y, z);
-            int originalMeta = world.getBlockMetadata(x, y, z);
-            world.setBlock(x, y, z, originalBlock, originalMeta, 3);
-        }
+    }
+
+    public List<Integer[]> getUpdateCoordinates() {
+        return updateCoordinates;
     }
 }
