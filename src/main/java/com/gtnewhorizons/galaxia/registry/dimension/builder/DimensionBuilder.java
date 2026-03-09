@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 
 /**
  * Builder class to configure dimensions properly
@@ -54,6 +55,7 @@ public class DimensionBuilder {
     private boolean removeSpeedCancelation = false;
     private List<CelestialBody> celestialBodies = Collections.emptyList();
     private EffectBuilder effects;
+    private EnumTiers tier = EnumTiers.TIER_1;
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -76,6 +78,11 @@ public class DimensionBuilder {
      */
     public DimensionBuilder name(String name) {
         this.name = name;
+        return this;
+    }
+
+    public DimensionBuilder tier(EnumTiers tier) {
+        this.tier = tier;
         return this;
     }
 
@@ -167,7 +174,8 @@ public class DimensionBuilder {
     }
 
     /**
-     * Sets the radius of the planet (used in orbital calculation, does not affect world generation)
+     * Sets the radius of the planet (used in orbital calculation, does not affect
+     * world generation)
      *
      * @param radius The required planetary radius
      * @return Configured builder
@@ -178,8 +186,10 @@ public class DimensionBuilder {
     }
 
     /**
-     * Sets whether to remove speed cancellation on the planet. All entities by default
-     * reduce their speed by 9% every tick. Override this to cancel (useful in low gravity dimensions)
+     * Sets whether to remove speed cancellation on the planet. All entities by
+     * default
+     * reduce their speed by 9% every tick. Override this to cancel (useful in low
+     * gravity dimensions)
      *
      * @return Configured builder
      */
@@ -228,7 +238,8 @@ public class DimensionBuilder {
             effects,
             mass,
             orbitalRadius,
-            radius);
+            radius,
+            tier);
 
         // Add dimension to hashmaps
         BY_NAME.put(name.toLowerCase(), def);

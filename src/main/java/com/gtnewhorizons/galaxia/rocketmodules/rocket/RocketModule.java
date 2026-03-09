@@ -17,8 +17,7 @@ public abstract class RocketModule {
     private final double width;
     private final double weight;
     private final String modelName;
-    private double thrust = 0;
-    private double fuelCapacity = 0;
+    private EnumModuleCategory category;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
@@ -33,6 +32,14 @@ public abstract class RocketModule {
         this.weight = weight;
         this.modelName = modelName;
         ModuleRegistry.register(this);
+    }
+
+    public EnumModuleCategory getCategory() {
+        return this.category;
+    }
+
+    public void setCategory(EnumModuleCategory cat) {
+        this.category = cat;
     }
 
     public int getId() {
@@ -55,24 +62,8 @@ public abstract class RocketModule {
         return weight;
     }
 
-    public double getSitOffset() {
-        return 0;
-    }
-
     public String getModelName() {
         return modelName;
-    }
-
-    public double getFuelCapacity() {
-        return fuelCapacity;
-    }
-
-    public double getThrust() {
-        return thrust;
-    }
-
-    public int getPassengerCapacity() {
-        return 0;
     }
 
     @SideOnly(Side.CLIENT)
@@ -96,11 +87,4 @@ public abstract class RocketModule {
         return getClass() == other.getClass();
     }
 
-    public void setThrust(double thrust) {
-        this.thrust = thrust;
-    }
-
-    public void setFuelCapacity(double fc) {
-        this.fuelCapacity = fc;
-    }
 }

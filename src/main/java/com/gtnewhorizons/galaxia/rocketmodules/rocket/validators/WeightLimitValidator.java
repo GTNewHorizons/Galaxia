@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.validators;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
 
 public class WeightLimitValidator implements IRocketValidator {
 
@@ -10,7 +10,9 @@ public class WeightLimitValidator implements IRocketValidator {
         double weight = assembly.getTotalWeight();
         double thrust = assembly.getModules()
             .stream()
-            .mapToDouble(RocketModule::getThrust)
+            .filter(EngineModule.class::isInstance)
+            .map(EngineModule.class::cast)
+            .mapToDouble(EngineModule::getThrust)
             .sum();
         boolean ok = thrust > 0 && weight <= thrust;
         return ok ? ValidationResult.success() : new ValidationResult(false, "This rocket is too heavy to lift off");

@@ -15,6 +15,7 @@ import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.relauncher.Side;
@@ -149,9 +150,7 @@ public class EntityRocket extends Entity {
         // Get all engine placements
         List<RocketAssembly.ModulePlacement> engines = getAssembly().getPlacements()
             .stream()
-            .filter(
-                p -> p.type()
-                    .getThrust() > 0)
+            .filter(p -> p.type() instanceof EngineModule)
             .collect(Collectors.toList());
 
         if (engines.isEmpty()) {

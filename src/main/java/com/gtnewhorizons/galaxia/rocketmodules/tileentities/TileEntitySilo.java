@@ -40,9 +40,13 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.CapsuleRequiredValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRatioValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ModulesFitInCoreValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.SingleRocketCoreValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.TierMatchesDestinationValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
 
@@ -58,8 +62,13 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     private final List<Integer> modules = new ArrayList<>();
     public boolean shouldRender = true;
     // Validation rules for rocket systems
-    private final List<IRocketValidator> validators = Arrays
-        .asList(new CapsuleRequiredValidator(), new EngineToTankRatioValidator(), new WeightLimitValidator());
+    private final List<IRocketValidator> validators = Arrays.asList(
+        new CapsuleRequiredValidator(),
+        new EngineToTankRatioValidator(),
+        new WeightLimitValidator(),
+        new TierMatchesDestinationValidator(),
+        new SingleRocketCoreValidator(),
+        new ModulesFitInCoreValidator());
     private int destination = 0;
     private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;
@@ -218,6 +227,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                                     IKey.str("§aEnter Rocket")
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
+                                    boolean validFlag = true;
+                                    getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
                                         .isEmpty()) {
                                         t.addLine("§7Add some modules first");
@@ -226,8 +237,11 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                                     for (IRocketValidator v : validators) {
                                         ValidationResult r = v.validate(getAssembly());
                                         if (!r.valid()) t.addLine("§c" + r.message());
+                                        validFlag = false;
                                     }
+                                    if (!validFlag) return;
                                 })
+                                .tooltipAutoUpdate(true)
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
@@ -274,7 +288,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     private void enterRocket(PosGuiData data) {
         if (getAssembly().getModules()
             .stream()
-            .noneMatch(m -> m.getPassengerCapacity() > 0)) return;
+            .noneMatch(m -> m instanceof CapsuleModule)) return;
         EntityRocket rocket = getEntityRocket();
         if (rocket == null || rocket.isDead) return;
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
@@ -373,8 +387,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public int getFirstCapsuleIndex() {
         List<RocketModule> list = getAssembly().getModules();
         for (int i = 0; i < list.size(); i++) {
-            if (list.get(i)
-                .getPassengerCapacity() > 0) return i;
+            if (list.get(i) instanceof CapsuleModule) return i;
         }
         return -1;
     }

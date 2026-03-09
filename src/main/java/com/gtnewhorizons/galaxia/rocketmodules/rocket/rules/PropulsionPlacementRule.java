@@ -7,17 +7,19 @@ import java.util.stream.Collectors;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.IStackableModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.FuelTankModule;
 
 public class PropulsionPlacementRule implements IPlacementRule {
 
     @Override
     public List<RocketAssembly.ModulePlacement> apply(List<RocketModule> allModules, double startY) {
         List<RocketModule> tanks = allModules.stream()
-            .filter(m -> m.getFuelCapacity() > 0)
+            .filter(m -> m instanceof FuelTankModule)
             .collect(Collectors.toList());
 
         List<RocketModule> engines = allModules.stream()
-            .filter(m -> m.getThrust() > 0)
+            .filter(m -> m instanceof EngineModule)
             .collect(Collectors.toList());
 
         List<RocketAssembly.ModulePlacement> placements = new ArrayList<>();

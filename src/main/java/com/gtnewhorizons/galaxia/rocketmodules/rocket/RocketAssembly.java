@@ -7,6 +7,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.FuelTankModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.ClusteredPlacementRule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.LinearPlacementRule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.PropulsionPlacementRule;
@@ -18,6 +22,7 @@ public final class RocketAssembly {
 
     private final List<RocketModule> modules;
     private List<ModulePlacement> placements;
+    private int destination = 0;
 
     public RocketAssembly(List<Integer> moduleIds) {
         this.modules = moduleIds.stream()
@@ -26,13 +31,21 @@ public final class RocketAssembly {
             .collect(Collectors.toList());
     }
 
+    public void updateDestination(int dim) {
+        this.destination = dim;
+    }
+
+    public int getDestination() {
+        return this.destination;
+    }
+
     public List<ModulePlacement> getPlacements() {
         if (placements == null) {
             placements = new ArrayList<>();
             double y = 0.0;
 
             List<RocketModule> propulsion = modules.stream()
-                .filter(m -> m.getFuelCapacity() > 0 || m.getThrust() > 0)
+                .filter(m -> m instanceof EngineModule || m instanceof FuelTankModule)
                 .collect(Collectors.toList());
 
             placements.addAll(new PropulsionPlacementRule().apply(propulsion, y));
@@ -45,7 +58,9 @@ public final class RocketAssembly {
                 .orElse(0.0);
 
             List<RocketModule> otherStackables = modules.stream()
-                .filter(m -> m instanceof IStackableModule && m.getFuelCapacity() == 0 && m.getThrust() == 0)
+                .filter(
+                    m -> m instanceof IStackableModule && !(m instanceof EngineModule)
+                        && !(m instanceof FuelTankModule))
                 .collect(Collectors.toList());
 
             placements.addAll(new ClusteredPlacementRule().apply(otherStackables, afterPropulsion));
@@ -83,16 +98,52 @@ public final class RocketAssembly {
 
     public double getMountedYOffset() {
         for (int i = modules.size() - 1; i >= 0; i--) {
-            if (modules.get(i)
-                .getPassengerCapacity() > 0) {
-                return getTotalHeight() + modules.get(i)
-                    .getSitOffset();
-            }
+            if (modules.get(i) instanceof CapsuleModule m) return m.getSitOffset() + getTotalHeight();
+
         }
-        return getTotalHeight();
+        return
+
+        getTotalHeight();
+
     }
 
     public List<RocketModule> getModules() {
         return Collections.unmodifiableList(modules);
+    }
+
+    public List<EngineModule> getEngineModules() {
+        return getModules().stream()
+            .filter(EngineModule.class::isInstance)
+            .map(EngineModule.class::cast)
+            .collect(Collectors.toList());
+    }
+
+    public List<FuelTankModule> getFuelTankModules() {
+        return getModules().stream()
+            .filter(FuelTankModule.class::isInstance)
+            .map(FuelTankModule.class::cast)
+            .collect(Collectors.toList());
+    }
+
+    public List<CapsuleModule> getCapsuleModules() {
+        return getModules().stream()
+            .filter(CapsuleModule.class::isInstance)
+            .map(CapsuleModule.class::cast)
+            .collect(Collectors.toList());
+    }
+
+    public List<RocketCoreModule> getCoreModules() {
+        return getModules().stream()
+            .filter(RocketCoreModule.class::isInstance)
+            .map(RocketCoreModule.class::cast)
+            .collect(Collectors.toList());
+    }
+
+    public List<RocketModule> getFunctionalModules() {
+        return new ArrayList<>();
+    }
+
+    public List<RocketModule> getStructuralModules() {
+        return new ArrayList<>();
     }
 }

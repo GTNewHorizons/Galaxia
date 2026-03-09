@@ -1,18 +1,22 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.IStackableModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class EngineModule extends RocketModule implements IStackableModule {
 
-    public EngineModule() {
-        super(3, "Engine", 0.5, 3.0, 250.0, "engine_3x1x3");
-        super.setThrust(10);
+    private double thrust;
+
+    public EngineModule(int id, String name, double height, double width, double weight, String modelName,
+        double thrust) {
+        super(id, name, height, width, weight, modelName);
+        this.thrust = thrust;
+        setCategory(EnumModuleCategory.ENGINE);
     }
 
-    @Override
     public double getThrust() {
-        return 6000.0;
+        return thrust;
     }
 
     @Override

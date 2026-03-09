@@ -1,16 +1,21 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.IStackableModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
-public class StorageModule extends RocketModule implements IStackableModule {
+public class StorageModule extends RocketModule {
 
-    public StorageModule() {
-        super(2, "Storage Unit", 4.0, 3.0, 900.0, "storage_unit_3x4x3");
+    private int capacity;
+
+    public StorageModule(int id, String name, double height, double width, double weight, String modelName,
+        int capacity) {
+        super(id, name, height, width, weight, modelName);
+        this.capacity = capacity;
+        setCategory(EnumModuleCategory.FUNCTIONAL);
     }
 
-    @Override
-    public int getMaxStackSize() {
-        return 7;
+    public int getCapacity() {
+        return this.capacity;
     }
+
 }

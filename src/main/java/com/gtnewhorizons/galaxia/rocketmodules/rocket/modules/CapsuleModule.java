@@ -1,20 +1,29 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.modules;
 
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class CapsuleModule extends RocketModule {
 
-    public CapsuleModule() {
-        super(1, "Capsule", 2.5, 3.0, 450.0, "capsule_3x2.5x3");
+    private double sitOffset;
+    private int capacity;
+
+    public CapsuleModule(int id, String name, double height, double width, double weight, String modelName,
+        double sitOffset, int capacity) {
+        super(id, name, height, width, weight, modelName);
+        this.sitOffset = sitOffset;
+        this.capacity = capacity;
+        setCategory(EnumModuleCategory.PAYLOAD);
+        ModuleRegistry.register(this);
     }
 
-    @Override
-    public int getPassengerCapacity() {
-        return 1;
-    }
-
-    @Override
     public double getSitOffset() {
-        return -1.75;
+        return sitOffset;
     }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
 }
