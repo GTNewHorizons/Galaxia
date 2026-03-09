@@ -360,6 +360,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     feature.generate(worldObj, rand, localX, localY, localZ);
                 }
             }
+            // Generate wall features
+            for (WorldGenGalaxiaWall feature : spaceBiome.getWallFeatures()) {
+                int localX = x + this.rand.nextInt(16) - 8;
+                int localZ = z + this.rand.nextInt(16) - 8;
+                int localY = rand.nextInt(Math.max(1, worldObj.getHeightValue(x, z)));
+                feature.generate(worldObj, rand, localX, localY, localZ);
+            }
         }
     }
 

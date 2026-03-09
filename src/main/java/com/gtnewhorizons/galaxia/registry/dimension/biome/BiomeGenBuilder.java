@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
@@ -38,6 +39,7 @@ public class BiomeGenBuilder {
     Block snowBlock = stone;
     List<WorldGenGalaxiaSurface> surfaceFeatures = new ArrayList<>();
     List<WorldGenGalaxiaCave> caveFeatures = new ArrayList<>();
+    List<WorldGenGalaxiaWall> wallFeatures = new ArrayList<>();
     List<Block> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
     int surfaceThickness = 1;
@@ -181,6 +183,11 @@ public class BiomeGenBuilder {
 
     public BiomeGenBuilder caveFeature(WorldGenGalaxiaCave feature) {
         caveFeatures.add(feature);
+        return this;
+    }
+
+    public BiomeGenBuilder wallFeature(WorldGenGalaxiaWall feature) {
+        wallFeatures.add(feature);
         return this;
     }
 

@@ -2,8 +2,10 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CrystalClusterFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.FluidSpringFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -208,6 +210,7 @@ public class Theia extends BasePlanet {
             .caveFeature(new WorldGenGalaxiaCave(64, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, new StalactiteFeature(PlanetBlocks.THEIA_ANORTHOSITE)))
             .caveFeature(new WorldGenGalaxiaCave(64, 32, 64, new Block[] { PlanetBlocks.THEIA_ANDESITE }, new StalactiteFeature(PlanetBlocks.THEIA_ANDESITE)))
             .caveFeature(new WorldGenGalaxiaCave(32, 4, 32, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }, new CrystalClusterFeature(GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get())))
+            .wallFeature(new WorldGenGalaxiaWall(2, new Block[]{PlanetBlocks.THEIA_ANDESITE, PlanetBlocks.THEIA_ANORTHOSITE}, new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock())))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
