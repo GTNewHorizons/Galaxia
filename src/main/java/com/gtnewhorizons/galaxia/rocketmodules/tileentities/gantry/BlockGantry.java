@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -43,7 +41,6 @@ public class BlockGantry extends Block implements ITileEntityProvider {
 
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
-                LOG.info("Connecting to: " + cx + ", " + cy + ", " + cz);
                 teg.connect(checkTeg);
             }
         }
@@ -74,7 +71,6 @@ public class BlockGantry extends Block implements ITileEntityProvider {
 
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
-                LOG.info("Disconnecting to: " + cx + ", " + cy + ", " + cz);
                 teg.disconnect(checkTeg);
             }
         }

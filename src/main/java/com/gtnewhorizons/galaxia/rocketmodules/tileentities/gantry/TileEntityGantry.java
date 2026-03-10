@@ -3,14 +3,18 @@ package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
+import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 
 public class TileEntityGantry extends TileEntity {
 
     private final float SPEED = 0.05f;
+    private List<int[]> pendingNeighbourCoords = new ArrayList<>();
 
     List<TileEntityGantry> neighbours = new ArrayList<>();
     private Vec3 sendDirection;
@@ -23,6 +27,17 @@ public class TileEntityGantry extends TileEntity {
     @Override
     public void updateEntity() {
         if (worldObj.isRemote) return;
+
+        if (!pendingNeighbourCoords.isEmpty()) {
+            for (int[] coords : pendingNeighbourCoords) {
+                TileEntity te = worldObj.getTileEntity(coords[0], coords[1], coords[2]);
+                if (te instanceof TileEntityGantry teg) {
+                    neighbours.add(teg);
+                }
+            }
+            pendingNeighbourCoords.clear();
+        }
+
         if (containedModule == null) return;
 
         progress += SPEED;
@@ -89,6 +104,34 @@ public class TileEntityGantry extends TileEntity {
         markDirty();
         return true;
 
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound tag) {
+        super.writeToNBT(tag);
+        NBTTagList neighbourList = new NBTTagList();
+        for (TileEntityGantry neighbour : neighbours) {
+            NBTTagCompound neighbourTag = new NBTTagCompound();
+            neighbourTag.setInteger("x", neighbour.xCoord);
+            neighbourTag.setInteger("y", neighbour.yCoord);
+            neighbourTag.setInteger("z", neighbour.zCoord);
+            neighbourList.appendTag(neighbourTag);
+        }
+        tag.setTag("neighbours", neighbourList);
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
+        super.readFromNBT(tag);
+
+        NBTTagList neighbourList = tag.getTagList("neighbours", NBT.TAG_COMPOUND);
+        pendingNeighbourCoords = new ArrayList<>();
+
+        for (int i = 0; i < neighbourList.tagCount(); i++) {
+            NBTTagCompound entry = neighbourList.getCompoundTagAt(i);
+            pendingNeighbourCoords
+                .add(new int[] { entry.getInteger("x"), entry.getInteger("y"), entry.getInteger("z"), });
+        }
     }
 
 }

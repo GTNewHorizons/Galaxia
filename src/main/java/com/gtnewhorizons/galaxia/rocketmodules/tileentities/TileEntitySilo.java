@@ -45,6 +45,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.SingleRocketCor
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.TierMatchesDestinationValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
@@ -69,9 +70,46 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     });
 
     private TileEntityGantryTerminal gantryTerminal;
+    private TileEntityModuleAssembler ma;
+    private int[] pendingTerminalCoords;
+    private int[] pendingAssemblerCoords;
+    private boolean hasAssembler = false;
 
-    public TileEntityModuleAssembler getLinkedAssembler() {
-        return new TileEntityModuleAssembler();
+    public void updateLinkedAssembler() {
+        if (worldObj.isRemote) return;
+        if (gantryTerminal == null) {
+            ma = null;
+            hasAssembler = false;
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return;
+        }
+        if (!gantryTerminal.checkValidGraph()) {
+            ma = null;
+            hasAssembler = false;
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return;
+        }
+        List<TileEntityGantryTerminal> endpoints = GantryAPI.findEndpointTerminals(gantryTerminal);
+        for (TileEntityGantryTerminal terminal : endpoints) {
+            TileEntityModuleAssembler maTest = terminal.getAssembler();
+            if (maTest != null) {
+                ma = maTest;
+                hasAssembler = true;
+                if (worldObj != null) {
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                }
+                return;
+            }
+        }
+        ma = null;
+        hasAssembler = false;
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     /**
@@ -91,10 +129,9 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(240, 160);
 
-        TileEntityModuleAssembler ma = getLinkedAssembler();
-        if (ma == null) {
+        if (!hasAssembler) {
             return panel.child(
-                IKey.str("§cNo Module Assembler linked.\nUse the Linking Tool to connect one.")
+                IKey.str("§cNo Module Assembler linked.")
                     .asWidget()
                     .pos(10, 35));
         }
@@ -261,6 +298,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         this.destination = dim;
     }
 
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return this.gantryTerminal;
+    }
+
     /**
      * Returns the modules back to the linked assembler
      * Sends a Silo->MA animation packet to clients for each returned module
@@ -363,6 +404,29 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
                 spawnRocket();
             }
+
+            if (pendingTerminalCoords != null) {
+                TileEntity te = worldObj
+                    .getTileEntity(pendingTerminalCoords[0], pendingTerminalCoords[1], pendingTerminalCoords[2]);
+
+                if (te instanceof TileEntityGantryTerminal teg) {
+                    gantryTerminal = teg;
+                    updateLinkedAssembler();
+                }
+
+                pendingTerminalCoords = null;
+            }
+
+            if (pendingAssemblerCoords != null) {
+                TileEntity te = worldObj
+                    .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
+
+                if (te instanceof TileEntityModuleAssembler tema) {
+                    ma = tema;
+                }
+
+                pendingAssemblerCoords = null;
+            }
         }
     }
 
@@ -404,7 +468,18 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         nbt.setBoolean("shouldRender", shouldRender);
-
+        // gantry
+        if (gantryTerminal != null) {
+            nbt.setInteger("terminalX", gantryTerminal.xCoord);
+            nbt.setInteger("terminalY", gantryTerminal.yCoord);
+            nbt.setInteger("terminalZ", gantryTerminal.zCoord);
+        }
+        // assembler
+        if (ma != null) {
+            nbt.setInteger("assemblerX", ma.xCoord);
+            nbt.setInteger("assemblerY", ma.yCoord);
+            nbt.setInteger("assemblerZ", ma.zCoord);
+        }
         // modules list
         NBTTagList list = new NBTTagList();
         for (int type : modules) {
@@ -413,6 +488,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             list.appendTag(entry);
         }
         nbt.setTag("modules", list);
+        nbt.setBoolean("hasAssembler", hasAssembler);
 
     }
 
@@ -435,10 +511,24 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
         assembly = null;
 
+        // Get Gantry Terminal
+        if (nbt.hasKey("terminalX")) {
+            pendingTerminalCoords = new int[] { nbt.getInteger("terminalX"), nbt.getInteger("terminalY"),
+                nbt.getInteger("terminalZ") };
+        }
+
+        // Get Module Assembler
+        if (nbt.hasKey("assemblerX")) {
+            pendingAssemblerCoords = new int[] { nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"),
+                nbt.getInteger("assemblerZ") };
+        }
+        hasAssembler = nbt.getBoolean("hasAssembler");
+
     }
 
     public void setGantryTerminal(TileEntityGantryTerminal teg) {
         this.gantryTerminal = teg;
+        updateLinkedAssembler();
     }
 
     /**

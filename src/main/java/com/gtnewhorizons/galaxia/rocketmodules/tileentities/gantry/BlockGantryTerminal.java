@@ -1,8 +1,6 @@
 
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -33,7 +31,6 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
 
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
-        if (world.isRemote) return;
 
         TileEntity te = world.getTileEntity(x, y, z);
         if (!(te instanceof TileEntityGantryTerminal)) {
@@ -49,16 +46,21 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
 
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
-                LOG.info("Connecting to: " + cx + ", " + cy + ", " + cz);
                 teg.connect(checkTeg);
             } else if (checkTe instanceof TileEntitySilo checkTes) {
-                LOG.info("Connected to Silo");
                 teg.connectSilo(checkTes);
                 checkTes.setGantryTerminal(teg);
+                if (!world.isRemote) {
+                    world.markBlockForUpdate(checkTes.xCoord, checkTes.yCoord, checkTes.zCoord);
+                    world.markBlockForUpdate(teg.xCoord, teg.yCoord, teg.zCoord);
+                }
             } else if (checkTe instanceof TileEntityModuleAssembler checkTema) {
-                LOG.info("Connected to assembler");
                 teg.connectAssembler(checkTema);
                 checkTema.setGantryTerminal(teg);
+                if (!world.isRemote) {
+                    world.markBlockForUpdate(checkTema.xCoord, checkTema.yCoord, checkTema.zCoord);
+                    world.markBlockForUpdate(teg.xCoord, teg.yCoord, teg.zCoord);
+                }
             }
 
         }

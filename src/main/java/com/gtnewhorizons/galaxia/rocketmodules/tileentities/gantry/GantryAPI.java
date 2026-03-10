@@ -1,12 +1,11 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
@@ -32,15 +31,22 @@ public final class GantryAPI {
         List<TileEntityGantry> endpoints = new ArrayList<>();
         TileEntityGantry start = (TileEntityGantry) te;
         dfsEndpoints(start, start, new HashSet<>(), endpoints, 0);
-        LOG.info(endpoints.get(0).zCoord);
         if (endpoints.size() == 1) return false;
         for (TileEntityGantry teg : endpoints) {
-            LOG.info(teg);
             if (!isTerminal(teg)) {
                 return false;
             }
         }
         return true;
+    }
+
+    public static List<TileEntityGantryTerminal> findEndpointTerminals(TileEntityGantryTerminal start) {
+        List<TileEntityGantry> ends = new ArrayList<>();
+        dfsEndpoints(start, start, new HashSet<>(), ends, 0);
+        return ends.stream()
+            .filter(TileEntityGantryTerminal.class::isInstance)
+            .map(TileEntityGantryTerminal.class::cast)
+            .collect(Collectors.toList());
     }
 
     private static void dfsEndpoints(TileEntityGantry current, TileEntityGantry start, Set<TileEntityGantry> visited,
@@ -53,7 +59,6 @@ public final class GantryAPI {
         }
 
         if (current.neighbours.isEmpty() || isEndpoint(current)) {
-            LOG.info("Adding new endpoint");
             endpoints.add(current);
             if (current != start) return;
         }

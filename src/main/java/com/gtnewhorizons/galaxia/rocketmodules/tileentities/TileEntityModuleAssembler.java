@@ -93,6 +93,10 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
         this.gantryTerminal = teg;
     }
 
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return this.gantryTerminal;
+    }
+
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
