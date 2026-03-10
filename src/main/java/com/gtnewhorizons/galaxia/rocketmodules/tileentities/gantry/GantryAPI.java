@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -7,10 +9,18 @@ import java.util.List;
 import java.util.Set;
 
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
 public final class GantryAPI {
 
+    public static final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
+        Vec3.createVectorHelper(0, 1, 0), Vec3.createVectorHelper(0, -1, 0), Vec3.createVectorHelper(0, 0, 1),
+        Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0), Vec3.createVectorHelper(1, -1, 0),
+        Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
+
+        Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
+        Vec3.createVectorHelper(0, -1, -1) };
     private static int MAX_CHAIN_SIZE = 256;
 
     public static boolean terminatesWithTerminals(World world, int x, int y, int z) {
@@ -21,17 +31,19 @@ public final class GantryAPI {
 
         List<TileEntityGantry> endpoints = new ArrayList<>();
         TileEntityGantry start = (TileEntityGantry) te;
-        dfsEndpoints(start, new HashSet<>(), endpoints, 0);
+        dfsEndpoints(start, start, new HashSet<>(), endpoints, 0);
+        LOG.info(endpoints.get(0).zCoord);
         if (endpoints.size() == 1) return false;
         for (TileEntityGantry teg : endpoints) {
-            if (isTerminal(teg)) {
+            LOG.info(teg);
+            if (!isTerminal(teg)) {
                 return false;
             }
         }
         return true;
     }
 
-    private static void dfsEndpoints(TileEntityGantry current, Set<TileEntityGantry> visited,
+    private static void dfsEndpoints(TileEntityGantry current, TileEntityGantry start, Set<TileEntityGantry> visited,
         List<TileEntityGantry> endpoints, int depth) {
         visited.add(current);
 
@@ -41,13 +53,14 @@ public final class GantryAPI {
         }
 
         if (current.neighbours.isEmpty() || isEndpoint(current)) {
+            LOG.info("Adding new endpoint");
             endpoints.add(current);
-            return;
+            if (current != start) return;
         }
 
         for (TileEntityGantry neighbour : current.neighbours) {
             if (!visited.contains(neighbour)) {
-                dfsEndpoints(neighbour, visited, endpoints, depth + 1);
+                dfsEndpoints(neighbour, start, visited, endpoints, depth + 1);
             }
         }
     }

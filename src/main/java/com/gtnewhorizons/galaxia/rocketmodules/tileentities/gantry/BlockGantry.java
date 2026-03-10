@@ -14,14 +14,6 @@ import net.minecraft.world.World;
 
 public class BlockGantry extends Block implements ITileEntityProvider {
 
-    private final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
-        Vec3.createVectorHelper(0, 1, 0), Vec3.createVectorHelper(0, -1, 0), Vec3.createVectorHelper(0, 0, 1),
-        Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0), Vec3.createVectorHelper(1, -1, 0),
-        Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
-
-        Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
-        Vec3.createVectorHelper(0, -1, -1) };
-
     public BlockGantry() {
         super(Material.iron);
         this.setBlockTextureName("iron_block");
@@ -44,7 +36,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         }
         TileEntityGantry teg = (TileEntityGantry) te;
 
-        for (Vec3 check_offset : CHECK_OFFSETS) {
+        for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = x + (int) check_offset.xCoord;
             int cy = y + (int) check_offset.yCoord;
             int cz = z + (int) check_offset.zCoord;
@@ -62,8 +54,30 @@ public class BlockGantry extends Block implements ITileEntityProvider {
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
-
         return true;
+
+    }
+
+    @Override
+    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (!(te instanceof TileEntityGantry)) {
+            return;
+        }
+        TileEntityGantry teg = (TileEntityGantry) te;
+
+        for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
+            int cx = x + (int) check_offset.xCoord;
+            int cy = y + (int) check_offset.yCoord;
+            int cz = z + (int) check_offset.zCoord;
+
+            TileEntity checkTe = world.getTileEntity(cx, cy, cz);
+            if (checkTe instanceof TileEntityGantry checkTeg) {
+                LOG.info("Disconnecting to: " + cx + ", " + cy + ", " + cz);
+                teg.disconnect(checkTeg);
+            }
+        }
 
     }
 

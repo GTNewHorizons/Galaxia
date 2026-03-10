@@ -43,6 +43,12 @@ public class TileEntityGantry extends TileEntity {
         other.neighbours.add(this);
     }
 
+    public void disconnect(TileEntityGantry other) {
+        this.neighbours.remove(other);
+        other.neighbours.remove(this);
+
+    }
+
     public void updateTransferDirection() {
         if (isReceiving) {
             currentDirection = receiveDirection;
