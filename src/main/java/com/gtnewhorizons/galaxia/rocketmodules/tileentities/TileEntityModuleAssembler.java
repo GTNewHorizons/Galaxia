@@ -21,11 +21,13 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData> {
 
     // Hashmap stores <Module ID, Count>
     public HashMap<Integer, Integer> moduleMap = new HashMap<>();
+    private TileEntityGantryTerminal gantryTerminal;
 
     /**
      * The UI builder for the Tile Entity GUI
@@ -85,6 +87,10 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
             .syncHandler(
                 new InteractionSyncHandler()
                     .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));
+    }
+
+    public void setGantryTerminal(TileEntityGantryTerminal teg) {
+        this.gantryTerminal = teg;
     }
 
     @Override

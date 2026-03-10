@@ -14,6 +14,9 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+
 public class BlockGantryTerminal extends Block implements ITileEntityProvider {
 
     public BlockGantryTerminal() {
@@ -33,10 +36,11 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
         if (world.isRemote) return;
 
         TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantry)) {
+        if (!(te instanceof TileEntityGantryTerminal)) {
             return;
         }
-        TileEntityGantry teg = (TileEntityGantry) te;
+
+        TileEntityGantryTerminal teg = (TileEntityGantryTerminal) te;
 
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = x + (int) check_offset.xCoord;
@@ -47,7 +51,16 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
             if (checkTe instanceof TileEntityGantry checkTeg) {
                 LOG.info("Connecting to: " + cx + ", " + cy + ", " + cz);
                 teg.connect(checkTeg);
+            } else if (checkTe instanceof TileEntitySilo checkTes) {
+                LOG.info("Connected to Silo");
+                teg.connectSilo(checkTes);
+                checkTes.setGantryTerminal(teg);
+            } else if (checkTe instanceof TileEntityModuleAssembler checkTema) {
+                LOG.info("Connected to assembler");
+                teg.connectAssembler(checkTema);
+                checkTema.setGantryTerminal(teg);
             }
+
         }
 
     }

@@ -45,6 +45,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.SingleRocketCor
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.TierMatchesDestinationValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
 
@@ -66,6 +67,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
+
+    private TileEntityGantryTerminal gantryTerminal;
 
     public TileEntityModuleAssembler getLinkedAssembler() {
         return new TileEntityModuleAssembler();
@@ -432,6 +435,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
         assembly = null;
 
+    }
+
+    public void setGantryTerminal(TileEntityGantryTerminal teg) {
+        this.gantryTerminal = teg;
     }
 
     /**
