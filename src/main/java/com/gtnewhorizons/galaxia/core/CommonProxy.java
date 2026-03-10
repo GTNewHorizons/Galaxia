@@ -12,12 +12,8 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.rocketmodules.link.LinkRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityMonorailPole;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
 
 import baubles.api.expanded.BaubleExpandedSlots;
@@ -45,7 +41,6 @@ public class CommonProxy {
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
-        registerLinks();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
 
@@ -95,10 +90,4 @@ public class CommonProxy {
 
     }
 
-    private void registerLinks() {
-        LinkRegistry.register(TileEntityModuleAssembler.class, TileEntitySilo.class);
-        LinkRegistry.register(TileEntityModuleAssembler.class, TileEntityMonorailPole.class);
-        LinkRegistry.register(TileEntityMonorailPole.class, TileEntityMonorailPole.class);
-        LinkRegistry.register(TileEntityMonorailPole.class, TileEntitySilo.class);
-    }
 }

@@ -13,7 +13,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.ChunkCoordinates;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -31,11 +30,8 @@ import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.MonorailAnimPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailAnimationState;
-import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
@@ -50,11 +46,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.TierMatchesDest
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
 
-import cpw.mods.fml.common.network.NetworkRegistry;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-
-public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>, ILinkable {
+public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
@@ -75,72 +67,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
 
-    /**
-     * Stored position of the linked master (ModuleAssembler).
-     * Persisted in NBT so the link survives chunk unload / world restart.
-     * Null = not linked.
-     */
-    private ChunkCoordinates masterPos = null;
-
-    private double monorailYOffset = 3.0;
-
-    @SideOnly(Side.CLIENT)
-    private MonorailAnimationState animationState;
-
-    @SideOnly(Side.CLIENT)
-    public MonorailAnimationState getAnimationState() {
-        if (animationState == null) animationState = new MonorailAnimationState();
-        return animationState;
-    }
-
-    @Override
-    public String getLinkableName() {
-        return "Rocket Silo";
-    }
-
-    @Override
-    public boolean canBeSlave() {
-        return true;
-    }
-
-    @Override
-    public void setMasterPos(ChunkCoordinates pos) {
-        this.masterPos = pos;
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-    }
-
-    @Override
-    public ChunkCoordinates getMasterPos() {
-        return masterPos;
-    }
-
-    public double getMonorailYOffset() {
-        return monorailYOffset;
-    }
-
-    public void setMonorailYOffset(double offset) {
-        this.monorailYOffset = offset;
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-    }
-
-    /**
-     * resolves and casts master to TileEntityModuleAssembler.
-     *
-     * @return Linked assembler, or null if not linked / unloaded.
-     */
     public TileEntityModuleAssembler getLinkedAssembler() {
-        // Walk the chain upstream until we reach the MA
-        ChunkCoordinates cursor = masterPos;
-        int safety = 64;
-        while (cursor != null && safety-- > 0) {
-            TileEntity te = worldObj.getTileEntity(cursor.posX, cursor.posY, cursor.posZ);
-            if (te instanceof TileEntityModuleAssembler ma) return ma;
-            if (te instanceof TileEntityMonorailPole pole) cursor = pole.getPrevPos();
-            else return null;
-        }
-        return null;
+        return new TileEntityModuleAssembler();
     }
 
     /**
@@ -312,11 +240,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            if (!worldObj.isRemote) {
-                GALAXIA_NETWORK.sendToAllAround(
-                    new MonorailAnimPacket(xCoord, yCoord, zCoord, id, MonorailAnimPacket.DIR_TO_SILO),
-                    new NetworkRegistry.TargetPoint(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, 512));
-            }
         }
     }
 
@@ -342,19 +265,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * @param ma The Module Assembler tile entity
      */
     public void returnModules(TileEntityModuleAssembler ma) {
-        if (!worldObj.isRemote) {
-            // Send animation packets BEFORE clearing the list so we still have IDs.
-            for (Integer id : modules) {
-                GALAXIA_NETWORK.sendToAllAround(
-                    new MonorailAnimPacket(xCoord, yCoord, zCoord, id, MonorailAnimPacket.DIR_TO_MA),
-                    new cpw.mods.fml.common.network.NetworkRegistry.TargetPoint(
-                        worldObj.provider.dimensionId,
-                        xCoord,
-                        yCoord,
-                        zCoord,
-                        512));
-            }
-        }
 
         for (Integer id : modules) {
             ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
@@ -450,33 +360,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
                 spawnRocket();
             }
-        } else {
-            if (masterPos != null) {
-                getAnimationState().tick(calcPathLength());
-            }
         }
-    }
-
-    @SideOnly(Side.CLIENT)
-    private float calcPathLength() {
-        float total = 0f;
-        int prevX = xCoord, prevY = yCoord, prevZ = zCoord;
-        ChunkCoordinates cursor = masterPos;
-        int safety = 64;
-        while (cursor != null && safety-- > 0) {
-            float dx = cursor.posX - prevX;
-            float dy = cursor.posY - prevY;
-            float dz = cursor.posZ - prevZ;
-            total += (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-            prevX = cursor.posX;
-            prevY = cursor.posY;
-            prevZ = cursor.posZ;
-            TileEntity te = worldObj.getTileEntity(cursor.posX, cursor.posY, cursor.posZ);
-            if (te instanceof TileEntityModuleAssembler) break;
-            else if (te instanceof TileEntityMonorailPole pole) cursor = pole.getPrevPos();
-            else break;
-        }
-        return total;
     }
 
     /**
@@ -527,15 +411,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
         nbt.setTag("modules", list);
 
-        // link data - always write so readFromNBT can detect absence
-        nbt.setBoolean("hasLink", masterPos != null);
-        if (masterPos != null) {
-            nbt.setInteger("masterX", masterPos.posX);
-            nbt.setInteger("masterY", masterPos.posY);
-            nbt.setInteger("masterZ", masterPos.posZ);
-        }
-
-        nbt.setDouble("monorailYOffset", monorailYOffset);
     }
 
     /**
@@ -557,17 +432,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
         assembly = null;
 
-        // link data
-        if (nbt.getBoolean("hasLink")) {
-            masterPos = new ChunkCoordinates(
-                nbt.getInteger("masterX"),
-                nbt.getInteger("masterY"),
-                nbt.getInteger("masterZ"));
-        } else {
-            masterPos = null;
-        }
-
-        monorailYOffset = nbt.hasKey("monorailYOffset") ? nbt.getDouble("monorailYOffset") : 3.0;
     }
 
     /**
