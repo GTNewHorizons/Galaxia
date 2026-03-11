@@ -100,4 +100,9 @@ public class BlockGantry extends Block implements ITileEntityProvider {
     public boolean isOpaqueCube() {
         return false;
     }
+
+    @Override
+    public int getRenderType() {
+        return -1;
+    }
 }

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -7,16 +9,25 @@ import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Vec3;
+import net.minecraftforge.client.model.AdvancedModelLoader;
+import net.minecraftforge.client.model.IModelCustom;
 import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 public class TileEntityGantry extends TileEntity {
 
-    private final float SPEED = 0.1f;
+    private final float SPEED = 0.05f;
     private final Deque<TransitModule> queue = new ArrayDeque<>();
     private final static int DISPATCH_INTERVAL = 20;
     private int dispatchCooldown = 0;
@@ -26,11 +37,18 @@ public class TileEntityGantry extends TileEntity {
     private Vec3 currentDirection;
     private float progress = 0f;
     private TransitModule containedTransitModule;
+    private String modelName;
+    public int clientModuleId = -1;
+    public float clientPrevProgress = 0f;
+    public float clientProgress = 0f;
+
+    @SideOnly(Side.CLIENT)
+    private IModelCustom model;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation texture;
 
     @Override
     public void updateEntity() {
-        if (worldObj.isRemote) return;
-
         if (!pendingNeighbourCoords.isEmpty()) {
             for (int[] coords : pendingNeighbourCoords) {
                 TileEntity te = worldObj.getTileEntity(coords[0], coords[1], coords[2]);
@@ -39,6 +57,19 @@ public class TileEntityGantry extends TileEntity {
                 }
             }
             pendingNeighbourCoords.clear();
+        }
+        if (worldObj.isRemote) {
+            if (clientModuleId != -1) {
+                clientPrevProgress = clientProgress;
+                clientProgress += SPEED;
+                if (clientProgress > 1.0f) {
+                    clientProgress = 0f;
+                    clientPrevProgress = 0f;
+                    clientModuleId = -1;
+                    currentDirection = null;
+                }
+            }
+            return;
         }
 
         if (!queue.isEmpty()) {
@@ -49,8 +80,13 @@ public class TileEntityGantry extends TileEntity {
                 containedTransitModule = entry;
                 currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
                 progress = 0f;
-                dispatchCooldown = DISPATCH_INTERVAL;
+                if (this instanceof TileEntityGantryTerminal) {
+                    dispatchCooldown = DISPATCH_INTERVAL;
+                } else {
+                    dispatchCooldown = 0;
+                }
                 markDirty();
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
 
             }
         }
@@ -70,14 +106,52 @@ public class TileEntityGantry extends TileEntity {
         return currentDirection;
     }
 
+    // TODO: ADD MODEL AND TEXTURE FOR GANTRY
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getTexture() {
+        if (texture == null) {
+            texture = LocationGalaxia("textures/model/gantry" + modelName + "/texture.png");
+        }
+        return texture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getModel() {
+        if (model == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry" + modelName + "/model.obj");
+            model = AdvancedModelLoader.loadModel(loc);
+        }
+        return model;
+    }
+
+    public float getInterpolatedProgress(float partialTicks) {
+        return clientPrevProgress + (clientProgress - clientPrevProgress) * partialTicks;
+    }
+
+    public float getProgress() {
+        return progress;
+    }
+
+    public List<TileEntityGantry> getNeighbours() {
+        return neighbours;
+    }
+
     public void setDirection(Vec3 dir) {
         currentDirection = dir;
     }
 
     public void clearModule() {
         progress = 0f;
+        clientProgress = 0f;
+        clientPrevProgress = 0f;
+        clientModuleId = -1;
         containedTransitModule = null;
         currentDirection = null;
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     public boolean checkValidGraph() {
@@ -129,7 +203,10 @@ public class TileEntityGantry extends TileEntity {
 
     public void enqueueModule(TransitModule transit) {
         queue.addLast(transit);
-        if (dispatchCooldown <= 0) dispatchCooldown = DISPATCH_INTERVAL;
+        if (dispatchCooldown <= 0) if (this instanceof TileEntityGantryTerminal) {
+            dispatchCooldown = DISPATCH_INTERVAL;
+        }
+        dispatchCooldown = 0;
         markDirty();
     }
 
@@ -138,6 +215,7 @@ public class TileEntityGantry extends TileEntity {
         if (transit == null) {
             return false;
         }
+
         enqueueModule(transit);
         markDirty();
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -171,5 +249,52 @@ public class TileEntityGantry extends TileEntity {
             pendingNeighbourCoords
                 .add(new int[] { entry.getInteger("x"), entry.getInteger("y"), entry.getInteger("z"), });
         }
+    }
+
+    @Override
+    public Packet getDescriptionPacket() {
+        NBTTagCompound tag = new NBTTagCompound();
+        writeToNBT(tag);
+
+        tag.setBoolean("hasModule", containedTransitModule != null);
+        tag.setFloat("progress", progress);
+
+        if (currentDirection != null) {
+            tag.setFloat("dirX", (float) currentDirection.xCoord);
+            tag.setFloat("dirY", (float) currentDirection.yCoord);
+            tag.setFloat("dirZ", (float) currentDirection.zCoord);
+        }
+        if (containedTransitModule != null) {
+            tag.setInteger(
+                "moduleId",
+                containedTransitModule.module()
+                    .getId());
+        }
+
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+    }
+
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        NBTTagCompound tag = packet.func_148857_g();
+        readFromNBT(tag);
+
+        int incomingId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : null;
+
+        if (incomingId != -1 && clientModuleId == -1) {
+            clientProgress = 0f;
+            clientPrevProgress = 0f;
+
+        }
+
+        clientModuleId = incomingId;
+
+        if (tag.hasKey("dirX")) {
+            currentDirection = Vec3
+                .createVectorHelper(tag.getFloat("dirX"), tag.getFloat("dirY"), tag.getFloat("dirZ"));
+        } else {
+            currentDirection = null;
+        }
+
     }
 }

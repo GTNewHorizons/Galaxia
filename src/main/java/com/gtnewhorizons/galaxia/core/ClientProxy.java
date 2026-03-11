@@ -4,10 +4,12 @@ import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
+import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.SiloRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
@@ -31,6 +33,7 @@ public class ClientProxy extends CommonProxy {
 
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGantry.class, new GantryRenderer());
     }
 
     @Override

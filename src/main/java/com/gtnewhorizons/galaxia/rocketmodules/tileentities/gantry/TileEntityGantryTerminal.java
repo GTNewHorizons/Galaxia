@@ -9,6 +9,8 @@ import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 
 public class TileEntityGantryTerminal extends TileEntityGantry {
 
+    private final static int DISPATCH_INTERVAL = 20;
+
     private TileEntitySilo connectedSilo;
     private TileEntityModuleAssembler connectedAssembler;
 
