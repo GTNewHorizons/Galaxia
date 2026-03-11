@@ -1,8 +1,8 @@
 # Galaxia
-**Galaxia** is a cleanroom replacement for **Galaxy space**, **Galacticraft**, 
-and **Amun-Ra** made purely for **GT:New Horizons**.
-It improves on where they left off conceptually, 
-focuses on advanced rocketry, interplanetary travel and automation, as well as adding 
-a bunch of new and interesting features for space exploration. 
+**Galaxia** is a new content space mod made purely for **GT:New Horizons**, thats inspired by old space mods like galacticraft and galaxyspace, but is a ton more thematically aligned with how actual modern aerospace and rocket construction is done. Galaxia adds a ton of new mechanics:new space travel mechanics, such as large interplanetary and interstellar freight cargo ships, sci fi station thrusters and unique rocket fuels, modular space ship assembly in space, and a new simplified orbital dynamics simulation minigame that allows players to fly their rocket in a 2d GUI to where they want to go! No more teleporting to planets after selecing them in MC, you can actually pilot your ships! 
+
+Galaxia has a modular system for constructing and assembling rockets, and has multiblocks to automate the construction of rocket parts for you (called modules) and to fuel and assemble them. You get to design your own ship structure, and each individual rocket can be customised using the assortment of custom modeled snap to place rocket parts we have. We also plan to have some space race elements! Make your own flag, track your teams progress, and race eachother to the moon! Currently 3 multiblocks are planned, the rocket silo, which functions as your rocket assembler where you put the parts together and launch, the module assembler, and a research computer for planet surface science missions. (to add more content to each planet, and unlock you fun and unique items, and more module parts!)
+
+ 
 
 [This document](<https://docs.google.com/document/d/1I0_qtxRzEGk6KiOuNXg74zO9CaGzLLQCIhR4LTER1zo/edit?pli=1&tab=t.0>) covers all mechanics and features that are added by this mod
