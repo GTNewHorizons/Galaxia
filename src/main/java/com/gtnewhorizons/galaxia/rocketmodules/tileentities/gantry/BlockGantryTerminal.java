@@ -39,6 +39,12 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
 
         TileEntityGantryTerminal teg = (TileEntityGantryTerminal) te;
 
+        if (teg.getModule() != null) {
+            this.setBlockTextureName("diamond_block");
+        } else {
+            this.setBlockTextureName("iron_block");
+        }
+
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = x + (int) check_offset.xCoord;
             int cy = y + (int) check_offset.yCoord;
@@ -76,8 +82,21 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
         if (!(te instanceof TileEntityGantry)) {
             return false;
         }
+        if (player.isSneaking()) {
+            player.addChatComponentMessage(
+                new ChatComponentText("Is connected: " + GantryAPI.terminatesWithTerminals(world, x, y, z)));
+            return true;
+        }
+        TileEntityGantryTerminal teg = (TileEntityGantryTerminal) te;
         player.addChatComponentMessage(
-            new ChatComponentText("Is connected: " + GantryAPI.terminatesWithTerminals(world, x, y, z)));
+            new ChatComponentText(
+                "Module: " + teg.getModule()
+                    + ", Direction: "
+                    + teg.getDirection()
+                    + ", Silo: "
+                    + teg.getSilo()
+                    + ", Assembler"
+                    + teg.getAssembler()));
         return true;
 
     }

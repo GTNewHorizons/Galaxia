@@ -274,13 +274,24 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * @param ma The linked Module Assembler
      */
     public void addModule(int id, TileEntityModuleAssembler ma) {
-        modules.add(id);
-        ma.moduleMap.put(id, ma.moduleMap.get(id) - 1);
+        if (worldObj.isRemote) return;
+        ma.removeModule(id);
+        ma.sendModule(id, this);
         assembly = null;
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
+    }
+
+    public boolean receiveModule(int id) {
+        modules.add(id);
+        assembly = null;
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+        return true;
     }
 
     /**
@@ -291,6 +302,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * @return Boolean : True -> has the module
      */
     public boolean hasRemaining(int id, TileEntityModuleAssembler ma) {
+        if (ma == null) return false;
         return ma.moduleMap.getOrDefault(id, 0) > 0;
     }
 
@@ -309,17 +321,23 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      * @param ma The Module Assembler tile entity
      */
     public void returnModules(TileEntityModuleAssembler ma) {
+        if (worldObj.isRemote) return;
+        for (int mId : modules) {
+            GantryAPI.injectModule(ModuleRegistry.fromId(mId), ma, this, true);
+        }
+        modules.clear();
 
         for (Integer id : modules) {
             ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
         }
         assembly = null;
-        modules.clear();
+        sync();
+    }
+
+    public void sync() {
         markDirty();
-        ma.markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            worldObj.markBlockForUpdate(ma.xCoord, ma.yCoord, ma.zCoord);
         }
     }
 

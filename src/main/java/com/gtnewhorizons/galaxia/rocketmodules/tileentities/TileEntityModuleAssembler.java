@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData> {
@@ -95,6 +96,23 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
 
     public TileEntityGantryTerminal getGantryTerminal() {
         return this.gantryTerminal;
+    }
+
+    public void removeModule(int id) {
+        moduleMap.put(id, moduleMap.getOrDefault(id, 0) - 1);
+        markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    public void sendModule(int id, TileEntitySilo dest) {
+        GantryAPI.injectModule(ModuleRegistry.fromId(id), this, dest, false);
+    }
+
+    public void sync() {
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     @Override

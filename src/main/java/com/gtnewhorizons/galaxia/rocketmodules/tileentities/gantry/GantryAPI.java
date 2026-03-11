@@ -11,6 +11,11 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
+
 public final class GantryAPI {
 
     public static final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
@@ -20,6 +25,7 @@ public final class GantryAPI {
 
         Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
         Vec3.createVectorHelper(0, -1, -1) };
+
     private static int MAX_CHAIN_SIZE = 256;
 
     public static boolean terminatesWithTerminals(World world, int x, int y, int z) {
@@ -38,6 +44,34 @@ public final class GantryAPI {
             }
         }
         return true;
+    }
+
+    public static void injectModule(RocketModule module, TileEntityModuleAssembler ma, TileEntitySilo silo,
+        boolean returning) {
+        TileEntityGantryTerminal start, dest;
+        if (returning) {
+            start = silo.getGantryTerminal();
+            dest = ma.getGantryTerminal();
+        } else {
+            start = ma.getGantryTerminal();
+            dest = silo.getGantryTerminal();
+        }
+
+        start.acceptModule(new TransitModule(module, dest));
+        start.sync();
+    }
+
+    public static void findPathUpdateGantries(TileEntityGantryTerminal start, TileEntityGantryTerminal end) {
+        List<TileEntityGantry> nodes = findPath(start, end);
+        for (int i = 0; i < nodes.size() - 1; i++) {
+            TileEntityGantry current = nodes.get(i);
+            TileEntityGantry next = nodes.get(i + 1);
+            current.setDirection(
+                Vec3.createVectorHelper(
+                    next.xCoord - current.xCoord,
+                    next.yCoord - current.yCoord,
+                    next.zCoord - current.zCoord));
+        }
     }
 
     public static List<TileEntityGantryTerminal> findEndpointTerminals(TileEntityGantryTerminal start) {
@@ -70,7 +104,7 @@ public final class GantryAPI {
         }
     }
 
-    private static List<TileEntityGantry> findPath(TileEntityGantryTerminal start, TileEntityGantryTerminal end) {
+    private static List<TileEntityGantry> findPath(TileEntityGantry start, TileEntityGantryTerminal end) {
         List<TileEntityGantry> path = new ArrayList<>();
         Set<TileEntityGantry> visited = new HashSet<>();
 
@@ -79,6 +113,17 @@ public final class GantryAPI {
         }
 
         return Collections.emptyList();
+    }
+
+    public static Vec3 getDirectionTo(TileEntityGantry start, TileEntityGantryTerminal end) {
+
+        List<TileEntityGantry> nodes = findPath(start, end);
+        if (nodes.size() == 1) {
+            return Vec3.createVectorHelper(0, 0, 0);
+        }
+        TileEntityGantry next = nodes.get(1);
+        return Vec3
+            .createVectorHelper(next.xCoord - start.xCoord, next.yCoord - start.yCoord, next.zCoord - start.zCoord);
     }
 
     private static boolean dfsPath(TileEntityGantry current, TileEntityGantryTerminal end,

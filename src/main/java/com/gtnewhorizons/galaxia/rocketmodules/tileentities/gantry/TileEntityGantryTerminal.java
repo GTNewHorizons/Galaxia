@@ -5,6 +5,7 @@ import net.minecraft.util.Vec3;
 
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 
 public class TileEntityGantryTerminal extends TileEntityGantry {
 
@@ -27,15 +28,18 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
         return connectedAssembler;
     }
 
+    public void sync() {
+        markDirty();
+        if (!worldObj.isRemote) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+    }
+
     @Override
     public void updateEntity() {
         super.updateEntity();
-        TileEntityGantryTerminal te = this;
-        if (!(te instanceof TileEntityGantryTerminal)) {
-            return;
-        }
 
-        TileEntityGantryTerminal teg = (TileEntityGantryTerminal) te;
+        TileEntityGantryTerminal teg = this;
 
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = xCoord + (int) check_offset.xCoord;
@@ -50,8 +54,29 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
                 teg.connectAssembler(checkTema);
                 checkTema.setGantryTerminal(teg);
             }
-
         }
+
+    }
+
+    public boolean acceptModule(TransitModule transit, boolean start) {
+        super.acceptModule(transit);
+        if (!start) passModuleToConsumer();
+        return true;
+    }
+
+    public void passModuleToConsumer() {
+        if (worldObj.isRemote) return;
+
+        if (connectedSilo != null && connectedSilo.receiveModule(getModule().getId())) {
+            clearModule();
+            return;
+        } else if (connectedAssembler != null) {
+            connectedAssembler.addModule(getModule().getId());
+            connectedAssembler.sync();
+            clearModule();
+            return;
+        }
+        return;
     }
 
 }

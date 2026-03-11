@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;
@@ -10,19 +12,20 @@ import net.minecraft.util.Vec3;
 import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 
 public class TileEntityGantry extends TileEntity {
 
-    private final float SPEED = 0.05f;
+    private final float SPEED = 0.1f;
+    private final Deque<TransitModule> queue = new ArrayDeque<>();
+    private final static int DISPATCH_INTERVAL = 20;
+    private int dispatchCooldown = 0;
     private List<int[]> pendingNeighbourCoords = new ArrayList<>();
 
     List<TileEntityGantry> neighbours = new ArrayList<>();
-    private Vec3 sendDirection;
-    private Vec3 receiveDirection;
     private Vec3 currentDirection;
     private float progress = 0f;
-    private RocketModule containedModule;
-    private boolean isReceiving;
+    private TransitModule containedTransitModule;
 
     @Override
     public void updateEntity() {
@@ -38,7 +41,21 @@ public class TileEntityGantry extends TileEntity {
             pendingNeighbourCoords.clear();
         }
 
-        if (containedModule == null) return;
+        if (!queue.isEmpty()) {
+            if (dispatchCooldown > 0) {
+                dispatchCooldown--;
+            } else if (containedTransitModule == null) {
+                TransitModule entry = queue.poll();
+                containedTransitModule = entry;
+                currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
+                progress = 0f;
+                dispatchCooldown = DISPATCH_INTERVAL;
+                markDirty();
+
+            }
+        }
+
+        if (containedTransitModule == null) return;
 
         progress += SPEED;
 
@@ -47,6 +64,20 @@ public class TileEntityGantry extends TileEntity {
             tryHandOff();
         }
         markDirty();
+    }
+
+    public Vec3 getDirection() {
+        return currentDirection;
+    }
+
+    public void setDirection(Vec3 dir) {
+        currentDirection = dir;
+    }
+
+    public void clearModule() {
+        progress = 0f;
+        containedTransitModule = null;
+        currentDirection = null;
     }
 
     public boolean checkValidGraph() {
@@ -64,26 +95,26 @@ public class TileEntityGantry extends TileEntity {
 
     }
 
-    public void updateTransferDirection() {
-        if (isReceiving) {
-            currentDirection = receiveDirection;
-            return;
-        }
-        currentDirection = sendDirection;
-        return;
+    public RocketModule getModule() {
+        if (containedTransitModule == null) return null;
+        return containedTransitModule.module();
     }
 
     // TODO:
     public void tryHandOff() {
 
         TileEntityGantry next = getNeighbourGantry(currentDirection);
-        // TODO: Handle properly
-        if (next == null) return;
+        if (next == null || next == this) {
+            if (this instanceof TileEntityGantryTerminal teg) {
+                teg.passModuleToConsumer();
+            }
+            clearModule();
+            return;
+        }
 
-        if (next.acceptModule(containedModule, isReceiving)) {
-            containedModule = null;
-            currentDirection = null;
-            progress = 0f;
+        if (next.acceptModule(containedTransitModule)) {
+            clearModule();
+            if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
     }
 
@@ -96,12 +127,20 @@ public class TileEntityGantry extends TileEntity {
         return (te instanceof TileEntityGantry ? (TileEntityGantry) te : null);
     }
 
-    public boolean acceptModule(RocketModule module, boolean isReceiving) {
-        if (containedModule != null) return false;
-        containedModule = module;
-        this.isReceiving = isReceiving;
-        progress = 0f;
+    public void enqueueModule(TransitModule transit) {
+        queue.addLast(transit);
+        if (dispatchCooldown <= 0) dispatchCooldown = DISPATCH_INTERVAL;
         markDirty();
+    }
+
+    public boolean acceptModule(TransitModule transit) {
+        if (worldObj.isRemote) return false;
+        if (transit == null) {
+            return false;
+        }
+        enqueueModule(transit);
+        markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         return true;
 
     }
@@ -133,5 +172,4 @@ public class TileEntityGantry extends TileEntity {
                 .add(new int[] { entry.getInteger("x"), entry.getInteger("y"), entry.getInteger("z"), });
         }
     }
-
 }

@@ -7,6 +7,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
@@ -34,6 +35,11 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         }
         TileEntityGantry teg = (TileEntityGantry) te;
 
+        if (teg.getModule() != null) {
+            this.setBlockTextureName("diamond_block");
+        } else {
+            this.setBlockTextureName("iron_block");
+        }
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = x + (int) check_offset.xCoord;
             int cy = y + (int) check_offset.yCoord;
@@ -42,6 +48,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
                 teg.connect(checkTeg);
+
             }
         }
 
@@ -51,6 +58,13 @@ public class BlockGantry extends Block implements ITileEntityProvider {
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (!(te instanceof TileEntityGantry)) {
+            return false;
+        }
+        TileEntityGantry teg = (TileEntityGantry) te;
+        player.addChatComponentMessage(
+            new ChatComponentText("Module: " + teg.getModule() + ", Direction: " + teg.getDirection()));
         return true;
 
     }
