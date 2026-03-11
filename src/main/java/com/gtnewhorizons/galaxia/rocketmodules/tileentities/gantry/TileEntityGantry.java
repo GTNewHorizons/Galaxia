@@ -27,7 +27,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 public class TileEntityGantry extends TileEntity {
 
-    private final float SPEED = 0.05f;
+    private final float SPEED = 0.1f;
     private final Deque<TransitModule> queue = new ArrayDeque<>();
     private final static int DISPATCH_INTERVAL = 20;
     private int dispatchCooldown = 0;
@@ -37,11 +37,11 @@ public class TileEntityGantry extends TileEntity {
     private Vec3 currentDirection;
     private float progress = 0f;
     private TransitModule containedTransitModule;
-    private String modelName;
     public int clientModuleId = -1;
     public float clientPrevProgress = 0f;
     public float clientProgress = 0f;
     public Vec3 clientPrevDirection = null;
+    public List<Vec3> neighbourDirs = new ArrayList<>();
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
@@ -113,7 +113,7 @@ public class TileEntityGantry extends TileEntity {
     @SideOnly(Side.CLIENT)
     public ResourceLocation getTexture() {
         if (texture == null) {
-            texture = LocationGalaxia("textures/model/gantry" + modelName + "/texture.png");
+            texture = LocationGalaxia("textures/model/gantry/texture.png");
         }
         return texture;
     }
@@ -121,7 +121,7 @@ public class TileEntityGantry extends TileEntity {
     @SideOnly(Side.CLIENT)
     public IModelCustom getModel() {
         if (model == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry" + modelName + "/model.obj");
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/model.obj");
             model = AdvancedModelLoader.loadModel(loc);
         }
         return model;
@@ -163,6 +163,27 @@ public class TileEntityGantry extends TileEntity {
     public void connect(TileEntityGantry other) {
         this.neighbours.add(other);
         other.neighbours.add(this);
+        this.updateNeighbourDirs();
+        other.updateNeighbourDirs();
+        this.markDirty();
+        other.markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
+        }
+    }
+
+    public void updateNeighbourDirs() {
+        if (worldObj.isRemote) return;
+
+        neighbourDirs.clear();
+        for (TileEntityGantry neighbour : neighbours) {
+            neighbourDirs.add(
+                Vec3.createVectorHelper(
+                    neighbour.xCoord - xCoord,
+                    neighbour.yCoord - yCoord,
+                    neighbour.zCoord - zCoord));
+        }
     }
 
     public void disconnect(TileEntityGantry other) {
@@ -237,6 +258,16 @@ public class TileEntityGantry extends TileEntity {
             neighbourList.appendTag(neighbourTag);
         }
         tag.setTag("neighbours", neighbourList);
+
+        NBTTagList dirList = new NBTTagList();
+        for (Vec3 dir : neighbourDirs) {
+            NBTTagCompound entry = new NBTTagCompound();
+            entry.setDouble("x", dir.xCoord);
+            entry.setDouble("y", dir.yCoord);
+            entry.setDouble("z", dir.zCoord);
+            dirList.appendTag(entry);
+        }
+        tag.setTag("neighbourDirs", dirList);
     }
 
     @Override
@@ -250,6 +281,14 @@ public class TileEntityGantry extends TileEntity {
             NBTTagCompound entry = neighbourList.getCompoundTagAt(i);
             pendingNeighbourCoords
                 .add(new int[] { entry.getInteger("x"), entry.getInteger("y"), entry.getInteger("z"), });
+        }
+
+        neighbourDirs.clear();
+        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_LIST);
+        for (int i = 0; i < list.tagCount(); i++) {
+            NBTTagCompound entry = list.getCompoundTagAt(i);
+            neighbourDirs
+                .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
         }
     }
 

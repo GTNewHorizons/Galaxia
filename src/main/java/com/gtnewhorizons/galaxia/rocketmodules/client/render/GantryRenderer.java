@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.client.render;
 
+import java.util.List;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
@@ -18,21 +20,41 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class GantryRenderer extends TileEntitySpecialRenderer {
 
     private static final float MODULE_SCALE = 0.4f;
+    private static final float GANTRY_SCALE = 0.33f;
 
     @Override
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
         if (!(tileEntity instanceof TileEntityGantry)) return;
 
-        // Gantry block
-        // GL11.glPushMatrix();
-        // GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
+        TileEntityGantry gantry = (TileEntityGantry) tileEntity;
+        List<Vec3> neighbourDirs = gantry.neighbourDirs;
+        boolean isStraight = isStraightConnection(neighbourDirs);
+        GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
+        GL11.glRotatef(90f, 0, 1, 0);
+        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
 
-        // Minecraft.getMinecraft().getTextureManager().bindTexture(gantry.getTexture());
-        // gantry.getModel().renderAll();
-        // GL11.glPopMatrix();
+        if (isStraight) {
+            Vec3 dirGantry = neighbourDirs.get(0);
+            Vec3 forward = Vec3.createVectorHelper(1, 0, 0);
+            Vec3 dirNorm = dirGantry.normalize();
+            Vec3 axis = forward.crossProduct(dirNorm);
+            float angle = (float) Math.toDegrees(Math.acos(forward.dotProduct(dirNorm)));
+            if (axis.lengthVector() > 0.0001) {
+                GL11.glRotatef(angle, (float) axis.xCoord, (float) axis.yCoord, (float) axis.zCoord);
+            }
+
+        }
+        // Gantry block
+
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(gantry.getTexture());
+        gantry.getModel()
+            .renderAll();
+        GL11.glPopMatrix();
 
         // Module
-        TileEntityGantry gantry = (TileEntityGantry) tileEntity;
         int moduleId = gantry.clientModuleId;
         if (moduleId == -1) {
             return;
@@ -68,6 +90,19 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         GL11.glEnable(GL11.GL_LIGHTING);
         GL11.glPopMatrix();
+    }
+
+    public boolean isStraightConnection(List<Vec3> dirs) {
+        if (dirs.size() == 0) return false;
+        if (dirs.size() < 2) return true;
+
+        if (dirs.size() == 2) {
+            Vec3 prev = dirs.get(0);
+            Vec3 next = dirs.get(1);
+            return prev.addVector(next.xCoord, next.yCoord, next.zCoord)
+                .equals(Vec3.createVectorHelper(0, 0, 0)) ? true : false;
+        }
+        return false;
     }
 
 }

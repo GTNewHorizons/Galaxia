@@ -119,6 +119,20 @@ public final class GantryAPI {
 
         List<TileEntityGantry> nodes = findPath(start, end);
         if (nodes.size() == 1) {
+            if (nodes.get(0) instanceof TileEntityGantryTerminal tegt) {
+                if (tegt.getSilo() != null) {
+                    TileEntitySilo s = tegt.getSilo();
+                    return Vec3
+                        .createVectorHelper(s.xCoord - start.xCoord, s.yCoord - start.yCoord, s.zCoord - start.zCoord);
+                }
+
+                if (tegt.getAssembler() != null) {
+                    TileEntityModuleAssembler a = tegt.getAssembler();
+                    return Vec3
+                        .createVectorHelper(a.xCoord - start.xCoord, a.yCoord - start.yCoord, a.zCoord - start.zCoord);
+
+                }
+            }
             return Vec3.createVectorHelper(0, 0, 0);
         }
         TileEntityGantry next = nodes.get(1);
