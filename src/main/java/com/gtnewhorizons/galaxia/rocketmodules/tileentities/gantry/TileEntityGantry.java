@@ -41,6 +41,7 @@ public class TileEntityGantry extends TileEntity {
     public int clientModuleId = -1;
     public float clientPrevProgress = 0f;
     public float clientProgress = 0f;
+    public Vec3 clientPrevDirection = null;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
@@ -63,6 +64,7 @@ public class TileEntityGantry extends TileEntity {
                 clientPrevProgress = clientProgress;
                 clientProgress += SPEED;
                 if (clientProgress > 1.0f) {
+                    clientPrevDirection = currentDirection;
                     clientProgress = 0f;
                     clientPrevProgress = 0f;
                     clientModuleId = -1;
@@ -284,6 +286,7 @@ public class TileEntityGantry extends TileEntity {
         if (incomingId != -1 && clientModuleId == -1) {
             clientProgress = 0f;
             clientPrevProgress = 0f;
+            clientPrevDirection = null;
 
         }
 
