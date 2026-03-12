@@ -1,13 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
 
 public class CraterFeature extends Feature {
 

@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Random;
+
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
-
-import java.util.Random;
 
 public abstract class WorldGenGalaxiaBase extends WorldGenerator {
 

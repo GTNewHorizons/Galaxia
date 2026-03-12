@@ -351,7 +351,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 int localZ = z + this.rand.nextInt(16) - 8;
                 int localY = worldObj.getHeightValue(x, z);
                 feature.generate(worldObj, rand, localX, localY, localZ);
-                updateCoordinates.addAll(feature.getFeature().getUpdateCoordinates());
+                updateCoordinates.addAll(
+                    feature.getFeature()
+                        .getUpdateCoordinates());
             }
             // Generate cave features
             for (WorldGenGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
@@ -360,9 +362,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
                     int localX = x + this.rand.nextInt(16) - 8;
                     int localZ = z + this.rand.nextInt(16) - 8;
-                    int localY = rand.nextInt(Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
+                    int localY = rand.nextInt(
+                        Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
-                    updateCoordinates.addAll(feature.getFeature().getUpdateCoordinates());
+                    updateCoordinates.addAll(
+                        feature.getFeature()
+                            .getUpdateCoordinates());
                 }
             }
             // Generate wall features
@@ -371,7 +376,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 int localZ = z + this.rand.nextInt(16) - 8;
                 int localY = rand.nextInt(Math.max(1, worldObj.getHeightValue(x, z)));
                 feature.generate(worldObj, rand, localX, localY, localZ);
-                updateCoordinates.addAll(feature.getFeature().getUpdateCoordinates());
+                updateCoordinates.addAll(
+                    feature.getFeature()
+                        .getUpdateCoordinates());
             }
         }
 

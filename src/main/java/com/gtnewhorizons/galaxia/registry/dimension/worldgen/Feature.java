@@ -1,15 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import net.minecraft.block.Block;
-import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+
+import net.minecraft.block.Block;
+import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
 public abstract class Feature {
 
@@ -56,7 +56,7 @@ public abstract class Feature {
             Chunk chunkToAdd = world.getChunkFromChunkCoords(cx, cz);
             if (!touchedChunks.contains(chunkToAdd)) {
                 touchedChunks.add(chunkToAdd);
-                updateCoordinates.add(new Integer[]{cx << 4, cz << 4});
+                updateCoordinates.add(new Integer[] { cx << 4, cz << 4 });
             }
         }
     }

@@ -6,6 +6,7 @@ import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
 public class StalactiteFeature extends Feature {
+
     private final Block stalactiteBlock;
 
     public StalactiteFeature(Block stalactiteBlock) {
@@ -39,7 +40,13 @@ public class StalactiteFeature extends Feature {
     @Override
     public void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
         for (int clusterCount = 0; clusterCount < 16; clusterCount++) {
-            placeStalactite(world, random, x + random.nextInt(5) - 4, y + random.nextInt(5) - 4, z + random.nextInt(5) - 4, surfaceRequirements);
+            placeStalactite(
+                world,
+                random,
+                x + random.nextInt(5) - 4,
+                y + random.nextInt(5) - 4,
+                z + random.nextInt(5) - 4,
+                surfaceRequirements);
         }
     }
 }

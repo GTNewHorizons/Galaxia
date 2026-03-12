@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Random;
+
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
-import java.util.Random;
-
 public class WorldGenGalaxiaWall extends WorldGenGalaxiaBase {
+
     private final int rarity;
     private final Block[] wallRequirements;
 

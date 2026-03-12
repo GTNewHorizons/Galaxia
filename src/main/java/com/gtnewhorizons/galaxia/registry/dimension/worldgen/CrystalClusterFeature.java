@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Random;
+
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
-import java.util.Random;
-
 public class CrystalClusterFeature extends Feature {
+
     private final Block crystalBlock;
 
     public CrystalClusterFeature(Block crystalBlock) {
@@ -56,7 +57,8 @@ public class CrystalClusterFeature extends Feature {
                         zOffset += zTilt;
                         zStraightnessIterator = 0;
                     }
-                    if (!world.isAirBlock(combinedX, combinedY, combinedZ) && world.getBlock(combinedX, combinedY, combinedZ) != crystalBlock) {
+                    if (!world.isAirBlock(combinedX, combinedY, combinedZ)
+                        && world.getBlock(combinedX, combinedY, combinedZ) != crystalBlock) {
                         break;
                     }
                     setBlockFast(world, combinedX, combinedY, combinedZ, crystalBlock, 0);
