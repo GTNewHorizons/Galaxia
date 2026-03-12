@@ -67,8 +67,13 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         TileEntityGantry teg = (TileEntityGantry) te;
         player.addChatComponentMessage(
             new ChatComponentText(
-                "Module: " + teg
-                    .getModule() + ", Direction: " + teg.getDirection() + ", isJunction: " + teg.isJunction));
+                "Module: " + teg.getModule()
+                    + ", Direction: "
+                    + teg.getDirection()
+                    + ", isJunction: "
+                    + teg.isJunction
+                    + ", facing: "
+                    + teg.facing));
         return true;
 
     }

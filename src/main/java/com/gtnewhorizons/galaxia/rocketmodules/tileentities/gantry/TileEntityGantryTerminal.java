@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 
@@ -12,7 +15,9 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
     private final static int DISPATCH_INTERVAL = 20;
 
     private TileEntitySilo connectedSilo;
+    public Vec3 siloDir = null;
     private TileEntityModuleAssembler connectedAssembler;
+    public Vec3 assemblerDir = null;
 
     public void connectSilo(TileEntitySilo silo) {
         connectedSilo = silo;
@@ -79,6 +84,57 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
             return;
         }
         return;
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound tag) {
+        super.writeToNBT(tag);
+        if (connectedAssembler != null) {
+            NBTTagCompound assemblerTag = new NBTTagCompound();
+            assemblerTag.setInteger("x", connectedAssembler.xCoord);
+            assemblerTag.setInteger("y", connectedAssembler.yCoord);
+            assemblerTag.setInteger("z", connectedAssembler.zCoord);
+            tag.setTag("assembler", assemblerTag);
+        }
+        if (connectedSilo != null) {
+            NBTTagCompound siloTag = new NBTTagCompound();
+            siloTag.setInteger("x", connectedSilo.xCoord);
+            siloTag.setInteger("y", connectedSilo.yCoord);
+            siloTag.setInteger("z", connectedSilo.zCoord);
+            tag.setTag("assembler", siloTag);
+        }
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
+        if (tag.hasKey("assembler")) {
+            NBTTagCompound assemblerTag = tag.getCompoundTag("assembler");
+            assemblerDir = Vec3.createVectorHelper(
+                assemblerTag.getDouble("x"),
+                assemblerTag.getDouble("y"),
+                assemblerTag.getDouble("z"));
+        }
+    }
+
+    @Override
+    public Packet getDescriptionPacket() {
+        super.getDescriptionPacket();
+        NBTTagCompound tag = new NBTTagCompound();
+        writeToNBT(tag);
+
+        if (siloDir != null) {
+            tag.setFloat("siloX", (float) siloDir.xCoord);
+            tag.setFloat("siloY", (float) siloDir.yCoord);
+            tag.setFloat("siloZ", (float) siloDir.zCoord);
+        }
+
+        if (assemblerDir != null) {
+            tag.setFloat("assemblerX", (float) assemblerDir.xCoord);
+            tag.setFloat("assemblerY", (float) assemblerDir.yCoord);
+            tag.setFloat("assemblerZ", (float) assemblerDir.zCoord);
+        }
+
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
     }
 
 }

@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.rocketmodules.client.render;
 
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
 
+import java.util.List;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
@@ -13,6 +15,7 @@ import org.lwjgl.opengl.GL11;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -31,7 +34,15 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         // Render Gantry
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
-        GL11.glRotatef(90f, 0, 1, 0);
+        GL11.glRotatef(90, 0, 1, 0);
+        Vec3 facingDir = deriveFacing(gantry);
+        if (facingDir != null) {
+            Vec3 f = facingDir.normalize();
+            float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+            GL11.glRotatef(facingYaw, 0, 1, 0);
+        } else {
+            GL11.glRotatef(90, 0, 1, 0);
+        }
         GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
 
         Minecraft.getMinecraft()
@@ -132,4 +143,44 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         return t * t * (3f - 2f * t);
     }
 
+    private static Vec3 deriveFacing(TileEntityGantry gantry) {
+        List<Vec3> dirs = gantry.neighbourDirs;
+        if (dirs.isEmpty()) {
+            if (gantry instanceof TileEntityGantryTerminal tegt) {
+                if (tegt.assemblerDir != null) {
+                    Vec3 dir = tegt.assemblerDir;
+                    return Vec3
+                        .createVectorHelper(
+                            dir.xCoord - gantry.xCoord,
+                            dir.yCoord - gantry.yCoord,
+                            dir.zCoord - gantry.zCoord)
+                        .normalize();
+                }
+                if (tegt.siloDir != null) {
+                    Vec3 dir = tegt.siloDir;
+                    return Vec3
+                        .createVectorHelper(
+                            dir.xCoord - gantry.xCoord,
+                            dir.yCoord - gantry.yCoord,
+                            dir.zCoord - gantry.zCoord)
+                        .normalize();
+                }
+            }
+            return null;
+        }
+        if (dirs.size() == 1) return dirs.get(0)
+            .normalize();
+
+        Vec3 a = dirs.get(0)
+            .normalize();
+        Vec3 b = dirs.get(1)
+            .normalize();
+        boolean isStraight = Math.abs(a.xCoord + b.xCoord) < 0.01 && Math.abs(a.yCoord + b.yCoord) < 0.01
+            && Math.abs(a.zCoord + b.zCoord) < 0.01;
+        if (isStraight) return dirs.get(0);
+
+        // TODO: FIX CORNER CASES WITH NEW MODEL
+        return Vec3.createVectorHelper(a.zCoord + b.zCoord, a.yCoord + b.yCoord, -(a.xCoord + b.xCoord))
+            .normalize();
+    }
 }

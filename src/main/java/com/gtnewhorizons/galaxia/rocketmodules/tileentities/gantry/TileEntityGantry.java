@@ -42,6 +42,7 @@ public class TileEntityGantry extends TileEntity {
     public float clientProgress = 0f;
     public List<Vec3> neighbourDirs = new ArrayList<>();
     public boolean isJunction = false;
+    public Vec3 facing = null;
 
     private Vec3 incomingDirection;
     public Vec3 clientIncomingDirection;
@@ -198,6 +199,11 @@ public class TileEntityGantry extends TileEntity {
                     neighbour.yCoord - yCoord,
                     neighbour.zCoord - zCoord));
         }
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+        return;
     }
 
     public void disconnect(TileEntityGantry other) {
@@ -284,6 +290,7 @@ public class TileEntityGantry extends TileEntity {
         }
         tag.setTag("neighbourDirs", dirList);
         tag.setBoolean("isJunction", isJunction);
+
     }
 
     @Override
@@ -300,7 +307,7 @@ public class TileEntityGantry extends TileEntity {
         }
 
         neighbourDirs.clear();
-        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_LIST);
+        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_COMPOUND);
         for (int i = 0; i < list.tagCount(); i++) {
             NBTTagCompound entry = list.getCompoundTagAt(i);
             neighbourDirs
@@ -365,6 +372,5 @@ public class TileEntityGantry extends TileEntity {
         } else {
             clientIncomingDirection = null;
         }
-
     }
 }
