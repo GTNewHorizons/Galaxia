@@ -40,8 +40,11 @@ public class TileEntityGantry extends TileEntity {
     public int clientModuleId = -1;
     public float clientPrevProgress = 0f;
     public float clientProgress = 0f;
-    public Vec3 clientPrevDirection = null;
     public List<Vec3> neighbourDirs = new ArrayList<>();
+    public boolean isJunction = false;
+
+    private Vec3 incomingDirection;
+    public Vec3 clientIncomingDirection;
 
     @SideOnly(Side.CLIENT)
     private IModelCustom model;
@@ -64,7 +67,6 @@ public class TileEntityGantry extends TileEntity {
                 clientPrevProgress = clientProgress;
                 clientProgress += SPEED;
                 if (clientProgress > 1.0f) {
-                    clientPrevDirection = currentDirection;
                     clientProgress = 0f;
                     clientPrevProgress = 0f;
                     clientModuleId = -1;
@@ -89,11 +91,12 @@ public class TileEntityGantry extends TileEntity {
                 }
                 markDirty();
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-
             }
         }
 
-        if (containedTransitModule == null) return;
+        if (containedTransitModule == null) {
+            return;
+        }
 
         progress += SPEED;
 
@@ -106,6 +109,15 @@ public class TileEntityGantry extends TileEntity {
 
     public Vec3 getDirection() {
         return currentDirection;
+    }
+
+    public void updateJunctionCheck() {
+        if (worldObj.isRemote) return;
+        isJunction = neighbours.size() > 2 ? true : false;
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     // TODO: ADD MODEL AND TEXTURE FOR GANTRY
@@ -150,6 +162,8 @@ public class TileEntityGantry extends TileEntity {
         clientModuleId = -1;
         containedTransitModule = null;
         currentDirection = null;
+        incomingDirection = null;
+        clientIncomingDirection = null;
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -209,7 +223,7 @@ public class TileEntityGantry extends TileEntity {
             return;
         }
 
-        if (next.acceptModule(containedTransitModule)) {
+        if (next.acceptModule(containedTransitModule, currentDirection)) {
             clearModule();
             if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
@@ -229,17 +243,22 @@ public class TileEntityGantry extends TileEntity {
         markDirty();
     }
 
-    public boolean acceptModule(TransitModule transit) {
+    public boolean acceptModule(TransitModule transit, Vec3 fromDirection) {
         if (worldObj.isRemote) return false;
         if (transit == null) {
             return false;
         }
+        this.incomingDirection = fromDirection;
 
         enqueueModule(transit);
         markDirty();
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         return true;
 
+    }
+
+    public boolean acceptModule(TransitModule transit) {
+        return acceptModule(transit, null);
     }
 
     @Override
@@ -264,6 +283,7 @@ public class TileEntityGantry extends TileEntity {
             dirList.appendTag(entry);
         }
         tag.setTag("neighbourDirs", dirList);
+        tag.setBoolean("isJunction", isJunction);
     }
 
     @Override
@@ -286,6 +306,7 @@ public class TileEntityGantry extends TileEntity {
             neighbourDirs
                 .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
         }
+        isJunction = tag.getBoolean("isJunction");
     }
 
     @Override
@@ -300,6 +321,12 @@ public class TileEntityGantry extends TileEntity {
             tag.setFloat("dirX", (float) currentDirection.xCoord);
             tag.setFloat("dirY", (float) currentDirection.yCoord);
             tag.setFloat("dirZ", (float) currentDirection.zCoord);
+        }
+
+        if (incomingDirection != null) {
+            tag.setFloat("inDirX", (float) incomingDirection.xCoord);
+            tag.setFloat("inDirY", (float) incomingDirection.yCoord);
+            tag.setFloat("inDirZ", (float) incomingDirection.zCoord);
         }
         if (containedTransitModule != null) {
             tag.setInteger(
@@ -321,8 +348,6 @@ public class TileEntityGantry extends TileEntity {
         if (incomingId != -1 && clientModuleId == -1) {
             clientProgress = 0f;
             clientPrevProgress = 0f;
-            clientPrevDirection = null;
-
         }
 
         clientModuleId = incomingId;
@@ -332,6 +357,13 @@ public class TileEntityGantry extends TileEntity {
                 .createVectorHelper(tag.getFloat("dirX"), tag.getFloat("dirY"), tag.getFloat("dirZ"));
         } else {
             currentDirection = null;
+        }
+
+        if (tag.hasKey("inDirX")) {
+            clientIncomingDirection = Vec3
+                .createVectorHelper(tag.getFloat("inDirX"), tag.getFloat("inDirY"), tag.getFloat("inDirZ"));
+        } else {
+            clientIncomingDirection = null;
         }
 
     }

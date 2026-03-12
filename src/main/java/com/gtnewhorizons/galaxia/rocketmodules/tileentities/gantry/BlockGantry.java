@@ -48,6 +48,8 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
                 teg.connect(checkTeg);
+                teg.updateJunctionCheck();
+                checkTeg.updateJunctionCheck();
 
             }
         }
@@ -64,7 +66,9 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         }
         TileEntityGantry teg = (TileEntityGantry) te;
         player.addChatComponentMessage(
-            new ChatComponentText("Module: " + teg.getModule() + ", Direction: " + teg.getDirection()));
+            new ChatComponentText(
+                "Module: " + teg
+                    .getModule() + ", Direction: " + teg.getDirection() + ", isJunction: " + teg.isJunction));
         return true;
 
     }
@@ -86,6 +90,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
                 teg.disconnect(checkTeg);
+                teg.updateJunctionCheck();
             }
         }
 

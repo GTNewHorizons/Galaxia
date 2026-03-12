@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.rocketmodules.client.render;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
 
 import net.minecraft.client.Minecraft;
@@ -49,24 +48,48 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         }
         RocketModule module = ModuleRegistry.fromId(moduleId);
 
-        Vec3 dir = gantry.getDirection();
+        Vec3 outDir = gantry.getDirection();
+        Vec3 inDir = gantry.clientIncomingDirection;
         float progress = gantry.getInterpolatedProgress(partialTicks);
 
-        float dx = dir != null ? (float) dir.xCoord * progress : 0f;
-        float dy = dir != null ? (float) dir.yCoord * progress : 0f;
-        float dz = dir != null ? (float) dir.zCoord * progress : 0f;
+        boolean isCorner = inDir != null && outDir != null
+            && (Math.abs(inDir.xCoord - outDir.xCoord) > 0.01 || Math.abs(inDir.yCoord - outDir.yCoord) > 0.01
+                || Math.abs(inDir.zCoord - outDir.zCoord) > 0.01);
 
-        Vec3 dirNorm = dir.normalize();
+        float dx, dy, dz, yaw, pitch;
 
-        float yaw = (float) Math.toDegrees(Math.atan2(-dirNorm.xCoord, dirNorm.zCoord));
-        float pitch = (float) Math.toDegrees(Math.asin(-dirNorm.yCoord)) + 90f;
+        if (isCorner) {
+            float blend = smoothStep(progress);
+            dx = (float) (inDir.xCoord * progress * (1f - blend) + outDir.xCoord * progress * blend);
+            dy = (float) (inDir.yCoord * progress * (1f - blend) + outDir.yCoord * progress * blend);
+            dz = (float) (inDir.zCoord * progress * (1f - blend) + outDir.zCoord * progress * blend);
+
+            Vec3 inNorm = inDir.normalize();
+            Vec3 outNorm = outDir.normalize();
+
+            float inYaw = (float) Math.toDegrees(Math.atan2(inNorm.xCoord, inNorm.zCoord));
+            float outYaw = (float) Math.toDegrees(Math.atan2(outNorm.xCoord, outNorm.zCoord));
+            yaw = lerpAngle(inYaw, outYaw, blend);
+            float inPitch = (float) Math.toDegrees(Math.asin(-inNorm.yCoord));
+            float outPitch = (float) Math.toDegrees(Math.asin(-outNorm.yCoord));
+            pitch = lerpAngle(inPitch, outPitch, blend);
+
+        } else {
+            dx = outDir != null ? (float) outDir.xCoord * progress : 0f;
+            dy = outDir != null ? (float) outDir.yCoord * progress : 0f;
+            dz = outDir != null ? (float) outDir.zCoord * progress : 0f;
+            Vec3 norm = outDir != null ? outDir.normalize() : Vec3.createVectorHelper(0, 0, 1);
+
+            yaw = (float) Math.toDegrees(Math.atan2(norm.xCoord, norm.zCoord));
+            pitch = (float) Math.toDegrees(Math.asin(-norm.yCoord));
+        }
 
         // Render Module
         GL11.glPushMatrix();
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glTranslated(x + 0.5 + dx, y + dy - module.getWidth() / 2, z + 0.5 + dz);
         GL11.glRotatef(yaw, 0f, 1f, 0f);
-        GL11.glRotatef(pitch, 1f, 0f, 0f);
+        GL11.glRotatef(pitch + 90f, 1f, 0f, 0f);
 
         GL11.glScalef(MODULE_SCALE, MODULE_SCALE, MODULE_SCALE);
 
@@ -80,21 +103,14 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
 
         // Render Carriage
-        Vec3 dirNormCar = dir.normalize();
-
-        float carYaw = (float) Math.toDegrees(Math.atan2(-dirNormCar.xCoord, dirNormCar.zCoord));
-        float carPitch = (float) Math.toDegrees(Math.asin(-dirNormCar.yCoord));
 
         GL11.glPushMatrix();
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
 
-        GL11.glRotatef(carYaw, 0f, 1f, 0f);
-        GL11.glRotatef(carPitch, 1f, 0f, 0f);
+        GL11.glRotatef(yaw, 0f, 1f, 0f);
+        GL11.glRotatef(pitch, 1f, 0f, 0f);
         GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        LOG.info(dirNormCar.zCoord);
-        Vec3 offsets = getOffsets(dirNormCar);
-        GL11.glTranslated(offsets.xCoord, offsets.yCoord, offsets.zCoord);
 
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -105,22 +121,15 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();;
     }
 
-    public Vec3 getOffsets(Vec3 dir) {
-        if (dir.yCoord == 0) {
-            return Vec3.createVectorHelper(0, 0, 0);
-        }
-        double x, y, z;
-        if (dir.xCoord == 0) {
-
-            x = 0;
-            y = Math.abs(dir.yCoord);
-            z = -dir.yCoord * 2;
-        } else {
-            x = -Math.abs(dir.yCoord) * 2;
-            y = Math.abs(dir.yCoord);
-            z = 0;
-        }
-        return Vec3.createVectorHelper(x, y, z);
-
+    private static float lerpAngle(float a, float b, float t) {
+        float diff = b - a;
+        while (diff > 180f) diff -= 360f;
+        while (diff < -180f) diff += 360f;
+        return a + diff * t;
     }
+
+    private static float smoothStep(float t) {
+        return t * t * (3f - 2f * t);
+    }
+
 }
