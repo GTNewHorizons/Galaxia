@@ -29,7 +29,7 @@ public class TileEntityGantry extends TileEntity {
 
     private final float SPEED = 0.1f;
     private final Deque<TransitModule> queue = new ArrayDeque<>();
-    private final static int DISPATCH_INTERVAL = 20;
+    private final static int DISPATCH_INTERVAL = 40;
     private int dispatchCooldown = 0;
     private List<int[]> pendingNeighbourCoords = new ArrayList<>();
 
@@ -82,7 +82,7 @@ public class TileEntityGantry extends TileEntity {
                 containedTransitModule = entry;
                 currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
                 progress = 0f;
-                if (this instanceof TileEntityGantryTerminal) {
+                if (!queue.isEmpty() && this instanceof TileEntityGantryTerminal) {
                     dispatchCooldown = DISPATCH_INTERVAL;
                 } else {
                     dispatchCooldown = 0;
@@ -226,10 +226,6 @@ public class TileEntityGantry extends TileEntity {
 
     public void enqueueModule(TransitModule transit) {
         queue.addLast(transit);
-        if (dispatchCooldown <= 0) if (this instanceof TileEntityGantryTerminal) {
-            dispatchCooldown = DISPATCH_INTERVAL;
-        }
-        dispatchCooldown = 0;
         markDirty();
     }
 
