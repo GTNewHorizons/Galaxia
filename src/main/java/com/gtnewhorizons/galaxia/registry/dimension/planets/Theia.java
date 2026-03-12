@@ -5,6 +5,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
@@ -12,11 +13,16 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CraterFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CrystalClusterFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.FluidSpringFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StalactiteFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenCrater;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenTheiaStalactite;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
@@ -68,8 +74,8 @@ public class Theia extends BasePlanet {
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         builder.sky(true)
-            .fog(0.03f, 0.02f, 0.06f)
-            .skyColor(0.015f, 0.01f, 0.03f)
+            .fog(0, 0, 0)
+            .skyColor(0, 0, 0.001f)
             .avgGround(80)
             .biome(
                 createLandBiome(
@@ -201,11 +207,36 @@ public class Theia extends BasePlanet {
                     .addStrataLayer(PlanetBlocks.THEIA_ANORTHOSITE, 1, 32))
             .generateCaves(true)
             .surfaceFeature(
-                new WorldGenCrater(
+                new WorldGenGalaxiaSurface(
                     8,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
-                    PlanetBlocks.THEIA_TEKTITE))
-            .caveFeature(new WorldGenTheiaStalactite(64, new Block[] { PlanetBlocks.THEIA_ANORTHOSITE }))
+                    new CraterFeature(PlanetBlocks.THEIA_TEKTITE)))
+            .caveFeature(
+                new WorldGenGalaxiaCave(
+                    64,
+                    4,
+                    32,
+                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE },
+                    new StalactiteFeature(PlanetBlocks.THEIA_ANORTHOSITE)))
+            .caveFeature(
+                new WorldGenGalaxiaCave(
+                    64,
+                    32,
+                    64,
+                    new Block[] { PlanetBlocks.THEIA_ANDESITE },
+                    new StalactiteFeature(PlanetBlocks.THEIA_ANDESITE)))
+            .caveFeature(
+                new WorldGenGalaxiaCave(
+                    32,
+                    4,
+                    32,
+                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE },
+                    new CrystalClusterFeature(GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get())))
+            .wallFeature(
+                new WorldGenGalaxiaWall(
+                    2,
+                    new Block[] { PlanetBlocks.THEIA_ANDESITE, PlanetBlocks.THEIA_ANORTHOSITE },
+                    new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock())))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
@@ -223,10 +254,10 @@ public class Theia extends BasePlanet {
                     .addStrataLayer(PlanetBlocks.THEIA_GABBRO, 1, 32))
             .generateCaves(false)
             .surfaceFeature(
-                new WorldGenCrater(
+                new WorldGenGalaxiaSurface(
                     32,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
-                    PlanetBlocks.THEIA_TEKTITE))
+                    new CraterFeature(PlanetBlocks.THEIA_TEKTITE)))
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 56, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .oceanCracks(0.3F, PlanetBlocks.THEIA_MAGMA, 4)

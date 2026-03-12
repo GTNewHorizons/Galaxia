@@ -2,8 +2,10 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
@@ -337,6 +339,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         // Get local biome
         BiomeGenBase localBiome = worldObj.getWorldChunkManager()
             .getBiomeGenAt(x, z);
+        Set<Integer[]> updateCoordinates = new HashSet<>();
         if (localBiome instanceof BiomeGenSpace spaceBiome) {
             if (spaceBiome.getSurfaceFeatures()
                 .isEmpty()) {
@@ -348,17 +351,44 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 int localZ = z + this.rand.nextInt(16) - 8;
                 int localY = worldObj.getHeightValue(x, z);
                 feature.generate(worldObj, rand, localX, localY, localZ);
+                updateCoordinates.addAll(
+                    feature.getFeature()
+                        .getUpdateCoordinates());
             }
             // Generate cave features
             for (WorldGenGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
                 int maximumHeight = feature.getMaximumHeight();
+                int minimumHeight = feature.getMinimumHeight();
                 for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
                     int localX = x + this.rand.nextInt(16) - 8;
                     int localZ = z + this.rand.nextInt(16) - 8;
-                    int localY = rand.nextInt(Math.min(worldObj.getHeightValue(x, z), maximumHeight) + 1) + 4;
+                    int localY = rand.nextInt(
+                        Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
+                    updateCoordinates.addAll(
+                        feature.getFeature()
+                            .getUpdateCoordinates());
                 }
             }
+            // Generate wall features
+            for (WorldGenGalaxiaWall feature : spaceBiome.getWallFeatures()) {
+                int localX = x + this.rand.nextInt(16) - 8;
+                int localZ = z + this.rand.nextInt(16) - 8;
+                int localY = rand.nextInt(Math.max(1, worldObj.getHeightValue(x, z)));
+                feature.generate(worldObj, rand, localX, localY, localZ);
+                updateCoordinates.addAll(
+                    feature.getFeature()
+                        .getUpdateCoordinates());
+            }
+        }
+
+        // Update affected chunks
+        for (Integer[] coordinates : updateCoordinates) {
+            int localX = coordinates[0];
+            int localZ = coordinates[1];
+            Block originalBlock = worldObj.getBlock(localX, 0, localZ);
+            int originalMeta = worldObj.getBlockMetadata(localX, 0, localZ);
+            worldObj.setBlock(localX, 0, localZ, originalBlock, originalMeta, 3);
         }
     }
 

@@ -5,15 +5,15 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
-public class WorldGenGalaxiaSurface extends WorldGenGalaxiaBase {
+public class WorldGenGalaxiaWall extends WorldGenGalaxiaBase {
 
     private final int rarity;
-    private final Block[] surfaceRequirements;
+    private final Block[] wallRequirements;
 
-    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature) {
+    public WorldGenGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature) {
         super(feature);
         this.rarity = rarity;
-        this.surfaceRequirements = surfaceRequirements;
+        this.wallRequirements = wallRequirements;
     }
 
     @Override
@@ -21,8 +21,8 @@ public class WorldGenGalaxiaSurface extends WorldGenGalaxiaBase {
         if (random.nextInt(rarity) > 0) {
             return true;
         }
-        net.minecraft.block.Block surfaceBlock = world.getBlock(x, y - 1, z);
-        for (Block surfaceRequirement : surfaceRequirements) {
+        net.minecraft.block.Block surfaceBlock = world.getBlock(x, y, z);
+        for (Block surfaceRequirement : wallRequirements) {
             if (surfaceBlock == surfaceRequirement) {
                 return false;
             }
@@ -35,7 +35,7 @@ public class WorldGenGalaxiaSurface extends WorldGenGalaxiaBase {
         if (stopGeneration(world, random, x, y, z)) {
             return false;
         }
-        feature.generateFeature(world, random, x, y, z, surfaceRequirements);
+        feature.generateFeature(world, random, x, y, z, wallRequirements);
         feature.finishGeneration();
         return true;
     }

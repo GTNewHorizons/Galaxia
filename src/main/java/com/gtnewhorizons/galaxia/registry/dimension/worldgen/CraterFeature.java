@@ -1,34 +1,25 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
 
-public class WorldGenCrater extends WorldGenGalaxiaSurface {
+public class CraterFeature extends Feature {
 
     private final Block tektite;
 
-    public WorldGenCrater(int rarity, Block[] surfaceRequirements, Block tektite) {
-        super(rarity, surfaceRequirements);
+    public CraterFeature(Block tektite) {
         this.tektite = tektite;
     }
 
     @Override
-    public boolean generate(World world, Random random, int x, int y, int z) {
-        if (!super.generate(world, random, x, y, z)) {
-            return false;
-        }
+    public void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
         int diameter = 16 + random.nextInt(16);
         int radius = diameter / 2;
         int squaredCraterRadius = radius * radius;
         int heightOffset = radius / 2;
-
-        Set<Chunk> touchedChunks = new HashSet<>();
 
         for (int localX = -radius; localX <= radius; localX++) {
             for (int localZ = -radius; localZ <= radius; localZ++) {
@@ -48,21 +39,9 @@ public class WorldGenCrater extends WorldGenGalaxiaSurface {
                     if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.1)) {
                         int wx = localX + x, wy = localY + y + heightOffset, wz = localZ + z;
                         setBlockFast(world, wx, wy, wz, Blocks.air, 0);
-                        int cx = wx >> 4;
-                        int cz = wz >> 4;
-                        if (world.getChunkProvider()
-                            .chunkExists(cx, cz)) {
-                            touchedChunks.add(world.getChunkFromChunkCoords(cx, cz));
-                        }
                     }
                 }
             }
         }
-
-        for (Chunk chunk : touchedChunks) {
-            chunk.generateSkylightMap();
-        }
-
-        return true;
     }
 }
