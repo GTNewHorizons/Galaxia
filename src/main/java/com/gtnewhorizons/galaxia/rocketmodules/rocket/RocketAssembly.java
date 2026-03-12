@@ -44,6 +44,7 @@ public final class RocketAssembly {
             placements = new ArrayList<>();
             double y = 0.0;
 
+            // Tanks and Engines
             List<RocketModule> propulsion = modules.stream()
                 .filter(m -> m instanceof EngineModule || m instanceof FuelTankModule)
                 .collect(Collectors.toList());
@@ -56,7 +57,6 @@ public final class RocketAssembly {
                         .getHeight())
                 .max()
                 .orElse(0.0);
-
             List<RocketModule> otherStackables = modules.stream()
                 .filter(
                     m -> m instanceof IStackableModule && !(m instanceof EngineModule)
@@ -72,11 +72,32 @@ public final class RocketAssembly {
                 .max()
                 .orElse(afterPropulsion);
 
+            // Rocket Core
+            List<RocketModule> cores = modules.stream()
+                .filter(RocketCoreModule.class::isInstance)
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(cores, afterClustered));
+
+            // Non Capsule Linears
             List<RocketModule> linears = modules.stream()
-                .filter(m -> !(m instanceof IStackableModule))
+                .filter(m -> !(m instanceof IStackableModule) && !(m instanceof CapsuleModule))
                 .collect(Collectors.toList());
 
             placements.addAll(new LinearPlacementRule().apply(linears, afterClustered));
+            double beforeCommand = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(afterClustered);
+
+            // Capsule Module
+            List<RocketModule> capsules = modules.stream()
+                .filter(CapsuleModule.class::isInstance)
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(capsules, beforeCommand));
         }
         return placements;
     }
