@@ -5,7 +5,6 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -33,15 +32,11 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailAnimationState;
-import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.CapsuleRequiredValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRatioValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
@@ -282,11 +277,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         if (worldObj.isRemote) return;
         ma.removeModule(id);
         ma.sendModule(id, this);
-        if (!canBuild(id))
-
-            return;
-        modules.add(id);
-        ma.moduleMap.put(id, ma.moduleMap.get(id) - 1);
         assembly = null;
         markDirty();
         if (worldObj != null) {
@@ -302,17 +292,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
         return true;
-    public boolean canBuild(int moduleId) {
-        EnumModuleCategory category = ModuleRegistry.fromId(moduleId)
-            .getCategory();
-        List<RocketModule> moduleList = modules.stream()
-            .map(m -> ModuleRegistry.fromId(m))
-            .collect(Collectors.toList());
-        if (category != EnumModuleCategory.CORE) return true;
-        if (moduleList.stream()
-            .filter(RocketCoreModule.class::isInstance)
-            .count() == 0) return true;
-        return false;
     }
 
     /**
