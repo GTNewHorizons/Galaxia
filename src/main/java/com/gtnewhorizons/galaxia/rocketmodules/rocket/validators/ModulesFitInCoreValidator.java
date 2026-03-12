@@ -60,7 +60,7 @@ public class ModulesFitInCoreValidator implements IRocketValidator {
             if (entry.getValue() > limit) return new ValidationResult(
                 false,
                 String.format(
-                    "Only %d %s allowed in a %s rocket",
+                    "Only %d %s supported in a %s rocket",
                     limit,
                     moduleConversions.get(entry.getKey()),
                     tierConversions.get(core.getTier())));
