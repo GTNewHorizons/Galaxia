@@ -19,9 +19,8 @@ import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 public final class GantryAPI {
 
     public static final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
-        Vec3.createVectorHelper(0, 1, 0), Vec3.createVectorHelper(0, -1, 0), Vec3.createVectorHelper(0, 0, 1),
-        Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0), Vec3.createVectorHelper(1, -1, 0),
-        Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
+        Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0),
+        Vec3.createVectorHelper(1, -1, 0), Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
 
         Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
         Vec3.createVectorHelper(0, -1, -1) };

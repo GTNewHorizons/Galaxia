@@ -22,6 +22,9 @@ import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGan
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
+/**
+ * Renderer to handle gantry blocks, modules, and carriage rendering
+ */
 @SideOnly(Side.CLIENT)
 public class GantryRenderer extends TileEntitySpecialRenderer {
 
@@ -42,11 +45,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         }
         if (dirs.size() == 1) {
             Vec3 dir = dirs.get(0);
-            if (dir.yCoord != 0 && (dir.xCoord != 0 || dir.zCoord != 0)) {
-                renderUpBeam(gantry, x, y, z, Vec3.createVectorHelper(-dir.xCoord, 0, -dir.zCoord), dir);
-            } else {
-                renderFullBeam(gantry, x, y, z, dir);
-            }
+            renderFullBeam(gantry, x, y, z, dir);
 
         }
 
@@ -54,6 +53,10 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         // Neighbour dirs contains all neighbours to block
 
         // First pass, straight beams:
+        boolean errorFlag = true;
+        if (dirs.size() < 2) {
+            errorFlag = false;
+        }
         for (int i = 0; i < dirs.size(); i++) {
             for (int j = i + 1; j < dirs.size(); j++) {
                 Vec3 a = dirs.get(i);
@@ -62,27 +65,29 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                 if (opp && isCardinal(a)) {
                     // If cardinal and has posite, render full beam
                     renderFullBeam(gantry, x, y, z, a);
-                    continue;
+                    errorFlag = false;
                 } else if (opp && !isCardinal(a)) {
                     // If not cardinal and has opposite, render diagonal beam
                     Vec3 upDir = (a.yCoord >= 0) ? a : b;
                     renderDiagonalBeam(gantry, x, y, z, upDir);
-                    continue;
+                    errorFlag = false;
                 } else if (!opp && isCardinal(a) && isCardinal(b)) {
                     // If cardinal and not opposite, render corner beam
                     renderCornerBeam(gantry, x, y, z, a, b);
-                    continue;
+                    errorFlag = false;
                 } else if (!opp && isCardinal(a) != isCardinal(b) && isUpBendPair(a, b)) {
                     // If not cardinal, and not opposite, render up bend
                     Vec3 horiz = isCardinal(a) ? a : b;
                     Vec3 elev = isCardinal(a) ? b : a;
                     renderUpBeam(gantry, x, y, z, horiz, elev);
-                    continue;
+                    errorFlag = false;
                 } else if (!opp & isCardinal(a) == isCardinal(b) && isOppositeHorizontal(a, b)) {
                     renderUBend(gantry, x, y, z, a);
+                    errorFlag = false;
                 }
             }
         }
+        if (errorFlag) renderErrorBeam(gantry, x, y, z);
 
         // Module
         int moduleId = gantry.clientModuleId;
@@ -161,7 +166,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         AdvancedModelLoader.loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"))
             .renderAll();
         GL11.glEnable(GL11.GL_LIGHTING);
-        GL11.glPopMatrix();;
+        GL11.glPopMatrix();
     }
 
     // LERP HELPERS
@@ -212,7 +217,39 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         g.getModel()
             .renderAll();
         GL11.glPopMatrix();
+    }
 
+    private static void renderErrorBeam(TileEntityGantry g, double x, double y, double z) {
+
+        Vec3 f = Vec3.createVectorHelper(1, 0, 0);
+        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+
+        GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
+        GL11.glRotatef(90, 0, 1, 0);
+        GL11.glRotatef(facingYaw, 0, 1, 0);
+        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(g.getErrorTexture());
+        g.getModel()
+            .renderAll();
+        GL11.glPopMatrix();
+
+        f = Vec3.createVectorHelper(0, 0, 1);
+        facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+
+        GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
+        GL11.glRotatef(90, 0, 1, 0);
+        GL11.glRotatef(facingYaw, 0, 1, 0);
+        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(g.getErrorTexture());
+        g.getModel()
+            .renderAll();
+        GL11.glPopMatrix();
     }
 
     private static void renderDiagonalBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {

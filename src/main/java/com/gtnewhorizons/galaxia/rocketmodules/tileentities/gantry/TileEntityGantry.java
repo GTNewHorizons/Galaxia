@@ -68,6 +68,14 @@ public class TileEntityGantry extends TileEntity {
     @SideOnly(Side.CLIENT)
     private ResourceLocation uBendTexture;
 
+    @SideOnly(Side.CLIENT)
+    private IModelCustom uBendHalfModel;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation uBendHalfTexture;
+
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation errorTexture;
+
     @Override
     public void updateEntity() {
         if (!pendingNeighbourCoords.isEmpty()) {
@@ -222,6 +230,31 @@ public class TileEntityGantry extends TileEntity {
             uBendModel = AdvancedModelLoader.loadModel(loc);
         }
         return uBendModel;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getUBendHalfTexture() {
+        if (uBendHalfTexture == null) {
+            uBendHalfTexture = LocationGalaxia("textures/model/gantry/ubendhalf.png");
+        }
+        return uBendHalfTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getUBendHalfModel() {
+        if (uBendHalfModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/ubendhalf.obj");
+            uBendHalfModel = AdvancedModelLoader.loadModel(loc);
+        }
+        return uBendHalfModel;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getErrorTexture() {
+        if (errorTexture == null) {
+            errorTexture = LocationGalaxia("textures/model/gantry/error.png");
+        }
+        return errorTexture;
     }
 
     public float getInterpolatedProgress(float partialTicks) {
