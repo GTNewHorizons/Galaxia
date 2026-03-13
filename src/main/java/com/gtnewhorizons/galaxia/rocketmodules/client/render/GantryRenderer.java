@@ -14,7 +14,10 @@ import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -31,6 +34,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         TileEntityGantry gantry = (TileEntityGantry) tileEntity;
         List<Vec3> dirs = gantry.neighbourDirs;
+        addAssemblerAndSiloIfRequired(gantry, dirs);
         if (dirs.isEmpty()) {
             // Render default variant
             renderFullBeam(gantry, x, y, z, Vec3.createVectorHelper(1, 0, 0));
@@ -263,5 +267,29 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             .renderAll();
         GL11.glPopMatrix();
 
+    }
+
+    public void addAssemblerAndSiloIfRequired(TileEntityGantry gantry, List<Vec3> dirs) {
+        if (!(gantry instanceof TileEntityGantryTerminal)) return;
+        TileEntityGantryTerminal tegt = (TileEntityGantryTerminal) gantry;
+        Vec3 dirToCheck;
+        if (tegt.getAssembler() != null) {
+            TileEntityModuleAssembler ma = tegt.getAssembler();
+            dirToCheck = Vec3
+                .createVectorHelper(ma.xCoord - gantry.xCoord, ma.yCoord - gantry.yCoord, ma.zCoord - gantry.zCoord);
+        } else if (tegt.getSilo() != null) {
+            TileEntitySilo s = tegt.getSilo();
+            dirToCheck = Vec3
+                .createVectorHelper(s.xCoord - gantry.xCoord, s.yCoord - gantry.yCoord, s.zCoord - gantry.zCoord);
+        } else {
+            return;
+        }
+
+        for (Vec3 dir : dirs) {
+            if (dir.xCoord == dirToCheck.xCoord && dir.yCoord == dirToCheck.yCoord && dir.zCoord == dirToCheck.zCoord) {
+                return;
+            }
+        }
+        dirs.add(dirToCheck);
     }
 }

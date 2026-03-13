@@ -243,6 +243,8 @@ public class TileEntityGantry extends TileEntity {
         other.neighbours.add(this);
         this.updateNeighbourDirs();
         other.updateNeighbourDirs();
+        this.updateJunctionCheck();
+        other.updateJunctionCheck();
         this.markDirty();
         other.markDirty();
         if (worldObj != null) {
@@ -272,6 +274,14 @@ public class TileEntityGantry extends TileEntity {
     public void disconnect(TileEntityGantry other) {
         this.neighbours.remove(other);
         other.neighbours.remove(this);
+        this.updateNeighbourDirs();
+        other.updateNeighbourDirs();
+        this.updateJunctionCheck();
+        other.updateJunctionCheck();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
+        }
 
     }
 

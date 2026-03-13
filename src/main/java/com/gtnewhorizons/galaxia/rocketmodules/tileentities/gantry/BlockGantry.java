@@ -48,8 +48,6 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
                 teg.connect(checkTeg);
-                teg.updateJunctionCheck();
-                checkTeg.updateJunctionCheck();
 
             }
         }
@@ -95,7 +93,6 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkTeg) {
                 teg.disconnect(checkTeg);
-                teg.updateJunctionCheck();
             }
         }
 
