@@ -51,6 +51,18 @@ public class TileEntityGantry extends TileEntity {
     private IModelCustom model;
     @SideOnly(Side.CLIENT)
     private ResourceLocation texture;
+    @SideOnly(Side.CLIENT)
+    private IModelCustom diagonalModel;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation diagonalTexture;
+    @SideOnly(Side.CLIENT)
+    private IModelCustom cornerModel;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation cornerTexture;
+    @SideOnly(Side.CLIENT)
+    private IModelCustom upBendModel;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation upBendTexture;
 
     @Override
     public void updateEntity() {
@@ -138,6 +150,57 @@ public class TileEntityGantry extends TileEntity {
             model = AdvancedModelLoader.loadModel(loc);
         }
         return model;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getDiagonalTexture() {
+        if (diagonalTexture == null) {
+            diagonalTexture = LocationGalaxia("textures/model/gantry/diagonal.png");
+        }
+        return diagonalTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getDiagonalModel() {
+        if (diagonalModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/diagonal.obj");
+            diagonalModel = AdvancedModelLoader.loadModel(loc);
+        }
+        return diagonalModel;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getCornerTexture() {
+        if (cornerTexture == null) {
+            cornerTexture = LocationGalaxia("textures/model/gantry/corner.png");
+        }
+        return cornerTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getCornerModel() {
+        if (cornerModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/corner.obj");
+            cornerModel = AdvancedModelLoader.loadModel(loc);
+        }
+        return cornerModel;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getUpBendTexture() {
+        if (upBendTexture == null) {
+            upBendTexture = LocationGalaxia("textures/model/gantry/upbend.png");
+        }
+        return upBendTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getUpBendModel() {
+        if (upBendModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/upbend.obj");
+            upBendModel = AdvancedModelLoader.loadModel(loc);
+        }
+        return upBendModel;
     }
 
     public float getInterpolatedProgress(float partialTicks) {
@@ -348,15 +411,25 @@ public class TileEntityGantry extends TileEntity {
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
         NBTTagCompound tag = packet.func_148857_g();
-        readFromNBT(tag);
 
-        int incomingId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : null;
+        // DO NOT call readFromNBT(tag) here — it will clobber xCoord/yCoord/zCoord
 
+        // Re-read neighbourDirs manually
+        neighbourDirs.clear();
+        NBTTagList list = tag.getTagList("neighbourDirs", NBT.TAG_COMPOUND);
+        for (int i = 0; i < list.tagCount(); i++) {
+            NBTTagCompound entry = list.getCompoundTagAt(i);
+            neighbourDirs
+                .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
+        }
+        isJunction = tag.getBoolean("isJunction");
+
+        // Module/direction sync
+        int incomingId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : -1;
         if (incomingId != -1 && clientModuleId == -1) {
             clientProgress = 0f;
             clientPrevProgress = 0f;
         }
-
         clientModuleId = incomingId;
 
         if (tag.hasKey("dirX")) {
@@ -373,4 +446,5 @@ public class TileEntityGantry extends TileEntity {
             clientIncomingDirection = null;
         }
     }
+
 }
