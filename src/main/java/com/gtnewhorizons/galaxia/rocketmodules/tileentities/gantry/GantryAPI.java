@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -18,14 +21,16 @@ import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 
 public final class GantryAPI {
 
+    private static final float HORIZONTAL_COST = 1f;
+    private static final float DIAGONAL_COST = 1.5f;
+    private static int MAX_CHAIN_SIZE = 256;
+
     public static final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
         Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0),
         Vec3.createVectorHelper(1, -1, 0), Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
 
         Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
         Vec3.createVectorHelper(0, -1, -1) };
-
-    private static int MAX_CHAIN_SIZE = 256;
 
     public static boolean terminatesWithTerminals(World world, int x, int y, int z) {
         TileEntity te = world.getTileEntity(x, y, z);
@@ -60,19 +65,6 @@ public final class GantryAPI {
         start.sync();
     }
 
-    public static void findPathUpdateGantries(TileEntityGantryTerminal start, TileEntityGantryTerminal end) {
-        List<TileEntityGantry> nodes = findPath(start, end);
-        for (int i = 0; i < nodes.size() - 1; i++) {
-            TileEntityGantry current = nodes.get(i);
-            TileEntityGantry next = nodes.get(i + 1);
-            current.setDirection(
-                Vec3.createVectorHelper(
-                    next.xCoord - current.xCoord,
-                    next.yCoord - current.yCoord,
-                    next.zCoord - current.zCoord));
-        }
-    }
-
     public static List<TileEntityGantryTerminal> findEndpointTerminals(TileEntityGantryTerminal start) {
         List<TileEntityGantry> ends = new ArrayList<>();
         dfsEndpoints(start, start, new HashSet<>(), ends, 0);
@@ -103,20 +95,53 @@ public final class GantryAPI {
         }
     }
 
-    private static List<TileEntityGantry> findPath(TileEntityGantry start, TileEntityGantryTerminal end) {
-        List<TileEntityGantry> path = new ArrayList<>();
-        Set<TileEntityGantry> visited = new HashSet<>();
+    private static List<TileEntityGantry> dijkstraPath(TileEntityGantry start, TileEntityGantryTerminal end) {
+        Map<TileEntityGantry, Float> dist = new HashMap<>();
+        Map<TileEntityGantry, TileEntityGantry> prev = new HashMap<>();
+        PriorityQueue<TileEntityGantry> queue = new PriorityQueue<>(
+            Comparator.comparingDouble(n -> dist.getOrDefault(n, Float.MAX_VALUE)));
 
-        if (dfsPath(start, end, visited, path, 0)) {
-            return path;
+        dist.put(start, 0f);
+        queue.add(start);
+        int visited = 0;
+
+        while (!queue.isEmpty()) {
+            TileEntityGantry current = queue.poll();
+            if (++visited > MAX_CHAIN_SIZE) break;
+            if (current == end) break;
+
+            float currentDist = dist.getOrDefault(current, Float.MAX_VALUE);
+
+            for (TileEntityGantry neighbour : current.getNeighbours()) {
+                float stepCost = isHorizontalStep(current, neighbour) ? HORIZONTAL_COST : DIAGONAL_COST;
+                float newDist = currentDist + stepCost;
+
+                if (newDist < dist.getOrDefault(neighbour, Float.MAX_VALUE)) {
+                    dist.put(neighbour, newDist);
+                    prev.put(neighbour, current);
+                    // Update priority in queue
+                    queue.remove(neighbour);
+                    queue.add(neighbour);
+                }
+            }
         }
 
-        return Collections.emptyList();
+        if (!prev.containsKey(end) && start != end) return null;
+        List<TileEntityGantry> path = new ArrayList<>();
+        for (TileEntityGantry step = end; step != null; step = prev.get(step)) {
+            path.add(0, step);
+        }
+        return path.isEmpty() ? null : path;
+    }
+
+    private static boolean isHorizontalStep(TileEntityGantry from, TileEntityGantry to) {
+        return (to.yCoord - from.yCoord) == 0 ? true : false;
+
     }
 
     public static Vec3 getDirectionTo(TileEntityGantry start, TileEntityGantryTerminal end) {
 
-        List<TileEntityGantry> nodes = findPath(start, end);
+        List<TileEntityGantry> nodes = dijkstraPath(start, end);
         if (nodes.size() == 1) {
             if (nodes.get(0) instanceof TileEntityGantryTerminal tegt) {
                 if (tegt.getSilo() != null) {
@@ -137,32 +162,6 @@ public final class GantryAPI {
         TileEntityGantry next = nodes.get(1);
         return Vec3
             .createVectorHelper(next.xCoord - start.xCoord, next.yCoord - start.yCoord, next.zCoord - start.zCoord);
-    }
-
-    private static boolean dfsPath(TileEntityGantry current, TileEntityGantryTerminal end,
-        Set<TileEntityGantry> visited, List<TileEntityGantry> path, int depth) {
-        visited.add(current);
-        path.add(current);
-
-        if (depth >= MAX_CHAIN_SIZE) {
-            path.add(current);
-            return false;
-        }
-
-        if (current == end) {
-            return true;
-        }
-
-        for (TileEntityGantry neighbour : current.neighbours) {
-            if (!visited.contains(neighbour)) {
-                if (dfsPath(neighbour, end, visited, path, depth + 1)) {
-                    return true;
-                }
-            }
-        }
-
-        path.remove(path.size() - 1);
-        return false;
     }
 
     private static boolean isEndpoint(TileEntityGantry teg) {

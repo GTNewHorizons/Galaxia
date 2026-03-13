@@ -79,11 +79,10 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                     // If not cardinal, and not opposite, render up bend
                     Vec3 horiz = isCardinal(a) ? a : b;
                     Vec3 elev = isCardinal(a) ? b : a;
-                    renderUpBeam(gantry, x, y, z, horiz, elev);
-                    errorFlag = false;
-                } else if (!opp & isCardinal(a) == isCardinal(b) && isOppositeHorizontal(a, b)) {
-                    renderUBend(gantry, x, y, z, a);
-                    errorFlag = false;
+                    if (hasDiagonalChain(gantry, elev)) {
+                        renderUpBeam(gantry, x, y, z, horiz, elev);
+                        errorFlag = false;
+                    }
                 }
             }
         }
@@ -193,14 +192,27 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         return a.xCoord == -b.xCoord && a.yCoord == -b.yCoord && a.zCoord == -b.zCoord;
     }
 
-    private boolean isOppositeHorizontal(Vec3 a, Vec3 b) {
-        return a.xCoord == -b.xCoord && a.zCoord == -b.zCoord;
-    }
-
     private boolean isUpBendPair(Vec3 a, Vec3 b) {
         boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
         boolean oneHasY = (a.yCoord != 0) ^ (b.yCoord != 0);
         return xzOpposite && oneHasY;
+    }
+
+    private boolean hasDiagonalChain(TileEntityGantry gantry, Vec3 elevDir) {
+        int nx = gantry.xCoord + (int) elevDir.xCoord;
+        int ny = gantry.yCoord + (int) elevDir.yCoord;
+        int nz = gantry.zCoord + (int) elevDir.zCoord;
+
+        TileEntity te = Minecraft.getMinecraft().theWorld.getTileEntity(nx, ny, nz);
+        if (!(te instanceof TileEntityGantry)) return false;
+
+        TileEntityGantry diagNeighbour = (TileEntityGantry) te;
+
+        for (Vec3 dir : diagNeighbour.neighbourDirs) {
+            if (dir.xCoord == elevDir.xCoord && dir.yCoord == elevDir.yCoord && dir.zCoord == elevDir.zCoord)
+                return true;
+        }
+        return false;
     }
 
     // BEAM RENDERERS
@@ -310,26 +322,6 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             .renderAll();
         GL11.glPopMatrix();
 
-    }
-
-    private static void renderUBend(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
-        Vec3 f = dir.normalize();
-        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-        boolean down = f.yCoord > 0 ? true : false;
-        double yOffset = down ? 1 : 0;
-
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + yOffset, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        if (!down) GL11.glRotatef(180, 1, 0, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getUBendTexture());
-        g.getUBendModel()
-            .renderAll();
-        GL11.glPopMatrix();
     }
 
     public void addAssemblerAndSiloIfRequired(TileEntityGantry gantry, List<Vec3> dirs) {
