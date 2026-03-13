@@ -135,9 +135,11 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         // Render Module
         GL11.glPushMatrix();
         GL11.glDisable(GL11.GL_LIGHTING);
-        GL11.glTranslated(x + 0.5 + dx, y + dy - module.getWidth() / 2, z + 0.5 + dz);
+        GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
         GL11.glRotatef(yaw, 0f, 1f, 0f);
-        GL11.glRotatef(pitch + 90f, 1f, 0f, 0f);
+        GL11.glRotatef(pitch, 1f, 0f, 0f);
+        GL11.glTranslatef(0f, (float) -module.getWidth() / 2, 0f);
+        GL11.glRotatef(90f, 1, 0, 0);
 
         GL11.glScalef(MODULE_SCALE, MODULE_SCALE, MODULE_SCALE);
 
