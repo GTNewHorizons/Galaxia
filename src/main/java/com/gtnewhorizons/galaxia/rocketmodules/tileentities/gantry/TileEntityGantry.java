@@ -63,6 +63,10 @@ public class TileEntityGantry extends TileEntity {
     private IModelCustom upBendModel;
     @SideOnly(Side.CLIENT)
     private ResourceLocation upBendTexture;
+    @SideOnly(Side.CLIENT)
+    private IModelCustom uBendModel;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation uBendTexture;
 
     @Override
     public void updateEntity() {
@@ -201,6 +205,23 @@ public class TileEntityGantry extends TileEntity {
             upBendModel = AdvancedModelLoader.loadModel(loc);
         }
         return upBendModel;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getUBendTexture() {
+        if (uBendTexture == null) {
+            uBendTexture = LocationGalaxia("textures/model/gantry/ubend.png");
+        }
+        return uBendTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public IModelCustom getUBendModel() {
+        if (uBendModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/ubend.obj");
+            uBendModel = AdvancedModelLoader.loadModel(loc);
+        }
+        return uBendModel;
     }
 
     public float getInterpolatedProgress(float partialTicks) {

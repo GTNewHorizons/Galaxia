@@ -42,7 +42,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         }
         if (dirs.size() == 1) {
             Vec3 dir = dirs.get(0);
-            if (dir.yCoord != 0) {
+            if (dir.yCoord != 0 && (dir.xCoord != 0 || dir.zCoord != 0)) {
                 renderUpBeam(gantry, x, y, z, Vec3.createVectorHelper(-dir.xCoord, 0, -dir.zCoord), dir);
             } else {
                 renderFullBeam(gantry, x, y, z, dir);
@@ -59,7 +59,6 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                 Vec3 a = dirs.get(i);
                 Vec3 b = dirs.get(j);
                 boolean opp = isOpposite(a, b);
-
                 if (opp && isCardinal(a)) {
                     // If cardinal and has posite, render full beam
                     renderFullBeam(gantry, x, y, z, a);
@@ -79,9 +78,10 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                     Vec3 elev = isCardinal(a) ? b : a;
                     renderUpBeam(gantry, x, y, z, horiz, elev);
                     continue;
+                } else if (!opp & isCardinal(a) == isCardinal(b) && isOppositeHorizontal(a, b)) {
+                    renderUBend(gantry, x, y, z, a);
                 }
             }
-
         }
 
         // Module
@@ -186,6 +186,10 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         return a.xCoord == -b.xCoord && a.yCoord == -b.yCoord && a.zCoord == -b.zCoord;
     }
 
+    private boolean isOppositeHorizontal(Vec3 a, Vec3 b) {
+        return a.xCoord == -b.xCoord && a.zCoord == -b.zCoord;
+    }
+
     private boolean isUpBendPair(Vec3 a, Vec3 b) {
         boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
         boolean oneHasY = (a.yCoord != 0) ^ (b.yCoord != 0);
@@ -267,6 +271,26 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             .renderAll();
         GL11.glPopMatrix();
 
+    }
+
+    private static void renderUBend(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
+        Vec3 f = dir.normalize();
+        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+        boolean down = f.yCoord > 0 ? true : false;
+        double yOffset = down ? 1 : 0;
+
+        GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, y + yOffset, z + 0.5);
+        GL11.glRotatef(90, 0, 1, 0);
+        GL11.glRotatef(facingYaw, 0, 1, 0);
+        if (!down) GL11.glRotatef(180, 1, 0, 0);
+        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(g.getUBendTexture());
+        g.getUBendModel()
+            .renderAll();
+        GL11.glPopMatrix();
     }
 
     public void addAssemblerAndSiloIfRequired(TileEntityGantry gantry, List<Vec3> dirs) {
