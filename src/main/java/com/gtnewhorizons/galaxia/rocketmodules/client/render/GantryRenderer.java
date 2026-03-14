@@ -79,7 +79,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                     // If not cardinal, and not opposite, render up bend
                     Vec3 horiz = isCardinal(a) ? a : b;
                     Vec3 elev = isCardinal(a) ? b : a;
-                    if (hasDiagonalChain(gantry, elev)) {
+                    if (hasOppositeDiagonal(gantry, elev) || hasNoAboveDiagonal(gantry, elev)) {
                         renderUpBeam(gantry, x, y, z, horiz, elev);
                         errorFlag = false;
                     }
@@ -198,7 +198,26 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         return xzOpposite && oneHasY;
     }
 
-    private boolean hasDiagonalChain(TileEntityGantry gantry, Vec3 elevDir) {
+    private boolean hasNoAboveDiagonal(TileEntityGantry gantry, Vec3 elevDir) {
+        int nx = gantry.xCoord + (int) elevDir.xCoord;
+        int ny = gantry.yCoord + (int) elevDir.yCoord;
+        int nz = gantry.zCoord + (int) elevDir.zCoord;
+
+        TileEntity te = Minecraft.getMinecraft().theWorld.getTileEntity(nx, ny, nz);
+        if (!(te instanceof TileEntityGantry)) return false;
+
+        TileEntityGantry diagNeighbour = (TileEntityGantry) te;
+
+        for (Vec3 dir : diagNeighbour.neighbourDirs) {
+            if (dir.xCoord == -elevDir.xCoord && dir.yCoord == elevDir.yCoord && dir.zCoord == -elevDir.zCoord)
+                return false;
+        }
+
+        return true;
+
+    }
+
+    private boolean hasOppositeDiagonal(TileEntityGantry gantry, Vec3 elevDir) {
         int nx = gantry.xCoord + (int) elevDir.xCoord;
         int ny = gantry.yCoord + (int) elevDir.yCoord;
         int nz = gantry.zCoord + (int) elevDir.zCoord;
