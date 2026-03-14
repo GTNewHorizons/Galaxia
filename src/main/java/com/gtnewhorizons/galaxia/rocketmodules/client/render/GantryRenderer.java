@@ -5,10 +5,12 @@ import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.client.model.AdvancedModelLoader;
+import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
@@ -27,6 +29,9 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
     private static final float MODULE_SCALE = 1;
     private static final float GANTRY_SCALE = 0.34f;
+
+    private static final IModelCustom carriageModel = AdvancedModelLoader
+        .loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"));
 
     @Override
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
@@ -127,8 +132,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             return;
         }
         RocketModule module = ModuleRegistry.fromId(moduleId);
+        applyWorldLighting(gantry);
         GL11.glPushMatrix();
-        GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
         GL11.glRotatef(yaw, 0f, 1f, 0f);
         GL11.glRotatef(pitch, 1f, 0f, 0f);
@@ -143,13 +148,11 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         module.getModel()
             .renderAll();
 
-        GL11.glEnable(GL11.GL_LIGHTING);
         GL11.glPopMatrix();
 
         // Render Carriage
 
         GL11.glPushMatrix();
-        GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
 
         GL11.glRotatef(yaw, 0f, 1f, 0f);
@@ -160,9 +163,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         Minecraft.getMinecraft()
             .getTextureManager()
             .bindTexture(LocationGalaxia("textures/model/gantry/carriage.png"));
-        AdvancedModelLoader.loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"))
-            .renderAll();
-        GL11.glEnable(GL11.GL_LIGHTING);
+        carriageModel.renderAll();
         GL11.glPopMatrix();
     }
 
@@ -196,6 +197,25 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
      */
     private static float smoothStep(float t) {
         return t * t * (3f - 2f * t);
+    }
+
+    /**
+     * Applies the world lightmap at the gantry's block position so the model
+     * receives ambient light and shadow from its surroundings.
+     *
+     * @param gantry The gantry whose world position is sampled
+     */
+    private static void applyWorldLighting(TileEntityGantry gantry) {
+        int brightness = gantry.getWorldObj()
+            .getLightBrightnessForSkyBlocks(gantry.xCoord, gantry.yCoord, gantry.zCoord, 0);
+
+        int skyLight = (brightness >> 16) & 0xFFFF;
+        int blockLight = brightness & 0xFFFF;
+
+        OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, blockLight, skyLight);
+        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
     }
 
     // DIRECTIONALITY HELPERS
@@ -298,6 +318,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         Vec3 f = dir.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
 
+        applyWorldLighting(g);
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
         GL11.glRotatef(90, 0, 1, 0);
@@ -317,6 +338,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         Vec3 f = Vec3.createVectorHelper(1, 0, 0);
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
 
+        applyWorldLighting(g);
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
         GL11.glRotatef(90, 0, 1, 0);
@@ -349,6 +371,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     private static void renderDiagonalBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
         Vec3 f = dir.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+        applyWorldLighting(g);
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y + 0.425, z + 0.5);
         GL11.glRotatef(90, 0, 1, 0);
@@ -369,6 +392,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         double cx = in.xCoord + out.xCoord;
         double cz = in.zCoord + out.zCoord;
         float facingYaw = (float) Math.toDegrees(Math.atan2(cx, cz));
+        applyWorldLighting(g);
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
         GL11.glRotatef(225, 0, 1, 0);
@@ -389,6 +413,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
 
         double yOffset = y + 0.5 + (elev.yCoord * 0.125);
+        applyWorldLighting(g);
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, yOffset, z + 0.5);
         GL11.glRotatef(90, 0, 1, 0);
