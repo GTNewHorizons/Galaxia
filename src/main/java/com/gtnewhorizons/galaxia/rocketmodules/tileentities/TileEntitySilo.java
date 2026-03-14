@@ -70,34 +70,41 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     });
 
     private TileEntityGantryTerminal gantryTerminal;
-    private TileEntityModuleAssembler ma;
+    private TileEntityModuleAssembler moduleAssembler;
     private int[] pendingTerminalCoords;
     private int[] pendingAssemblerCoords;
     private boolean hasAssembler = false;
 
+    /**
+     * Updates the linked module assembler by searching endpoint terminals of linked
+     * gantry
+     */
     public void updateLinkedAssembler() {
         if (worldObj.isRemote) return;
+        // If no gantry terminal, no graph to check
         if (gantryTerminal == null) {
-            ma = null;
+            moduleAssembler = null;
             hasAssembler = false;
             if (worldObj != null) {
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             }
             return;
         }
+        // If not a valid graph, cannot walk it
         if (!gantryTerminal.checkValidGraph()) {
-            ma = null;
+            moduleAssembler = null;
             hasAssembler = false;
             if (worldObj != null) {
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             }
             return;
         }
+        // Iterate through endpoints to find one with a linked assembler
         List<TileEntityGantryTerminal> endpoints = GantryAPI.findEndpointTerminals(gantryTerminal);
         for (TileEntityGantryTerminal terminal : endpoints) {
-            TileEntityModuleAssembler maTest = terminal.getAssembler();
-            if (maTest != null) {
-                ma = maTest;
+            TileEntityModuleAssembler testAssembler = terminal.getAssembler();
+            if (testAssembler != null) {
+                moduleAssembler = testAssembler;
                 hasAssembler = true;
                 if (worldObj != null) {
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -105,7 +112,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                 return;
             }
         }
-        ma = null;
+        moduleAssembler = null;
         hasAssembler = false;
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -156,7 +163,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             .pos(10, 35)
             .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
-            moduleRow.child(createModuleButton(m, ma));
+            moduleRow.child(createModuleButton(m, moduleAssembler));
         }
 
         Flow destRow = Flow.row()
@@ -183,7 +190,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                                 .tooltip(t -> t.addLine("Disassemble Rocket"))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
-                                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(ma); }))))
+                                        md -> {
+                                            if (md.mouseButton == 0 && !worldObj.isRemote)
+                                                returnModules(moduleAssembler);
+                                        }))))
                 // Launch Page
                 .addPage(
                     new ParentWidget<>().size(240, 160)
@@ -195,6 +205,7 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                                     IKey.str("§aEnter Rocket")
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
+                                    // Flag to indicate validity of rocket launching
                                     boolean validFlag = true;
                                     getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
@@ -223,19 +234,29 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     /**
      * Creates the button for adding a module
      *
-     * @param m  The Rocket module this button is responsible for
-     * @param ma The Module Assembler this is linked to
+     * @param module    The Rocket module this button is responsible for
+     * @param assembler The Module Assembler this is linked to
      * @return ButtonWidget to add to the panel
      */
-    private ButtonWidget<?> createModuleButton(RocketModule m, TileEntityModuleAssembler ma) {
+    private ButtonWidget<?> createModuleButton(RocketModule module, TileEntityModuleAssembler assembler) {
         return new ButtonWidget<>().size(48, 20)
-            .overlay(IKey.str(m.getName()))
-            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
+            .overlay(IKey.str(module.getName()))
+            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())))
             .syncHandler(
                 new InteractionSyncHandler().setOnMousePressed(
-                    md -> { if (md.mouseButton == 0 && hasRemaining(m.getId(), ma)) addModule(m.getId(), ma); }));
+                    md -> {
+                        if (md.mouseButton == 0 && hasRemaining(module.getId(), assembler))
+                            requestModule(module.getId(), assembler);
+                    }));
     }
 
+    /**
+     * Creates the button for selecting a dimension to travel to
+     *
+     * @param dim The planet to add an option for
+     *
+     * @return ButtonWidget to add to the panel
+     */
     private ToggleButton createDestinationButton(BasePlanet dim) {
         return new ToggleButton().size(48, 20)
             .overlay(
@@ -267,16 +288,16 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     /**
-     * Adds a module to the render stack and eventual entity, and removes from
-     * associated Assembler map
+     * Requests a new module to the silo from an assembler, and removes from
+     * assembler map
      *
-     * @param id The module ID to add
-     * @param ma The linked Module Assembler
+     * @param id        The module ID to add
+     * @param assembler The linked Module Assembler
      */
-    public void addModule(int id, TileEntityModuleAssembler ma) {
+    public void requestModule(int id, TileEntityModuleAssembler assembler) {
         if (worldObj.isRemote) return;
-        ma.removeModule(id);
-        ma.sendModule(id, this);
+        assembler.removeModule(id);
+        assembler.sendModule(id, this);
         assembly = null;
         markDirty();
         if (worldObj != null) {
@@ -284,6 +305,13 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         }
     }
 
+    /**
+     * Receives a new module and adds it to the current render stack
+     *
+     * @param id The module ID to add
+     *
+     * @return Boolean : True => Successful reception
+     */
     public boolean receiveModule(int id) {
         modules.add(id);
         assembly = null;
@@ -297,13 +325,13 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     /**
      * Checks to see if the linked assembler has the module requested
      *
-     * @param id The ID of the module to check
-     * @param ma The linked assembler to check from
+     * @param id        The ID of the module to check
+     * @param assembler The linked assembler to check from
      * @return Boolean : True -> has the module
      */
-    public boolean hasRemaining(int id, TileEntityModuleAssembler ma) {
-        if (ma == null) return false;
-        return ma.moduleMap.getOrDefault(id, 0) > 0;
+    public boolean hasRemaining(int id, TileEntityModuleAssembler assembler) {
+        if (assembler == null) return false;
+        return assembler.moduleMap.getOrDefault(id, 0) > 0;
     }
 
     public void setDesination(int dim) {
@@ -315,21 +343,18 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     }
 
     /**
-     * Returns the modules back to the linked assembler
-     * Sends a Silo->MA animation packet to clients for each returned module
+     * Returns the modules back to the linked assembler. Injects a module into the
+     * linked terminal with a return direction
      *
-     * @param ma The Module Assembler tile entity
+     * @param assembler The Module Assembler tile entity
      */
-    public void returnModules(TileEntityModuleAssembler ma) {
+    public void returnModules(TileEntityModuleAssembler assembler) {
         if (worldObj.isRemote) return;
-        for (int mId : modules) {
-            GantryAPI.injectModule(ModuleRegistry.fromId(mId), ma, this, true);
+        for (int id : modules) {
+            GantryAPI.injectModule(ModuleRegistry.fromId(id), assembler, this, true);
         }
         modules.clear();
 
-        for (Integer id : modules) {
-            ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
-        }
         assembly = null;
         sync();
     }
@@ -427,8 +452,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                 TileEntity te = worldObj
                     .getTileEntity(pendingTerminalCoords[0], pendingTerminalCoords[1], pendingTerminalCoords[2]);
 
-                if (te instanceof TileEntityGantryTerminal teg) {
-                    gantryTerminal = teg;
+                if (te instanceof TileEntityGantryTerminal terminal) {
+                    gantryTerminal = terminal;
                     updateLinkedAssembler();
                 }
 
@@ -439,8 +464,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
                 TileEntity te = worldObj
                     .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
 
-                if (te instanceof TileEntityModuleAssembler tema) {
-                    ma = tema;
+                if (te instanceof TileEntityModuleAssembler assembler) {
+                    moduleAssembler = assembler;
                 }
 
                 pendingAssemblerCoords = null;
@@ -493,10 +518,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
             nbt.setInteger("terminalZ", gantryTerminal.zCoord);
         }
         // assembler
-        if (ma != null) {
-            nbt.setInteger("assemblerX", ma.xCoord);
-            nbt.setInteger("assemblerY", ma.yCoord);
-            nbt.setInteger("assemblerZ", ma.zCoord);
+        if (moduleAssembler != null) {
+            nbt.setInteger("assemblerX", moduleAssembler.xCoord);
+            nbt.setInteger("assemblerY", moduleAssembler.yCoord);
+            nbt.setInteger("assemblerZ", moduleAssembler.zCoord);
         }
         // modules list
         NBTTagList list = new NBTTagList();

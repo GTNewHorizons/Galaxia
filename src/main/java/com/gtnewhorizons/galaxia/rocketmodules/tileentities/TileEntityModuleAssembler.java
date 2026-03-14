@@ -98,6 +98,11 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
         return this.gantryTerminal;
     }
 
+    /**
+     * Removes a module from the module map and updates TileEntity
+     *
+     * @param id The module ID to remove
+     */
     public void removeModule(int id) {
         moduleMap.put(id, moduleMap.getOrDefault(id, 0) - 1);
         markDirty();

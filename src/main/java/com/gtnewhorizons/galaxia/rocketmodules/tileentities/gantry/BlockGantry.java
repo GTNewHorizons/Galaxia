@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import java.util.ArrayList;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -35,11 +37,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         }
         TileEntityGantry teg = (TileEntityGantry) te;
 
-        if (teg.getModule() != null) {
-            this.setBlockTextureName("diamond_block");
-        } else {
-            this.setBlockTextureName("iron_block");
-        }
+        // Check valid directions and connect to others
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = x + (int) check_offset.xCoord;
             int cy = y + (int) check_offset.yCoord;
@@ -64,6 +62,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         if (!(te instanceof TileEntityGantry)) {
             return false;
         }
+        // Debugging chat message
         TileEntityGantry teg = (TileEntityGantry) te;
         player.addChatComponentMessage(
             new ChatComponentText(
@@ -81,20 +80,21 @@ public class BlockGantry extends Block implements ITileEntityProvider {
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
 
-        TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantry)) {
+        TileEntity gantry = world.getTileEntity(x, y, z);
+        if (!(gantry instanceof TileEntityGantry)) {
             return;
         }
-        TileEntityGantry teg = (TileEntityGantry) te;
+        TileEntityGantry terminal = (TileEntityGantry) gantry;
 
-        for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
+        // Iterate through neighbours and disconnect them
+        for (Vec3 check_offset : new ArrayList<>(terminal.neighbourDirs)) {
             int cx = x + (int) check_offset.xCoord;
             int cy = y + (int) check_offset.yCoord;
             int cz = z + (int) check_offset.zCoord;
 
-            TileEntity checkTe = world.getTileEntity(cx, cy, cz);
-            if (checkTe instanceof TileEntityGantry checkTeg) {
-                teg.disconnect(checkTeg);
+            TileEntity checkTileEntity = world.getTileEntity(cx, cy, cz);
+            if (checkTileEntity instanceof TileEntityGantry checkGantry) {
+                terminal.disconnect(checkGantry);
             }
         }
 

@@ -63,21 +63,13 @@ public class TileEntityGantry extends TileEntity {
     private IModelCustom upBendModel;
     @SideOnly(Side.CLIENT)
     private ResourceLocation upBendTexture;
-    @SideOnly(Side.CLIENT)
-    private IModelCustom uBendModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation uBendTexture;
-
-    @SideOnly(Side.CLIENT)
-    private IModelCustom uBendHalfModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation uBendHalfTexture;
 
     @SideOnly(Side.CLIENT)
     private ResourceLocation errorTexture;
 
     @Override
     public void updateEntity() {
+        // Lazy loading for neighbours
         if (!pendingNeighbourCoords.isEmpty()) {
             for (int[] coords : pendingNeighbourCoords) {
                 TileEntity te = worldObj.getTileEntity(coords[0], coords[1], coords[2]);
@@ -88,10 +80,13 @@ public class TileEntityGantry extends TileEntity {
             pendingNeighbourCoords.clear();
         }
         if (worldObj.isRemote) {
+            // -1 used as "null" as 0 is a valid ID
             if (clientModuleId != -1) {
+                // If module, increase progress
                 clientPrevProgress = clientProgress;
                 clientProgress += SPEED;
                 if (clientProgress > 1.0f) {
+                    // If above 1, reset
                     clientProgress = 0f;
                     clientPrevProgress = 0f;
                     clientModuleId = -1;
@@ -101,14 +96,18 @@ public class TileEntityGantry extends TileEntity {
             return;
         }
 
+        // Handle dispatch queue
         if (!queue.isEmpty()) {
+            // If cooling down, lower cooldown counter
             if (dispatchCooldown > 0) {
                 dispatchCooldown--;
             } else if (containedTransitModule == null) {
+                // If no contained module, take the next and process
                 TransitModule entry = queue.poll();
                 containedTransitModule = entry;
                 currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
                 progress = 0f;
+                // Only add cooldown back if a terminal and remaining queue
                 if (!queue.isEmpty() && this instanceof TileEntityGantryTerminal) {
                     dispatchCooldown = DISPATCH_INTERVAL;
                 } else {
@@ -123,11 +122,13 @@ public class TileEntityGantry extends TileEntity {
             return;
         }
 
+        // Progress module
         progress += SPEED;
 
+        // If progress finished, hand off to next gantry
         if (progress >= 1.0f) {
             progress = 1.0f;
-            tryHandOff();
+            handOff();
         }
         markDirty();
     }
@@ -136,17 +137,9 @@ public class TileEntityGantry extends TileEntity {
         return currentDirection;
     }
 
-    public void updateJunctionCheck() {
-        if (worldObj.isRemote) return;
-        isJunction = neighbours.size() > 2 ? true : false;
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-    }
-
     // TODO: ADD MODEL AND TEXTURE FOR GANTRY
 
+    // MODEL AND TEXTURE GETTERS
     @SideOnly(Side.CLIENT)
     public ResourceLocation getTexture() {
         if (texture == null) {
@@ -216,40 +209,6 @@ public class TileEntityGantry extends TileEntity {
     }
 
     @SideOnly(Side.CLIENT)
-    public ResourceLocation getUBendTexture() {
-        if (uBendTexture == null) {
-            uBendTexture = LocationGalaxia("textures/model/gantry/ubend.png");
-        }
-        return uBendTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getUBendModel() {
-        if (uBendModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/ubend.obj");
-            uBendModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return uBendModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getUBendHalfTexture() {
-        if (uBendHalfTexture == null) {
-            uBendHalfTexture = LocationGalaxia("textures/model/gantry/ubendhalf.png");
-        }
-        return uBendHalfTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getUBendHalfModel() {
-        if (uBendHalfModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/ubendhalf.obj");
-            uBendHalfModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return uBendHalfModel;
-    }
-
-    @SideOnly(Side.CLIENT)
     public ResourceLocation getErrorTexture() {
         if (errorTexture == null) {
             errorTexture = LocationGalaxia("textures/model/gantry/error.png");
@@ -273,6 +232,9 @@ public class TileEntityGantry extends TileEntity {
         currentDirection = dir;
     }
 
+    /**
+     * Clears the module from gantry and resets progress
+     */
     public void clearModule() {
         progress = 0f;
         clientProgress = 0f;
@@ -288,17 +250,25 @@ public class TileEntityGantry extends TileEntity {
         }
     }
 
+    /**
+     * Ensures the graph is valid by all endpoints being terminals
+     *
+     * @return Boolean : True => is valid graph
+     */
     public boolean checkValidGraph() {
         return GantryAPI.terminatesWithTerminals(worldObj, xCoord, yCoord, zCoord);
     }
 
+    /**
+     * Connects another gantry to this one and updates both
+     *
+     * @param other The other gantry to connect to
+     */
     public void connect(TileEntityGantry other) {
         this.neighbours.add(other);
         other.neighbours.add(this);
         this.updateNeighbourDirs();
         other.updateNeighbourDirs();
-        this.updateJunctionCheck();
-        other.updateJunctionCheck();
         this.markDirty();
         other.markDirty();
         if (worldObj != null) {
@@ -307,9 +277,13 @@ public class TileEntityGantry extends TileEntity {
         }
     }
 
+    /**
+     * Update neighbour direction list
+     */
     public void updateNeighbourDirs() {
         if (worldObj.isRemote) return;
 
+        // Clear list and go through neighbours getting vectors
         neighbourDirs.clear();
         for (TileEntityGantry neighbour : neighbours) {
             neighbourDirs.add(
@@ -325,13 +299,16 @@ public class TileEntityGantry extends TileEntity {
         return;
     }
 
+    /**
+     * Disconnects the gantry from another one and updates both
+     *
+     * @param other The other gantry to disconnect from
+     */
     public void disconnect(TileEntityGantry other) {
         this.neighbours.remove(other);
         other.neighbours.remove(this);
         this.updateNeighbourDirs();
         other.updateNeighbourDirs();
-        this.updateJunctionCheck();
-        other.updateJunctionCheck();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             worldObj.markBlockForUpdate(other.xCoord, other.yCoord, other.zCoord);
@@ -344,11 +321,15 @@ public class TileEntityGantry extends TileEntity {
         return containedTransitModule.module();
     }
 
-    // TODO:
-    public void tryHandOff() {
+    /**
+     * Hands off a module to the next gantry in the path of the module
+     */
+    public void handOff() {
 
+        // Get next gantry to hand to
         TileEntityGantry next = getNeighbourGantry(currentDirection);
         if (next == null || next == this) {
+            // If terminal endpoint, pass to consumer (assembler / silo etc.)
             if (this instanceof TileEntityGantryTerminal teg) {
                 teg.passModuleToConsumer();
             }
@@ -356,12 +337,20 @@ public class TileEntityGantry extends TileEntity {
             return;
         }
 
+        // If next gantry can take it, pass it on
         if (next.acceptModule(containedTransitModule, currentDirection)) {
             clearModule();
             if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
     }
 
+    /**
+     * Gets the neighbouring gantry based on a given direction
+     *
+     * @param dir The vector direction to check
+     *
+     * @return The gantry found or null
+     */
     public TileEntityGantry getNeighbourGantry(Vec3 dir) {
         if (dir == null) return null;
         int nx = xCoord + (int) dir.xCoord;
@@ -371,11 +360,25 @@ public class TileEntityGantry extends TileEntity {
         return (te instanceof TileEntityGantry ? (TileEntityGantry) te : null);
     }
 
+    /**
+     * Adds a new transit module to the dispatch queue
+     *
+     * @param transit The transit module to add
+     */
     public void enqueueModule(TransitModule transit) {
         queue.addLast(transit);
         markDirty();
     }
 
+    /**
+     * Takes an incoming transit module and direction and adds it to the dispatch
+     * queue
+     *
+     * @param transit       The transit module
+     * @param fromDirection The direction it came from
+     *
+     * @return Boolean : True => accepted module
+     */
     public boolean acceptModule(TransitModule transit, Vec3 fromDirection) {
         if (worldObj.isRemote) return false;
         if (transit == null) {
@@ -390,6 +393,7 @@ public class TileEntityGantry extends TileEntity {
 
     }
 
+    // Overloaded method for initial injection with no previous direction
     public boolean acceptModule(TransitModule transit) {
         return acceptModule(transit, null);
     }
@@ -416,7 +420,6 @@ public class TileEntityGantry extends TileEntity {
             dirList.appendTag(entry);
         }
         tag.setTag("neighbourDirs", dirList);
-        tag.setBoolean("isJunction", isJunction);
 
     }
 
@@ -440,7 +443,6 @@ public class TileEntityGantry extends TileEntity {
             neighbourDirs
                 .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
         }
-        isJunction = tag.getBoolean("isJunction");
     }
 
     @Override
@@ -486,7 +488,6 @@ public class TileEntityGantry extends TileEntity {
             neighbourDirs
                 .add(Vec3.createVectorHelper(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
         }
-        isJunction = tag.getBoolean("isJunction");
 
         // Module/direction sync
         int incomingId = tag.hasKey("moduleId") ? tag.getInteger("moduleId") : -1;

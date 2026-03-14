@@ -8,21 +8,28 @@ import net.minecraft.util.Vec3;
 
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
-import com.gtnewhorizons.galaxia.rocketmodules.utility.TransitModule;
 
 public class TileEntityGantryTerminal extends TileEntityGantry {
-
-    private final static int DISPATCH_INTERVAL = 20;
 
     private TileEntitySilo connectedSilo;
     public Vec3 siloDir = null;
     private TileEntityModuleAssembler connectedAssembler;
     public Vec3 assemblerDir = null;
 
+    /**
+     * Connects a silo provided to this terminal
+     *
+     * @param silo The silo to connect
+     */
     public void connectSilo(TileEntitySilo silo) {
         connectedSilo = silo;
     }
 
+    /**
+     * Connects a module assembler to this terminal
+     *
+     * @param assembler The assembler to connect
+     */
     public void connectAssembler(TileEntityModuleAssembler assembler) {
         connectedAssembler = assembler;
     }
@@ -47,7 +54,7 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
         super.updateEntity();
 
         TileEntityGantryTerminal teg = this;
-
+        // Checks all valid directions for silos and assmeblers to connect
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = xCoord + (int) check_offset.xCoord;
             int cy = yCoord + (int) check_offset.yCoord;
@@ -65,12 +72,9 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
 
     }
 
-    public boolean acceptModule(TransitModule transit, boolean start) {
-        super.acceptModule(transit);
-        if (!start) passModuleToConsumer();
-        return true;
-    }
-
+    /**
+     * Passes a module to a linked consumer if it exists
+     */
     public void passModuleToConsumer() {
         if (worldObj.isRemote) return;
 
@@ -101,18 +105,23 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
             siloTag.setInteger("x", connectedSilo.xCoord);
             siloTag.setInteger("y", connectedSilo.yCoord);
             siloTag.setInteger("z", connectedSilo.zCoord);
-            tag.setTag("assembler", siloTag);
+            tag.setTag("silo", siloTag);
         }
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
+        super.readFromNBT(tag);
         if (tag.hasKey("assembler")) {
             NBTTagCompound assemblerTag = tag.getCompoundTag("assembler");
             assemblerDir = Vec3.createVectorHelper(
                 assemblerTag.getDouble("x"),
                 assemblerTag.getDouble("y"),
                 assemblerTag.getDouble("z"));
+        }
+        if (tag.hasKey("silo")) {
+            NBTTagCompound siloTag = tag.getCompoundTag("silo");
+            siloDir = Vec3.createVectorHelper(siloTag.getDouble("x"), siloTag.getDouble("y"), siloTag.getDouble("z"));
         }
     }
 

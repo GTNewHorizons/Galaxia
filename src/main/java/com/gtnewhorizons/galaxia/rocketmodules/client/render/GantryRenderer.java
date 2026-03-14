@@ -14,10 +14,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -37,7 +34,6 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         TileEntityGantry gantry = (TileEntityGantry) tileEntity;
         List<Vec3> dirs = gantry.neighbourDirs;
-        addAssemblerAndSiloIfRequired(gantry, dirs);
         if (dirs.isEmpty()) {
             // Render default variant
             renderFullBeam(gantry, x, y, z, Vec3.createVectorHelper(1, 0, 0));
@@ -52,7 +48,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         // RENDER GANTRY VARIANTS
         // Neighbour dirs contains all neighbours to block
 
-        // First pass, straight beams:
+        // Flag for error checking
         boolean errorFlag = true;
         if (dirs.size() < 2) {
             errorFlag = false;
@@ -63,7 +59,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                 Vec3 b = dirs.get(j);
                 boolean opp = isOpposite(a, b);
                 if (opp && isCardinal(a)) {
-                    // If cardinal and has posite, render full beam
+                    // If cardinal and has opposite, render full beam
                     renderFullBeam(gantry, x, y, z, a);
                     errorFlag = false;
                 } else if (opp && !isCardinal(a)) {
@@ -86,14 +82,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                 }
             }
         }
+        // If no valid render found, render error
         if (errorFlag) renderErrorBeam(gantry, x, y, z);
-
-        // Module
-        int moduleId = gantry.clientModuleId;
-        if (moduleId == -1) {
-            return;
-        }
-        RocketModule module = ModuleRegistry.fromId(moduleId);
 
         Vec3 outDir = gantry.getDirection();
         Vec3 inDir = gantry.clientIncomingDirection;
@@ -132,6 +122,11 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         }
 
         // Render Module
+        int moduleId = gantry.clientModuleId;
+        if (moduleId == -1) {
+            return;
+        }
+        RocketModule module = ModuleRegistry.fromId(moduleId);
         GL11.glPushMatrix();
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
@@ -159,6 +154,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         GL11.glRotatef(yaw, 0f, 1f, 0f);
         GL11.glRotatef(pitch, 1f, 0f, 0f);
+        GL11.glRotatef(90, 0, 1, 0);
         GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
 
         Minecraft.getMinecraft()
@@ -171,6 +167,16 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     }
 
     // LERP HELPERS
+
+    /**
+     * Linear Interpolater of an angle based on block progress
+     *
+     * @param a Start angle
+     * @param b End angle
+     * @param t Progress through block
+     *
+     * @return Interpolated angle
+     */
     private static float lerpAngle(float a, float b, float t) {
         float diff = b - a;
         while (diff > 180f) diff -= 360f;
@@ -178,26 +184,69 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         return a + diff * t;
     }
 
+    /**
+     * Basic smoothstep function
+     *
+     * @see <a href="https://en.wikipedia.org/wiki/Smoothstep">Smoothstep
+     *      Wikipedia</a>
+     *
+     * @param t Progress through block
+     *
+     * @return Smoothstepped progress
+     */
     private static float smoothStep(float t) {
         return t * t * (3f - 2f * t);
     }
 
     // DIRECTIONALITY HELPERS
+    /**
+     * Determines if a direction is a cardinal direction (N, E, S, W)
+     *
+     * @param dir Vector direction to check
+     *
+     * @return Boolean : True => is cardinal
+     */
     private boolean isCardinal(Vec3 dir) {
         return dir.yCoord == 0
             && ((Math.abs(dir.xCoord) == 1 && dir.zCoord == 0) || (dir.xCoord == 0 && Math.abs(dir.zCoord) == 1));
     }
 
+    /**
+     * Determines if two vectors are opposite
+     *
+     * @param a First vector
+     * @param b Second vector
+     *
+     * @return Boolean : True => are opposite
+     */
     private boolean isOpposite(Vec3 a, Vec3 b) {
         return a.xCoord == -b.xCoord && a.yCoord == -b.yCoord && a.zCoord == -b.zCoord;
     }
 
+    /**
+     * Determines if two vectors form a valid "up-bend" pair, where one vector is
+     * cardinal, and the other is in opposite x/z direction and at different heights
+     *
+     * @param a First vector
+     * @param b Second vector
+     *
+     * @return Boolean : True => valid up-bend
+     */
     private boolean isUpBendPair(Vec3 a, Vec3 b) {
         boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
         boolean oneHasY = (a.yCoord != 0) ^ (b.yCoord != 0);
         return xzOpposite && oneHasY;
     }
 
+    /**
+     * Determines whether there is no block diagonally the same direction but
+     * further in Y direction
+     *
+     * @param gantry  The gantry being checked
+     * @param elevDir The direction with y elevation
+     *
+     * @return Boolean : True => No above diagonal
+     */
     private boolean hasNoAboveDiagonal(TileEntityGantry gantry, Vec3 elevDir) {
         int nx = gantry.xCoord + (int) elevDir.xCoord;
         int ny = gantry.yCoord + (int) elevDir.yCoord;
@@ -217,6 +266,15 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
     }
 
+    /**
+     * Determines whether a gantry has a diagonal in the opposite direction (i.e. a
+     * diagonal chain)
+     *
+     * @param gantry  The gantry being checked
+     * @param elevDir The direction vector with elevation
+     *
+     * @return Boolean : True => has opposite diagonal
+     */
     private boolean hasOppositeDiagonal(TileEntityGantry gantry, Vec3 elevDir) {
         int nx = gantry.xCoord + (int) elevDir.xCoord;
         int ny = gantry.yCoord + (int) elevDir.yCoord;
@@ -235,6 +293,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     }
 
     // BEAM RENDERERS
+    // Rendes a full beam from block to block horizontally
     private static void renderFullBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
         Vec3 f = dir.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
@@ -252,6 +311,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
     }
 
+    // Renders an "Error Beam", a cross beam with red colour for invalid placements
     private static void renderErrorBeam(TileEntityGantry g, double x, double y, double z) {
 
         Vec3 f = Vec3.createVectorHelper(1, 0, 0);
@@ -285,6 +345,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
     }
 
+    // Renders a diagonal beam in the direction of a given vector
     private static void renderDiagonalBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
         Vec3 f = dir.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
@@ -303,6 +364,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
     }
 
+    // Renders a corner beam between two cardinal directions
     private static void renderCornerBeam(TileEntityGantry g, double x, double y, double z, Vec3 in, Vec3 out) {
         double cx = in.xCoord + out.xCoord;
         double cz = in.zCoord + out.zCoord;
@@ -321,6 +383,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
     }
 
+    // Renders an "up-beam" between a cardinal direction and a diagonal direction
     private static void renderUpBeam(TileEntityGantry g, double x, double y, double z, Vec3 horiz, Vec3 elev) {
         Vec3 f = horiz.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
@@ -343,27 +406,4 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
     }
 
-    public void addAssemblerAndSiloIfRequired(TileEntityGantry gantry, List<Vec3> dirs) {
-        if (!(gantry instanceof TileEntityGantryTerminal)) return;
-        TileEntityGantryTerminal tegt = (TileEntityGantryTerminal) gantry;
-        Vec3 dirToCheck;
-        if (tegt.getAssembler() != null) {
-            TileEntityModuleAssembler ma = tegt.getAssembler();
-            dirToCheck = Vec3
-                .createVectorHelper(ma.xCoord - gantry.xCoord, ma.yCoord - gantry.yCoord, ma.zCoord - gantry.zCoord);
-        } else if (tegt.getSilo() != null) {
-            TileEntitySilo s = tegt.getSilo();
-            dirToCheck = Vec3
-                .createVectorHelper(s.xCoord - gantry.xCoord, s.yCoord - gantry.yCoord, s.zCoord - gantry.zCoord);
-        } else {
-            return;
-        }
-
-        for (Vec3 dir : dirs) {
-            if (dir.xCoord == dirToCheck.xCoord && dir.yCoord == dirToCheck.yCoord && dir.zCoord == dirToCheck.zCoord) {
-                return;
-            }
-        }
-        dirs.add(dirToCheck);
-    }
 }

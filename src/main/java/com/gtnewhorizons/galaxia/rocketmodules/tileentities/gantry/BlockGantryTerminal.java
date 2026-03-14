@@ -32,40 +32,35 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
 
-        TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantryTerminal)) {
+        TileEntity tileEntity = world.getTileEntity(x, y, z);
+        if (!(tileEntity instanceof TileEntityGantryTerminal)) {
             return;
         }
 
-        TileEntityGantryTerminal teg = (TileEntityGantryTerminal) te;
+        TileEntityGantryTerminal gantryTerminal = (TileEntityGantryTerminal) tileEntity;
 
-        if (teg.getModule() != null) {
-            this.setBlockTextureName("diamond_block");
-        } else {
-            this.setBlockTextureName("iron_block");
-        }
-
+        // Cycle through valid directions and check for new connections
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
             int cx = x + (int) check_offset.xCoord;
             int cy = y + (int) check_offset.yCoord;
             int cz = z + (int) check_offset.zCoord;
 
-            TileEntity checkTe = world.getTileEntity(cx, cy, cz);
-            if (checkTe instanceof TileEntityGantry checkTeg) {
-                teg.connect(checkTeg);
-            } else if (checkTe instanceof TileEntitySilo checkTes) {
-                teg.connectSilo(checkTes);
-                checkTes.setGantryTerminal(teg);
+            TileEntity checkTileEntity = world.getTileEntity(cx, cy, cz);
+            if (checkTileEntity instanceof TileEntityGantry checkGantry) {
+                gantryTerminal.connect(checkGantry);
+            } else if (checkTileEntity instanceof TileEntitySilo checkSilo) {
+                gantryTerminal.connectSilo(checkSilo);
+                checkSilo.setGantryTerminal(gantryTerminal);
                 if (!world.isRemote) {
-                    world.markBlockForUpdate(checkTes.xCoord, checkTes.yCoord, checkTes.zCoord);
-                    world.markBlockForUpdate(teg.xCoord, teg.yCoord, teg.zCoord);
+                    world.markBlockForUpdate(checkSilo.xCoord, checkSilo.yCoord, checkSilo.zCoord);
+                    world.markBlockForUpdate(gantryTerminal.xCoord, gantryTerminal.yCoord, gantryTerminal.zCoord);
                 }
-            } else if (checkTe instanceof TileEntityModuleAssembler checkTema) {
-                teg.connectAssembler(checkTema);
-                checkTema.setGantryTerminal(teg);
+            } else if (checkTileEntity instanceof TileEntityModuleAssembler checkAssembler) {
+                gantryTerminal.connectAssembler(checkAssembler);
+                checkAssembler.setGantryTerminal(gantryTerminal);
                 if (!world.isRemote) {
-                    world.markBlockForUpdate(checkTema.xCoord, checkTema.yCoord, checkTema.zCoord);
-                    world.markBlockForUpdate(teg.xCoord, teg.yCoord, teg.zCoord);
+                    world.markBlockForUpdate(checkAssembler.xCoord, checkAssembler.yCoord, checkAssembler.zCoord);
+                    world.markBlockForUpdate(gantryTerminal.xCoord, gantryTerminal.yCoord, gantryTerminal.zCoord);
                 }
             }
 
@@ -78,25 +73,27 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
         float hitY, float hitZ) {
         if (world.isRemote) return true;
 
-        TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantry)) {
+        TileEntity tileEntity = world.getTileEntity(x, y, z);
+        if (!(tileEntity instanceof TileEntityGantry)) {
             return false;
         }
+        // Debug message in chat
         if (player.isSneaking()) {
             player.addChatComponentMessage(
                 new ChatComponentText("Is connected: " + GantryAPI.terminatesWithTerminals(world, x, y, z)));
             return true;
         }
-        TileEntityGantryTerminal teg = (TileEntityGantryTerminal) te;
+        // Debug message in chat
+        TileEntityGantryTerminal terminal = (TileEntityGantryTerminal) tileEntity;
         player.addChatComponentMessage(
             new ChatComponentText(
-                "Module: " + teg.getModule()
+                "Module: " + terminal.getModule()
                     + ", Direction: "
-                    + teg.getDirection()
+                    + terminal.getDirection()
                     + ", Silo: "
-                    + teg.getSilo()
+                    + terminal.getSilo()
                     + ", Assembler"
-                    + teg.getAssembler()));
+                    + terminal.getAssembler()));
         return true;
 
     }
@@ -111,8 +108,4 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
         return false;
     }
 
-    @Override
-    public int getRenderType() {
-        return -1;
-    }
 }
