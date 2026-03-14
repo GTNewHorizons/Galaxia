@@ -139,10 +139,10 @@ public final class GantryAPI {
     }
 
     /**
-     * Performs a Dijkstra Search algorithm to find the shortest path from a gantry
-     * to a terminal along a grapy, prioritising horizontal paths first
+     * Performs an A* Search algorithm to find the shortest path from a gantry
+     * to a terminal along a graph, prioritising horizontal paths first.
      *
-     * @see <a href="https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm"Dijkstra's
+     * @see <a href="https://en.wikipedia.org/wiki/A*_search_algorithm">A* Search
      *      Algorithm</a>
      *
      * @param start The start point to search from
@@ -150,43 +150,75 @@ public final class GantryAPI {
      *
      * @return The list of gantries in the shortest path, null if end not found
      */
-    private static List<TileEntityGantry> dijkstraPath(TileEntityGantry start, TileEntityGantryTerminal end) {
-        Map<TileEntityGantry, Float> dist = new HashMap<>();
+    private static List<TileEntityGantry> aStarPath(TileEntityGantry start, TileEntityGantryTerminal end) {
+        // g(n): actual cost from start to node n
+        Map<TileEntityGantry, Float> gScore = new HashMap<>();
+        // f(n): g(n) + h(n), used for priority ordering
+        Map<TileEntityGantry, Float> fScore = new HashMap<>();
         Map<TileEntityGantry, TileEntityGantry> prev = new HashMap<>();
-        PriorityQueue<TileEntityGantry> queue = new PriorityQueue<>(
-            Comparator.comparingDouble(n -> dist.getOrDefault(n, Float.MAX_VALUE)));
+        Set<TileEntityGantry> closedSet = new HashSet<>();
 
-        dist.put(start, 0f);
-        queue.add(start);
+        PriorityQueue<TileEntityGantry> openSet = new PriorityQueue<>(
+            Comparator.comparingDouble(n -> fScore.getOrDefault(n, Float.MAX_VALUE)));
+
+        gScore.put(start, 0f);
+        fScore.put(start, heuristic(start, end));
+        openSet.add(start);
+
         int visited = 0;
 
-        while (!queue.isEmpty()) {
-            TileEntityGantry current = queue.poll();
+        while (!openSet.isEmpty()) {
+            TileEntityGantry current = openSet.poll();
+
             if (++visited > MAX_CHAIN_SIZE) break;
             if (current == end) break;
 
-            float currentDist = dist.getOrDefault(current, Float.MAX_VALUE);
+            // Node is settled — skip if revisited via a worse path
+            closedSet.add(current);
 
             for (TileEntityGantry neighbour : current.getNeighbours()) {
-                float stepCost = isHorizontalStep(current, neighbour) ? HORIZONTAL_COST : DIAGONAL_COST;
-                float newDist = currentDist + stepCost;
+                if (closedSet.contains(neighbour)) continue;
 
-                if (newDist < dist.getOrDefault(neighbour, Float.MAX_VALUE)) {
-                    dist.put(neighbour, newDist);
+                float stepCost = isHorizontalStep(current, neighbour) ? HORIZONTAL_COST : DIAGONAL_COST;
+                float tentativeG = gScore.getOrDefault(current, Float.MAX_VALUE) + stepCost;
+
+                if (tentativeG < gScore.getOrDefault(neighbour, Float.MAX_VALUE)) {
                     prev.put(neighbour, current);
-                    // Update priority in queue
-                    queue.remove(neighbour);
-                    queue.add(neighbour);
+                    gScore.put(neighbour, tentativeG);
+                    fScore.put(neighbour, tentativeG + heuristic(neighbour, end));
+
+                    // Re-insert to update priority (remove is O(n) but acceptable at
+                    // MAX_CHAIN_SIZE=256)
+                    openSet.remove(neighbour);
+                    openSet.add(neighbour);
                 }
             }
         }
 
         if (!prev.containsKey(end) && start != end) return null;
+
         List<TileEntityGantry> path = new ArrayList<>();
         for (TileEntityGantry step = end; step != null; step = prev.get(step)) {
             path.add(0, step);
         }
         return path.isEmpty() ? null : path;
+    }
+
+    /**
+     * Euclidean distance squared heuristic for A* — estimates the remaining cost
+     * from a node to the goal. Admissible because straight-line distance
+     * is always ≤ actual traversal cost given the step costs used.
+     *
+     * @param node The current node
+     * @param goal The target terminal
+     *
+     * @return The estimated cost from node to goal
+     */
+    private static float heuristic(TileEntityGantry node, TileEntityGantry goal) {
+        float dx = goal.xCoord - node.xCoord;
+        float dy = goal.yCoord - node.yCoord;
+        float dz = goal.zCoord - node.zCoord;
+        return (float) dx * dx + dy * dy + dz * dz;
     }
 
     /**
@@ -212,7 +244,8 @@ public final class GantryAPI {
      */
     public static Vec3 getDirectionTo(TileEntityGantry start, TileEntityGantryTerminal end) {
 
-        List<TileEntityGantry> nodes = dijkstraPath(start, end);
+        List<TileEntityGantry> nodes = aStarPath(start, end);
+        if (nodes.size() == 0) return Vec3.createVectorHelper(0, 0, 0);
         if (nodes.size() == 1) {
             if (nodes.get(0) instanceof TileEntityGantryTerminal terminal) {
                 if (terminal.getSilo() != null) {
