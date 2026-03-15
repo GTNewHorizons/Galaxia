@@ -46,7 +46,9 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         }
         if (dirs.size() == 1) {
             Vec3 dir = dirs.get(0);
-            renderFullBeam(gantry, x, y, z, dir);
+            if (dir.yCoord != 0) {
+                renderUpBeam(gantry, x, y, z, Vec3.createVectorHelper(-dir.xCoord, 0, -dir.zCoord), dir);
+            } else renderFullBeam(gantry, x, y, z, dir);
 
         }
 
@@ -84,6 +86,9 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                         renderUpBeam(gantry, x, y, z, horiz, elev);
                         errorFlag = false;
                     }
+                } else if (dirs.size() == 2 && isUPair(a, b)) {
+                    renderUBend(gantry, x, y, z, a);
+                    errorFlag = false;
                 }
             }
         }
@@ -259,6 +264,21 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     }
 
     /**
+     * Determines if two vector directions form a valid "U-Bend" pair, i.e. both are
+     * same cardinal direction at the same (non-zero) y-level
+     *
+     * @param a First vector
+     * @param b Second vector
+     *
+     * @return Boolean : True => valid U-Bend)
+     */
+    private boolean isUPair(Vec3 a, Vec3 b) {
+        boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
+        boolean sameY = a.yCoord == b.yCoord && a.yCoord != 0;
+        return xzOpposite && sameY;
+    }
+
+    /**
      * Determines whether there is no block diagonally the same direction but
      * further in Y direction
      *
@@ -428,7 +448,28 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         g.getUpBendModel()
             .renderAll();
         GL11.glPopMatrix();
+    }
 
+    private static void renderUBend(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
+        Vec3 f = dir.normalize();
+        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+
+        double yOffset = y + 0.5 + (dir.yCoord * 0.5);
+        applyWorldLighting(g);
+        GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, yOffset, z + 0.5);
+        GL11.glRotatef(90, 0, 1, 0);
+        GL11.glRotatef(facingYaw, 0, 1, 0);
+        if (f.yCoord < 0) {
+            GL11.glRotatef(180, 1, 0, 0);
+        }
+        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(g.getUBendTexture());
+        g.getUBendModel()
+            .renderAll();
+        GL11.glPopMatrix();
     }
 
 }
