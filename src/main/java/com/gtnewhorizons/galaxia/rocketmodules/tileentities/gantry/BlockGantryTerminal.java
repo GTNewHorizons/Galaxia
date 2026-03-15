@@ -1,6 +1,8 @@
 
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import java.util.ArrayList;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -66,6 +68,28 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
 
         }
 
+    }
+
+    @Override
+    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+
+        TileEntity gantry = world.getTileEntity(x, y, z);
+        if (!(gantry instanceof TileEntityGantry)) {
+            return;
+        }
+        TileEntityGantry terminal = (TileEntityGantry) gantry;
+
+        // Iterate through neighbours and disconnect them
+        for (Vec3 check_offset : new ArrayList<>(terminal.neighbourDirs)) {
+            int cx = x + (int) check_offset.xCoord;
+            int cy = y + (int) check_offset.yCoord;
+            int cz = z + (int) check_offset.zCoord;
+
+            TileEntity checkTileEntity = world.getTileEntity(cx, cy, cz);
+            if (checkTileEntity instanceof TileEntityGantry checkGantry) {
+                terminal.disconnect(checkGantry);
+            }
+        }
     }
 
     @Override

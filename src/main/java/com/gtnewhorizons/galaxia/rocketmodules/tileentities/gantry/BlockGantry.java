@@ -44,8 +44,8 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             int cz = z + (int) check_offset.zCoord;
 
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
-            if (checkTe instanceof TileEntityGantry checkTeg) {
-                teg.connect(checkTeg);
+            if (checkTe instanceof TileEntityGantry checkGantry) {
+                teg.connect(checkGantry);
 
             }
         }
