@@ -14,6 +14,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChunkCoordinates;
+import net.minecraft.util.AxisAlignedBB;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -39,15 +40,11 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailAnimationState;
-import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.CapsuleRequiredValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.EngineToTankRatioValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.IRocketValidator;
@@ -56,7 +53,10 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.SingleRocketCor
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.TierMatchesDestinationValidator;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.ValidationResult;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitValidator;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
+public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -81,6 +81,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
+
+    private TileEntityGantryTerminal gantryTerminal;
+    private TileEntityModuleAssembler moduleAssembler;
+    private int[] pendingTerminalCoords;
+    private int[] pendingAssemblerCoords;
+    private boolean hasAssembler = false;
 
     private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntitySilo>builder()
@@ -127,71 +133,47 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     }
 
     /**
-     * Stored position of the linked master (ModuleAssembler).
-     * Persisted in NBT so the link survives chunk unload / world restart.
-     * Null = not linked.
+     * Updates the linked module assembler by searching endpoint terminals of linked
+     * gantry
      */
-    private ChunkCoordinates masterPos = null;
-
-    private double monorailYOffset = 3.0;
-
-    @SideOnly(Side.CLIENT)
-    private MonorailAnimationState animationState;
-
-    @SideOnly(Side.CLIENT)
-    public MonorailAnimationState getAnimationState() {
-        if (animationState == null) animationState = new MonorailAnimationState();
-        return animationState;
-    }
-
-    @Override
-    public String getLinkableName() {
-        return "Rocket Silo";
-    }
-
-    @Override
-    public boolean canBeSlave() {
-        return true;
-    }
-
-    @Override
-    public void setMasterPos(ChunkCoordinates pos) {
-        this.masterPos = pos;
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-    }
-
-    @Override
-    public ChunkCoordinates getMasterPos() {
-        return masterPos;
-    }
-
-    public double getMonorailYOffset() {
-        return monorailYOffset;
-    }
-
-    public void setMonorailYOffset(double offset) {
-        this.monorailYOffset = offset;
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-    }
-
-    /**
-     * resolves and casts master to TileEntityModuleAssembler.
-     *
-     * @return Linked assembler, or null if not linked / unloaded.
-     */
-    public TileEntityModuleAssembler getLinkedAssembler() {
-        // Walk the chain upstream until we reach the MA
-        ChunkCoordinates cursor = masterPos;
-        int safety = 64;
-        while (cursor != null && safety-- > 0) {
-            TileEntity te = worldObj.getTileEntity(cursor.posX, cursor.posY, cursor.posZ);
-            if (te instanceof TileEntityModuleAssembler ma) return ma;
-            if (te instanceof TileEntityMonorailPole pole) cursor = pole.getPrevPos();
-            else return null;
+    public void updateLinkedAssembler() {
+        if (worldObj.isRemote) return;
+        // If no gantry terminal, no graph to check
+        if (gantryTerminal == null) {
+            moduleAssembler = null;
+            hasAssembler = false;
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return;
         }
-        return null;
+        // If not a valid graph, cannot walk it
+        if (!gantryTerminal.checkValidGraph()) {
+            moduleAssembler = null;
+            hasAssembler = false;
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return;
+        }
+        // Iterate through endpoints to find one with a linked assembler
+        List<TileEntityGantryTerminal> endpoints = GantryAPI.findEndpointTerminals(gantryTerminal);
+        for (TileEntityGantryTerminal terminal : endpoints) {
+            TileEntityModuleAssembler testAssembler = terminal.getAssembler();
+            if (testAssembler != null) {
+                moduleAssembler = testAssembler;
+                hasAssembler = true;
+                if (worldObj != null) {
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                }
+                return;
+            }
+        }
+        moduleAssembler = null;
+        hasAssembler = false;
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     /**
@@ -211,10 +193,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(240, 160);
 
-        TileEntityModuleAssembler ma = getLinkedAssembler();
-        if (ma == null) {
+        if (!hasAssembler) {
             return panel.child(
-                IKey.str("§cNo Module Assembler linked.\nUse the Linking Tool to connect one.")
+                IKey.str("§cNo Module Assembler linked.")
                     .asWidget()
                     .pos(10, 35));
         }
@@ -239,7 +220,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             .pos(10, 35)
             .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
-            moduleRow.child(createModuleButton(m, ma));
+            moduleRow.child(createModuleButton(m, moduleAssembler));
         }
 
         Flow destRow = Flow.row()
@@ -266,7 +247,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                 .tooltip(t -> t.addLine("Disassemble Rocket"))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
-                                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(ma); }))))
+                                        md -> {
+                                            if (md.mouseButton == 0 && !worldObj.isRemote)
+                                                returnModules(moduleAssembler);
+                                        }))))
                 // Launch Page
                 .addPage(
                     new ParentWidget<>().size(240, 160)
@@ -278,6 +262,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                     IKey.str("§aEnter Rocket")
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
+                                    // Flag to indicate validity of rocket launching
                                     boolean validFlag = true;
                                     getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
@@ -306,19 +291,29 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     /**
      * Creates the button for adding a module
      *
-     * @param m  The Rocket module this button is responsible for
-     * @param ma The Module Assembler this is linked to
+     * @param module    The Rocket module this button is responsible for
+     * @param assembler The Module Assembler this is linked to
      * @return ButtonWidget to add to the panel
      */
-    private ButtonWidget<?> createModuleButton(RocketModule m, TileEntityModuleAssembler ma) {
+    private ButtonWidget<?> createModuleButton(RocketModule module, TileEntityModuleAssembler assembler) {
         return new ButtonWidget<>().size(48, 20)
-            .overlay(IKey.str(m.getName()))
-            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
+            .overlay(IKey.str(module.getName()))
+            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())))
             .syncHandler(
                 new InteractionSyncHandler().setOnMousePressed(
-                    md -> { if (md.mouseButton == 0 && hasRemaining(m.getId(), ma)) addModule(m.getId(), ma); }));
+                    md -> {
+                        if (md.mouseButton == 0 && hasRemaining(module.getId(), assembler))
+                            requestModule(module.getId(), assembler);
+                    }));
     }
 
+    /**
+     * Creates the button for selecting a dimension to travel to
+     *
+     * @param dim The planet to add an option for
+     *
+     * @return ButtonWidget to add to the panel
+     */
     private ToggleButton createDestinationButton(BasePlanet dim) {
         return new ToggleButton().size(48, 20)
             .overlay(
@@ -350,85 +345,81 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     }
 
     /**
-     * Adds a module to the render stack and eventual entity, and removes from
-     * associated Assembler map
+     * Requests a new module to the silo from an assembler, and removes from
+     * assembler map
      *
-     * @param id The module ID to add
-     * @param ma The linked Module Assembler
+     * @param id        The module ID to add
+     * @param assembler The linked Module Assembler
      */
-    public void addModule(int id, TileEntityModuleAssembler ma) {
-        if (!canBuild(id))
-
-            return;
-        modules.add(id);
-        ma.moduleMap.put(id, ma.moduleMap.get(id) - 1);
+    public void requestModule(int id, TileEntityModuleAssembler assembler) {
+        if (worldObj.isRemote) return;
+        assembler.removeModule(id);
+        assembler.sendModule(id, this);
         assembly = null;
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            if (!worldObj.isRemote) {
-                GALAXIA_NETWORK.sendToAllAround(
-                    new MonorailAnimPacket(xCoord, yCoord, zCoord, id, MonorailAnimPacket.DIR_TO_SILO),
-                    new NetworkRegistry.TargetPoint(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, 512));
-            }
         }
     }
 
-    public boolean canBuild(int moduleId) {
-        EnumModuleCategory category = ModuleRegistry.fromId(moduleId)
-            .getCategory();
-        if (category != EnumModuleCategory.CORE) return true;
-        return modules.stream()
-            .map(ModuleRegistry::fromId)
-            .noneMatch(RocketCoreModule.class::isInstance);
+    /**
+     * Receives a new module and adds it to the current render stack
+     *
+     * @param id The module ID to add
+     *
+     * @return Boolean : True => Successful reception
+     */
+    public boolean receiveModule(int id) {
+        modules.add(id);
+        assembly = null;
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+        return true;
     }
 
     /**
      * Checks to see if the linked assembler has the module requested
      *
-     * @param id The ID of the module to check
-     * @param ma The linked assembler to check from
+     * @param id        The ID of the module to check
+     * @param assembler The linked assembler to check from
      * @return Boolean : True -> has the module
      */
-    public boolean hasRemaining(int id, TileEntityModuleAssembler ma) {
-        return ma.moduleMap.getOrDefault(id, 0) > 0;
+    public boolean hasRemaining(int id, TileEntityModuleAssembler assembler) {
+        if (assembler == null) return false;
+        return assembler.moduleMap.getOrDefault(id, 0) > 0;
     }
 
     public void setDesination(int dim) {
         this.destination = dim;
     }
 
-    /**
-     * Returns the modules back to the linked assembler
-     * Sends a Silo->MA animation packet to clients for each returned module
-     *
-     * @param ma The Module Assembler tile entity
-     */
-    public void returnModules(TileEntityModuleAssembler ma) {
-        if (!worldObj.isRemote) {
-            // Send animation packets BEFORE clearing the list so we still have IDs.
-            for (Integer id : modules) {
-                GALAXIA_NETWORK.sendToAllAround(
-                    new MonorailAnimPacket(xCoord, yCoord, zCoord, id, MonorailAnimPacket.DIR_TO_MA),
-                    new cpw.mods.fml.common.network.NetworkRegistry.TargetPoint(
-                        worldObj.provider.dimensionId,
-                        xCoord,
-                        yCoord,
-                        zCoord,
-                        512));
-            }
-        }
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return this.gantryTerminal;
+    }
 
-        for (Integer id : modules) {
-            ma.moduleMap.put(id, ma.moduleMap.getOrDefault(id, 0) + 1);
+    /**
+     * Returns the modules back to the linked assembler. Injects a module into the
+     * linked terminal with a return direction
+     *
+     * @param assembler The Module Assembler tile entity
+     */
+    public void returnModules(TileEntityModuleAssembler assembler) {
+        if (worldObj.isRemote) return;
+        for (int id : modules) {
+            GantryAPI.injectModule(ModuleRegistry.fromId(id), assembler, this, true);
         }
-        assembly = null;
         modules.clear();
+
+        assembly = null;
+        sync();
+    }
+
+    public void sync() {
         markDirty();
-        ma.markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            worldObj.markBlockForUpdate(ma.xCoord, ma.yCoord, ma.zCoord);
         }
     }
 
@@ -515,33 +506,30 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
                 spawnRocket();
             }
-        } else {
-            if (masterPos != null) {
-                getAnimationState().tick(calcPathLength());
+
+            if (pendingTerminalCoords != null) {
+                TileEntity te = worldObj
+                    .getTileEntity(pendingTerminalCoords[0], pendingTerminalCoords[1], pendingTerminalCoords[2]);
+
+                if (te instanceof TileEntityGantryTerminal terminal) {
+                    gantryTerminal = terminal;
+                    updateLinkedAssembler();
+                }
+
+                pendingTerminalCoords = null;
+            }
+
+            if (pendingAssemblerCoords != null) {
+                TileEntity te = worldObj
+                    .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
+
+                if (te instanceof TileEntityModuleAssembler assembler) {
+                    moduleAssembler = assembler;
+                }
+
+                pendingAssemblerCoords = null;
             }
         }
-    }
-
-    @SideOnly(Side.CLIENT)
-    private float calcPathLength() {
-        float total = 0f;
-        int prevX = xCoord, prevY = yCoord, prevZ = zCoord;
-        ChunkCoordinates cursor = masterPos;
-        int safety = 64;
-        while (cursor != null && safety-- > 0) {
-            float dx = cursor.posX - prevX;
-            float dy = cursor.posY - prevY;
-            float dz = cursor.posZ - prevZ;
-            total += (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-            prevX = cursor.posX;
-            prevY = cursor.posY;
-            prevZ = cursor.posZ;
-            TileEntity te = worldObj.getTileEntity(cursor.posX, cursor.posY, cursor.posZ);
-            if (te instanceof TileEntityModuleAssembler) break;
-            else if (te instanceof TileEntityMonorailPole pole) cursor = pole.getPrevPos();
-            else break;
-        }
-        return total;
     }
 
     /**
@@ -562,7 +550,18 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         nbt.setBoolean("shouldRender", shouldRender);
-
+        // gantry
+        if (gantryTerminal != null) {
+            nbt.setInteger("terminalX", gantryTerminal.xCoord);
+            nbt.setInteger("terminalY", gantryTerminal.yCoord);
+            nbt.setInteger("terminalZ", gantryTerminal.zCoord);
+        }
+        // assembler
+        if (moduleAssembler != null) {
+            nbt.setInteger("assemblerX", moduleAssembler.xCoord);
+            nbt.setInteger("assemblerY", moduleAssembler.yCoord);
+            nbt.setInteger("assemblerZ", moduleAssembler.zCoord);
+        }
         // modules list
         NBTTagList list = new NBTTagList();
         for (int type : modules) {
@@ -571,16 +570,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             list.appendTag(entry);
         }
         nbt.setTag("modules", list);
+        nbt.setBoolean("hasAssembler", hasAssembler);
 
-        // link data - always write so readFromNBT can detect absence
-        nbt.setBoolean("hasLink", masterPos != null);
-        if (masterPos != null) {
-            nbt.setInteger("masterX", masterPos.posX);
-            nbt.setInteger("masterY", masterPos.posY);
-            nbt.setInteger("masterZ", masterPos.posZ);
-        }
-
-        nbt.setDouble("monorailYOffset", monorailYOffset);
     }
 
     /**
@@ -602,17 +593,24 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         }
         assembly = null;
 
-        // link data
-        if (nbt.getBoolean("hasLink")) {
-            masterPos = new ChunkCoordinates(
-                nbt.getInteger("masterX"),
-                nbt.getInteger("masterY"),
-                nbt.getInteger("masterZ"));
-        } else {
-            masterPos = null;
+        // Get Gantry Terminal
+        if (nbt.hasKey("terminalX")) {
+            pendingTerminalCoords = new int[] { nbt.getInteger("terminalX"), nbt.getInteger("terminalY"),
+                nbt.getInteger("terminalZ") };
         }
 
-        monorailYOffset = nbt.hasKey("monorailYOffset") ? nbt.getDouble("monorailYOffset") : 3.0;
+        // Get Module Assembler
+        if (nbt.hasKey("assemblerX")) {
+            pendingAssemblerCoords = new int[] { nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"),
+                nbt.getInteger("assemblerZ") };
+        }
+        hasAssembler = nbt.getBoolean("hasAssembler");
+
+    }
+
+    public void setGantryTerminal(TileEntityGantryTerminal teg) {
+        this.gantryTerminal = teg;
+        updateLinkedAssembler();
     }
 
     /**

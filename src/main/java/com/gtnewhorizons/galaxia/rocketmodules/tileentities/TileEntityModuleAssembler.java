@@ -4,13 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChunkCoordinates;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -21,40 +19,16 @@ import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.gtnewhorizons.galaxia.rocketmodules.link.ILinkable;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData>, ILinkable {
+public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData> {
 
     // Hashmap stores <Module ID, Count>
     public HashMap<Integer, Integer> moduleMap = new HashMap<>();
-
-    @Override
-    public String getLinkableName() {
-        return "Module Assembler";
-    }
-
-    @Override
-    public boolean canBeMaster() {
-        return true;
-    }
-
-    /**
-     * Override to add custom master-side behaviour
-     */
-    @Override
-    public void onSlaveLinked(TileEntity slave, EntityPlayer player) {
-        // Currently just a hook
-    }
-
-    @Override
-    public void setMasterPos(ChunkCoordinates pos) { /* master-only TE */ }
-
-    @Override
-    public ChunkCoordinates getMasterPos() {
-        return null;
-    }
+    private TileEntityGantryTerminal gantryTerminal;
 
     /**
      * The UI builder for the Tile Entity GUI
@@ -114,6 +88,36 @@ public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<
             .syncHandler(
                 new InteractionSyncHandler()
                     .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));
+    }
+
+    public void setGantryTerminal(TileEntityGantryTerminal teg) {
+        this.gantryTerminal = teg;
+    }
+
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return this.gantryTerminal;
+    }
+
+    /**
+     * Removes a module from the module map and updates TileEntity
+     *
+     * @param id The module ID to remove
+     */
+    public void removeModule(int id) {
+        moduleMap.put(id, moduleMap.getOrDefault(id, 0) - 1);
+        markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    public void sendModule(int id, TileEntitySilo dest) {
+        GantryAPI.injectModule(ModuleRegistry.fromId(id), this, dest, false);
+    }
+
+    public void sync() {
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     @Override
