@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.core;
 
-import com.gtnewhorizon.structurelib.StructureLibAPI;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
 
+import com.gtnewhorizon.structurelib.StructureLibAPI;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
@@ -59,9 +59,7 @@ public class ClientProxy extends CommonProxy {
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);
         API.registerUsageHandler(handler);
-        API.addRecipeCatalyst(
-            new ItemStack(StructureLibAPI.getDefaultHologramItem()),
-            handler.getOverlayIdentifier());
+        API.addRecipeCatalyst(new ItemStack(StructureLibAPI.getDefaultHologramItem()), handler.getOverlayIdentifier());
     }
 
     @Override

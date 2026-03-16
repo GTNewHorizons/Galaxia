@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.core.nei;
 
-import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import net.minecraft.tileentity.TileEntity;
 
+import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 
 import blockrenderer6343.api.utils.CreativeItemSource;
@@ -13,13 +13,13 @@ public class GalaxiaGuiMultiblockHandler extends GuiMultiblockHandler {
 
     @Override
     protected void placeMultiblock() {
-        if (!(renderingController instanceof GalaxiaMultiblockBase<?> dummy)) return;
+        if (!(renderingController instanceof GalaxiaMultiblockBase<?>dummy)) return;
 
         renderer.world.setBlock(MB_PLACE_POS.x, MB_PLACE_POS.y, MB_PLACE_POS.z, dummy.getControllerBlock(), 0, 3);
 
         TileEntity te = renderer.world.getTileEntity(MB_PLACE_POS.x, MB_PLACE_POS.y, MB_PLACE_POS.z);
 
-        if (!(te instanceof GalaxiaMultiblockBase<?> live)) return;
+        if (!(te instanceof GalaxiaMultiblockBase<?>live)) return;
 
         renderingController = live;
         this.trigger = DEFAULT_TRIGGER;

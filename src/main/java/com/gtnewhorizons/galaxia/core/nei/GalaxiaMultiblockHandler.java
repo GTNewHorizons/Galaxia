@@ -1,13 +1,11 @@
 package com.gtnewhorizons.galaxia.core.nei;
 
-import java.awt.Rectangle;
 import java.util.HashMap;
 import java.util.Map;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.StatCollector;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -37,13 +35,8 @@ public class GalaxiaMultiblockHandler extends MultiblockHandler {
     }
 
     @Override
-    public String getRecipeTabName() {
-        return StatCollector.translateToLocal("galaxia.nei.multiblock.name");
-    }
-
-    @Override
     public @NotNull ItemStack getConstructableStack(IConstructable multiblock) {
-        if (multiblock instanceof GalaxiaMultiblockBase<?> base) {
+        if (multiblock instanceof GalaxiaMultiblockBase<?>base) {
             return new ItemStack(base.getControllerBlock());
         }
         return new ItemStack(Items.paper);
