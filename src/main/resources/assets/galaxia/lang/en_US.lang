@@ -105,6 +105,8 @@ tile.space_air.name=Space Air
 tile.module_assembler_controller.name=Module Assembler
 tile.silo_controller.name=Rocket Silo
 tile.space_station_panel.name=Space Station Panel
+tile.gantry_block.name=Gantry Shaft
+tile.gantry_terminal.name=Gantry Terminal
 
 # Miscellaneous / Resource blocks
 tile.block_of_pyrite.name=Block of Pyrite

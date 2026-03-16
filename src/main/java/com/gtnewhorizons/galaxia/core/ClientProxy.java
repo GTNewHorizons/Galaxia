@@ -1,15 +1,19 @@
 package com.gtnewhorizons.galaxia.core;
 
-import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
+import net.minecraft.item.Item;
+import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailRenderer;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryItemRenderer;
+import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.SiloRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
@@ -31,19 +35,11 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
 
-        final SiloRenderer siloRenderer = new SiloRenderer();
-        final MonorailRenderer monorailRenderer = new MonorailRenderer();
-
-        ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new TileEntitySpecialRenderer() {
-
-            @Override
-            public void renderTileEntityAt(net.minecraft.tileentity.TileEntity te, double x, double y, double z,
-                float partialTick) {
-                siloRenderer.renderTileEntityAt(te, x, y, z, partialTick);
-                monorailRenderer.renderTileEntityAt(te, x, y, z, partialTick);
-            }
-        });
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGantry.class, new GantryRenderer());
+        MinecraftForgeClient
+            .registerItemRenderer(Item.getItemFromBlock(GalaxiaBlocksEnum.GANTRY.get()), new GantryItemRenderer());
     }
 
     @Override

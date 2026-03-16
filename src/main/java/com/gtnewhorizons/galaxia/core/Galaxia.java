@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.MonorailAnimPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -77,10 +76,11 @@ public final class Galaxia {
     // spotless:off
     private static void registerNetwork() {
         int id = 0;
-        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
+                Side.SERVER);
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++, Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++, Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(MonorailAnimPacket.Handler.class, MonorailAnimPacket.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
+                Side.SERVER);
     }
     // spotless:on
 
