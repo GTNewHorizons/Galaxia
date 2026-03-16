@@ -1,14 +1,12 @@
 package com.gtnewhorizons.galaxia.core;
 
-import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.item.Item;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
-import com.gtnewhorizon.structurelib.StructureLibAPI;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
+import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryItemRenderer;
@@ -39,6 +37,7 @@ public class ClientProxy extends CommonProxy {
     public void init(FMLInitializationEvent event) {
         super.init(event);
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
+        IMCForNEI.IMCSender();
 
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
@@ -56,7 +55,6 @@ public class ClientProxy extends CommonProxy {
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);
         API.registerUsageHandler(handler);
-        API.addRecipeCatalyst(new ItemStack(StructureLibAPI.getDefaultHologramItem()), handler.getOverlayIdentifier());
     }
 
     @Override

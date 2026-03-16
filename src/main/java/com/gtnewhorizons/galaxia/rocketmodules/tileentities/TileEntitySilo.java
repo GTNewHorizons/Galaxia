@@ -13,8 +13,6 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChunkCoordinates;
-import net.minecraft.util.AxisAlignedBB;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -35,7 +33,6 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.MonorailAnimPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
@@ -56,12 +53,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitVali
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData> {
-import cpw.mods.fml.common.network.NetworkRegistry;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-
-public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implements IGuiHolder<PosGuiData>, ILinkable {
+public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implements IGuiHolder<PosGuiData> {
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
