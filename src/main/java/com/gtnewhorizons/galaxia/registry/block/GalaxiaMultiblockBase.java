@@ -35,6 +35,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
         mCheckTimer = 0;
     }
 
+    // does practically nothing but must be implemented
     @Override
     public String[] getStructureDescription(ItemStack trigger) {
         return new String[0];
@@ -70,7 +71,8 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     @SuppressWarnings("unchecked")
     @Override
     public void construct(ItemStack trigger, boolean hintsOnly) {
-        if (worldObj == null || worldObj.isRemote) return;
+        if (worldObj == null) return;
+        if (!hintsOnly && worldObj.isRemote) return;
 
         getStructureDefinition().buildOrHints(
             (T) this,
