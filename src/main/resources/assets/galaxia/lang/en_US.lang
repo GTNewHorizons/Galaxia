@@ -20,6 +20,9 @@
 #### Creative tab
 itemGroup.galaxia=§9Galaxia§r
 
+#### NEI
+galaxia.nei.multiblock.name=Multiblock Structure
+
 #### Baubles
 slot.oxygen_tank=Oxygen Tank
 slot.thermal_protection=Thermal Protection

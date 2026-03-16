@@ -5,15 +5,15 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import net.minecraft.block.Block;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ChunkCoordinates;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -31,8 +31,13 @@ import com.cleanroommc.modularui.widgets.PageButton;
 import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.MonorailAnimPacket;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.MonorailAnimationState;
@@ -57,7 +62,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>, ILinkable {
+public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implements IGuiHolder<PosGuiData>, ILinkable {
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
@@ -77,6 +82,50 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
+
+    private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
+        .<TileEntitySilo>builder()
+        // spotless:off
+        .addShape("main", new String[][] {
+            {"CCC", "CCC", "CCC"},
+            {"C C", "C C", "C C"},
+            {"C C", "C C", "C C"},
+            {"C C", "C C", "C C"},
+            {"CCC", "C~C", "CCC"}
+        })
+        //spotless:on
+        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
+        .build();
+
+    @Override
+    public IStructureDefinition<TileEntitySilo> getStructureDefinition() {
+        return STRUCTURE_DEFINITION;
+    }
+
+    @Override
+    protected int getControllerOffsetX() {
+        return 1;
+    }
+
+    @Override
+    protected int getControllerOffsetY() {
+        return 1;
+    }
+
+    @Override
+    protected int getControllerOffsetZ() {
+        return 4;
+    }
+
+    @Override
+    protected void onStructureFormed() {
+        shouldRender = true;
+    }
+
+    @Override
+    public Block getControllerBlock() {
+        return GalaxiaBlocksEnum.SILO_CONTROLLER.get();
+    }
 
     /**
      * Stored position of the linked master (ModuleAssembler).
@@ -329,14 +378,10 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public boolean canBuild(int moduleId) {
         EnumModuleCategory category = ModuleRegistry.fromId(moduleId)
             .getCategory();
-        List<RocketModule> moduleList = modules.stream()
-            .map(m -> ModuleRegistry.fromId(m))
-            .collect(Collectors.toList());
         if (category != EnumModuleCategory.CORE) return true;
-        if (moduleList.stream()
-            .filter(RocketCoreModule.class::isInstance)
-            .count() == 0) return true;
-        return false;
+        return modules.stream()
+            .map(ModuleRegistry::fromId)
+            .noneMatch(RocketCoreModule.class::isInstance);
     }
 
     /**
@@ -465,6 +510,8 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
      */
     @Override
     public void updateEntity() {
+        super.updateEntity();
+
         if (!worldObj.isRemote) {
             if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
                 spawnRocket();
@@ -505,26 +552,6 @@ public class TileEntitySilo extends TileEntity implements IGuiHolder<PosGuiData>
     public void invalidate() {
         super.invalidate();
         if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
-    }
-
-    /**
-     * Returns rendering bounding box
-     *
-     * @return Bounding box
-     */
-    @Override
-    public AxisAlignedBB getRenderBoundingBox() {
-        return TileEntity.INFINITE_EXTENT_AABB;
-    }
-
-    /**
-     * Gets the max render distance squared
-     *
-     * @return Max RDS
-     */
-    @Override
-    public double getMaxRenderDistanceSquared() {
-        return 512 * 512;
     }
 
     /**
