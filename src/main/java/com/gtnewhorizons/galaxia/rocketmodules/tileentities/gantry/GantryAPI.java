@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,13 +57,11 @@ public final class GantryAPI {
         // Get all endpoints with DFS
         dfsEndpoints(start, start, new HashSet<>(), endpoints, 0);
         if (endpoints.size() == 1) {
-            LOG.info("ONLY");
             return false;
         }
         // Ensure all are terminal instances
         for (TileEntityGantry instance : endpoints) {
             if (!isTerminal(instance)) {
-                LOG.info("FOUND NON-TERMINATION");
                 return false;
             }
         }

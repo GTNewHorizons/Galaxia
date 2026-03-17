@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -179,7 +178,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      */
     public void updateLinkedAssembler() {
         if (worldObj.isRemote) return;
-        LOG.info("Started Search");
         // If no gantry terminal, no graph to check
         if (gantryTerminal == null) {
             moduleAssembler = null;
@@ -189,7 +187,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             }
             return;
         }
-        LOG.info("Found terminal");
         // If not a valid graph, cannot walk it
         if (!gantryTerminal.checkValidGraph()) {
             moduleAssembler = null;
@@ -199,10 +196,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             }
             return;
         }
-        LOG.info("Valid Graph");
         // Iterate through endpoints to find one with a linked assembler
         List<TileEntityGantryTerminal> endpoints = GantryAPI.findEndpointTerminals(gantryTerminal);
-        LOG.info(endpoints);
         for (TileEntityGantryTerminal terminal : endpoints) {
             TileEntityModuleAssembler testAssembler = terminal.getAssembler();
             if (testAssembler != null) {
@@ -238,7 +233,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(240, 160);
         updateLinkedAssembler();
-        LOG.info("BUILD");
 
         if (!hasAssembler) {
             return panel.child(
