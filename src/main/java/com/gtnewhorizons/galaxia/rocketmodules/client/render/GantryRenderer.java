@@ -38,85 +38,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         if (!(tileEntity instanceof TileEntityGantry gantry)) return;
 
         List<Vec3> dirs = gantry.neighbourDirs;
-        if (dirs.isEmpty()) {
-            // Render default variant
-            renderFullBeam(gantry, x, y, z, Vec3.createVectorHelper(1, 0, 0));
-            return;
-        }
-        if (dirs.size() == 1) {
-            Vec3 dir = dirs.get(0);
-            if (dir.yCoord != 0) {
-                renderUpBeam(gantry, x, y, z, Vec3.createVectorHelper(-dir.xCoord, 0, -dir.zCoord), dir);
-            } else renderFullBeam(gantry, x, y, z, dir);
 
-        }
-
-        // RENDER GANTRY VARIANTS
-        // Neighbour dirs contains all neighbours to block
-
-        // Flag for error checking
-        boolean errorFlag = dirs.size() >= 2;
-
-        // Pass 1: handle every diagonal-down neighbour independently.
-        // A block that is the TOP of one or more ramps must render a straight
-        // horizontal beam for each incoming ramp direction. We do this before
-        // the pair loop so that multiple ramps arriving from different sides are
-        // all rendered correctly (cross-junction / V-junction support).
-        //
-        // If this block has NO cardinal neighbours at all (pure V/fan junction —
-        // only diagonal-down arms, like the "020 / 101" case), every diagonal-down
-        // is inherently a valid top-of-ramp, so we skip the chain-continuity check.
-        // If there IS at least one cardinal neighbour we keep the check so that
-        // mid-chain diagonal blocks don't accidentally render as tops.
-        boolean hasAnyCardinal = false;
-        for (Vec3 d : dirs) {
-            if (isCardinal(d)) { hasAnyCardinal = true; break; }
-        }
-        for (Vec3 elev : dirs) {
-            if (elev.yCoord >= 0 || isCardinal(elev)) continue; // only diagonal-down
-            Vec3 horiz = Vec3.createVectorHelper(elev.xCoord, 0, elev.zCoord);
-            if (!hasAnyCardinal || hasOppositeDiagonal(gantry, elev) || hasNoAboveDiagonal(gantry, elev)) {
-                renderFullBeam(gantry, x, y, z, horiz);
-                errorFlag = false;
-            }
-        }
-
-        // Pass 2: pair-based rendering for all other cases
-        for (int i = 0; i < dirs.size(); i++) {
-            for (int j = i + 1; j < dirs.size(); j++) {
-                Vec3 a = dirs.get(i);
-                Vec3 b = dirs.get(j);
-                boolean opp = isOpposite(a, b);
-                if (opp && isCardinal(a)) {
-                    // If cardinal and has opposite, render full beam
-                    renderFullBeam(gantry, x, y, z, a);
-                    errorFlag = false;
-                } else if (opp && !isCardinal(a)) {
-                    // If not cardinal and has opposite, render diagonal beam
-                    Vec3 upDir = (a.yCoord >= 0) ? a : b;
-                    renderDiagonalBeam(gantry, x, y, z, upDir);
-                    errorFlag = false;
-                } else if (!opp && isCardinal(a) && isCardinal(b)) {
-                    // If cardinal and not opposite, render corner beam
-                    renderCornerBeam(gantry, x, y, z, a, b);
-                    errorFlag = false;
-                } else if (!opp && isCardinal(a) != isCardinal(b) && isUpBendPair(a, b)) {
-                    // If not cardinal, and not opposite, render up bend
-                    Vec3 horiz = isCardinal(a) ? a : b;
-                    Vec3 elev = isCardinal(a) ? b : a;
-                    if (hasOppositeDiagonal(gantry, elev) || hasNoAboveDiagonal(gantry, elev)) {
-                        // Top-of-ramp case (elev.yCoord < 0): already handled in Pass 1.
-                        // Bottom-of-ramp (elev goes upward): render the bend.
-                        if (elev.yCoord > 0) {
-                            renderUpBeam(gantry, x, y, z, horiz, elev);
-                        }
-                        errorFlag = false;
-                    }
-                }
-            }
-        }
-        // If no valid render found, render error
-        if (errorFlag) renderErrorBeam(gantry, x, y, z);
+        renderGantryPath(gantry, x, y, z, dirs);
 
         Vec3 outDir = gantry.getDirection();
         Vec3 inDir = gantry.clientIncomingDirection;
@@ -124,7 +47,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         boolean isCorner = inDir != null && outDir != null
             && (Math.abs(inDir.xCoord - outDir.xCoord) > 0.01 || Math.abs(inDir.yCoord - outDir.yCoord) > 0.01
-            || Math.abs(inDir.zCoord - outDir.zCoord) > 0.01);
+                || Math.abs(inDir.zCoord - outDir.zCoord) > 0.01);
 
         float dx, dy, dz, yaw, pitch;
 
@@ -154,11 +77,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             pitch = (float) Math.toDegrees(Math.asin(-norm.yCoord));
         }
 
-        // Render Module
         int moduleId = gantry.clientModuleId;
-        if (moduleId == -1) {
-            return;
-        }
+        if (moduleId == -1) return;
         RocketModule module = ModuleRegistry.fromId(moduleId);
         applyWorldLighting(gantry);
         GL11.glPushMatrix();
@@ -178,11 +98,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         GL11.glPopMatrix();
 
-        // Render Carriage
-
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
-
         GL11.glRotatef(yaw, 0f, 1f, 0f);
         GL11.glRotatef(pitch, 1f, 0f, 0f);
         GL11.glRotatef(90, 0, 1, 0);
@@ -195,17 +112,175 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
     }
 
-    // LERP HELPERS
+    /**
+     * Renders the gantry path using dedicated models for straights, corners,
+     * T-junctions, crosses, diagonals, and mixed ramp transitions.
+     */
+    private void renderGantryPath(TileEntityGantry gantry, double x, double y, double z, List<Vec3> dirs) {
+        if (dirs.isEmpty()) {
+            renderFullBeam(gantry, x, y, z, Vec3.createVectorHelper(1, 0, 0));
+            return;
+        }
+
+        if (dirs.size() == 1) {
+            Vec3 dir = dirs.get(0);
+            if (dir.yCoord != 0) {
+                renderDiagonalBeam(gantry, x, y, z, dir);
+            } else {
+                renderFullBeam(gantry, x, y, z, dir);
+            }
+            return;
+        }
+
+        int cardinalCount = 0;
+        Vec3 firstCard = null;
+        Vec3 secondCard = null;
+        for (Vec3 d : dirs) {
+            if (isCardinal(d)) {
+                cardinalCount++;
+                if (firstCard == null) firstCard = d;
+                else if (secondCard == null) secondCard = d;
+            }
+        }
+
+        if (cardinalCount == 0) {
+            renderDiagonalBeam(gantry, x, y, z, dirs.get(0));
+            return;
+        }
+
+        int uncovered = getUncoveredCount(dirs);
+        if (uncovered == 0) {
+            renderPlusBeam(gantry, x, y, z);
+            return;
+        } else if (uncovered == 1) {
+            Vec3 missing = getUncoveredMissingDirection(dirs);
+            renderTBeam(gantry, x, y, z, missing);
+            return;
+        }
+
+        if (cardinalCount == 4) {
+            renderPlusBeam(gantry, x, y, z);
+            return;
+        }
+
+        if (cardinalCount == 3) {
+            Vec3 missing = findMissingCardinalDirection(dirs);
+            if (missing != null) {
+                if (hasDiagonalCoveringDirection(dirs, missing)) {
+                    renderPlusBeam(gantry, x, y, z);
+                } else {
+                    renderTBeam(gantry, x, y, z, missing);
+                }
+            }
+            return;
+        }
+
+        if (cardinalCount == 2) {
+            if (isOpposite(firstCard, secondCard)) {
+                renderFullBeam(gantry, x, y, z, firstCard);
+            } else {
+                renderCornerBeam(gantry, x, y, z, firstCard, secondCard);
+            }
+            return;
+        }
+
+        Vec3 cardDir = null;
+        for (Vec3 d : dirs) {
+            if (isCardinal(d)) {
+                cardDir = d;
+                break;
+            }
+        }
+
+        for (Vec3 d : dirs) {
+            if (!isCardinal(d)) {
+                Vec3 horiz = Vec3.createVectorHelper(d.xCoord, 0, d.zCoord);
+                if (isOpposite(cardDir, horiz)) {
+                    if (d.yCoord > 0) {
+                        renderDiagonalBeam(gantry, x, y, z, d);
+                    } else {
+                        renderFullBeam(gantry, x, y, z, cardDir);
+                    }
+                } else {
+                    renderCornerBeam(gantry, x, y, z, cardDir, horiz);
+                }
+                return;
+            }
+        }
+
+        renderErrorBeam(gantry, x, y, z);
+    }
 
     /**
-     * Linear Interpolater of an angle based on block progress
-     *
-     * @param a Start angle
-     * @param b End angle
-     * @param t Progress through block
-     *
-     * @return Interpolated angle
+     * Checks if a diagonal ramp neighbour covers the missing cardinal direction
+     * for a cross instead of a T-shape. When the ramp is below us (y < 0),
+     * we are at its upper exit, so we use the raw horizontal component of d.
      */
+    private boolean hasDiagonalCoveringDirection(List<Vec3> dirs, Vec3 horizDir) {
+        for (Vec3 d : dirs) {
+            if (d.yCoord != 0) {
+                Vec3 diagHoriz = Vec3.createVectorHelper(d.xCoord, 0, d.zCoord);
+                if (d.yCoord > 0) {
+                    diagHoriz = Vec3.createVectorHelper(-d.xCoord, 0, -d.zCoord);
+                }
+                if (Math.abs(diagHoriz.xCoord - horizDir.xCoord) < 0.01
+                    && Math.abs(diagHoriz.zCoord - horizDir.zCoord) < 0.01) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Counts how many of the 4 cardinal directions are neither a direct
+     * cardinal neighbour nor covered by any diagonal ramp.
+     */
+    private int getUncoveredCount(List<Vec3> dirs) {
+        int count = 0;
+        Vec3[] candidates = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
+            Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1) };
+        for (Vec3 cand : candidates) {
+            boolean covered = false;
+            for (Vec3 d : dirs) {
+                if (isCardinal(d) && Math.abs(d.xCoord - cand.xCoord) < 0.01
+                    && Math.abs(d.zCoord - cand.zCoord) < 0.01) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered && hasDiagonalCoveringDirection(dirs, cand)) {
+                covered = true;
+            }
+            if (!covered) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Returns the single uncovered cardinal direction when exactly one remains.
+     * Returns null otherwise.
+     */
+    private Vec3 getUncoveredMissingDirection(List<Vec3> dirs) {
+        Vec3[] candidates = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
+            Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1) };
+        for (Vec3 cand : candidates) {
+            boolean covered = false;
+            for (Vec3 d : dirs) {
+                if (isCardinal(d) && Math.abs(d.xCoord - cand.xCoord) < 0.01
+                    && Math.abs(d.zCoord - cand.zCoord) < 0.01) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered && hasDiagonalCoveringDirection(dirs, cand)) {
+                covered = true;
+            }
+            if (!covered) return cand;
+        }
+        return null;
+    }
+
     private static float lerpAngle(float a, float b, float t) {
         float diff = b - a;
         while (diff > 180f) diff -= 360f;
@@ -246,102 +321,35 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
     }
 
-    // DIRECTIONALITY HELPERS
-    /**
-     * Determines if a direction is a cardinal direction (N, E, S, W)
-     *
-     * @param dir Vector direction to check
-     *
-     * @return Boolean : True => is cardinal
-     */
     private boolean isCardinal(Vec3 dir) {
         return dir.yCoord == 0
             && ((Math.abs(dir.xCoord) == 1 && dir.zCoord == 0) || (dir.xCoord == 0 && Math.abs(dir.zCoord) == 1));
     }
 
-    /**
-     * Determines if two vectors are opposite
-     *
-     * @param a First vector
-     * @param b Second vector
-     *
-     * @return Boolean : True => are opposite
-     */
     private boolean isOpposite(Vec3 a, Vec3 b) {
         return a.xCoord == -b.xCoord && a.yCoord == -b.yCoord && a.zCoord == -b.zCoord;
     }
 
     /**
-     * Determines if two vectors form a valid "up-bend" pair, where one vector is
-     * cardinal, and the other is in opposite x/z direction and at different heights
-     *
-     * @param a First vector
-     * @param b Second vector
-     *
-     * @return Boolean : True => valid up-bend
+     * Finds the single missing cardinal direction (for T-shape).
      */
-    private boolean isUpBendPair(Vec3 a, Vec3 b) {
-        boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
-        boolean oneHasY = (a.yCoord != 0) ^ (b.yCoord != 0);
-        return xzOpposite && oneHasY;
-    }
-
-    /**
-     * Determines whether there is no block diagonally the same direction but
-     * further in Y direction
-     *
-     * @param gantry  The gantry being checked
-     * @param elevDir The direction with y elevation
-     *
-     * @return Boolean : True => No above diagonal
-     */
-    private boolean hasNoAboveDiagonal(TileEntityGantry gantry, Vec3 elevDir) {
-        int nx = gantry.xCoord + (int) elevDir.xCoord;
-        int ny = gantry.yCoord + (int) elevDir.yCoord;
-        int nz = gantry.zCoord + (int) elevDir.zCoord;
-
-        TileEntity te = Minecraft.getMinecraft().theWorld.getTileEntity(nx, ny, nz);
-        if (!(te instanceof TileEntityGantry)) return false;
-
-        TileEntityGantry diagNeighbour = (TileEntityGantry) te;
-
-        for (Vec3 dir : diagNeighbour.neighbourDirs) {
-            if (dir.xCoord == -elevDir.xCoord && dir.yCoord == elevDir.yCoord && dir.zCoord == -elevDir.zCoord)
-                return false;
+    private Vec3 findMissingCardinalDirection(List<Vec3> dirs) {
+        Vec3[] candidates = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
+            Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1) };
+        for (Vec3 cand : candidates) {
+            boolean found = false;
+            for (Vec3 d : dirs) {
+                if (isCardinal(d) && Math.abs(d.xCoord - cand.xCoord) < 0.01
+                    && Math.abs(d.zCoord - cand.zCoord) < 0.01) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return cand;
         }
-
-        return true;
-
+        return null;
     }
 
-    /**
-     * Determines whether a gantry has a diagonal in the opposite direction (i.e. a
-     * diagonal chain)
-     *
-     * @param gantry  The gantry being checked
-     * @param elevDir The direction vector with elevation
-     *
-     * @return Boolean : True => has opposite diagonal
-     */
-    private boolean hasOppositeDiagonal(TileEntityGantry gantry, Vec3 elevDir) {
-        int nx = gantry.xCoord + (int) elevDir.xCoord;
-        int ny = gantry.yCoord + (int) elevDir.yCoord;
-        int nz = gantry.zCoord + (int) elevDir.zCoord;
-
-        TileEntity te = Minecraft.getMinecraft().theWorld.getTileEntity(nx, ny, nz);
-        if (!(te instanceof TileEntityGantry)) return false;
-
-        TileEntityGantry diagNeighbour = (TileEntityGantry) te;
-
-        for (Vec3 dir : diagNeighbour.neighbourDirs) {
-            if (dir.xCoord == elevDir.xCoord && dir.yCoord == elevDir.yCoord && dir.zCoord == elevDir.zCoord)
-                return true;
-        }
-        return false;
-    }
-
-    // BEAM RENDERERS
-    // Rendes a full beam from block to block horizontally
     private static void renderFullBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
         Vec3 f = dir.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
@@ -354,15 +362,13 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
         Minecraft.getMinecraft()
             .getTextureManager()
-            .bindTexture(g.getTexture());
-        g.getModel()
+            .bindTexture(g.getStraightTexture());
+        g.getStraightModel()
             .renderAll();
         GL11.glPopMatrix();
     }
 
-    // Renders an "Error Beam", a cross beam with red colour for invalid placements
     private static void renderErrorBeam(TileEntityGantry g, double x, double y, double z) {
-
         Vec3 f = Vec3.createVectorHelper(1, 0, 0);
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
 
@@ -375,7 +381,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         Minecraft.getMinecraft()
             .getTextureManager()
             .bindTexture(g.getErrorTexture());
-        g.getModel()
+        g.getStraightModel()
             .renderAll();
         GL11.glPopMatrix();
 
@@ -390,18 +396,19 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         Minecraft.getMinecraft()
             .getTextureManager()
             .bindTexture(g.getErrorTexture());
-        g.getModel()
+        g.getStraightModel()
             .renderAll();
         GL11.glPopMatrix();
     }
 
-    // Renders a diagonal beam in the direction of a given vector
     private static void renderDiagonalBeam(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
-        Vec3 f = dir.normalize();
+        Vec3 ascDir = (dir.yCoord >= 0) ? dir : Vec3.createVectorHelper(-dir.xCoord, -dir.yCoord, -dir.zCoord);
+        Vec3 f = ascDir.normalize();
         float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+
         applyWorldLighting(g);
         GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, y + 0.425, z + 0.5);
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
         GL11.glRotatef(90, 0, 1, 0);
         GL11.glRotatef(facingYaw, 0, 1, 0);
         GL11.glRotatef(180, 0, 1, 0);
@@ -412,14 +419,13 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         g.getDiagonalModel()
             .renderAll();
         GL11.glPopMatrix();
-
     }
 
-    // Renders a corner beam between two cardinal directions
     private static void renderCornerBeam(TileEntityGantry g, double x, double y, double z, Vec3 in, Vec3 out) {
         double cx = in.xCoord + out.xCoord;
         double cz = in.zCoord + out.zCoord;
         float facingYaw = (float) Math.toDegrees(Math.atan2(cx, cz));
+
         applyWorldLighting(g);
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
@@ -432,30 +438,41 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         g.getCornerModel()
             .renderAll();
         GL11.glPopMatrix();
-
     }
 
-    // Renders an "up-beam" between a cardinal direction and a diagonal direction
-    private static void renderUpBeam(TileEntityGantry g, double x, double y, double z, Vec3 horiz, Vec3 elev) {
-        Vec3 f = horiz.normalize();
-        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
+    /**
+     * Renders a T-shape using a dedicated model.
+     * missingDir is the open side of the T.
+     */
+    private static void renderTBeam(TileEntityGantry g, double x, double y, double z, Vec3 missingDir) {
+        Vec3 f = missingDir.normalize();
+        float missingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
 
-        double yOffset = y + 0.5 + (elev.yCoord * 0.125);
         applyWorldLighting(g);
         GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, yOffset, z + 0.5);
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
         GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        if (elev.yCoord < 0) {
-            GL11.glRotatef(180, 1, 0, 0);
-        }
+        GL11.glRotatef(missingYaw + 180f, 0, 1, 0);
         GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
         Minecraft.getMinecraft()
             .getTextureManager()
-            .bindTexture(g.getUpBendTexture());
-        g.getUpBendModel()
+            .bindTexture(g.getSemiCrossTexture());
+        g.getSemiCrossModel()
             .renderAll();
         GL11.glPopMatrix();
     }
 
+    private static void renderPlusBeam(TileEntityGantry g, double x, double y, double z) {
+        applyWorldLighting(g);
+        GL11.glPushMatrix();
+        GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5);
+        GL11.glRotatef(90, 0, 1, 0);
+        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(g.getCrossTexture());
+        g.getCrossModel()
+            .renderAll();
+        GL11.glPopMatrix();
+    }
 }
