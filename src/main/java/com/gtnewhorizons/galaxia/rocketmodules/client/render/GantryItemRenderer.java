@@ -47,8 +47,8 @@ public class GantryItemRenderer implements IItemRenderer {
                 GL11.glScalef(0.5f, 0.5f, 0.5f);
                 break;
         }
-        Minecraft.getMinecraft().renderEngine.bindTexture(LocationGalaxia("textures/model/gantry/texture.png"));
-        AdvancedModelLoader.loadModel(LocationGalaxia("textures/model/gantry/model.obj"))
+        Minecraft.getMinecraft().renderEngine.bindTexture(LocationGalaxia("textures/model/gantry/straight.png"));
+        AdvancedModelLoader.loadModel(LocationGalaxia("textures/model/gantry/straight.obj"))
             .renderAll();
 
         GL11.glPopMatrix();
