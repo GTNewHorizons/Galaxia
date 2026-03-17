@@ -62,31 +62,60 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
             StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
         .build();
 
+    /**
+     * Gets the structure definition of this multiblock
+     *
+     * @return The structure definition of this multiblock
+     */
     @Override
     public IStructureDefinition<TileEntityModuleAssembler> getStructureDefinition() {
         return STRUCTURE_DEFINITION;
     }
 
+    /**
+     * Gets the x offset from the origin of the multi to the controller
+     *
+     * @return X offset
+     */
     @Override
     protected int getControllerOffsetX() {
         return 1;
     }
 
+    /**
+     * Gets the y offset from the origin of the multi to the controller
+     *
+     * @return Y offset
+     */
     @Override
     protected int getControllerOffsetY() {
         return 1;
     }
 
+    /**
+     * Gets the z offset from the origin of the multi to the controller
+     *
+     * @return Z offset
+     */
     @Override
     protected int getControllerOffsetZ() {
         return 4;
     }
 
+    /**
+     * Handles logic after structure is formed
+     */
     @Override
     protected void onStructureFormed() {
         shouldRender = true;
     }
 
+    /**
+     * Handles the logic of checking structure validity - overridden to include
+     * terminal count checks
+     *
+     * @return Boolean : True => valid structure
+     */
     @Override
     protected boolean checkStructure() {
         if (worldObj == null || worldObj.isRemote) return structureValid;
@@ -116,6 +145,11 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         return valid;
     }
 
+    /**
+     * Gets the controller block for this multi
+     *
+     * @return The controller block
+     */
     @Override
     public Block getControllerBlock() {
         return GalaxiaBlocksEnum.ASSEMBLER_CONTROLLER.get();
