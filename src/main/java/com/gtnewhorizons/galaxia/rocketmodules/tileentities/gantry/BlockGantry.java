@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
+
 import java.util.ArrayList;
 
 import net.minecraft.block.Block;
@@ -45,8 +47,8 @@ public class BlockGantry extends Block implements ITileEntityProvider {
 
             TileEntity checkTe = world.getTileEntity(cx, cy, cz);
             if (checkTe instanceof TileEntityGantry checkGantry) {
+                LOG.info("ADDING");
                 teg.connect(checkGantry);
-
             }
         }
 
@@ -74,7 +76,6 @@ public class BlockGantry extends Block implements ITileEntityProvider {
                     + ", facing: "
                     + teg.facing));
         return true;
-
     }
 
     @Override

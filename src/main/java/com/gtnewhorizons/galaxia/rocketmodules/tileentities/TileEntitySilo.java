@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -112,17 +113,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
     @Override
     protected int getControllerOffsetX() {
-        return 4;
+        return 2;
     }
 
     @Override
     protected int getControllerOffsetY() {
-        return 0;
+        return 4;
     }
 
     @Override
     protected int getControllerOffsetZ() {
-        return 2;
+        return 0;
     }
 
     @Override
@@ -132,9 +133,16 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     }
 
     @Override
+    protected void onStructureDisformed() {
+        updateLinkedAssembler();
+        shouldRender = false;
+    }
+
+    @Override
     protected boolean checkStructure() {
         if (worldObj == null || worldObj.isRemote) return structureValid;
         foundTerminalCount = 0;
+        gantryTerminal = null;
 
         boolean valid = getStructureDefinition().check(
             (TileEntitySilo) this,
@@ -149,9 +157,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             getControllerOffsetZ(),
             false);
 
+        if (valid && foundTerminalCount != 1) valid = false;
         if (valid != structureValid) {
             structureValid = valid;
-            if (valid && foundTerminalCount == 1) onStructureFormed();
+            if (valid) onStructureFormed();
             else onStructureDisformed();
             markDirty();
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -170,6 +179,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      */
     public void updateLinkedAssembler() {
         if (worldObj.isRemote) return;
+        LOG.info("Started Search");
         // If no gantry terminal, no graph to check
         if (gantryTerminal == null) {
             moduleAssembler = null;
@@ -179,6 +189,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             }
             return;
         }
+        LOG.info("Found terminal");
         // If not a valid graph, cannot walk it
         if (!gantryTerminal.checkValidGraph()) {
             moduleAssembler = null;
@@ -188,8 +199,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             }
             return;
         }
+        LOG.info("Valid Graph");
         // Iterate through endpoints to find one with a linked assembler
         List<TileEntityGantryTerminal> endpoints = GantryAPI.findEndpointTerminals(gantryTerminal);
+        LOG.info(endpoints);
         for (TileEntityGantryTerminal terminal : endpoints) {
             TileEntityModuleAssembler testAssembler = terminal.getAssembler();
             if (testAssembler != null) {
@@ -224,6 +237,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(240, 160);
+        updateLinkedAssembler();
+        LOG.info("BUILD");
 
         if (!hasAssembler) {
             return panel.child(
@@ -496,7 +511,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private void spawnRocket() {
         entityRocket = new EntityRocket(worldObj);
         entityRocket.bindSilo(this);
-        entityRocket.setPosition(xCoord + 0.5, yCoord + 1.0, zCoord + 0.5);
+        entityRocket.setPosition(xCoord + 0.5, yCoord + 1.0, zCoord + 2.5);
         worldObj.spawnEntityInWorld(entityRocket);
     }
 
@@ -570,12 +585,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         nbt.setBoolean("shouldRender", shouldRender);
-        // gantry
-        if (gantryTerminal != null) {
-            nbt.setInteger("terminalX", gantryTerminal.xCoord);
-            nbt.setInteger("terminalY", gantryTerminal.yCoord);
-            nbt.setInteger("terminalZ", gantryTerminal.zCoord);
-        }
         // assembler
         if (moduleAssembler != null) {
             nbt.setInteger("assemblerX", moduleAssembler.xCoord);

@@ -1,21 +1,16 @@
 
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.ITileEntityProvider;
-import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.world.World;
 
-public class BlockGantryTerminal extends Block implements ITileEntityProvider {
+public class BlockGantryTerminal extends BlockGantry {
 
     public BlockGantryTerminal() {
-        super(Material.iron);
+        super();
         this.setBlockTextureName("gold_block");
-        this.setHardness(1.5F);
-        this.setResistance(10.0f);
     }
 
     @Override
@@ -61,6 +56,11 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
     @Override
     public boolean isOpaqueCube() {
         return false;
+    }
+
+    @Override
+    public int getRenderType() {
+        return 0;
     }
 
 }
