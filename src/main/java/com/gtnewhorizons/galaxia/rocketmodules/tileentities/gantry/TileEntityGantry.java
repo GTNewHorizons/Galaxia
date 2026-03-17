@@ -71,6 +71,10 @@ public class TileEntityGantry extends TileEntity {
     @SideOnly(Side.CLIENT)
     private ResourceLocation errorTexture;
 
+    /**
+     * Updates the tile entity. In this case, handling current module progression
+     * and queue management
+     */
     @Override
     public void updateEntity() {
         // Lazy loading for neighbours
@@ -137,6 +141,11 @@ public class TileEntityGantry extends TileEntity {
         markDirty();
     }
 
+    /**
+     * Gets the current direction of the gantry
+     *
+     * @return The current direction
+     */
     public Vec3 getDirection() {
         return currentDirection;
     }
@@ -237,18 +246,39 @@ public class TileEntityGantry extends TileEntity {
         return errorTexture;
     }
 
+    /**
+     * Gets an interpolated progress based on the partial tick
+     *
+     * @param partialTicks The amount through the current tick the world is
+     * @return The interpolated progress
+     */
     public float getInterpolatedProgress(float partialTicks) {
         return clientPrevProgress + (clientProgress - clientPrevProgress) * partialTicks;
     }
 
+    /**
+     * Gets the current progress of the module stored (0 if no module)
+     *
+     * @return Current progress / 0 if no module
+     */
     public float getProgress() {
         return progress;
     }
 
+    /**
+     * Gets the list of gantries that count as valid neighbours to this one
+     *
+     * @return The list of valid gantry neighbours
+     */
     public List<TileEntityGantry> getNeighbours() {
         return neighbours;
     }
 
+    /**
+     * Sets the current direction of the gantry
+     *
+     * @param dir The target direction
+     */
     public void setDirection(Vec3 dir) {
         currentDirection = dir;
     }

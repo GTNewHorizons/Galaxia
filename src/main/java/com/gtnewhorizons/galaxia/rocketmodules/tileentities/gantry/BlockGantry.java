@@ -25,6 +25,17 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         return new TileEntityGantry();
     }
 
+    /**
+     * Handles logic to be ran on block placing - in this case, connecting to other
+     * gantries
+     *
+     * @param world  The world placed in
+     * @param x      X position of placed block
+     * @param y      Y position of placed block
+     * @param z      Z position of placed block
+     * @param placer The placer of the block
+     * @param stack  The item stack being used to place
+     */
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
         if (world.isRemote) return;
@@ -49,6 +60,16 @@ public class BlockGantry extends Block implements ITileEntityProvider {
 
     }
 
+    /**
+     * Handles logic on block break - in this case disconnecting from other gantries
+     *
+     * @param world  The world placed in
+     * @param x      X position of placed block
+     * @param y      Y position of placed block
+     * @param z      Z position of placed block
+     * @param placer The placer of the block
+     * @param stack  The item stack being used to place
+     */
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
 
@@ -82,6 +103,12 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         return false;
     }
 
+    /**
+     * Overrides the render type to not use the block render engine, but instead
+     * solely use TESR
+     *
+     * @return The render type (always -1 in this case)
+     */
     @Override
     public int getRenderType() {
         return -1;

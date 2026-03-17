@@ -111,41 +111,77 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
         .build();
 
+    /**
+     * Gets the structure definition of the Silo multi
+     *
+     * @return The structure definition for the multi
+     */
     @Override
     public IStructureDefinition<TileEntitySilo> getStructureDefinition() {
         return STRUCTURE_DEFINITION;
     }
 
+    /**
+     * Gets the x offset from the origin of the multi to the controller block
+     *
+     * @return X offset
+     */
     @Override
     protected int getControllerOffsetX() {
         return 2;
     }
 
+    /**
+     * Gets the y offset from the origin of the multi to the controller block
+     *
+     * @return Y offset
+     */
     @Override
     protected int getControllerOffsetY() {
         return 4;
     }
 
+    /**
+     * Gets the z offset from the origin of the multi to the controller block
+     *
+     * @return Z offset
+     */
     @Override
     protected int getControllerOffsetZ() {
         return 0;
     }
 
+    /**
+     * Runs whenever the structure forms - here updates the assembler linking and
+     * sets the rendering
+     */
     @Override
     protected void onStructureFormed() {
         updateLinkedAssembler();
         shouldRender = true;
     }
 
+    /**
+     * Runs whenever a previously formed structure disforms - updates assembler and
+     * removes rendering
+     */
     @Override
     protected void onStructureDisformed() {
         updateLinkedAssembler();
         shouldRender = false;
     }
 
+    /**
+     * Checks the structure of the multi against the definition. Overridden to
+     * detect terminal counts being correct. Forms structure if correct, disforms
+     * otherwise
+     *
+     * @return Boolean : True => valid structure
+     */
     @Override
     protected boolean checkStructure() {
         if (worldObj == null || worldObj.isRemote) return structureValid;
+        // Reset terminals as recounted in definition check
         foundTerminalCount = 0;
         gantryTerminal = null;
 
@@ -173,6 +209,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return valid;
     }
 
+    /**
+     * Gets the controller block to be used
+     *
+     * @return The block to be used as the block for this TE/multi controller
+     */
     @Override
     public Block getControllerBlock() {
         return GalaxiaBlocksEnum.SILO_CONTROLLER.get();
@@ -238,6 +279,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(240, 160);
+        // Check validity of assembler path on UI build
         updateLinkedAssembler();
 
         if (!hasAssembler) {
