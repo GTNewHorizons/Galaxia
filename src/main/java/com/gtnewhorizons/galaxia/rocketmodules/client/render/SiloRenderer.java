@@ -7,9 +7,11 @@ import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 public class SiloRenderer extends TileEntitySpecialRenderer {
 
+    private static final int Z_OFFSET = 2;
+
     @Override
     public void renderTileEntityAt(TileEntity te, double x, double y, double z, float partialTicks) {
         if (!(te instanceof TileEntitySilo silo) || !silo.shouldRender || silo.getNumModules() == 0) return;
-        RocketVisualHelper.render(silo.getAssembly(), x, y + 1.0, z + 2, true);
+        RocketVisualHelper.render(silo.getAssembly(), x, y + 1.0, z + Z_OFFSET, true);
     }
 }

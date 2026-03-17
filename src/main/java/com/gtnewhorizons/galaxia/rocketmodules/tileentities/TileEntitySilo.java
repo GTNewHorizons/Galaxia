@@ -81,10 +81,16 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private boolean hasAssembler = false;
     private int foundTerminalCount = 0;
 
+    private static final int X_OFFSET = 0;
+    private static final int Y_OFFSET = 1;
+    private static final int Z_OFFSET = 2;
+
+    private static final String STRUCTURE_PIECE_MAIN = "main";
+
     private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntitySilo>builder()
         // spotless:off
-            .addShape("main", StructureUtility.transpose(new String[][] {
+            .addShape(STRUCTURE_PIECE_MAIN, StructureUtility.transpose(new String[][] {
                     { "  T  ", "     ", "T   T", "     ", "  T  " },
                     { "  T  ", "     ", "T   T", "     ", "  T  " },
                     { "  C  ", "     ", "C   C", "     ", "  C  " },
@@ -505,7 +511,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private void spawnRocket() {
         entityRocket = new EntityRocket(worldObj);
         entityRocket.bindSilo(this);
-        entityRocket.setPosition(xCoord + 0.5, yCoord + 1.0, zCoord + 2.5);
+        entityRocket.setPosition(xCoord + X_OFFSET + 0.5, yCoord + Y_OFFSET, zCoord + Z_OFFSET + 0.5);
         worldObj.spawnEntityInWorld(entityRocket);
     }
 
