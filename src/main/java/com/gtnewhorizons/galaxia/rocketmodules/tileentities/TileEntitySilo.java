@@ -157,9 +157,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             getControllerOffsetZ(),
             false);
 
-        if (valid && foundTerminalCount != 1) valid = false;
         if (valid != structureValid) {
             structureValid = valid;
+            if (valid && foundTerminalCount != 1) valid = false;
             if (valid) onStructureFormed();
             else onStructureDisformed();
             markDirty();

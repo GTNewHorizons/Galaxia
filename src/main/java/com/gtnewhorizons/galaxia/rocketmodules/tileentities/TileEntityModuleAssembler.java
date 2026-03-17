@@ -91,6 +91,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     protected boolean checkStructure() {
         if (worldObj == null || worldObj.isRemote) return structureValid;
         foundTerminalCount = 0;
+        gantryTerminal = null;
 
         boolean valid = getStructureDefinition().check(
             (TileEntityModuleAssembler) this,
