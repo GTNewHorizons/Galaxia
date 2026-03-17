@@ -69,7 +69,7 @@ public abstract class RocketModule {
     @SideOnly(Side.CLIENT)
     public IModelCustom getModel() {
         if (model == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/modules/" + modelName + "/straight.obj");
+            ResourceLocation loc = LocationGalaxia("textures/model/modules/" + modelName + "/model.obj");
             model = AdvancedModelLoader.loadModel(loc);
         }
         return model;
@@ -78,7 +78,7 @@ public abstract class RocketModule {
     @SideOnly(Side.CLIENT)
     public ResourceLocation getTexture() {
         if (texture == null) {
-            texture = LocationGalaxia("textures/model/modules/" + modelName + "/straight.png");
+            texture = LocationGalaxia("textures/model/modules/" + modelName + "/texture.png");
         }
         return texture;
     }
