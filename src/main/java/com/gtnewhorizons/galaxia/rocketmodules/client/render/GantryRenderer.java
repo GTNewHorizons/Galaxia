@@ -28,16 +28,15 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class GantryRenderer extends TileEntitySpecialRenderer {
 
     private static final float MODULE_SCALE = 1;
-    private static final float GANTRY_SCALE = 0.34f;
+    private static final float GANTRY_SCALE = 1;
 
     private static final IModelCustom carriageModel = AdvancedModelLoader
         .loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"));
 
     @Override
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
-        if (!(tileEntity instanceof TileEntityGantry)) return;
+        if (!(tileEntity instanceof TileEntityGantry gantry)) return;
 
-        TileEntityGantry gantry = (TileEntityGantry) tileEntity;
         List<Vec3> dirs = gantry.neighbourDirs;
         if (dirs.isEmpty()) {
             // Render default variant
@@ -56,10 +55,33 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         // Neighbour dirs contains all neighbours to block
 
         // Flag for error checking
-        boolean errorFlag = true;
-        if (dirs.size() < 2) {
-            errorFlag = false;
+        boolean errorFlag = dirs.size() >= 2;
+
+        // Pass 1: handle every diagonal-down neighbour independently.
+        // A block that is the TOP of one or more ramps must render a straight
+        // horizontal beam for each incoming ramp direction. We do this before
+        // the pair loop so that multiple ramps arriving from different sides are
+        // all rendered correctly (cross-junction / V-junction support).
+        //
+        // If this block has NO cardinal neighbours at all (pure V/fan junction —
+        // only diagonal-down arms, like the "020 / 101" case), every diagonal-down
+        // is inherently a valid top-of-ramp, so we skip the chain-continuity check.
+        // If there IS at least one cardinal neighbour we keep the check so that
+        // mid-chain diagonal blocks don't accidentally render as tops.
+        boolean hasAnyCardinal = false;
+        for (Vec3 d : dirs) {
+            if (isCardinal(d)) { hasAnyCardinal = true; break; }
         }
+        for (Vec3 elev : dirs) {
+            if (elev.yCoord >= 0 || isCardinal(elev)) continue; // only diagonal-down
+            Vec3 horiz = Vec3.createVectorHelper(elev.xCoord, 0, elev.zCoord);
+            if (!hasAnyCardinal || hasOppositeDiagonal(gantry, elev) || hasNoAboveDiagonal(gantry, elev)) {
+                renderFullBeam(gantry, x, y, z, horiz);
+                errorFlag = false;
+            }
+        }
+
+        // Pass 2: pair-based rendering for all other cases
         for (int i = 0; i < dirs.size(); i++) {
             for (int j = i + 1; j < dirs.size(); j++) {
                 Vec3 a = dirs.get(i);
@@ -83,12 +105,13 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                     Vec3 horiz = isCardinal(a) ? a : b;
                     Vec3 elev = isCardinal(a) ? b : a;
                     if (hasOppositeDiagonal(gantry, elev) || hasNoAboveDiagonal(gantry, elev)) {
-                        renderUpBeam(gantry, x, y, z, horiz, elev);
+                        // Top-of-ramp case (elev.yCoord < 0): already handled in Pass 1.
+                        // Bottom-of-ramp (elev goes upward): render the bend.
+                        if (elev.yCoord > 0) {
+                            renderUpBeam(gantry, x, y, z, horiz, elev);
+                        }
                         errorFlag = false;
                     }
-                } else if (dirs.size() == 2 && isUPair(a, b)) {
-                    renderUBend(gantry, x, y, z, a);
-                    errorFlag = false;
                 }
             }
         }
@@ -101,7 +124,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         boolean isCorner = inDir != null && outDir != null
             && (Math.abs(inDir.xCoord - outDir.xCoord) > 0.01 || Math.abs(inDir.yCoord - outDir.yCoord) > 0.01
-                || Math.abs(inDir.zCoord - outDir.zCoord) > 0.01);
+            || Math.abs(inDir.zCoord - outDir.zCoord) > 0.01);
 
         float dx, dy, dz, yaw, pitch;
 
@@ -261,21 +284,6 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
         boolean oneHasY = (a.yCoord != 0) ^ (b.yCoord != 0);
         return xzOpposite && oneHasY;
-    }
-
-    /**
-     * Determines if two vector directions form a valid "U-Bend" pair, i.e. both are
-     * same cardinal direction at the same (non-zero) y-level
-     *
-     * @param a First vector
-     * @param b Second vector
-     *
-     * @return Boolean : True => valid U-Bend)
-     */
-    private boolean isUPair(Vec3 a, Vec3 b) {
-        boolean xzOpposite = (a.xCoord == -b.xCoord) && (a.zCoord == -b.zCoord);
-        boolean sameY = a.yCoord == b.yCoord && a.yCoord != 0;
-        return xzOpposite && sameY;
     }
 
     /**
@@ -446,28 +454,6 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             .getTextureManager()
             .bindTexture(g.getUpBendTexture());
         g.getUpBendModel()
-            .renderAll();
-        GL11.glPopMatrix();
-    }
-
-    private static void renderUBend(TileEntityGantry g, double x, double y, double z, Vec3 dir) {
-        Vec3 f = dir.normalize();
-        float facingYaw = (float) Math.toDegrees(Math.atan2(f.xCoord, f.zCoord));
-
-        double yOffset = y + 0.5 + (dir.yCoord * 0.5);
-        applyWorldLighting(g);
-        GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5, yOffset, z + 0.5);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glRotatef(facingYaw, 0, 1, 0);
-        if (f.yCoord < 0) {
-            GL11.glRotatef(180, 1, 0, 0);
-        }
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(g.getUBendTexture());
-        g.getUBendModel()
             .renderAll();
         GL11.glPopMatrix();
     }
