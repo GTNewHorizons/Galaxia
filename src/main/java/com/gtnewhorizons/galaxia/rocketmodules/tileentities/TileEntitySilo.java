@@ -81,9 +81,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private boolean hasAssembler = false;
     private int foundTerminalCount = 0;
 
-    private static final int X_OFFSET = 0;
-    private static final int Y_OFFSET = 1;
-    private static final int Z_OFFSET = 2;
+    public static final int SILO_CENTER_X_OFFSET = 0;
+    public static final int SILO_CENTER_Y_OFFSET = 1;
+    public static final int SILO_CENTER_Z_OFFSET = 2;
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
@@ -188,9 +188,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         if (gantryTerminal == null) {
             moduleAssembler = null;
             hasAssembler = false;
-            if (worldObj != null) {
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             return;
         }
         // If not a valid graph, cannot walk it
@@ -511,7 +509,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private void spawnRocket() {
         entityRocket = new EntityRocket(worldObj);
         entityRocket.bindSilo(this);
-        entityRocket.setPosition(xCoord + X_OFFSET + 0.5, yCoord + Y_OFFSET, zCoord + Z_OFFSET + 0.5);
+        entityRocket.setPosition(
+            xCoord + SILO_CENTER_X_OFFSET + 0.5,
+            yCoord + SILO_CENTER_Y_OFFSET,
+            zCoord + SILO_CENTER_Z_OFFSET + 0.5);
         worldObj.spawnEntityInWorld(entityRocket);
     }
 
