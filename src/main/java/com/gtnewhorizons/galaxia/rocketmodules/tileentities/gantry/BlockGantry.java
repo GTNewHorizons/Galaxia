@@ -17,7 +17,6 @@ public class BlockGantry extends Block implements ITileEntityProvider {
 
     public BlockGantry() {
         super(Material.iron);
-        this.setBlockTextureName("iron_block");
         this.setHardness(1.5F);
         this.setResistance(10.0f);
     }
@@ -32,10 +31,9 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         if (world.isRemote) return;
 
         TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantry)) {
+        if (!(te instanceof TileEntityGantry teg)) {
             return;
         }
-        TileEntityGantry teg = (TileEntityGantry) te;
 
         // Check valid directions and connect to others
         for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
@@ -59,11 +57,10 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         if (player.isSneaking()) return false;
 
         TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantry)) {
+        if (!(te instanceof TileEntityGantry teg)) {
             return false;
         }
         // Debugging chat message
-        TileEntityGantry teg = (TileEntityGantry) te;
         player.addChatComponentMessage(
             new ChatComponentText(
                 "Module: " + teg.getModule()
@@ -81,10 +78,9 @@ public class BlockGantry extends Block implements ITileEntityProvider {
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
 
         TileEntity gantry = world.getTileEntity(x, y, z);
-        if (!(gantry instanceof TileEntityGantry)) {
+        if (!(gantry instanceof TileEntityGantry terminal)) {
             return;
         }
-        TileEntityGantry terminal = (TileEntityGantry) gantry;
 
         // Iterate through neighbours and disconnect them
         for (Vec3 check_offset : new ArrayList<>(terminal.neighbourDirs)) {
@@ -98,6 +94,14 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             }
         }
 
+    }
+
+    @Override
+    public boolean canPlaceBlockAt(World world, int x, int y, int z) {
+        // if there is any gantry above/below the block without air gap
+        if (world.getBlock(x, y - 1, z) == this) return false;
+        if (world.getBlock(x, y + 1, z) == this) return false;
+        return super.canPlaceBlockAt(world, x, y, z);
     }
 
     @Override

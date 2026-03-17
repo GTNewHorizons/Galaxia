@@ -46,6 +46,12 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
         if (!(tileEntity instanceof TileEntityGantry gantry)) return;
 
+        // Invalid gantry (stacked directly on another) renders error and doesnt affect anything else
+        if (gantry.isInvalid()) {
+            renderErrorBeam(gantry, x, y, z);
+            return;
+        }
+
         List<Vec3> dirs = gantry.neighbourDirs;
 
         renderGantryPath(gantry, x, y, z, dirs);
