@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
@@ -47,29 +46,6 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
         if (!worldObj.isRemote) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
-    }
-
-    @Override
-    public void updateEntity() {
-        super.updateEntity();
-
-        TileEntityGantryTerminal teg = this;
-        // Checks all valid directions for silos and assmeblers to connect
-        for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
-            int cx = xCoord + (int) check_offset.xCoord;
-            int cy = yCoord + (int) check_offset.yCoord;
-            int cz = zCoord + (int) check_offset.zCoord;
-
-            TileEntity checkTe = worldObj.getTileEntity(cx, cy, cz);
-            if (checkTe instanceof TileEntitySilo checkTes) {
-                teg.connectSilo(checkTes);
-                checkTes.setGantryTerminal(teg);
-            } else if (checkTe instanceof TileEntityModuleAssembler checkTema) {
-                teg.connectAssembler(checkTema);
-                checkTema.setGantryTerminal(teg);
-            }
-        }
-
     }
 
     /**

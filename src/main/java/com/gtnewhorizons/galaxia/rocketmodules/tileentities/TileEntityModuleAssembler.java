@@ -4,11 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
-import net.minecraft.tileentity.TileEntity;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -19,16 +19,106 @@ import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
+import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-public class TileEntityModuleAssembler extends TileEntity implements IGuiHolder<PosGuiData> {
+public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler>
+    implements IGuiHolder<PosGuiData> {
 
     // Hashmap stores <Module ID, Count>
     public HashMap<Integer, Integer> moduleMap = new HashMap<>();
     private TileEntityGantryTerminal gantryTerminal;
+    private int foundTerminalCount = 0;
+    public boolean shouldRender = true;
+
+    private static final IStructureDefinition<TileEntityModuleAssembler> STRUCTURE_DEFINITION = StructureDefinition
+        .<TileEntityModuleAssembler>builder()
+        // spotless:off
+            .addShape("main", new String[][] {
+                    { "CCC", "CCC", "CCC" },
+                    { "C C", "T T", "C C" },
+                    { "C C", "C C", "C C" },
+                    { "C C", "C C", "C C" },
+                    { "CCC", "C~C", "CCC" }
+            })
+            // spotless:on
+        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
+        .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((assembler, te) -> {
+            if (te instanceof TileEntityGantryTerminal terminal) {
+                assembler.setGantryTerminal(terminal);
+                terminal.connectAssembler(assembler);
+                return true;
+            }
+            return false;
+        }, GalaxiaBlocksEnum.GANTRY_TERMINAL.get(), 0),
+            StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
+        .build();
+
+    @Override
+    public IStructureDefinition<TileEntityModuleAssembler> getStructureDefinition() {
+        return STRUCTURE_DEFINITION;
+    }
+
+    @Override
+    protected int getControllerOffsetX() {
+        return 1;
+    }
+
+    @Override
+    protected int getControllerOffsetY() {
+        return 1;
+    }
+
+    @Override
+    protected int getControllerOffsetZ() {
+        return 4;
+    }
+
+    @Override
+    protected void onStructureFormed() {
+        shouldRender = true;
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        if (worldObj == null || worldObj.isRemote) return structureValid;
+        foundTerminalCount = 0;
+
+        boolean valid = getStructureDefinition().check(
+            (TileEntityModuleAssembler) this,
+            "main",
+            worldObj,
+            ExtendedFacing.DEFAULT,
+            xCoord,
+            yCoord,
+            zCoord,
+            getControllerOffsetX(),
+            getControllerOffsetY(),
+            getControllerOffsetZ(),
+            false);
+
+        if (valid != structureValid) {
+            structureValid = valid;
+            if (valid && foundTerminalCount == 1) onStructureFormed();
+            else onStructureDisformed();
+            markDirty();
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+        return valid;
+    }
+
+    @Override
+    public Block getControllerBlock() {
+        return GalaxiaBlocksEnum.ASSEMBLER_CONTROLLER.get();
+    }
 
     /**
      * The UI builder for the Tile Entity GUI

@@ -245,7 +245,7 @@ public final class GantryAPI {
     public static Vec3 getDirectionTo(TileEntityGantry start, TileEntityGantryTerminal end) {
 
         List<TileEntityGantry> nodes = aStarPath(start, end);
-        if (nodes.size() == 0) return Vec3.createVectorHelper(0, 0, 0);
+        if (nodes == null || nodes.size() == 0) return Vec3.createVectorHelper(0, 0, 0);
         if (nodes.size() == 1) {
             if (nodes.get(0) instanceof TileEntityGantryTerminal terminal) {
                 if (terminal.getSilo() != null) {

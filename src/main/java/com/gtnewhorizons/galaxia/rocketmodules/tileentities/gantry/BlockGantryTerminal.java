@@ -1,21 +1,13 @@
 
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import java.util.ArrayList;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
-
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 public class BlockGantryTerminal extends Block implements ITileEntityProvider {
 
@@ -29,67 +21,6 @@ public class BlockGantryTerminal extends Block implements ITileEntityProvider {
     @Override
     public TileEntity createNewTileEntity(World world, int meta) {
         return new TileEntityGantryTerminal();
-    }
-
-    @Override
-    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
-
-        TileEntity tileEntity = world.getTileEntity(x, y, z);
-        if (!(tileEntity instanceof TileEntityGantryTerminal)) {
-            return;
-        }
-
-        TileEntityGantryTerminal gantryTerminal = (TileEntityGantryTerminal) tileEntity;
-
-        // Cycle through valid directions and check for new connections
-        for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
-            int cx = x + (int) check_offset.xCoord;
-            int cy = y + (int) check_offset.yCoord;
-            int cz = z + (int) check_offset.zCoord;
-
-            TileEntity checkTileEntity = world.getTileEntity(cx, cy, cz);
-            if (checkTileEntity instanceof TileEntityGantry checkGantry) {
-                gantryTerminal.connect(checkGantry);
-            } else if (checkTileEntity instanceof TileEntitySilo checkSilo) {
-                gantryTerminal.connectSilo(checkSilo);
-                checkSilo.setGantryTerminal(gantryTerminal);
-                if (!world.isRemote) {
-                    world.markBlockForUpdate(checkSilo.xCoord, checkSilo.yCoord, checkSilo.zCoord);
-                    world.markBlockForUpdate(gantryTerminal.xCoord, gantryTerminal.yCoord, gantryTerminal.zCoord);
-                }
-            } else if (checkTileEntity instanceof TileEntityModuleAssembler checkAssembler) {
-                gantryTerminal.connectAssembler(checkAssembler);
-                checkAssembler.setGantryTerminal(gantryTerminal);
-                if (!world.isRemote) {
-                    world.markBlockForUpdate(checkAssembler.xCoord, checkAssembler.yCoord, checkAssembler.zCoord);
-                    world.markBlockForUpdate(gantryTerminal.xCoord, gantryTerminal.yCoord, gantryTerminal.zCoord);
-                }
-            }
-
-        }
-
-    }
-
-    @Override
-    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
-
-        TileEntity gantry = world.getTileEntity(x, y, z);
-        if (!(gantry instanceof TileEntityGantry)) {
-            return;
-        }
-        TileEntityGantry terminal = (TileEntityGantry) gantry;
-
-        // Iterate through neighbours and disconnect them
-        for (Vec3 check_offset : new ArrayList<>(terminal.neighbourDirs)) {
-            int cx = x + (int) check_offset.xCoord;
-            int cy = y + (int) check_offset.yCoord;
-            int cz = z + (int) check_offset.zCoord;
-
-            TileEntity checkTileEntity = world.getTileEntity(cx, cy, cz);
-            if (checkTileEntity instanceof TileEntityGantry checkGantry) {
-                terminal.disconnect(checkGantry);
-            }
-        }
     }
 
     @Override
