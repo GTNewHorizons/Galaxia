@@ -33,6 +33,15 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     private static final IModelCustom carriageModel = AdvancedModelLoader
         .loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"));
 
+    // spotless:off
+    private static final Vec3[] CARDINAL_DIRECTIONS = {
+        Vec3.createVectorHelper(1, 0, 0),
+        Vec3.createVectorHelper(-1, 0, 0),
+        Vec3.createVectorHelper(0, 0, 1),
+        Vec3.createVectorHelper(0, 0, -1)
+    };
+    //spotless:on
+
     @Override
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
         if (!(tileEntity instanceof TileEntityGantry gantry)) return;
@@ -82,12 +91,9 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         RocketModule module = ModuleRegistry.fromId(moduleId);
         applyWorldLighting(gantry);
         GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
-        GL11.glRotatef(yaw, 0f, 1f, 0f);
-        GL11.glRotatef(pitch, 1f, 0f, 0f);
+        applyGantryOrientation(x, y, z, dx, dy, dz, yaw, pitch);
         GL11.glTranslatef(0f, (float) -module.getWidth() / 2, 0f);
         GL11.glRotatef(90f, 1, 0, 0);
-
         GL11.glScalef(MODULE_SCALE, MODULE_SCALE, MODULE_SCALE);
 
         Minecraft.getMinecraft()
@@ -99,9 +105,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
 
         GL11.glPushMatrix();
-        GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
-        GL11.glRotatef(yaw, 0f, 1f, 0f);
-        GL11.glRotatef(pitch, 1f, 0f, 0f);
+        applyGantryOrientation(x, y, z, dx, dy, dz, yaw, pitch);
         GL11.glRotatef(90, 0, 1, 0);
         GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
 
@@ -223,8 +227,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                 if (d.yCoord > 0) {
                     diagHoriz = Vec3.createVectorHelper(-d.xCoord, 0, -d.zCoord);
                 }
-                if (Math.abs(diagHoriz.xCoord - horizDir.xCoord) < 0.01
-                    && Math.abs(diagHoriz.zCoord - horizDir.zCoord) < 0.01) {
+                if (approxEqualHorizontal(diagHoriz, horizDir)) {
                     return true;
                 }
             }
@@ -238,21 +241,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
      */
     private int getUncoveredCount(List<Vec3> dirs) {
         int count = 0;
-        Vec3[] candidates = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
-            Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1) };
-        for (Vec3 cand : candidates) {
-            boolean covered = false;
-            for (Vec3 d : dirs) {
-                if (isCardinal(d) && Math.abs(d.xCoord - cand.xCoord) < 0.01
-                    && Math.abs(d.zCoord - cand.zCoord) < 0.01) {
-                    covered = true;
-                    break;
-                }
-            }
-            if (!covered && hasDiagonalCoveringDirection(dirs, cand)) {
-                covered = true;
-            }
-            if (!covered) count++;
+        for (Vec3 cand : CARDINAL_DIRECTIONS) {
+            if (!isCovered(cand, dirs)) count++;
         }
         return count;
     }
@@ -262,21 +252,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
      * Returns null otherwise.
      */
     private Vec3 getUncoveredMissingDirection(List<Vec3> dirs) {
-        Vec3[] candidates = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
-            Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1) };
-        for (Vec3 cand : candidates) {
-            boolean covered = false;
-            for (Vec3 d : dirs) {
-                if (isCardinal(d) && Math.abs(d.xCoord - cand.xCoord) < 0.01
-                    && Math.abs(d.zCoord - cand.zCoord) < 0.01) {
-                    covered = true;
-                    break;
-                }
-            }
-            if (!covered && hasDiagonalCoveringDirection(dirs, cand)) {
-                covered = true;
-            }
-            if (!covered) return cand;
+        for (Vec3 cand : CARDINAL_DIRECTIONS) {
+            if (!isCovered(cand, dirs)) return cand;
         }
         return null;
     }
@@ -321,31 +298,59 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
     }
 
+    /**
+     * Applies the base position and yaw/pitch rotation used by both the module
+     * and the carriage.
+     */
+    private void applyGantryOrientation(double x, double y, double z, float dx, float dy, float dz, float yaw,
+        float pitch) {
+        GL11.glTranslated(x + 0.5 + dx, y + 0.5 + dy, z + 0.5 + dz);
+        GL11.glRotatef(yaw, 0f, 1f, 0f);
+        GL11.glRotatef(pitch, 1f, 0f, 0f);
+    }
+
     private boolean isCardinal(Vec3 dir) {
         return dir.yCoord == 0
             && ((Math.abs(dir.xCoord) == 1 && dir.zCoord == 0) || (dir.xCoord == 0 && Math.abs(dir.zCoord) == 1));
     }
 
     private boolean isOpposite(Vec3 a, Vec3 b) {
-        return a.xCoord == -b.xCoord && a.yCoord == -b.yCoord && a.zCoord == -b.zCoord;
+        return Math.abs(a.xCoord + b.xCoord) < 0.01 && Math.abs(a.yCoord + b.yCoord) < 0.01
+            && Math.abs(a.zCoord + b.zCoord) < 0.01;
+    }
+
+    /**
+     * Compares the horizontal x and z components of two vectors.
+     */
+    private boolean approxEqualHorizontal(Vec3 a, Vec3 b) {
+        return Math.abs(a.xCoord - b.xCoord) < 0.01 && Math.abs(a.zCoord - b.zCoord) < 0.01;
+    }
+
+    /**
+     * Returns true if the given cardinal direction has a direct cardinal neighbour in the list.
+     */
+    private boolean hasDirectCardinal(Vec3 candidate, List<Vec3> dirs) {
+        for (Vec3 d : dirs) {
+            if (isCardinal(d) && approxEqualHorizontal(d, candidate)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if the cardinal direction is covered by either a direct cardinal or a diagonal ramp.
+     */
+    private boolean isCovered(Vec3 candidate, List<Vec3> dirs) {
+        return hasDirectCardinal(candidate, dirs) || hasDiagonalCoveringDirection(dirs, candidate);
     }
 
     /**
      * Finds the single missing cardinal direction (for T-shape).
      */
     private Vec3 findMissingCardinalDirection(List<Vec3> dirs) {
-        Vec3[] candidates = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
-            Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1) };
-        for (Vec3 cand : candidates) {
-            boolean found = false;
-            for (Vec3 d : dirs) {
-                if (isCardinal(d) && Math.abs(d.xCoord - cand.xCoord) < 0.01
-                    && Math.abs(d.zCoord - cand.zCoord) < 0.01) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) return cand;
+        for (Vec3 cand : CARDINAL_DIRECTIONS) {
+            if (!hasDirectCardinal(cand, dirs)) return cand;
         }
         return null;
     }
