@@ -13,6 +13,7 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.client.model.AdvancedModelLoader;
@@ -47,26 +48,35 @@ public class TileEntityGantry extends TileEntity {
     private Vec3 incomingDirection;
     public Vec3 clientIncomingDirection;
 
+    // I beam
     @SideOnly(Side.CLIENT)
-    private IModelCustom model;
+    private IModelCustom straightModel;
     @SideOnly(Side.CLIENT)
-    private ResourceLocation texture;
+    private ResourceLocation straightTexture;
+
+    // 45° angle up beam
     @SideOnly(Side.CLIENT)
     private IModelCustom diagonalModel;
     @SideOnly(Side.CLIENT)
     private ResourceLocation diagonalTexture;
+
+    // L beam
     @SideOnly(Side.CLIENT)
     private IModelCustom cornerModel;
     @SideOnly(Side.CLIENT)
     private ResourceLocation cornerTexture;
+
+    // T beam
     @SideOnly(Side.CLIENT)
-    private IModelCustom upBendModel;
+    private IModelCustom tModel;
     @SideOnly(Side.CLIENT)
-    private ResourceLocation upBendTexture;
+    private ResourceLocation tTexture;
+
+    // crossway beam
     @SideOnly(Side.CLIENT)
-    private IModelCustom uBendModel;
+    private IModelCustom plusModel;
     @SideOnly(Side.CLIENT)
-    private ResourceLocation uBendTexture;
+    private ResourceLocation plusTexture;
 
     @SideOnly(Side.CLIENT)
     private ResourceLocation errorTexture;
@@ -145,20 +155,20 @@ public class TileEntityGantry extends TileEntity {
 
     // MODEL AND TEXTURE GETTERS
     @SideOnly(Side.CLIENT)
-    public ResourceLocation getTexture() {
-        if (texture == null) {
-            texture = LocationGalaxia("textures/model/gantry/texture.png");
+    public ResourceLocation getStraightTexture() {
+        if (straightTexture == null) {
+            straightTexture = LocationGalaxia("textures/model/gantry/straight.png");
         }
-        return texture;
+        return straightTexture;
     }
 
     @SideOnly(Side.CLIENT)
-    public IModelCustom getModel() {
-        if (model == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/model.obj");
-            model = AdvancedModelLoader.loadModel(loc);
+    public IModelCustom getStraightModel() {
+        if (straightModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/straight.obj");
+            straightModel = AdvancedModelLoader.loadModel(loc);
         }
-        return model;
+        return straightModel;
     }
 
     @SideOnly(Side.CLIENT)
@@ -196,37 +206,37 @@ public class TileEntityGantry extends TileEntity {
     }
 
     @SideOnly(Side.CLIENT)
-    public ResourceLocation getUpBendTexture() {
-        if (upBendTexture == null) {
-            upBendTexture = LocationGalaxia("textures/model/gantry/upbend.png");
+    public ResourceLocation getSemiCrossTexture() {
+        if (tTexture == null) {
+            tTexture = LocationGalaxia("textures/model/gantry/semicross.png");
         }
-        return upBendTexture;
+        return tTexture;
     }
 
     @SideOnly(Side.CLIENT)
-    public IModelCustom getUpBendModel() {
-        if (upBendModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/upbend.obj");
-            upBendModel = AdvancedModelLoader.loadModel(loc);
+    public IModelCustom getSemiCrossModel() {
+        if (tModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/semicross.obj");
+            tModel = AdvancedModelLoader.loadModel(loc);
         }
-        return upBendModel;
+        return tModel;
     }
 
     @SideOnly(Side.CLIENT)
-    public ResourceLocation getUBendTexture() {
-        if (uBendTexture == null) {
-            uBendTexture = LocationGalaxia("textures/model/gantry/ubend.png");
+    public ResourceLocation getCrossTexture() {
+        if (plusTexture == null) {
+            plusTexture = LocationGalaxia("textures/model/gantry/cross.png");
         }
-        return uBendTexture;
+        return plusTexture;
     }
 
     @SideOnly(Side.CLIENT)
-    public IModelCustom getUBendModel() {
-        if (uBendModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/ubend.obj");
-            uBendModel = AdvancedModelLoader.loadModel(loc);
+    public IModelCustom getCrossModel() {
+        if (plusModel == null) {
+            ResourceLocation loc = LocationGalaxia("textures/model/gantry/cross.obj");
+            plusModel = AdvancedModelLoader.loadModel(loc);
         }
-        return uBendModel;
+        return plusModel;
     }
 
     @SideOnly(Side.CLIENT)
@@ -533,4 +543,13 @@ public class TileEntityGantry extends TileEntity {
         }
     }
 
+    @Override
+    public AxisAlignedBB getRenderBoundingBox() {
+        return TileEntity.INFINITE_EXTENT_AABB;
+    }
+
+    @Override
+    public double getMaxRenderDistanceSquared() {
+        return 512 * 512;
+    }
 }
