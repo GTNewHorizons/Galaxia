@@ -27,6 +27,19 @@ public class PropulsionPlacementRule implements IPlacementRule {
         int engineIdx = 0;
         int tankIdx = 0;
 
+        if (tanks.size() == 2 && engines.size() <= 1) {
+            if (engines.size() == 1) {
+                RocketModule engine = engines.get(0);
+                placements.add(new RocketAssembly.ModulePlacement(engine, 0, y, 0));
+                y += engine.getHeight();
+            }
+            for (RocketModule tank : tanks) {
+                placements.add(new RocketAssembly.ModulePlacement(tank, 0, y, 0));
+                y += tank.getHeight();
+            }
+            return placements;
+        }
+
         while (tankIdx < tanks.size()) {
             RocketModule centreTank = tanks.get(tankIdx++);
             int orbitalCount = Math

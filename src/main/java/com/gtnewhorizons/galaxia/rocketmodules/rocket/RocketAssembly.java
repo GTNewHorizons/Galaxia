@@ -57,6 +57,7 @@ public final class RocketAssembly {
                         .getHeight())
                 .max()
                 .orElse(0.0);
+
             List<RocketModule> otherStackables = modules.stream()
                 .filter(
                     m -> m instanceof IStackableModule && !(m instanceof EngineModule)
@@ -64,7 +65,6 @@ public final class RocketAssembly {
                 .collect(Collectors.toList());
 
             placements.addAll(new ClusteredPlacementRule().apply(otherStackables, afterPropulsion));
-
             double afterClustered = placements.stream()
                 .mapToDouble(
                     p -> p.y() + p.type()
