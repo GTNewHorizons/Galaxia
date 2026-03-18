@@ -280,6 +280,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
 
     public void setGantryTerminal(TileEntityGantryTerminal teg) {
         this.gantryTerminal = teg;
+        foundTerminalCount++;
     }
 
     public TileEntityGantryTerminal getGantryTerminal() {
