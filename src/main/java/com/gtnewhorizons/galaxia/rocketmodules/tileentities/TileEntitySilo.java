@@ -212,7 +212,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
             valid = getStructureDefinition().check(
                 (TileEntitySilo) this,
-                "main",
+                STRUCTURE_PIECE_MAIN,
                 worldObj,
                 facing,
                 xCoord,
@@ -248,7 +248,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         getStructureDefinition().buildOrHints(
             (TileEntitySilo) this,
             trigger,
-            "main",
+            STRUCTURE_PIECE_MAIN,
             worldObj,
             currentFacing,
             xCoord,
@@ -268,7 +268,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return getStructureDefinition().survivalBuild(
             (TileEntitySilo) this,
             trigger,
-            "main",
+            STRUCTURE_PIECE_MAIN,
             worldObj,
             currentFacing,
             xCoord,
