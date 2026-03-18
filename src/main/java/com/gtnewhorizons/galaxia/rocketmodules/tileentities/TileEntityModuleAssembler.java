@@ -1,14 +1,19 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import net.minecraft.block.Block;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -21,6 +26,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -40,7 +46,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     public boolean shouldRender = true;
 
     private ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
-    private final String STRUCTURE_PIECE_MAIN = "main";
+    private final static String STRUCTURE_PIECE_MAIN = "main";
 
     private static final IStructureDefinition<TileEntityModuleAssembler> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntityModuleAssembler>builder()
