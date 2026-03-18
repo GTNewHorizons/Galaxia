@@ -29,7 +29,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
     private static final float MODULE_SCALE = 1f;
     private static final float GANTRY_SCALE = 1f;
-    private static final float CARRIAGE_SCALE = 0.4f;
+    private static final float CARRIAGE_SCALE = 1f;
 
     private static final IModelCustom carriageModel = AdvancedModelLoader
         .loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"));
