@@ -5,14 +5,17 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import net.minecraft.block.Block;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -31,6 +34,7 @@ import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
@@ -80,10 +84,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private int[] pendingAssemblerCoords;
     private boolean hasAssembler = false;
     private int foundTerminalCount = 0;
+    public ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
 
-    public static final int SILO_CENTER_X_OFFSET = 0;
-    public static final int SILO_CENTER_Y_OFFSET = 1;
-    public static final int SILO_CENTER_Z_OFFSET = 2;
+    public static final int SILO_DEFAULT_X_OFFSET = 0;
+    public static final int SILO_DEFAULT_Y_OFFSET = 1;
+    public static final int SILO_DEFAULT_Z_OFFSET = 2;
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
@@ -171,6 +176,21 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         shouldRender = false;
     }
 
+    public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
+        switch (currentFacing.getDirection()) {
+            case SOUTH:
+                return new int[] { localX, localY, -localZ };
+            case NORTH:
+                return new int[] { -localX, localY, localZ };
+            case EAST:
+                return new int[] { -localZ, localY, -localX };
+            case WEST:
+                return new int[] { localZ, localY, localX };
+            default:
+                return new int[] { localX, localY, -localZ };
+        }
+    }
+
     /**
      * Checks the structure of the multi against the definition. Overridden to
      * detect terminal counts being correct. Forms structure if correct, disforms
@@ -182,31 +202,84 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected boolean checkStructure() {
         if (worldObj == null || worldObj.isRemote) return structureValid;
         // Reset terminals as recounted in definition check
-        foundTerminalCount = 0;
-        gantryTerminal = null;
+        boolean valid = false;
+        final List<ExtendedFacing> HORIZONTAL_FACINGS = Arrays.stream(ExtendedFacing.values())
+            .filter(f -> f.getDirection() != ForgeDirection.UP && f.getDirection() != ForgeDirection.DOWN)
+            .collect(Collectors.toList());
+        for (ExtendedFacing facing : HORIZONTAL_FACINGS) {
+            foundTerminalCount = 0;
+            gantryTerminal = null;
 
-        boolean valid = getStructureDefinition().check(
-            (TileEntitySilo) this,
-            "main",
-            worldObj,
-            ExtendedFacing.DEFAULT,
-            xCoord,
-            yCoord,
-            zCoord,
-            getControllerOffsetX(),
-            getControllerOffsetY(),
-            getControllerOffsetZ(),
-            false);
+            valid = getStructureDefinition().check(
+                (TileEntitySilo) this,
+                STRUCTURE_PIECE_MAIN,
+                worldObj,
+                facing,
+                xCoord,
+                yCoord,
+                zCoord,
+                getControllerOffsetX(),
+                getControllerOffsetY(),
+                getControllerOffsetZ(),
+                false);
+
+            if (valid && foundTerminalCount == 1) {
+                currentFacing = facing;
+                break;
+            }
+            valid = false;
+        }
 
         if (valid != structureValid) {
             structureValid = valid;
-            if (valid && foundTerminalCount != 1) valid = false;
             if (valid) onStructureFormed();
             else onStructureDisformed();
             markDirty();
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
         return valid;
+    }
+
+    @Override
+    public void construct(ItemStack trigger, boolean hintsOnly) {
+        if (worldObj == null) return;
+        if (!hintsOnly && worldObj.isRemote) return;
+
+        getStructureDefinition().buildOrHints(
+            (TileEntitySilo) this,
+            trigger,
+            STRUCTURE_PIECE_MAIN,
+            worldObj,
+            currentFacing,
+            xCoord,
+            yCoord,
+            zCoord,
+            getControllerOffsetX(),
+            getControllerOffsetY(),
+            getControllerOffsetZ(),
+            hintsOnly);
+    }
+
+    @Override
+    public int survivalConstruct(ItemStack trigger, int elementBudget, ISurvivalBuildEnvironment env) {
+        if (worldObj == null || worldObj.isRemote) return -1;
+        if (structureValid) return -1;
+
+        return getStructureDefinition().survivalBuild(
+            (TileEntitySilo) this,
+            trigger,
+            STRUCTURE_PIECE_MAIN,
+            worldObj,
+            currentFacing,
+            xCoord,
+            yCoord,
+            zCoord,
+            getControllerOffsetX(),
+            getControllerOffsetY(),
+            getControllerOffsetZ(),
+            elementBudget,
+            env,
+            false);
     }
 
     /**
@@ -551,10 +624,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private void spawnRocket() {
         entityRocket = new EntityRocket(worldObj);
         entityRocket.bindSilo(this);
-        entityRocket.setPosition(
-            xCoord + SILO_CENTER_X_OFFSET + 0.5,
-            yCoord + SILO_CENTER_Y_OFFSET,
-            zCoord + SILO_CENTER_Z_OFFSET + 0.5);
+        int[] offset = getRotatedOffset(
+            SILO_DEFAULT_X_OFFSET,
+            SILO_DEFAULT_Y_OFFSET,
+            SILO_DEFAULT_Z_OFFSET,
+            currentFacing);
+        entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
         worldObj.spawnEntityInWorld(entityRocket);
     }
 
@@ -643,6 +718,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         }
         nbt.setTag("modules", list);
         nbt.setBoolean("hasAssembler", hasAssembler);
+        nbt.setInteger("facing", currentFacing.getIndex());
 
     }
 
@@ -671,6 +747,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                 nbt.getInteger("assemblerZ") };
         }
         hasAssembler = nbt.getBoolean("hasAssembler");
+
+        if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
 
     }
 

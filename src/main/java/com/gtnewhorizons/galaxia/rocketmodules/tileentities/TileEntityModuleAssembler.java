@@ -1,14 +1,19 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import net.minecraft.block.Block;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -21,6 +26,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -39,10 +45,13 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     private int foundTerminalCount = 0;
     public boolean shouldRender = true;
 
+    private ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
+    private final static String STRUCTURE_PIECE_MAIN = "main";
+
     private static final IStructureDefinition<TileEntityModuleAssembler> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntityModuleAssembler>builder()
         // spotless:off
-            .addShape("main", new String[][] {
+            .addShape(STRUCTURE_PIECE_MAIN, new String[][] {
                     { "CCC", "CCC", "CCC" },
                     { "C C", "T T", "C C" },
                     { "C C", "C C", "C C" },
@@ -119,30 +128,84 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected boolean checkStructure() {
         if (worldObj == null || worldObj.isRemote) return structureValid;
-        foundTerminalCount = 0;
-        gantryTerminal = null;
+        boolean valid = false;
+        final List<ExtendedFacing> HORIZONTAL_FACINGS = Arrays.stream(ExtendedFacing.values())
+            .filter(f -> f.getDirection() != ForgeDirection.UP && f.getDirection() != ForgeDirection.DOWN)
+            .collect(Collectors.toList());
+        for (ExtendedFacing facing : HORIZONTAL_FACINGS) {
+            foundTerminalCount = 0;
+            gantryTerminal = null;
 
-        boolean valid = getStructureDefinition().check(
+            valid = getStructureDefinition().check(
+                (TileEntityModuleAssembler) this,
+                STRUCTURE_PIECE_MAIN,
+                worldObj,
+                facing,
+                xCoord,
+                yCoord,
+                zCoord,
+                getControllerOffsetX(),
+                getControllerOffsetY(),
+                getControllerOffsetZ(),
+                false);
+
+            if (valid && foundTerminalCount == 1) {
+                currentFacing = facing;
+                break;
+            }
+            valid = false;
+        }
+
+        if (valid != structureValid) {
+            structureValid = valid;
+            if (valid) onStructureFormed();
+            else onStructureDisformed();
+            markDirty();
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+        return valid;
+    }
+
+    @Override
+    public void construct(ItemStack trigger, boolean hintsOnly) {
+        if (worldObj == null) return;
+        if (!hintsOnly && worldObj.isRemote) return;
+
+        getStructureDefinition().buildOrHints(
             (TileEntityModuleAssembler) this,
-            "main",
+            trigger,
+            STRUCTURE_PIECE_MAIN,
             worldObj,
-            ExtendedFacing.DEFAULT,
+            currentFacing,
             xCoord,
             yCoord,
             zCoord,
             getControllerOffsetX(),
             getControllerOffsetY(),
             getControllerOffsetZ(),
-            false);
+            hintsOnly);
+    }
 
-        if (valid != structureValid) {
-            structureValid = valid;
-            if (valid && foundTerminalCount == 1) onStructureFormed();
-            else onStructureDisformed();
-            markDirty();
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-        return valid;
+    @Override
+    public int survivalConstruct(ItemStack trigger, int elementBudget, ISurvivalBuildEnvironment env) {
+        if (worldObj == null || worldObj.isRemote) return -1;
+        if (structureValid) return -1;
+
+        return getStructureDefinition().survivalBuild(
+            (TileEntityModuleAssembler) this,
+            trigger,
+            STRUCTURE_PIECE_MAIN,
+            worldObj,
+            currentFacing,
+            xCoord,
+            yCoord,
+            zCoord,
+            getControllerOffsetX(),
+            getControllerOffsetY(),
+            getControllerOffsetZ(),
+            elementBudget,
+            env,
+            false);
     }
 
     /**
