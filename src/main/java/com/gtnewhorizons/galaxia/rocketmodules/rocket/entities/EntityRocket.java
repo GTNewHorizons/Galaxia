@@ -25,11 +25,11 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class EntityRocket extends Entity {
 
     public enum Phase {
-        IDLE, // Sitting in silo/planet, yet to launch
+        IDLE, // Sitting in silo yet to launch
         LAUNCHING, // Ascending to space
         FALLING, // Descending in destination dimension
         RETRO, // Retro-rockets firing, rapid deceleration
-        TOUCHDOWN // Landed - waiting for player to leave
+        TOUCHDOWN // Landed - waiting for player
     }
 
     // DataWatcher constants
@@ -38,10 +38,10 @@ public class EntityRocket extends Entity {
     private static final int DW_CAPSULE = 12; // int - Capsule model index
 
     // Landing tuning constants
-    public static final double SPAWN_ALTITUDE = 750.0;
-    private static final double TERMINAL_FALL_SPEED = -3.5; // blocks/tick
-    private static final double RETRO_DECEL = 0.18; // blocks/tick²
-    private static final double RETRO_START_HEIGHT = 75;
+    public static final double SPAWN_ALTITUDE = 1200.0;
+    public static final double TERMINAL_FALL_SPEED = -3.5; // blocks/tick
+    private static final double RETRO_DECEL = 0.031; // blocks/tick²
+    private static final double RETRO_START_HEIGHT = 200;
     private static final double SAFE_LAND_SPEED = -0.1;
     private static final int EJECT_DELAY_TICKS = 100;
 
@@ -57,6 +57,9 @@ public class EntityRocket extends Entity {
     private double targetX;
     private double targetZ;
     private int groundY = -1;
+    private EntityPlayerMP lastRider = null;
+
+    private String lastKnownModules = "";
 
     public EntityRocket(World world) {
         super(world);
@@ -78,6 +81,14 @@ public class EntityRocket extends Entity {
     }
 
     public RocketAssembly getAssembly() {
+        if (worldObj.isRemote) {
+            String current = dataWatcher.getWatchableObjectString(DW_MODULES);
+            if (assembly == null || !current.equals(lastKnownModules)) {
+                lastKnownModules = current;
+                assembly = new RocketAssembly(getModuleTypes());
+            }
+            return assembly;
+        }
         if (assembly == null) {
             assembly = new RocketAssembly(getModuleTypes());
         }
@@ -114,7 +125,14 @@ public class EntityRocket extends Entity {
     }
 
     public boolean shouldRender() {
-        return dataWatcher.getWatchableObjectByte(10) == 1;
+        return getPhase() != Phase.IDLE;
+    }
+
+    public void setModules(List<Integer> moduleList) {
+        modules.clear();
+        modules.addAll(moduleList);
+        assembly = null;
+        syncModules();
     }
 
     // ---------------------------------------------------------------------------------
@@ -125,8 +143,8 @@ public class EntityRocket extends Entity {
         modules.clear();
         modules.addAll(silo.getModules());
         assembly = null;
-        syncModules();
         assembly = new RocketAssembly(modules);
+        syncModules();
         setPhase(Phase.LAUNCHING);
         silo.launch();
     }
@@ -161,6 +179,11 @@ public class EntityRocket extends Entity {
     @Override
     public void onUpdate() {
         super.onUpdate();
+
+        if (riddenByEntity instanceof EntityPlayerMP player) {
+            lastRider = player;
+        }
+
         Phase phase = getPhase();
 
         switch (phase) {
@@ -196,12 +219,13 @@ public class EntityRocket extends Entity {
         // Hand off to teleporter system at correct height
         if (!worldObj.isRemote && this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
             player.mountEntity(null);
-            GALAXIA_NETWORK.sendToServer(new TeleportRequestPacket(destination, player.posX, player.posY, player.posZ));
+            GALAXIA_NETWORK.sendToServer(
+                new TeleportRequestPacket(destination, player.posX, player.posY, player.posZ, capsuleIndex, modules));
         }
     }
 
     private void updateFalling() {
-        lockHorizontal();
+        if (!worldObj.isRemote) lockHorizontal();
 
         if (motionY > TERMINAL_FALL_SPEED) {
             motionY = Math.max(motionY - 0.05, TERMINAL_FALL_SPEED);
@@ -216,7 +240,7 @@ public class EntityRocket extends Entity {
     }
 
     private void updateRetro() {
-        lockHorizontal();
+        if (!worldObj.isRemote) lockHorizontal();
 
         motionY = Math.min(motionY + RETRO_DECEL, SAFE_LAND_SPEED);
         moveEntity(0, motionY, 0);
@@ -228,6 +252,7 @@ public class EntityRocket extends Entity {
             motionY = 0;
             motionX = 0;
             motionZ = 0;
+            groundY = -1;
             setPhase(Phase.TOUCHDOWN);
         }
     }
@@ -235,10 +260,20 @@ public class EntityRocket extends Entity {
     private void updateTouchdown() {
         if (worldObj.isRemote) return;
 
+        if (riddenByEntity == null) {
+            if (lastRider != null && !lastRider.isDead) {
+                lastRider.setPositionAndUpdate(targetX + assembly.getTotalWidth(), getGroundY() + 1, targetZ);
+                lastRider = null;
+            }
+            return;
+        }
+
         touchdownTicks++;
         if (touchdownTicks >= EJECT_DELAY_TICKS && riddenByEntity instanceof EntityPlayerMP player) {
             player.mountEntity(null);
-            player.setPositionAndUpdate(targetX + 1, getGroundY() + 1, targetZ);
+            player.setPositionAndUpdate(targetX + assembly.getTotalWidth(), getGroundY() + 1, targetZ);
+            lastRider = null;
+            touchdownTicks = 0;
         }
     }
 
@@ -353,7 +388,7 @@ public class EntityRocket extends Entity {
                     double radius = 0.5 + rand.nextDouble() * 1.5;
                     worldObj.spawnParticle(
                         "largesmoke",
-                        Math.cos(angle) * radius,
+                        posX + Math.cos(angle) * radius,
                         posY - 0.5,
                         posZ + Math.sin(angle) * radius,
                         Math.cos(angle) * 0.1,

@@ -1,10 +1,16 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.network.play.server.S1BPacketEntityAttach;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Teleporter;
 import net.minecraft.world.WorldServer;
+
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -18,6 +24,9 @@ public class TeleportRequestPacket implements IMessage {
 
     private int dim;
     private double x, y, z;
+    private int capsuleIndex;
+    private String modules;
+    private boolean hasRocket;
 
     public TeleportRequestPacket() {}
 
@@ -26,6 +35,20 @@ public class TeleportRequestPacket implements IMessage {
         this.x = x;
         this.y = y;
         this.z = z;
+        this.hasRocket = false;
+        this.modules = "";
+    }
+
+    public TeleportRequestPacket(int dim, double x, double y, double z, int capsuleIndex, List<Integer> modules) {
+        this(dim, x, y, z);
+        this.hasRocket = true;
+        this.capsuleIndex = capsuleIndex;
+        StringBuilder sb = new StringBuilder();
+        for (int m : modules) {
+            if (sb.length() > 0) sb.append(",");
+            sb.append(m);
+        }
+        this.modules = sb.toString();
     }
 
     /**
@@ -39,6 +62,13 @@ public class TeleportRequestPacket implements IMessage {
         buf.writeDouble(x);
         buf.writeDouble(y);
         buf.writeDouble(z);
+        buf.writeBoolean(hasRocket);
+        if (hasRocket) {
+            buf.writeInt(capsuleIndex);
+            byte[] bytes = modules.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            buf.writeInt(bytes.length);
+            buf.writeBytes(bytes);
+        }
     }
 
     /**
@@ -52,6 +82,25 @@ public class TeleportRequestPacket implements IMessage {
         x = buf.readDouble();
         y = buf.readDouble();
         z = buf.readDouble();
+        hasRocket = buf.readBoolean();
+        if (hasRocket) {
+            capsuleIndex = buf.readInt();
+            int len = buf.readInt();
+            byte[] bytes = new byte[len];
+            buf.readBytes(bytes);
+            modules = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    private List<Integer> parseModules() {
+        List<Integer> list = new ArrayList<>();
+        if (modules == null || modules.isEmpty()) return list;
+        for (String part : modules.split(",")) {
+            try {
+                list.add(Integer.parseInt(part.trim()));
+            } catch (Exception ignored) {}
+        }
+        return list;
     }
 
     /**
@@ -75,14 +124,8 @@ public class TeleportRequestPacket implements IMessage {
             if (targetWorld == null) return null;
 
             if (player.dimension == message.dim) {
-                player.setLocationAndAngles(
-                    message.x,
-                    message.y + 0.5,
-                    message.z,
-                    player.rotationYaw,
-                    player.rotationPitch);
-                player.fallDistance = 0.0F;
-                player.motionX = player.motionY = player.motionZ = 0.0D;
+                placePlayer(message, player);
+                if (message.hasRocket) spawnLandingRocket(message, player, targetWorld);
                 return null;
             }
 
@@ -101,14 +144,17 @@ public class TeleportRequestPacket implements IMessage {
                      */
                     @Override
                     public void placeInPortal(Entity entity, double px, double py, double pz, float yaw) {
+                        double landY = message.hasRocket ? EntityRocket.SPAWN_ALTITUDE : message.y + 0.5;
+                        double fallingMotionY = message.hasRocket ? EntityRocket.TERMINAL_FALL_SPEED : 0;
                         entity.setLocationAndAngles(
                             message.x,
-                            message.y + 0.5,
+                            landY,
                             message.z,
                             entity.rotationYaw,
                             entity.rotationPitch);
                         entity.fallDistance = 0.0F;
-                        entity.motionX = entity.motionY = entity.motionZ = 0.0D;
+                        entity.motionX = entity.motionZ = 0.0D;
+                        entity.motionY = fallingMotionY;
                     }
 
                     /**
@@ -123,7 +169,35 @@ public class TeleportRequestPacket implements IMessage {
                     }
                 });
 
+            if (message.hasRocket) spawnLandingRocket(message, player, targetWorld);
             return null;
+        }
+
+        private void placePlayer(TeleportRequestPacket message, EntityPlayerMP player) {
+            double landY = message.hasRocket ? EntityRocket.SPAWN_ALTITUDE : message.y + 0.5;
+            double fallingMotionY = message.hasRocket ? EntityRocket.TERMINAL_FALL_SPEED : 0;
+            player.setLocationAndAngles(message.x, landY, message.z, player.rotationYaw, player.rotationPitch);
+            player.fallDistance = 0f;
+            player.motionX = player.motionZ = 0;
+            player.motionY = fallingMotionY;
+        }
+
+        private void spawnLandingRocket(TeleportRequestPacket message, EntityPlayerMP player, WorldServer world) {
+            EntityRocket lander = new EntityRocket(world);
+            lander.setModules(message.parseModules());
+            lander.setCapsuleIndex(message.capsuleIndex);
+            lander.setPosition(message.x, EntityRocket.SPAWN_ALTITUDE, message.z);
+            world.spawnEntityInWorld(lander);
+            lander.beginLanding(message.x, message.z);
+
+            int[] ticksWaited = { 0 };
+            ServerTickTaskQueue.scheduleWhen(() -> {
+                ticksWaited[0]++;
+                return player.dimension == message.dim && !player.isDead && !lander.isDead && ticksWaited[0] >= 5;
+            }, () -> {
+                player.mountEntity(lander);
+                player.playerNetServerHandler.sendPacket(new S1BPacketEntityAttach(0, player, lander));
+            });
         }
     }
 }

@@ -7,6 +7,7 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.B
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
+import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
@@ -36,6 +37,10 @@ public class CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(new DimensionEventHandler());
+
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new ServerTickTaskQueue());
 
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
