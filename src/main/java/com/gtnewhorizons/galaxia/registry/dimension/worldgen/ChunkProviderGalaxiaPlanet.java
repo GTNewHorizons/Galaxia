@@ -133,6 +133,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
 
         // Generate blocks
+        long defaultVariableStart = System.nanoTime();
         Block topBlock = Blocks.grass;
         StratificationPreset fillerBlocks = new StratificationPreset(Blocks.stone);
         Block snowBlock = Blocks.snow;
@@ -147,8 +148,17 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         int oceanCrackComplexity = 1;
         float oceanCrackThickness = 0.5F;
         boolean generateCaves = false;
+        long assignmentTime = 0;
+        long oceanTime = 0;
+        long caveTime = 0;
+        long placementTime = 0;
+        long defaultVariableEnd = System.nanoTime();
+        long defaultVariableTime = defaultVariableEnd - defaultVariableStart;
+        long blockStorageTime = 0;
+        System.out.println("Time for creating default variables: " + (defaultVariableTime));
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
+                long assignmentTimeStart = System.nanoTime();
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * 16];
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
                     topBlock = getSurfaceBlock(
@@ -169,16 +179,22 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     oceanCrackThickness = spaceBiome.getOceanCrackThickness();
                     oceanCrackComplexity = spaceBiome.getOceanCrackComplexity();
                 }
+                long assignmentTimeFinish = System.nanoTime();
+                assignmentTime += (assignmentTimeFinish - assignmentTimeStart);
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
+                    long blockStorageStart = System.nanoTime();
                     int sy = y >> 4;
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
+                    long blockStorageFinish = System.nanoTime();
+                    blockStorageTime += (blockStorageFinish - blockStorageStart);
                     Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlocks.getStrataBlock(y);
                     if (block == topBlock && y >= snowHeight) {
                         block = snowBlock;
                     }
+                    long oceanTimeStart = System.nanoTime();
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
                             if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
@@ -211,17 +227,29 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
+                    long oceanTimeFinish = System.nanoTime();
+                    oceanTime += (oceanTimeFinish - oceanTimeStart);
                     if (generateCaves
                         && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
                         && generateCave(localX, y, localZ, height)) {
                         block = Blocks.air;
                     }
+                    long caveGenerationTime = System.nanoTime();
+                    caveTime += (caveGenerationTime - oceanTimeFinish);
                     if (block != null) {
                         storage[sy].func_150818_a(localX, y & 15, localZ, block);
                     }
+                    long blockPlacementTime = System.nanoTime();
+                    placementTime += (blockPlacementTime - caveGenerationTime);
                 }
             }
         }
+        System.out.println("Time for assigning biome variables: " + (assignmentTime));
+        System.out.println("Time for creating block storage: " + (blockStorageTime));
+        System.out.println("Time for generating oceans: " + (oceanTime));
+        System.out.println("Time for generating caves: " + (caveTime));
+        System.out.println("Time for placing blocks: " + (placementTime));
+        System.out.println("Total time for all tracked block placement steps: " + (assignmentTime + blockStorageTime + oceanTime + caveTime + placementTime + defaultVariableTime));
         long blockGenerationTime = System.nanoTime();
         System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
 
