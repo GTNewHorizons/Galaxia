@@ -59,9 +59,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
      */
     @Override
     public Chunk provideChunk(int chunkX, int chunkZ) {
+        System.out.println("++++++++ START CHUNK GENERATION ++++++++");
+        long startTime = System.nanoTime();
         Chunk chunk = new Chunk(worldObj, chunkX, chunkZ);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
         prepareCaveCache(chunkX, chunkZ);
+        long preparationTime = System.nanoTime();
+        System.out.println("Time for preparing cave generation: " + (preparationTime - startTime));
 
         // Get local biomes
         double[] heightMap = generateBaseHeightmap(chunkX, chunkZ);
@@ -105,6 +109,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
             }
         }
+        long blendingTime = System.nanoTime();
+        System.out.println("Time for blending biomes: " + (blendingTime - preparationTime));
 
         // Calculate terrain features
         for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
@@ -123,6 +129,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         for (int i = 0; i < 256; i++) {
             heightMap[i] = Math.max(1, Math.min(256, heightMap[i]));
         }
+        long terrainFeatureTime = System.nanoTime();
+        System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
 
         // Generate blocks
         Block topBlock = Blocks.grass;
@@ -214,8 +222,14 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
             }
         }
+        long blockGenerationTime = System.nanoTime();
+        System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
 
         chunk.generateSkylightMap();
+        long lightGenerationTime = System.nanoTime();
+        System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
+
+        System.out.println("-------- END CHUNK GENERATION --------");
         return chunk;
     }
 
