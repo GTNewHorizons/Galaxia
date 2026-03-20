@@ -539,6 +539,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return true;
     }
 
+    public void kill() {
+        modules.clear();
+        entityRocket.setDead();
+    }
+
     /**
      * Checks to see if the linked assembler has the module requested
      *
@@ -631,6 +636,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             currentFacing);
         entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
         worldObj.spawnEntityInWorld(entityRocket);
+    }
+
+    public void receiveLandingRocket(List<Integer> incomingModules) {
+        modules.clear();
+        modules.addAll(incomingModules);
+        assembly = null;
+
+        shouldRender = true;
+        entityRocket = null;
+
+        sync();
     }
 
     /**

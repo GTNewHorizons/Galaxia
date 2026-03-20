@@ -45,8 +45,11 @@ public class EntityRocket extends Entity {
     private static final double SAFE_LAND_SPEED = -0.1;
     private static final int EJECT_DELAY_TICKS = 100;
 
+    private TileEntitySilo targetSilo = null;
+
     private TileEntitySilo silo;
     private RocketAssembly assembly;
+
     private final List<Integer> modules = new ArrayList<>();
     private int capsuleIndex = -1;
     private int launchTicks = 0;
@@ -78,6 +81,10 @@ public class EntityRocket extends Entity {
 
     public void bindSilo(TileEntitySilo silo) {
         this.silo = silo;
+    }
+
+    public void setTargetSilo(TileEntitySilo silo) {
+        this.targetSilo = silo;
     }
 
     public RocketAssembly getAssembly() {
@@ -248,12 +255,16 @@ public class EntityRocket extends Entity {
         if (worldObj.isRemote) spawnDescentParticles(true);
 
         if (!worldObj.isRemote && (posY - getGroundY() <= 1.0 || motionY >= SAFE_LAND_SPEED)) {
-            posY = getGroundY() + 1;
-            motionY = 0;
-            motionX = 0;
-            motionZ = 0;
-            groundY = -1;
-            setPhase(Phase.TOUCHDOWN);
+            if (targetSilo != null) {
+                landOnSilo(targetSilo);
+            } else {
+                posY = getGroundY() + 1;
+                motionY = 0;
+                motionX = 0;
+                motionZ = 0;
+                groundY = -1;
+                setPhase(Phase.TOUCHDOWN);
+            }
         }
     }
 
@@ -412,6 +423,23 @@ public class EntityRocket extends Entity {
         posZ = targetZ;
         motionX = 0;
         motionZ = 0;
+    }
+
+    private void landOnSilo(TileEntitySilo silo) {
+        if (lastRider != null && !lastRider.isDead) {
+            lastRider.setPositionAndUpdate(silo.xCoord + 0.5, silo.yCoord + 2.0, silo.zCoord + 0.5);
+            lastRider = null;
+        }
+
+        silo.receiveLandingRocket(new ArrayList<>(modules));
+
+        motionX = motionY = motionZ = 0;
+        groundY = -1;
+        if (riddenByEntity instanceof EntityPlayerMP player) {
+            player.mountEntity(null);
+            player.setPositionAndUpdate(targetX + assembly.getTotalWidth(), getGroundY() + 1, targetZ);
+        }
+        setPhase(Phase.IDLE);
     }
 
     private int getGroundY() {

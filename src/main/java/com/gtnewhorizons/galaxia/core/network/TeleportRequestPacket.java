@@ -7,10 +7,12 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.play.server.S1BPacketEntityAttach;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.Teleporter;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -108,6 +110,9 @@ public class TeleportRequestPacket implements IMessage {
      */
     public static class Handler implements IMessageHandler<TeleportRequestPacket, IMessage> {
 
+        private static final int SILO_SEARCH_RADIUS = 32;
+        private static final int SILO_SEARCH_HEIGHT = 5;
+
         /**
          * Handler for on sending a new packet request
          *
@@ -173,6 +178,26 @@ public class TeleportRequestPacket implements IMessage {
             return null;
         }
 
+        private TileEntitySilo findNearbySilo(WorldServer world, double x, double z) {
+            int groundY = world.getTopSolidOrLiquidBlock((int) x, (int) z);
+            int searchX = (int) x;
+            int searchZ = (int) z;
+            for (int dx = -SILO_SEARCH_RADIUS; dx <= SILO_SEARCH_RADIUS; dx++) {
+                for (int dz = -SILO_SEARCH_RADIUS; dz <= SILO_SEARCH_RADIUS; dz++) {
+                    for (int dy = -SILO_SEARCH_HEIGHT; dy <= SILO_SEARCH_HEIGHT; dy++) {
+                        TileEntity te = world.getTileEntity(searchX + dx, groundY + dy, searchZ + dz);
+                        if (te instanceof TileEntitySilo silo && silo.isStructureValid()
+                            && silo.getModules()
+                                .isEmpty()) {
+                            return silo;
+                        }
+
+                    }
+                }
+            }
+            return null;
+        }
+
         private void placePlayer(TeleportRequestPacket message, EntityPlayerMP player) {
             double landY = message.hasRocket ? EntityRocket.SPAWN_ALTITUDE : message.y + 0.5;
             double fallingMotionY = message.hasRocket ? EntityRocket.TERMINAL_FALL_SPEED : 0;
@@ -183,12 +208,26 @@ public class TeleportRequestPacket implements IMessage {
         }
 
         private void spawnLandingRocket(TeleportRequestPacket message, EntityPlayerMP player, WorldServer world) {
+            TileEntitySilo targetSilo = findNearbySilo(world, message.x, message.z);
+
+            double landX = targetSilo != null ? targetSilo.xCoord + TileEntitySilo.getRotatedOffset(
+                TileEntitySilo.SILO_DEFAULT_X_OFFSET,
+                TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
+                TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
+                targetSilo.currentFacing)[0] + 0.5 : message.x;
+
+            double landZ = targetSilo != null ? targetSilo.zCoord + TileEntitySilo.getRotatedOffset(
+                TileEntitySilo.SILO_DEFAULT_X_OFFSET,
+                TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
+                TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
+                targetSilo.currentFacing)[2] + 0.5 : message.z;
             EntityRocket lander = new EntityRocket(world);
             lander.setModules(message.parseModules());
             lander.setCapsuleIndex(message.capsuleIndex);
-            lander.setPosition(message.x, EntityRocket.SPAWN_ALTITUDE, message.z);
+            lander.setPosition(landX, EntityRocket.SPAWN_ALTITUDE, landZ);
+            lander.setTargetSilo(targetSilo);
             world.spawnEntityInWorld(lander);
-            lander.beginLanding(message.x, message.z);
+            lander.beginLanding(landX, landZ);
 
             int[] ticksWaited = { 0 };
             ServerTickTaskQueue.scheduleWhen(() -> {
