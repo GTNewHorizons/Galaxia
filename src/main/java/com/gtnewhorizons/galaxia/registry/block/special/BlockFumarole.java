@@ -29,7 +29,7 @@ public class BlockFumarole extends Block implements ITileEntityProvider {
         super(Material.rock);
 
         this.setTickRandomly(true);
-        this.setBlockName("fumarole");
+        this.setBlockName("tenebrae_fumarole");
     }
 
     @Override

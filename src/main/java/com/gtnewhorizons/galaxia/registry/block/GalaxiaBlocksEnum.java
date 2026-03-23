@@ -36,7 +36,7 @@ public enum GalaxiaBlocksEnum {
     SILO_CONTROLLER(new BlockSilo(), TileEntitySilo.class, "silo_controller"),
     MODULE_CONTROLLER(new BlockStationModuleController(), TileStationModuleController.class, "module_controller"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
-    FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "fumarole"),
+    FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "tenebrae_fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),
     GANTRY_TERMINAL(new BlockGantryTerminal(), TileEntityGantryTerminal.class, "gantry_terminal"),
 
