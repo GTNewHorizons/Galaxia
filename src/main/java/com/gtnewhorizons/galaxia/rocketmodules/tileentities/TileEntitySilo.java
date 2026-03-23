@@ -73,7 +73,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         new TierMatchesDestinationValidator(),
         new SingleRocketCoreValidator(),
         new ModulesFitInCoreValidator());
-    private int destination = 0;
+    private int destination = -1;
     private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
@@ -388,8 +388,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             .pos(10, 35)
             .padding(4);
 
+        // Add Overworld option if not there
+        if (worldObj.provider.dimensionId != 0) {
+            destRow.child(
+                new ToggleButton().size(48, 20)
+                    .overlay(IKey.str("Viridis"))
+                    .valueWrapped(selectedDim, 0));
+        }
+
         for (BasePlanet dim : SolarSystemRegistry.getAllPlanets()) {
-            destRow.child(createDestinationButton(dim));
+            if (dim.getPlanetEnum()
+                .getId() != worldObj.provider.dimensionId) destRow.child(createDestinationButton(dim));
         }
 
         // Builder Page
@@ -539,6 +548,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return true;
     }
 
+    public void kill() {
+        modules.clear();
+        entityRocket.setDead();
+    }
+
     /**
      * Checks to see if the linked assembler has the module requested
      *
@@ -631,6 +645,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             currentFacing);
         entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
         worldObj.spawnEntityInWorld(entityRocket);
+    }
+
+    public void receiveLandingRocket(List<Integer> incomingModules) {
+        modules.clear();
+        modules.addAll(incomingModules);
+        assembly = null;
+
+        shouldRender = true;
+        entityRocket = null;
+
+        sync();
     }
 
     /**

@@ -111,6 +111,15 @@ public final class RocketAssembly {
             .orElse(0.0);
     }
 
+    public double getTotalWidth() {
+        return getPlacements().stream()
+            .mapToDouble(
+                p -> p.x() + p.type()
+                    .getWidth())
+            .max()
+            .orElse(0.0);
+    }
+
     public double getTotalWeight() {
         return modules.stream()
             .mapToDouble(RocketModule::getWeight)

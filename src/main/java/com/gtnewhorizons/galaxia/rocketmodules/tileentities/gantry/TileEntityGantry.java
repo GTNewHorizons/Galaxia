@@ -114,23 +114,22 @@ public class TileEntityGantry extends TileEntity {
             return;
         }
 
+        if (dispatchCooldown > 0) dispatchCooldown--;
+
         // Handle dispatch queue
         if (!queue.isEmpty()) {
             // If cooling down, lower cooldown counter
-            if (dispatchCooldown > 0) {
-                dispatchCooldown--;
-            } else if (containedTransitModule == null) {
+            if (dispatchCooldown == 0 && containedTransitModule == null) {
                 // If no contained module, take the next and process
                 TransitModule entry = queue.poll();
                 containedTransitModule = entry;
                 currentDirection = GantryAPI.getDirectionTo(this, entry.destination());
                 progress = 0f;
-                // Only add cooldown back if a terminal and remaining queue
-                if (!queue.isEmpty() && this instanceof TileEntityGantryTerminal) {
+
+                if (this instanceof TileEntityGantryTerminal) {
                     dispatchCooldown = DISPATCH_INTERVAL;
-                } else {
-                    dispatchCooldown = 0;
                 }
+
                 markDirty();
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             }

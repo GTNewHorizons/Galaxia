@@ -12,9 +12,10 @@ public class TierMatchesDestinationValidator implements IRocketValidator {
     @Override
     public ValidationResult validate(RocketAssembly assembly) {
         int destinationId = assembly.getDestination();
-        if (destinationId == 0) return new ValidationResult(false, "Destination not selected");
+        if (destinationId == -1) return new ValidationResult(false, "Destination not selected");
         List<RocketCoreModule> cores = assembly.getCoreModules();
         if (cores.isEmpty()) return ValidationResult.success();
+        if (destinationId == 0) return ValidationResult.success();
         EnumTiers tier = cores.get(0)
             .getTier();
         String destinationName = SolarSystemRegistry.getById(destinationId)
