@@ -13,6 +13,8 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -233,7 +235,9 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
 
         // Title
         panel.child(
-            IKey.str("§lModule Assembler")
+            IKey.str(
+                EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
+                    + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
 
@@ -272,7 +276,10 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     private ButtonWidget<?> createModuleButton(RocketModule m) {
         return new ButtonWidget<>().size(48, 20)
             .overlay(IKey.str(m.getName()))
-            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
+            .tooltip(
+                t -> t.add(
+                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())
+                        + EnumChatFormatting.RESET))
             .syncHandler(
                 new InteractionSyncHandler()
                     .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));

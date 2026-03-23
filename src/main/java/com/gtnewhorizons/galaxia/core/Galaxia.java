@@ -10,7 +10,6 @@ import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
-import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
@@ -20,6 +19,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.Side;
 
 @Mod(modid = Galaxia.MODID, name = Galaxia.NAME, version = Tags.VERSION, acceptedMinecraftVersions = "[1.7.10]")
@@ -47,10 +47,15 @@ public final class Galaxia {
 
     @SidedProxy(clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy", serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
     public static CommonProxy proxy;
+
+    private static final Item CREATIVE_TAB_ICON_ITEM = new Item()
+        .setUnlocalizedName(UNLOCALIZED_PREFIX + "creative_tab_icon")
+        .setTextureName(TEXTURE_PREFIX + "galaxia_logo");
     // spotless:on
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
+        registerCreativeTabIconItem();
         proxy.preInit(event);
     }
 
@@ -84,11 +89,15 @@ public final class Galaxia {
     }
     // spotless:on
 
+    private static void registerCreativeTabIconItem() {
+        GameRegistry.registerItem(CREATIVE_TAB_ICON_ITEM, "creative_tab_icon");
+    }
+
     public static final CreativeTabs creativeTab = new CreativeTabs(MODID) {
 
         @Override
         public Item getTabIconItem() {
-            return GalaxiaItemList.GALAXIA_LOGO.getItem();
+            return CREATIVE_TAB_ICON_ITEM;
         }
     };
 }

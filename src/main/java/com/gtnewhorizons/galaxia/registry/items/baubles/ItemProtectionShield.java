@@ -34,15 +34,14 @@ public class ItemProtectionShield extends Item implements IBaubleExpanded {
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
         if (pressureProtectionHigh > 0) tooltip.add(
-            StatCollector.translateToLocalFormatted(
-                "item.galaxia.protection_shield_pressure.desc.high",
-                pressureProtectionHigh));
+            StatCollector
+                .translateToLocalFormatted("galaxia.tooltip.protection_shield_radiation.high", pressureProtectionHigh));
         if (pressureProtectionLow > 0) tooltip.add(
             StatCollector
-                .translateToLocalFormatted("item.galaxia.protection_shield_pressure.desc.low", pressureProtectionLow));
+                .translateToLocalFormatted("galaxia.tooltip.protection_shield_radiation.low", pressureProtectionLow));
         if (radiationProtection > 0) tooltip.add(
             StatCollector
-                .translateToLocalFormatted("item.galaxia.protection_shield_radiation.desc", radiationProtection));
+                .translateToLocalFormatted("galaxia.tooltip.protection_shield_radiation.desc", radiationProtection));
     }
 
     @Override
