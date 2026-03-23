@@ -20,7 +20,7 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceAir;
 
-public class TileModuleController extends TileEntity implements IGuiHolder<PosGuiData> {
+public class TileStationModuleController extends TileEntity implements IGuiHolder<PosGuiData> {
 
     private boolean isDepressurized = false;
 
