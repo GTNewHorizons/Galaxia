@@ -28,6 +28,8 @@ import cpw.mods.fml.common.registry.GameRegistry;
  */
 public enum GalaxiaItemList {
 
+    GALAXIA_LOGO("galaxia_logo"),
+
     // TOOLS
     ITEM_TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("tool/galactic_map", ItemGalacticMap::new, 1),
@@ -53,7 +55,7 @@ public enum GalaxiaItemList {
 
     // PARTS
     HEAVY_DUTY_PLATE_BASE("parts/heavy_duty_plate_base"),
-    satellite_dish("parts/satellite_dish"),
+    SATELLITE_DISH("parts/satellite_dish"),
     BOROSILICATE_GLASS_BAR("parts/borosilicate_glass_bar"),
 
     // GEAR

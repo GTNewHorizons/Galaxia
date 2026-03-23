@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core;
 
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
@@ -9,6 +10,7 @@ import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryRenderer;
 import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketRenderer;
@@ -51,6 +53,7 @@ public class ClientProxy extends CommonProxy {
     public void postInit(FMLPostInitializationEvent event) {
         super.postInit(event);
 
+        API.hideItem(new ItemStack(GalaxiaItemList.GALAXIA_LOGO.getItem()));
         GalaxiaMultiblockHandler.register(new TileEntitySilo());
         GalaxiaMultiblockHandler.register(new TileEntityModuleAssembler());
 
