@@ -122,8 +122,6 @@ tile.tenebrae_lava.name=Tenebrae Lava
 tile.liquid_mercury.name=Liquid Mercury
 
 #### Items
-item.galaxia.galaxia_logo.name=Galaxia Logo
-
 # Items - "Tools"
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.galactic_map.name=Galactic Map

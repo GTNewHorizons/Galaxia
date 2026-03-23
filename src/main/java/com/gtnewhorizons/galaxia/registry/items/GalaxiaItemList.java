@@ -28,8 +28,6 @@ import cpw.mods.fml.common.registry.GameRegistry;
  */
 public enum GalaxiaItemList {
 
-    GALAXIA_LOGO("galaxia_logo"),
-
     // TOOLS
     ITEM_TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("tool/galactic_map", ItemGalacticMap::new, 1),
