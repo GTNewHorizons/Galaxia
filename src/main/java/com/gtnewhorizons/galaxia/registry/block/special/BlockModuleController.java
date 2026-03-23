@@ -8,19 +8,19 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileNoduleController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileModuleController;
 
-public class BlockNoduleController extends Block implements ITileEntityProvider {
+public class BlockModuleController extends Block implements ITileEntityProvider {
 
-    public BlockNoduleController() {
+    public BlockModuleController() {
         super(Material.iron);
-        this.setBlockName("nodule_controller");
+        this.setBlockName("module_controller");
         this.setBlockTextureName("galaxia:space_station/space_station_block_1");
     }
 
     @Override
     public TileEntity createNewTileEntity(World worldIn, int meta) {
-        return new TileNoduleController();
+        return new TileModuleController();
     }
 
     @Override
@@ -28,10 +28,10 @@ public class BlockNoduleController extends Block implements ITileEntityProvider 
         float hitY, float hitZ) {
         if (worldIn.isRemote) return true;
         TileEntity te = worldIn.getTileEntity(x, y, z);
-        if (!(te instanceof TileNoduleController)) return false;
+        if (!(te instanceof TileModuleController)) return false;
         for (int[] d : BlockSpaceAir.adjacents) {
             if (BlockSpaceAir.isDepressurized(worldIn, x + d[0], y + d[1], z + d[2]))
-                ((TileNoduleController) te).depressurize();
+                ((TileModuleController) te).depressurize();
         }
         GuiFactories.tileEntity()
             .open(player, x, y, z);
@@ -46,7 +46,7 @@ public class BlockNoduleController extends Block implements ITileEntityProvider 
             || BlockSpaceAir.isDepressurized(worldIn, x, y - 1, z)
             || BlockSpaceAir.isDepressurized(worldIn, x, y, z + 1)
             || BlockSpaceAir.isDepressurized(worldIn, x, y, z - 1))
-            ((TileNoduleController) worldIn.getTileEntity(x, y, z)).depressurize();
+            ((TileModuleController) worldIn.getTileEntity(x, y, z)).depressurize();
     }
 
     @Override

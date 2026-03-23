@@ -88,7 +88,7 @@ public final class Galaxia {
 
         @Override
         public Item getTabIconItem() {
-            return GalaxiaItemList.GALAXIA_LOGO.getItem();
+            return GalaxiaItemList.GALAXIA_LOGO.getItem(); // TODO Change this from itemRender to Icon Texture Render
         }
     };
 }

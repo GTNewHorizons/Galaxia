@@ -25,7 +25,7 @@ public class ItemOxygenMask extends Item implements IBaubleExpanded {
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean p_77624_4_) {
         super.addInformation(stack, player, tooltip, p_77624_4_);
-        tooltip.add(StatCollector.translateToLocalFormatted("item.galaxia.oxygen_mask.desc"));
+        tooltip.add(StatCollector.translateToLocalFormatted("galaxia.tooltip.oxygen_mask.desc"));
     }
 
     @Override
