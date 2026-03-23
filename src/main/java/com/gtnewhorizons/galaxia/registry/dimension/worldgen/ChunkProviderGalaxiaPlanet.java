@@ -69,6 +69,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
         // Get local biomes
         double[] heightMap = generateBaseHeightmap(chunkX, chunkZ);
+        Block[] surfaceReplacementMap = new Block[256];
         int biomeCount = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager()).getBiomeCount();
         BiomeGenBase[] chunkBiomes = new BiomeGenBase[256];
         double[][] biomeContrib = new double[biomeCount][];
@@ -119,10 +120,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 double[] terrainRelevance = biomeContrib[biomeIndex];
                 TerrainConfiguration terrain = spaceBiome.getTerrain();
                 for (TerrainFeature f : terrain.getMacroFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, chunkX, chunkZ, rand, terrainRelevance);
+                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance);
                 }
                 for (TerrainFeature f : terrain.getMesoFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, chunkX, chunkZ, rand, terrainRelevance);
+                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance);
                 }
             }
         }
@@ -182,6 +183,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 long assignmentTimeFinish = System.nanoTime();
                 assignmentTime += (assignmentTimeFinish - assignmentTimeStart);
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
+                Block replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
                     long blockStorageStart = System.nanoTime();
                     int sy = y >> 4;
@@ -190,7 +192,17 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     }
                     long blockStorageFinish = System.nanoTime();
                     blockStorageTime += (blockStorageFinish - blockStorageStart);
-                    Block block = (y >= height - surfaceDepth) ? topBlock : fillerBlocks.getStrataBlock(y);
+                    Block block;
+                    if (y >= height - surfaceDepth) {
+                        block = topBlock;
+                        if (replacementBlock != null) {
+                            block = replacementBlock;
+                            storage[sy].func_150818_a(localX, y & 15, localZ, block);
+                            continue;
+                        }
+                    } else {
+                        block = fillerBlocks.getStrataBlock(y);
+                    }
                     if (block == topBlock && y >= snowHeight) {
                         block = snowBlock;
                     }

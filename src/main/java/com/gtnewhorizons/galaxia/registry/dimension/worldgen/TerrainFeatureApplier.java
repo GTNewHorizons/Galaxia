@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.Random;
 
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 /**
@@ -23,8 +25,8 @@ public final class TerrainFeatureApplier {
      * @param rand             Random instance
      * @param terrainRelevance Matrix holding the terrain precedence
      */
-    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, int chunkX, int chunkZ, Random rand,
-        double[] terrainRelevance) {
+    public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, Block[] surfaceReplacementMap,
+                                        int chunkX, int chunkZ, Random rand, double[] terrainRelevance) {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
         }
@@ -66,7 +68,7 @@ public final class TerrainFeatureApplier {
                 applyBaseHeight(heightMap, height, terrainRelevance);
                 break;
             case SHIELD_VOLCANOES:
-                applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance);
+                applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance, surfaceReplacementMap);
                 break;
             case MULTI_RING_BASINS:
             case PLATEAUS_AND_ESCARPMENTS:
@@ -265,7 +267,7 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applyShieldVolcanoes(double[] hm, double height, double width, int chunkX, int chunkZ,
-        double[] terrainRelevance) {
+        double[] terrainRelevance, Block[] surfaceReplacementMap) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
@@ -276,6 +278,7 @@ public final class TerrainFeatureApplier {
                 double localNoise = noise[x + z * 16];
                 if (localNoise > 0.75) {
                     localNoise = (0.75 - localNoise) * 16;
+                    surfaceReplacementMap[x + z * 16] = Blocks.lava;
                 }
                 hm[x + z * 16] += ((localNoise * height) * localRelevance);
             }
