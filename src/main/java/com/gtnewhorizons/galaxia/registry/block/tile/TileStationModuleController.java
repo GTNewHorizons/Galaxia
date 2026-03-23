@@ -54,7 +54,8 @@ public class TileStationModuleController extends TileEntity implements IGuiHolde
                     .overlay(
                         IKey.str(
                             (isDepressurized ? EnumChatFormatting.YELLOW : EnumChatFormatting.GRAY)
-                                + StatCollector.translateToLocal("galaxia.gui.module_controller.button.repressurize"))
+                                + StatCollector.translateToLocal("galaxia.gui.module_controller.button.repressurize")
+                                + EnumChatFormatting.RESET)
                             .alignment(Alignment.CENTER))
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                         if (mouseData.mouseButton != 0 || worldObj.isRemote) return;

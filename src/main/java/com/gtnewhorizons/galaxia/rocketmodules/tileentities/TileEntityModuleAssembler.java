@@ -235,7 +235,9 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
 
         // Title
         panel.child(
-            IKey.str(EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name"))
+            IKey.str(
+                EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
+                    + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
 
@@ -275,7 +277,9 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         return new ButtonWidget<>().size(48, 20)
             .overlay(IKey.str(m.getName()))
             .tooltip(
-                t -> t.add(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())))
+                t -> t.add(
+                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())
+                        + EnumChatFormatting.RESET))
             .syncHandler(
                 new InteractionSyncHandler()
                     .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));

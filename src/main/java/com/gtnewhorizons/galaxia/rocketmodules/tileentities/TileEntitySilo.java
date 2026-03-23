@@ -358,7 +358,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         if (!hasAssembler) {
             return panel.child(
                 IKey.str(
-                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none"))
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
+                        + EnumChatFormatting.RESET)
                     .asWidget()
                     .pos(10, 35));
         }
@@ -374,7 +375,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
         // Title
         panel.child(
-            IKey.str(EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title"))
+            IKey.str(
+                EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
+                    + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
         // Module addition buttons
@@ -437,8 +440,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                 .pos(10, 120)
                                 .overlay(
                                     IKey.str(
-                                        EnumChatFormatting.GREEN + StatCollector
-                                            .translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket"))
+                                        EnumChatFormatting.GREEN
+                                            + StatCollector
+                                                .translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
+                                            + EnumChatFormatting.RESET)
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
                                     // Flag to indicate validity of rocket launching
@@ -447,13 +452,16 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                     if (getAssembly().getModules()
                                         .isEmpty()) {
                                         t.addLine(
-                                            EnumChatFormatting.GRAY + StatCollector
-                                                .translateToLocal("galaxia.tooltip.rocket_silo.builder.enter_rocket"));
+                                            EnumChatFormatting.GRAY
+                                                + StatCollector.translateToLocal(
+                                                    "galaxia.tooltip.rocket_silo.builder.enter_rocket")
+                                                + EnumChatFormatting.RESET);
                                         return;
                                     }
                                     for (IRocketValidator v : validators) {
                                         ValidationResult r = v.validate(getAssembly());
-                                        if (!r.valid()) t.addLine(EnumChatFormatting.RED + r.message());
+                                        if (!r.valid())
+                                            t.addLine(EnumChatFormatting.RED + r.message() + EnumChatFormatting.RESET);
                                         validFlag = false;
                                     }
                                     if (!validFlag) return;
@@ -481,7 +489,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             .overlay(IKey.str(module.getName()))
             .tooltip(
                 t -> t.add(
-                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())))
+                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())
+                        + EnumChatFormatting.RESET))
             .syncHandler(
                 new InteractionSyncHandler().setOnMousePressed(
                     md -> {
