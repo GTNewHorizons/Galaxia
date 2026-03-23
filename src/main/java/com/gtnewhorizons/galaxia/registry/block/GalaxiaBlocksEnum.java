@@ -6,12 +6,12 @@ import net.minecraft.tileentity.TileEntity;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockNoduleController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceAir;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStation;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationModuleController;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileNoduleController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationModuleController;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockSilo;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
@@ -34,7 +34,7 @@ public enum GalaxiaBlocksEnum {
 
     // TE
     SILO_CONTROLLER(new BlockSilo(), TileEntitySilo.class, "silo_controller"),
-    NODULE_CONTROLLER(new BlockNoduleController(), TileNoduleController.class, "nodule_controller"),
+    MODULE_CONTROLLER(new BlockStationModuleController(), TileStationModuleController.class, "module_controller"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),

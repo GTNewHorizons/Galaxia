@@ -1,22 +1,5 @@
 ## Galaxia English (US) translation file
 
-## Before you commit war crime please read:
-## Strings marked with [?] = Need correct name, currently placeholder
-## Use StatCollector and localized enum Colors
-## Have "§r" (color reset) at the end of colored string
-## Keep the lang file nice and clean '='
-#
-## Sort like:
-# Creative tab
-# Baubles
-# Block
-# Items
-# Elements
- #- Gui
- #- Tooltip
- #- Other
-# Config
-
 #### Creative tab
 itemGroup.galaxia=§9Galaxia§r
 
@@ -31,9 +14,16 @@ slot.wither_protection=Wither Protection
 slot.spore_filter=Spore Filter
 slot.oxygen_mask=Oxygen Mask
 
-#### Blocks
+#### Dimensions
+galaxia.dimension.vitris_space=Vitris Space Stations
+galaxia.dimension.theia=Theia
+galaxia.dimension.hemateria=Hemateria
+galaxia.dimension.frozen_belt=Frozen Belt
+galaxia.dimension.panspira=Panspira
+galaxia.dimension.tenebrae=Tenebrae
 
-# Blocks Theia
+#### Blocks
+# Blocks - "Theia"
 tile.theia_regolith.name=Theia Regolith
 tile.theia_magma.name=Theia Magma
 tile.theia_gabbro.name=Theia Gabbro
@@ -44,7 +34,7 @@ tile.theia_andesite.name=Theia Andesite
 tile.theia_tektite.name=Theia Tektite
 tile.theia_obsidian.name=Theia Obsidian
 
-# Blocks Hemateria
+# Blocks - "Hemateria"
 tile.hemateria_regolith.name=Hemateria Regolith
 tile.hemateria_andesite.name=Hemateria Andesite
 tile.hemateria_basalt.name=Hemateria Basalt
@@ -59,7 +49,7 @@ tile.hemateria_sandstone.name=Hemateria Sandstone
 tile.hemateria_tuff.name=Hemateria Tuff
 tile.hemateria_tektite.name=Hemateria Tektite
 
-# Blocks Frozen Belt
+# Blocks - "Frozen Belt"
 tile.frozen_belt_ice.name=Frozen Belt Ice
 tile.frozen_belt_breccia.name=Frozen Belt Breccia
 tile.frozen_belt_gabbro.name=Frozen Belt Gabbro
@@ -67,7 +57,7 @@ tile.frozen_belt_basalt.name=Frozen Belt Basalt
 tile.frozen_belt_andesite.name=Frozen Belt Andesite
 tile.frozen_belt_anorthosite.name=Frozen Belt Anorthosite
 
-# Blocks Panspira
+# Blocks - "Panspira"
 tile.panspira_regolith.name=Panspira Regolith
 tile.panspira_andesite.name=Panspira Andesite
 tile.panspira_snow.name=Panspira Snow
@@ -76,7 +66,7 @@ tile.panspira_soil.name=Panspira Soil
 tile.panspira_magma.name=Panspira Magma
 tile.fumarole.name=Fumarole
 
-# Blocks Tenebrae
+# Blocks - "Tenebrae"
 tile.tenebrae_basalt.name=Tenebrae Basalt
 tile.tenebrae_magma.name=Tenebrae Magma
 tile.tenebrae_andesite.name=Tenebrae Andesite
@@ -89,21 +79,20 @@ tile.tenebrae_latite.name=Tenebrae Latite
 tile.tenebrae_brimstone.name=Tenebrae Brimstone
 tile.tenebrae_fumarole.name=Tenebrae Fumarole
 
-# Asteroid Belt
-
+# Blocks - "Asteroid Belt"
 tile.naquadah_asteroid_shell.name=Naquadah Asteroid Shell
 tile.olivine_asteroid_shell.name=Olivine Asteroid Shell
 tile.frozen_asteroid_shell.name=Frozen Asteroid Shell
-tile.red_asteroid_shell.name=[?]Red Asteroid Shell
-tile.black_asteroid_shell.name=[?]Black Asteroid Shell
+tile.red_asteroid_shell.name=Red Asteroid Shell
+tile.black_asteroid_shell.name=Black Asteroid Shell
 tile.rocky_asteroid_shell.name=Rocky Asteroid Shell
-tile.grey_asteroid_shell.name=[?]Grey Asteroid Shell
+tile.grey_asteroid_shell.name=Grey Asteroid Shell
 tile.silver_asteroid_shell.name=Silver Asteroid Shell
 
-# Blocks Space Station
+# Blocks - "Space Station"
 tile.space_station_block.name=Space Insulation Block
 tile.space_station_glass.name=Space glass
-tile.nodule_controller.name=Station Module Controller
+tile.module_controller.name=Station Module Controller
 tile.space_air.name=Space Air
 tile.module_assembler_controller.name=Module Assembler
 tile.silo_controller.name=Rocket Silo
@@ -111,7 +100,7 @@ tile.space_station_panel.name=Space Station Panel
 tile.gantry_block.name=Gantry Shaft
 tile.gantry_terminal.name=Gantry Terminal
 
-# Miscellaneous / Resource blocks
+# Blocks - "Miscellaneous / Resource blocks"
 tile.block_of_pyrite.name=Block of Pyrite
 tile.block_of_cheese.name=Block of Cheese
 tile.block_of_cinnabar.name=Block of Cinnabar
@@ -126,22 +115,32 @@ tile.rusty_sheetmetal.name=Rusty Sheetmetal
 tile.launchpad.name=Launchpad Casing
 tile.research_outpost_casing.name=Research Outpost Casing
 
-#### Items
-item.galaxia.galaxia_logo.name=Galaxia Logo
+# Blocks - "Liquid blocks"
+tile.lahar.name=Lahar
+tile.molten_resin.name=Molten Resin
+tile.tenebrae_lava.name=Tenebrae Lava
+tile.liquid_mercury.name=Liquid Mercury
 
-# Tools
+#### Items
+# Items - "Tools"
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.galactic_map.name=Galactic Map
-item.galaxia.linking_tool.name=Linking tool
 
-# Worldgen / Ores
+# Items - Tools - "Linking Tool"
+## UNUSED item.galaxia.linking_tool.name=Linking tool
+## UNUSED item.galaxia.linking_tool.desc.usage=§7Used to link machines together§r
+## UNUSED item.galaxia.linking_tool.desc.shift_rmb_air=§8Shift+RMB on air§7 - unbind§r
+## UNUSED item.galaxia.linking_tool.desc.shift_rmb=§8Shift+RMB§7 - bind master§r
+## UNUSED item.galaxia.linking_tool.desc.rmb=§8RMB§7 - connect slave§r
+## UNUSED item.galaxia.linking_tool.desc.bound_to=§7Bound to: §a%s §8[%d, %d, %d]§r
+## UNUSED item.galaxia.linking_tool.desc.not_bound=§8Not bound§r
+
+# Items - "Worldgen / Ores"
 item.galaxia.theia_dust.name=Theia Dust
 item.galaxia.theia_tektite_shard.name=Theia Tektite Shard
-
 item.galaxia.hemateria_dust.name=Hemateria Dust
 item.galaxia.hemateria_tektite_shard.name=Hemateria Tektite Shard
 item.galaxia.hemateria_ice_cubes.name=Hemateria Ice Cubes
-
 item.galaxia.cinnabar_scale.name=Cinnabar Scale
 item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
 item.galaxia.meteoric_iron_shard.name=Meteoric Iron Shard
@@ -150,81 +149,120 @@ item.galaxia.raw_meteoric_iron.name=Raw Meteoric Iron
 item.galaxia.hematite_dust.name=Hematite Dust
 item.galaxia.hematite_ingot.name=Hematite Ingot
 item.galaxia.amber_shard.name=Amber Shard
-item.galaxia.psychedelic_amber_shard.name=[?] Enchanted Amber Shard
+item.galaxia.psychedelic_amber_shard.name=Enchanted Amber Shard
 item.galaxia.pyrite_cubes.name=Pyrite Cubes
 
-# Armor
+# Items - "Armor"
 item.galaxia.spacesuit_helmet.name=Space Suit Helmet
 item.galaxia.spacesuit_chestplate.name=Space Suit Chestplate
 item.galaxia.spacesuit_leggings.name=Space Suit Leggings
 item.galaxia.spacesuit_boots.name=Space Suit Boots
 
-# Gear / Baubles
+# Items - "Gear"
 item.galaxia.oxygen_tank_1.name=Small Oxygen Tank
 item.galaxia.oxygen_tank_2.name=Medium Oxygen Tank
 item.galaxia.oxygen_tank_3.name=Large Oxygen Tank
-item.galaxia.oxygen_tank_4.name=§6Creative Oxygen Tank§r
-item.galaxia.oxygen_tank.desc=Capacity: %s / %s
-item.galaxia.oxygen_tank.infinite=Capacity: §cInfinite§r
+item.galaxia.oxygen_tank_4.name=Creative Oxygen Tank
 item.galaxia.thermal_protection_cold.name=Cold Thermal Protection
 item.galaxia.thermal_protection_hot.name=Hot Thermal Protection
-item.galaxia.thermal_protection.desc.cold=Frost Protection: +%s
-item.galaxia.thermal_protection.desc.hot=Heat Protection: +%s
 item.galaxia.protection_shield_radiation.name=Radiation Shielding
 item.galaxia.protection_shield_pressure_high.name=High Pressure Shielding
 item.galaxia.protection_shield_pressure_low.name=Low Pressure Shielding
-item.galaxia.protection_shield_radiation.desc=Radiation Shielding: +%s
-item.galaxia.protection_shield_pressure.desc.low=Low Pressure Shielding: +%s
-item.galaxia.protection_shield_pressure.desc.high=High Pressure Shielding: +%s
 item.galaxia.oxygen_mask.name=Oxygen Mask
-item.galaxia.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
 item.galaxia.spore_filter.name=Spore Filter
-item.galaxia.spore_filter.desc=Filters out any atmospheric spores
 item.galaxia.wither_protection.name=Wither Protection
-item.galaxia.wither_protection.desc=Provides protection from atmospheric withering effects
 
-
-
-# Parts
+# Items - "Parts"
 item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
 item.galaxia.heavy_duty_plate_base.name=Heavy Duty Plate
 item.galaxia.satellite_dish.name=Satellite Transmitter Dish
 
 #### Liquids
-
-# buckets
+# Liquids - "Buckets"
 item.lahar_bucket.name=Bucket of Lahar
 item.molten_resin_bucket.name=Bucket of Molten Resin
 item.tenebrae_lava_bucket.name=Bucket of Tenebrae Lava
 item.liquid_mercury_bucket.name=Bucket of Liquid Mercury
 
-# liquid blocks
-tile.lahar.name=Lahar
-tile.molten_resin.name=Molten Resin
-tile.tenebrae_lava.name=Tenebrae Lava
-tile.liquid_mercury.name=Liquid Mercury
+#### Elements
+# Elements - "GUI"
+# Elements - GUI - "Planet Teleporter"
+galaxia.gui.planet_teleporter.title=Planet Teleporter
+galaxia.gui.planet_teleporter.teleport=Teleport
+galaxia.gui.planet_teleporter.selected=Selected: %s
+
+# Elements - GUI - "Orbital GUI"
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.search=Search
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.search.placeholder=Enter name...
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.paused=§cPAUSED§r
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
+# I GUESS YOU WANT THIS OFF? 
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.camera=Camera: %.3f, %.3f
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.following=Following: %s  |  Paused: %b
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.time=Time: %.1fs  |  Speed: ×%.1f
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
+# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.none=none
+
+# Elements - GUI - "Rocket Silo"
+galaxia.gui.rocket_silo.title=Rocket Silo
+galaxia.gui.rocket_silo.assembler_none=No Module Assembler linked
+galaxia.gui.rocket_silo.build=Build Rocket
+galaxia.gui.rocket_silo.launch=Launch Rocket
+galaxia.gui.rocket_silo.builder.return_modules=Return Modules
+galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
+galaxia.gui.rocket_silo.button.viridis=Viridis
+
+# Elements - GUI - "Module Controller"
+galaxia.gui.module_controller.title=Module Controller
+galaxia.gui.module_controller.button.repressurize=Repressurize
+
+### Elements - "Tooltip"
+galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
+galaxia.tooltip.spore_filter.desc=Filters out any atmospheric spores
+galaxia.tooltip.wither_protection.desc=Provides protection from atmospheric withering effects
+galaxia.tooltip.oxygen_tank.desc=Capacity: %s / %s
+galaxia.tooltip.oxygen_tank.desc.infinite=Capacity: %s
+galaxia.tooltip.oxygen_tank.infinite.value=Infinite
+galaxia.tooltip.thermal_protection.cold=Frost Protection: +%s
+galaxia.tooltip.thermal_protection.hot=Heat Protection: +%s
+galaxia.tooltip.protection_shield_radiation.desc=Radiation Shielding: +%s
+galaxia.tooltip.protection_shield_radiation.low=Low Pressure Shielding: +%s
+galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
+
+galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
+galaxia.tooltip.rocket_silo.builder.enter_rocket=Add some modules first
+
+### Elements - "Other"
+# Elements - Other - "Effect"
+galaxia.effect.low_oxygen=Low Oxygen
+galaxia.effect.overheating=Overheating
+galaxia.effect.overcooling=Freezing
+
+# Elements - Other - "Death Messages"
+death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
+death.attack.galaxia.noOxygen=%1$s ran out of oxygen
+death.attack.galaxia.radiation=%1$s died from radiation exposure
 
 #### Config
-
-### Config - "Rocket"
+# Config - "Rocket"
 galaxia.config.category.rocket=Rocket
 galaxia.config.category.rocket.tooltip=Settings for the Galaxia rockets
 
-### Config - Rocket - "Global"
+# Config - Rocket - "Global"
 galaxia.config.category.rocket_global=Global
 galaxia.config.category.rocket_global.tooltip=Global settings for the Galaxia rockets
-
 galaxia.config.rocket.camera_distance=Third person view distance
 galaxia.config.rocket.camera_distance.tooltip=Defines distance in third person view when sitting in rocket
 
-### Config - "Overlay"
+# Config - "Overlay"
 galaxia.config.category.overlay=Overlay
 galaxia.config.category.overlay.tooltip=Settings for the Galaxia HUD overlays
 
-### Config - Overlay - "Global"
+# Config - Overlay - "Global"
 galaxia.config.category.overlay_global=Global
 galaxia.config.category.overlay_global.tooltip=Global overlay settings for the Galaxia HUD
-
 galaxia.config.overlay.show_in_creative=Display bars in creative
 galaxia.config.overlay.show_in_creative.tooltip=Defines if bars will be displayed in creative mode
 galaxia.config.overlay.horizontal_offset=Global bars horizontal offset
@@ -236,10 +274,9 @@ galaxia.config.overlay.pulse.speed.tooltip=Pulse speed factor for bars (higher v
 galaxia.config.overlay.pulse.amplitude=Global bars pulse amplitude
 galaxia.config.overlay.pulse.amplitude.tooltip=Pulse intensity for bars, used to dim the bar
 
-### Config - Overlay - "Oxygen Bar"
+# Config - Overlay - "Oxygen Bar"
 galaxia.config.category.overlay_oxygen_bar=Oxygen Bar
 galaxia.config.category.overlay_oxygen_bar.tooltip=Overlay settings for the Oxygen Bar
-
 galaxia.config.overlay.show_oxygen_bar=Oxygen bar display
 galaxia.config.overlay.show_oxygen_bar.tooltip=Enable or disable rendering of the oxygen bar
 galaxia.config.overlay.oxygen_bar_horizontal_offset=Oxygen bar horizontal offset
@@ -253,10 +290,9 @@ galaxia.config.overlay.texture.oxygen_bar_width.tooltip=Oxygen bar texture width
 galaxia.config.overlay.texture.oxygen_bar_height=Oxygen bar texture height
 galaxia.config.overlay.texture.oxygen_bar_height.tooltip=Oxygen bar texture height in pixels
 
-### Config - Overlay - "Temperature Bar"
+# Config - Overlay - "Temperature Bar"
 galaxia.config.category.overlay_temperature_bar=Temperature Bar
 galaxia.config.category.overlay_temperature_bar.tooltip=Overlay settings for the Temperature Bar
-
 galaxia.config.overlay.show_temperature_bar=Temperature bar display
 galaxia.config.overlay.show_temperature_bar.tooltip=Enable or disable rendering of the temperature bar
 galaxia.config.overlay.temperature_bar_horizontal_offset=Temperature bar horizontal offset
@@ -271,24 +307,3 @@ galaxia.config.overlay.texture.temperature_bar_width=Temperature bar texture wid
 galaxia.config.overlay.texture.temperature_bar_width.tooltip=Temperature bar texture width in pixels
 galaxia.config.overlay.texture.temperature_bar_height=Temperature bar texture height
 galaxia.config.overlay.texture.temperature_bar_height.tooltip=Temperature bar texture height in pixels
-
-#### GUI
-
-# Linking Tool messages
-galaxia.linking_tool.not_linkable_master=§cThis block cannot be a master.§r
-galaxia.linking_tool.not_master=§c%s cannot be a master.§r
-galaxia.linking_tool.bound=§a%s §7@ %d,%d,%d §abound as master.§r
-galaxia.linking_tool.no_master=§eNo master bound. Shift+Right-click a master block first.§r
-galaxia.linking_tool.not_linkable_slave=§cThis block cannot be linked.§r
-galaxia.linking_tool.not_slave=§c%s cannot be a slave.§r
-galaxia.linking_tool.master_gone=§cBound master is gone. Please re-bind.§r
-galaxia.linking_tool.incompatible=§c%s is not compatible with %s.§r
-galaxia.linking_tool.linked=§a%s §7@ %d,%d,%d §alinked to §7%s §a@ %d,%d,%d.§r
-galaxia.linking_tool.cleared=§7Master binding cleared.§r
-
-item.galaxia.linking_tool.desc.usage=§7Used to link machines together§r
-item.galaxia.linking_tool.desc.shift_rmb_air=§8Shift+RMB on air§7 - unbind§r
-item.galaxia.linking_tool.desc.shift_rmb=§8Shift+RMB§7 - bind master§r
-item.galaxia.linking_tool.desc.rmb=§8RMB§7 - connect slave§r
-item.galaxia.linking_tool.desc.bound_to=§7Bound to: §a%s §8[%d, %d, %d]§r
-item.galaxia.linking_tool.desc.not_bound=§8Not bound§r

@@ -15,6 +15,8 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -355,7 +357,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
         if (!hasAssembler) {
             return panel.child(
-                IKey.str("§cNo Module Assembler linked.")
+                IKey.str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
+                        + EnumChatFormatting.RESET)
                     .asWidget()
                     .pos(10, 35));
         }
@@ -363,15 +367,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         panel.child(
             new PageButton(0, tabController).size(120, 28)
                 .pos(0, -28)
-                .overlay(IKey.str("Build Rocket")))
+                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
             .child(
                 new PageButton(1, tabController).size(120, 28)
                     .pos(120, -28)
-                    .overlay(IKey.str("Launch Rocket")));
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
 
         // Title
         panel.child(
-            IKey.str("§lRocket Silo")
+            IKey.str(
+                EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
+                    + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
         // Module addition buttons
@@ -392,7 +398,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         if (worldObj.provider.dimensionId != 0) {
             destRow.child(
                 new ToggleButton().size(48, 20)
-                    .overlay(IKey.str("Viridis"))
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.viridis")))
                     .valueWrapped(selectedDim, 0));
         }
 
@@ -411,9 +417,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                             new ButtonWidget<>().size(220, 30)
                                 .pos(10, 80)
                                 .overlay(
-                                    IKey.str("Return Modules")
+                                    IKey.str(
+                                        StatCollector
+                                            .translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
                                         .alignment(Alignment.Center))
-                                .tooltip(t -> t.addLine("Disassemble Rocket"))
+                                .tooltip(
+                                    t -> t.addLine(
+                                        StatCollector
+                                            .translateToLocal("galaxia.tooltip.rocket_silo.builder.return_modules")))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
@@ -428,7 +439,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                             new ButtonWidget<>().size(220, 30)
                                 .pos(10, 120)
                                 .overlay(
-                                    IKey.str("§aEnter Rocket")
+                                    IKey.str(
+                                        EnumChatFormatting.GREEN
+                                            + StatCollector
+                                                .translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
+                                            + EnumChatFormatting.RESET)
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
                                     // Flag to indicate validity of rocket launching
@@ -436,12 +451,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                     getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
                                         .isEmpty()) {
-                                        t.addLine("§7Add some modules first");
+                                        t.addLine(
+                                            EnumChatFormatting.GRAY
+                                                + StatCollector.translateToLocal(
+                                                    "galaxia.tooltip.rocket_silo.builder.enter_rocket")
+                                                + EnumChatFormatting.RESET);
                                         return;
                                     }
                                     for (IRocketValidator v : validators) {
                                         ValidationResult r = v.validate(getAssembly());
-                                        if (!r.valid()) t.addLine("§c" + r.message());
+                                        if (!r.valid())
+                                            t.addLine(EnumChatFormatting.RED + r.message() + EnumChatFormatting.RESET);
                                         validFlag = false;
                                     }
                                     if (!validFlag) return;
@@ -467,7 +487,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private ButtonWidget<?> createModuleButton(RocketModule module, TileEntityModuleAssembler assembler) {
         return new ButtonWidget<>().size(48, 20)
             .overlay(IKey.str(module.getName()))
-            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())))
+            .tooltip(
+                t -> t.add(
+                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())
+                        + EnumChatFormatting.RESET))
             .syncHandler(
                 new InteractionSyncHandler().setOnMousePressed(
                     md -> {

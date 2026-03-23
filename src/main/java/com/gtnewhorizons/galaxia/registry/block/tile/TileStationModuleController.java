@@ -6,6 +6,8 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -18,7 +20,7 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceAir;
 
-public class TileNoduleController extends TileEntity implements IGuiHolder<PosGuiData> {
+public class TileStationModuleController extends TileEntity implements IGuiHolder<PosGuiData> {
 
     private boolean isDepressurized = false;
 
@@ -43,14 +45,17 @@ public class TileNoduleController extends TileEntity implements IGuiHolder<PosGu
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         return new ModularPanel("galaxia:rocket_silo").size(210, 130)
             .child(
-                IKey.str("nodule_controller")
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.module_controller.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(
                 new ButtonWidget<>().size(190, 30)
                     .pos(10, 85)
                     .overlay(
-                        IKey.str((isDepressurized ? "§e" : "§7") + "repressurize")
+                        IKey.str(
+                            (isDepressurized ? EnumChatFormatting.YELLOW : EnumChatFormatting.GRAY)
+                                + StatCollector.translateToLocal("galaxia.gui.module_controller.button.repressurize")
+                                + EnumChatFormatting.RESET)
                             .alignment(Alignment.CENTER))
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                         if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
