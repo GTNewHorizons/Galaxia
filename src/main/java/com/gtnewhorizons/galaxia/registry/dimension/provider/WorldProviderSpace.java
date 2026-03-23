@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
@@ -28,6 +29,7 @@ public class WorldProviderSpace extends WorldProvider {
 
     private BiomeGenBase[][] biomes;
 
+    protected DimensionEnum dimension;
     protected boolean hasSky = true;
     protected float cloudHeight = Integer.MIN_VALUE;
     protected boolean isSurface = true;
@@ -102,7 +104,7 @@ public class WorldProviderSpace extends WorldProvider {
     @Override
     public IChunkProvider createChunkGenerator() {
         if (chunkGenSupplier == null) {
-            return new ChunkProviderGalaxiaPlanet(worldObj);
+            return new ChunkProviderGalaxiaPlanet(worldObj, dimension);
         }
         return chunkGenSupplier.get();
     }

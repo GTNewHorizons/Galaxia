@@ -4,12 +4,13 @@ import java.util.Collections;
 import java.util.Map;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 
 /**
  * Data record holding terrain features
  */
 @Desugar
-public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams) {
+public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams, PlanetBlockType replacementBlock) {
 
     public TerrainFeature {
         customParams = Collections.unmodifiableMap(customParams);

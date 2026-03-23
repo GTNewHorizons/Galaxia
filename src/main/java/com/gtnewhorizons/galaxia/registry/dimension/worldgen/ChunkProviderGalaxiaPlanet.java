@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -26,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSp
  */
 public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
+    private final DimensionEnum dimension;
     private final World worldObj;
     private final Random rand;
     private final NoiseGeneratorOctaves crackNoise;
@@ -39,8 +41,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
      * Constructor to initialize the world and noise/random generators
      *
      * @param world The world to bind the chunk generator to
+     * @param dimension Galaxia dimension for agnostic block placement
      */
-    public ChunkProviderGalaxiaPlanet(World world) {
+    public ChunkProviderGalaxiaPlanet(World world, DimensionEnum dimension) {
+        this.dimension = dimension;
         this.worldObj = world;
 
         this.rand = new Random(world.getSeed());
@@ -120,10 +124,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 double[] terrainRelevance = biomeContrib[biomeIndex];
                 TerrainConfiguration terrain = spaceBiome.getTerrain();
                 for (TerrainFeature f : terrain.getMacroFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance);
+                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance, dimension);
                 }
                 for (TerrainFeature f : terrain.getMesoFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance);
+                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance, dimension);
                 }
             }
         }
