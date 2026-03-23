@@ -38,6 +38,7 @@ tile.theia_obsidian.name=Theia Obsidian
 tile.hemateria_regolith.name=Hemateria Regolith
 tile.hemateria_andesite.name=Hemateria Andesite
 tile.hemateria_basalt.name=Hemateria Basalt
+tile.hemateria_anorthosite.name=Hemateria Anorthosite
 tile.hemateria_snow.name=Hemateria Snow
 tile.hemateria_magma.name=Hemateria Magma
 tile.hemateria_rhyolite.name=Hemateria Rhyolite
@@ -122,6 +123,7 @@ tile.tenebrae_lava.name=Tenebrae Lava
 tile.liquid_mercury.name=Liquid Mercury
 
 #### Items
+item.galaxia.galaxia_logo.name=Galaxia
 # Items - "Tools"
 item.galaxia.teleporter.name=Teleporter
 item.galaxia.galactic_map.name=Galactic Map
