@@ -14,6 +14,14 @@ slot.wither_protection=Wither Protection
 slot.spore_filter=Spore Filter
 slot.oxygen_mask=Oxygen Mask
 
+#### Dimensions
+galaxia.dimension.vitris_space=Vitris Space Stations
+galaxia.dimension.theia=Theia
+galaxia.dimension.hemateria=Hemateria
+galaxia.dimension.frozen_belt=Frozen Belt
+galaxia.dimension.panspira=Panspira
+galaxia.dimension.tenebrae=Tenebrae
+
 #### Blocks
 # Blocks - "Theia"
 tile.theia_regolith.name=Theia Regolith
@@ -229,10 +237,15 @@ galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
 galaxia.tooltip.rocket_silo.builder.enter_rocket=Add some modules first
 
 ### Elements - "Other"
-### Elements - Other - "Effect"
+# Elements - Other - "Effect"
 galaxia.effect.low_oxygen=Low Oxygen
 galaxia.effect.overheating=Overheating
 galaxia.effect.overcooling=Freezing
+
+# Elements - Other - "Death Messages"
+death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
+death.attack.galaxia.noOxygen=%1$s ran out of oxygen
+death.attack.galaxia.radiation=%1$s died from radiation exposure
 
 #### Config
 # Config - "Rocket"
