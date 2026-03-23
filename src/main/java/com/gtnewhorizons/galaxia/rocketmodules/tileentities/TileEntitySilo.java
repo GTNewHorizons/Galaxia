@@ -418,7 +418,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         StatCollector
                                             .translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
                                         .alignment(Alignment.Center))
-                                .tooltip(t -> t.addLine("Disassemble Rocket"))
+                                .tooltip(
+                                    t -> t.addLine(
+                                        StatCollector
+                                            .translateToLocal("galaxia.tooltip.rocket_silo.builder.return_modules")))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
