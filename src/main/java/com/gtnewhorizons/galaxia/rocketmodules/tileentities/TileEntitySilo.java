@@ -178,6 +178,16 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         shouldRender = false;
     }
 
+    /**
+     * Helper method to get rotation offsets based on multi direction
+     *
+     * @param localX        The x offset local to the controller
+     * @param localY        The y offset local to the controller
+     * @param localZ        The z offset local to the controller
+     * @param currentFacing The direction the multi is currently facing
+     *
+     * @return Array of offsets based on direction and local coordinates
+     */
     public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
         switch (currentFacing.getDirection()) {
             case SOUTH:
@@ -242,6 +252,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return valid;
     }
 
+    /**
+     * Construction override for using StrucureLibs auto-construction
+     *
+     * @param trigger   The ItemStack used to construct
+     * @param hintsOnly Whether the construct should show hints only or build
+     */
     @Override
     public void construct(ItemStack trigger, boolean hintsOnly) {
         if (worldObj == null) return;
@@ -262,6 +278,13 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             hintsOnly);
     }
 
+    /**
+     * Construction override for auto-building in survival
+     *
+     * @param trigger       The ItemStack used to construct
+     * @param elementBudget The budget of elements available to the player
+     * @param env           The build environment
+     */
     @Override
     public int survivalConstruct(ItemStack trigger, int elementBudget, ISurvivalBuildEnvironment env) {
         if (worldObj == null || worldObj.isRemote) return -1;
@@ -530,7 +553,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         EntityRocket rocket = getEntityRocket();
         if (rocket == null || rocket.isDead) return;
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
-        rocket.setDesination(destination);
+        rocket.setDestination(destination);
         data.getPlayer()
             .mountEntity(rocket);
         if (!rocket.shouldRender()) rocket.launch();
@@ -571,6 +594,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return true;
     }
 
+    /**
+     * Kills the rocket by clearing modules and settting dead
+     */
     public void kill() {
         modules.clear();
         entityRocket.setDead();
@@ -588,6 +614,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return assembler.moduleMap.getOrDefault(id, 0) > 0;
     }
 
+    /**
+     * Sets the target dimension destination for the silo, based on selected planet
+     * in UI
+     *
+     * @param dim The ID of the selected dimension
+     */
     public void setDesination(int dim) {
         this.destination = dim;
     }
@@ -670,6 +702,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         worldObj.spawnEntityInWorld(entityRocket);
     }
 
+    /**
+     * Receives a list of incoming modules and adds to the silo
+     *
+     * @param The incoming module list
+     */
     public void receiveLandingRocket(List<Integer> incomingModules) {
         modules.clear();
         modules.addAll(incomingModules);
