@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.entities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +16,9 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
@@ -51,6 +54,9 @@ public class EntityRocket extends Entity {
     private RocketAssembly assembly;
 
     private final List<Integer> modules = new ArrayList<>();
+    // To be used to "remember" the rocket when still in orbit
+    private List<Integer> cachedModules = new ArrayList<>();
+    private boolean isLander = false;
     private int capsuleIndex = -1;
     private int launchTicks = 0;
     private int touchdownTicks = 0;
@@ -142,18 +148,56 @@ public class EntityRocket extends Entity {
         syncModules();
     }
 
+    public void turnToLanderAndCache() {
+        cachedModules.clear();
+        for (Integer m : modules) {
+            cachedModules.add(m);
+        }
+        modules.clear();
+        for (Integer m : cachedModules) {
+            if (ModuleRegistry.fromId(m) instanceof CapsuleModule) modules.add(m);
+        }
+        isLander = true;
+        destination = 0;
+        LOG.info("Cached");
+        LOG.info("Modules now: " + modules);
+        syncModules();
+    }
+
+    public void reattachCachedModules() {
+        modules.clear();
+        setModules(cachedModules);
+        cachedModules.clear();
+    }
+
     // ---------------------------------------------------------------------------------
     // Launch (ascent)
     // ---------------------------------------------------------------------------------
 
     public void launch() {
-        modules.clear();
-        modules.addAll(silo.getModules());
-        assembly = null;
-        assembly = new RocketAssembly(modules);
-        syncModules();
+        if (!isLander) {
+            modules.clear();
+            modules.addAll(silo.getModules());
+            assembly = null;
+            assembly = new RocketAssembly(modules);
+            syncModules();
+            silo.launch();
+        }
+
         setPhase(Phase.LAUNCHING);
-        silo.launch();
+    }
+
+    @Override
+    public boolean interactFirst(EntityPlayer player) {
+        LOG.info("INTERACTED");
+        if (worldObj.isRemote) return true;
+        if (!(player instanceof EntityPlayerMP)) return false;
+        if (getPhase() != Phase.TOUCHDOWN) return false;
+        if (isLander != true) return false;
+
+        player.mountEntity(this);
+        launch();
+        return true;
     }
 
     // ---------------------------------------------------------------------------------
@@ -226,6 +270,12 @@ public class EntityRocket extends Entity {
         // Hand off to teleporter system at correct height
         if (!worldObj.isRemote && this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
             player.mountEntity(null);
+            // Always send full rocket for overworld
+            if (destination == 0) {
+                if (cachedModules.size() > modules.size()) {
+                    reattachCachedModules();
+                }
+            }
             GALAXIA_NETWORK.sendToServer(
                 new TeleportRequestPacket(destination, player.posX, player.posY, player.posZ, capsuleIndex, modules));
         }
