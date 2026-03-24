@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -230,7 +228,6 @@ public class TeleportRequestPacket implements IMessage {
             lander.setModules(message.parseModules());
             if (!inSilo) {
                 lander.turnToLanderAndCache();
-                LOG.info("GOT HERE");
             }
             lander.setCapsuleIndex(message.capsuleIndex);
             lander.setPosition(landX, EntityRocket.SPAWN_ALTITUDE, landZ);

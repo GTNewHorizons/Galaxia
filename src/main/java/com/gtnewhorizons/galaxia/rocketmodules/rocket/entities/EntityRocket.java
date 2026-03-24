@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.entities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +80,11 @@ public class EntityRocket extends Entity {
     // Public facing API
     // ---------------------------------------------------------------------------------
 
+    @Override
+    public boolean canBeCollidedWith() {
+        return true;
+    }
+
     public void setDesination(int dim) {
         this.destination = dim;
     }
@@ -159,8 +163,6 @@ public class EntityRocket extends Entity {
         }
         isLander = true;
         destination = 0;
-        LOG.info("Cached");
-        LOG.info("Modules now: " + modules);
         syncModules();
     }
 
@@ -189,11 +191,9 @@ public class EntityRocket extends Entity {
 
     @Override
     public boolean interactFirst(EntityPlayer player) {
-        LOG.info("INTERACTED");
         if (worldObj.isRemote) return true;
         if (!(player instanceof EntityPlayerMP)) return false;
         if (getPhase() != Phase.TOUCHDOWN) return false;
-        if (isLander != true) return false;
 
         player.mountEntity(this);
         launch();
@@ -524,6 +524,7 @@ public class EntityRocket extends Entity {
         tag.setInteger("groundY", groundY);
         tag.setDouble("motionYSaved", motionY);
         tag.setInteger("touchdownTicks", touchdownTicks);
+        tag.setBoolean("isLander", isLander);
     }
 
     @Override
@@ -546,6 +547,7 @@ public class EntityRocket extends Entity {
         groundY = tag.getInteger("groundY");
         motionY = tag.getDouble("motionYSaved");
         touchdownTicks = tag.getInteger("touchdownTicks");
+        isLander = tag.getBoolean("isLander");
 
         assembly = null;
         syncModules();
