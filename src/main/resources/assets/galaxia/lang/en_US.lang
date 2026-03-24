@@ -248,6 +248,11 @@ death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
 death.attack.galaxia.noOxygen=%1$s ran out of oxygen
 death.attack.galaxia.radiation=%1$s died from radiation exposure
 
+### Entities
+# Entities - Rocket
+entity.galaxia.EntityRocket.lander=Lander
+entity.galaxia.EntityRocket.name=Rocket
+
 #### Config
 # Config - "Rocket"
 galaxia.config.category.rocket=Rocket

@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket.entities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+import static com.gtnewhorizons.galaxia.core.Galaxia.LOG;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class EntityRocket extends Entity {
     private static final int DW_PHASE = 10; // byte - Phase ordinal
     private static final int DW_MODULES = 11; // String - Module IDs
     private static final int DW_CAPSULE = 12; // int - Capsule model index
+    private static final int DW_IS_LANDER = 13; // byte - boolean
 
     // Landing tuning constants
     public static final double SPAWN_ALTITUDE = 1200.0;
@@ -162,6 +164,7 @@ public class EntityRocket extends Entity {
             if (ModuleRegistry.fromId(m) instanceof CapsuleModule) modules.add(m);
         }
         isLander = true;
+        dataWatcher.updateObject(DW_IS_LANDER, (byte) 1);
         destination = 0;
         syncModules();
     }
@@ -170,6 +173,12 @@ public class EntityRocket extends Entity {
         modules.clear();
         setModules(cachedModules);
         cachedModules.clear();
+        isLander = false;
+        dataWatcher.updateObject(DW_IS_LANDER, (byte) 0);
+    }
+
+    public boolean isLander() {
+        return dataWatcher.getWatchableObjectByte(DW_IS_LANDER) == 1;
     }
 
     // ---------------------------------------------------------------------------------
@@ -194,6 +203,7 @@ public class EntityRocket extends Entity {
         if (worldObj.isRemote) return true;
         if (!(player instanceof EntityPlayerMP)) return false;
         if (getPhase() != Phase.TOUCHDOWN) return false;
+        if (!isLander) return false;
 
         player.mountEntity(this);
         launch();
@@ -216,6 +226,7 @@ public class EntityRocket extends Entity {
         dataWatcher.addObject(DW_PHASE, (byte) Phase.IDLE.ordinal()); // launched
         dataWatcher.addObject(DW_MODULES, ""); // modules
         dataWatcher.addObject(DW_CAPSULE, -1); // capsuleIndex
+        dataWatcher.addObject(DW_IS_LANDER, (byte) 0);
     }
 
     @Override
@@ -482,6 +493,7 @@ public class EntityRocket extends Entity {
         }
 
         silo.receiveLandingRocket(new ArrayList<>(modules));
+        LOG.info("RECEIVED");
 
         motionX = motionY = motionZ = 0;
         groundY = -1;
@@ -548,6 +560,7 @@ public class EntityRocket extends Entity {
         motionY = tag.getDouble("motionYSaved");
         touchdownTicks = tag.getInteger("touchdownTicks");
         isLander = tag.getBoolean("isLander");
+        dataWatcher.updateObject(DW_IS_LANDER, (byte) (isLander ? 1 : 0));
 
         assembly = null;
         syncModules();
