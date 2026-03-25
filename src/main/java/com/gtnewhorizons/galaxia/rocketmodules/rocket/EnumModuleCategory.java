@@ -6,5 +6,6 @@ public enum EnumModuleCategory {
     FUEL_TANK,
     PAYLOAD,
     STRUCTURAL,
-    FUNCTIONAL
+    FUNCTIONAL,
+    LANDER
 }

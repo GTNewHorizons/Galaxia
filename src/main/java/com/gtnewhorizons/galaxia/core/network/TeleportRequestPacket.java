@@ -228,8 +228,10 @@ public class TeleportRequestPacket implements IMessage {
             lander.setModules(message.parseModules());
             if (!inSilo) {
                 lander.turnToLanderAndCache();
+                lander.setCapsuleIndex(0);
+            } else {
+                lander.setCapsuleIndex(message.capsuleIndex);
             }
-            lander.setCapsuleIndex(message.capsuleIndex);
             lander.setPosition(landX, EntityRocket.SPAWN_ALTITUDE, landZ);
             lander.setTargetSilo(targetSilo);
             world.spawnEntityInWorld(lander);

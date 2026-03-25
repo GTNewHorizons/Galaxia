@@ -17,8 +17,8 @@ import net.minecraft.world.World;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.LanderModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.relauncher.Side;
@@ -225,7 +225,7 @@ public class EntityRocket extends Entity {
         }
         modules.clear();
         for (Integer m : cachedModules) {
-            if (ModuleRegistry.fromId(m) instanceof CapsuleModule) modules.add(m);
+            if (ModuleRegistry.fromId(m) instanceof LanderModule) modules.add(m);
         }
         isLander = true;
         // Synced with client for Waila compat
