@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumModuleCategory;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
@@ -59,8 +61,8 @@ public class ModulesFitInCoreValidator implements IRocketValidator {
                 .getLimitFor(entry.getKey());
             if (entry.getValue() > limit) return new ValidationResult(
                 false,
-                String.format(
-                    "Only %d %s supported in a %s rocket",
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.rocket_silo.validator.too_many_modules",
                     limit,
                     moduleConversions.get(entry.getKey()),
                     tierConversions.get(core.getTier())));

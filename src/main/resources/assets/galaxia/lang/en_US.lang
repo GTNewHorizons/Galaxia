@@ -217,6 +217,15 @@ galaxia.gui.rocket_silo.builder.return_modules=Return Modules
 galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
 galaxia.gui.rocket_silo.button.viridis=Viridis
 
+# Elements - GUI - "Rocket Silo Validator"
+galaxia.gui.rocket_silo.validator.too_heavy=This rocket is too heavy to lift off
+galaxia.gui.rocket_silo.validator.capsule_none=Requires at least one Capsule module
+galaxia.gui.rocket_silo.validator.too_many_modules=Only %d %s supported in a %s rocket
+galaxia.gui.rocket_silo.validator.multi_core=Only one rocket core per rocket
+galaxia.gui.rocket_silo.validator.engine_tank_ratio=Requires 1 engine per fuel tank stack
+galaxia.gui.rocket_silo.validator.destination_none=Destination not selected
+galaxia.gui.rocket_silo.validator.wrong_tier=Rocket of tier %d cannot reach %s (Tier %d)
+
 # Elements - GUI - "Module Controller"
 galaxia.gui.module_controller.title=Module Controller
 galaxia.gui.module_controller.button.repressurize=Repressurize

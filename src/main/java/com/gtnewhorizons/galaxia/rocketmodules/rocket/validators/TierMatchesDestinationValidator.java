@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.rocketmodules.rocket.validators;
 
 import java.util.List;
 
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
@@ -12,7 +14,9 @@ public class TierMatchesDestinationValidator implements IRocketValidator {
     @Override
     public ValidationResult validate(RocketAssembly assembly) {
         int destinationId = assembly.getDestination();
-        if (destinationId == -1) return new ValidationResult(false, "Destination not selected");
+        if (destinationId == -1) return new ValidationResult(
+            false,
+            StatCollector.translateToLocal("galaxia.gui.rocket_silo.validator.destination_none"));
         List<RocketCoreModule> cores = assembly.getCoreModules();
         if (cores.isEmpty()) return ValidationResult.success();
         if (destinationId == 0) return ValidationResult.success();
@@ -28,8 +32,8 @@ public class TierMatchesDestinationValidator implements IRocketValidator {
         return ok ? ValidationResult.success()
             : new ValidationResult(
                 false,
-                String.format(
-                    "Rocket of tier %d cannot reach %s (Tier %d)",
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.rocket_silo.validator.wrong_tier",
                     tier.toInt(),
                     destinationName,
                     destinationTier.toInt()));
