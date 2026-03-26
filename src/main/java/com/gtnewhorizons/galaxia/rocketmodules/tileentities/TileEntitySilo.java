@@ -406,7 +406,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         // Module addition buttons
         Flow moduleRow = Flow.row()
             .coverChildren()
-            .pos(10, 35)
+            .pos(8, 35)
             .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
             moduleRow.child(createModuleButton(m, moduleAssembler));
@@ -508,7 +508,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      * @return ButtonWidget to add to the panel
      */
     private ButtonWidget<?> createModuleButton(RocketModule module, TileEntityModuleAssembler assembler) {
-        return new ButtonWidget<>().size(48, 20)
+        return new ButtonWidget<>().size(36, 20)
             .overlay(IKey.str(module.getName()))
             .tooltip(
                 t -> t.add(
