@@ -45,7 +45,7 @@ public class EntityRocket extends Entity {
     public static final double TERMINAL_FALL_SPEED = -3.5; // blocks/tick
     private static final double RETRO_DECEL = 0.031; // blocks/tick²
     private static final double RETRO_START_HEIGHT = 200;
-    private static final double SAFE_LAND_SPEED = -0.1;
+    private static final double SAFE_LAND_SPEED = -0.2;
     private static final int EJECT_DELAY_TICKS = 100;
 
     private TileEntitySilo targetSilo = null;
@@ -103,7 +103,8 @@ public class EntityRocket extends Entity {
     }
 
     /**
-     * Binds a silo TileEntity as the silo this rocket has been launched from
+     * Binds a silo TileEntity as the silo this rocket has been built and launched
+     * from
      *
      * @param silo The silo TileEntity that this rocket was created from
      */
@@ -113,7 +114,8 @@ public class EntityRocket extends Entity {
 
     /**
      * Sets a silo as a "target", such that it will land in that silo. This will
-     * only be invoked if a suitable silo is either found/selected
+     * only be invoked if a suitable silo is either found/selected, and generally
+     * should be set on dimensional transfer
      *
      * @param silo The target silo TileEntity
      */
@@ -122,7 +124,8 @@ public class EntityRocket extends Entity {
     }
 
     /**
-     * Gets the RocketAssembly for the current modules in the silo
+     * Gets the RocketAssembly for the current modules in the silo. Also syncs to
+     * client via data watcher
      *
      * @return RocketAssembly associated with this silo in current state
      */
@@ -143,7 +146,9 @@ public class EntityRocket extends Entity {
     }
 
     /**
-     * Sets the index for the "main" capsule module from the list of modules
+     * Sets the index for the "main" capsule module from the list of modules. In the
+     * case of multiple capsules, the "main" capsule is determined as the one that
+     * the primary rider will mount on launch
      *
      * @param index The index to point to the main capsule module
      */
@@ -153,7 +158,9 @@ public class EntityRocket extends Entity {
     }
 
     /**
-     * Gets the index for the "main" capsule module from module list
+     * Gets the index for the "main" capsule module from module list. In the
+     * case of multiple capsules, the "main" capsule is determined as the one that
+     * the primary rider will mount on launch
      *
      * @return The index of the main capsule
      */
@@ -164,6 +171,8 @@ public class EntityRocket extends Entity {
     /**
      * Gets the current "Phase" of the rocket, which determines its behaviour
      *
+     * @see Phase
+     *
      * @return Phase of the rocket
      */
     public Phase getPhase() {
@@ -171,7 +180,8 @@ public class EntityRocket extends Entity {
     }
 
     /**
-     * Gets a list of module types as integer IDs from the current modules list
+     * Gets a list of module types as integer IDs from the current modules list.
+     * Works on both client (via data watcher) and server
      *
      * @return The integer list of module types as IDs
      */
@@ -216,13 +226,16 @@ public class EntityRocket extends Entity {
 
     /**
      * Updates the rocket to act as a "lander", stripping it down to the
-     * CapsuleModules, and caching the rest of the rocket for relaunch
+     * LanderModules, and caching the rest of the rocket for relaunch
      */
     public void turnToLanderAndCache() {
+        // Cache current modules
         cachedModules.clear();
         for (Integer m : modules) {
             cachedModules.add(m);
         }
+
+        // Reduce modules to only Lander Modules
         modules.clear();
         for (Integer m : cachedModules) {
             if (ModuleRegistry.fromId(m) instanceof LanderModule) modules.add(m);
@@ -261,7 +274,8 @@ public class EntityRocket extends Entity {
     // ---------------------------------------------------------------------------------
 
     /**
-     * Launches the rocket and updates silo/phases where needed
+     * Launches the rocket
+     * If the rocket is a lander, just launch. If not, update the silo and assembly
      */
     public void launch() {
         if (!isLander) {
@@ -301,7 +315,7 @@ public class EntityRocket extends Entity {
     // ---------------------------------------------------------------------------------
 
     /**
-     * Begins the landing procedures, setting the coordinates and motiuon and
+     * Begins the landing procedures, setting the coordinates and motion and
      * updating phases
      *
      * @param x The x-coordinate to begin landing at
@@ -340,6 +354,9 @@ public class EntityRocket extends Entity {
     // Update loop
     // ---------------------------------------------------------------------------------
 
+    /**
+     * Overall update loop, defers to different update loops depending on state
+     */
     @Override
     public void onUpdate() {
         super.onUpdate();
@@ -386,16 +403,19 @@ public class EntityRocket extends Entity {
             player.mountEntity(null);
             // Always send full rocket for overworld
             if (destination == 0) {
+                // If the "cached" orbiting rocket is larger than current, regain cached modules
                 if (cachedModules.size() > modules.size()) {
                     reattachCachedModules();
                 }
             }
+            // Teleport player and rocket to target dimension, remount, and set to LANDING
             GALAXIA_NETWORK.sendToServer(
                 new TeleportRequestPacket(destination, player.posX, player.posY, player.posZ, capsuleIndex, modules));
         }
     }
 
     private void updateFalling() {
+        // Stops drifting horizontally whilst falling
         if (!worldObj.isRemote) lockHorizontal();
 
         if (motionY > TERMINAL_FALL_SPEED) {
@@ -405,20 +425,23 @@ public class EntityRocket extends Entity {
 
         if (worldObj.isRemote) spawnDescentParticles(false);
 
+        // Once at correct height, set phase to retro burning
         if (posY - getGroundY() <= RETRO_START_HEIGHT) {
             setPhase(Phase.RETRO);
         }
     }
 
     private void updateRetro() {
+        // Stops drifting horizontally whilst falling
         if (!worldObj.isRemote) lockHorizontal();
 
+        // Decelerate until at safe speed
         motionY = Math.min(motionY + RETRO_DECEL, SAFE_LAND_SPEED);
         moveEntity(0, motionY, 0);
 
         if (worldObj.isRemote) spawnDescentParticles(true);
 
-        if (!worldObj.isRemote && (posY - getGroundY() <= 1.0 || motionY >= SAFE_LAND_SPEED)) {
+        if (!worldObj.isRemote && posY - getGroundY() <= 1.0) {
             if (targetSilo != null) {
                 landOnSilo(targetSilo);
             } else {
@@ -443,6 +466,7 @@ public class EntityRocket extends Entity {
             return;
         }
 
+        // Delay then eject player
         touchdownTicks++;
         if (touchdownTicks >= EJECT_DELAY_TICKS && riddenByEntity instanceof EntityPlayerMP player) {
             player.mountEntity(null);
@@ -596,6 +620,8 @@ public class EntityRocket extends Entity {
     /**
      * Handles the logic of landing on a silo if one is found previously - To be
      * used only when silo in landing trajectory
+     *
+     * @param silo The silo TileEntity to land on
      */
     private void landOnSilo(TileEntitySilo silo) {
         if (lastRider != null && !lastRider.isDead) {
