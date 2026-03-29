@@ -129,6 +129,13 @@ item.galaxia.galaxia_logo.name=Galaxia
 item.galaxia.galactic_map.name=Galactic Map
 item.galaxia.teleporter.name=Teleporter
 
+# Items - Tools - "Rocket Schematic"
+item.galaxia.rocket_schematic.name=Rocket Schematic
+item.galaxia.rocket_schematic.saved_name_none=Unnamed Schematic
+item.galaxia.rocket_schematic.empty=Empty schematic
+item.galaxia.rocket_schematic.modules=Modules: %d
+item.galaxia.rocket_schematic.height=Height %.1fm
+
 # Items - Tools - "Linking Tool"
 ## UNUSED item.galaxia.linking_tool.name=Linking tool
 ## UNUSED item.galaxia.linking_tool.desc.usage=§7Used to link machines together§r
@@ -213,8 +220,12 @@ galaxia.gui.rocket_silo.title=Rocket Silo
 galaxia.gui.rocket_silo.assembler_none=No Module Assembler linked
 galaxia.gui.rocket_silo.build=Build Rocket
 galaxia.gui.rocket_silo.launch=Launch Rocket
+galaxia.gui.rocket_silo.save=Save Schematic
 galaxia.gui.rocket_silo.builder.return_modules=Return Modules
 galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
+galaxia.gui.rocket_silo.builder.modules_none=Add some modules first
+galaxia.gui.rocket_silo.builder.schematic_save=Save build to schematic
+galaxia.gui.rocket_silo.builder.schematic_text=Schematic Name:
 galaxia.gui.rocket_silo.button.viridis=Viridis
 
 # Elements - GUI - "Rocket Silo Validator"
