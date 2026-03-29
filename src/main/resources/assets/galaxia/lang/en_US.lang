@@ -231,7 +231,7 @@ galaxia.gui.rocket_silo.validator.wrong_tier=Rocket of tier %d cannot reach %s (
 galaxia.gui.module_controller.title=Module Controller
 galaxia.gui.module_controller.button.repressurize=Repressurize
 
-### Elements - "Tooltip"
+# Elements - "Tooltip"
 galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
 galaxia.tooltip.spore_filter.desc=Filters out any atmospheric spores
 galaxia.tooltip.wither_protection.desc=Provides protection from atmospheric withering effects
@@ -247,7 +247,7 @@ galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
 galaxia.tooltip.rocket_silo.builder.enter_rocket=Add some modules first
 
-### Elements - "Other"
+# Elements - "Other"
 # Elements - Other - "Effect"
 galaxia.effect.low_oxygen=Low Oxygen
 galaxia.effect.overheating=Overheating
@@ -259,7 +259,7 @@ death.attack.galaxia.noOxygen=%1$s ran out of oxygen
 death.attack.galaxia.radiation=%1$s died from radiation exposure
 
 ### Entities
-# Entities - Rocket
+# Entities - "Rocket"
 entity.galaxia.EntityRocket.lander=Lander
 entity.galaxia.EntityRocket.name=Rocket
 
