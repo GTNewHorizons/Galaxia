@@ -756,6 +756,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         super.updateEntity();
 
         if (!worldObj.isRemote) {
+            // TODO: Create a check of sorts to prevent the RocketEntity from uncoupling upon rejoin/server reload such that entities do not linger.
             if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid) {
                 spawnRocket();
             }
