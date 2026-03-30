@@ -122,6 +122,7 @@ tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
 tile.gantry_block.name=Gantry Shaft
 tile.gantry_terminal.name=Gantry Terminal
+tile.rocket_trophy.name=Rocket Trophy
 
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
@@ -130,11 +131,12 @@ item.galaxia.galactic_map.name=Galactic Map
 item.galaxia.teleporter.name=Teleporter
 
 # Items - Tools - "Rocket Schematic"
-item.galaxia.rocket_schematic.name=Rocket Schematic
+item.galaxia.schematic.name=Rocket Schematic
 item.galaxia.rocket_schematic.saved_name_none=Unnamed Schematic
 item.galaxia.rocket_schematic.empty=Empty schematic
 item.galaxia.rocket_schematic.modules=Modules: %d
-item.galaxia.rocket_schematic.height=Height %.1fm
+item.galaxia.rocket_schematic.height=Height: %.1fm
+item.galaxia.rocket_schematic.width=Width: %.1fkg
 
 # Items - Tools - "Linking Tool"
 ## UNUSED item.galaxia.linking_tool.name=Linking tool
@@ -241,6 +243,12 @@ galaxia.gui.rocket_silo.validator.wrong_tier=Rocket of tier %d cannot reach %s (
 # Elements - GUI - "Module Controller"
 galaxia.gui.module_controller.title=Module Controller
 galaxia.gui.module_controller.button.repressurize=Repressurize
+
+# Elements - GUI - "Rocket Trophy"
+galaxia.gui.rocket_trophy.title=Rocket Trophy Positioning
+galaxia.gui.rocket_trophy.schematic_loaded=Schematic loaded!
+galaxia.gui.rocket_trophy.schematic_none=No schematic to load
+galaxia.gui.rocket_trophy.position=Render Position:
 
 # Elements - "Tooltip"
 galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments

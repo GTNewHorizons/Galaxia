@@ -72,5 +72,7 @@ public class ItemRocketSchematic extends Item {
         tooltip.add(StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.modules", modules.size()));
         tooltip.add(
             StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.height", assembly.getTotalHeight()));
+        tooltip.add(
+            StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.width", assembly.getTotalWidth()));
     }
 }
