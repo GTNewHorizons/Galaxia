@@ -136,7 +136,7 @@ item.galaxia.rocket_schematic.saved_name_none=Unnamed Schematic
 item.galaxia.rocket_schematic.empty=Empty schematic
 item.galaxia.rocket_schematic.modules=Modules: %d
 item.galaxia.rocket_schematic.height=Height: %.1fm
-item.galaxia.rocket_schematic.width=Width: %.1fkg
+item.galaxia.rocket_schematic.width=Width: %.1fm
 
 # Items - Tools - "Linking Tool"
 ## UNUSED item.galaxia.linking_tool.name=Linking tool
