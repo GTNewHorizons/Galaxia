@@ -28,6 +28,7 @@ public abstract class RelativeMovementMixin {
             return;
         }
 
+        float verticalMomentum = 0;
         if (self instanceof EntityPlayer player) {
             if (!GalaxiaAPI.hasReactionControlSystem(player)) {
                 final boolean isAribourne = player.worldObj
@@ -37,12 +38,20 @@ public abstract class RelativeMovementMixin {
                 }
                 return;
             }
+
+            if (player.isSneaking()) {
+                verticalMomentum -= 1;
+            }
+
+            if (player instanceof EntityPlayerSP sp && sp.movementInput.jump) {
+                verticalMomentum += 1;
+            }
         }
 
         // do nothing if no input
-        // if (strafe == 0 && forward == 0) {
-        // return;
-        // }
+         if (strafe == 0 && forward == 0 && verticalMomentum == 0) {
+             return;
+         }
 
         float yawRad = self.rotationYaw * (float) Math.PI / 180.0F;
         float pitchRad = self.rotationPitch * (float) Math.PI / 180.0F;
@@ -66,16 +75,6 @@ public abstract class RelativeMovementMixin {
 
         // allow sprinting in space
         float speed = 0.02F * (self.isSprinting() ? 2 : 1);
-        float verticalMomentum = 0;
-        if (self instanceof EntityPlayer player) {
-            if (player.isSneaking()) {
-                verticalMomentum -= 1;
-            }
-
-            if (player instanceof EntityPlayerSP sp && sp.movementInput.jump) {
-                verticalMomentum += 1;
-            }
-        }
         double motionX = (lookX * forward + cosYaw * strafe) * speed;
         double motionY = lookY * forward * speed + verticalMomentum * speed;
         double motionZ = (lookZ * forward + sinYaw * strafe) * speed;
