@@ -19,14 +19,16 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetLocation;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetRequirement;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStatus;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyAssetState;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialConstructionSite;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialManagedAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
@@ -77,6 +79,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private String actionStatusMessage = "";
     private long actionStatusExpiresAt = 0L;
     private OrbitalCelestialBody assetManagementBody = null;
+    private PendingAssetCreation pendingAssetCreation = null;
+    private PendingAssetDestruction pendingAssetDestruction = null;
+    private PendingConstructionCancellation pendingConstructionCancellation = null;
+    private PendingResourceTransfer pendingResourceTransfer = null;
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
@@ -1139,38 +1145,54 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         mc.fontRenderer.drawStringWithShadow(assetManagementBody.displayName(), layout.left + 120, layout.top + 10, 0xFFD9E0FF);
 
         drawModalButton(layout.closeButton, "Close", true, false);
-        drawModalButton(layout.createStationButton, "Create Station", assetManagementBody.properties().canCreateStation(), false);
-        drawModalButton(layout.createOutpostButton, "Create Outpost", assetManagementBody.properties().canCreateOutpost(), false);
+        drawModalButton(layout.createStationButton, "Create Station", canCreateBaseStation(assetManagementBody), false);
+        if (isGT5AutomationAvailable()) {
+            drawModalButton(
+                layout.createAutomatedStationButton,
+                "Create Automated Station",
+                canCreateAutomatedStation(assetManagementBody),
+                false);
+            drawModalButton(
+                layout.createOutpostButton,
+                "Create Automated Outpost",
+                canCreateAutomatedOutpost(assetManagementBody),
+                false);
+        } else {
+            mc.fontRenderer.drawStringWithShadow(
+                "GT5U required for automated assets",
+                layout.left + 160,
+                layout.top + 36,
+                0xFF9AA7B8);
+        }
 
         mc.fontRenderer.drawStringWithShadow("Construction", layout.left + 14, layout.top + 54, 0xFF5A63FF);
         int siteY = layout.top + 70;
-        if (state.constructionSites().isEmpty()) {
+        if (layout.siteRows.isEmpty()) {
             mc.fontRenderer.drawStringWithShadow("No construction sites", layout.left + 18, siteY, 0xFF9AA7B8);
         } else {
             for (ConstructionSiteRow row : layout.siteRows) {
-                CelestialConstructionSite site = row.site;
+                CelestialManagedAsset site = row.asset;
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                mc.fontRenderer.drawStringWithShadow(site.displayName(), row.left + 8, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(site), row.left + 8, row.top + 6, 0xFFFFFFFF);
                 mc.fontRenderer.drawStringWithShadow(
-                    formatAssetKind(site.kind()) + " | " + formatAssetLocation(site.location()) + " | "
-                        + site.status().name().toLowerCase().replace('_', ' '),
+                    (site.status() == CelestialAssetStatus.DECONSTRUCTION ? "Stored: " : "Inventory: ")
+                        + buildConstructionInventorySummary(site),
                     row.left + 8,
-                    row.top + 16,
+                    row.top + 18,
                     0xFFD9E0FF);
-                drawModalButton(row.completeButton, "Complete", true, false);
-                drawModalButton(row.cancelButton, "Cancel Build", true, false);
+                drawModalButton(row.actionButton, row.actionType.buttonLabel, true, false);
             }
         }
 
         int assetsHeaderY = layout.assetsSectionTop - 16;
         mc.fontRenderer.drawStringWithShadow("Assets", layout.left + 14, assetsHeaderY, 0xFF5A63FF);
-        if (state.assets().isEmpty()) {
+        if (layout.assetRows.isEmpty()) {
             mc.fontRenderer.drawStringWithShadow("No deployed assets", layout.left + 18, layout.assetsSectionTop, 0xFF9AA7B8);
         } else {
             for (AssetRow row : layout.assetRows) {
                 CelestialManagedAsset asset = row.asset;
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                mc.fontRenderer.drawStringWithShadow(asset.displayName(), row.left + 8, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(asset), row.left + 8, row.top + 6, 0xFFFFFFFF);
                 mc.fontRenderer.drawStringWithShadow(
                     formatAssetKind(asset.kind()) + " | " + formatAssetLocation(asset.location()),
                     row.left + 8,
@@ -1179,6 +1201,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 drawModalButton(row.destroyButton, "Destroy", true, false);
             }
         }
+
+        drawPendingAssetCreationModal();
+        drawPendingAssetDestructionModal();
+        drawPendingConstructionCancellationModal();
+        drawPendingResourceTransferModal();
     }
 
     private void drawModalButton(ButtonRect rect, String label, boolean enabled, boolean hovered) {
@@ -1190,6 +1217,25 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, border);
         Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, border);
         Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, rect.left + 8, rect.top + 5, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
+    }
+
+    private void drawDangerButton(ButtonRect rect, String label) {
+        Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, 0xFF5A1E24);
+        Gui.drawRect(rect.left, rect.top, rect.right, rect.top + 1, 0xFFFF5A5A);
+        Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, 0xFFFF5A5A);
+        Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, 0xFFFF5A5A);
+        Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, 0xFFFF5A5A);
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, rect.left + 8, rect.top + 5, 0xFFFFFFFF);
+    }
+
+    private void drawCenteredLargeString(String text, float x, float y, float scale, int colour) {
+        Minecraft mc = Minecraft.getMinecraft();
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, 0);
+        GlStateManager.scale(scale, scale, 1f);
+        float w = mc.fontRenderer.getStringWidth(text);
+        mc.fontRenderer.drawStringWithShadow(text, Math.round(-w / 2f), 0, colour);
+        GlStateManager.popMatrix();
     }
 
     private void drawActionStatusMessage() {
@@ -1242,6 +1288,27 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         if (action.actionType == ContextMenuActionType.MANAGE_ASSETS) {
             openAssetManagement(contextMenuBody);
+        } else if (action.actionType == ContextMenuActionType.CREATE_STATION) {
+            CelestialAssetStore.createOperationalAsset(
+                contextMenuBody.id(),
+                contextMenuBody.displayName() + " Station",
+                CelestialAssetKind.STATION,
+                CelestialAssetLocation.ORBIT);
+            showActionStatus("Station created");
+        } else if (action.actionType == ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM) {
+            openAssetManagement(contextMenuBody);
+            openPendingAssetCreation(
+                contextMenuBody,
+                contextMenuBody.displayName() + " Automated Station",
+                CelestialAssetKind.AUTOMATED_STATION,
+                CelestialAssetLocation.ORBIT);
+        } else if (action.actionType == ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM) {
+            openAssetManagement(contextMenuBody);
+            openPendingAssetCreation(
+                contextMenuBody,
+                contextMenuBody.displayName() + " Automated Outpost",
+                CelestialAssetKind.AUTOMATED_OUTPOST,
+                CelestialAssetLocation.SURFACE);
         } else {
             actionStatusMessage = action.feedbackMessage;
             actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
@@ -1280,17 +1347,21 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private List<ContextMenuAction> buildContextMenuActions(OrbitalCelestialBody body) {
         List<ContextMenuAction> actions = new ArrayList<>();
         actions.add(new ContextMenuAction("Manage Assets", true, "", ContextMenuActionType.MANAGE_ASSETS));
-        if (body.properties().canCreateStation()) {
+        if (canCreateBaseStation(body)) {
             actions.add(
-                new ContextMenuAction("Create Station", true, "Use Manage Assets to create a station",
-                    ContextMenuActionType.MESSAGE));
+                new ContextMenuAction("Create Station", true, "", ContextMenuActionType.CREATE_STATION));
         }
-        if (body.properties().canCreateOutpost()) {
+        if (canCreateAutomatedStation(body)) {
             actions.add(
-                new ContextMenuAction("Create Outpost", true, "Use Manage Assets to create an outpost",
-                    ContextMenuActionType.MESSAGE));
+                new ContextMenuAction("Create Automated Station", true, "",
+                    ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM));
         }
-        if (actions.isEmpty()) {
+        if (canCreateAutomatedOutpost(body)) {
+            actions.add(
+                new ContextMenuAction("Create Automated Outpost", true, "",
+                    ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM));
+        }
+        if (actions.size() == 1) {
             actions.add(new ContextMenuAction("No actions available", false, "", ContextMenuActionType.MESSAGE));
         }
         return actions;
@@ -1326,16 +1397,36 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             return;
         }
         assetManagementBody = body;
+        pendingAssetCreation = null;
+        pendingAssetDestruction = null;
+        pendingConstructionCancellation = null;
+        pendingResourceTransfer = null;
     }
 
     private void closeAssetManagement() {
         assetManagementBody = null;
+        pendingAssetCreation = null;
+        pendingAssetDestruction = null;
+        pendingConstructionCancellation = null;
+        pendingResourceTransfer = null;
     }
 
     private boolean handleAssetManagementClick(int localMouseX, int localMouseY) {
         AssetManagementLayout layout = getAssetManagementLayout();
         if (layout == null) {
             return false;
+        }
+        if (pendingResourceTransfer != null) {
+            return handlePendingResourceTransferClick(localMouseX, localMouseY);
+        }
+        if (pendingConstructionCancellation != null) {
+            return handlePendingConstructionCancellationClick(localMouseX, localMouseY);
+        }
+        if (pendingAssetDestruction != null) {
+            return handlePendingAssetDestructionClick(localMouseX, localMouseY);
+        }
+        if (pendingAssetCreation != null) {
+            return handlePendingAssetCreationClick(localMouseX, localMouseY);
         }
         if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
             || localMouseY > layout.bottom) {
@@ -1347,42 +1438,52 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             closeAssetManagement();
             return true;
         }
-        if (layout.createStationButton.contains(localMouseX, localMouseY) && assetManagementBody.properties().canCreateStation()) {
-            CelestialAssetStore.createConstructionSite(
+        if (layout.createStationButton.contains(localMouseX, localMouseY) && canCreateBaseStation(assetManagementBody)) {
+            CelestialAssetStore.createOperationalAsset(
                 assetManagementBody.id(),
-                assetManagementBody.displayName() + " Orbital Station",
+                assetManagementBody.displayName() + " Station",
                 CelestialAssetKind.STATION,
                 CelestialAssetLocation.ORBIT);
-            showActionStatus("Station construction queued");
+            showActionStatus("Station created");
             return true;
         }
-        if (layout.createOutpostButton.contains(localMouseX, localMouseY) && assetManagementBody.properties().canCreateOutpost()) {
-            CelestialAssetStore.createConstructionSite(
-                assetManagementBody.id(),
-                assetManagementBody.displayName() + " Surface Outpost",
-                CelestialAssetKind.OUTPOST,
+        if (layout.createAutomatedStationButton.contains(localMouseX, localMouseY)
+            && canCreateAutomatedStation(assetManagementBody)) {
+            openPendingAssetCreation(
+                assetManagementBody,
+                assetManagementBody.displayName() + " Automated Station",
+                CelestialAssetKind.AUTOMATED_STATION,
+                CelestialAssetLocation.ORBIT);
+            return true;
+        }
+        if (layout.createOutpostButton.contains(localMouseX, localMouseY) && canCreateAutomatedOutpost(assetManagementBody)) {
+            openPendingAssetCreation(
+                assetManagementBody,
+                assetManagementBody.displayName() + " Automated Outpost",
+                CelestialAssetKind.AUTOMATED_OUTPOST,
                 CelestialAssetLocation.SURFACE);
-            showActionStatus("Outpost construction queued");
             return true;
         }
 
         for (ConstructionSiteRow row : layout.siteRows) {
-            if (row.completeButton.contains(localMouseX, localMouseY)) {
-                CelestialAssetStore.completeConstruction(row.site.siteId());
-                showActionStatus("Construction completed");
-                return true;
-            }
-            if (row.cancelButton.contains(localMouseX, localMouseY)) {
-                CelestialAssetStore.cancelConstruction(row.site.siteId());
-                showActionStatus("Construction canceled");
+            if (row.actionButton.contains(localMouseX, localMouseY)) {
+                if (row.actionType == ConstructionRowActionType.CANCEL_BUILD) {
+                    if (hasStoredConstructionResources(row.asset)) {
+                        openPendingConstructionCancellation(row.asset);
+                    } else {
+                        CelestialAssetStore.cancelConstruction(row.asset.assetId());
+                        showActionStatus("Construction canceled");
+                    }
+                } else if (row.actionType == ConstructionRowActionType.SEND_RESOURCES) {
+                    openPendingResourceTransfer(row.asset);
+                }
                 return true;
             }
         }
 
         for (AssetRow row : layout.assetRows) {
             if (row.destroyButton.contains(localMouseX, localMouseY)) {
-                CelestialAssetStore.destroyAsset(row.asset.assetId());
-                showActionStatus("Asset destroyed");
+                openPendingAssetDestruction(row.asset);
                 return true;
             }
         }
@@ -1404,14 +1505,20 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         int bottom = top + height;
 
         ButtonRect closeButton = new ButtonRect(right - 88, top + 6, right - 12, top + 24);
-        ButtonRect createStationButton = new ButtonRect(left + 14, top + 30, left + 154, top + 48);
-        ButtonRect createOutpostButton = new ButtonRect(left + 164, top + 30, left + 304, top + 48);
+        ButtonRect createStationButton = new ButtonRect(left + 14, top + 30, left + 134, top + 48);
+        ButtonRect createAutomatedStationButton = new ButtonRect(left + 144, top + 30, left + 304, top + 48);
+        ButtonRect createOutpostButton = new ButtonRect(left + 314, top + 30, left + 474, top + 48);
+
+        List<CelestialManagedAsset> constructionAssets = new ArrayList<>();
+        constructionAssets.addAll(getAssetsWithStatus(state.assets(), CelestialAssetStatus.CONSTRUCTION_SITE));
+        constructionAssets.addAll(getAssetsWithStatus(state.assets(), CelestialAssetStatus.DECONSTRUCTION));
+        List<CelestialManagedAsset> deployedAssets = getAssetsWithStatus(state.assets(), CelestialAssetStatus.OPERATIONAL);
 
         List<ConstructionSiteRow> siteRows = new ArrayList<>();
         int siteTop = top + 70;
-        int siteRowHeight = 34;
-        for (int i = 0; i < state.constructionSites().size(); i++) {
-            CelestialConstructionSite site = state.constructionSites().get(i);
+        int siteRowHeight = 42;
+        for (int i = 0; i < constructionAssets.size(); i++) {
+            CelestialManagedAsset site = constructionAssets.get(i);
             int rowTop = siteTop + i * (siteRowHeight + 6);
             int rowBottom = rowTop + siteRowHeight;
             int rowRight = right - 14;
@@ -1422,15 +1529,17 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                     rowTop,
                     rowRight,
                     rowBottom,
-                    new ButtonRect(rowRight - 168, rowTop + 8, rowRight - 88, rowTop + 26),
-                    new ButtonRect(rowRight - 82, rowTop + 8, rowRight - 8, rowTop + 26)));
+                    new ButtonRect(rowRight - 124, rowTop + 12, rowRight - 8, rowTop + 30),
+                    site.status() == CelestialAssetStatus.DECONSTRUCTION
+                        ? ConstructionRowActionType.SEND_RESOURCES
+                        : ConstructionRowActionType.CANCEL_BUILD));
         }
 
-        int assetsSectionTop = Math.max(top + 220, siteTop + Math.max(1, state.constructionSites().size()) * (siteRowHeight + 6));
+        int assetsSectionTop = Math.max(top + 220, siteTop + Math.max(1, constructionAssets.size()) * (siteRowHeight + 6));
         List<AssetRow> assetRows = new ArrayList<>();
         int assetTop = assetsSectionTop;
-        for (int i = 0; i < state.assets().size(); i++) {
-            CelestialManagedAsset asset = state.assets().get(i);
+        for (int i = 0; i < deployedAssets.size(); i++) {
+            CelestialManagedAsset asset = deployedAssets.get(i);
             int rowTop = assetTop + i * (siteRowHeight + 6);
             int rowBottom = rowTop + siteRowHeight;
             int rowRight = right - 14;
@@ -1452,6 +1561,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             assetsSectionTop,
             closeButton,
             createStationButton,
+            createAutomatedStationButton,
             createOutpostButton,
             siteRows,
             assetRows);
@@ -1462,10 +1572,512 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
     }
 
+    private void openPendingAssetCreation(OrbitalCelestialBody body, String displayName, CelestialAssetKind kind,
+        CelestialAssetLocation location) {
+        if (body == null) {
+            return;
+        }
+        pendingAssetCreation = new PendingAssetCreation(
+            body.id(),
+            displayName,
+            kind,
+            location,
+            CelestialAssetStore.previewRequirements(kind));
+    }
+
+    private void openPendingAssetDestruction(CelestialManagedAsset asset) {
+        if (asset == null) {
+            return;
+        }
+        pendingAssetDestruction = new PendingAssetDestruction(asset, false);
+    }
+
+    private boolean hasStoredConstructionResources(CelestialManagedAsset asset) {
+        if (asset == null) {
+            return false;
+        }
+        for (CelestialAssetRequirement entry : asset.constructionInventory()) {
+            if (entry.amount() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void openPendingConstructionCancellation(CelestialManagedAsset asset) {
+        if (asset == null) {
+            return;
+        }
+        pendingConstructionCancellation = new PendingConstructionCancellation(asset);
+    }
+
+    private void openPendingResourceTransfer(CelestialManagedAsset asset) {
+        if (asset == null) {
+            return;
+        }
+        pendingResourceTransfer = new PendingResourceTransfer(asset, getTransferTargetsInSystem(assetManagementBody));
+    }
+
+    private boolean handlePendingAssetCreationClick(int localMouseX, int localMouseY) {
+        PendingAssetCreationLayout layout = getPendingAssetCreationLayout();
+        if (layout == null) {
+            return true;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            pendingAssetCreation = null;
+            return true;
+        }
+        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
+            pendingAssetCreation = null;
+            return true;
+        }
+        if (layout.confirmButton.contains(localMouseX, localMouseY)) {
+            CelestialAssetStore.createAssetInConstruction(
+                pendingAssetCreation.celestialObjectId,
+                pendingAssetCreation.displayName,
+                pendingAssetCreation.kind,
+                pendingAssetCreation.location);
+            showActionStatus(formatAssetKind(pendingAssetCreation.kind) + " construction planned");
+            pendingAssetCreation = null;
+            return true;
+        }
+        return true;
+    }
+
+    private boolean handlePendingAssetDestructionClick(int localMouseX, int localMouseY) {
+        PendingAssetDestructionLayout layout = getPendingAssetDestructionLayout();
+        if (layout == null) {
+            return true;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            pendingAssetDestruction = null;
+            return true;
+        }
+        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
+            pendingAssetDestruction = null;
+            return true;
+        }
+        if (layout.destroyButton.contains(localMouseX, localMouseY)) {
+            if (!pendingAssetDestruction.armed) {
+                pendingAssetDestruction = new PendingAssetDestruction(pendingAssetDestruction.asset, true);
+            } else {
+                CelestialAssetStore.destroyAsset(pendingAssetDestruction.asset.assetId());
+                showActionStatus("Asset destroyed");
+                pendingAssetDestruction = null;
+            }
+            return true;
+        }
+        return true;
+    }
+
+    private boolean handlePendingConstructionCancellationClick(int localMouseX, int localMouseY) {
+        PendingConstructionCancellationLayout layout = getPendingConstructionCancellationLayout();
+        if (layout == null) {
+            return true;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            pendingConstructionCancellation = null;
+            return true;
+        }
+        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
+            pendingConstructionCancellation = null;
+            return true;
+        }
+        if (layout.confirmButton.contains(localMouseX, localMouseY)) {
+            CelestialAssetStore.startDeconstruction(pendingConstructionCancellation.asset.assetId());
+            showActionStatus("Construction site converted to deconstruction");
+            pendingConstructionCancellation = null;
+            return true;
+        }
+        return true;
+    }
+
+    private boolean handlePendingResourceTransferClick(int localMouseX, int localMouseY) {
+        PendingResourceTransferLayout layout = getPendingResourceTransferLayout();
+        if (layout == null) {
+            return true;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            pendingResourceTransfer = null;
+            return true;
+        }
+        if (layout.closeButton.contains(localMouseX, localMouseY)) {
+            pendingResourceTransfer = null;
+            return true;
+        }
+        for (TransferTargetRow row : layout.rows) {
+            if (row.sendButton.contains(localMouseX, localMouseY)) {
+                // TODO: validate an orbital rocket with enough free capacity before allowing resource recovery transfer.
+                // TODO: consume the construction inventory and create an actual logistics job toward the selected station.
+                showActionStatus("Resource transfer planning is not implemented yet");
+                pendingResourceTransfer = null;
+                return true;
+            }
+        }
+        return true;
+    }
+
+    private void drawPendingAssetCreationModal() {
+        PendingAssetCreationLayout layout = getPendingAssetCreationLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
+
+        mc.fontRenderer.drawStringWithShadow(
+            "Confirm " + formatAssetKind(pendingAssetCreation.kind),
+            layout.left + 12,
+            layout.top + 10,
+            0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(
+            pendingAssetCreation.displayName,
+            layout.left + 12,
+            layout.top + 28,
+            0xFFD9E0FF);
+        mc.fontRenderer.drawStringWithShadow("Required resources", layout.left + 12, layout.top + 52, 0xFF5A63FF);
+
+        int resourceY = layout.top + 68;
+        for (CelestialAssetRequirement requirement : pendingAssetCreation.requiredResources) {
+            mc.fontRenderer.drawStringWithShadow(
+                "- " + requirement.amount() + " " + requirement.displayName(),
+                layout.left + 16,
+                resourceY,
+                0xFFD9E0FF);
+            resourceY += 12;
+        }
+
+        drawModalButton(layout.cancelButton, "Cancel", true, false);
+        drawModalButton(layout.confirmButton, "Confirm", true, false);
+    }
+
+    private void drawPendingAssetDestructionModal() {
+        PendingAssetDestructionLayout layout = getPendingAssetDestructionLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xAA000000);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF1A1012);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFFD14A4A);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFFD14A4A);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFFD14A4A);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFFD14A4A);
+
+        drawCenteredLargeString("THIS IS IRREVERSIBLE", (layout.left + layout.right) / 2f, layout.top + 16, 1.45f, 0xFFFF5A5A);
+        mc.fontRenderer.drawStringWithShadow(
+            "You are about to destroy:",
+            layout.left + 18,
+            layout.top + 52,
+            0xFFD9E0FF);
+        mc.fontRenderer.drawStringWithShadow(
+            formatAssetDisplayName(pendingAssetDestruction.asset),
+            layout.left + 18,
+            layout.top + 68,
+            0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(
+            pendingAssetDestruction.armed ? "Click Destroy again to confirm." : "Press Destroy to arm confirmation.",
+            layout.left + 18,
+            layout.top + 92,
+            0xFFFFB3B3);
+
+        drawModalButton(layout.cancelButton, "Cancel", true, false);
+        drawDangerButton(layout.destroyButton, "Destroy");
+    }
+
+    private void drawPendingConstructionCancellationModal() {
+        PendingConstructionCancellationLayout layout = getPendingConstructionCancellationLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFFE6B35A);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFFE6B35A);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFFE6B35A);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFFE6B35A);
+
+        mc.fontRenderer.drawStringWithShadow("Cancel Construction?", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(
+            formatAssetDisplayName(pendingConstructionCancellation.asset),
+            layout.left + 12,
+            layout.top + 28,
+            0xFFD9E0FF);
+        mc.fontRenderer.drawStringWithShadow(
+            "Stored resources will be moved into deconstruction recovery.",
+            layout.left + 12,
+            layout.top + 54,
+            0xFFFFD59A);
+
+        drawModalButton(layout.cancelButton, "Cancel", true, false);
+        drawModalButton(layout.confirmButton, "Confirm", true, false);
+    }
+
+    private void drawPendingResourceTransferModal() {
+        PendingResourceTransferLayout layout = getPendingResourceTransferLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
+
+        mc.fontRenderer.drawStringWithShadow("Send Resources To", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(
+            formatAssetDisplayName(pendingResourceTransfer.asset),
+            layout.left + 12,
+            layout.top + 28,
+            0xFFD9E0FF);
+        mc.fontRenderer.drawStringWithShadow(
+            "Requires an orbital rocket with enough capacity.",
+            layout.left + 12,
+            layout.top + 46,
+            0xFF9AA7B8);
+
+        if (layout.rows.isEmpty()) {
+            mc.fontRenderer.drawStringWithShadow("No stations available in this system", layout.left + 16, layout.top + 74, 0xFF9AA7B8);
+        } else {
+            for (TransferTargetRow row : layout.rows) {
+                Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
+                mc.fontRenderer.drawStringWithShadow(row.target.displayName, row.left + 8, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(row.target.hostBodyName, row.left + 8, row.top + 18, 0xFFD9E0FF);
+                drawModalButton(row.sendButton, "Send", true, false);
+            }
+        }
+
+        drawModalButton(layout.closeButton, "Close", true, false);
+    }
+
+    private PendingAssetCreationLayout getPendingAssetCreationLayout() {
+        if (pendingAssetCreation == null) {
+            return null;
+        }
+
+        int width = 320;
+        int height = 150 + Math.max(0, pendingAssetCreation.requiredResources.size() - 2) * 12;
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+
+        return new PendingAssetCreationLayout(
+            left,
+            top,
+            right,
+            bottom,
+            new ButtonRect(left + 16, bottom - 34, left + 126, bottom - 14),
+            new ButtonRect(right - 126, bottom - 34, right - 16, bottom - 14));
+    }
+
+    private PendingAssetDestructionLayout getPendingAssetDestructionLayout() {
+        if (pendingAssetDestruction == null) {
+            return null;
+        }
+
+        int width = 360;
+        int height = 150;
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+
+        ButtonRect leftButton = new ButtonRect(left + 18, bottom - 34, left + 148, bottom - 14);
+        ButtonRect rightButton = new ButtonRect(right - 148, bottom - 34, right - 18, bottom - 14);
+
+        return pendingAssetDestruction.armed
+            ? new PendingAssetDestructionLayout(left, top, right, bottom, rightButton, leftButton)
+            : new PendingAssetDestructionLayout(left, top, right, bottom, leftButton, rightButton);
+    }
+
+    private PendingConstructionCancellationLayout getPendingConstructionCancellationLayout() {
+        if (pendingConstructionCancellation == null) {
+            return null;
+        }
+
+        int width = 360;
+        int height = 124;
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+        return new PendingConstructionCancellationLayout(
+            left,
+            top,
+            right,
+            bottom,
+            new ButtonRect(left + 18, bottom - 34, left + 148, bottom - 14),
+            new ButtonRect(right - 148, bottom - 34, right - 18, bottom - 14));
+    }
+
+    private PendingResourceTransferLayout getPendingResourceTransferLayout() {
+        if (pendingResourceTransfer == null) {
+            return null;
+        }
+
+        int width = 420;
+        int height = Math.min(280, 120 + pendingResourceTransfer.targets.size() * 42);
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+
+        List<TransferTargetRow> rows = new ArrayList<>();
+        int rowTop = top + 66;
+        for (int i = 0; i < pendingResourceTransfer.targets.size(); i++) {
+            StationTransferTarget target = pendingResourceTransfer.targets.get(i);
+            int currentTop = rowTop + i * 42;
+            int currentBottom = currentTop + 36;
+            rows.add(new TransferTargetRow(
+                target,
+                left + 14,
+                currentTop,
+                right - 14,
+                currentBottom,
+                new ButtonRect(right - 92, currentTop + 8, right - 20, currentTop + 26)));
+        }
+
+        return new PendingResourceTransferLayout(
+            left,
+            top,
+            right,
+            bottom,
+            new ButtonRect(right - 96, top + 8, right - 18, top + 26),
+            rows);
+    }
+
+    private List<CelestialManagedAsset> getAssetsWithStatus(List<CelestialManagedAsset> assets, CelestialAssetStatus status) {
+        List<CelestialManagedAsset> filtered = new ArrayList<>();
+        for (CelestialManagedAsset asset : assets) {
+            if (asset.status() == status) {
+                filtered.add(asset);
+            }
+        }
+        return filtered;
+    }
+
+    private String formatAssetDisplayName(CelestialManagedAsset asset) {
+        return switch (asset.status()) {
+            case CONSTRUCTION_SITE -> asset.displayName() + " (In construction)";
+            case DECONSTRUCTION -> asset.displayName() + " (Deconstruction)";
+            default -> asset.displayName();
+        };
+    }
+
+    private String buildRequirementsSummary(List<CelestialAssetRequirement> requiredResources) {
+        if (requiredResources.isEmpty()) {
+            return "No requirements";
+        }
+        List<String> parts = new ArrayList<>();
+        for (CelestialAssetRequirement requirement : requiredResources) {
+            parts.add(requirement.amount() + " " + requirement.displayName());
+        }
+        return String.join(", ", parts);
+    }
+
+    private String buildConstructionInventorySummary(CelestialManagedAsset asset) {
+        if (asset.status() == CelestialAssetStatus.DECONSTRUCTION) {
+            return buildStoredInventorySummary(asset.constructionInventory());
+        }
+        if (asset.requiredResources().isEmpty()) {
+            return "Empty";
+        }
+        List<String> parts = new ArrayList<>();
+        for (CelestialAssetRequirement required : asset.requiredResources()) {
+            long storedAmount = 0;
+            for (CelestialAssetRequirement stored : asset.constructionInventory()) {
+                if (required.matches(stored.stack())) {
+                    storedAmount += stored.amount();
+                }
+            }
+            parts.add(storedAmount + "/" + required.amount() + " " + required.displayName());
+        }
+        return String.join(", ", parts);
+    }
+
+    private String buildStoredInventorySummary(List<CelestialAssetRequirement> storedResources) {
+        if (storedResources.isEmpty()) {
+            return "Empty";
+        }
+        List<String> parts = new ArrayList<>();
+        for (CelestialAssetRequirement stored : storedResources) {
+            parts.add(stored.amount() + " " + stored.displayName());
+        }
+        return String.join(", ", parts);
+    }
+
+    private List<StationTransferTarget> getTransferTargetsInSystem(OrbitalCelestialBody body) {
+        List<StationTransferTarget> targets = new ArrayList<>();
+        if (body == null) {
+            return targets;
+        }
+
+        OrbitalCelestialBody hostStar = findHostStar(root, body, null);
+        if (hostStar == null) {
+            return targets;
+        }
+
+        List<OrbitalCelestialBody> systemBodies = new ArrayList<>();
+        collectBodies(hostStar, systemBodies);
+        for (OrbitalCelestialBody systemBody : systemBodies) {
+            CelestialBodyAssetState state = CelestialAssetStore.getState(systemBody.id());
+            for (CelestialManagedAsset asset : state.assets()) {
+                boolean isStationTarget = asset.status() == CelestialAssetStatus.OPERATIONAL
+                    && asset.location() == CelestialAssetLocation.ORBIT
+                    && (asset.kind() == CelestialAssetKind.STATION
+                        || asset.kind() == CelestialAssetKind.AUTOMATED_STATION);
+                if (isStationTarget) {
+                    targets.add(new StationTransferTarget(asset.assetId(), asset.displayName(), systemBody.displayName()));
+                }
+            }
+        }
+        return targets;
+    }
+
+    private OrbitalCelestialBody findHostStar(OrbitalCelestialBody current, OrbitalCelestialBody target,
+        OrbitalCelestialBody currentStar) {
+        OrbitalCelestialBody nextStar = current.objectClass() == CelestialObjectClass.STAR ? current : currentStar;
+        if (current == target) {
+            return nextStar;
+        }
+        for (OrbitalCelestialBody child : current.children()) {
+            OrbitalCelestialBody found = findHostStar(child, target, nextStar);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private void collectBodies(OrbitalCelestialBody current, List<OrbitalCelestialBody> out) {
+        out.add(current);
+        for (OrbitalCelestialBody child : current.children()) {
+            collectBodies(child, out);
+        }
+    }
+
     private String formatAssetKind(CelestialAssetKind kind) {
         return switch (kind) {
             case STATION -> "Station";
-            case OUTPOST -> "Outpost";
+            case AUTOMATED_STATION -> "Automated Station";
+            case AUTOMATED_OUTPOST -> "Automated Outpost";
         };
     }
 
@@ -1541,6 +2153,22 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private float getSelectionBoxRadius(ScreenBodyBounds bounds) {
         return bounds.renderedRadius + 4f;
+    }
+
+    private boolean isGT5AutomationAvailable() {
+        return Galaxia.hasGT5U();
+    }
+
+    private boolean canCreateBaseStation(OrbitalCelestialBody body) {
+        return body != null && body.properties().canCreateStation();
+    }
+
+    private boolean canCreateAutomatedStation(OrbitalCelestialBody body) {
+        return canCreateBaseStation(body) && isGT5AutomationAvailable();
+    }
+
+    private boolean canCreateAutomatedOutpost(OrbitalCelestialBody body) {
+        return body != null && isGT5AutomationAvailable() && body.properties().canCreateOutpost();
     }
 
     private float getInteractionRadius(OrbitalCelestialBody body) {
@@ -1637,7 +2265,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private enum ContextMenuActionType {
         MESSAGE,
-        MANAGE_ASSETS
+        MANAGE_ASSETS,
+        CREATE_STATION,
+        OPEN_AUTOMATED_STATION_CONFIRM,
+        OPEN_AUTOMATED_OUTPOST_CONFIRM
     }
 
     private static final class ContextMenuLayout {
@@ -1683,23 +2314,34 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private static final class ConstructionSiteRow {
 
-        private final CelestialConstructionSite site;
+        private final CelestialManagedAsset asset;
         private final int left;
         private final int top;
         private final int right;
         private final int bottom;
-        private final ButtonRect completeButton;
-        private final ButtonRect cancelButton;
+        private final ButtonRect actionButton;
+        private final ConstructionRowActionType actionType;
 
-        private ConstructionSiteRow(CelestialConstructionSite site, int left, int top, int right, int bottom,
-            ButtonRect completeButton, ButtonRect cancelButton) {
-            this.site = site;
+        private ConstructionSiteRow(CelestialManagedAsset asset, int left, int top, int right, int bottom,
+            ButtonRect actionButton, ConstructionRowActionType actionType) {
+            this.asset = asset;
             this.left = left;
             this.top = top;
             this.right = right;
             this.bottom = bottom;
-            this.completeButton = completeButton;
-            this.cancelButton = cancelButton;
+            this.actionButton = actionButton;
+            this.actionType = actionType;
+        }
+    }
+
+    private enum ConstructionRowActionType {
+        CANCEL_BUILD("Cancel Build"),
+        SEND_RESOURCES("Send To...");
+
+        private final String buttonLabel;
+
+        ConstructionRowActionType(String buttonLabel) {
+            this.buttonLabel = buttonLabel;
         }
     }
 
@@ -1732,12 +2374,14 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         private final int assetsSectionTop;
         private final ButtonRect closeButton;
         private final ButtonRect createStationButton;
+        private final ButtonRect createAutomatedStationButton;
         private final ButtonRect createOutpostButton;
         private final List<ConstructionSiteRow> siteRows;
         private final List<AssetRow> assetRows;
 
         private AssetManagementLayout(int left, int top, int right, int bottom, int assetsSectionTop,
-            ButtonRect closeButton, ButtonRect createStationButton, ButtonRect createOutpostButton,
+            ButtonRect closeButton, ButtonRect createStationButton, ButtonRect createAutomatedStationButton,
+            ButtonRect createOutpostButton,
             List<ConstructionSiteRow> siteRows, List<AssetRow> assetRows) {
             this.left = left;
             this.top = top;
@@ -1746,9 +2390,172 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             this.assetsSectionTop = assetsSectionTop;
             this.closeButton = closeButton;
             this.createStationButton = createStationButton;
+            this.createAutomatedStationButton = createAutomatedStationButton;
             this.createOutpostButton = createOutpostButton;
             this.siteRows = siteRows;
             this.assetRows = assetRows;
+        }
+    }
+
+    private static final class PendingAssetCreation {
+
+        private final String celestialObjectId;
+        private final String displayName;
+        private final CelestialAssetKind kind;
+        private final CelestialAssetLocation location;
+        private final List<CelestialAssetRequirement> requiredResources;
+
+        private PendingAssetCreation(String celestialObjectId, String displayName, CelestialAssetKind kind,
+            CelestialAssetLocation location, List<CelestialAssetRequirement> requiredResources) {
+            this.celestialObjectId = celestialObjectId;
+            this.displayName = displayName;
+            this.kind = kind;
+            this.location = location;
+            this.requiredResources = requiredResources;
+        }
+    }
+
+    private static final class PendingAssetCreationLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect cancelButton;
+        private final ButtonRect confirmButton;
+
+        private PendingAssetCreationLayout(int left, int top, int right, int bottom, ButtonRect cancelButton,
+            ButtonRect confirmButton) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.cancelButton = cancelButton;
+            this.confirmButton = confirmButton;
+        }
+    }
+
+    private static final class PendingAssetDestruction {
+
+        private final CelestialManagedAsset asset;
+        private final boolean armed;
+
+        private PendingAssetDestruction(CelestialManagedAsset asset, boolean armed) {
+            this.asset = asset;
+            this.armed = armed;
+        }
+    }
+
+    private static final class PendingAssetDestructionLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect cancelButton;
+        private final ButtonRect destroyButton;
+
+        private PendingAssetDestructionLayout(int left, int top, int right, int bottom, ButtonRect cancelButton,
+            ButtonRect destroyButton) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.cancelButton = cancelButton;
+            this.destroyButton = destroyButton;
+        }
+    }
+
+    private static final class PendingConstructionCancellation {
+
+        private final CelestialManagedAsset asset;
+
+        private PendingConstructionCancellation(CelestialManagedAsset asset) {
+            this.asset = asset;
+        }
+    }
+
+    private static final class PendingConstructionCancellationLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect cancelButton;
+        private final ButtonRect confirmButton;
+
+        private PendingConstructionCancellationLayout(int left, int top, int right, int bottom, ButtonRect cancelButton,
+            ButtonRect confirmButton) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.cancelButton = cancelButton;
+            this.confirmButton = confirmButton;
+        }
+    }
+
+    private static final class PendingResourceTransfer {
+
+        private final CelestialManagedAsset asset;
+        private final List<StationTransferTarget> targets;
+
+        private PendingResourceTransfer(CelestialManagedAsset asset, List<StationTransferTarget> targets) {
+            this.asset = asset;
+            this.targets = targets;
+        }
+    }
+
+    private static final class PendingResourceTransferLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect closeButton;
+        private final List<TransferTargetRow> rows;
+
+        private PendingResourceTransferLayout(int left, int top, int right, int bottom, ButtonRect closeButton,
+            List<TransferTargetRow> rows) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.closeButton = closeButton;
+            this.rows = rows;
+        }
+    }
+
+    private static final class StationTransferTarget {
+
+        private final String assetId;
+        private final String displayName;
+        private final String hostBodyName;
+
+        private StationTransferTarget(String assetId, String displayName, String hostBodyName) {
+            this.assetId = assetId;
+            this.displayName = displayName;
+            this.hostBodyName = hostBodyName;
+        }
+    }
+
+    private static final class TransferTargetRow {
+
+        private final StationTransferTarget target;
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect sendButton;
+
+        private TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
+            ButtonRect sendButton) {
+            this.target = target;
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.sendButton = sendButton;
         }
     }
 

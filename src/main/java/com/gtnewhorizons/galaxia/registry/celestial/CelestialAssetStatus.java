@@ -1,10 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-public enum ConstructionSiteStatus {
-    PLANNED,
-    UNDER_CONSTRUCTION,
+public enum CelestialAssetStatus {
+    CONSTRUCTION_SITE,
+    DECONSTRUCTION,
     OPERATIONAL,
-    UPGRADED,
     DISABLED,
     DESTROYED
 }
