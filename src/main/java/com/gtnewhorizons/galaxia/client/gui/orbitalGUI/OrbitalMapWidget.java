@@ -83,10 +83,15 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private PendingAssetDestruction pendingAssetDestruction = null;
     private PendingConstructionCancellation pendingConstructionCancellation = null;
     private PendingResourceTransfer pendingResourceTransfer = null;
+    private OrbitalCelestialBody layerTransitionAnchorBody = null;
+    private LayerTransitionMode layerTransitionMode = LayerTransitionMode.NONE;
+    private double layerTransitionProgress = 1.0;
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
-    private static final double LERP_SPEED = 0.06;
+    private static final double LERP_SPEED = 0.045;
+    private static final double LAYER_VIEW_LERP_SPEED = 0.03;
+    private static final double LAYER_TRANSITION_SPEED = 0.075;
     private static final double KEPLER_BASE = 0.42;
 
     private static final float ISO_BASE_CUBE_SIZE = 42f;
@@ -99,6 +104,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private static final float MAP_ICON_BASE_SCALE = 18f;
     private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
     private static final float MAP_LABEL_SCALE = 0.82f;
+    private static final float GALAXY_STAR_RADIUS_SCALE = 0.34f;
     private static final int GALAXY_TITLE_TOP = 10;
     private static final int GALAXY_TITLE_HEIGHT = 21;
 
@@ -121,6 +127,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     public void showLayer(OrbitalCelestialBody layerRoot) {
         OrbitalCelestialBody targetLayer = layerRoot == null ? root : layerRoot;
+        if (this.viewRoot == targetLayer) {
+            return;
+        }
+        startLayerTransition(this.viewRoot, targetLayer);
         this.viewRoot = targetLayer;
         closeContextMenu();
         closeAssetManagement();
@@ -387,6 +397,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (body.spriteSize() > 0.0001) {
             float spriteSize = (float) body.spriteSize();
             float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) getScale() * MAP_ICON_ZOOM_SCALE);
+            radius *= getBodyRenderScaleMultiplier(body);
             return Math.max(2.0f, radius);
         }
         return 2f;
@@ -428,9 +439,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         boolean goIso = body.objectClass() != CelestialObjectClass.GALAXY && body.objectClass() != CelestialObjectClass.STAR;
         targetIsometricProgress = goIso ? 1.0 : 0.0;
 
+        double computedZoom;
         if (!goIso) {
             double maxSize = calculateOverviewExtent(body);
-            targetZoomLevel = maxSize > 1e-9 ? Math.log((420.0 / maxSize) / BASE_SCALE) / Math.log(ZOOM_BASE) : -0.8;
+            computedZoom = maxSize > 1e-9 ? Math.log((420.0 / maxSize) / BASE_SCALE) / Math.log(ZOOM_BASE) : -0.8;
         } else {
             OrbitalCelestialBody parent = findParent(root, body);
             double maxApogee = 0;
@@ -439,7 +451,16 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                     maxApogee = Math.max(maxApogee, c.orbitalParams().apogee());
                 }
             }
-            targetZoomLevel = maxApogee > 1e-9 ? Math.log((350.0 / maxApogee) / BASE_SCALE) / Math.log(ZOOM_BASE) : 3.0;
+            computedZoom = maxApogee > 1e-9 ? Math.log((350.0 / maxApogee) / BASE_SCALE) / Math.log(ZOOM_BASE) : 3.0;
+        }
+
+        if (body.objectClass() == CelestialObjectClass.GALAXY) {
+            targetZoomLevel = computedZoom;
+        } else if (body.objectClass() == CelestialObjectClass.STAR
+            && layerTransitionMode == LayerTransitionMode.GALAXY_TO_STAR) {
+            targetZoomLevel = computedZoom;
+        } else {
+            targetZoomLevel = computedZoom;
         }
         targetZoomLevel = Math.max(-7000.0, Math.min(14000.0, targetZoomLevel));
     }
@@ -456,6 +477,47 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         focusedBody = null;
         isometricProgress = 0.0;
         targetIsometricProgress = 0.0;
+    }
+
+    private void startLayerTransition(OrbitalCelestialBody sourceLayer, OrbitalCelestialBody targetLayer) {
+        layerTransitionAnchorBody = null;
+        layerTransitionMode = LayerTransitionMode.NONE;
+        layerTransitionProgress = 1.0;
+
+        if (sourceLayer == null || targetLayer == null) {
+            return;
+        }
+
+        if (sourceLayer.objectClass() == CelestialObjectClass.STAR && targetLayer == root) {
+            layerTransitionAnchorBody = sourceLayer;
+            layerTransitionMode = LayerTransitionMode.STAR_TO_GALAXY;
+            layerTransitionProgress = 0.0;
+        } else if (sourceLayer == root && targetLayer.objectClass() == CelestialObjectClass.STAR) {
+            layerTransitionAnchorBody = targetLayer;
+            layerTransitionMode = LayerTransitionMode.GALAXY_TO_STAR;
+            layerTransitionProgress = 0.0;
+        }
+    }
+
+    private boolean isGalaxyMapStar(OrbitalCelestialBody body) {
+        if (body == null || body.objectClass() != CelestialObjectClass.STAR || viewRoot != root) {
+            return false;
+        }
+        OrbitalCelestialBody parent = findParent(root, body);
+        return parent != null && parent.objectClass() == CelestialObjectClass.GALAXY;
+    }
+
+    private float getBodyRenderScaleMultiplier(OrbitalCelestialBody body) {
+        float baseScale = isGalaxyMapStar(body) ? GALAXY_STAR_RADIUS_SCALE : 1.0f;
+        if (body == layerTransitionAnchorBody && layerTransitionProgress < 0.999) {
+            float progress = (float) layerTransitionProgress;
+            return switch (layerTransitionMode) {
+                case STAR_TO_GALAXY -> lerp(1.0f, GALAXY_STAR_RADIUS_SCALE, progress);
+                case GALAXY_TO_STAR -> lerp(GALAXY_STAR_RADIUS_SCALE, 1.0f, progress);
+                case NONE -> baseScale;
+            };
+        }
+        return baseScale;
     }
 
     private double calculateOverviewExtent(OrbitalCelestialBody body) {
@@ -558,10 +620,19 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         updateSimulationTime();
 
-        cameraX = lerp(cameraX, targetCameraX, LERP_SPEED);
-        cameraY = lerp(cameraY, targetCameraY, LERP_SPEED);
-        zoomLevel = lerp(zoomLevel, targetZoomLevel, LERP_SPEED);
-        isometricProgress = lerp(isometricProgress, targetIsometricProgress, LERP_SPEED);
+        double activeLerpSpeed = layerTransitionMode == LayerTransitionMode.NONE ? LERP_SPEED : LAYER_VIEW_LERP_SPEED;
+        cameraX = lerp(cameraX, targetCameraX, activeLerpSpeed);
+        cameraY = lerp(cameraY, targetCameraY, activeLerpSpeed);
+        zoomLevel = lerp(zoomLevel, targetZoomLevel, activeLerpSpeed);
+        isometricProgress = lerp(isometricProgress, targetIsometricProgress, activeLerpSpeed);
+        if (layerTransitionProgress < 1.0) {
+            layerTransitionProgress = Math.min(1.0, layerTransitionProgress + LAYER_TRANSITION_SPEED);
+            if (layerTransitionProgress >= 0.999) {
+                layerTransitionProgress = 1.0;
+                layerTransitionAnchorBody = null;
+                layerTransitionMode = LayerTransitionMode.NONE;
+            }
+        }
 
         if (Math.abs(cameraX - targetCameraX) < CONVERGE_THRESHOLD) cameraX = targetCameraX;
         if (Math.abs(cameraY - targetCameraY) < CONVERGE_THRESHOLD) cameraY = targetCameraY;
@@ -2269,6 +2340,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         CREATE_STATION,
         OPEN_AUTOMATED_STATION_CONFIRM,
         OPEN_AUTOMATED_OUTPOST_CONFIRM
+    }
+
+    private enum LayerTransitionMode {
+        NONE,
+        STAR_TO_GALAXY,
+        GALAXY_TO_STAR
     }
 
     private static final class ContextMenuLayout {

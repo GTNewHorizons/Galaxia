@@ -70,6 +70,85 @@ public final class CelestialRegistry {
 
         register(
             CelestialObjectRegistration.builder()
+                .id("ilia")
+                .name("Ilia")
+                .parent("novum_caelum")
+                .objectClass(CelestialObjectClass.STAR)
+                .absolutePosition(5800.0, -2600.0)
+                .texture(EnumTextures.ICON_EGORA.get())
+                .spriteSize(0.92)
+                .selectable(false)
+                .properties(
+                    CelestialBodyProperties.builder()
+                        .visitable(false)
+                        .canCreateStation(false)
+                        .canCreateOutpost(false)
+                        .metadata("system", "ilia")
+                        .build())
+                .build());
+
+        register(
+            CelestialObjectRegistration.builder()
+                .id("proxima_centauri")
+                .name("Proxima Centauri")
+                .parent("novum_caelum")
+                .objectClass(CelestialObjectClass.STAR)
+                .absolutePosition(-4900.0, 3400.0)
+                .texture(EnumTextures.ICON_EGORA.get())
+                .spriteSize(0.88)
+                .selectable(false)
+                .properties(
+                    CelestialBodyProperties.builder()
+                        .visitable(false)
+                        .canCreateStation(false)
+                        .canCreateOutpost(false)
+                        .metadata("system", "proxima_centauri")
+                        .build())
+                .build());
+
+        register(
+            CelestialObjectRegistration.builder()
+                .id("romulus")
+                .name("Romulus")
+                .parent("ilia")
+                .objectClass(CelestialObjectClass.PLANET)
+                .circularOrbit(0.74 * earthRadiusToAU, 0.00031, seededPhase("ilia_romulus"))
+                .texture(EnumTextures.EGORA.get())
+                .spriteSize(0.24)
+                .properties(
+                    CelestialBodyProperties.builder()
+                        .visitable(false)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
+                        .temperature(301)
+                        .radiation(0.08)
+                        .oreProfile("temperate_silicates")
+                        .metadata("status", "placeholder_colony_world")
+                        .build())
+                .build());
+
+        register(
+            CelestialObjectRegistration.builder()
+                .id("remus")
+                .name("Remus")
+                .parent("ilia")
+                .objectClass(CelestialObjectClass.PLANET)
+                .circularOrbit(1.21 * earthRadiusToAU, 0.00018, seededPhase("ilia_remus"))
+                .texture(EnumTextures.EGORA.get())
+                .spriteSize(0.19)
+                .properties(
+                    CelestialBodyProperties.builder()
+                        .visitable(false)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
+                        .temperature(182)
+                        .radiation(0.14)
+                        .oreProfile("cold_metallic")
+                        .build())
+                .build());
+
+        register(
+            CelestialObjectRegistration.builder()
                 .id("egora")
                 .name("Egora")
                 .parent("vael")
