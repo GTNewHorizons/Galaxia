@@ -175,7 +175,7 @@ item.galaxia.protection_shield_pressure_high.name=High Pressure Shielding
 item.galaxia.protection_shield_pressure_low.name=Low Pressure Shielding
 item.galaxia.spore_filter.name=Spore Filter
 item.galaxia.wither_protection.name=Wither Protection
-item.galaxia.reaction_control_system.anme=Reaction Control System
+item.galaxia.reaction_control_system.name=Reaction Control System
 
 # Items - "Parts"
 item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
