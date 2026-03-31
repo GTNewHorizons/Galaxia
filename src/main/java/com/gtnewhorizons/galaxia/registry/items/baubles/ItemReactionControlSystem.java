@@ -71,7 +71,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded {
 
     @Override
     public String[] getBaubleTypes(ItemStack itemstack) {
-        return new String[] {BAUBLE_TYPE_REACTION_CONTROL_SYSTEM};
+        return new String[] { BAUBLE_TYPE_REACTION_CONTROL_SYSTEM };
     }
 
     @Override
@@ -87,6 +87,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded {
     public void onWornTick(ItemStack itemstack, EntityLivingBase player) {
         if (player.ticksExisted % 40 != 0 || player.worldObj.isRemote) return;
         if (!GalaxiaAPI.isInGalaxiaDimension(player)) return;
+        if (!(GalaxiaAPI.getGravity(player) != 0)) return;
 
         final boolean isThrusting = Math.abs(prevMotionX - player.motionX) < 1e-6
             || Math.abs(prevMotionY - player.motionY) < 1e-6

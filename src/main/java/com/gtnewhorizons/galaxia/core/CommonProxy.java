@@ -68,7 +68,8 @@ public class CommonProxy {
         Galaxia.sporeFilterSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_SPORE_FILTER);
         Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         Galaxia.witherSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_WITHER_PROTECTION);
-        Galaxia.reactionControlSystemSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
+        Galaxia.reactionControlSystemSlot = BaubleExpandedSlots
+            .getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
     }
 
     // register server commands in this event handler (Remove if not needed)
