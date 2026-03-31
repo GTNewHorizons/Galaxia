@@ -13,6 +13,7 @@ slot.protection_shield=Protection Shielding
 slot.spore_filter=Spore Filter
 slot.thermal_protection=Thermal Protection
 slot.wither_protection=Wither Protection
+slot.reaction_control_system=Reaction Control System
 
 #### Dimensions
 galaxia.dimension.frozen_belt=Frozen Belt
@@ -174,6 +175,7 @@ item.galaxia.protection_shield_pressure_high.name=High Pressure Shielding
 item.galaxia.protection_shield_pressure_low.name=Low Pressure Shielding
 item.galaxia.spore_filter.name=Spore Filter
 item.galaxia.wither_protection.name=Wither Protection
+item.galaxia.reaction_control_system.anme=Reaction Control System
 
 # Items - "Parts"
 item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
