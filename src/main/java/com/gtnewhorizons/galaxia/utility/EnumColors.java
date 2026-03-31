@@ -33,11 +33,6 @@ public enum EnumColors {
     MapBackground(0xFF0F1621),
     MapCelestialLabelText(0xFFFFFFFF),
     MapStatusText(0xAAFFFFFF),
-    MapCelestialBlackHole(0xFF111111),
-    MapCelestialStar(0xFFFFEE88),
-    MapCelestialPlanet(0xFF44AAFF),
-    MapCelestialMoon(0xFFEEEEEE),
-    MapCelestialDefault(0xFF00FF99),
 
     // Debug overlay
     DebugOverlayTitle(0xFFFF5555),
