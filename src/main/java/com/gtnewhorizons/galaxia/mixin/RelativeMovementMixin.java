@@ -1,6 +1,9 @@
 package com.gtnewhorizons.galaxia.mixin;
 
+import net.minecraft.block.BlockAir;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.MathHelper;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,10 +28,21 @@ public abstract class RelativeMovementMixin {
             return;
         }
 
-        // do nothing if no input
-        if (strafe == 0 && forward == 0) {
-            return;
+        if (self instanceof EntityPlayer player) {
+            if (!GalaxiaAPI.hasReactionControlSystem(player)) {
+                final boolean isAribourne = player.worldObj
+                    .getBlock((int) player.posX, (int) (player.posY - 1), (int) player.posZ) instanceof BlockAir;
+                if (!isAribourne) {
+                    self.moveFlying(strafe, forward, friction);
+                }
+                return;
+            }
         }
+
+        // do nothing if no input
+        // if (strafe == 0 && forward == 0) {
+        // return;
+        // }
 
         float yawRad = self.rotationYaw * (float) Math.PI / 180.0F;
         float pitchRad = self.rotationPitch * (float) Math.PI / 180.0F;
@@ -52,10 +66,31 @@ public abstract class RelativeMovementMixin {
 
         // allow sprinting in space
         float speed = 0.02F * (self.isSprinting() ? 2 : 1);
+        float verticalMomentum = 0;
+        if (self instanceof EntityPlayer player) {
+            if (player.isSneaking()) {
+                verticalMomentum -= 1;
+            }
 
-        self.motionX += (lookX * forward + (double) cosYaw * strafe) * speed;
-        self.motionY += lookY * forward * speed;
-        self.motionZ += (lookZ * forward + (double) sinYaw * strafe) * speed;
+            if (player instanceof EntityPlayerSP sp && sp.movementInput.jump) {
+                verticalMomentum += 1;
+            }
+        }
+        double motionX = (lookX * forward + cosYaw * strafe) * speed;
+        double motionY = lookY * forward * speed + verticalMomentum * speed;
+        double motionZ = (lookZ * forward + sinYaw * strafe) * speed;
+
+        if (Math.abs(motionX) < 1e-6) motionX = 0;
+        if (Math.abs(motionY) < 1e-6) motionY = 0;
+        if (Math.abs(motionZ) < 1e-6) motionZ = 0;
+
+        if (motionX * self.motionX < 0) motionX *= 2;
+        if (motionY * self.motionY < 0) motionY *= 2;
+        if (motionZ * self.motionZ < 0) motionZ *= 2;
+
+        self.motionX += motionX;
+        self.motionY += motionY;
+        self.motionZ += motionZ;
 
         self.fallDistance = 0.0F;
     }
