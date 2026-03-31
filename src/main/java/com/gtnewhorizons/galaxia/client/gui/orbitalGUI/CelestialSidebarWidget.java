@@ -67,7 +67,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
             .hintText(StatCollector.translateToLocal("galaxia.gui.orbital.search.placeholder"))
             .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
-            .setFocusOnGuiOpen(true);
+            .setFocusOnGuiOpen(false);
         child(searchField);
 
         map.setBodySelectionListener(this::handleMapSelection);
@@ -91,6 +91,10 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         int localX = mx - getArea().rx;
         int localYAbsolute = my - getArea().ry;
 
+        if (localX < 0 || localYAbsolute < 0 || localX >= getArea().width || localYAbsolute >= getArea().height) {
+            return false;
+        }
+
         if (handleLayerButtonClick(localX, localYAbsolute)) {
             return true;
         }
@@ -99,15 +103,8 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return false;
         }
 
-        int localY = localYAbsolute - LIST_TOP;
-
-        if (localY < 0) return false;
-
-        int index = (int) ((localY + scrollOffset) / LINE_HEIGHT);
-        List<VisibleEntry> visible = getVisibleEntries();
-        if (index < 0 || index >= visible.size()) return false;
-
-        VisibleEntry entry = visible.get(index);
+        VisibleEntry entry = findVisibleRowAt(localX, localYAbsolute);
+        if (entry == null) return false;
 
         if (entry.hasChildren && localX < ARROW_ZONE + entry.depth * 24) {
             if (expanded.contains(entry.body)) expanded.remove(entry.body);
@@ -121,6 +118,9 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
 
     @Desugar
     private record VisibleEntry(OrbitalCelestialBody body, int depth, boolean hasChildren) {}
+
+    @Desugar
+    private record RowLayout(VisibleEntry entry, int left, int right, int top, int bottom) {}
 
     private List<VisibleEntry> getVisibleEntries() {
         List<VisibleEntry> list = new ArrayList<>();
@@ -154,6 +154,42 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
 
     private double getMaxScroll() {
         return Math.max(0, getVisibleEntries().size() * LINE_HEIGHT - getArea().height + LIST_TOP + 20);
+    }
+
+    private List<RowLayout> buildVisibleRowLayouts(List<VisibleEntry> visible) {
+        List<RowLayout> rows = new ArrayList<>();
+        int y = LIST_TOP - (int) scrollOffset;
+
+        for (int i = 0; i < visible.size(); i++) {
+            int sy = y + i * LINE_HEIGHT;
+            if (sy < 50 || sy > getArea().height - 10) {
+                continue;
+            }
+
+            VisibleEntry entry = visible.get(i);
+            int iconX = 10 + entry.depth * 24;
+            int textX = 22 + entry.depth * 24;
+            int textWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(entry.body.displayName());
+            int rowLeft = Math.max(0, iconX - 4);
+            int rowRight = Math.min(getArea().width - 10, Math.max(textX + textWidth + 4, rowLeft + 16));
+
+            rows.add(new RowLayout(entry, rowLeft, rowRight, sy, sy + LINE_HEIGHT));
+        }
+
+        return rows;
+    }
+
+    private VisibleEntry findVisibleRowAt(int localX, int localYAbsolute) {
+        List<VisibleEntry> visible = getVisibleEntries();
+        for (RowLayout row : buildVisibleRowLayouts(visible)) {
+            if (localX < row.left() || localX > row.right()) {
+                continue;
+            }
+            if (localYAbsolute >= row.top() && localYAbsolute < row.bottom()) {
+                return row.entry();
+            }
+        }
+        return null;
     }
 
     private String getCurrentSystemLabel() {
@@ -247,22 +283,22 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             EnumColors.MapSidebaSearchLabel.getColor());
 
         List<VisibleEntry> visible = getVisibleEntries();
-        int y = LIST_TOP - (int) scrollOffset;
+        List<RowLayout> rowLayouts = buildVisibleRowLayouts(visible);
+        int mouseLocalX = getContext().getMouseX() - getArea().rx;
+        int mouseLocalY = getContext().getMouseY() - getArea().ry;
+        VisibleEntry hoveredEntry = findVisibleRowAt(mouseLocalX, mouseLocalY);
+        OrbitalCelestialBody hoveredBody = hoveredEntry == null ? null : hoveredEntry.body();
 
-        int mouseLocalY = getContext().getMouseY() - getArea().ry - LIST_TOP;
-        int hovered = (mouseLocalY >= 0) ? (int) ((mouseLocalY + scrollOffset) / LINE_HEIGHT) : -1;
-
-        for (int i = 0; i < visible.size(); i++) {
-            VisibleEntry e = visible.get(i);
-            int sy = y + i * LINE_HEIGHT;
-            if (sy < 50 || sy > getArea().height - 10) continue;
+        for (RowLayout row : rowLayouts) {
+            VisibleEntry e = row.entry();
+            int sy = row.top();
+            boolean hovered = hoveredBody != null && e.body() == hoveredBody;
 
             int iconX = 10 + e.depth * 24;
             int textX = 22 + e.depth * 24;
             String text = e.body.displayName();
 
-            int color = (i == hovered) ? EnumColors.MapSidebarListHovered.getColor()
-                : EnumColors.MapSidebarListNormal.getColor();
+            int color = hovered ? 0xFF59BFD9 : EnumColors.MapSidebarListNormal.getColor();
 
             if (e.hasChildren) {
                 IDrawable play = IDrawable.of(GuiTextures.PLAY);

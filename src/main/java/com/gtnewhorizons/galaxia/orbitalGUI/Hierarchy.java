@@ -12,7 +12,6 @@ import net.minecraft.util.StatCollector;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyProperties;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
-import com.gtnewhorizons.galaxia.registry.celestial.StationConstructionLocation;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 public final class Hierarchy {
@@ -53,8 +52,7 @@ public final class Hierarchy {
     public record OrbitalCelestialBody(String id, String name, String nameKey, int dimensionId,
         DimensionEnum dimensionEnum, CelestialObjectClass objectClass, OrbitalParams orbitalParams,
         AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize, boolean selectable,
-        CelestialBodyProperties properties,
-        StationConstructionLocation constructionLocation, List<OrbitalCelestialBody> children) {
+        CelestialBodyProperties properties, List<OrbitalCelestialBody> children) {
 
         public OrbitalCelestialBody {
             children = children == null ? Collections.emptyList()

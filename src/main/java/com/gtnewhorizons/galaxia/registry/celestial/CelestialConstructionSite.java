@@ -7,8 +7,8 @@ import java.util.Map;
 import com.github.bsideup.jabel.Desugar;
 
 @Desugar
-public record CelestialConstructionSite(String celestialObjectId, StationConstructionLocation location,
-    ConstructionSiteStatus status, Map<String, Long> requiredResources, Map<String, Long> deliveredResources) {
+public record CelestialConstructionSite(String celestialObjectId, ConstructionSiteStatus status,
+    Map<String, Long> requiredResources, Map<String, Long> deliveredResources) {
 
     public CelestialConstructionSite {
         requiredResources = requiredResources == null ? Collections.emptyMap()

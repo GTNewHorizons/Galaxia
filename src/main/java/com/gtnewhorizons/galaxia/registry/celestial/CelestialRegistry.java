@@ -72,7 +72,7 @@ public final class CelestialRegistry {
                 .name("Egora")
                 .parent("vael")
                 .objectClass(CelestialObjectClass.PLANET)
-                .circularOrbit(0.92 * earthRadiusToAU, 0.00026, seededPhase("egora"))
+                .circularOrbit(0.92 * earthRadiusToAU, 0.00022, seededPhase("egora"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.18)
                 .properties(
@@ -91,7 +91,7 @@ public final class CelestialRegistry {
                 .dimension(DimensionEnum.PANSPIRA)
                 .parent("vael")
                 .objectClass(CelestialObjectClass.PLANET)
-                .circularOrbit(0.60 * earthRadiusToAU, 0.00032, seededPhase("panspira"))
+                .circularOrbit(0.60 * earthRadiusToAU, 0.00057, seededPhase("panspira"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.75)
                 .properties(
@@ -109,9 +109,9 @@ public final class CelestialRegistry {
                 .dimension(DimensionEnum.HEMATERIA)
                 .parent("vael")
                 .objectClass(CelestialObjectClass.PLANET)
-                .circularOrbit(1.52 * earthRadiusToAU, 0.00020, seededPhase("hemateria"))
+                .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("hemateria"))
                 .texture(EnumTextures.HEMATERIA.get())
-                .spriteSize(0.10)
+                .spriteSize(0.825)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
@@ -127,9 +127,9 @@ public final class CelestialRegistry {
                 .dimension(DimensionEnum.THEIA)
                 .parent("hemateria")
                 .objectClass(CelestialObjectClass.MOON)
-                .circularOrbit(0.27 * earthRadiusToAU, 0.00068, seededPhase("theia"))
+                .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("theia"))
                 .texture(EnumTextures.EGORA.get())
-                .spriteSize(0.02)
+                .spriteSize(0.06)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
@@ -138,7 +138,6 @@ public final class CelestialRegistry {
                         .radiation(0.18)
                         .oreProfile("tektite_mercury")
                         .build())
-                .constructionLocation(StationConstructionLocation.SURFACE)
                 .build());
 
         register(
@@ -146,7 +145,9 @@ public final class CelestialRegistry {
                 .dimension(DimensionEnum.FROZEN_BELT)
                 .parent("vael")
                 .objectClass(CelestialObjectClass.ASTEROID_BELT)
-                .circularOrbit(2.30 * earthRadiusToAU, 0.00012, seededPhase("frozen_belt"))
+                .circularOrbit(2.30 * earthRadiusToAU, 0.00005, seededPhase("frozen_belt"))
+                .texture(EnumTextures.ICON_EGORA.get())
+                .spriteSize(0.60)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
@@ -156,7 +157,6 @@ public final class CelestialRegistry {
                         .oreProfile("ice_metallic")
                         .metadata("minorBodies", "enabled")
                         .build())
-                .constructionLocation(StationConstructionLocation.ORBITAL)
                 .build());
 
         register(
@@ -165,7 +165,9 @@ public final class CelestialRegistry {
                 .name("Ambergris Fragment")
                 .parent("frozen_belt")
                 .objectClass(CelestialObjectClass.ASTEROID)
-                .circularOrbit(0.18 * earthRadiusToAU, 0.00084, seededPhase("ambergris_fragment"))
+                .circularOrbit(0.18 * earthRadiusToAU, 0.00091, seededPhase("ambergris_fragment"))
+                .texture(EnumTextures.ICON_EGORA.get())
+                .spriteSize(0.05)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
@@ -175,7 +177,6 @@ public final class CelestialRegistry {
                         .oreProfile("rare_ice_metals")
                         .metadata("sizeClass", "minor")
                         .build())
-                .constructionLocation(StationConstructionLocation.SURFACE)
                 .build());
 
         register(
@@ -183,14 +184,15 @@ public final class CelestialRegistry {
                 .dimension(DimensionEnum.VITRIS_SPACE)
                 .parent("hemateria")
                 .objectClass(CelestialObjectClass.STATION)
-                .circularOrbit(0.04 * earthRadiusToAU, 0.00140, seededPhase("vitris_space"))
+                .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("vitris_space"))
+                .texture(EnumTextures.ICON_EGORA.get())
+                .spriteSize(0.08)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
                         .supportsAutomatedOutposts(false)
                         .metadata("stationRole", "orbital_logistics")
                         .build())
-                .constructionLocation(StationConstructionLocation.ORBITAL)
                 .build());
     }
 
@@ -295,7 +297,6 @@ public final class CelestialRegistry {
             registration.spriteSize(),
             registration.selectable(),
             registration.properties(),
-            registration.constructionLocation(),
             children);
     }
 }

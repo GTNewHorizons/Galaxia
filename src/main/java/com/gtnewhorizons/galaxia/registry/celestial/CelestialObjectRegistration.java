@@ -15,8 +15,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 public record CelestialObjectRegistration(String id, String name, String nameKey, String parentId,
     DimensionEnum dimensionEnum, CelestialObjectClass objectClass, OrbitalParams orbitalParams,
     AbsolutePosition absolutePosition,
-    ResourceLocation texture, double spriteSize, boolean selectable, CelestialBodyProperties properties,
-    StationConstructionLocation constructionLocation) {
+    ResourceLocation texture, double spriteSize, boolean selectable, CelestialBodyProperties properties) {
 
     public static Builder builder() {
         return new Builder();
@@ -36,7 +35,6 @@ public record CelestialObjectRegistration(String id, String name, String nameKey
         private double spriteSize;
         private boolean selectable = true;
         private CelestialBodyProperties properties = CelestialBodyProperties.builder().build();
-        private StationConstructionLocation constructionLocation = StationConstructionLocation.NONE;
 
         public Builder id(String value) {
             this.id = value;
@@ -122,11 +120,6 @@ public record CelestialObjectRegistration(String id, String name, String nameKey
             return this;
         }
 
-        public Builder constructionLocation(StationConstructionLocation value) {
-            this.constructionLocation = Objects.requireNonNull(value);
-            return this;
-        }
-
         public CelestialObjectRegistration build() {
             if (id == null || id.isEmpty()) throw new IllegalStateException("Celestial object id is required");
             if (name == null || name.isEmpty()) throw new IllegalStateException("Celestial object name is required");
@@ -143,8 +136,7 @@ public record CelestialObjectRegistration(String id, String name, String nameKey
                 texture,
                 spriteSize,
                 selectable,
-                properties,
-                constructionLocation);
+                properties);
         }
     }
 }

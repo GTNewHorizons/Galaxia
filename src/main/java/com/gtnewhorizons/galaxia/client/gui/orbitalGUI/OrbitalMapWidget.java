@@ -10,11 +10,11 @@ import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IGuiAction;
-import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -62,6 +62,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private OrbitalCelestialBody pendingFocusBody = null;
     private boolean clickCandidate = false;
+    private boolean debugOverlayEnabled = true;
     private int pressMouseX;
     private int pressMouseY;
 
@@ -77,6 +78,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private static final double CONVERGE_THRESHOLD = 0.001;
     private static final int CLICK_DRAG_THRESHOLD = 6;
+    private static final float MAP_ICON_BASE_SCALE = 18f;
+    private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
 
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
@@ -158,6 +161,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
         if (ch == '-') {
             timeScale = Math.max(timeScale / 1.35, 0.01);
+            return true;
+        }
+        if (keyCode == Keyboard.KEY_B) {
+            debugOverlayEnabled = !debugOverlayEnabled;
             return true;
         }
         return false;
@@ -304,9 +311,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private float getSpriteRadius(OrbitalCelestialBody body) {
         if (body.spriteSize() > 0.0001) {
-            return (float) Math.max(12.0, body.spriteSize() * getScale());
+            float spriteSize = (float) body.spriteSize();
+            float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) getScale() * MAP_ICON_ZOOM_SCALE);
+            return Math.max(2.0f, radius);
         }
-        return 12f;
+        return 2f;
     }
 
     private float getRenderedBodyRadius(OrbitalCelestialBody body) {
@@ -557,8 +566,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             && isVisibleInCurrentLayer(focusedBody)) drawSelectionHighlight(focusedBody);
 
         if (hoveredBody != null && isVisibleInCurrentLayer(hoveredBody)) {
-            drawHoverTooltip(hoveredBody, toLocalMouseX(getContext().getMouseX()), toLocalMouseY(getContext().getMouseY()));
-            drawHoverStatusText(hoveredBody);
+            drawHoverPanel(hoveredBody);
+        }
+
+        if (debugOverlayEnabled) {
+            drawDebugOverlay();
         }
     }
 
@@ -633,8 +645,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 actualLabelAlpha *= (float) Math.max(0.0, 1.0 - isometricProgress * 3.0);
             }
 
-            float cubeSize = getCubeSizeForBody(body);
-            float yOffset = (float) lerp(14.0, cubeSize / 2f + 8.0, (float) isometricProgress);
+            float yOffset = getLabelYOffset(body);
             int col = withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
             labelDrawCalls.add(new LabelDrawCall(body.displayName(), sx, sy + yOffset, col));
         }
@@ -670,6 +681,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private void registerHitboxes(OrbitalCelestialBody body, float sx, float sy) {
         float renderedRadius = getRenderedBodyRadius(body);
         float interactionRadius = getInteractionRadius(body);
+        float maxRadius = Math.max(renderedRadius, interactionRadius);
+
+        if (!isOnScreen(sx, sy, maxRadius)) {
+            return;
+        }
 
         screenBodies.add(new ScreenBodyBounds(body, sx, sy, renderedRadius, interactionRadius));
     }
@@ -718,10 +734,66 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
+    private void drawCircleOutline(float x, float y, float r, int colour, float alpha, float lineWidth) {
+        GlStateManager.disableTexture2D();
+        float red = ((colour >> 16) & 0xFF) / 255f;
+        float green = ((colour >> 8) & 0xFF) / 255f;
+        float blue = (colour & 0xFF) / 255f;
+        GlStateManager.color(red, green, blue, alpha);
+        GL11.glLineWidth(lineWidth);
+        GL11.glBegin(GL11.GL_LINE_LOOP);
+        for (int i = 0; i < 48; i++) {
+            double a = i * Math.PI * 2.0 / 48.0;
+            GL11.glVertex2f(x + (float) Math.cos(a) * r, y + (float) Math.sin(a) * r);
+        }
+        GL11.glEnd();
+        GL11.glLineWidth(1f);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+    }
+
+    private void drawSquareOutline(float x, float y, float halfSize, int colour, float alpha, float lineWidth) {
+        GlStateManager.disableTexture2D();
+        float red = ((colour >> 16) & 0xFF) / 255f;
+        float green = ((colour >> 8) & 0xFF) / 255f;
+        float blue = (colour & 0xFF) / 255f;
+        GlStateManager.color(red, green, blue, alpha);
+        GL11.glLineWidth(lineWidth);
+        GL11.glBegin(GL11.GL_LINE_LOOP);
+        GL11.glVertex2f(x - halfSize, y - halfSize);
+        GL11.glVertex2f(x + halfSize, y - halfSize);
+        GL11.glVertex2f(x + halfSize, y + halfSize);
+        GL11.glVertex2f(x - halfSize, y + halfSize);
+        GL11.glEnd();
+        GL11.glLineWidth(1f);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+    }
+
     private void drawCenteredString(String text, float x, float y, int colour) {
         Minecraft mc = Minecraft.getMinecraft();
         int w = mc.fontRenderer.getStringWidth(text);
         mc.fontRenderer.drawStringWithShadow(text, Math.round(x - w / 2f), Math.round(y), colour);
+    }
+
+    private void drawDebugOverlay() {
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(8, getArea().height - 36, 182, getArea().height - 8, 0x990B111C);
+        mc.fontRenderer.drawStringWithShadow("Debug: body hitzones", 14, getArea().height - 30, 0xFF7FFFD4);
+        mc.fontRenderer.drawStringWithShadow("Toggle: B", 14, getArea().height - 18, 0xFFB8C7D9);
+
+        for (ScreenBodyBounds bounds : screenBodies) {
+            drawSquareOutline(bounds.centerX, bounds.centerY, bounds.interactionRadius, 0xFF00E5FF, 0.95f, 1.5f);
+            Gui.drawRect(
+                Math.round(bounds.centerX) - 1,
+                Math.round(bounds.centerY) - 1,
+                Math.round(bounds.centerX) + 1,
+                Math.round(bounds.centerY) + 1,
+                0xFF9BFF7A);
+            mc.fontRenderer.drawStringWithShadow(
+                bounds.body.displayName(),
+                Math.round(bounds.centerX + bounds.interactionRadius + 4),
+                Math.round(bounds.centerY - 4),
+                0xFF9BFF7A);
+        }
     }
 
     private void drawCollectedLabels() {
@@ -789,68 +861,66 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         drawSelectionOverlay(sx, sy, box, 0.45f);
     }
 
-    private void drawHoverTooltip(OrbitalCelestialBody body, int mouseX, int mouseY) {
+    private void drawHoverPanel(OrbitalCelestialBody body) {
         Minecraft mc = Minecraft.getMinecraft();
-        String title = body.displayName();
-        String subtitle = formatHoverSubtitle(body);
-
-        int titleWidth = mc.fontRenderer.getStringWidth(title);
-        int subtitleWidth = subtitle.isEmpty() ? 0 : mc.fontRenderer.getStringWidth(subtitle);
-        int boxWidth = Math.max(titleWidth, subtitleWidth) + 12;
-        int boxHeight = subtitle.isEmpty() ? 16 : 26;
-
-        ScreenBodyBounds bounds = findScreenBodyBounds(body);
-        float sx = bounds == null ? mouseX : bounds.centerX;
-        float sy = bounds == null ? mouseY : bounds.centerY;
-        float selectionBox = bounds == null ? getSelectionBoxRadius(body) : getSelectionBoxRadius(bounds);
-
-        int x = Math.max(6, Math.min(Math.round(sx - boxWidth / 2f), getArea().width - boxWidth - 6));
-        int y = Math.max(6, Math.round(sy - selectionBox - boxHeight - 10));
-
-        Gui.drawRect(x, y, x + boxWidth, y + boxHeight, 0xD8101722);
-        Gui.drawRect(x, y, x + boxWidth, y + 1, 0xAA89C2FF);
-        Gui.drawRect(x, y + boxHeight - 1, x + boxWidth, y + boxHeight, 0xAA89C2FF);
-        Gui.drawRect(x, y, x + 1, y + boxHeight, 0xAA89C2FF);
-        Gui.drawRect(x + boxWidth - 1, y, x + boxWidth, y + boxHeight, 0xAA89C2FF);
-
-        mc.fontRenderer.drawStringWithShadow(title, x + 6, y + 4, 0xFFFFFFFF);
-        if (!subtitle.isEmpty()) {
-            mc.fontRenderer.drawStringWithShadow(subtitle, x + 6, y + 14, 0xFFB8C7D9);
+        List<InfoRow> rows = buildHoverInfoRows(body);
+        int widest = 0;
+        for (InfoRow row : rows) {
+            widest = Math.max(widest, mc.fontRenderer.getStringWidth(row.label));
+            widest = Math.max(widest, mc.fontRenderer.getStringWidth(row.value));
         }
-    }
+        int lineHeight = 18;
+        int boxWidth = Math.max(132, widest + 18);
+        int boxHeight = 10 + rows.size() * lineHeight;
+        int x = getArea().width - boxWidth - 18;
+        int y = Math.max(24, (getArea().height - boxHeight) / 2);
 
-    private void drawHoverStatusText(OrbitalCelestialBody body) {
-        Minecraft mc = Minecraft.getMinecraft();
-        mc.fontRenderer.drawStringWithShadow("Hover: " + body.displayName(), 12, 24, 0xFFD8ECFF);
-    }
+        Gui.drawRect(x, y, x + boxWidth, y + boxHeight, 0xE20E1526);
+        Gui.drawRect(x, y, x + boxWidth, y + 3, 0xFF4B55F2);
+        Gui.drawRect(x, y + boxHeight - 3, x + boxWidth, y + boxHeight, 0xFF4B55F2);
+        Gui.drawRect(x, y, x + 3, y + boxHeight, 0xFF4B55F2);
+        Gui.drawRect(x + boxWidth - 3, y, x + boxWidth, y + boxHeight, 0xFF4B55F2);
 
-    private String formatHoverSubtitle(OrbitalCelestialBody body) {
-        String objectClass = body.objectClass()
-            .name()
-            .toLowerCase()
-            .replace('_', ' ');
-        StringBuilder subtitle = new StringBuilder(objectClass);
-
-        if (body.properties().supportsAutomatedOutposts()) {
-            subtitle.append(" | outpost");
-        } else if (body.properties().visitable()) {
-            subtitle.append(" | visitable");
+        int textY = y + 8;
+        for (InfoRow row : rows) {
+            mc.fontRenderer.drawStringWithShadow(row.label, x + 12, textY, 0xFF5A63FF);
+            if (!row.value.isEmpty()) {
+                mc.fontRenderer.drawStringWithShadow(row.value, x + 12, textY + 9, 0xFFD9E0FF);
+            }
+            textY += lineHeight;
         }
-
-        return subtitle.toString();
     }
 
     private void drawSelectionOverlay(float centerX, float centerY, float boxSize, float alpha) {
-        GlStateManager.pushMatrix();
         GlStateManager.enableBlend();
         GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GlStateManager.color(1f, 1f, 1f, alpha);
-        GlStateManager.translate(centerX, centerY, 0);
-        float scale = Math.max(0.01f, boxSize / 64f);
-        GlStateManager.scale(scale, scale, 1f);
-        GuiDraw.drawTexture(EnumTextures.SELECTION_FRAME.get(), -64, -64, 128, 128, 0, 0, 128, 128);
-        GlStateManager.color(1f, 1f, 1f, 1f);
-        GlStateManager.popMatrix();
+        int color = withAlpha(0xFF18C8FF, alpha);
+        int thickness = 2;
+        int left = Math.round(centerX - boxSize);
+        int right = Math.round(centerX + boxSize);
+        int top = Math.round(centerY - boxSize);
+        int bottom = Math.round(centerY + boxSize);
+        int corner = Math.max(5, Math.min(12, Math.round(boxSize * 0.55f)));
+
+        drawCorner(left, top, corner, thickness, true, true, color);
+        drawCorner(right, top, corner, thickness, false, true, color);
+        drawCorner(left, bottom, corner, thickness, true, false, color);
+        drawCorner(right, bottom, corner, thickness, false, false, color);
+    }
+
+    private void drawCorner(int x, int y, int length, int thickness, boolean leftAligned, boolean topAligned, int color) {
+        int horizontalStart = leftAligned ? x : x - length;
+        int horizontalEnd = leftAligned ? x + length : x;
+        int horizontalTop = topAligned ? y : y - thickness;
+        int horizontalBottom = topAligned ? y + thickness : y;
+
+        int verticalLeft = leftAligned ? x : x - thickness;
+        int verticalRight = leftAligned ? x + thickness : x;
+        int verticalTop = topAligned ? y : y - length;
+        int verticalBottom = topAligned ? y + length : y;
+
+        Gui.drawRect(horizontalStart, horizontalTop, horizontalEnd, horizontalBottom, color);
+        Gui.drawRect(verticalLeft, verticalTop, verticalRight, verticalBottom, color);
     }
 
     private float getSelectionBoxRadius(OrbitalCelestialBody body) {
@@ -863,6 +933,76 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private float getInteractionRadius(OrbitalCelestialBody body) {
         return Math.max(5f, getRenderedBodyRadius(body));
+    }
+
+    private boolean isOnScreen(float sx, float sy, float radius) {
+        return sx >= 0 && sy >= 0 && sx <= getArea().width && sy <= getArea().height;
+    }
+
+    private float getLabelYOffset(OrbitalCelestialBody body) {
+        return getRenderedBodyRadius(body) + 6f;
+    }
+
+    private List<InfoRow> buildHoverInfoRows(OrbitalCelestialBody body) {
+        List<InfoRow> rows = new ArrayList<>();
+        rows.add(new InfoRow("Name", body.displayName()));
+        rows.add(new InfoRow("Type", formatObjectClass(body)));
+        rows.add(new InfoRow("Landable?", isLandable(body) ? "Yes" : "No"));
+        addDangerRows(rows, body);
+        rows.add(new InfoRow("Surface Type", formatSurfaceType(body)));
+        rows.add(new InfoRow("Ores", "Later"));
+        return rows;
+    }
+
+    private String formatObjectClass(OrbitalCelestialBody body) {
+        String raw = body.objectClass().name().toLowerCase().replace('_', ' ');
+        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
+    private boolean isLandable(OrbitalCelestialBody body) {
+        return switch (body.objectClass()) {
+            case PLANET, MOON, ASTEROID -> body.properties().visitable();
+            default -> false;
+        };
+    }
+
+    private void addDangerRows(List<InfoRow> rows, OrbitalCelestialBody body) {
+        List<String> dangers = new ArrayList<>();
+        if (body.properties().radiation() >= 0.25) {
+            dangers.add("Radiation");
+        }
+        if (body.properties().temperature() > 360) {
+            dangers.add("Extreme heat");
+        }
+        if (body.properties().temperature() > 0 && body.properties().temperature() < 120) {
+            dangers.add("Extreme cold");
+        }
+        if (!body.properties().visitable() && body.properties().supportsAutomatedOutposts()) {
+            dangers.add("Remote only");
+        }
+        if (dangers.isEmpty()) {
+            rows.add(new InfoRow("Dangers", "None"));
+            return;
+        }
+        rows.add(new InfoRow("Dangers", dangers.get(0)));
+        for (int i = 1; i < dangers.size(); i++) {
+            rows.add(new InfoRow("", dangers.get(i)));
+        }
+    }
+
+    private String formatSurfaceType(OrbitalCelestialBody body) {
+        String oreProfile = body.properties().oreProfile();
+        if (oreProfile == null || oreProfile.isEmpty()) {
+            return body.objectClass() == CelestialObjectClass.STATION ? "Artificial" : "Unknown";
+        }
+        String[] parts = oreProfile.split("_");
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            if (parts[i].isEmpty()) continue;
+            if (out.length() > 0) out.append(' ');
+            out.append(Character.toUpperCase(parts[i].charAt(0))).append(parts[i].substring(1));
+        }
+        return out.toString();
     }
 
     private static int withAlpha(int colour, float alpha) {
@@ -904,12 +1044,14 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         private double bodyScore(float x, float y) {
             double dx = x - centerX;
             double dy = y - centerY;
-            double radiusSq = interactionRadius * interactionRadius;
-            double distanceSq = dx * dx + dy * dy;
-            if (distanceSq > radiusSq) {
+            double absDx = Math.abs(dx);
+            double absDy = Math.abs(dy);
+            if (absDx > interactionRadius || absDy > interactionRadius) {
                 return Double.MAX_VALUE;
             }
-            return distanceSq / Math.max(1.0, radiusSq);
+            double normalizedDx = absDx / Math.max(1.0, interactionRadius);
+            double normalizedDy = absDy / Math.max(1.0, interactionRadius);
+            return Math.max(normalizedDx, normalizedDy);
         }
     }
 
@@ -925,6 +1067,17 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             this.x = x;
             this.y = y;
             this.color = color;
+        }
+    }
+
+    private static final class InfoRow {
+
+        private final String label;
+        private final String value;
+
+        private InfoRow(String label, String value) {
+            this.label = label;
+            this.value = value;
         }
     }
 
