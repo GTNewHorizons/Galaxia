@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import net.minecraft.block.Block;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -28,12 +29,14 @@ import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.StringSyncValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.PageButton;
 import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
@@ -44,6 +47,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketModule;
@@ -80,6 +84,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         destination = v;
         GALAXIA_NETWORK.sendToServer(new DestinationSetPacket(xCoord, yCoord, zCoord, v));
     });
+
+    private String pendingSchematicName = "";
 
     private TileEntityGantryTerminal gantryTerminal;
     private TileEntityModuleAssembler moduleAssembler;
@@ -379,6 +385,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         // Check validity of assembler path on UI build
         updateLinkedAssembler();
 
+        StringSyncValue nameSync = new StringSyncValue(this::getPendingSchematicName, this::setPendingSchematicName);
+
         if (!hasAssembler) {
             return panel.child(
                 IKey.str(
@@ -389,13 +397,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         }
 
         panel.child(
-            new PageButton(0, tabController).size(120, 28)
+            new PageButton(0, tabController).size(80, 28)
                 .pos(0, -28)
                 .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
             .child(
-                new PageButton(1, tabController).size(120, 28)
-                    .pos(120, -28)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
+                new PageButton(1, tabController).size(80, 28)
+                    .pos(80, -28)
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))))
+            .child(
+                new PageButton(2, tabController).size(80, 28)
+                    .pos(160, -28)
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.save"))));
 
         // Title
         panel.child(
@@ -447,8 +459,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         .alignment(Alignment.Center))
                                 .tooltip(
                                     t -> t.addLine(
-                                        StatCollector
-                                            .translateToLocal("galaxia.tooltip.rocket_silo.builder.return_modules")))
+                                        StatCollector.translateToLocal("galaxia.rocket_silo.builder.return_modules")))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
@@ -477,8 +488,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         .isEmpty()) {
                                         t.addLine(
                                             EnumChatFormatting.GRAY
-                                                + StatCollector.translateToLocal(
-                                                    "galaxia.tooltip.rocket_silo.builder.enter_rocket")
+                                                + StatCollector
+                                                    .translateToLocal("galaxia.rocket_silo.builder.modules_none")
                                                 + EnumChatFormatting.RESET);
                                         return;
                                     }
@@ -493,12 +504,50 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                 .tooltipAutoUpdate(true)
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
+                                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); }))))
+                // Schematic Page
+                .addPage(
+                    new ParentWidget<>().size(240, 160)
+                        .child(
+                            IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_text"))
+                                .asWidget()
+                                .pos(10, 40))
+                        .child(
+                            new TextFieldWidget().size(220, 30)
+                                .pos(10, 60)
+                                .setMaxLength(64)
+                                .value(nameSync)
+                                .autoUpdateOnChange(true))
+                        .child(
+                            new ButtonWidget<>().size(220, 30)
+                                .pos(10, 120)
+                                .overlay(
+                                    IKey.str(
+                                        EnumChatFormatting.GREEN
+                                            + StatCollector
+                                                .translateToLocal("galaxia.gui.rocket_silo.builder.schematic_save")
+                                            + EnumChatFormatting.RESET)
+                                        .alignment(Alignment.CENTER))
+                                .tooltipDynamic(t -> {
+                                    if (getAssembly().getModules()
+                                        .isEmpty()) {
+                                        t.addLine(
+                                            EnumChatFormatting.GRAY
+                                                + StatCollector.translateToLocal(
+                                                    "galaxia.tooltip.rocket_silo.builder.modules_none")
+                                                + EnumChatFormatting.RESET);
+                                        return;
+                                    }
+                                })
+                                .tooltipAutoUpdate(true)
+                                .syncHandler(
+                                    new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
-                                            if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data);
+                                            if (md.mouseButton == 0 && !worldObj.isRemote)
+                                                captureSchematic(data.getPlayer());
                                         })))));
 
         return panel;
-
     }
 
     /**
@@ -616,6 +665,22 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     public boolean hasRemaining(int id, TileEntityModuleAssembler assembler) {
         if (assembler == null) return false;
         return assembler.moduleMap.getOrDefault(id, 0) > 0;
+    }
+
+    public void captureSchematic(EntityPlayer player) {
+        if (worldObj.isRemote || modules.isEmpty()) return;
+        ItemStack schematic = ItemRocketSchematic.captureFromSilo(this, pendingSchematicName);
+        if (schematic != null) {
+            player.inventory.addItemStackToInventory(schematic);
+        }
+    }
+
+    public String getPendingSchematicName() {
+        return pendingSchematicName;
+    }
+
+    public void setPendingSchematicName(String name) {
+        this.pendingSchematicName = name;
     }
 
     /**
