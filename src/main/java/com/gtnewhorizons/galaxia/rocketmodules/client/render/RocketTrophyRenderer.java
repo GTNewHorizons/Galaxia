@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityRocketTrop
 
 public class RocketTrophyRenderer extends TileEntitySpecialRenderer {
 
-    // TODO fix normal shadows
+    // TODO: fix normal shadows
     @Override
     public void renderTileEntityAt(TileEntity te, double x, double y, double z, float partialTicks) {
         if (!(te instanceof TileEntityRocketTrophy trophy)) return;

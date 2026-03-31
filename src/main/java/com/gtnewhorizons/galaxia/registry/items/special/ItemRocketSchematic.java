@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.IIcon;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants.NBT;
 
@@ -18,8 +20,19 @@ import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 public class ItemRocketSchematic extends Item {
 
-    public ItemRocketSchematic() {}
+    public ItemRocketSchematic() {
+        super();
+    }
 
+    /**
+     * Captures the current rocket assembly from a silo and saves it to a new
+     * schematic item
+     *
+     * @param silo The rocket silo being saved from
+     * @param The  name entered for the schematic build
+     *
+     * @return The ItemStack with the schematic
+     */
     public static ItemStack captureFromSilo(TileEntitySilo silo, String name) {
         ArrayList<Integer> moduleIds = silo.getModules();
         if (moduleIds.isEmpty()) return null;
@@ -41,6 +54,13 @@ public class ItemRocketSchematic extends Item {
         return stack;
     }
 
+    /**
+     * A static method to get the modules from a rocket schematic
+     *
+     * @param stack The item stack to read modules from
+     *
+     * @return The list of integer types containing all modules
+     */
     public static List<Integer> readModules(ItemStack stack) {
         List<Integer> result = new ArrayList<>();
         if (stack == null || !stack.hasTagCompound()) return result;
@@ -74,5 +94,11 @@ public class ItemRocketSchematic extends Item {
             StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.height", assembly.getTotalHeight()));
         tooltip.add(
             StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.width", assembly.getTotalWidth()));
+    }
+
+    // TODO: REMOVE ONCE A TEXTURE IS CREATED
+    @Override
+    public IIcon getIconFromDamage(int damage) {
+        return Items.paper.getIconFromDamage(0);
     }
 }

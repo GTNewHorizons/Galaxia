@@ -92,14 +92,14 @@ public class TileEntityRocketTrophy extends TileEntity implements IGuiHolder<Pos
         float[] rowTopSteps = { 0.5f, 0.5f, 0.5f };
         float[] rowBotSteps = { 5f, 5f, 0.1f };
         StringSyncValue[] syncsTop = new StringSyncValue[] {
-            new StringSyncValue(() -> String.valueOf(offsetX), s -> setOffsetX(Float.parseFloat(s))),
-            new StringSyncValue(() -> String.valueOf(offsetY), s -> setOffsetY(Float.parseFloat(s))),
-            new StringSyncValue(() -> String.valueOf(offsetZ), s -> setOffsetZ(Float.parseFloat(s))), };
+            new StringSyncValue(() -> String.format("%.2f", offsetX), s -> setOffsetX(Float.parseFloat(s))),
+            new StringSyncValue(() -> String.format("%.2f", offsetY), s -> setOffsetY(Float.parseFloat(s))),
+            new StringSyncValue(() -> String.format("%.2f", offsetZ), s -> setOffsetZ(Float.parseFloat(s))), };
 
         StringSyncValue[] syncsBot = new StringSyncValue[] {
-            new StringSyncValue(() -> String.valueOf(pitch), s -> setPitch(Float.parseFloat(s))),
-            new StringSyncValue(() -> String.valueOf(yaw), s -> setYaw(Float.parseFloat(s))),
-            new StringSyncValue(() -> String.valueOf(scale), s -> setScale(Float.parseFloat(s))), };
+            new StringSyncValue(() -> String.format("%.2f", pitch), s -> setPitch(Float.parseFloat(s))),
+            new StringSyncValue(() -> String.format("%.2f", yaw), s -> setYaw(Float.parseFloat(s))),
+            new StringSyncValue(() -> String.format("%.2f", scale), s -> setScale(Float.parseFloat(s))), };
 
         for (int axis = 0; axis < 3; axis++) {
             final int a = axis;

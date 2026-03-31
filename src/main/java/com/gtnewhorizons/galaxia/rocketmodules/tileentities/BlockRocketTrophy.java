@@ -16,7 +16,7 @@ public class BlockRocketTrophy extends BlockContainer {
 
     public BlockRocketTrophy() {
         super(Material.iron);
-        setHardness(2.0f);
+        setBlockTextureName("diamond_block");
     }
 
     @Override

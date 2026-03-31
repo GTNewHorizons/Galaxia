@@ -113,12 +113,14 @@ public final class RocketAssembly {
     }
 
     public double getTotalWidth() {
-        return getPlacements().stream()
-            .mapToDouble(
-                p -> p.x() + p.type()
-                    .getWidth())
-            .max()
-            .orElse(0.0);
+        return Math.round(
+            getPlacements().stream()
+                .mapToDouble(
+                    p -> p.x() + p.type()
+                        .getWidth())
+                .max()
+                .orElse(0.0) * 100.0)
+            / 100.0;
     }
 
     public double getTotalWeight() {
