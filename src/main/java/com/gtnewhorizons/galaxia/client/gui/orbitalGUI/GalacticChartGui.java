@@ -10,6 +10,8 @@ import com.gtnewhorizons.galaxia.orbitalGUI.GalaxiaRegistry;
 
 public class GalacticChartGui {
 
+    private static final int LEFT_PANEL_WIDTH = 216;
+
     public ModularPanel build(PanelSyncManager syncManager) {
         ModularPanel panel = ModularPanel.defaultPanel("galactic_orbital_map")
             .fullScreenInvisible();
@@ -25,10 +27,10 @@ public class GalacticChartGui {
         return panel.child(
             (IWidget) sidebar.left(0)
                 .top(0)
-                .width(280)
+                .width(LEFT_PANEL_WIDTH)
                 .bottom(0))
             .child(
-                (IWidget) map.left(280)
+                (IWidget) map.left(LEFT_PANEL_WIDTH)
                     .top(0)
                     .right(0)
                     .bottom(0));

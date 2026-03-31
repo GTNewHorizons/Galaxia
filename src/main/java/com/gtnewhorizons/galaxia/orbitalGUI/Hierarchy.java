@@ -66,6 +66,10 @@ public final class Hierarchy {
             }
             return name;
         }
+
+        public boolean hasDimension() {
+            return dimensionEnum != null;
+        }
     }
 
     public static final class MetadataBuilder {

@@ -22,6 +22,12 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetLocation;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyAssetState;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialConstructionSite;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialManagedAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
 
@@ -65,6 +71,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private boolean debugOverlayEnabled = true;
     private int pressMouseX;
     private int pressMouseY;
+    private OrbitalCelestialBody contextMenuBody = null;
+    private int contextMenuX;
+    private int contextMenuY;
+    private String actionStatusMessage = "";
+    private long actionStatusExpiresAt = 0L;
+    private OrbitalCelestialBody assetManagementBody = null;
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
@@ -80,6 +92,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private static final int CLICK_DRAG_THRESHOLD = 6;
     private static final float MAP_ICON_BASE_SCALE = 18f;
     private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
+    private static final float MAP_LABEL_SCALE = 0.82f;
+    private static final int GALAXY_TITLE_TOP = 10;
+    private static final int GALAXY_TITLE_HEIGHT = 21;
 
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
@@ -101,6 +116,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     public void showLayer(OrbitalCelestialBody layerRoot) {
         OrbitalCelestialBody targetLayer = layerRoot == null ? root : layerRoot;
         this.viewRoot = targetLayer;
+        closeContextMenu();
+        closeAssetManagement();
         focusOn(targetLayer);
     }
 
@@ -120,6 +137,14 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
 
         listenGuiAction((IGuiAction.MousePressed) button -> {
+            if (assetManagementBody != null) {
+                return true;
+            }
+            if (button == 0 && contextMenuBody != null) {
+                clickCandidate = false;
+                dragging = false;
+                return true;
+            }
             if (button != 0) return false;
             pressMouseX = getContext().getMouseX();
             pressMouseY = getContext().getMouseY();
@@ -133,6 +158,45 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 handleMouseDragged(getContext().getMouseX(), getContext().getMouseY(), mouseButton, time));
 
         listenGuiAction((IGuiAction.MouseReleased) mouseButton -> {
+            int localMouseX = toLocalMouseX(getContext().getMouseX());
+            int localMouseY = toLocalMouseY(getContext().getMouseY());
+
+            if (assetManagementBody != null) {
+                if (mouseButton == 0 && handleAssetManagementClick(localMouseX, localMouseY)) {
+                    clickCandidate = false;
+                    dragging = false;
+                    return true;
+                }
+                if (mouseButton == 1) {
+                    return true;
+                }
+            }
+
+            if (contextMenuBody != null) {
+                if (mouseButton == 0) {
+                    if (handleContextMenuClick(localMouseX, localMouseY)) {
+                        clickCandidate = false;
+                        dragging = false;
+                        return true;
+                    }
+                    closeContextMenu();
+                } else if (mouseButton == 1 && isWithinContextMenu(localMouseX, localMouseY)) {
+                    return true;
+                }
+            }
+
+            if (mouseButton == 1) {
+                OrbitalCelestialBody clickedBody = findBodyAtScreen(getContext().getMouseX(), getContext().getMouseY());
+                if (clickedBody != null) {
+                    openContextMenu(clickedBody, localMouseX, localMouseY);
+                    clickCandidate = false;
+                    dragging = false;
+                    return true;
+                }
+                closeContextMenu();
+                return false;
+            }
+
             if (mouseButton == 0 && clickCandidate) {
                 OrbitalCelestialBody clickedBody = findBodyAtScreen(getContext().getMouseX(), getContext().getMouseY());
                 if (clickedBody != null) {
@@ -171,6 +235,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private boolean handleMouseWheel(UpOrDown dir, int mx, int my) {
+        if (assetManagementBody != null) {
+            return true;
+        }
         int sign = dir.isUp() ? 1 : dir.isDown() ? -1 : 0;
         if (sign == 0) return false;
 
@@ -195,6 +262,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private boolean handleMouseDragged(int mx, int my, int button, long time) {
         if (button != 0) return false;
+        if (assetManagementBody != null) return true;
         int lx = toLocalMouseX(mx);
         int ly = toLocalMouseY(my);
         if (Math.abs(mx - pressMouseX) > CLICK_DRAG_THRESHOLD || Math.abs(my - pressMouseY) > CLICK_DRAG_THRESHOLD) {
@@ -550,6 +618,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             12,
             12,
             EnumColors.MapStatusText.getColor());
+        drawActionStatusMessage();
+        drawViewTitleBanner();
 
         hoveredBody = dragging ? null : findBodyAtLocal(getContext().getMouseX(), getContext().getMouseY());
         if (hoveredBody != null && hoveredBody.objectClass() == CelestialObjectClass.GALAXY) {
@@ -565,13 +635,17 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (focusedBody != null && focusedBody.objectClass() != CelestialObjectClass.GALAXY
             && isVisibleInCurrentLayer(focusedBody)) drawSelectionHighlight(focusedBody);
 
-        if (hoveredBody != null && isVisibleInCurrentLayer(hoveredBody)) {
-            drawHoverPanel(hoveredBody);
-        }
-
         if (debugOverlayEnabled) {
             drawDebugOverlay();
         }
+
+        OrbitalCelestialBody infoBody = getPinnedInfoBody();
+        if (infoBody != null) {
+            drawPinnedInfoPanel(infoBody);
+        }
+
+        drawAssetManagementModal();
+        drawContextMenu();
     }
 
     private void drawOrbitsRecursive(OrbitalCelestialBody body, double parentWX, double parentWY) {
@@ -582,7 +656,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
 
         for (OrbitalCelestialBody child : body.children()) {
-            if (ellipseAlpha > 0.01f && !usesAbsolutePosition(body, child)) {
+            if (ellipseAlpha > 0.01f && !usesAbsolutePosition(body, child) && shouldRenderBodyAtCurrentZoom(child)) {
                 drawEllipse(child.orbitalParams(), parentWX, parentWY, ellipseAlpha);
             }
             double[] childWorldPos = resolveChildWorldPos(body, child, parentWX, parentWY, globalTime);
@@ -607,7 +681,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             bodyAlpha = (float) Math.max(0.0, 1.0 - isometricProgress * 3.0);
         }
 
-        if (body.objectClass() != CelestialObjectClass.GALAXY && bodyAlpha > 0.01f) {
+        boolean renderBody = shouldRenderBodyAtCurrentZoom(body);
+        if (body.objectClass() != CelestialObjectClass.GALAXY && bodyAlpha > 0.01f && renderBody) {
             ResourceLocation texture = getRenderTexture(body);
             if (texture != null && body.spriteSize() > 0.0001) {
                 float bodyRadius = getRenderedBodyRadius(body);
@@ -645,9 +720,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 actualLabelAlpha *= (float) Math.max(0.0, 1.0 - isometricProgress * 3.0);
             }
 
-            float yOffset = getLabelYOffset(body);
-            int col = withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
-            labelDrawCalls.add(new LabelDrawCall(body.displayName(), sx, sy + yOffset, col));
+            if (shouldRenderBodyAtCurrentZoom(body)) {
+                float yOffset = getLabelYOffset(body);
+                int col = withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
+                labelDrawCalls.add(new LabelDrawCall(body.displayName(), sx, sy + yOffset, col));
+            }
         }
 
         if (!shouldTraverseChildren(body)) {
@@ -771,7 +848,100 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private void drawCenteredString(String text, float x, float y, int colour) {
         Minecraft mc = Minecraft.getMinecraft();
         int w = mc.fontRenderer.getStringWidth(text);
+        GlStateManager.pushMatrix();
+        GlStateManager.scale(MAP_LABEL_SCALE, MAP_LABEL_SCALE, 1f);
+        mc.fontRenderer.drawStringWithShadow(
+            text,
+            Math.round((x / MAP_LABEL_SCALE) - (w / 2f)),
+            Math.round(y / MAP_LABEL_SCALE),
+            colour);
+        GlStateManager.popMatrix();
+    }
+
+    private void drawViewTitleBanner() {
+        if (viewRoot == null) {
+            return;
+        }
+
+        String title;
+        if (viewRoot.objectClass() == CelestialObjectClass.GALAXY) {
+            title = viewRoot.displayName();
+        } else if (viewRoot.objectClass() == CelestialObjectClass.STAR) {
+            title = viewRoot.displayName() + " System";
+        } else {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        int textWidth = mc.fontRenderer.getStringWidth(title);
+        float centerX = getArea().width / 2f;
+        int top = GALAXY_TITLE_TOP;
+        int bottom = top + GALAXY_TITLE_HEIGHT;
+        float bottomHalfWidth = Math.max(74f, textWidth / 2f + 28f);
+        float topHalfWidth = bottomHalfWidth + 8f;
+
+        drawFilledTrapezoid(centerX, top, bottom, topHalfWidth, bottomHalfWidth, 0xEE162133);
+        drawTrapezoidOutline(centerX, top, bottom, topHalfWidth, bottomHalfWidth, 0xFF7FB6FF, 1.4f);
+        drawCenteredBannerString(title, centerX, top + 7, 0xFFFFFFFF);
+    }
+
+    private void prepareFilledShapeDraw(int colour) {
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        float red = ((colour >> 16) & 0xFF) / 255f;
+        float green = ((colour >> 8) & 0xFF) / 255f;
+        float blue = (colour & 0xFF) / 255f;
+        float alpha = ((colour >> 24) & 0xFF) / 255f;
+        GlStateManager.color(red, green, blue, alpha);
+    }
+
+    private void finishFilledShapeDraw() {
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GlStateManager.enableTexture2D();
+    }
+
+    private void drawCenteredBannerString(String text, float x, float y, int colour) {
+        Minecraft mc = Minecraft.getMinecraft();
+        int w = mc.fontRenderer.getStringWidth(text);
         mc.fontRenderer.drawStringWithShadow(text, Math.round(x - w / 2f), Math.round(y), colour);
+    }
+
+    private void drawFilledTrapezoid(float centerX, int top, int bottom, float topHalfWidth, float bottomHalfWidth,
+        int colour) {
+        prepareFilledShapeDraw(colour);
+        for (int y = top; y < bottom; y++) {
+            float t = (y - top) / (float) Math.max(1, bottom - top);
+            float halfWidth = topHalfWidth + (bottomHalfWidth - topHalfWidth) * t;
+            int left = Math.round(centerX - halfWidth);
+            int right = Math.round(centerX + halfWidth);
+            Gui.drawRect(left, y, right, y + 1, colour);
+        }
+        finishFilledShapeDraw();
+    }
+
+    private void drawTrapezoidOutline(float centerX, int top, int bottom, float topHalfWidth, float bottomHalfWidth,
+        int colour, float lineWidth) {
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        float red = ((colour >> 16) & 0xFF) / 255f;
+        float green = ((colour >> 8) & 0xFF) / 255f;
+        float blue = (colour & 0xFF) / 255f;
+        float alpha = ((colour >> 24) & 0xFF) / 255f;
+        GlStateManager.color(red, green, blue, alpha);
+        GL11.glLineWidth(lineWidth);
+        GL11.glBegin(GL11.GL_LINE_LOOP);
+        GL11.glVertex2f(centerX - topHalfWidth, top);
+        GL11.glVertex2f(centerX + topHalfWidth, top);
+        GL11.glVertex2f(centerX + bottomHalfWidth, bottom);
+        GL11.glVertex2f(centerX - bottomHalfWidth, bottom);
+        GL11.glEnd();
+        GL11.glLineWidth(1f);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        GlStateManager.enableTexture2D();
     }
 
     private void drawDebugOverlay() {
@@ -787,11 +957,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 Math.round(bounds.centerY) - 1,
                 Math.round(bounds.centerX) + 1,
                 Math.round(bounds.centerY) + 1,
-                0xFF9BFF7A);
-            mc.fontRenderer.drawStringWithShadow(
-                bounds.body.displayName(),
-                Math.round(bounds.centerX + bounds.interactionRadius + 4),
-                Math.round(bounds.centerY - 4),
                 0xFF9BFF7A);
         }
     }
@@ -835,19 +1000,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         Minecraft mc = Minecraft.getMinecraft();
         String name = body.displayName();
-        int labelY = (int)(sy - box - 26);
+        int labelY = (int)(sy - box - 22);
 
         drawSelectionOverlay(sx, sy, box, 1.0f);
-
-        GlStateManager.pushMatrix();
-        GlStateManager.enableTexture2D();
-        mc.fontRenderer.drawStringWithShadow(
-            name,
-            (int)(sx - mc.fontRenderer.getStringWidth(name) / 2f),
-            labelY,
-            0xFFFFFFFF
-        );
-        GlStateManager.popMatrix();
+        drawCenteredString(name, sx, labelY, 0xFFFFFFFF);
     }
 
     private void drawHoverHighlight(OrbitalCelestialBody body) {
@@ -861,25 +1017,34 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         drawSelectionOverlay(sx, sy, box, 0.45f);
     }
 
-    private void drawHoverPanel(OrbitalCelestialBody body) {
+    private OrbitalCelestialBody getPinnedInfoBody() {
+        if (hoveredBody != null && hoveredBody.objectClass() != CelestialObjectClass.GALAXY
+            && isVisibleInCurrentLayer(hoveredBody)) {
+            return hoveredBody;
+        }
+        return null;
+    }
+
+    private void drawPinnedInfoPanel(OrbitalCelestialBody body) {
         Minecraft mc = Minecraft.getMinecraft();
-        List<InfoRow> rows = buildHoverInfoRows(body);
+        List<InfoRow> rows = buildPinnedInfoRows(body);
         int widest = 0;
         for (InfoRow row : rows) {
             widest = Math.max(widest, mc.fontRenderer.getStringWidth(row.label));
             widest = Math.max(widest, mc.fontRenderer.getStringWidth(row.value));
         }
+
         int lineHeight = 18;
-        int boxWidth = Math.max(132, widest + 18);
+        int boxWidth = Math.max(150, widest + 18);
         int boxHeight = 10 + rows.size() * lineHeight;
         int x = getArea().width - boxWidth - 18;
         int y = Math.max(24, (getArea().height - boxHeight) / 2);
 
-        Gui.drawRect(x, y, x + boxWidth, y + boxHeight, 0xE20E1526);
-        Gui.drawRect(x, y, x + boxWidth, y + 3, 0xFF4B55F2);
-        Gui.drawRect(x, y + boxHeight - 3, x + boxWidth, y + boxHeight, 0xFF4B55F2);
-        Gui.drawRect(x, y, x + 3, y + boxHeight, 0xFF4B55F2);
-        Gui.drawRect(x + boxWidth - 3, y, x + boxWidth, y + boxHeight, 0xFF4B55F2);
+        Gui.drawRect(x, y, x + boxWidth, y + boxHeight, 0xFF162133);
+        Gui.drawRect(x, y, x + boxWidth, y + 2, 0xFF7FB6FF);
+        Gui.drawRect(x, y + boxHeight - 2, x + boxWidth, y + boxHeight, 0xFF7FB6FF);
+        Gui.drawRect(x, y, x + 2, y + boxHeight, 0xFF7FB6FF);
+        Gui.drawRect(x + boxWidth - 2, y, x + boxWidth, y + boxHeight, 0xFF7FB6FF);
 
         int textY = y + 8;
         for (InfoRow row : rows) {
@@ -889,6 +1054,453 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             }
             textY += lineHeight;
         }
+    }
+
+    private List<InfoRow> buildPinnedInfoRows(OrbitalCelestialBody body) {
+        List<InfoRow> rows = new ArrayList<>();
+        rows.add(new InfoRow("Name", body.displayName()));
+        rows.add(new InfoRow("Type", formatObjectClass(body.objectClass())));
+        rows.add(new InfoRow("Landable", isLandable(body) ? "Yes" : "No"));
+        rows.add(new InfoRow("Dangers", buildDangerSummary(body)));
+        rows.add(new InfoRow("Surface", formatSurfaceType(body)));
+        rows.add(new InfoRow("Ores", body.properties().oreProfile().isEmpty() ? "Later" : formatSurfaceType(body)));
+        return rows;
+    }
+
+    private String buildDangerSummary(OrbitalCelestialBody body) {
+        List<String> dangers = new ArrayList<>();
+        if (body.properties().radiation() >= 0.25) {
+            dangers.add("Radiation");
+        }
+        if (body.properties().temperature() > 360) {
+            dangers.add("Heat");
+        }
+        if (body.properties().temperature() > 0 && body.properties().temperature() < 120) {
+            dangers.add("Cold");
+        }
+        if (!body.properties().visitable() && body.properties().canCreateOutpost()) {
+            dangers.add("Remote");
+        }
+        return dangers.isEmpty() ? "None" : String.join(", ", dangers);
+    }
+
+    private void drawContextMenu() {
+        ContextMenuLayout layout = getContextMenuLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        int mouseX = toLocalMouseX(getContext().getMouseX());
+        int mouseY = toLocalMouseY(getContext().getMouseY());
+
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF111925);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + layout.headerHeight, 0xFF23324B);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 2, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.bottom - 2, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.left + 2, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.right - 2, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
+
+        mc.fontRenderer.drawStringWithShadow(contextMenuBody.displayName(), layout.left + 10, layout.top + 7, 0xFFFFFFFF);
+
+        for (int i = 0; i < layout.actions.size(); i++) {
+            ContextMenuAction action = layout.actions.get(i);
+            int rowTop = layout.top + layout.headerHeight + i * layout.rowHeight;
+            int rowBottom = rowTop + layout.rowHeight;
+            boolean hovered = mouseX >= layout.left && mouseX <= layout.right && mouseY >= rowTop && mouseY < rowBottom;
+
+            if (hovered && action.enabled) {
+                Gui.drawRect(layout.left + 4, rowTop, layout.right - 4, rowBottom - 1, 0xFF375575);
+            }
+
+            int color = action.enabled ? 0xFFD9E0FF : 0xFF6F7A89;
+            mc.fontRenderer.drawStringWithShadow(action.label, layout.left + 10, rowTop + 5, color);
+        }
+    }
+
+    private void drawAssetManagementModal() {
+        AssetManagementLayout layout = getAssetManagementLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        CelestialBodyAssetState state = CelestialAssetStore.getState(assetManagementBody.id());
+
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xAA09111B);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 28, 0xFF22324A);
+
+        mc.fontRenderer.drawStringWithShadow("Manage Assets", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(assetManagementBody.displayName(), layout.left + 120, layout.top + 10, 0xFFD9E0FF);
+
+        drawModalButton(layout.closeButton, "Close", true, false);
+        drawModalButton(layout.createStationButton, "Create Station", assetManagementBody.properties().canCreateStation(), false);
+        drawModalButton(layout.createOutpostButton, "Create Outpost", assetManagementBody.properties().canCreateOutpost(), false);
+
+        mc.fontRenderer.drawStringWithShadow("Construction", layout.left + 14, layout.top + 54, 0xFF5A63FF);
+        int siteY = layout.top + 70;
+        if (state.constructionSites().isEmpty()) {
+            mc.fontRenderer.drawStringWithShadow("No construction sites", layout.left + 18, siteY, 0xFF9AA7B8);
+        } else {
+            for (ConstructionSiteRow row : layout.siteRows) {
+                CelestialConstructionSite site = row.site;
+                Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
+                mc.fontRenderer.drawStringWithShadow(site.displayName(), row.left + 8, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(
+                    formatAssetKind(site.kind()) + " | " + formatAssetLocation(site.location()) + " | "
+                        + site.status().name().toLowerCase().replace('_', ' '),
+                    row.left + 8,
+                    row.top + 16,
+                    0xFFD9E0FF);
+                drawModalButton(row.completeButton, "Complete", true, false);
+                drawModalButton(row.cancelButton, "Cancel Build", true, false);
+            }
+        }
+
+        int assetsHeaderY = layout.assetsSectionTop - 16;
+        mc.fontRenderer.drawStringWithShadow("Assets", layout.left + 14, assetsHeaderY, 0xFF5A63FF);
+        if (state.assets().isEmpty()) {
+            mc.fontRenderer.drawStringWithShadow("No deployed assets", layout.left + 18, layout.assetsSectionTop, 0xFF9AA7B8);
+        } else {
+            for (AssetRow row : layout.assetRows) {
+                CelestialManagedAsset asset = row.asset;
+                Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
+                mc.fontRenderer.drawStringWithShadow(asset.displayName(), row.left + 8, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(
+                    formatAssetKind(asset.kind()) + " | " + formatAssetLocation(asset.location()),
+                    row.left + 8,
+                    row.top + 16,
+                    0xFFD9E0FF);
+                drawModalButton(row.destroyButton, "Destroy", true, false);
+            }
+        }
+    }
+
+    private void drawModalButton(ButtonRect rect, String label, boolean enabled, boolean hovered) {
+        int bg = !enabled ? 0xFF243041 : hovered ? 0xFF3A5678 : 0xFF2D435D;
+        int border = enabled ? 0xFF7FB6FF : 0xFF556577;
+        Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, bg);
+        Gui.drawRect(rect.left, rect.top, rect.right, rect.top + 1, border);
+        Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, border);
+        Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, border);
+        Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, border);
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, rect.left + 8, rect.top + 5, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
+    }
+
+    private void drawActionStatusMessage() {
+        if (actionStatusMessage == null || actionStatusMessage.isEmpty()) {
+            return;
+        }
+        if (System.currentTimeMillis() > actionStatusExpiresAt) {
+            actionStatusMessage = "";
+            return;
+        }
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(actionStatusMessage, 12, 24, 0xFFD9E0FF);
+    }
+
+    private void openContextMenu(OrbitalCelestialBody body, int localMouseX, int localMouseY) {
+        if (body == null || body.objectClass() == CelestialObjectClass.GALAXY) {
+            closeContextMenu();
+            return;
+        }
+        contextMenuBody = body;
+        contextMenuX = localMouseX;
+        contextMenuY = localMouseY;
+    }
+
+    private void closeContextMenu() {
+        contextMenuBody = null;
+    }
+
+    private boolean handleContextMenuClick(int localMouseX, int localMouseY) {
+        ContextMenuLayout layout = getContextMenuLayout();
+        if (layout == null) {
+            return false;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            return false;
+        }
+        if (localMouseY < layout.top + layout.headerHeight) {
+            return true;
+        }
+
+        int rowIndex = (localMouseY - layout.top - layout.headerHeight) / layout.rowHeight;
+        if (rowIndex < 0 || rowIndex >= layout.actions.size()) {
+            return true;
+        }
+
+        ContextMenuAction action = layout.actions.get(rowIndex);
+        if (!action.enabled) {
+            return true;
+        }
+
+        if (action.actionType == ContextMenuActionType.MANAGE_ASSETS) {
+            openAssetManagement(contextMenuBody);
+        } else {
+            actionStatusMessage = action.feedbackMessage;
+            actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
+        }
+        closeContextMenu();
+        return true;
+    }
+
+    private boolean isWithinContextMenu(int localMouseX, int localMouseY) {
+        ContextMenuLayout layout = getContextMenuLayout();
+        return layout != null && localMouseX >= layout.left && localMouseX <= layout.right && localMouseY >= layout.top
+            && localMouseY <= layout.bottom;
+    }
+
+    private ContextMenuLayout getContextMenuLayout() {
+        if (contextMenuBody == null) {
+            return null;
+        }
+
+        List<ContextMenuAction> actions = buildContextMenuActions(contextMenuBody);
+        Minecraft mc = Minecraft.getMinecraft();
+        int maxTextWidth = mc.fontRenderer.getStringWidth(contextMenuBody.displayName());
+        for (ContextMenuAction action : actions) {
+            maxTextWidth = Math.max(maxTextWidth, mc.fontRenderer.getStringWidth(action.label));
+        }
+
+        int width = Math.max(150, maxTextWidth + 20);
+        int headerHeight = 22;
+        int rowHeight = 18;
+        int height = headerHeight + actions.size() * rowHeight;
+        int left = clamp(contextMenuX, 8, Math.max(8, getArea().width - width - 8));
+        int top = clamp(contextMenuY, 8, Math.max(8, getArea().height - height - 8));
+        return new ContextMenuLayout(left, top, left + width, top + height, headerHeight, rowHeight, actions);
+    }
+
+    private List<ContextMenuAction> buildContextMenuActions(OrbitalCelestialBody body) {
+        List<ContextMenuAction> actions = new ArrayList<>();
+        actions.add(new ContextMenuAction("Manage Assets", true, "", ContextMenuActionType.MANAGE_ASSETS));
+        if (body.properties().canCreateStation()) {
+            actions.add(
+                new ContextMenuAction("Create Station", true, "Use Manage Assets to create a station",
+                    ContextMenuActionType.MESSAGE));
+        }
+        if (body.properties().canCreateOutpost()) {
+            actions.add(
+                new ContextMenuAction("Create Outpost", true, "Use Manage Assets to create an outpost",
+                    ContextMenuActionType.MESSAGE));
+        }
+        if (actions.isEmpty()) {
+            actions.add(new ContextMenuAction("No actions available", false, "", ContextMenuActionType.MESSAGE));
+        }
+        return actions;
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private boolean shouldRenderBodyAtCurrentZoom(OrbitalCelestialBody body) {
+        if (isometricProgress > 0.01 || body == viewRoot || body == focusedBody) {
+            return true;
+        }
+        if (body.objectClass() != CelestialObjectClass.STATION && body.objectClass() != CelestialObjectClass.ASTEROID
+            && !(body.objectClass() == CelestialObjectClass.MOON && body.spriteSize() < 0.12)) {
+            return true;
+        }
+
+        OrbitalCelestialBody parent = findParent(root, body);
+        if (parent == null || parent.objectClass() == CelestialObjectClass.GALAXY) {
+            return true;
+        }
+        if (usesAbsolutePosition(parent, body)) {
+            return true;
+        }
+        float separation = (float) (body.orbitalParams().perigee() * getScale());
+        float minimumSeparation = getRenderedBodyRadius(body) + getRenderedBodyRadius(parent) + 10f;
+        return separation >= minimumSeparation;
+    }
+
+    private void openAssetManagement(OrbitalCelestialBody body) {
+        if (body == null || body.objectClass() == CelestialObjectClass.GALAXY) {
+            return;
+        }
+        assetManagementBody = body;
+    }
+
+    private void closeAssetManagement() {
+        assetManagementBody = null;
+    }
+
+    private boolean handleAssetManagementClick(int localMouseX, int localMouseY) {
+        AssetManagementLayout layout = getAssetManagementLayout();
+        if (layout == null) {
+            return false;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            closeAssetManagement();
+            return true;
+        }
+
+        if (layout.closeButton.contains(localMouseX, localMouseY)) {
+            closeAssetManagement();
+            return true;
+        }
+        if (layout.createStationButton.contains(localMouseX, localMouseY) && assetManagementBody.properties().canCreateStation()) {
+            CelestialAssetStore.createConstructionSite(
+                assetManagementBody.id(),
+                assetManagementBody.displayName() + " Orbital Station",
+                CelestialAssetKind.STATION,
+                CelestialAssetLocation.ORBIT);
+            showActionStatus("Station construction queued");
+            return true;
+        }
+        if (layout.createOutpostButton.contains(localMouseX, localMouseY) && assetManagementBody.properties().canCreateOutpost()) {
+            CelestialAssetStore.createConstructionSite(
+                assetManagementBody.id(),
+                assetManagementBody.displayName() + " Surface Outpost",
+                CelestialAssetKind.OUTPOST,
+                CelestialAssetLocation.SURFACE);
+            showActionStatus("Outpost construction queued");
+            return true;
+        }
+
+        for (ConstructionSiteRow row : layout.siteRows) {
+            if (row.completeButton.contains(localMouseX, localMouseY)) {
+                CelestialAssetStore.completeConstruction(row.site.siteId());
+                showActionStatus("Construction completed");
+                return true;
+            }
+            if (row.cancelButton.contains(localMouseX, localMouseY)) {
+                CelestialAssetStore.cancelConstruction(row.site.siteId());
+                showActionStatus("Construction canceled");
+                return true;
+            }
+        }
+
+        for (AssetRow row : layout.assetRows) {
+            if (row.destroyButton.contains(localMouseX, localMouseY)) {
+                CelestialAssetStore.destroyAsset(row.asset.assetId());
+                showActionStatus("Asset destroyed");
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    private AssetManagementLayout getAssetManagementLayout() {
+        if (assetManagementBody == null) {
+            return null;
+        }
+
+        CelestialBodyAssetState state = CelestialAssetStore.getState(assetManagementBody.id());
+        int width = Math.min(520, getArea().width - 80);
+        int height = Math.min(420, getArea().height - 60);
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+
+        ButtonRect closeButton = new ButtonRect(right - 88, top + 6, right - 12, top + 24);
+        ButtonRect createStationButton = new ButtonRect(left + 14, top + 30, left + 154, top + 48);
+        ButtonRect createOutpostButton = new ButtonRect(left + 164, top + 30, left + 304, top + 48);
+
+        List<ConstructionSiteRow> siteRows = new ArrayList<>();
+        int siteTop = top + 70;
+        int siteRowHeight = 34;
+        for (int i = 0; i < state.constructionSites().size(); i++) {
+            CelestialConstructionSite site = state.constructionSites().get(i);
+            int rowTop = siteTop + i * (siteRowHeight + 6);
+            int rowBottom = rowTop + siteRowHeight;
+            int rowRight = right - 14;
+            siteRows.add(
+                new ConstructionSiteRow(
+                    site,
+                    left + 14,
+                    rowTop,
+                    rowRight,
+                    rowBottom,
+                    new ButtonRect(rowRight - 168, rowTop + 8, rowRight - 88, rowTop + 26),
+                    new ButtonRect(rowRight - 82, rowTop + 8, rowRight - 8, rowTop + 26)));
+        }
+
+        int assetsSectionTop = Math.max(top + 220, siteTop + Math.max(1, state.constructionSites().size()) * (siteRowHeight + 6));
+        List<AssetRow> assetRows = new ArrayList<>();
+        int assetTop = assetsSectionTop;
+        for (int i = 0; i < state.assets().size(); i++) {
+            CelestialManagedAsset asset = state.assets().get(i);
+            int rowTop = assetTop + i * (siteRowHeight + 6);
+            int rowBottom = rowTop + siteRowHeight;
+            int rowRight = right - 14;
+            assetRows.add(
+                new AssetRow(
+                    asset,
+                    left + 14,
+                    rowTop,
+                    rowRight,
+                    rowBottom,
+                    new ButtonRect(rowRight - 82, rowTop + 8, rowRight - 8, rowTop + 26)));
+        }
+
+        return new AssetManagementLayout(
+            left,
+            top,
+            right,
+            bottom,
+            assetsSectionTop,
+            closeButton,
+            createStationButton,
+            createOutpostButton,
+            siteRows,
+            assetRows);
+    }
+
+    private void showActionStatus(String message) {
+        actionStatusMessage = message;
+        actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
+    }
+
+    private String formatAssetKind(CelestialAssetKind kind) {
+        return switch (kind) {
+            case STATION -> "Station";
+            case OUTPOST -> "Outpost";
+        };
+    }
+
+    private String formatAssetLocation(CelestialAssetLocation location) {
+        return switch (location) {
+            case ORBIT -> "Orbit";
+            case SURFACE -> "Surface";
+        };
+    }
+
+    private String formatObjectClass(CelestialObjectClass objectClass) {
+        String raw = objectClass.name().toLowerCase().replace('_', ' ');
+        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
+    private boolean isLandable(OrbitalCelestialBody body) {
+        return switch (body.objectClass()) {
+            case PLANET, MOON, ASTEROID -> body.properties().visitable();
+            default -> false;
+        };
+    }
+
+    private String formatSurfaceType(OrbitalCelestialBody body) {
+        String oreProfile = body.properties().oreProfile();
+        if (oreProfile == null || oreProfile.isEmpty()) {
+            return body.objectClass() == CelestialObjectClass.STATION ? "Artificial" : "Unknown";
+        }
+        String[] parts = oreProfile.split("_");
+        StringBuilder out = new StringBuilder();
+        for (String part : parts) {
+            if (part.isEmpty()) continue;
+            if (out.length() > 0) out.append(' ');
+            out.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return out.toString();
     }
 
     private void drawSelectionOverlay(float centerX, float centerY, float boxSize, float alpha) {
@@ -941,68 +1553,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private float getLabelYOffset(OrbitalCelestialBody body) {
         return getRenderedBodyRadius(body) + 6f;
-    }
-
-    private List<InfoRow> buildHoverInfoRows(OrbitalCelestialBody body) {
-        List<InfoRow> rows = new ArrayList<>();
-        rows.add(new InfoRow("Name", body.displayName()));
-        rows.add(new InfoRow("Type", formatObjectClass(body)));
-        rows.add(new InfoRow("Landable?", isLandable(body) ? "Yes" : "No"));
-        addDangerRows(rows, body);
-        rows.add(new InfoRow("Surface Type", formatSurfaceType(body)));
-        rows.add(new InfoRow("Ores", "Later"));
-        return rows;
-    }
-
-    private String formatObjectClass(OrbitalCelestialBody body) {
-        String raw = body.objectClass().name().toLowerCase().replace('_', ' ');
-        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
-    }
-
-    private boolean isLandable(OrbitalCelestialBody body) {
-        return switch (body.objectClass()) {
-            case PLANET, MOON, ASTEROID -> body.properties().visitable();
-            default -> false;
-        };
-    }
-
-    private void addDangerRows(List<InfoRow> rows, OrbitalCelestialBody body) {
-        List<String> dangers = new ArrayList<>();
-        if (body.properties().radiation() >= 0.25) {
-            dangers.add("Radiation");
-        }
-        if (body.properties().temperature() > 360) {
-            dangers.add("Extreme heat");
-        }
-        if (body.properties().temperature() > 0 && body.properties().temperature() < 120) {
-            dangers.add("Extreme cold");
-        }
-        if (!body.properties().visitable() && body.properties().supportsAutomatedOutposts()) {
-            dangers.add("Remote only");
-        }
-        if (dangers.isEmpty()) {
-            rows.add(new InfoRow("Dangers", "None"));
-            return;
-        }
-        rows.add(new InfoRow("Dangers", dangers.get(0)));
-        for (int i = 1; i < dangers.size(); i++) {
-            rows.add(new InfoRow("", dangers.get(i)));
-        }
-    }
-
-    private String formatSurfaceType(OrbitalCelestialBody body) {
-        String oreProfile = body.properties().oreProfile();
-        if (oreProfile == null || oreProfile.isEmpty()) {
-            return body.objectClass() == CelestialObjectClass.STATION ? "Artificial" : "Unknown";
-        }
-        String[] parts = oreProfile.split("_");
-        StringBuilder out = new StringBuilder();
-        for (int i = 0; i < parts.length; i++) {
-            if (parts[i].isEmpty()) continue;
-            if (out.length() > 0) out.append(' ');
-            out.append(Character.toUpperCase(parts[i].charAt(0))).append(parts[i].substring(1));
-        }
-        return out.toString();
     }
 
     private static int withAlpha(int colour, float alpha) {
@@ -1067,6 +1617,138 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             this.x = x;
             this.y = y;
             this.color = color;
+        }
+    }
+
+    private static final class ContextMenuAction {
+
+        private final String label;
+        private final boolean enabled;
+        private final String feedbackMessage;
+        private final ContextMenuActionType actionType;
+
+        private ContextMenuAction(String label, boolean enabled, String feedbackMessage, ContextMenuActionType actionType) {
+            this.label = label;
+            this.enabled = enabled;
+            this.feedbackMessage = feedbackMessage;
+            this.actionType = actionType;
+        }
+    }
+
+    private enum ContextMenuActionType {
+        MESSAGE,
+        MANAGE_ASSETS
+    }
+
+    private static final class ContextMenuLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final int headerHeight;
+        private final int rowHeight;
+        private final List<ContextMenuAction> actions;
+
+        private ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
+            List<ContextMenuAction> actions) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.headerHeight = headerHeight;
+            this.rowHeight = rowHeight;
+            this.actions = actions;
+        }
+    }
+
+    private static final class ButtonRect {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+
+        private ButtonRect(int left, int top, int right, int bottom) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+        }
+
+        private boolean contains(int x, int y) {
+            return x >= left && x <= right && y >= top && y <= bottom;
+        }
+    }
+
+    private static final class ConstructionSiteRow {
+
+        private final CelestialConstructionSite site;
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect completeButton;
+        private final ButtonRect cancelButton;
+
+        private ConstructionSiteRow(CelestialConstructionSite site, int left, int top, int right, int bottom,
+            ButtonRect completeButton, ButtonRect cancelButton) {
+            this.site = site;
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.completeButton = completeButton;
+            this.cancelButton = cancelButton;
+        }
+    }
+
+    private static final class AssetRow {
+
+        private final CelestialManagedAsset asset;
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect destroyButton;
+
+        private AssetRow(CelestialManagedAsset asset, int left, int top, int right, int bottom,
+            ButtonRect destroyButton) {
+            this.asset = asset;
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.destroyButton = destroyButton;
+        }
+    }
+
+    private static final class AssetManagementLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final int assetsSectionTop;
+        private final ButtonRect closeButton;
+        private final ButtonRect createStationButton;
+        private final ButtonRect createOutpostButton;
+        private final List<ConstructionSiteRow> siteRows;
+        private final List<AssetRow> assetRows;
+
+        private AssetManagementLayout(int left, int top, int right, int bottom, int assetsSectionTop,
+            ButtonRect closeButton, ButtonRect createStationButton, ButtonRect createOutpostButton,
+            List<ConstructionSiteRow> siteRows, List<AssetRow> assetRows) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.assetsSectionTop = assetsSectionTop;
+            this.closeButton = closeButton;
+            this.createStationButton = createStationButton;
+            this.createOutpostButton = createOutpostButton;
+            this.siteRows = siteRows;
+            this.assetRows = assetRows;
         }
     }
 

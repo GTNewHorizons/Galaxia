@@ -43,7 +43,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
-                        .supportsAutomatedOutposts(false)
+                        .canCreateStation(false)
+                        .canCreateOutpost(false)
                         .metadata("mapLayer", "stars")
                         .build())
                 .build());
@@ -61,7 +62,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
-                        .supportsAutomatedOutposts(false)
+                        .canCreateStation(false)
+                        .canCreateOutpost(false)
                         .metadata("system", "vael")
                         .build())
                 .build());
@@ -78,7 +80,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
-                        .supportsAutomatedOutposts(false)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
                         .temperature(288)
                         .radiation(0.05)
                         .oreProfile("temperate_crust")
@@ -97,7 +100,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
-                        .supportsAutomatedOutposts(false)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
                         .temperature(423)
                         .radiation(0.20)
                         .oreProfile("volcanic_heavy")
@@ -115,7 +119,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
-                        .supportsAutomatedOutposts(false)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
                         .temperature(67)
                         .radiation(0.10)
                         .oreProfile("frozen_minerals")
@@ -133,7 +138,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
-                        .supportsAutomatedOutposts(true)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
                         .temperature(225)
                         .radiation(0.18)
                         .oreProfile("tektite_mercury")
@@ -151,7 +157,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
-                        .supportsAutomatedOutposts(true)
+                        .canCreateStation(true)
+                        .canCreateOutpost(false)
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("ice_metallic")
@@ -171,7 +178,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
-                        .supportsAutomatedOutposts(true)
+                        .canCreateStation(false)
+                        .canCreateOutpost(true)
                         .temperature(41)
                         .radiation(0.52)
                         .oreProfile("rare_ice_metals")
@@ -190,7 +198,8 @@ public final class CelestialRegistry {
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(true)
-                        .supportsAutomatedOutposts(false)
+                        .canCreateStation(false)
+                        .canCreateOutpost(false)
                         .metadata("stationRole", "orbital_logistics")
                         .build())
                 .build());

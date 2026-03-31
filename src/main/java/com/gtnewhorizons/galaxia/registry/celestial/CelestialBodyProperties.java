@@ -7,8 +7,8 @@ import java.util.Map;
 import com.github.bsideup.jabel.Desugar;
 
 @Desugar
-public record CelestialBodyProperties(boolean visitable, boolean supportsAutomatedOutposts, String oreProfile,
-    double radiation, double temperature, Map<String, String> metadata) {
+public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
+    String oreProfile, double radiation, double temperature, Map<String, String> metadata) {
 
     public CelestialBodyProperties {
         metadata = metadata == null ? Collections.emptyMap()
@@ -22,7 +22,8 @@ public record CelestialBodyProperties(boolean visitable, boolean supportsAutomat
     public static final class Builder {
 
         private boolean visitable;
-        private boolean supportsAutomatedOutposts;
+        private boolean canCreateStation;
+        private boolean canCreateOutpost;
         private String oreProfile = "";
         private double radiation;
         private double temperature;
@@ -33,8 +34,13 @@ public record CelestialBodyProperties(boolean visitable, boolean supportsAutomat
             return this;
         }
 
-        public Builder supportsAutomatedOutposts(boolean value) {
-            this.supportsAutomatedOutposts = value;
+        public Builder canCreateStation(boolean value) {
+            this.canCreateStation = value;
+            return this;
+        }
+
+        public Builder canCreateOutpost(boolean value) {
+            this.canCreateOutpost = value;
             return this;
         }
 
@@ -61,7 +67,8 @@ public record CelestialBodyProperties(boolean visitable, boolean supportsAutomat
         public CelestialBodyProperties build() {
             return new CelestialBodyProperties(
                 visitable,
-                supportsAutomatedOutposts,
+                canCreateStation,
+                canCreateOutpost,
                 oreProfile,
                 radiation,
                 temperature,
