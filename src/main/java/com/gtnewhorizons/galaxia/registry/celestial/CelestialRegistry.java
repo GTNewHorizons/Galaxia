@@ -39,7 +39,6 @@ public final class CelestialRegistry {
                 .id("novum_caelum")
                 .name("Novum Caelum")
                 .objectClass(CelestialObjectClass.GALAXY)
-                .selectable(false)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
@@ -58,7 +57,6 @@ public final class CelestialRegistry {
                 .absolutePosition(0.0, 0.0)
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
-                .selectable(false)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
@@ -77,7 +75,6 @@ public final class CelestialRegistry {
                 .absolutePosition(5800.0, -2600.0)
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
-                .selectable(false)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
@@ -96,7 +93,6 @@ public final class CelestialRegistry {
                 .absolutePosition(-4900.0, 3400.0)
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.88)
-                .selectable(false)
                 .properties(
                     CelestialBodyProperties.builder()
                         .visitable(false)
@@ -112,7 +108,7 @@ public final class CelestialRegistry {
                 .name("Romulus")
                 .parent("ilia")
                 .objectClass(CelestialObjectClass.PLANET)
-                .circularOrbit(0.74 * earthRadiusToAU, 0.00031, seededPhase("ilia_romulus"))
+                .circularOrbit(0.296 * earthRadiusToAU, 0.00031, seededPhase("ilia_romulus"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.24)
                 .properties(
@@ -122,7 +118,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(301)
                         .radiation(0.08)
-                        .oreProfile("temperate_silicates")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .metadata("status", "placeholder_colony_world")
                         .build())
                 .build());
@@ -133,7 +130,7 @@ public final class CelestialRegistry {
                 .name("Remus")
                 .parent("ilia")
                 .objectClass(CelestialObjectClass.PLANET)
-                .circularOrbit(1.21 * earthRadiusToAU, 0.00018, seededPhase("ilia_remus"))
+                .circularOrbit(0.726 * earthRadiusToAU, 0.00018, seededPhase("ilia_remus"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.19)
                 .properties(
@@ -143,7 +140,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(182)
                         .radiation(0.14)
-                        .oreProfile("cold_metallic")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .build())
                 .build());
 
@@ -163,7 +161,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(288)
                         .radiation(0.05)
-                        .oreProfile("temperate_crust")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .metadata("status", "placeholder_homeworld")
                         .build())
                 .build());
@@ -183,7 +182,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(423)
                         .radiation(0.20)
-                        .oreProfile("volcanic_heavy")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .build())
                 .build());
 
@@ -202,7 +202,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(67)
                         .radiation(0.10)
-                        .oreProfile("frozen_minerals")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .build())
                 .build());
 
@@ -221,7 +222,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(225)
                         .radiation(0.18)
-                        .oreProfile("tektite_mercury")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .build())
                 .build());
 
@@ -240,7 +242,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(false)
                         .temperature(67)
                         .radiation(0.28)
-                        .oreProfile("ice_metallic")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled")
                         .build())
                 .build());
@@ -261,7 +264,8 @@ public final class CelestialRegistry {
                         .canCreateOutpost(true)
                         .temperature(41)
                         .radiation(0.52)
-                        .oreProfile("rare_ice_metals")
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .metadata("sizeClass", "minor")
                         .build())
                 .build());
@@ -279,6 +283,8 @@ public final class CelestialRegistry {
                         .visitable(true)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
+                        .oreProfile("undefined")
+                        .metadata("surface", "undefined")
                         .metadata("stationRole", "orbital_logistics")
                         .build())
                 .build());
@@ -383,7 +389,6 @@ public final class CelestialRegistry {
             registration.absolutePosition(),
             registration.texture(),
             registration.spriteSize(),
-            registration.selectable(),
             registration.properties(),
             children);
     }

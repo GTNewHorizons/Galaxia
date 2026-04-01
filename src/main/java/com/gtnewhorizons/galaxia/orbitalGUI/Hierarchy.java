@@ -51,8 +51,8 @@ public final class Hierarchy {
     @Desugar
     public record OrbitalCelestialBody(String id, String name, String nameKey, int dimensionId,
         DimensionEnum dimensionEnum, CelestialObjectClass objectClass, OrbitalParams orbitalParams,
-        AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize, boolean selectable,
-        CelestialBodyProperties properties, List<OrbitalCelestialBody> children) {
+        AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize, CelestialBodyProperties properties,
+        List<OrbitalCelestialBody> children) {
 
         public OrbitalCelestialBody {
             children = children == null ? Collections.emptyList()

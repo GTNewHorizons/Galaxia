@@ -83,15 +83,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private PendingAssetDestruction pendingAssetDestruction = null;
     private PendingConstructionCancellation pendingConstructionCancellation = null;
     private PendingResourceTransfer pendingResourceTransfer = null;
-    private OrbitalCelestialBody layerTransitionAnchorBody = null;
-    private LayerTransitionMode layerTransitionMode = LayerTransitionMode.NONE;
-    private double layerTransitionProgress = 1.0;
+    private OrbitalCelestialBody pendingLayerTarget = null;
+    private OrbitalCelestialBody pendingLayerAnchor = null;
+    private double pendingLayerStartZoom = 0.0;
+    private double pendingLayerTargetZoom = 0.0;
+    private LayerSwitchPhase layerSwitchPhase = LayerSwitchPhase.NONE;
+    private OrbitalCelestialBody layerSwitchTarget = null;
+    private OrbitalCelestialBody layerSwitchAnchor = null;
+    private double layerSwitchStartZoom = 0.0;
+    private double layerSwitchTargetZoom = 0.0;
+    private float layerSwitchStartSpriteSize = 0.0f;
+    private float layerSwitchTargetSpriteSize = 0.0f;
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
     private static final double LERP_SPEED = 0.045;
-    private static final double LAYER_VIEW_LERP_SPEED = 0.03;
-    private static final double LAYER_TRANSITION_SPEED = 0.075;
+    private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
+    private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
     private static final double KEPLER_BASE = 0.42;
 
     private static final float ISO_BASE_CUBE_SIZE = 42f;
@@ -100,13 +108,16 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private static final float ISO_Y_OFFSET = 20f;
 
     private static final double CONVERGE_THRESHOLD = 0.001;
+    private static final double PENDING_LAYER_SWITCH_CAMERA_THRESHOLD = 1.5;
+    private static final double LAYER_SWITCH_CONVERGE_THRESHOLD = 0.03;
     private static final int CLICK_DRAG_THRESHOLD = 6;
     private static final float MAP_ICON_BASE_SCALE = 18f;
     private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
     private static final float MAP_LABEL_SCALE = 0.82f;
-    private static final float GALAXY_STAR_RADIUS_SCALE = 0.34f;
+    private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
     private static final int GALAXY_TITLE_TOP = 10;
     private static final int GALAXY_TITLE_HEIGHT = 21;
+    private static final double SYSTEM_DEPARTURE_EXTENT_MULTIPLIER = 24.0;
 
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
@@ -116,7 +127,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     public OrbitalMapWidget withInitialLayer(OrbitalCelestialBody layerRoot) {
         this.initialLayer = layerRoot == null ? root : layerRoot;
-        this.viewRoot = this.initialLayer;
         return this;
     }
 
@@ -130,11 +140,31 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (this.viewRoot == targetLayer) {
             return;
         }
-        startLayerTransition(this.viewRoot, targetLayer);
-        this.viewRoot = targetLayer;
+        clearLayerSwitchState();
         closeContextMenu();
         closeAssetManagement();
-        focusOn(targetLayer);
+
+        OrbitalCelestialBody anchorBody = null;
+        if (this.viewRoot == root && targetLayer.objectClass() == CelestialObjectClass.STAR) {
+            anchorBody = targetLayer;
+        } else if (this.viewRoot.objectClass() == CelestialObjectClass.STAR && targetLayer == root) {
+            anchorBody = this.viewRoot;
+        }
+
+        if (anchorBody != null) {
+            double transitionTargetZoom = targetLayer == root ? getSystemDepartureZoom(anchorBody) : getGalaxyCutZoom(anchorBody);
+            pendingLayerTarget = targetLayer;
+            pendingLayerAnchor = anchorBody;
+            pendingLayerStartZoom = zoomLevel;
+            pendingLayerTargetZoom = transitionTargetZoom;
+            pendingFocusBody = null;
+            targetIsometricProgress = 0.0;
+            centerOnBody(anchorBody);
+            targetZoomLevel = transitionTargetZoom;
+            return;
+        }
+
+        applyLayerSwitch(targetLayer, targetLayer);
     }
 
     public OrbitalCelestialBody getViewRoot() {
@@ -145,8 +175,14 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     public void onInit() {
         super.onInit();
 
-        resetForLayer(initialLayer);
-        showLayer(initialLayer);
+        OrbitalCelestialBody startingLayer = initialLayer == null ? root : initialLayer;
+        resetForLayer(startingLayer);
+        this.viewRoot = startingLayer;
+        setFocusImmediately(startingLayer);
+        cameraX = targetCameraX;
+        cameraY = targetCameraY;
+        zoomLevel = targetZoomLevel;
+        isometricProgress = targetIsometricProgress;
 
         listenGuiAction(
             (IGuiAction.MouseScroll) (direction, amount) ->
@@ -216,7 +252,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             if (mouseButton == 0 && clickCandidate) {
                 OrbitalCelestialBody clickedBody = findBodyAtScreen(getContext().getMouseX(), getContext().getMouseY());
                 if (clickedBody != null) {
-                    focusOn(clickedBody);
+                    boolean opensSystemFromGalaxy = viewRoot == root
+                        && clickedBody.objectClass() == CelestialObjectClass.STAR
+                        && bodySelectionListener != null;
+                    if (!opensSystemFromGalaxy) {
+                        focusOn(clickedBody);
+                    }
                     if (bodySelectionListener != null) {
                         bodySelectionListener.onBodySelected(clickedBody);
                     }
@@ -394,13 +435,47 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private float getSpriteRadius(OrbitalCelestialBody body) {
-        if (body.spriteSize() > 0.0001) {
-            float spriteSize = (float) body.spriteSize();
+        float spriteSize = getDisplaySpriteSize(body);
+        if (spriteSize > 0.0001f) {
             float radius = spriteSize * (MAP_ICON_BASE_SCALE + (float) getScale() * MAP_ICON_ZOOM_SCALE);
-            radius *= getBodyRenderScaleMultiplier(body);
             return Math.max(2.0f, radius);
         }
         return 2f;
+    }
+
+    private float getDisplaySpriteSize(OrbitalCelestialBody body) {
+        if (body == null) {
+            return 0f;
+        }
+        float systemSize = (float) body.spriteSize();
+        float galaxySize = GALAXY_MAP_STAR_SPRITE_SIZE;
+        if (body == pendingLayerAnchor && pendingLayerTarget != null && body.objectClass() == CelestialObjectClass.STAR) {
+            if (pendingLayerTarget == root) {
+                float progress = getTransitionProgress(zoomLevel, pendingLayerStartZoom, pendingLayerTargetZoom);
+                return lerp(systemSize, galaxySize, progress);
+            }
+            return galaxySize;
+        }
+        if (body == layerSwitchAnchor && body.objectClass() == CelestialObjectClass.STAR
+            && (layerSwitchPhase == LayerSwitchPhase.SYSTEM_PRE_CUT || layerSwitchPhase == LayerSwitchPhase.GALAXY_POST_CUT)) {
+            float progress = getTransitionProgress(zoomLevel, layerSwitchStartZoom, layerSwitchTargetZoom);
+            return lerp(layerSwitchStartSpriteSize, layerSwitchTargetSpriteSize, progress);
+        }
+        if (viewRoot == root && body.objectClass() == CelestialObjectClass.STAR) {
+            OrbitalCelestialBody parent = findParent(root, body);
+            if (parent != null && parent.objectClass() == CelestialObjectClass.GALAXY) {
+                return galaxySize;
+            }
+        }
+        return systemSize;
+    }
+
+    private float getTransitionProgress(double current, double start, double end) {
+        double delta = end - start;
+        if (Math.abs(delta) < 1e-9) {
+            return 1.0f;
+        }
+        return (float) Math.max(0.0, Math.min(1.0, (current - start) / delta));
     }
 
     private float getRenderedBodyRadius(OrbitalCelestialBody body) {
@@ -424,6 +499,25 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             pendingFocusBody = body;
             targetIsometricProgress = 0.0;
         }
+    }
+
+    private void centerOnBody(OrbitalCelestialBody body) {
+        if (body == null) {
+            return;
+        }
+        focusedBody = body;
+        isFollowing = true;
+        double[] pos = getAbsoluteWorldPos(body);
+        if (pos != null) {
+            targetCameraX = pos[0];
+            targetCameraY = pos[1];
+        }
+        targetIsometricProgress = 0.0;
+    }
+
+    private void applyLayerSwitch(OrbitalCelestialBody targetLayer, OrbitalCelestialBody focusBody) {
+        this.viewRoot = targetLayer == null ? root : targetLayer;
+        focusOn(focusBody == null ? this.viewRoot : focusBody);
     }
 
     private void setFocusImmediately(OrbitalCelestialBody body) {
@@ -454,70 +548,31 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             computedZoom = maxApogee > 1e-9 ? Math.log((350.0 / maxApogee) / BASE_SCALE) / Math.log(ZOOM_BASE) : 3.0;
         }
 
-        if (body.objectClass() == CelestialObjectClass.GALAXY) {
-            targetZoomLevel = computedZoom;
-        } else if (body.objectClass() == CelestialObjectClass.STAR
-            && layerTransitionMode == LayerTransitionMode.GALAXY_TO_STAR) {
-            targetZoomLevel = computedZoom;
-        } else {
-            targetZoomLevel = computedZoom;
-        }
+        targetZoomLevel = computedZoom;
         targetZoomLevel = Math.max(-7000.0, Math.min(14000.0, targetZoomLevel));
     }
 
     private void resetForLayer(OrbitalCelestialBody layerRoot) {
-        if (layerRoot != root) {
-            return;
-        }
-        cameraX = 0.0;
-        cameraY = 0.0;
-        targetCameraX = 0.0;
-        targetCameraY = 0.0;
         isFollowing = false;
         focusedBody = null;
         isometricProgress = 0.0;
         targetIsometricProgress = 0.0;
-    }
-
-    private void startLayerTransition(OrbitalCelestialBody sourceLayer, OrbitalCelestialBody targetLayer) {
-        layerTransitionAnchorBody = null;
-        layerTransitionMode = LayerTransitionMode.NONE;
-        layerTransitionProgress = 1.0;
-
-        if (sourceLayer == null || targetLayer == null) {
-            return;
-        }
-
-        if (sourceLayer.objectClass() == CelestialObjectClass.STAR && targetLayer == root) {
-            layerTransitionAnchorBody = sourceLayer;
-            layerTransitionMode = LayerTransitionMode.STAR_TO_GALAXY;
-            layerTransitionProgress = 0.0;
-        } else if (sourceLayer == root && targetLayer.objectClass() == CelestialObjectClass.STAR) {
-            layerTransitionAnchorBody = targetLayer;
-            layerTransitionMode = LayerTransitionMode.GALAXY_TO_STAR;
-            layerTransitionProgress = 0.0;
+        if (layerRoot == root) {
+            cameraX = 0.0;
+            cameraY = 0.0;
+            targetCameraX = 0.0;
+            targetCameraY = 0.0;
         }
     }
 
-    private boolean isGalaxyMapStar(OrbitalCelestialBody body) {
-        if (body == null || body.objectClass() != CelestialObjectClass.STAR || viewRoot != root) {
-            return false;
-        }
-        OrbitalCelestialBody parent = findParent(root, body);
-        return parent != null && parent.objectClass() == CelestialObjectClass.GALAXY;
+    private boolean isReadyForPendingLayerSwitch() {
+        return Math.abs(cameraX - targetCameraX) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD
+            && Math.abs(cameraY - targetCameraY) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD;
     }
 
-    private float getBodyRenderScaleMultiplier(OrbitalCelestialBody body) {
-        float baseScale = isGalaxyMapStar(body) ? GALAXY_STAR_RADIUS_SCALE : 1.0f;
-        if (body == layerTransitionAnchorBody && layerTransitionProgress < 0.999) {
-            float progress = (float) layerTransitionProgress;
-            return switch (layerTransitionMode) {
-                case STAR_TO_GALAXY -> lerp(1.0f, GALAXY_STAR_RADIUS_SCALE, progress);
-                case GALAXY_TO_STAR -> lerp(GALAXY_STAR_RADIUS_SCALE, 1.0f, progress);
-                case NONE -> baseScale;
-            };
-        }
-        return baseScale;
+    private boolean isReadyForLayerSwitchPhase() {
+        return isReadyForPendingLayerSwitch()
+            && Math.abs(zoomLevel - targetZoomLevel) < LAYER_SWITCH_CONVERGE_THRESHOLD;
     }
 
     private double calculateOverviewExtent(OrbitalCelestialBody body) {
@@ -536,6 +591,184 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             maxSize = Math.max(maxSize, child.orbitalParams().apogee());
         }
         return maxSize;
+    }
+
+    private double clampZoom(double zoom) {
+        return Math.max(-7000.0, Math.min(14000.0, zoom));
+    }
+
+    private double zoomForWorldDistance(double worldDistance, double screenDistance) {
+        if (worldDistance <= 1e-9 || screenDistance <= 1e-9) {
+            return -0.8;
+        }
+        return clampZoom(Math.log((screenDistance / worldDistance) / BASE_SCALE) / Math.log(ZOOM_BASE));
+    }
+
+    private double getViewportHalfDiagonal() {
+        double width = getArea().width > 0 ? getArea().width : 960.0;
+        double height = getArea().height > 0 ? getArea().height : 640.0;
+        return Math.hypot(width * 0.5, height * 0.5);
+    }
+
+    private double getViewportMinDimension() {
+        double width = getArea().width > 0 ? getArea().width : 960.0;
+        double height = getArea().height > 0 ? getArea().height : 640.0;
+        return Math.min(width, height);
+    }
+
+    private double getOverviewZoomForBody(OrbitalCelestialBody body) {
+        boolean goIso = body.objectClass() != CelestialObjectClass.GALAXY && body.objectClass() != CelestialObjectClass.STAR;
+        double computedZoom;
+        if (!goIso) {
+            double maxSize = calculateOverviewExtent(body);
+            computedZoom = maxSize > 1e-9 ? Math.log((420.0 / maxSize) / BASE_SCALE) / Math.log(ZOOM_BASE) : -0.8;
+        } else {
+            OrbitalCelestialBody parent = findParent(root, body);
+            double maxApogee = 0;
+            if (parent != null) {
+                for (OrbitalCelestialBody c : parent.children()) {
+                    maxApogee = Math.max(maxApogee, c.orbitalParams().apogee());
+                }
+            }
+            computedZoom = maxApogee > 1e-9 ? Math.log((350.0 / maxApogee) / BASE_SCALE) / Math.log(ZOOM_BASE) : 3.0;
+        }
+        return clampZoom(computedZoom);
+    }
+
+    private double getSystemDepartureZoom(OrbitalCelestialBody star) {
+        double farthestOrbit = calculateOverviewExtent(star);
+        return zoomForWorldDistance(farthestOrbit * SYSTEM_DEPARTURE_EXTENT_MULTIPLIER, 420.0);
+    }
+
+    private double getNearestOtherStarDistance(OrbitalCelestialBody anchorStar) {
+        double[] anchorPos = getAbsoluteWorldPos(anchorStar);
+        if (anchorPos == null) {
+            return Double.MAX_VALUE;
+        }
+        double nearestDistance = Double.MAX_VALUE;
+        for (OrbitalCelestialBody child : root.children()) {
+            if (child == anchorStar || child.objectClass() != CelestialObjectClass.STAR) {
+                continue;
+            }
+            double[] childPos = getAbsoluteWorldPos(child);
+            if (childPos == null) {
+                continue;
+            }
+            nearestDistance = Math.min(
+                nearestDistance,
+                Math.hypot(childPos[0] - anchorPos[0], childPos[1] - anchorPos[1]));
+        }
+        return nearestDistance;
+    }
+
+    private double getGalaxyOverviewZoom(OrbitalCelestialBody anchorStar) {
+        double nearestDistance = getNearestOtherStarDistance(anchorStar);
+        if (nearestDistance == Double.MAX_VALUE || nearestDistance <= 1e-9) {
+            return getOverviewZoomForBody(root);
+        }
+        return zoomForWorldDistance(nearestDistance, getViewportMinDimension() * 0.2);
+    }
+
+    private double getGalaxyCutZoom(OrbitalCelestialBody anchorStar) {
+        double nearestDistance = getNearestOtherStarDistance(anchorStar);
+        if (nearestDistance == Double.MAX_VALUE || nearestDistance <= 1e-9) {
+            return getGalaxyOverviewZoom(anchorStar);
+        }
+        return zoomForWorldDistance(nearestDistance, getViewportHalfDiagonal() * 1.2);
+    }
+
+    private boolean isLayerSwitchActive() {
+        return layerSwitchPhase != LayerSwitchPhase.NONE;
+    }
+
+    private void clearLayerSwitchState() {
+        pendingLayerTarget = null;
+        pendingLayerAnchor = null;
+        pendingLayerStartZoom = 0.0;
+        pendingLayerTargetZoom = 0.0;
+        layerSwitchPhase = LayerSwitchPhase.NONE;
+        layerSwitchTarget = null;
+        layerSwitchAnchor = null;
+        layerSwitchStartZoom = 0.0;
+        layerSwitchTargetZoom = 0.0;
+        layerSwitchStartSpriteSize = 0.0f;
+        layerSwitchTargetSpriteSize = 0.0f;
+    }
+
+    private void startLayerSwitchTransition(OrbitalCelestialBody targetLayer, OrbitalCelestialBody anchorBody,
+        float currentAnchorSpriteSize) {
+        layerSwitchTarget = targetLayer;
+        layerSwitchAnchor = anchorBody;
+        layerSwitchStartZoom = zoomLevel;
+        layerSwitchStartSpriteSize = currentAnchorSpriteSize;
+        if (targetLayer == root) {
+            layerSwitchPhase = LayerSwitchPhase.SYSTEM_PRE_CUT;
+            layerSwitchTargetZoom = getSystemDepartureZoom(anchorBody);
+            layerSwitchTargetSpriteSize = GALAXY_MAP_STAR_SPRITE_SIZE;
+        } else {
+            layerSwitchPhase = LayerSwitchPhase.GALAXY_PRE_CUT;
+            layerSwitchTargetZoom = getGalaxyCutZoom(anchorBody);
+            layerSwitchTargetSpriteSize = (float) anchorBody.spriteSize();
+        }
+        targetZoomLevel = layerSwitchTargetZoom;
+        targetIsometricProgress = 0.0;
+    }
+
+    private void updateLayerSwitchTransition() {
+        if (layerSwitchPhase == LayerSwitchPhase.NONE || layerSwitchTarget == null || layerSwitchAnchor == null) {
+            return;
+        }
+        if (!isReadyForLayerSwitchPhase()) {
+            return;
+        }
+
+        if (layerSwitchPhase == LayerSwitchPhase.SYSTEM_PRE_CUT) {
+            double[] anchorPos = getAbsoluteWorldPos(layerSwitchAnchor);
+            this.viewRoot = root;
+            focusedBody = layerSwitchAnchor;
+            isFollowing = true;
+            if (anchorPos != null) {
+                cameraX = anchorPos[0];
+                cameraY = anchorPos[1];
+                targetCameraX = anchorPos[0];
+                targetCameraY = anchorPos[1];
+            }
+            zoomLevel = getGalaxyCutZoom(layerSwitchAnchor);
+            targetZoomLevel = getGalaxyOverviewZoom(layerSwitchAnchor);
+            isometricProgress = 0.0;
+            targetIsometricProgress = 0.0;
+            pendingFocusBody = null;
+            layerSwitchPhase = LayerSwitchPhase.SYSTEM_POST_CUT;
+            return;
+        }
+
+        if (layerSwitchPhase == LayerSwitchPhase.GALAXY_PRE_CUT) {
+            double[] anchorPos = getAbsoluteWorldPos(layerSwitchAnchor);
+            this.viewRoot = layerSwitchTarget;
+            focusedBody = layerSwitchAnchor;
+            isFollowing = true;
+            if (anchorPos != null) {
+                cameraX = anchorPos[0];
+                cameraY = anchorPos[1];
+                targetCameraX = anchorPos[0];
+                targetCameraY = anchorPos[1];
+            }
+            zoomLevel = getSystemDepartureZoom(layerSwitchAnchor);
+            targetZoomLevel = getOverviewZoomForBody(layerSwitchTarget);
+            isometricProgress = 0.0;
+            targetIsometricProgress = 0.0;
+            pendingFocusBody = null;
+            layerSwitchStartZoom = zoomLevel;
+            layerSwitchTargetZoom = targetZoomLevel;
+            layerSwitchStartSpriteSize = GALAXY_MAP_STAR_SPRITE_SIZE;
+            layerSwitchTargetSpriteSize = (float) layerSwitchAnchor.spriteSize();
+            layerSwitchPhase = LayerSwitchPhase.GALAXY_POST_CUT;
+            return;
+        }
+
+        layerSwitchPhase = LayerSwitchPhase.NONE;
+        layerSwitchTarget = null;
+        layerSwitchAnchor = null;
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody target) {
@@ -620,19 +853,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         updateSimulationTime();
 
-        double activeLerpSpeed = layerTransitionMode == LayerTransitionMode.NONE ? LERP_SPEED : LAYER_VIEW_LERP_SPEED;
+        double activeLerpSpeed = pendingLayerTarget != null ? PENDING_LAYER_CENTER_LERP_SPEED
+            : isLayerSwitchActive() ? LAYER_SWITCH_LERP_SPEED : LERP_SPEED;
         cameraX = lerp(cameraX, targetCameraX, activeLerpSpeed);
         cameraY = lerp(cameraY, targetCameraY, activeLerpSpeed);
         zoomLevel = lerp(zoomLevel, targetZoomLevel, activeLerpSpeed);
         isometricProgress = lerp(isometricProgress, targetIsometricProgress, activeLerpSpeed);
-        if (layerTransitionProgress < 1.0) {
-            layerTransitionProgress = Math.min(1.0, layerTransitionProgress + LAYER_TRANSITION_SPEED);
-            if (layerTransitionProgress >= 0.999) {
-                layerTransitionProgress = 1.0;
-                layerTransitionAnchorBody = null;
-                layerTransitionMode = LayerTransitionMode.NONE;
-            }
-        }
 
         if (Math.abs(cameraX - targetCameraX) < CONVERGE_THRESHOLD) cameraX = targetCameraX;
         if (Math.abs(cameraY - targetCameraY) < CONVERGE_THRESHOLD) cameraY = targetCameraY;
@@ -644,6 +870,19 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             setFocusImmediately(pendingFocusBody);
             pendingFocusBody = null;
         }
+
+        if (pendingLayerTarget != null && pendingLayerAnchor != null && isReadyForPendingLayerSwitch()) {
+            OrbitalCelestialBody targetLayer = pendingLayerTarget;
+            OrbitalCelestialBody anchorBody = pendingLayerAnchor;
+            float currentAnchorSpriteSize = getDisplaySpriteSize(anchorBody);
+            pendingLayerTarget = null;
+            pendingLayerAnchor = null;
+            pendingLayerStartZoom = 0.0;
+            pendingLayerTargetZoom = 0.0;
+            startLayerSwitchTransition(targetLayer, anchorBody, currentAnchorSpriteSize);
+        }
+
+        updateLayerSwitchTransition();
 
         if (isFollowing && focusedBody != null) {
             double[] pos = getAbsoluteWorldPos(focusedBody);
@@ -1139,8 +1378,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         rows.add(new InfoRow("Type", formatObjectClass(body.objectClass())));
         rows.add(new InfoRow("Landable", isLandable(body) ? "Yes" : "No"));
         rows.add(new InfoRow("Dangers", buildDangerSummary(body)));
-        rows.add(new InfoRow("Surface", formatSurfaceType(body)));
-        rows.add(new InfoRow("Ores", body.properties().oreProfile().isEmpty() ? "Later" : formatSurfaceType(body)));
+        if (body.objectClass() != CelestialObjectClass.STAR && body.objectClass() != CelestialObjectClass.GALAXY) {
+            rows.add(new InfoRow("Surface", formatSurfaceType(body)));
+            rows.add(new InfoRow("Ores", formatOreProfile(body)));
+        }
         return rows;
     }
 
@@ -1446,8 +1687,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (isometricProgress > 0.01 || body == viewRoot || body == focusedBody) {
             return true;
         }
-        if (body.objectClass() != CelestialObjectClass.STATION && body.objectClass() != CelestialObjectClass.ASTEROID
-            && !(body.objectClass() == CelestialObjectClass.MOON && body.spriteSize() < 0.12)) {
+        if (!shouldUseOverlapDeclutter(body)) {
             return true;
         }
 
@@ -1461,6 +1701,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         float separation = (float) (body.orbitalParams().perigee() * getScale());
         float minimumSeparation = getRenderedBodyRadius(body) + getRenderedBodyRadius(parent) + 10f;
         return separation >= minimumSeparation;
+    }
+
+    private boolean shouldUseOverlapDeclutter(OrbitalCelestialBody body) {
+        return body != root;
     }
 
     private void openAssetManagement(OrbitalCelestialBody body) {
@@ -2172,11 +2416,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private String formatSurfaceType(OrbitalCelestialBody body) {
+        String surfaceType = body.properties().metadata().get("surface");
+        if (surfaceType == null || surfaceType.isEmpty()) {
+            return "Undefined";
+        }
+        return formatInfoToken(surfaceType);
+    }
+
+    private String formatOreProfile(OrbitalCelestialBody body) {
         String oreProfile = body.properties().oreProfile();
         if (oreProfile == null || oreProfile.isEmpty()) {
-            return body.objectClass() == CelestialObjectClass.STATION ? "Artificial" : "Unknown";
+            return "Undefined";
         }
-        String[] parts = oreProfile.split("_");
+        return formatInfoToken(oreProfile);
+    }
+
+    private String formatInfoToken(String value) {
+        String[] parts = value.split("_");
         StringBuilder out = new StringBuilder();
         for (String part : parts) {
             if (part.isEmpty()) continue;
@@ -2342,10 +2598,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         OPEN_AUTOMATED_OUTPOST_CONFIRM
     }
 
-    private enum LayerTransitionMode {
+    private enum LayerSwitchPhase {
         NONE,
-        STAR_TO_GALAXY,
-        GALAXY_TO_STAR
+        SYSTEM_PRE_CUT,
+        SYSTEM_POST_CUT,
+        GALAXY_PRE_CUT,
+        GALAXY_POST_CUT
     }
 
     private static final class ContextMenuLayout {
