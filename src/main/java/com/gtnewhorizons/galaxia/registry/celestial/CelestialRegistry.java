@@ -15,6 +15,10 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
+
 public final class CelestialRegistry {
 
     private static final Map<String, CelestialObjectRegistration> REGISTRATIONS = new LinkedHashMap<>();
@@ -28,6 +32,31 @@ public final class CelestialRegistry {
     private static double seededPhase(String id) {
         long hash = Objects.requireNonNull(id, "id").hashCode() & 0xFFFFFFFFL;
         return (hash / (double) 0xFFFFFFFFL) * Math.PI * 2.0;
+    }
+
+    // TODO: Replace these placeholder vanilla ore tables with GT5U ore definitions once the GregTech ore layer is designed.
+    private static CelestialBodyProperties.Builder withVanillaOres(CelestialBodyProperties.Builder builder, Block... ores) {
+        for (Block ore : ores) {
+            builder.ore(new ItemStack(ore));
+        }
+        // gregtech/api ore list goes here later
+        return builder;
+    }
+
+    private static GtOreVeinDefinition gtVein(String id, String displayName, String primaryOre, String secondaryOre,
+        String betweenOre, String sporadicOre, int minY, int maxY, int weight, int density, int size) {
+        return new GtOreVeinDefinition(
+            id,
+            displayName,
+            primaryOre,
+            secondaryOre,
+            betweenOre,
+            sporadicOre,
+            minY,
+            maxY,
+            weight,
+            density,
+            size);
     }
 
     public static synchronized void registerDefaults() {
@@ -112,16 +141,21 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.24)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(301)
-                        .radiation(0.08)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_colony_world")
-                        .build())
+                    withVanillaOres(
+                        CelestialBodyProperties.builder()
+                            .visitable(false)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(301)
+                            .radiation(0.08)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined")
+                            .metadata("status", "placeholder_colony_world"),
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.redstone_ore,
+                        Blocks.diamond_ore)
+                            .build())
                 .build());
 
         register(
@@ -134,15 +168,20 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.19)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(182)
-                        .radiation(0.14)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .build())
+                    withVanillaOres(
+                        CelestialBodyProperties.builder()
+                            .visitable(false)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(182)
+                            .radiation(0.14)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.lapis_ore,
+                        Blocks.redstone_ore)
+                            .build())
                 .build());
 
         register(
@@ -155,16 +194,26 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.18)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(288)
-                        .radiation(0.05)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_homeworld")
-                        .build())
+                    withVanillaOres(
+                        CelestialBodyProperties.builder()
+                            .visitable(false)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(288)
+                            .radiation(0.05)
+                            .oreProfile("undefined")
+                            .gtOreVeins(
+                                gtVein("lapis", "Lapis Vein", "Lazurite", "Sodalite", "Lapis", "Calcite", 20, 50, 40, 4, 16),
+                                gtVein("iron", "Iron Vein", "Brown Limonite", "Yellow Limonite", "Banded Iron", "Malachite", 10, 40, 120, 3, 24),
+                                gtVein("redstone", "Redstone Vein", "Redstone", "Redstone", "Ruby", "Cinnabar", 5, 40, 60, 2, 24))
+                            .metadata("surface", "undefined")
+                            .metadata("status", "placeholder_homeworld"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.redstone_ore,
+                        Blocks.diamond_ore)
+                            .build())
                 .build());
 
         register(
@@ -176,15 +225,20 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.75)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(423)
-                        .radiation(0.20)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .build())
+                    withVanillaOres(
+                        CelestialBodyProperties.builder()
+                            .visitable(true)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(423)
+                            .radiation(0.20)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.redstone_ore,
+                        Blocks.emerald_ore)
+                            .build())
                 .build());
 
         register(
@@ -196,15 +250,21 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.HEMATERIA.get())
                 .spriteSize(0.825)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(67)
-                        .radiation(0.10)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .build())
+                    withVanillaOres(
+                        CelestialBodyProperties.builder()
+                            .visitable(true)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(67)
+                            .radiation(0.10)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.lapis_ore,
+                        Blocks.diamond_ore)
+                            .build())
                 .build());
 
         register(
@@ -216,15 +276,19 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.06)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(225)
-                        .radiation(0.18)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .build())
+                    withVanillaOres(
+                        CelestialBodyProperties.builder()
+                            .visitable(true)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(225)
+                            .radiation(0.18)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.gold_ore)
+                            .build())
                 .build());
 
         register(

@@ -38,6 +38,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private static final int LAYER_BUTTON_TOP = 14;
     private static final int LAYER_BUTTON_HEIGHT = 18;
     private static final int LAYER_BUTTON_GAP = 8;
+    private static final int CREATIVE_BUTTON_TOP = 42;
     private static final int SEARCH_LABEL_TOP = 42;
     private static final int SEARCH_FIELD_TOP = 54;
     private static final int LIST_TOP = 82;
@@ -99,6 +100,10 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return true;
         }
 
+        if (handleCreativeButtonClick(localX, localYAbsolute)) {
+            return true;
+        }
+
         if (activeLayer == root) {
             return false;
         }
@@ -153,12 +158,12 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private double getMaxScroll() {
-        return Math.max(0, getVisibleEntries().size() * LINE_HEIGHT - getArea().height + LIST_TOP + 20);
+        return Math.max(0, getVisibleEntries().size() * LINE_HEIGHT - getArea().height + getListTop() + 20);
     }
 
     private List<RowLayout> buildVisibleRowLayouts(List<VisibleEntry> visible) {
         List<RowLayout> rows = new ArrayList<>();
-        int y = LIST_TOP - (int) scrollOffset;
+        int y = getListTop() - (int) scrollOffset;
 
         for (int i = 0; i < visible.size(); i++) {
             int sy = y + i * LINE_HEIGHT;
@@ -196,6 +201,30 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         return currentSystem == null ? "System" : currentSystem.displayName();
     }
 
+    private boolean shouldShowCreativeButton() {
+        return map.isCreativeModeAvailable();
+    }
+
+    private int getSearchOffset() {
+        return shouldShowCreativeButton() ? 28 : 0;
+    }
+
+    private int getSearchLabelTop() {
+        return SEARCH_LABEL_TOP + getSearchOffset();
+    }
+
+    private int getSearchFieldTop() {
+        return SEARCH_FIELD_TOP + getSearchOffset();
+    }
+
+    private int getListTop() {
+        return LIST_TOP + getSearchOffset();
+    }
+
+    private int getCreativeButtonWidth() {
+        return Math.max(112, Minecraft.getMinecraft().fontRenderer.getStringWidth("Creative Mode") + 18);
+    }
+
     private boolean handleLayerButtonClick(int localX, int localY) {
         int galaxyButtonWidth = 70;
         int starButtonX = 18 + galaxyButtonWidth + LAYER_BUTTON_GAP;
@@ -210,6 +239,19 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
                 selectLayer(currentSystem);
                 return true;
             }
+        }
+        return false;
+    }
+
+    private boolean handleCreativeButtonClick(int localX, int localY) {
+        if (!shouldShowCreativeButton()) {
+            return false;
+        }
+        int width = getCreativeButtonWidth();
+        if (localY >= CREATIVE_BUTTON_TOP && localY <= CREATIVE_BUTTON_TOP + LAYER_BUTTON_HEIGHT && localX >= 18
+            && localX <= 18 + width) {
+            map.toggleCreativeBuildMode();
+            return true;
         }
         return false;
     }
@@ -259,7 +301,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         }
 
         if (searchField != null) {
-            searchField.top(activeLayer == root ? -1000 : SEARCH_FIELD_TOP);
+            searchField.top(activeLayer == root ? -1000 : getSearchFieldTop());
         }
 
         Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapSidebarBackground.getColor());
@@ -271,6 +313,9 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             Math.max(80, Minecraft.getMinecraft().fontRenderer.getStringWidth(getCurrentSystemLabel()) + 18),
             getCurrentSystemLabel(),
             activeLayer == currentSystem);
+        if (shouldShowCreativeButton()) {
+            drawLayerButton(18, CREATIVE_BUTTON_TOP, getCreativeButtonWidth(), "Creative Mode", map.isCreativeBuildModeEnabled());
+        }
 
         if (activeLayer == root) {
             return;
@@ -279,7 +324,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
             StatCollector.translateToLocal("galaxia.gui.orbital.search"),
             18,
-            SEARCH_LABEL_TOP,
+            getSearchLabelTop(),
             EnumColors.MapSidebaSearchLabel.getColor());
 
         List<VisibleEntry> visible = getVisibleEntries();
