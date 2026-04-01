@@ -155,6 +155,34 @@ public final class CelestialAssetStore {
         return false;
     }
 
+    public static synchronized boolean renameAsset(String assetId, String displayName) {
+        if (displayName == null || displayName.trim().isEmpty()) {
+            return false;
+        }
+        String trimmedName = displayName.trim();
+        for (MutableBodyState state : STATE_BY_BODY.values()) {
+            for (int i = 0; i < state.assets.size(); i++) {
+                CelestialManagedAsset asset = state.assets.get(i);
+                if (!asset.assetId().equals(assetId)) {
+                    continue;
+                }
+                state.assets.set(
+                    i,
+                    new CelestialManagedAsset(
+                        asset.assetId(),
+                        asset.celestialObjectId(),
+                        trimmedName,
+                        asset.kind(),
+                        asset.location(),
+                        asset.status(),
+                        asset.requiredResources(),
+                        asset.constructionInventory()));
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static synchronized List<CelestialAssetRequirement> previewRequirements(CelestialAssetKind kind) {
         return Collections.unmodifiableList(new ArrayList<>(defaultRequirements(kind)));
     }

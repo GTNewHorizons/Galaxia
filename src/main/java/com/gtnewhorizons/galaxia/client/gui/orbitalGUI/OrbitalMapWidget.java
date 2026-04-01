@@ -27,6 +27,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
@@ -97,7 +98,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private PendingAssetDestruction pendingAssetDestruction = null;
     private PendingConstructionCancellation pendingConstructionCancellation = null;
     private PendingResourceTransfer pendingResourceTransfer = null;
+    private PendingAssetManagement pendingAssetManagement = null;
+    private PendingAssetRename pendingAssetRename = null;
+    private TextFieldWidget renameField = null;
     private boolean creativeBuildMode = false;
+    private boolean guiActionsRegistered = false;
     private OrbitalCelestialBody pendingLayerTarget = null;
     private OrbitalCelestialBody pendingLayerAnchor = null;
     private double pendingLayerStartZoom = 0.0;
@@ -157,6 +162,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     public OrbitalMapWidget setBodySelectionListener(BodySelectionListener listener) {
         this.bodySelectionListener = listener;
+        return this;
+    }
+
+    public OrbitalMapWidget attachRenameField(TextFieldWidget field) {
+        this.renameField = field;
         return this;
     }
 
@@ -226,6 +236,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         cameraY = targetCameraY;
         zoomLevel = targetZoomLevel;
         isometricProgress = targetIsometricProgress;
+
+        if (guiActionsRegistered) {
+            return;
+        }
+        guiActionsRegistered = true;
 
         listenGuiAction(
             (IGuiAction.MouseScroll) (direction, amount) ->
@@ -332,6 +347,17 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private boolean handleKeyPressed(char ch, int keyCode) {
+        if (pendingAssetRename != null) {
+            if (keyCode == Keyboard.KEY_ESCAPE) {
+                closePendingAssetRename();
+                return true;
+            }
+            if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER) {
+                confirmPendingAssetRename();
+                return true;
+            }
+            return false;
+        }
         if (keyCode == 57) {
             paused = !paused;
             return true;
@@ -357,6 +383,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         if (assetManagementBody != null) {
             if (pendingAssetCreation != null || pendingAssetDestruction != null || pendingConstructionCancellation != null
+                || pendingAssetRename != null
                 || pendingResourceTransfer != null) {
                 return true;
             }
@@ -952,6 +979,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
         updateSimulationTime();
         updateManualDragging();
+        updateRenameFieldLayout();
 
         double activeLerpSpeed = pendingLayerTarget != null ? PENDING_LAYER_CENTER_LERP_SPEED
             : isLayerSwitchActive() ? LAYER_SWITCH_LERP_SPEED : LERP_SPEED;
@@ -1774,6 +1802,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         Minecraft mc = Minecraft.getMinecraft();
         CelestialBodyAssetState state = CelestialAssetStore.getState(assetManagementBody.id());
+        int localMouseX = getContext().getMouseX();
+        int localMouseY = getContext().getMouseY();
+        String hoveredTooltip = null;
 
         Gui.drawRect(0, 0, getArea().width, getArea().height, 0xAA09111B);
         Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
@@ -1783,33 +1814,61 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
         Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 28, 0xFF22324A);
 
-        mc.fontRenderer.drawStringWithShadow("Manage Assets", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(assetManagementBody.displayName(), layout.left + 120, layout.top + 10, 0xFFD9E0FF);
+        int titleX = layout.left + 12;
+        int titleY = layout.top + 10;
+        String title = "Manage Assets";
+        mc.fontRenderer.drawStringWithShadow(title, titleX, titleY, 0xFFFFFFFF);
 
-        drawModalButton(layout.closeButton, "Close", true, false);
-        drawModalButton(
+        int titleRight = titleX + mc.fontRenderer.getStringWidth(title);
+        int assetNameMaxWidth = Math.max(0, layout.closeButton.left - 12 - (titleRight + 12));
+        if (assetNameMaxWidth > 0) {
+            String assetName = mc.fontRenderer.trimStringToWidth(assetManagementBody.displayName(), assetNameMaxWidth);
+            int assetNameWidth = mc.fontRenderer.getStringWidth(assetName);
+            int assetNameX = Math.max(titleRight + 12, layout.closeButton.left - 12 - assetNameWidth);
+            mc.fontRenderer.drawStringWithShadow(assetName, assetNameX, titleY, 0xFFD9E0FF);
+        }
+
+        hoveredTooltip = drawAssetManagerIconButton(
+            layout.closeButton,
+            null,
+            AssetManagerButtonGlyph.CLOSE,
+            "Close",
+            true,
+            localMouseX,
+            localMouseY,
+            hoveredTooltip);
+        hoveredTooltip = drawAssetManagerIconButton(
             layout.createStationButton,
-            "Create Station",
             getAssetIconTexture(CelestialAssetKind.STATION),
+            AssetManagerButtonGlyph.NONE,
+            "Create Station",
             canCreateBaseStation(assetManagementBody),
-            false);
+            localMouseX,
+            localMouseY,
+            hoveredTooltip);
         if (isGT5AutomationAvailable()) {
-            drawModalButton(
+            hoveredTooltip = drawAssetManagerIconButton(
                 layout.createAutomatedStationButton,
-                "Create Automated Station",
                 getAssetIconTexture(CelestialAssetKind.AUTOMATED_STATION),
+                AssetManagerButtonGlyph.NONE,
+                "Create Automated Station",
                 canCreateAutomatedStation(assetManagementBody),
-                false);
-            drawModalButton(
+                localMouseX,
+                localMouseY,
+                hoveredTooltip);
+            hoveredTooltip = drawAssetManagerIconButton(
                 layout.createOutpostButton,
-                "Create Automated Outpost",
                 getAssetIconTexture(CelestialAssetKind.AUTOMATED_OUTPOST),
+                AssetManagerButtonGlyph.NONE,
+                "Create Automated Outpost",
                 canCreateAutomatedOutpost(assetManagementBody),
-                false);
+                localMouseX,
+                localMouseY,
+                hoveredTooltip);
         } else {
             mc.fontRenderer.drawStringWithShadow(
                 "GT5U required for automated assets",
-                layout.left + 160,
+                layout.left + 104,
                 layout.top + 36,
                 0xFF9AA7B8);
         }
@@ -1823,14 +1882,28 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 CelestialManagedAsset site = row.asset;
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
                 drawAssetIcon(site.kind(), row.left + 10, row.top + 9, 16, 1.0f);
-                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(site), row.left + 32, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(
+                    formatAssetDisplayName(site),
+                    row.left + 32,
+                    row.top + 6,
+                    row.nameClickArea.contains(localMouseX, localMouseY) ? 0xFF8CE4FF : 0xFFFFFFFF);
                 mc.fontRenderer.drawStringWithShadow(
                     (site.status() == CelestialAssetStatus.DECONSTRUCTION ? "Stored: " : "Inventory: ")
                         + buildConstructionInventorySummary(site),
                     row.left + 32,
                     row.top + 18,
                     0xFFD9E0FF);
-                drawModalButton(row.actionButton, row.actionType.buttonLabel, true, false);
+                hoveredTooltip = drawAssetManagerIconButton(
+                    row.actionButton,
+                    null,
+                    row.actionType == ConstructionRowActionType.SEND_RESOURCES
+                        ? AssetManagerButtonGlyph.SEND
+                        : AssetManagerButtonGlyph.CANCEL,
+                    row.actionType.buttonLabel,
+                    true,
+                    localMouseX,
+                    localMouseY,
+                    hoveredTooltip);
             }
         }
 
@@ -1845,13 +1918,36 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 CelestialManagedAsset asset = row.asset;
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
                 drawAssetIcon(asset.kind(), row.left + 10, row.top + 9, 16, 1.0f);
-                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(asset), row.left + 32, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(
+                    formatAssetDisplayName(asset),
+                    row.left + 32,
+                    row.top + 6,
+                    row.nameClickArea.contains(localMouseX, localMouseY) ? 0xFF8CE4FF : 0xFFFFFFFF);
                 mc.fontRenderer.drawStringWithShadow(
                     formatAssetKind(asset.kind()) + " | " + formatAssetLocation(asset.location()),
                     row.left + 32,
                     row.top + 16,
                     0xFFD9E0FF);
-                drawModalButton(row.destroyButton, "Destroy", true, false);
+                if (row.manageButton != null) {
+                    hoveredTooltip = drawAssetManagerIconButton(
+                        row.manageButton,
+                        null,
+                        AssetManagerButtonGlyph.MANAGE,
+                        "Manage",
+                        true,
+                        localMouseX,
+                        localMouseY,
+                        hoveredTooltip);
+                }
+                hoveredTooltip = drawAssetManagerIconButton(
+                    row.destroyButton,
+                    null,
+                    AssetManagerButtonGlyph.DESTROY,
+                    "Destroy",
+                    true,
+                    localMouseX,
+                    localMouseY,
+                    hoveredTooltip);
             }
         }
         drawAssetManagementScrollbar(layout);
@@ -1860,6 +1956,69 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         drawPendingAssetDestructionModal();
         drawPendingConstructionCancellationModal();
         drawPendingResourceTransferModal();
+        drawPendingAssetManagementModal();
+        drawPendingAssetRenameModal();
+        if (hoveredTooltip != null && pendingAssetCreation == null && pendingAssetDestruction == null
+            && pendingConstructionCancellation == null && pendingResourceTransfer == null
+            && pendingAssetManagement == null
+            && pendingAssetRename == null) {
+            drawSimpleTooltip(hoveredTooltip, localMouseX, localMouseY);
+        }
+    }
+
+    private String drawAssetManagerIconButton(ButtonRect rect, ResourceLocation icon, AssetManagerButtonGlyph glyph, String tooltip,
+        boolean enabled, int mouseX, int mouseY, String currentTooltip) {
+        boolean hovered = rect.contains(mouseX, mouseY);
+        int bg = !enabled ? 0xFF243041 : hovered ? 0xFF3A5678 : 0xFF2D435D;
+        int border = enabled ? 0xFF7FB6FF : 0xFF556577;
+        Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, bg);
+        Gui.drawRect(rect.left, rect.top, rect.right, rect.top + 1, border);
+        Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, border);
+        Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, border);
+        Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, border);
+
+        if (icon != null) {
+            drawUiSprite(icon, rect.left + (rect.right - rect.left - 14) / 2, rect.top + (rect.bottom - rect.top - 14) / 2, 14, enabled ? 1.0f : 0.45f);
+        } else if (glyph != AssetManagerButtonGlyph.NONE) {
+            drawAssetManagerGlyph(rect, glyph, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
+        }
+
+        if (hovered && currentTooltip == null) {
+            return tooltip;
+        }
+        return currentTooltip;
+    }
+
+    private void drawAssetManagerGlyph(ButtonRect rect, AssetManagerButtonGlyph glyph, int color) {
+        int centerX = (rect.left + rect.right) / 2;
+        int centerY = (rect.top + rect.bottom) / 2;
+        switch (glyph) {
+            case CLOSE, CANCEL, DESTROY -> drawGlyphX(centerX, centerY, 5, color);
+            case SEND -> drawGlyphSend(centerX, centerY, color);
+            case MANAGE -> drawGlyphManage(centerX, centerY, color);
+            case NONE -> {}
+        }
+    }
+
+    private void drawGlyphX(int centerX, int centerY, int radius, int color) {
+        for (int i = -radius; i <= radius; i++) {
+            Gui.drawRect(centerX + i, centerY + i, centerX + i + 1, centerY + i + 1, color);
+            Gui.drawRect(centerX + i, centerY - i, centerX + i + 1, centerY - i + 1, color);
+        }
+    }
+
+    private void drawGlyphSend(int centerX, int centerY, int color) {
+        Gui.drawRect(centerX - 5, centerY - 1, centerX + 3, centerY + 1, color);
+        Gui.drawRect(centerX + 2, centerY - 3, centerX + 3, centerY + 4, color);
+        Gui.drawRect(centerX + 3, centerY - 2, centerX + 4, centerY + 3, color);
+        Gui.drawRect(centerX + 4, centerY - 1, centerX + 5, centerY + 2, color);
+        Gui.drawRect(centerX + 5, centerY, centerX + 6, centerY + 1, color);
+    }
+
+    private void drawGlyphManage(int centerX, int centerY, int color) {
+        Gui.drawRect(centerX - 5, centerY - 4, centerX + 6, centerY - 3, color);
+        Gui.drawRect(centerX - 5, centerY, centerX + 6, centerY + 1, color);
+        Gui.drawRect(centerX - 5, centerY + 4, centerX + 6, centerY + 5, color);
     }
 
     private void drawModalButton(ButtonRect rect, String label, boolean enabled, boolean hovered) {
@@ -2086,6 +2245,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         pendingAssetDestruction = null;
         pendingConstructionCancellation = null;
         pendingResourceTransfer = null;
+        closePendingAssetRename();
     }
 
     private void closeAssetManagement() {
@@ -2095,6 +2255,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         pendingAssetDestruction = null;
         pendingConstructionCancellation = null;
         pendingResourceTransfer = null;
+        pendingAssetManagement = null;
+        closePendingAssetRename();
     }
 
     private boolean handleAssetManagementClick(int localMouseX, int localMouseY) {
@@ -2102,8 +2264,14 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (layout == null) {
             return false;
         }
+        if (pendingAssetRename != null) {
+            return handlePendingAssetRenameClick(localMouseX, localMouseY);
+        }
         if (pendingResourceTransfer != null) {
             return handlePendingResourceTransferClick(localMouseX, localMouseY);
+        }
+        if (pendingAssetManagement != null) {
+            return handlePendingAssetManagementClick(localMouseX, localMouseY);
         }
         if (pendingConstructionCancellation != null) {
             return handlePendingConstructionCancellationClick(localMouseX, localMouseY);
@@ -2170,6 +2338,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
 
         for (ConstructionSiteRow row : layout.siteRows) {
+            if (row.nameClickArea.contains(localMouseX, localMouseY)) {
+                openPendingAssetRename(row.asset);
+                return true;
+            }
             if (row.actionButton.contains(localMouseX, localMouseY)) {
                 if (row.actionType == ConstructionRowActionType.CANCEL_BUILD) {
                     if (isCreativeBuildModeEnabled()) {
@@ -2189,6 +2361,14 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
 
         for (AssetRow row : layout.assetRows) {
+            if (row.nameClickArea.contains(localMouseX, localMouseY)) {
+                openPendingAssetRename(row.asset);
+                return true;
+            }
+            if (row.manageButton != null && row.manageButton.contains(localMouseX, localMouseY)) {
+                openPendingAssetManagement(row.asset);
+                return true;
+            }
             if (row.destroyButton.contains(localMouseX, localMouseY)) {
                 openPendingAssetDestruction(row.asset);
                 return true;
@@ -2203,6 +2383,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             return null;
         }
 
+        Minecraft mc = Minecraft.getMinecraft();
         CelestialBodyAssetState state = CelestialAssetStore.getState(assetManagementBody.id());
         int width = Math.min(520, getArea().width - 80);
         int height = Math.min(420, getArea().height - 60);
@@ -2211,10 +2392,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         int right = left + width;
         int bottom = top + height;
 
-        ButtonRect closeButton = new ButtonRect(right - 88, top + 6, right - 12, top + 24);
-        ButtonRect createStationButton = new ButtonRect(left + 14, top + 30, left + 134, top + 48);
-        ButtonRect createAutomatedStationButton = new ButtonRect(left + 144, top + 30, left + 304, top + 48);
-        ButtonRect createOutpostButton = new ButtonRect(left + 314, top + 30, left + 474, top + 48);
+        ButtonRect closeButton = new ButtonRect(right - 28, top + 6, right - 10, top + 24);
+        ButtonRect createStationButton = new ButtonRect(left + 14, top + 30, left + 36, top + 52);
+        ButtonRect createAutomatedStationButton = new ButtonRect(left + 42, top + 30, left + 64, top + 52);
+        ButtonRect createOutpostButton = new ButtonRect(left + 70, top + 30, left + 92, top + 52);
         int contentLeft = left + 10;
         int contentTop = top + 54;
         int contentRight = right - 24;
@@ -2258,15 +2439,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             if (rowTop < contentTop || rowBottom > contentBottom) {
                 continue;
             }
+            int rowLeft = left + 14;
             int rowRight = contentRight;
+            int nameWidth = mc.fontRenderer.getStringWidth(formatAssetDisplayName(site));
+            ButtonRect nameClickArea = new ButtonRect(
+                rowLeft + 30,
+                rowTop + 4,
+                Math.min(rowRight - 42, rowLeft + 32 + nameWidth),
+                rowTop + 16);
             siteRows.add(
                 new ConstructionSiteRow(
                     site,
-                    left + 14,
+                    rowLeft,
                     rowTop,
                     rowRight,
                     rowBottom,
-                    new ButtonRect(rowRight - 124, rowTop + 12, rowRight - 8, rowTop + 30),
+                    nameClickArea,
+                    new ButtonRect(rowRight - 34, rowTop + 9, rowRight - 10, rowTop + 33),
                     site.status() == CelestialAssetStatus.DECONSTRUCTION
                         ? ConstructionRowActionType.SEND_RESOURCES
                         : ConstructionRowActionType.CANCEL_BUILD));
@@ -2280,15 +2469,25 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             if (rowTop < contentTop || rowBottom > contentBottom) {
                 continue;
             }
+            int rowLeft = left + 14;
             int rowRight = contentRight;
+            int nameWidth = mc.fontRenderer.getStringWidth(formatAssetDisplayName(asset));
+            boolean manageable = isManageableStationAsset(asset);
+            ButtonRect manageButton = manageable ? new ButtonRect(rowRight - 62, rowTop + 9, rowRight - 38, rowTop + 33) : null;
             assetRows.add(
                 new AssetRow(
                     asset,
-                    left + 14,
+                    rowLeft,
                     rowTop,
                     rowRight,
                     rowBottom,
-                    new ButtonRect(rowRight - 82, rowTop + 8, rowRight - 8, rowTop + 26)));
+                    new ButtonRect(
+                        rowLeft + 30,
+                        rowTop + 4,
+                        Math.min(manageable ? rowRight - 70 : rowRight - 42, rowLeft + 32 + nameWidth),
+                        rowTop + 16),
+                    manageButton,
+                    new ButtonRect(rowRight - 34, rowTop + 9, rowRight - 10, rowTop + 33)));
         }
 
         return new AssetManagementLayout(
@@ -2349,11 +2548,38 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             CelestialAssetStore.previewRequirements(kind));
     }
 
+    private void openPendingAssetRename(CelestialManagedAsset asset) {
+        if (asset == null) {
+            return;
+        }
+        pendingAssetRename = new PendingAssetRename(asset);
+        if (renameField != null) {
+            renameField.setText(asset.displayName());
+            if (renameField.isValid()) {
+                getContext().focus(renameField);
+            }
+        }
+    }
+
+    private void closePendingAssetRename() {
+        pendingAssetRename = null;
+        if (renameField != null && renameField.isValid() && getContext().isFocused(renameField)) {
+            getContext().removeFocus();
+        }
+    }
+
     private void openPendingAssetDestruction(CelestialManagedAsset asset) {
         if (asset == null) {
             return;
         }
         pendingAssetDestruction = new PendingAssetDestruction(asset, false);
+    }
+
+    private void openPendingAssetManagement(CelestialManagedAsset asset) {
+        if (asset == null || !isManageableStationAsset(asset)) {
+            return;
+        }
+        pendingAssetManagement = new PendingAssetManagement(asset);
     }
 
     private boolean hasStoredConstructionResources(CelestialManagedAsset asset) {
@@ -2366,6 +2592,13 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             }
         }
         return false;
+    }
+
+    private boolean isManageableStationAsset(CelestialManagedAsset asset) {
+        if (asset == null || asset.status() != CelestialAssetStatus.OPERATIONAL) {
+            return false;
+        }
+        return asset.kind() == CelestialAssetKind.STATION || asset.kind() == CelestialAssetKind.AUTOMATED_STATION;
     }
 
     private void openPendingConstructionCancellation(CelestialManagedAsset asset) {
@@ -2416,6 +2649,48 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             return true;
         }
         return true;
+    }
+
+    private boolean handlePendingAssetRenameClick(int localMouseX, int localMouseY) {
+        PendingAssetRenameLayout layout = getPendingAssetRenameLayout();
+        if (layout == null) {
+            return true;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            closePendingAssetRename();
+            return true;
+        }
+        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
+            closePendingAssetRename();
+            return true;
+        }
+        if (layout.confirmButton.contains(localMouseX, localMouseY)) {
+            confirmPendingAssetRename();
+            return true;
+        }
+        return true;
+    }
+
+    private void confirmPendingAssetRename() {
+        if (pendingAssetRename == null) {
+            return;
+        }
+        String renamed = renameField == null ? "" : renameField.getText().trim();
+        if (renamed.isEmpty()) {
+            showActionStatus("Name cannot be empty");
+            return;
+        }
+        if (renamed.equals(pendingAssetRename.asset.displayName())) {
+            closePendingAssetRename();
+            return;
+        }
+        if (CelestialAssetStore.renameAsset(pendingAssetRename.asset.assetId(), renamed)) {
+            showActionStatus("Asset renamed");
+            closePendingAssetRename();
+            return;
+        }
+        showActionStatus("Rename failed");
     }
 
     private boolean handlePendingAssetDestructionClick(int localMouseX, int localMouseY) {
@@ -2494,6 +2769,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return true;
     }
 
+    private boolean handlePendingAssetManagementClick(int localMouseX, int localMouseY) {
+        PendingAssetManagementLayout layout = getPendingAssetManagementLayout();
+        if (layout == null) {
+            return true;
+        }
+        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
+            || localMouseY > layout.bottom) {
+            pendingAssetManagement = null;
+            return true;
+        }
+        if (layout.closeButton.contains(localMouseX, localMouseY)) {
+            pendingAssetManagement = null;
+            return true;
+        }
+        return true;
+    }
+
     private void drawPendingAssetCreationModal() {
         PendingAssetCreationLayout layout = getPendingAssetCreationLayout();
         if (layout == null) {
@@ -2530,6 +2822,31 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 0xFFD9E0FF);
             resourceY += 12;
         }
+
+        drawModalButton(layout.cancelButton, "Cancel", true, false);
+        drawModalButton(layout.confirmButton, "Confirm", true, false);
+    }
+
+    private void drawPendingAssetRenameModal() {
+        PendingAssetRenameLayout layout = getPendingAssetRenameLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
+
+        mc.fontRenderer.drawStringWithShadow("Rename Asset", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(
+            formatAssetDisplayName(pendingAssetRename.asset),
+            layout.left + 12,
+            layout.top + 28,
+            0xFFD9E0FF);
 
         drawModalButton(layout.cancelButton, "Cancel", true, false);
         drawModalButton(layout.confirmButton, "Confirm", true, false);
@@ -2641,6 +2958,32 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         drawModalButton(layout.closeButton, "Close", true, false);
     }
 
+    private void drawPendingAssetManagementModal() {
+        PendingAssetManagementLayout layout = getPendingAssetManagementLayout();
+        if (layout == null) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getMinecraft();
+        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
+        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
+        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
+
+        drawAssetIcon(pendingAssetManagement.asset.kind(), layout.left + 12, layout.top + 10, 18, 1.0f);
+        mc.fontRenderer.drawStringWithShadow("Manage Station", layout.left + 36, layout.top + 10, 0xFFFFFFFF);
+        mc.fontRenderer.drawStringWithShadow(
+            formatAssetDisplayName(pendingAssetManagement.asset),
+            layout.left + 36,
+            layout.top + 28,
+            0xFFD9E0FF);
+        mc.fontRenderer.drawStringWithShadow("This panel is not implemented yet.", layout.left + 14, layout.top + 62, 0xFF9AA7B8);
+
+        drawModalButton(layout.closeButton, "Close", true, false);
+    }
+
     private PendingAssetCreationLayout getPendingAssetCreationLayout() {
         if (pendingAssetCreation == null) {
             return null;
@@ -2662,6 +3005,43 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             new ButtonRect(right - 126, bottom - 34, right - 16, bottom - 14));
     }
 
+    private PendingAssetRenameLayout getPendingAssetRenameLayout() {
+        if (pendingAssetRename == null) {
+            return null;
+        }
+
+        int width = 340;
+        int height = 126;
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+
+        return new PendingAssetRenameLayout(
+            left,
+            top,
+            right,
+            bottom,
+            new ButtonRect(left + 14, top + 54, right - 14, top + 76),
+            new ButtonRect(left + 18, bottom - 34, left + 128, bottom - 14),
+            new ButtonRect(right - 128, bottom - 34, right - 18, bottom - 14));
+    }
+
+    private void updateRenameFieldLayout() {
+        if (renameField == null) {
+            return;
+        }
+        PendingAssetRenameLayout layout = getPendingAssetRenameLayout();
+        if (layout == null) {
+            renameField.top(-1000);
+            return;
+        }
+        renameField.left(getArea().rx + layout.inputField.left)
+            .top(getArea().ry + layout.inputField.top)
+            .width(layout.inputField.right - layout.inputField.left)
+            .height(layout.inputField.bottom - layout.inputField.top);
+    }
+
     private PendingAssetDestructionLayout getPendingAssetDestructionLayout() {
         if (pendingAssetDestruction == null) {
             return null;
@@ -2680,6 +3060,26 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return pendingAssetDestruction.armed
             ? new PendingAssetDestructionLayout(left, top, right, bottom, rightButton, leftButton)
             : new PendingAssetDestructionLayout(left, top, right, bottom, leftButton, rightButton);
+    }
+
+    private PendingAssetManagementLayout getPendingAssetManagementLayout() {
+        if (pendingAssetManagement == null) {
+            return null;
+        }
+
+        int width = 360;
+        int height = 150;
+        int left = (getArea().width - width) / 2;
+        int top = (getArea().height - height) / 2;
+        int right = left + width;
+        int bottom = top + height;
+
+        return new PendingAssetManagementLayout(
+            left,
+            top,
+            right,
+            bottom,
+            new ButtonRect(right - 128, bottom - 34, right - 18, bottom - 14));
     }
 
     private PendingConstructionCancellationLayout getPendingConstructionCancellationLayout() {
@@ -3181,16 +3581,18 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         private final int top;
         private final int right;
         private final int bottom;
+        private final ButtonRect nameClickArea;
         private final ButtonRect actionButton;
         private final ConstructionRowActionType actionType;
 
         private ConstructionSiteRow(CelestialManagedAsset asset, int left, int top, int right, int bottom,
-            ButtonRect actionButton, ConstructionRowActionType actionType) {
+            ButtonRect nameClickArea, ButtonRect actionButton, ConstructionRowActionType actionType) {
             this.asset = asset;
             this.left = left;
             this.top = top;
             this.right = right;
             this.bottom = bottom;
+            this.nameClickArea = nameClickArea;
             this.actionButton = actionButton;
             this.actionType = actionType;
         }
@@ -3207,6 +3609,15 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
     }
 
+    private enum AssetManagerButtonGlyph {
+        NONE,
+        CLOSE,
+        CANCEL,
+        SEND,
+        MANAGE,
+        DESTROY
+    }
+
     private static final class AssetRow {
 
         private final CelestialManagedAsset asset;
@@ -3214,15 +3625,19 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         private final int top;
         private final int right;
         private final int bottom;
+        private final ButtonRect nameClickArea;
+        private final ButtonRect manageButton;
         private final ButtonRect destroyButton;
 
         private AssetRow(CelestialManagedAsset asset, int left, int top, int right, int bottom,
-            ButtonRect destroyButton) {
+            ButtonRect nameClickArea, ButtonRect manageButton, ButtonRect destroyButton) {
             this.asset = asset;
             this.left = left;
             this.top = top;
             this.right = right;
             this.bottom = bottom;
+            this.nameClickArea = nameClickArea;
+            this.manageButton = manageButton;
             this.destroyButton = destroyButton;
         }
     }
@@ -3304,6 +3719,15 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
     }
 
+    private static final class PendingAssetRename {
+
+        private final CelestialManagedAsset asset;
+
+        private PendingAssetRename(CelestialManagedAsset asset) {
+            this.asset = asset;
+        }
+    }
+
     private static final class PendingAssetCreationLayout {
 
         private final int left;
@@ -3324,6 +3748,28 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
     }
 
+    private static final class PendingAssetRenameLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect inputField;
+        private final ButtonRect cancelButton;
+        private final ButtonRect confirmButton;
+
+        private PendingAssetRenameLayout(int left, int top, int right, int bottom, ButtonRect inputField,
+            ButtonRect cancelButton, ButtonRect confirmButton) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.inputField = inputField;
+            this.cancelButton = cancelButton;
+            this.confirmButton = confirmButton;
+        }
+    }
+
     private static final class PendingAssetDestruction {
 
         private final CelestialManagedAsset asset;
@@ -3332,6 +3778,32 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         private PendingAssetDestruction(CelestialManagedAsset asset, boolean armed) {
             this.asset = asset;
             this.armed = armed;
+        }
+    }
+
+    private static final class PendingAssetManagement {
+
+        private final CelestialManagedAsset asset;
+
+        private PendingAssetManagement(CelestialManagedAsset asset) {
+            this.asset = asset;
+        }
+    }
+
+    private static final class PendingAssetManagementLayout {
+
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final ButtonRect closeButton;
+
+        private PendingAssetManagementLayout(int left, int top, int right, int bottom, ButtonRect closeButton) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+            this.closeButton = closeButton;
         }
     }
 

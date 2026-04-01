@@ -5,8 +5,10 @@ import net.minecraft.client.Minecraft;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.GalaxiaRegistry;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public class GalacticChartGui {
 
@@ -21,7 +23,18 @@ public class GalacticChartGui {
         OrbitalCelestialBody currentStar = GalaxiaRegistry.findCurrentStar(currentDimension)
             .orElseGet(() -> GalaxiaRegistry.getPrimaryStar().orElse(galaxyRoot));
 
-        OrbitalMapWidget map = new OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar);
+        TextFieldWidget renameField = new TextFieldWidget().left(LEFT_PANEL_WIDTH)
+            .top(-1000)
+            .width(180)
+            .height(22)
+            .setMaxLength(48)
+            .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
+            .hintText("Asset name")
+            .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
+            .setFocusOnGuiOpen(false);
+
+        OrbitalMapWidget map = new OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar)
+            .attachRenameField(renameField);
         CelestialSidebarWidget sidebar = new CelestialSidebarWidget(galaxyRoot, currentStar, map);
 
         return panel.child(
@@ -33,6 +46,7 @@ public class GalacticChartGui {
                 (IWidget) map.left(LEFT_PANEL_WIDTH)
                     .top(0)
                     .right(0)
-                    .bottom(0));
+                    .bottom(0))
+            .child((IWidget) renameField);
     }
 }
