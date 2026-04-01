@@ -48,7 +48,7 @@ public class GuiPlanetTeleporter extends GuiScreen {
                 startY + i * spacing,
                 buttonWidth,
                 buttonHeight,
-                planet.name());
+                formatPlanetName(planet));
             this.buttonList.add(planetButton);
         }
 
@@ -136,7 +136,8 @@ public class GuiPlanetTeleporter extends GuiScreen {
 
         this.drawCenteredString(
             this.fontRendererObj,
-            StatCollector.translateToLocalFormatted("galaxia.gui.planet_teleporter.selected", selectedPlanet.name()),
+            StatCollector
+                .translateToLocalFormatted("galaxia.gui.planet_teleporter.selected", formatPlanetName(selectedPlanet)),
             this.width / 2,
             30,
             EnumColors.SubTitle.getColor());
@@ -220,5 +221,13 @@ public class GuiPlanetTeleporter extends GuiScreen {
     @Override
     public boolean doesGuiPauseGame() {
         return false;
+    }
+
+    private static String formatPlanetName(DimensionEnum planet) {
+        String localized = StatCollector.translateToLocal(planet.getTranslationKey());
+        if (!planet.getTranslationKey()
+            .equals(localized)) return localized;
+        return planet.getName()
+            .replace('_', ' ');
     }
 }

@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -12,9 +11,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.Teleporter;
 import net.minecraft.world.WorldServer;
 
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -181,7 +178,7 @@ public class TeleportRequestPacket implements IMessage {
             return null;
         }
 
-        private TileEntitySilo findNearbySilo(WorldServer world, double x, double z) {
+        public TileEntitySilo findNearbySilo(WorldServer world, double x, double z) {
             int groundY = world.getTopSolidOrLiquidBlock((int) x, (int) z);
             int searchX = (int) x;
             int searchZ = (int) z;
@@ -226,23 +223,15 @@ public class TeleportRequestPacket implements IMessage {
                 TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
                 TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
                 targetSilo.currentFacing)[2] + 0.5 : message.z;
+
             EntityRocket lander = new EntityRocket(world);
-            if (inSilo) lander.setModules(message.parseModules());
-            else {
-
-                List<Integer> validCapsules = ModuleRegistry.getAll()
-                    .stream()
-                    .filter(CapsuleModule.class::isInstance)
-                    .map(m -> m.getId())
-                    .collect(Collectors.toList());
-
-                lander.setModules(
-                    message.parseModules()
-                        .stream()
-                        .filter(m -> validCapsules.contains(m))
-                        .collect(Collectors.toList()));
+            lander.setModules(message.parseModules());
+            if (!inSilo) {
+                lander.turnToLanderAndCache();
+                lander.setCapsuleIndex(0);
+            } else {
+                lander.setCapsuleIndex(message.capsuleIndex);
             }
-            lander.setCapsuleIndex(message.capsuleIndex);
             lander.setPosition(landX, EntityRocket.SPAWN_ALTITUDE, landZ);
             lander.setTargetSilo(targetSilo);
             world.spawnEntityInWorld(lander);

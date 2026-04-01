@@ -15,6 +15,8 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -174,8 +176,19 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureDisformed() {
         updateLinkedAssembler();
         shouldRender = false;
+        this.kill();
     }
 
+    /**
+     * Helper method to get rotation offsets based on multi direction
+     *
+     * @param localX        The x offset local to the controller
+     * @param localY        The y offset local to the controller
+     * @param localZ        The z offset local to the controller
+     * @param currentFacing The direction the multi is currently facing
+     *
+     * @return Array of offsets based on direction and local coordinates
+     */
     public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
         switch (currentFacing.getDirection()) {
             case SOUTH:
@@ -240,6 +253,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return valid;
     }
 
+    /**
+     * Construction override for using StrucureLibs auto-construction
+     *
+     * @param trigger   The ItemStack used to construct
+     * @param hintsOnly Whether the construct should show hints only or build
+     */
     @Override
     public void construct(ItemStack trigger, boolean hintsOnly) {
         if (worldObj == null) return;
@@ -260,6 +279,13 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             hintsOnly);
     }
 
+    /**
+     * Construction override for auto-building in survival
+     *
+     * @param trigger       The ItemStack used to construct
+     * @param elementBudget The budget of elements available to the player
+     * @param env           The build environment
+     */
     @Override
     public int survivalConstruct(ItemStack trigger, int elementBudget, ISurvivalBuildEnvironment env) {
         if (worldObj == null || worldObj.isRemote) return -1;
@@ -355,7 +381,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
 
         if (!hasAssembler) {
             return panel.child(
-                IKey.str("§cNo Module Assembler linked.")
+                IKey.str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
+                        + EnumChatFormatting.RESET)
                     .asWidget()
                     .pos(10, 35));
         }
@@ -363,21 +391,23 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         panel.child(
             new PageButton(0, tabController).size(120, 28)
                 .pos(0, -28)
-                .overlay(IKey.str("Build Rocket")))
+                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
             .child(
                 new PageButton(1, tabController).size(120, 28)
                     .pos(120, -28)
-                    .overlay(IKey.str("Launch Rocket")));
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
 
         // Title
         panel.child(
-            IKey.str("§lRocket Silo")
+            IKey.str(
+                EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
+                    + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
         // Module addition buttons
         Flow moduleRow = Flow.row()
             .coverChildren()
-            .pos(10, 35)
+            .pos(8, 35)
             .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
             moduleRow.child(createModuleButton(m, moduleAssembler));
@@ -392,7 +422,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         if (worldObj.provider.dimensionId != 0) {
             destRow.child(
                 new ToggleButton().size(48, 20)
-                    .overlay(IKey.str("Viridis"))
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.viridis")))
                     .valueWrapped(selectedDim, 0));
         }
 
@@ -411,9 +441,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                             new ButtonWidget<>().size(220, 30)
                                 .pos(10, 80)
                                 .overlay(
-                                    IKey.str("Return Modules")
+                                    IKey.str(
+                                        StatCollector
+                                            .translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
                                         .alignment(Alignment.Center))
-                                .tooltip(t -> t.addLine("Disassemble Rocket"))
+                                .tooltip(
+                                    t -> t.addLine(
+                                        StatCollector
+                                            .translateToLocal("galaxia.tooltip.rocket_silo.builder.return_modules")))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
@@ -428,7 +463,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                             new ButtonWidget<>().size(220, 30)
                                 .pos(10, 120)
                                 .overlay(
-                                    IKey.str("§aEnter Rocket")
+                                    IKey.str(
+                                        EnumChatFormatting.GREEN
+                                            + StatCollector
+                                                .translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
+                                            + EnumChatFormatting.RESET)
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
                                     // Flag to indicate validity of rocket launching
@@ -436,12 +475,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                     getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
                                         .isEmpty()) {
-                                        t.addLine("§7Add some modules first");
+                                        t.addLine(
+                                            EnumChatFormatting.GRAY
+                                                + StatCollector.translateToLocal(
+                                                    "galaxia.tooltip.rocket_silo.builder.enter_rocket")
+                                                + EnumChatFormatting.RESET);
                                         return;
                                     }
                                     for (IRocketValidator v : validators) {
                                         ValidationResult r = v.validate(getAssembly());
-                                        if (!r.valid()) t.addLine("§c" + r.message());
+                                        if (!r.valid())
+                                            t.addLine(EnumChatFormatting.RED + r.message() + EnumChatFormatting.RESET);
                                         validFlag = false;
                                     }
                                     if (!validFlag) return;
@@ -465,9 +509,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      * @return ButtonWidget to add to the panel
      */
     private ButtonWidget<?> createModuleButton(RocketModule module, TileEntityModuleAssembler assembler) {
-        return new ButtonWidget<>().size(48, 20)
+        return new ButtonWidget<>().size(36, 20)
             .overlay(IKey.str(module.getName()))
-            .tooltip(t -> t.add("§7" + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())))
+            .tooltip(
+                t -> t.add(
+                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())
+                        + EnumChatFormatting.RESET))
             .syncHandler(
                 new InteractionSyncHandler().setOnMousePressed(
                     md -> {
@@ -507,7 +554,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         EntityRocket rocket = getEntityRocket();
         if (rocket == null || rocket.isDead) return;
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
-        rocket.setDesination(destination);
+        rocket.setDestination(destination);
         data.getPlayer()
             .mountEntity(rocket);
         if (!rocket.shouldRender()) rocket.launch();
@@ -548,9 +595,15 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return true;
     }
 
+    /**
+     * Kills the rocket by clearing modules and settting dead
+     */
     public void kill() {
         modules.clear();
-        entityRocket.setDead();
+        if (this.getEntityRocket() != null) {
+            this.getEntityRocket()
+                .setDead();
+        }
     }
 
     /**
@@ -565,6 +618,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         return assembler.moduleMap.getOrDefault(id, 0) > 0;
     }
 
+    /**
+     * Sets the target dimension destination for the silo, based on selected planet
+     * in UI
+     *
+     * @param dim The ID of the selected dimension
+     */
     public void setDesination(int dim) {
         this.destination = dim;
     }
@@ -647,6 +706,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         worldObj.spawnEntityInWorld(entityRocket);
     }
 
+    /**
+     * Receives a list of incoming modules and adds to the silo
+     *
+     * @param The incoming module list
+     */
     public void receiveLandingRocket(List<Integer> incomingModules) {
         modules.clear();
         modules.addAll(incomingModules);
@@ -693,7 +757,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         super.updateEntity();
 
         if (!worldObj.isRemote) {
-            if (shouldRender && (entityRocket == null || entityRocket.isDead)) {
+            // TODO: Create a check of sorts to prevent the RocketEntity from uncoupling upon rejoin/server reload
+            if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid) {
                 spawnRocket();
             }
 

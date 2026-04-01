@@ -55,7 +55,7 @@ public enum GalaxiaItemList {
 
     // PARTS
     HEAVY_DUTY_PLATE_BASE("parts/heavy_duty_plate_base"),
-    satellite_dish("parts/satellite_dish"),
+    SATELLITE_DISH("parts/satellite_dish"),
     BOROSILICATE_GLASS_BAR("parts/borosilicate_glass_bar"),
 
     // GEAR

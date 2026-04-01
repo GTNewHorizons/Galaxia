@@ -16,7 +16,11 @@ public enum EnumColors {
     SubTitle(0xAAAAFF),
     Value(0xFFFFFF),
 
+    // Icon
     IconGreen(0x55FF55),
+
+    // Effect(s)
+    EffectBad(0x66CCFF),
 
     // Map Sidebar
     MapSidebarBackground(0xE60F1621),
@@ -54,17 +58,14 @@ public enum EnumColors {
         this.defaultColor = defaultColor;
     }
 
-    // Optional resource pack color override
-    // Examples (lowercase):
-    // galaxia.color.override.title=FFFFFF
-    // galaxia.color.override.subtitle=CD7F32
-
     /**
-     * Gets the colour as a parsed form if possible, or default:
+     * Gets the colour as a parsed form if possible, or default.
+     * <br>
      * Optional resource pack color override
+     * <p>
      * Examples (lowercase):
-     * - galaxia.color.override.title=FFFFFF
-     * - galaxia.color.override.subtitle=CD7F32
+     * - <code>galaxia.color.override.title=FFFFFF</code>
+     * - <code>galaxia.color.override.subtitle=CD7F32</code>
      *
      * @return Parsed colour from ENUM, or default
      */

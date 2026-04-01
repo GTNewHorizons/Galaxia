@@ -10,6 +10,7 @@ import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.FuelTankModule;
+import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.LanderModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.ClusteredPlacementRule;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.rules.LinearPlacementRule;
@@ -131,10 +132,11 @@ public final class RocketAssembly {
             if (modules.get(i) instanceof CapsuleModule m) return m.getSitOffset() + getTotalHeight();
 
         }
-        return
 
-        getTotalHeight();
-
+        for (int i = modules.size() - 1; i >= 0; i--) {
+            if (modules.get(i) instanceof LanderModule l) return l.getSitOffset() + getTotalHeight();
+        }
+        return getTotalHeight();
     }
 
     public List<RocketModule> getModules() {

@@ -1,22 +1,21 @@
 package com.gtnewhorizons.galaxia.utility.effects;
 
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.potion.PotionEffect;
 
 public class GalaxiaEffectAPI {
 
     public static float getSpeedMultiplier(EntityLivingBase entity) {
-        float result = 1f;
-        boolean applyMultiplier = entity.isPotionActive(GalaxiaEffects.lowOxygen)
-            || entity.isPotionActive(GalaxiaEffects.overcooling)
-            || entity.isPotionActive(GalaxiaEffects.overheating);
+        PotionEffect lowOxygen = entity.getActivePotionEffect(GalaxiaEffects.lowOxygen);
+        PotionEffect overcooling = entity.getActivePotionEffect(GalaxiaEffects.overcooling);
+        PotionEffect overheating = entity.getActivePotionEffect(GalaxiaEffects.overheating);
 
-        if (applyMultiplier) {
-            int amp = entity.getActivePotionEffect(GalaxiaEffects.lowOxygen)
-                .getAmplifier();
-            result = oxygenSpeedMultiplier(amp);
-        }
+        int amp = -1;
+        if (lowOxygen != null) amp = Math.max(amp, lowOxygen.getAmplifier());
+        if (overcooling != null) amp = Math.max(amp, overcooling.getAmplifier());
+        if (overheating != null) amp = Math.max(amp, overheating.getAmplifier());
 
-        return result;
+        return amp >= 0 ? oxygenSpeedMultiplier(amp) : 1f;
     }
 
     private static float oxygenSpeedMultiplier(int amp) {
