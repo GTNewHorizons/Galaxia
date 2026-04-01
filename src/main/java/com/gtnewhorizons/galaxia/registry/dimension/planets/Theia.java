@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -14,16 +16,14 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CraterFeature;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CrystalClusterFeature;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.FluidSpringFeature;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StalactiteFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CrystalClusterFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.FluidSpringFeature;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.StalactiteFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
@@ -210,34 +210,34 @@ public class Theia extends BasePlanet {
                     .addStrataLayer(PlanetBlocks.THEIA_ANORTHOSITE, 1, 32))
             .generateCaves(true)
             .surfaceFeature(
-                new WorldGenGalaxiaSurface(
+                new LocationRuleGalaxiaSurface(
                     8,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     new CraterFeature(PlanetBlocks.THEIA_TEKTITE),
                     true))
             .caveFeature(
-                new WorldGenGalaxiaCave(
+                new LocationRuleGalaxiaCave(
                     64,
                     4,
                     32,
                     new Block[] { PlanetBlocks.THEIA_ANORTHOSITE },
                     new StalactiteFeature(PlanetBlocks.THEIA_ANORTHOSITE)))
             .caveFeature(
-                new WorldGenGalaxiaCave(
+                new LocationRuleGalaxiaCave(
                     64,
                     32,
                     64,
                     new Block[] { PlanetBlocks.THEIA_ANDESITE },
                     new StalactiteFeature(PlanetBlocks.THEIA_ANDESITE)))
             .caveFeature(
-                new WorldGenGalaxiaCave(
+                new LocationRuleGalaxiaCave(
                     32,
                     4,
                     32,
                     new Block[] { PlanetBlocks.THEIA_ANORTHOSITE },
                     new CrystalClusterFeature(GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get())))
             .wallFeature(
-                new WorldGenGalaxiaWall(
+                new LocationRuleGalaxiaWall(
                     2,
                     new Block[] { PlanetBlocks.THEIA_ANDESITE, PlanetBlocks.THEIA_ANORTHOSITE },
                     new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock())))
@@ -258,7 +258,7 @@ public class Theia extends BasePlanet {
                     .addStrataLayer(PlanetBlocks.THEIA_GABBRO, 1, 32))
             .generateCaves(false)
             .surfaceFeature(
-                new WorldGenGalaxiaSurface(
+                new LocationRuleGalaxiaSurface(
                     32,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     new CraterFeature(PlanetBlocks.THEIA_TEKTITE)))

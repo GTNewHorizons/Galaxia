@@ -1,16 +1,21 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule;
 
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
-public abstract class WorldGenGalaxiaBase extends WorldGenerator {
+/**
+ * Provides primary logic for location rules.
+ * Allows features to be placed in specific areas.
+ */
+public abstract class LocationRuleGalaxiaBase extends WorldGenerator {
 
     private final boolean centered;
     protected final Feature feature;
 
-    public WorldGenGalaxiaBase(Feature feature, boolean centered) {
+    public LocationRuleGalaxiaBase(Feature feature, boolean centered) {
         this.feature = feature;
         this.centered = centered;
     }

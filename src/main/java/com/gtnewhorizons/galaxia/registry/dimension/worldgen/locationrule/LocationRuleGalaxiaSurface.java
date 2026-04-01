@@ -1,22 +1,23 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule;
 
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
-public class WorldGenGalaxiaSurface extends WorldGenGalaxiaBase {
+public class LocationRuleGalaxiaSurface extends LocationRuleGalaxiaBase {
 
     private final int rarity;
     private final Block[] surfaceRequirements;
 
-    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature, boolean centered) {
+    public LocationRuleGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature, boolean centered) {
         super(feature, centered);
         this.rarity = rarity;
         this.surfaceRequirements = surfaceRequirements;
     }
 
-    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature) {
+    public LocationRuleGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature) {
         this(rarity, surfaceRequirements, feature, false);
     }
 

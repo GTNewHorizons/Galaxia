@@ -8,6 +8,9 @@ import java.util.Random;
 import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -404,7 +407,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 return;
             }
             // Generate surface features in locally random points within the chunk
-            for (WorldGenGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
+            for (LocationRuleGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
                 int localX = x - 8;
                 int localZ = z - 8;
                 if (!feature.isCentered()) {
@@ -418,7 +421,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         .getUpdateCoordinates());
             }
             // Generate cave features
-            for (WorldGenGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
+            for (LocationRuleGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
                 int maximumHeight = feature.getMaximumHeight();
                 int minimumHeight = feature.getMinimumHeight();
                 for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
@@ -437,7 +440,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
             }
             // Generate wall features
-            for (WorldGenGalaxiaWall feature : spaceBiome.getWallFeatures()) {
+            for (LocationRuleGalaxiaWall feature : spaceBiome.getWallFeatures()) {
                 int localX = x - 8;
                 int localZ = z - 8;
                 if (!feature.isCentered()) {
