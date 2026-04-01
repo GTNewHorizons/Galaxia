@@ -6,6 +6,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
+/**
+ * Places a feature on the surface in a cave layer
+ */
 public class LocationRuleGalaxiaCave extends LocationRuleGalaxiaSurface {
 
     private final int frequency;

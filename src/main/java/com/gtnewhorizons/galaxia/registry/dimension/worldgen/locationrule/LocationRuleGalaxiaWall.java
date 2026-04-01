@@ -6,6 +6,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
+/**
+ * Places a feature inside a solid wall
+ */
 public class LocationRuleGalaxiaWall extends LocationRuleGalaxiaBase {
 
     private final int rarity;

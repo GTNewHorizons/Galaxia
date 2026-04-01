@@ -6,6 +6,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
+/**
+ * Places a feature on the planet's surface
+ */
 public class LocationRuleGalaxiaSurface extends LocationRuleGalaxiaBase {
 
     private final int rarity;
