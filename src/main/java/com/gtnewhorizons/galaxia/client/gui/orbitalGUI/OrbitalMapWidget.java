@@ -47,6 +47,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private BodySelectionListener bodySelectionListener;
     private final List<ScreenBodyBounds> screenBodies = new ArrayList<>();
     private final List<LabelDrawCall> labelDrawCalls = new ArrayList<>();
+    private final List<MarkerDrawCall> markerDrawCalls = new ArrayList<>();
 
     private double cameraX = 0, cameraY = 0;
     private double zoomLevel = -0.8;
@@ -908,6 +909,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
         screenBodies.clear();
         labelDrawCalls.clear();
+        markerDrawCalls.clear();
         drawOrbitsRecursive(viewRoot, viewOrigin[0], viewOrigin[1]);
         GL11.glDisable(GL11.GL_LINE_SMOOTH);
         GL11.glLineWidth(1f);
@@ -926,6 +928,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         GlStateManager.popMatrix();
 
         drawCollectedLabels();
+        drawCollectedMarkers();
 
         String speedText = paused ? StatCollector.translateToLocal("galaxia.gui.orbital.paused")
             : StatCollector.translateToLocalFormatted("galaxia.gui.orbital.speed_multiplier", timeScale);
@@ -1009,6 +1012,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 drawFilledCircle(sx, sy, radius, color, bodyAlpha);
             }
             registerHitboxes(body, sx, sy);
+            registerMarkers(body, sx, sy, bodyAlpha);
         }
 
         if (!shouldTraverseChildren(body)) {
@@ -1083,6 +1087,25 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         screenBodies.add(new ScreenBodyBounds(body, sx, sy, renderedRadius, interactionRadius));
     }
 
+    private void registerMarkers(OrbitalCelestialBody body, float sx, float sy, float alpha) {
+        CelestialMarkerContext context = new CelestialMarkerContext(body, CelestialAssetStore.getStateIfPresent(body.id()));
+        List<CelestialMarker> markers = CelestialMarkerRegistry.getMarkers(context);
+        if (markers.isEmpty()) {
+            return;
+        }
+
+        int iconSize = Math.max(10, Math.min(15, Math.round(getRenderedBodyRadius(body) * 0.95f)));
+        int gap = 3;
+        int startX = Math.round(sx + getRenderedBodyRadius(body) + 6f);
+        int topY = Math.round(sy - getRenderedBodyRadius(body));
+
+        for (int i = 0; i < markers.size(); i++) {
+            CelestialMarker marker = markers.get(i);
+            int markerX = startX + i * (iconSize + gap);
+            markerDrawCalls.add(new MarkerDrawCall(marker.texture(), markerX, topY, iconSize, alpha * marker.alpha()));
+        }
+    }
+
     private ScreenBodyBounds findScreenBodyBounds(OrbitalCelestialBody body) {
         for (int i = screenBodies.size() - 1; i >= 0; i--) {
             ScreenBodyBounds bounds = screenBodies.get(i);
@@ -1109,6 +1132,31 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         tess.draw();
 
         GL11.glColor4f(1f, 1f, 1f, 1f);
+    }
+
+    private void drawUiSprite(ResourceLocation tex, int x, int y, int size, float alpha) {
+        Minecraft.getMinecraft().getTextureManager().bindTexture(tex);
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(1f, 1f, 1f, alpha);
+
+        Tessellator tess = Tessellator.instance;
+        tess.startDrawingQuads();
+        tess.addVertexWithUV(x, y + size, 0, 0, 1);
+        tess.addVertexWithUV(x + size, y + size, 0, 1, 1);
+        tess.addVertexWithUV(x + size, y, 0, 1, 0);
+        tess.addVertexWithUV(x, y, 0, 0, 0);
+        tess.draw();
+
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+    }
+
+    private void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
+        ResourceLocation texture = getAssetIconTexture(kind);
+        if (texture != null) {
+            drawUiSprite(texture, x, y, size, alpha);
+        }
     }
 
     private void drawFilledCircle(float x, float y, float r, int colour, float alpha) {
@@ -1280,6 +1328,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private void drawCollectedLabels() {
         for (LabelDrawCall label : labelDrawCalls) {
             drawCenteredString(label.text, label.x, label.y, label.color);
+        }
+    }
+
+    private void drawCollectedMarkers() {
+        for (MarkerDrawCall marker : markerDrawCalls) {
+            drawUiSprite(marker.texture, marker.x, marker.y, marker.size, marker.alpha);
         }
     }
 
@@ -1457,16 +1511,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         mc.fontRenderer.drawStringWithShadow(assetManagementBody.displayName(), layout.left + 120, layout.top + 10, 0xFFD9E0FF);
 
         drawModalButton(layout.closeButton, "Close", true, false);
-        drawModalButton(layout.createStationButton, "Create Station", canCreateBaseStation(assetManagementBody), false);
+        drawModalButton(
+            layout.createStationButton,
+            "Create Station",
+            getAssetIconTexture(CelestialAssetKind.STATION),
+            canCreateBaseStation(assetManagementBody),
+            false);
         if (isGT5AutomationAvailable()) {
             drawModalButton(
                 layout.createAutomatedStationButton,
                 "Create Automated Station",
+                getAssetIconTexture(CelestialAssetKind.AUTOMATED_STATION),
                 canCreateAutomatedStation(assetManagementBody),
                 false);
             drawModalButton(
                 layout.createOutpostButton,
                 "Create Automated Outpost",
+                getAssetIconTexture(CelestialAssetKind.AUTOMATED_OUTPOST),
                 canCreateAutomatedOutpost(assetManagementBody),
                 false);
         } else {
@@ -1485,11 +1546,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             for (ConstructionSiteRow row : layout.siteRows) {
                 CelestialManagedAsset site = row.asset;
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(site), row.left + 8, row.top + 6, 0xFFFFFFFF);
+                drawAssetIcon(site.kind(), row.left + 10, row.top + 9, 16, 1.0f);
+                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(site), row.left + 32, row.top + 6, 0xFFFFFFFF);
                 mc.fontRenderer.drawStringWithShadow(
                     (site.status() == CelestialAssetStatus.DECONSTRUCTION ? "Stored: " : "Inventory: ")
                         + buildConstructionInventorySummary(site),
-                    row.left + 8,
+                    row.left + 32,
                     row.top + 18,
                     0xFFD9E0FF);
                 drawModalButton(row.actionButton, row.actionType.buttonLabel, true, false);
@@ -1504,10 +1566,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             for (AssetRow row : layout.assetRows) {
                 CelestialManagedAsset asset = row.asset;
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(asset), row.left + 8, row.top + 6, 0xFFFFFFFF);
+                drawAssetIcon(asset.kind(), row.left + 10, row.top + 9, 16, 1.0f);
+                mc.fontRenderer.drawStringWithShadow(formatAssetDisplayName(asset), row.left + 32, row.top + 6, 0xFFFFFFFF);
                 mc.fontRenderer.drawStringWithShadow(
                     formatAssetKind(asset.kind()) + " | " + formatAssetLocation(asset.location()),
-                    row.left + 8,
+                    row.left + 32,
                     row.top + 16,
                     0xFFD9E0FF);
                 drawModalButton(row.destroyButton, "Destroy", true, false);
@@ -1521,6 +1584,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private void drawModalButton(ButtonRect rect, String label, boolean enabled, boolean hovered) {
+        drawModalButton(rect, label, null, enabled, hovered);
+    }
+
+    private void drawModalButton(ButtonRect rect, String label, ResourceLocation icon, boolean enabled, boolean hovered) {
         int bg = !enabled ? 0xFF243041 : hovered ? 0xFF3A5678 : 0xFF2D435D;
         int border = enabled ? 0xFF7FB6FF : 0xFF556577;
         Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, bg);
@@ -1528,7 +1595,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, border);
         Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, border);
         Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, border);
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, rect.left + 8, rect.top + 5, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
+        int textX = rect.left + 8;
+        if (icon != null) {
+            drawUiSprite(icon, rect.left + 5, rect.top + 2, 14, enabled ? 1.0f : 0.45f);
+            textX = rect.left + 24;
+        }
+        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, textX, rect.top + 5, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
     }
 
     private void drawDangerButton(ButtonRect rect, String label) {
@@ -2050,14 +2122,15 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
         Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
 
+        drawAssetIcon(pendingAssetCreation.kind, layout.left + 12, layout.top + 10, 18, 1.0f);
         mc.fontRenderer.drawStringWithShadow(
             "Confirm " + formatAssetKind(pendingAssetCreation.kind),
-            layout.left + 12,
+            layout.left + 36,
             layout.top + 10,
             0xFFFFFFFF);
         mc.fontRenderer.drawStringWithShadow(
             pendingAssetCreation.displayName,
-            layout.left + 12,
+            layout.left + 36,
             layout.top + 28,
             0xFFD9E0FF);
         mc.fontRenderer.drawStringWithShadow("Required resources", layout.left + 12, layout.top + 52, 0xFF5A63FF);
@@ -2172,8 +2245,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         } else {
             for (TransferTargetRow row : layout.rows) {
                 Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                mc.fontRenderer.drawStringWithShadow(row.target.displayName, row.left + 8, row.top + 6, 0xFFFFFFFF);
-                mc.fontRenderer.drawStringWithShadow(row.target.hostBodyName, row.left + 8, row.top + 18, 0xFFD9E0FF);
+                drawAssetIcon(CelestialAssetKind.STATION, row.left + 10, row.top + 9, 16, 1.0f);
+                mc.fontRenderer.drawStringWithShadow(row.target.displayName, row.left + 32, row.top + 6, 0xFFFFFFFF);
+                mc.fontRenderer.drawStringWithShadow(row.target.hostBodyName, row.left + 32, row.top + 18, 0xFFD9E0FF);
                 drawModalButton(row.sendButton, "Send", true, false);
             }
         }
@@ -2396,6 +2470,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         };
     }
 
+    private ResourceLocation getAssetIconTexture(CelestialAssetKind kind) {
+        return CelestialAssetIcons.get(kind);
+    }
+
     private String formatAssetLocation(CelestialAssetLocation location) {
         return switch (location) {
             case ORBIT -> "Orbit";
@@ -2572,6 +2650,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             this.x = x;
             this.y = y;
             this.color = color;
+        }
+    }
+
+    private static final class MarkerDrawCall {
+
+        private final ResourceLocation texture;
+        private final int x;
+        private final int y;
+        private final int size;
+        private final float alpha;
+
+        private MarkerDrawCall(ResourceLocation texture, int x, int y, int size, float alpha) {
+            this.texture = texture;
+            this.x = x;
+            this.y = y;
+            this.size = size;
+            this.alpha = alpha;
         }
     }
 

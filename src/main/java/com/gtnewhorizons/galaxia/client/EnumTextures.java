@@ -34,6 +34,10 @@ public enum EnumTextures {
 
     // Space Object Icons for Galactic map
     ICON_EGORA("textures/gui/bodyicons/egora.png"),
+    ICON_STATION("textures/gui/bodyicons/station.png"),
+    ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
+    ICON_OUTPOST("textures/gui/bodyicons/outpost.png"),
+    ICON_OUTPOST_AUTOMATED("textures/gui/bodyicons/outpost_automated.png"),
 
     // Add more textures here
     ; // leave trailing semicolon

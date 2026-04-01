@@ -21,6 +21,14 @@ public final class CelestialAssetStore {
         return state.snapshot();
     }
 
+    public static synchronized CelestialBodyAssetState getStateIfPresent(String celestialObjectId) {
+        MutableBodyState state = STATE_BY_BODY.get(celestialObjectId);
+        if (state == null) {
+            return new CelestialBodyAssetState(celestialObjectId, Collections.emptyList());
+        }
+        return state.snapshot();
+    }
+
     public static synchronized CelestialManagedAsset createAssetInConstruction(String celestialObjectId, String displayName,
         CelestialAssetKind kind, CelestialAssetLocation location) {
         MutableBodyState state = STATE_BY_BODY.computeIfAbsent(celestialObjectId, MutableBodyState::new);
