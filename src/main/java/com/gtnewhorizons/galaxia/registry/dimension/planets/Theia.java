@@ -213,7 +213,8 @@ public class Theia extends BasePlanet {
                 new WorldGenGalaxiaSurface(
                     8,
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
-                    new CraterFeature(PlanetBlocks.THEIA_TEKTITE)))
+                    new CraterFeature(PlanetBlocks.THEIA_TEKTITE),
+                    true))
             .caveFeature(
                 new WorldGenGalaxiaCave(
                     64,

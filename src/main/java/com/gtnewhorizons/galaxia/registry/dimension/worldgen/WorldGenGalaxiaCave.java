@@ -12,11 +12,16 @@ public class WorldGenGalaxiaCave extends WorldGenGalaxiaSurface {
     private final int maximumHeight;
 
     public WorldGenGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements,
-        Feature feature) {
-        super(1, surfaceRequirements, feature);
+        Feature feature, boolean centered) {
+        super(1, surfaceRequirements, feature, centered);
         this.frequency = frequency;
         this.minimumHeight = minimumHeight;
         this.maximumHeight = maximumHeight;
+    }
+
+    public WorldGenGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements,
+                               Feature feature) {
+        this(frequency, minimumHeight, maximumHeight, surfaceRequirements, feature, false);
     }
 
     @Override

@@ -10,10 +10,14 @@ public class WorldGenGalaxiaSurface extends WorldGenGalaxiaBase {
     private final int rarity;
     private final Block[] surfaceRequirements;
 
-    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature) {
-        super(feature);
+    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature, boolean centered) {
+        super(feature, centered);
         this.rarity = rarity;
         this.surfaceRequirements = surfaceRequirements;
+    }
+
+    public WorldGenGalaxiaSurface(int rarity, Block[] surfaceRequirements, Feature feature) {
+        this(rarity, surfaceRequirements, feature, false);
     }
 
     @Override

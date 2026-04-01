@@ -405,8 +405,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
             // Generate surface features in locally random points within the chunk
             for (WorldGenGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
-                int localX = x + this.rand.nextInt(16) - 8;
-                int localZ = z + this.rand.nextInt(16) - 8;
+                int localX = x - 8;
+                int localZ = z - 8;
+                if (!feature.isCentered()) {
+                    localX += this.rand.nextInt(16);
+                    localZ += this.rand.nextInt(16);
+                }
                 int localY = worldObj.getHeightValue(x, z);
                 feature.generate(worldObj, rand, localX, localY, localZ);
                 updateCoordinates.addAll(
@@ -418,8 +422,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 int maximumHeight = feature.getMaximumHeight();
                 int minimumHeight = feature.getMinimumHeight();
                 for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
-                    int localX = x + this.rand.nextInt(16) - 8;
-                    int localZ = z + this.rand.nextInt(16) - 8;
+                    int localX = x - 8;
+                    int localZ = z - 8;
+                    if (!feature.isCentered()) {
+                        localX += this.rand.nextInt(16);
+                        localZ += this.rand.nextInt(16);
+                    }
                     int localY = rand.nextInt(
                         Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
@@ -430,8 +438,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
             // Generate wall features
             for (WorldGenGalaxiaWall feature : spaceBiome.getWallFeatures()) {
-                int localX = x + this.rand.nextInt(16) - 8;
-                int localZ = z + this.rand.nextInt(16) - 8;
+                int localX = x - 8;
+                int localZ = z - 8;
+                if (!feature.isCentered()) {
+                    localX += this.rand.nextInt(16);
+                    localZ += this.rand.nextInt(16);
+                }
                 int localY = rand.nextInt(Math.max(1, worldObj.getHeightValue(x, z)));
                 feature.generate(worldObj, rand, localX, localY, localZ);
                 updateCoordinates.addAll(

@@ -10,10 +10,14 @@ public class WorldGenGalaxiaWall extends WorldGenGalaxiaBase {
     private final int rarity;
     private final Block[] wallRequirements;
 
-    public WorldGenGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature) {
-        super(feature);
+    public WorldGenGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature, boolean centered) {
+        super(feature, centered);
         this.rarity = rarity;
         this.wallRequirements = wallRequirements;
+    }
+
+    public WorldGenGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature) {
+        this(rarity, wallRequirements, feature, false);
     }
 
     @Override
