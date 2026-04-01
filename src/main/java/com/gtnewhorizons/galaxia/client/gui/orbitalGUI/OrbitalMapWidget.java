@@ -1,25 +1,17 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.entity.RenderItem;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
-import net.minecraftforge.oredict.OreDictionary;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IGuiAction;
@@ -29,18 +21,11 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetLocation;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetRequirement;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStatus;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyAssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialManagedAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
-import com.gtnewhorizons.galaxia.registry.celestial.GtOreVeinDefinition;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
@@ -55,15 +40,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private OrbitalCelestialBody viewRoot;
     private OrbitalCelestialBody initialLayer;
     private BodySelectionListener bodySelectionListener;
-    private final List<ScreenBodyBounds> screenBodies = new ArrayList<>();
-    private final List<LabelDrawCall> labelDrawCalls = new ArrayList<>();
-    private final List<MarkerDrawCall> markerDrawCalls = new ArrayList<>();
-    private final List<PinnedInfoItemBounds> pinnedInfoItemBounds = new ArrayList<>();
+    private OrbitalSceneFrame sceneFrame = new OrbitalSceneFrame();
 
-    private double cameraX = 0, cameraY = 0;
-    private double zoomLevel = -0.8;
-    private double targetCameraX = 0, targetCameraY = 0;
-    private double targetZoomLevel = -0.8;
+    private final OrbitalViewState viewState = new OrbitalViewState(-0.8);
+    private final OrbitalWorldStateCache worldStateCache = new OrbitalWorldStateCache();
 
     private boolean dragging = false;
     private double lastMouseX, lastMouseY;
@@ -77,9 +57,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private OrbitalCelestialBody hoveredBody = null;
     private boolean isFollowing = false;
 
-    private double isometricProgress = 0.0;
-    private double targetIsometricProgress = 0.0;
-
     private OrbitalCelestialBody pendingFocusBody = null;
     private boolean clickCandidate = false;
     private boolean dragEnabledForCurrentPress = false;
@@ -87,40 +64,321 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private boolean debugOverlayEnabled = true;
     private int pressMouseX;
     private int pressMouseY;
-    private OrbitalCelestialBody contextMenuBody = null;
-    private int contextMenuX;
-    private int contextMenuY;
+    private final OrbitalContextMenuState contextMenuState = new OrbitalContextMenuState();
     private String actionStatusMessage = "";
     private long actionStatusExpiresAt = 0L;
-    private OrbitalCelestialBody assetManagementBody = null;
-    private int assetManagementScroll = 0;
-    private PendingAssetCreation pendingAssetCreation = null;
-    private PendingAssetDestruction pendingAssetDestruction = null;
-    private PendingConstructionCancellation pendingConstructionCancellation = null;
-    private PendingResourceTransfer pendingResourceTransfer = null;
-    private PendingAssetManagement pendingAssetManagement = null;
-    private PendingAssetRename pendingAssetRename = null;
+    private final OrbitalAssetSupport assetSupport = new OrbitalAssetSupport();
+    private final OrbitalAssetActionController assetActionController = new OrbitalAssetActionController(
+        assetSupport,
+        new OrbitalAssetActionController.Callbacks() {
+
+            @Override
+            public boolean isCreativeBuildModeEnabled() {
+                return OrbitalMapWidget.this.isCreativeBuildModeEnabled();
+            }
+
+            @Override
+            public void showActionStatus(String message) {
+                OrbitalMapWidget.this.showActionStatus(message);
+            }
+
+            @Override
+            public void beginRenameInput(String currentText) {
+                if (renameField == null) {
+                    return;
+                }
+                renameField.setText(currentText);
+                if (renameField.isValid()) {
+                    getContext().focus(renameField);
+                }
+            }
+
+            @Override
+            public void endRenameInput() {
+                if (renameField != null && renameField.isValid() && getContext().isFocused(renameField)) {
+                    getContext().removeFocus();
+                }
+            }
+
+            @Override
+            public String getRenameInput() {
+                return renameField == null ? "" : renameField.getText();
+            }
+        });
+    private final OrbitalAssetUiState assetUiState = new OrbitalAssetUiState();
+    private final OrbitalAssetManagementPanel assetManagementPanel = new OrbitalAssetManagementPanel(
+        new OrbitalAssetManagementPanel.Callbacks() {
+
+            @Override
+            public void closeAssetManagement() {
+                assetActionController.closeAssetManagement(assetUiState);
+            }
+
+            @Override
+            public boolean isCreativeBuildModeEnabled() {
+                return OrbitalMapWidget.this.isCreativeBuildModeEnabled();
+            }
+
+            @Override
+            public boolean isGT5AutomationAvailable() {
+                return OrbitalMapWidget.this.isGT5AutomationAvailable();
+            }
+
+            @Override
+            public boolean canCreateBaseStation(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.canCreateBaseStation(body);
+            }
+
+            @Override
+            public boolean canCreateAutomatedStation(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.canCreateAutomatedStation(body);
+            }
+
+            @Override
+            public boolean canCreateAutomatedOutpost(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.canCreateAutomatedOutpost(body);
+            }
+
+            @Override
+            public boolean hasStoredConstructionResources(CelestialManagedAsset asset) {
+                return assetSupport.hasStoredConstructionResources(asset);
+            }
+
+            @Override
+            public boolean isManageableStationAsset(CelestialManagedAsset asset) {
+                return assetSupport.isManageableStationAsset(asset);
+            }
+
+            @Override
+            public String formatAssetDisplayName(CelestialManagedAsset asset) {
+                return assetSupport.formatAssetDisplayName(asset);
+            }
+
+            @Override
+            public String buildConstructionInventorySummary(CelestialManagedAsset asset) {
+                return assetSupport.buildConstructionInventorySummary(asset);
+            }
+
+            @Override
+            public String formatAssetKind(CelestialAssetKind kind) {
+                return assetSupport.formatAssetKind(kind);
+            }
+
+            @Override
+            public String formatAssetLocation(CelestialAssetLocation location) {
+                return assetSupport.formatAssetLocation(location);
+            }
+
+            @Override
+            public void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
+                OrbitalMapWidget.this.drawAssetIcon(kind, x, y, size, alpha);
+            }
+
+            @Override
+            public void drawTooltip(String tooltip, int mouseX, int mouseY) {
+                OrbitalMapWidget.this.drawSimpleTooltip(tooltip, mouseX, mouseY);
+            }
+
+            @Override
+            public void createBaseStation(OrbitalCelestialBody body) {
+                assetActionController.createBaseStation(body);
+            }
+
+            @Override
+            public void triggerAssetCreation(OrbitalCelestialBody body, CelestialAssetKind kind,
+                boolean openManagementFirst) {
+                assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
+            }
+
+            @Override
+            public void openPendingAssetRename(CelestialManagedAsset asset) {
+                assetActionController.openPendingAssetRename(assetUiState, asset);
+            }
+
+            @Override
+            public void openPendingConstructionCancellation(CelestialManagedAsset asset) {
+                assetActionController.openPendingConstructionCancellation(assetUiState, asset);
+            }
+
+            @Override
+            public void openPendingResourceTransfer(CelestialManagedAsset asset) {
+                assetActionController.openPendingResourceTransfer(assetUiState, root, asset);
+            }
+
+            @Override
+            public void openPendingAssetManagement(CelestialManagedAsset asset) {
+                assetActionController.openPendingAssetManagement(assetUiState, asset);
+            }
+
+            @Override
+            public void openPendingAssetDestruction(CelestialManagedAsset asset) {
+                assetActionController.openPendingAssetDestruction(assetUiState, asset);
+            }
+
+            @Override
+            public void showActionStatus(String message) {
+                OrbitalMapWidget.this.showActionStatus(message);
+            }
+        });
+    private final OrbitalAssetPendingModalPanel assetPendingModalPanel = new OrbitalAssetPendingModalPanel(
+        new OrbitalAssetPendingModalPanel.Callbacks() {
+
+            @Override
+            public void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
+                OrbitalMapWidget.this.drawAssetIcon(kind, x, y, size, alpha);
+            }
+
+            @Override
+            public String formatAssetKind(CelestialAssetKind kind) {
+                return assetSupport.formatAssetKind(kind);
+            }
+
+            @Override
+            public String formatAssetDisplayName(CelestialManagedAsset asset) {
+                return assetSupport.formatAssetDisplayName(asset);
+            }
+
+            @Override
+            public void confirmPendingAssetCreation() {
+                assetActionController.confirmPendingAssetCreation(assetUiState);
+            }
+
+            @Override
+            public void closePendingAssetRename() {
+                assetActionController.closePendingAssetRename(assetUiState);
+            }
+
+            @Override
+            public void confirmPendingAssetRename() {
+                assetActionController.confirmPendingAssetRename(assetUiState);
+            }
+
+            @Override
+            public void showActionStatus(String message) {
+                OrbitalMapWidget.this.showActionStatus(message);
+            }
+        });
+    private final OrbitalSceneRenderer sceneRenderer = new OrbitalSceneRenderer(new OrbitalSceneRenderer.Callbacks() {
+
+        @Override
+        public double getScale() {
+            return OrbitalMapWidget.this.getScale();
+        }
+
+        @Override
+        public float worldToScreenX(double wx) {
+            return OrbitalMapWidget.this.worldToScreenX(wx);
+        }
+
+        @Override
+        public float worldToScreenY(double wy) {
+            return OrbitalMapWidget.this.worldToScreenY(wy);
+        }
+
+        @Override
+        public ResourceLocation getRenderTexture(OrbitalCelestialBody body) {
+            return OrbitalMapWidget.this.getRenderTexture(body);
+        }
+
+        @Override
+        public float getDisplaySpriteSize(OrbitalCelestialBody body) {
+            return OrbitalMapWidget.this.getDisplaySpriteSize(body);
+        }
+
+        @Override
+        public float getSelectionBoxRadius(ScreenBodyBounds bounds) {
+            return OrbitalMapWidget.this.getSelectionBoxRadius(bounds);
+        }
+
+        @Override
+        public ResourceLocation getAssetIconTexture(CelestialAssetKind kind) {
+            return OrbitalMapWidget.this.getAssetIconTexture(kind);
+        }
+    });
+    private final OrbitalPinnedInfoPanel pinnedInfoPanel = new OrbitalPinnedInfoPanel(
+        new OrbitalPinnedInfoPanel.Callbacks() {
+
+            @Override
+            public void drawTooltip(String text, int x, int y) {
+                OrbitalMapWidget.this.drawSimpleTooltip(text, x, y);
+            }
+        });
+    private final OrbitalPinnedInfoContentBuilder pinnedInfoContentBuilder = new OrbitalPinnedInfoContentBuilder();
+    private final OrbitalContextMenuPanel contextMenuPanel = new OrbitalContextMenuPanel(
+        new OrbitalContextMenuPanel.Callbacks() {
+
+            @Override
+            public boolean canCreateBaseStation(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.canCreateBaseStation(body);
+            }
+
+            @Override
+            public boolean canCreateAutomatedStation(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.canCreateAutomatedStation(body);
+            }
+
+            @Override
+            public boolean canCreateAutomatedOutpost(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.canCreateAutomatedOutpost(body);
+            }
+
+            @Override
+            public void openAssetManagement(OrbitalCelestialBody body) {
+                assetActionController.openAssetManagement(assetUiState, body);
+            }
+
+            @Override
+            public void createBaseStation(OrbitalCelestialBody body) {
+                assetActionController.createBaseStation(body);
+            }
+
+            @Override
+            public void triggerAssetCreation(OrbitalCelestialBody body, CelestialAssetKind kind,
+                boolean openManagementFirst) {
+                assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
+            }
+        });
+    private final OrbitalSceneFrameBuilder sceneFrameBuilder = new OrbitalSceneFrameBuilder(
+        new OrbitalSceneFrameBuilder.Callbacks() {
+
+            @Override
+            public double[] getViewOrigin(OrbitalCelestialBody viewRoot) {
+                return OrbitalMapWidget.this.getAbsoluteWorldPos(viewRoot);
+            }
+
+            @Override
+            public ResolvedBodyDrawState resolveBodyDrawState(OrbitalCelestialBody body, OrbitalCelestialBody parent,
+                double worldX, double worldY, float labelAlpha) {
+                return OrbitalMapWidget.this.resolveBodyDrawState(body, parent, worldX, worldY, labelAlpha);
+            }
+
+            @Override
+            public boolean shouldTraverseChildren(OrbitalCelestialBody body) {
+                return OrbitalMapWidget.this.shouldTraverseChildren(body);
+            }
+
+            @Override
+            public float getInteractionRadius(float renderedRadius) {
+                return OrbitalMapWidget.this.getInteractionRadius(renderedRadius);
+            }
+
+            @Override
+            public boolean isOnScreen(float sx, float sy, float radius) {
+                return OrbitalMapWidget.this.isOnScreen(sx, sy, radius);
+            }
+        });
     private TextFieldWidget renameField = null;
     private boolean creativeBuildMode = false;
     private boolean guiActionsRegistered = false;
-    private OrbitalCelestialBody pendingLayerTarget = null;
-    private OrbitalCelestialBody pendingLayerAnchor = null;
-    private double pendingLayerStartZoom = 0.0;
-    private double pendingLayerTargetZoom = 0.0;
-    private LayerSwitchPhase layerSwitchPhase = LayerSwitchPhase.NONE;
-    private OrbitalCelestialBody layerSwitchTarget = null;
-    private OrbitalCelestialBody layerSwitchAnchor = null;
-    private double layerSwitchStartZoom = 0.0;
-    private double layerSwitchTargetZoom = 0.0;
-    private float layerSwitchStartSpriteSize = 0.0f;
-    private float layerSwitchTargetSpriteSize = 0.0f;
+    private final OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
 
     private static final double ZOOM_BASE = 1.18;
     private static final double BASE_SCALE = 82.0;
     private static final double LERP_SPEED = 0.045;
     private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
     private static final double LAYER_SWITCH_LERP_SPEED = 0.036;
-    private static final double KEPLER_BASE = 0.42;
+    private static final double OVERVIEW_SCREEN_RADIUS = 420.0;
+    private static final double ISO_OVERVIEW_SCREEN_RADIUS = 350.0;
 
     private static final float ISO_BASE_CUBE_SIZE = 42f;
     private static final float ISO_SPACING = 90f;
@@ -133,22 +391,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private static final int CLICK_DRAG_THRESHOLD = 6;
     private static final float MAP_ICON_BASE_SCALE = 18f;
     private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
-    private static final float MAP_LABEL_SCALE = 0.82f;
     private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
-    private static final int GALAXY_TITLE_TOP = 10;
-    private static final int GALAXY_TITLE_HEIGHT = 21;
     private static final double SYSTEM_DEPARTURE_EXTENT_MULTIPLIER = 24.0;
     private static final int ASSET_MODAL_SCROLL_STEP = 36;
-    private static final int PINNED_INFO_PANEL_WIDTH = 116;
-    private static final int PINNED_INFO_PANEL_PADDING = 12;
-    private static final int PINNED_INFO_TEXT_LINE_HEIGHT = 9;
-    private static final int PINNED_INFO_ROW_GAP = 6;
-    private static final int PINNED_INFO_ICON_SIZE = 16;
-    private static final int PINNED_INFO_ICON_GAP = 2;
-    private static final int PINNED_INFO_INLINE_ICON_SIZE = 12;
-    private static final int PINNED_INFO_INLINE_ICON_GAP = 1;
-    private static final RenderItem GUI_ITEM_RENDERER = new RenderItem();
-
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
         this.viewRoot = root;
@@ -177,7 +422,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
         clearLayerSwitchState();
         closeContextMenu();
-        closeAssetManagement();
+        assetActionController.closeAssetManagement(assetUiState);
 
         OrbitalCelestialBody anchorBody = null;
         if (this.viewRoot == root && targetLayer.objectClass() == CelestialObjectClass.STAR) {
@@ -188,14 +433,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         if (anchorBody != null) {
             double transitionTargetZoom = targetLayer == root ? getSystemDepartureZoom(anchorBody) : getGalaxyCutZoom(anchorBody);
-            pendingLayerTarget = targetLayer;
-            pendingLayerAnchor = anchorBody;
-            pendingLayerStartZoom = zoomLevel;
-            pendingLayerTargetZoom = transitionTargetZoom;
+            transitionState.beginPending(targetLayer, anchorBody, viewState.zoomLevel, transitionTargetZoom);
             pendingFocusBody = null;
-            targetIsometricProgress = 0.0;
+            viewState.targetIsometricProgress = 0.0;
             centerOnBody(anchorBody);
-            targetZoomLevel = transitionTargetZoom;
+            viewState.targetZoomLevel = transitionTargetZoom;
             return;
         }
 
@@ -232,10 +474,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         resetForLayer(startingLayer);
         this.viewRoot = startingLayer;
         setFocusImmediately(startingLayer);
-        cameraX = targetCameraX;
-        cameraY = targetCameraY;
-        zoomLevel = targetZoomLevel;
-        isometricProgress = targetIsometricProgress;
+        viewState.syncToTargets();
 
         if (guiActionsRegistered) {
             return;
@@ -247,10 +486,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 handleMouseWheel(direction, getContext().getMouseX(), getContext().getMouseY()));
 
         listenGuiAction((IGuiAction.MousePressed) button -> {
-            if (assetManagementBody != null) {
+            if (assetUiState.isAssetManagementOpen()) {
                 return true;
             }
-            if (button == 0 && contextMenuBody != null) {
+            if (button == 0 && contextMenuState.isOpen()) {
                 clickCandidate = false;
                 dragging = false;
                 dragEnabledForCurrentPress = false;
@@ -277,7 +516,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             int localMouseX = toLocalMouseX(getContext().getMouseX());
             int localMouseY = toLocalMouseY(getContext().getMouseY());
 
-            if (assetManagementBody != null) {
+            if (assetUiState.isAssetManagementOpen()) {
                 if (mouseButton == 0 && handleAssetManagementClick(localMouseX, localMouseY)) {
                     clickCandidate = false;
                     dragging = false;
@@ -290,7 +529,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 }
             }
 
-            if (contextMenuBody != null) {
+            if (contextMenuState.isOpen()) {
                 if (mouseButton == 0) {
                     if (handleContextMenuClick(localMouseX, localMouseY)) {
                         clickCandidate = false;
@@ -347,13 +586,13 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private boolean handleKeyPressed(char ch, int keyCode) {
-        if (pendingAssetRename != null) {
+        if (assetUiState.pendingAssetRename != null) {
             if (keyCode == Keyboard.KEY_ESCAPE) {
-                closePendingAssetRename();
+                assetActionController.closePendingAssetRename(assetUiState);
                 return true;
             }
             if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER) {
-                confirmPendingAssetRename();
+                assetActionController.confirmPendingAssetRename(assetUiState);
                 return true;
             }
             return false;
@@ -381,18 +620,18 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         int sign = dir.isUp() ? 1 : dir.isDown() ? -1 : 0;
         if (sign == 0) return false;
 
-        if (assetManagementBody != null) {
-            if (pendingAssetCreation != null || pendingAssetDestruction != null || pendingConstructionCancellation != null
-                || pendingAssetRename != null
-                || pendingResourceTransfer != null) {
+        if (assetUiState.isAssetManagementOpen()) {
+            if (assetUiState.pendingAssetCreation != null || assetUiState.pendingAssetDestruction != null
+                || assetUiState.pendingConstructionCancellation != null || assetUiState.pendingAssetRename != null
+                || assetUiState.pendingResourceTransfer != null) {
                 return true;
             }
             int localMouseX = toLocalMouseX(mx);
             int localMouseY = toLocalMouseY(my);
             AssetManagementLayout layout = getAssetManagementLayout();
             if (layout != null && layout.isInScrollViewport(localMouseX, localMouseY)) {
-                assetManagementScroll = clamp(
-                    assetManagementScroll - sign * ASSET_MODAL_SCROLL_STEP,
+                assetUiState.assetManagementScroll = clamp(
+                    assetUiState.assetManagementScroll - sign * ASSET_MODAL_SCROLL_STEP,
                     0,
                     layout.maxScroll);
             }
@@ -400,32 +639,32 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
 
         double oldScale = getScale();
-        zoomLevel = Math.max(-7000.0, Math.min(14000.0, zoomLevel + sign * 0.78));
+        viewState.zoomLevel = Math.max(-7000.0, Math.min(14000.0, viewState.zoomLevel + sign * 0.78));
 
         int lx = toLocalMouseX(mx);
         int ly = toLocalMouseY(my);
-        double wmx = cameraX + (lx - getArea().width / 2.0) / oldScale;
-        double wmy = cameraY + (ly - getArea().height / 2.0) / oldScale;
+        double wmx = viewState.cameraX + (lx - getArea().width / 2.0) / oldScale;
+        double wmy = viewState.cameraY + (ly - getArea().height / 2.0) / oldScale;
 
         double newScale = getScale();
-        cameraX = wmx - (lx - getArea().width / 2.0) / newScale;
-        cameraY = wmy - (ly - getArea().height / 2.0) / newScale;
+        viewState.cameraX = wmx - (lx - getArea().width / 2.0) / newScale;
+        viewState.cameraY = wmy - (ly - getArea().height / 2.0) / newScale;
 
-        targetCameraX = cameraX;
-        targetCameraY = cameraY;
-        targetZoomLevel = zoomLevel;
+        viewState.targetCameraX = viewState.cameraX;
+        viewState.targetCameraY = viewState.cameraY;
+        viewState.targetZoomLevel = viewState.zoomLevel;
         isFollowing = false;
         return true;
     }
 
     private boolean handleMouseDragged(int mx, int my, int button, long time) {
         if (button != 0) return false;
-        if (assetManagementBody != null) return true;
+        if (assetUiState.isAssetManagementOpen()) return true;
         return true;
     }
 
     private void updateManualDragging() {
-        if (assetManagementBody != null || pendingLayerTarget != null || isLayerSwitchActive()) {
+        if (assetUiState.isAssetManagementOpen() || transitionState.hasPending() || isLayerSwitchActive()) {
             return;
         }
         if (!Mouse.isButtonDown(0)) {
@@ -457,10 +696,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             return;
         }
 
-        cameraX -= dx / getScale();
-        cameraY -= dy / getScale();
-        targetCameraX = cameraX;
-        targetCameraY = cameraY;
+        viewState.cameraX -= dx / getScale();
+        viewState.cameraY -= dy / getScale();
+        viewState.targetCameraX = viewState.cameraX;
+        viewState.targetCameraY = viewState.cameraY;
         isFollowing = false;
         lastMouseX = lx;
         lastMouseY = ly;
@@ -470,56 +709,21 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         long now = System.currentTimeMillis();
         double dt = (now - lastFrameTime) / 1000.0;
         lastFrameTime = now;
-        if (!paused && !(focusedBody != null && targetIsometricProgress > 0.5)) {
+        if (!paused && !(focusedBody != null && viewState.targetIsometricProgress > 0.5)) {
             globalTime += dt * timeScale;
         }
     }
 
-    private double[] calculatePosition(OrbitalParams p, double t) {
-        return calculatePositionStatic(p, t);
-    }
-
     private double getScale() {
-        return BASE_SCALE * Math.pow(ZOOM_BASE, zoomLevel);
-    }
-
-    private static boolean usesAbsolutePosition(OrbitalCelestialBody parent, OrbitalCelestialBody child) {
-        return parent != null && parent.objectClass() == CelestialObjectClass.GALAXY && child.absolutePosition() != null;
-    }
-
-    private static double[] resolveChildWorldPos(OrbitalCelestialBody parent, OrbitalCelestialBody child, double parentWX,
-        double parentWY, double globalTime) {
-        if (usesAbsolutePosition(parent, child)) {
-            AbsolutePosition absolute = child.absolutePosition();
-            return new double[] { absolute.x(), absolute.y() };
-        }
-        double[] local = calculatePositionStatic(child.orbitalParams(), globalTime);
-        return new double[] { parentWX + local[0], parentWY + local[1] };
-    }
-
-    private static double[] calculatePositionStatic(OrbitalParams p, double t) {
-        double a = p.semiMajorAxis();
-        if (a < 1e-8) return new double[] { 0.0, 0.0 };
-
-        double n = p.orbitSpeed() > 0 ? p.orbitSpeed() : KEPLER_BASE * Math.pow(a, -1.5);
-        double M = p.meanAnomalyAtEpoch() + n * t;
-        double e = p.eccentricity();
-
-        double E = M;
-        for (int i = 0; i < 8; i++) E = M + e * Math.sin(E);
-
-        double nu = 2.0 * Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0), Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
-        double r = a * (1.0 - e * e) / (1.0 + e * Math.cos(nu));
-        double ag = nu + p.argumentOfPeriapsis();
-        return new double[] { r * Math.cos(ag), r * Math.sin(ag) };
+        return BASE_SCALE * Math.pow(ZOOM_BASE, viewState.zoomLevel);
     }
 
     private float worldToScreenX(double wx) {
-        return (float) ((wx - cameraX) * getScale() + getArea().width / 2.0);
+        return (float) ((wx - viewState.cameraX) * getScale() + getArea().width / 2.0);
     }
 
     private float worldToScreenY(double wy) {
-        return (float) ((wy - cameraY) * getScale() + getArea().height / 2.0);
+        return (float) ((wy - viewState.cameraY) * getScale() + getArea().height / 2.0);
     }
 
     private int toLocalMouseX(int mouseX) {
@@ -575,17 +779,25 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         }
         float systemSize = (float) body.spriteSize();
         float galaxySize = GALAXY_MAP_STAR_SPRITE_SIZE;
-        if (body == pendingLayerAnchor && pendingLayerTarget != null && body.objectClass() == CelestialObjectClass.STAR) {
-            if (pendingLayerTarget == root) {
-                float progress = getTransitionProgress(zoomLevel, pendingLayerStartZoom, pendingLayerTargetZoom);
+        if (body == transitionState.pendingAnchor && transitionState.hasPending()
+            && body.objectClass() == CelestialObjectClass.STAR) {
+            if (transitionState.pendingTarget == root) {
+                float progress = getTransitionProgress(
+                    viewState.zoomLevel,
+                    transitionState.pendingStartZoom,
+                    transitionState.pendingTargetZoom);
                 return lerp(systemSize, galaxySize, progress);
             }
             return galaxySize;
         }
-        if (body == layerSwitchAnchor && body.objectClass() == CelestialObjectClass.STAR
-            && (layerSwitchPhase == LayerSwitchPhase.SYSTEM_PRE_CUT || layerSwitchPhase == LayerSwitchPhase.GALAXY_POST_CUT)) {
-            float progress = getTransitionProgress(zoomLevel, layerSwitchStartZoom, layerSwitchTargetZoom);
-            return lerp(layerSwitchStartSpriteSize, layerSwitchTargetSpriteSize, progress);
+        if (body == transitionState.activeAnchor && body.objectClass() == CelestialObjectClass.STAR
+            && (transitionState.phase == OrbitalLayerTransitionState.Phase.SYSTEM_PRE_CUT
+                || transitionState.phase == OrbitalLayerTransitionState.Phase.GALAXY_POST_CUT)) {
+            float progress = getTransitionProgress(
+                viewState.zoomLevel,
+                transitionState.activeStartZoom,
+                transitionState.activeTargetZoom);
+            return lerp(transitionState.activeStartSpriteSize, transitionState.activeTargetSpriteSize, progress);
         }
         if (viewRoot == root && body.objectClass() == CelestialObjectClass.STAR) {
             OrbitalCelestialBody parent = findParent(root, body);
@@ -605,25 +817,38 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private float getRenderedBodyRadius(OrbitalCelestialBody body) {
-        if (getRenderTexture(body) != null && body.spriteSize() > 0.0001) {
+        if (getRenderTexture(body) != null && getDisplaySpriteSize(body) > 0.0001f) {
             float spriteR = getSpriteRadius(body);
             float cubeR = getCubeSizeForBody(body) * 0.5f;
-            return lerp(spriteR, cubeR, (float) isometricProgress);
+            return lerp(spriteR, cubeR, (float) viewState.isometricProgress);
         }
         return body == viewRoot ? 11f : 7f;
     }
 
     private ResourceLocation getRenderTexture(OrbitalCelestialBody body) {
-        return body.objectClass() == CelestialObjectClass.GALAXY ? null : EnumTextures.ICON_EGORA.get();
+        if (body == null || body.objectClass() == CelestialObjectClass.GALAXY) {
+            return null;
+        }
+
+        ResourceLocation texture = body.texture();
+        if (isMapBodyIcon(texture)) {
+            return texture;
+        }
+        return EnumTextures.ICON_EGORA.get();
+    }
+
+    private boolean isMapBodyIcon(ResourceLocation texture) {
+        return texture != null && texture.getResourcePath() != null
+            && texture.getResourcePath().contains("textures/gui/bodyicons/");
     }
 
     public void focusOn(OrbitalCelestialBody body) {
         if (body == null) return;
-        if (isometricProgress < 0.01) {
+        if (viewState.isometricProgress < 0.01) {
             setFocusImmediately(body);
         } else {
             pendingFocusBody = body;
-            targetIsometricProgress = 0.0;
+            viewState.targetIsometricProgress = 0.0;
         }
     }
 
@@ -635,10 +860,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         isFollowing = true;
         double[] pos = getAbsoluteWorldPos(body);
         if (pos != null) {
-            targetCameraX = pos[0];
-            targetCameraY = pos[1];
+            viewState.targetCameraX = pos[0];
+            viewState.targetCameraY = pos[1];
         }
-        targetIsometricProgress = 0.0;
+        viewState.targetIsometricProgress = 0.0;
     }
 
     private void applyLayerSwitch(OrbitalCelestialBody targetLayer, OrbitalCelestialBody focusBody) {
@@ -652,53 +877,29 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         double[] pos = getAbsoluteWorldPos(body);
         if (pos != null) {
-            targetCameraX = pos[0];
-            targetCameraY = pos[1];
+            viewState.targetCameraX = pos[0];
+            viewState.targetCameraY = pos[1];
         }
 
-        boolean goIso = body.objectClass() != CelestialObjectClass.GALAXY && body.objectClass() != CelestialObjectClass.STAR;
-        targetIsometricProgress = goIso ? 1.0 : 0.0;
-
-        double computedZoom;
-        if (!goIso) {
-            double maxSize = calculateOverviewExtent(body);
-            computedZoom = maxSize > 1e-9 ? Math.log((420.0 / maxSize) / BASE_SCALE) / Math.log(ZOOM_BASE) : -0.8;
-        } else {
-            OrbitalCelestialBody parent = findParent(root, body);
-            double maxApogee = 0;
-            if (parent != null) {
-                for (OrbitalCelestialBody c : parent.children()) {
-                    maxApogee = Math.max(maxApogee, c.orbitalParams().apogee());
-                }
-            }
-            computedZoom = maxApogee > 1e-9 ? Math.log((350.0 / maxApogee) / BASE_SCALE) / Math.log(ZOOM_BASE) : 3.0;
-        }
-
-        targetZoomLevel = computedZoom;
-        targetZoomLevel = Math.max(-7000.0, Math.min(14000.0, targetZoomLevel));
+        boolean goIso = shouldUseIsometricOverview(body);
+        viewState.targetIsometricProgress = goIso ? 1.0 : 0.0;
+        viewState.targetZoomLevel = getOverviewZoomForBody(body);
     }
 
     private void resetForLayer(OrbitalCelestialBody layerRoot) {
         isFollowing = false;
         focusedBody = null;
-        isometricProgress = 0.0;
-        targetIsometricProgress = 0.0;
-        if (layerRoot == root) {
-            cameraX = 0.0;
-            cameraY = 0.0;
-            targetCameraX = 0.0;
-            targetCameraY = 0.0;
-        }
+        viewState.reset(layerRoot == root);
     }
 
     private boolean isReadyForPendingLayerSwitch() {
-        return Math.abs(cameraX - targetCameraX) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD
-            && Math.abs(cameraY - targetCameraY) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD;
+        return Math.abs(viewState.cameraX - viewState.targetCameraX) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD
+            && Math.abs(viewState.cameraY - viewState.targetCameraY) < PENDING_LAYER_SWITCH_CAMERA_THRESHOLD;
     }
 
     private boolean isReadyForLayerSwitchPhase() {
         return isReadyForPendingLayerSwitch()
-            && Math.abs(zoomLevel - targetZoomLevel) < LAYER_SWITCH_CONVERGE_THRESHOLD;
+            && Math.abs(viewState.zoomLevel - viewState.targetZoomLevel) < LAYER_SWITCH_CONVERGE_THRESHOLD;
     }
 
     private double calculateOverviewExtent(OrbitalCelestialBody body) {
@@ -717,6 +918,29 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             maxSize = Math.max(maxSize, child.orbitalParams().apogee());
         }
         return maxSize;
+    }
+
+    private boolean shouldUseIsometricOverview(OrbitalCelestialBody body) {
+        return body.objectClass() != CelestialObjectClass.GALAXY && body.objectClass() != CelestialObjectClass.STAR;
+    }
+
+    private double calculateFocusedOrbitExtent(OrbitalCelestialBody body) {
+        OrbitalCelestialBody parent = findParent(root, body);
+        if (parent == null) {
+            return 0.0;
+        }
+
+        double maxApogee = 0.0;
+        for (OrbitalCelestialBody sibling : parent.children()) {
+            maxApogee = Math.max(maxApogee, sibling.orbitalParams().apogee());
+        }
+        return maxApogee;
+    }
+
+    private double computeOverviewZoom(OrbitalCelestialBody body, boolean goIso) {
+        double extent = goIso ? calculateFocusedOrbitExtent(body) : calculateOverviewExtent(body);
+        double screenRadius = goIso ? ISO_OVERVIEW_SCREEN_RADIUS : OVERVIEW_SCREEN_RADIUS;
+        return extent > 1e-9 ? zoomForWorldDistance(extent, screenRadius) : goIso ? 3.0 : -0.8;
     }
 
     private double clampZoom(double zoom) {
@@ -743,27 +967,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private double getOverviewZoomForBody(OrbitalCelestialBody body) {
-        boolean goIso = body.objectClass() != CelestialObjectClass.GALAXY && body.objectClass() != CelestialObjectClass.STAR;
-        double computedZoom;
-        if (!goIso) {
-            double maxSize = calculateOverviewExtent(body);
-            computedZoom = maxSize > 1e-9 ? Math.log((420.0 / maxSize) / BASE_SCALE) / Math.log(ZOOM_BASE) : -0.8;
-        } else {
-            OrbitalCelestialBody parent = findParent(root, body);
-            double maxApogee = 0;
-            if (parent != null) {
-                for (OrbitalCelestialBody c : parent.children()) {
-                    maxApogee = Math.max(maxApogee, c.orbitalParams().apogee());
-                }
-            }
-            computedZoom = maxApogee > 1e-9 ? Math.log((350.0 / maxApogee) / BASE_SCALE) / Math.log(ZOOM_BASE) : 3.0;
-        }
-        return clampZoom(computedZoom);
+        return computeOverviewZoom(body, shouldUseIsometricOverview(body));
     }
 
     private double getSystemDepartureZoom(OrbitalCelestialBody star) {
         double farthestOrbit = calculateOverviewExtent(star);
-        return zoomForWorldDistance(farthestOrbit * SYSTEM_DEPARTURE_EXTENT_MULTIPLIER, 420.0);
+        return zoomForWorldDistance(farthestOrbit * SYSTEM_DEPARTURE_EXTENT_MULTIPLIER, OVERVIEW_SCREEN_RADIUS);
     }
 
     private double getNearestOtherStarDistance(OrbitalCelestialBody anchorStar) {
@@ -804,120 +1013,102 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private boolean isLayerSwitchActive() {
-        return layerSwitchPhase != LayerSwitchPhase.NONE;
+        return transitionState.isActive();
     }
 
     private void clearLayerSwitchState() {
-        pendingLayerTarget = null;
-        pendingLayerAnchor = null;
-        pendingLayerStartZoom = 0.0;
-        pendingLayerTargetZoom = 0.0;
-        layerSwitchPhase = LayerSwitchPhase.NONE;
-        layerSwitchTarget = null;
-        layerSwitchAnchor = null;
-        layerSwitchStartZoom = 0.0;
-        layerSwitchTargetZoom = 0.0;
-        layerSwitchStartSpriteSize = 0.0f;
-        layerSwitchTargetSpriteSize = 0.0f;
+        transitionState.clear();
     }
 
     private void startLayerSwitchTransition(OrbitalCelestialBody targetLayer, OrbitalCelestialBody anchorBody,
         float currentAnchorSpriteSize) {
-        layerSwitchTarget = targetLayer;
-        layerSwitchAnchor = anchorBody;
-        layerSwitchStartZoom = zoomLevel;
-        layerSwitchStartSpriteSize = currentAnchorSpriteSize;
         if (targetLayer == root) {
-            layerSwitchPhase = LayerSwitchPhase.SYSTEM_PRE_CUT;
-            layerSwitchTargetZoom = getSystemDepartureZoom(anchorBody);
-            layerSwitchTargetSpriteSize = GALAXY_MAP_STAR_SPRITE_SIZE;
+            transitionState.beginActive(
+                OrbitalLayerTransitionState.Phase.SYSTEM_PRE_CUT,
+                targetLayer,
+                anchorBody,
+                viewState.zoomLevel,
+                getSystemDepartureZoom(anchorBody),
+                currentAnchorSpriteSize,
+                GALAXY_MAP_STAR_SPRITE_SIZE);
         } else {
-            layerSwitchPhase = LayerSwitchPhase.GALAXY_PRE_CUT;
-            layerSwitchTargetZoom = getGalaxyCutZoom(anchorBody);
-            layerSwitchTargetSpriteSize = (float) anchorBody.spriteSize();
+            transitionState.beginActive(
+                OrbitalLayerTransitionState.Phase.GALAXY_PRE_CUT,
+                targetLayer,
+                anchorBody,
+                viewState.zoomLevel,
+                getGalaxyCutZoom(anchorBody),
+                currentAnchorSpriteSize,
+                (float) anchorBody.spriteSize());
         }
-        targetZoomLevel = layerSwitchTargetZoom;
-        targetIsometricProgress = 0.0;
+        viewState.targetZoomLevel = transitionState.activeTargetZoom;
+        viewState.targetIsometricProgress = 0.0;
     }
 
     private void updateLayerSwitchTransition() {
-        if (layerSwitchPhase == LayerSwitchPhase.NONE || layerSwitchTarget == null || layerSwitchAnchor == null) {
+        if (!transitionState.isActive() || transitionState.activeTarget == null || transitionState.activeAnchor == null) {
             return;
         }
         if (!isReadyForLayerSwitchPhase()) {
             return;
         }
 
-        if (layerSwitchPhase == LayerSwitchPhase.SYSTEM_PRE_CUT) {
-            double[] anchorPos = getAbsoluteWorldPos(layerSwitchAnchor);
+        if (transitionState.phase == OrbitalLayerTransitionState.Phase.SYSTEM_PRE_CUT) {
+            double[] anchorPos = getAbsoluteWorldPos(transitionState.activeAnchor);
             this.viewRoot = root;
-            focusedBody = layerSwitchAnchor;
+            focusedBody = transitionState.activeAnchor;
             isFollowing = true;
             if (anchorPos != null) {
-                cameraX = anchorPos[0];
-                cameraY = anchorPos[1];
-                targetCameraX = anchorPos[0];
-                targetCameraY = anchorPos[1];
+                viewState.setCamera(anchorPos[0], anchorPos[1]);
             }
-            zoomLevel = getGalaxyCutZoom(layerSwitchAnchor);
-            targetZoomLevel = getGalaxyOverviewZoom(layerSwitchAnchor);
-            isometricProgress = 0.0;
-            targetIsometricProgress = 0.0;
+            viewState.zoomLevel = getGalaxyCutZoom(transitionState.activeAnchor);
+            viewState.targetZoomLevel = getGalaxyOverviewZoom(transitionState.activeAnchor);
+            viewState.isometricProgress = 0.0;
+            viewState.targetIsometricProgress = 0.0;
             pendingFocusBody = null;
-            layerSwitchPhase = LayerSwitchPhase.SYSTEM_POST_CUT;
+            transitionState.phase = OrbitalLayerTransitionState.Phase.SYSTEM_POST_CUT;
             return;
         }
 
-        if (layerSwitchPhase == LayerSwitchPhase.GALAXY_PRE_CUT) {
-            double[] anchorPos = getAbsoluteWorldPos(layerSwitchAnchor);
-            this.viewRoot = layerSwitchTarget;
-            focusedBody = layerSwitchAnchor;
+        if (transitionState.phase == OrbitalLayerTransitionState.Phase.GALAXY_PRE_CUT) {
+            double[] anchorPos = getAbsoluteWorldPos(transitionState.activeAnchor);
+            this.viewRoot = transitionState.activeTarget;
+            focusedBody = transitionState.activeAnchor;
             isFollowing = true;
             if (anchorPos != null) {
-                cameraX = anchorPos[0];
-                cameraY = anchorPos[1];
-                targetCameraX = anchorPos[0];
-                targetCameraY = anchorPos[1];
+                viewState.setCamera(anchorPos[0], anchorPos[1]);
             }
-            zoomLevel = getSystemDepartureZoom(layerSwitchAnchor);
-            targetZoomLevel = getOverviewZoomForBody(layerSwitchTarget);
-            isometricProgress = 0.0;
-            targetIsometricProgress = 0.0;
+            viewState.zoomLevel = getSystemDepartureZoom(transitionState.activeAnchor);
+            viewState.targetZoomLevel = getOverviewZoomForBody(transitionState.activeTarget);
+            viewState.isometricProgress = 0.0;
+            viewState.targetIsometricProgress = 0.0;
             pendingFocusBody = null;
-            layerSwitchStartZoom = zoomLevel;
-            layerSwitchTargetZoom = targetZoomLevel;
-            layerSwitchStartSpriteSize = GALAXY_MAP_STAR_SPRITE_SIZE;
-            layerSwitchTargetSpriteSize = (float) layerSwitchAnchor.spriteSize();
-            layerSwitchPhase = LayerSwitchPhase.GALAXY_POST_CUT;
+            transitionState.activeStartZoom = viewState.zoomLevel;
+            transitionState.activeTargetZoom = viewState.targetZoomLevel;
+            transitionState.activeStartSpriteSize = GALAXY_MAP_STAR_SPRITE_SIZE;
+            transitionState.activeTargetSpriteSize = (float) transitionState.activeAnchor.spriteSize();
+            transitionState.phase = OrbitalLayerTransitionState.Phase.GALAXY_POST_CUT;
             return;
         }
 
-        layerSwitchPhase = LayerSwitchPhase.NONE;
-        layerSwitchTarget = null;
-        layerSwitchAnchor = null;
+        transitionState.clearActive();
+    }
+
+    private void ensureWorldStateCache() {
+        worldStateCache.ensure(root, globalTime);
     }
 
     private double[] getAbsoluteWorldPos(OrbitalCelestialBody target) {
-        return getAbsoluteWorldPos(root, target, 0.0, 0.0);
-    }
-
-    private double[] getAbsoluteWorldPos(OrbitalCelestialBody cur, OrbitalCelestialBody target, double wx, double wy) {
-        if (cur == target) return new double[] { wx, wy };
-        for (OrbitalCelestialBody child : cur.children()) {
-            double[] childWorldPos = resolveChildWorldPos(cur, child, wx, wy, globalTime);
-            double[] res = getAbsoluteWorldPos(child, target, childWorldPos[0], childWorldPos[1]);
-            if (res != null) return res;
-        }
-        return null;
+        ensureWorldStateCache();
+        return worldStateCache.getWorldPosition(target);
     }
 
     private OrbitalCelestialBody findParent(OrbitalCelestialBody cur, OrbitalCelestialBody target) {
-        for (OrbitalCelestialBody child : cur.children()) {
-            if (child == target) return cur;
-            OrbitalCelestialBody found = findParent(child, target);
-            if (found != null) return found;
+        if (cur != root) {
+            return null;
         }
-        return null;
+        ensureWorldStateCache();
+        return worldStateCache.getParent(target);
     }
 
     private float[] getIsometricScreenPos(OrbitalCelestialBody body) {
@@ -981,42 +1172,32 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         updateManualDragging();
         updateRenameFieldLayout();
 
-        double activeLerpSpeed = pendingLayerTarget != null ? PENDING_LAYER_CENTER_LERP_SPEED
+        double activeLerpSpeed = transitionState.hasPending() ? PENDING_LAYER_CENTER_LERP_SPEED
             : isLayerSwitchActive() ? LAYER_SWITCH_LERP_SPEED : LERP_SPEED;
-        cameraX = lerp(cameraX, targetCameraX, activeLerpSpeed);
-        cameraY = lerp(cameraY, targetCameraY, activeLerpSpeed);
-        zoomLevel = lerp(zoomLevel, targetZoomLevel, activeLerpSpeed);
-        isometricProgress = lerp(isometricProgress, targetIsometricProgress, activeLerpSpeed);
+        viewState.step(activeLerpSpeed);
+        viewState.snap(CONVERGE_THRESHOLD);
 
-        if (Math.abs(cameraX - targetCameraX) < CONVERGE_THRESHOLD) cameraX = targetCameraX;
-        if (Math.abs(cameraY - targetCameraY) < CONVERGE_THRESHOLD) cameraY = targetCameraY;
-        if (Math.abs(zoomLevel - targetZoomLevel) < CONVERGE_THRESHOLD) zoomLevel = targetZoomLevel;
-        if (Math.abs(isometricProgress - targetIsometricProgress) < CONVERGE_THRESHOLD)
-            isometricProgress = targetIsometricProgress;
-
-        if (pendingFocusBody != null && isometricProgress < 0.01) {
+        if (pendingFocusBody != null && viewState.isometricProgress < 0.01) {
             setFocusImmediately(pendingFocusBody);
             pendingFocusBody = null;
         }
 
-        if (pendingLayerTarget != null && pendingLayerAnchor != null && isReadyForPendingLayerSwitch()) {
-            OrbitalCelestialBody targetLayer = pendingLayerTarget;
-            OrbitalCelestialBody anchorBody = pendingLayerAnchor;
+        if (transitionState.hasPending() && isReadyForPendingLayerSwitch()) {
+            OrbitalCelestialBody targetLayer = transitionState.pendingTarget;
+            OrbitalCelestialBody anchorBody = transitionState.pendingAnchor;
             float currentAnchorSpriteSize = getDisplaySpriteSize(anchorBody);
-            pendingLayerTarget = null;
-            pendingLayerAnchor = null;
-            pendingLayerStartZoom = 0.0;
-            pendingLayerTargetZoom = 0.0;
+            transitionState.clearPending();
             startLayerSwitchTransition(targetLayer, anchorBody, currentAnchorSpriteSize);
         }
 
         updateLayerSwitchTransition();
+        ensureWorldStateCache();
 
         if (isFollowing && focusedBody != null) {
             double[] pos = getAbsoluteWorldPos(focusedBody);
             if (pos != null) {
-                targetCameraX = pos[0];
-                targetCameraY = pos[1];
+                viewState.targetCameraX = pos[0];
+                viewState.targetCameraY = pos[1];
             }
         }
 
@@ -1030,24 +1211,17 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         GlStateManager.disableTexture2D();
         GL11.glEnable(GL11.GL_LINE_SMOOTH);
-        double[] viewOrigin = getAbsoluteWorldPos(viewRoot);
-        if (viewOrigin == null) {
-            viewOrigin = new double[] { 0.0, 0.0 };
-        }
-        screenBodies.clear();
-        labelDrawCalls.clear();
-        markerDrawCalls.clear();
-        drawOrbitsRecursive(viewRoot, viewOrigin[0], viewOrigin[1]);
+        float labelAlpha = (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5);
+        sceneFrame = sceneFrameBuilder.build(viewRoot, globalTime, labelAlpha);
+        drawResolvedOrbits();
         GL11.glDisable(GL11.GL_LINE_SMOOTH);
         GL11.glLineWidth(1f);
 
         GlStateManager.enableTexture2D();
-        drawBodiesRecursive(viewRoot, viewOrigin[0], viewOrigin[1]);
+        drawResolvedBodies();
 
-        float labelAlpha = (float) Math.max(0.0, 1.0 - isometricProgress * 2.5);
         if (labelAlpha > 0.02f) {
             GlStateManager.color(1f, 1f, 1f, 1f);
-            drawLabelsRecursive(viewRoot, viewOrigin[0], viewOrigin[1], labelAlpha);
         }
 
         GlStateManager.enableTexture2D();
@@ -1085,7 +1259,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             drawDebugOverlay();
         }
 
-        pinnedInfoItemBounds.clear();
         OrbitalCelestialBody infoBody = getPinnedInfoBody();
         if (infoBody != null) {
             drawPinnedInfoPanel(infoBody);
@@ -1096,94 +1269,65 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         drawPinnedInfoItemTooltip();
     }
 
-    private void drawOrbitsRecursive(OrbitalCelestialBody body, double parentWX, double parentWY) {
-        float ellipseAlpha = (float) Math.max(0.0, 1.0 - isometricProgress * 2.5);
-
-        if (!shouldTraverseChildren(body)) {
-            return;
-        }
-
-        for (OrbitalCelestialBody child : body.children()) {
-            if (ellipseAlpha > 0.01f && !usesAbsolutePosition(body, child) && shouldRenderBodyAtCurrentZoom(child)) {
-                drawEllipse(child.orbitalParams(), parentWX, parentWY, ellipseAlpha);
-            }
-            double[] childWorldPos = resolveChildWorldPos(body, child, parentWX, parentWY, globalTime);
-            drawOrbitsRecursive(child, childWorldPos[0], childWorldPos[1]);
-        }
-    }
-
-    private void drawBodiesRecursive(OrbitalCelestialBody body, double parentWX, double parentWY) {
-        double wx = parentWX;
-        double wy = parentWY;
-
+    private ResolvedBodyDrawState resolveBodyDrawState(OrbitalCelestialBody body, OrbitalCelestialBody parent,
+        double worldX, double worldY, float labelAlpha) {
         float[] isoPos = getIsometricScreenPos(body);
-        float sx = snapToPixel((float) lerp(worldToScreenX(wx), isoPos[0], isometricProgress));
-        float sy = snapToPixel((float) lerp(worldToScreenY(wy), isoPos[1], isometricProgress));
-
-        float bodyAlpha;
-        if (isometricProgress < 0.01) {
-            bodyAlpha = 1f;
-        } else if (isImportantInIsoMode(body)) {
-            bodyAlpha = 1f;
-        } else {
-            bodyAlpha = (float) Math.max(0.0, 1.0 - isometricProgress * 3.0);
-        }
-
+        float screenX = snapToPixel((float) lerp(worldToScreenX(worldX), isoPos[0], viewState.isometricProgress));
+        float screenY = snapToPixel((float) lerp(worldToScreenY(worldY), isoPos[1], viewState.isometricProgress));
+        float bodyAlpha = getBodyRenderAlpha(body);
+        float renderedRadius = getRenderedBodyRadius(body);
         boolean renderBody = shouldRenderBodyAtCurrentZoom(body);
-        if (body.objectClass() != CelestialObjectClass.GALAXY && bodyAlpha > 0.01f && renderBody) {
-            ResourceLocation texture = getRenderTexture(body);
-            if (texture != null && body.spriteSize() > 0.0001) {
-                float bodyRadius = getRenderedBodyRadius(body);
-                drawSprite(texture, sx, sy, bodyRadius, bodyAlpha);
-            } else {
-                int color = getFallbackBodyColor(body.objectClass());
-                float radius = body == root ? 11f : 7f;
-                drawFilledCircle(sx, sy, radius, color, bodyAlpha);
+
+        boolean drawLabel = false;
+        float labelY = 0f;
+        int labelColor = 0;
+        if (labelAlpha > 0.02f && body != root && body != focusedBody && renderBody) {
+            float actualLabelAlpha = getLabelRenderAlpha(body, labelAlpha);
+            if (actualLabelAlpha > 0.01f) {
+                drawLabel = true;
+                labelY = screenY + getLabelYOffset(renderedRadius);
+                labelColor = withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
             }
-            registerHitboxes(body, sx, sy);
-            registerMarkers(body, sx, sy, bodyAlpha);
         }
 
-        if (!shouldTraverseChildren(body)) {
-            return;
-        }
-
-        for (OrbitalCelestialBody child : body.children()) {
-            double[] childWorldPos = resolveChildWorldPos(body, child, wx, wy, globalTime);
-            drawBodiesRecursive(child, childWorldPos[0], childWorldPos[1]);
-        }
+        return new ResolvedBodyDrawState(
+            body,
+            parent,
+            worldX,
+            worldY,
+            screenX,
+            screenY,
+            renderedRadius,
+            bodyAlpha,
+            renderBody,
+            drawLabel,
+            labelY,
+            labelColor);
     }
 
-    private void drawLabelsRecursive(OrbitalCelestialBody body, double parentWX, double parentWY, float labelAlpha) {
-        double wx = parentWX;
-        double wy = parentWY;
-
-        boolean drawLabel = body != root && body != focusedBody;
-        if (drawLabel) {
-            float[] isoPos = getIsometricScreenPos(body);
-            float sx = snapToPixel((float) lerp(worldToScreenX(wx), isoPos[0], isometricProgress));
-            float sy = snapToPixel((float) lerp(worldToScreenY(wy), isoPos[1], isometricProgress));
-
-            float actualLabelAlpha = labelAlpha;
-            if (isometricProgress >= 0.01 && !isImportantInIsoMode(body)) {
-                actualLabelAlpha *= (float) Math.max(0.0, 1.0 - isometricProgress * 3.0);
-            }
-
-            if (shouldRenderBodyAtCurrentZoom(body)) {
-                float yOffset = getLabelYOffset(body);
-                int col = withAlpha(EnumColors.MapCelestialLabelText.getColor(), actualLabelAlpha);
-                labelDrawCalls.add(new LabelDrawCall(body.displayName(), sx, sy + yOffset, col));
-            }
+    private float getBodyRenderAlpha(OrbitalCelestialBody body) {
+        if (viewState.isometricProgress < 0.01) {
+            return 1f;
         }
-
-        if (!shouldTraverseChildren(body)) {
-            return;
+        if (isImportantInIsoMode(body)) {
+            return 1f;
         }
+        return (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 3.0);
+    }
 
-        for (OrbitalCelestialBody child : body.children()) {
-            double[] childWorldPos = resolveChildWorldPos(body, child, wx, wy, globalTime);
-            drawLabelsRecursive(child, childWorldPos[0], childWorldPos[1], labelAlpha);
+    private float getLabelRenderAlpha(OrbitalCelestialBody body, float labelAlpha) {
+        if (viewState.isometricProgress < 0.01 || isImportantInIsoMode(body)) {
+            return labelAlpha;
         }
+        return labelAlpha * (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 3.0);
+    }
+
+    private void drawResolvedOrbits() {
+        sceneRenderer.drawOrbits(sceneFrame, (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5));
+    }
+
+    private void drawResolvedBodies() {
+        sceneRenderer.drawBodies(sceneFrame, viewRoot);
     }
 
     private OrbitalCelestialBody findBodyAtScreen(int mouseX, int mouseY) {
@@ -1193,8 +1337,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private OrbitalCelestialBody findBodyAtLocal(float localX, float localY) {
         OrbitalCelestialBody best = null;
         double bestScore = Double.MAX_VALUE;
-        for (int i = screenBodies.size() - 1; i >= 0; i--) {
-            ScreenBodyBounds bounds = screenBodies.get(i);
+        for (int i = sceneFrame.screenBodies.size() - 1; i >= 0; i--) {
+            ScreenBodyBounds bounds = sceneFrame.screenBodies.get(i);
             double score = bounds.bodyScore(localX, localY);
             if (score < bestScore) {
                 best = bounds.body;
@@ -1204,316 +1348,32 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return best;
     }
 
-    private void registerHitboxes(OrbitalCelestialBody body, float sx, float sy) {
-        float renderedRadius = getRenderedBodyRadius(body);
-        float interactionRadius = getInteractionRadius(body);
-        float maxRadius = Math.max(renderedRadius, interactionRadius);
-
-        if (!isOnScreen(sx, sy, maxRadius)) {
-            return;
-        }
-
-        screenBodies.add(new ScreenBodyBounds(body, sx, sy, renderedRadius, interactionRadius));
-    }
-
-    private void registerMarkers(OrbitalCelestialBody body, float sx, float sy, float alpha) {
-        CelestialMarkerContext context = new CelestialMarkerContext(body, CelestialAssetStore.getStateIfPresent(body.id()));
-        List<CelestialMarker> markers = CelestialMarkerRegistry.getMarkers(context);
-        if (markers.isEmpty()) {
-            return;
-        }
-
-        int iconSize = Math.max(10, Math.min(15, Math.round(getRenderedBodyRadius(body) * 0.95f)));
-        int gap = 3;
-        int startX = Math.round(sx + getRenderedBodyRadius(body) + 6f);
-        int topY = Math.round(sy - getRenderedBodyRadius(body));
-
-        for (int i = 0; i < markers.size(); i++) {
-            CelestialMarker marker = markers.get(i);
-            int markerX = startX + i * (iconSize + gap);
-            markerDrawCalls.add(new MarkerDrawCall(marker.texture(), markerX, topY, iconSize, alpha * marker.alpha()));
-        }
-    }
-
-    private ScreenBodyBounds findScreenBodyBounds(OrbitalCelestialBody body) {
-        for (int i = screenBodies.size() - 1; i >= 0; i--) {
-            ScreenBodyBounds bounds = screenBodies.get(i);
-            if (bounds.body == body) {
-                return bounds;
-            }
-        }
-        return null;
-    }
-
-    private void drawSprite(ResourceLocation tex, float x, float y, float radius, float alpha) {
-        Minecraft.getMinecraft().getTextureManager().bindTexture(tex);
-        GlStateManager.enableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glColor4f(1f, 1f, 1f, alpha);
-
-        Tessellator tess = Tessellator.instance;
-        tess.startDrawingQuads();
-        tess.addVertexWithUV(x - radius, y + radius, 0, 0, 1);
-        tess.addVertexWithUV(x + radius, y + radius, 0, 1, 1);
-        tess.addVertexWithUV(x + radius, y - radius, 0, 1, 0);
-        tess.addVertexWithUV(x - radius, y - radius, 0, 0, 0);
-        tess.draw();
-
-        GL11.glColor4f(1f, 1f, 1f, 1f);
-    }
-
-    private void drawUiSprite(ResourceLocation tex, int x, int y, int size, float alpha) {
-        Minecraft.getMinecraft().getTextureManager().bindTexture(tex);
-        GlStateManager.enableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glColor4f(1f, 1f, 1f, alpha);
-
-        Tessellator tess = Tessellator.instance;
-        tess.startDrawingQuads();
-        tess.addVertexWithUV(x, y + size, 0, 0, 1);
-        tess.addVertexWithUV(x + size, y + size, 0, 1, 1);
-        tess.addVertexWithUV(x + size, y, 0, 1, 0);
-        tess.addVertexWithUV(x, y, 0, 0, 0);
-        tess.draw();
-
-        GL11.glColor4f(1f, 1f, 1f, 1f);
-    }
-
     private void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
-        ResourceLocation texture = getAssetIconTexture(kind);
-        if (texture != null) {
-            drawUiSprite(texture, x, y, size, alpha);
-        }
-    }
-
-    private void drawFilledCircle(float x, float y, float r, int colour, float alpha) {
-        GlStateManager.disableTexture2D();
-        float red = ((colour >> 16) & 0xFF) / 255f;
-        float green = ((colour >> 8) & 0xFF) / 255f;
-        float blue = (colour & 0xFF) / 255f;
-        GlStateManager.color(red, green, blue, alpha);
-        GL11.glBegin(GL11.GL_TRIANGLE_FAN);
-        GL11.glVertex2f(x, y);
-        for (int i = 0; i <= 32; i++) {
-            double a = i * Math.PI * 2.0 / 32.0;
-            GL11.glVertex2f(x + (float) Math.cos(a) * r, y + (float) Math.sin(a) * r);
-        }
-        GL11.glEnd();
-        GlStateManager.color(1f, 1f, 1f, 1f);
-    }
-
-    private void drawCircleOutline(float x, float y, float r, int colour, float alpha, float lineWidth) {
-        GlStateManager.disableTexture2D();
-        float red = ((colour >> 16) & 0xFF) / 255f;
-        float green = ((colour >> 8) & 0xFF) / 255f;
-        float blue = (colour & 0xFF) / 255f;
-        GlStateManager.color(red, green, blue, alpha);
-        GL11.glLineWidth(lineWidth);
-        GL11.glBegin(GL11.GL_LINE_LOOP);
-        for (int i = 0; i < 48; i++) {
-            double a = i * Math.PI * 2.0 / 48.0;
-            GL11.glVertex2f(x + (float) Math.cos(a) * r, y + (float) Math.sin(a) * r);
-        }
-        GL11.glEnd();
-        GL11.glLineWidth(1f);
-        GlStateManager.color(1f, 1f, 1f, 1f);
-    }
-
-    private void drawSquareOutline(float x, float y, float halfSize, int colour, float alpha, float lineWidth) {
-        GlStateManager.disableTexture2D();
-        float red = ((colour >> 16) & 0xFF) / 255f;
-        float green = ((colour >> 8) & 0xFF) / 255f;
-        float blue = (colour & 0xFF) / 255f;
-        GlStateManager.color(red, green, blue, alpha);
-        GL11.glLineWidth(lineWidth);
-        GL11.glBegin(GL11.GL_LINE_LOOP);
-        GL11.glVertex2f(x - halfSize, y - halfSize);
-        GL11.glVertex2f(x + halfSize, y - halfSize);
-        GL11.glVertex2f(x + halfSize, y + halfSize);
-        GL11.glVertex2f(x - halfSize, y + halfSize);
-        GL11.glEnd();
-        GL11.glLineWidth(1f);
-        GlStateManager.color(1f, 1f, 1f, 1f);
-    }
-
-    private void drawCenteredString(String text, float x, float y, int colour) {
-        Minecraft mc = Minecraft.getMinecraft();
-        int w = mc.fontRenderer.getStringWidth(text);
-        GlStateManager.pushMatrix();
-        GlStateManager.scale(MAP_LABEL_SCALE, MAP_LABEL_SCALE, 1f);
-        mc.fontRenderer.drawStringWithShadow(
-            text,
-            Math.round((x / MAP_LABEL_SCALE) - (w / 2f)),
-            Math.round(y / MAP_LABEL_SCALE),
-            colour);
-        GlStateManager.popMatrix();
+        sceneRenderer.drawAssetIcon(kind, x, y, size, alpha);
     }
 
     private void drawViewTitleBanner() {
-        if (viewRoot == null) {
-            return;
-        }
-
-        String title;
-        if (viewRoot.objectClass() == CelestialObjectClass.GALAXY) {
-            title = viewRoot.displayName();
-        } else if (viewRoot.objectClass() == CelestialObjectClass.STAR) {
-            title = viewRoot.displayName() + " System";
-        } else {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        int textWidth = mc.fontRenderer.getStringWidth(title);
-        float centerX = getArea().width / 2f;
-        int top = GALAXY_TITLE_TOP;
-        int bottom = top + GALAXY_TITLE_HEIGHT;
-        float bottomHalfWidth = Math.max(74f, textWidth / 2f + 28f);
-        float topHalfWidth = bottomHalfWidth + 8f;
-
-        drawFilledTrapezoid(centerX, top, bottom, topHalfWidth, bottomHalfWidth, 0xEE162133);
-        drawTrapezoidOutline(centerX, top, bottom, topHalfWidth, bottomHalfWidth, 0xFF7FB6FF, 1.4f);
-        drawCenteredBannerString(title, centerX, top + 7, 0xFFFFFFFF);
-    }
-
-    private void prepareFilledShapeDraw(int colour) {
-        GlStateManager.disableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glDisable(GL11.GL_CULL_FACE);
-        float red = ((colour >> 16) & 0xFF) / 255f;
-        float green = ((colour >> 8) & 0xFF) / 255f;
-        float blue = (colour & 0xFF) / 255f;
-        float alpha = ((colour >> 24) & 0xFF) / 255f;
-        GlStateManager.color(red, green, blue, alpha);
-    }
-
-    private void finishFilledShapeDraw() {
-        GlStateManager.color(1f, 1f, 1f, 1f);
-        GL11.glEnable(GL11.GL_CULL_FACE);
-        GlStateManager.enableTexture2D();
-    }
-
-    private void drawCenteredBannerString(String text, float x, float y, int colour) {
-        Minecraft mc = Minecraft.getMinecraft();
-        int w = mc.fontRenderer.getStringWidth(text);
-        mc.fontRenderer.drawStringWithShadow(text, Math.round(x - w / 2f), Math.round(y), colour);
-    }
-
-    private void drawFilledTrapezoid(float centerX, int top, int bottom, float topHalfWidth, float bottomHalfWidth,
-        int colour) {
-        prepareFilledShapeDraw(colour);
-        for (int y = top; y < bottom; y++) {
-            float t = (y - top) / (float) Math.max(1, bottom - top);
-            float halfWidth = topHalfWidth + (bottomHalfWidth - topHalfWidth) * t;
-            int left = Math.round(centerX - halfWidth);
-            int right = Math.round(centerX + halfWidth);
-            Gui.drawRect(left, y, right, y + 1, colour);
-        }
-        finishFilledShapeDraw();
-    }
-
-    private void drawTrapezoidOutline(float centerX, int top, int bottom, float topHalfWidth, float bottomHalfWidth,
-        int colour, float lineWidth) {
-        GlStateManager.disableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        float red = ((colour >> 16) & 0xFF) / 255f;
-        float green = ((colour >> 8) & 0xFF) / 255f;
-        float blue = (colour & 0xFF) / 255f;
-        float alpha = ((colour >> 24) & 0xFF) / 255f;
-        GlStateManager.color(red, green, blue, alpha);
-        GL11.glLineWidth(lineWidth);
-        GL11.glBegin(GL11.GL_LINE_LOOP);
-        GL11.glVertex2f(centerX - topHalfWidth, top);
-        GL11.glVertex2f(centerX + topHalfWidth, top);
-        GL11.glVertex2f(centerX + bottomHalfWidth, bottom);
-        GL11.glVertex2f(centerX - bottomHalfWidth, bottom);
-        GL11.glEnd();
-        GL11.glLineWidth(1f);
-        GlStateManager.color(1f, 1f, 1f, 1f);
-        GlStateManager.enableTexture2D();
+        sceneRenderer.drawViewTitleBanner(viewRoot, getArea().width);
     }
 
     private void drawDebugOverlay() {
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(8, getArea().height - 36, 182, getArea().height - 8, 0x990B111C);
-        mc.fontRenderer.drawStringWithShadow("Debug: body hitzones", 14, getArea().height - 30, 0xFF7FFFD4);
-        mc.fontRenderer.drawStringWithShadow("Toggle: B", 14, getArea().height - 18, 0xFFB8C7D9);
-
-        for (ScreenBodyBounds bounds : screenBodies) {
-            drawSquareOutline(bounds.centerX, bounds.centerY, bounds.interactionRadius, 0xFF00E5FF, 0.95f, 1.5f);
-            Gui.drawRect(
-                Math.round(bounds.centerX) - 1,
-                Math.round(bounds.centerY) - 1,
-                Math.round(bounds.centerX) + 1,
-                Math.round(bounds.centerY) + 1,
-                0xFF9BFF7A);
-        }
+        sceneRenderer.drawDebugOverlay(sceneFrame, getArea().height);
     }
 
     private void drawCollectedLabels() {
-        for (LabelDrawCall label : labelDrawCalls) {
-            drawCenteredString(label.text, label.x, label.y, label.color);
-        }
+        sceneRenderer.drawCollectedLabels(sceneFrame);
     }
 
     private void drawCollectedMarkers() {
-        for (MarkerDrawCall marker : markerDrawCalls) {
-            drawUiSprite(marker.texture, marker.x, marker.y, marker.size, marker.alpha);
-        }
-    }
-
-    private void drawEllipse(OrbitalParams p, double parentX, double parentY, float alpha) {
-        double a = p.semiMajorAxis();
-        double e = p.eccentricity();
-        double b = a * Math.sqrt(Math.max(0.0, 1.0 - e * e));
-        double rot = p.argumentOfPeriapsis();
-
-        GlStateManager.disableTexture2D();
-        GlStateManager.color(1f, 1f, 1f, alpha * 0.92f);
-        GL11.glLineWidth((float) Math.max(1.4, getScale() * 0.035));
-
-        GL11.glBegin(GL11.GL_LINE_LOOP);
-        for (int i = 0; i <= 360; i++) {
-            double E = i * Math.PI * 2.0 / 360.0;
-            double ex = a * (Math.cos(E) - e);
-            double ey = b * Math.sin(E);
-            double rx = ex * Math.cos(rot) - ey * Math.sin(rot);
-            double ry = ex * Math.sin(rot) + ey * Math.cos(rot);
-            GL11.glVertex2d(worldToScreenX(parentX + rx), worldToScreenY(parentY + ry));
-        }
-        GL11.glEnd();
-        GlStateManager.color(1f, 1f, 1f, 1f);
+        sceneRenderer.drawCollectedMarkers(sceneFrame);
     }
 
     private void drawSelectionHighlight(OrbitalCelestialBody body) {
-        ScreenBodyBounds bounds = findScreenBodyBounds(body);
-        if (bounds == null) return;
-
-        float sx = bounds.centerX;
-        float sy = bounds.centerY;
-        float box = getSelectionBoxRadius(bounds);
-
-        Minecraft mc = Minecraft.getMinecraft();
-        String name = body.displayName();
-        int labelY = (int)(sy - box - 22);
-
-        drawSelectionOverlay(sx, sy, box, 1.0f);
-        drawCenteredString(name, sx, labelY, 0xFFFFFFFF);
+        sceneRenderer.drawSelectionHighlight(body, sceneFrame);
     }
 
     private void drawHoverHighlight(OrbitalCelestialBody body) {
-        ScreenBodyBounds bounds = findScreenBodyBounds(body);
-        if (bounds == null) return;
-
-        float sx = bounds.centerX;
-        float sy = bounds.centerY;
-        float box = getSelectionBoxRadius(bounds);
-
-        drawSelectionOverlay(sx, sy, box, 0.45f);
+        sceneRenderer.drawHoverHighlight(body, sceneFrame);
     }
 
     private OrbitalCelestialBody getPinnedInfoBody() {
@@ -1529,201 +1389,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private void drawPinnedInfoPanel(OrbitalCelestialBody body) {
-        Minecraft mc = Minecraft.getMinecraft();
-        List<InfoRow> rows = buildPinnedInfoRows(body);
-        int contentWidth = getPinnedInfoContentWidth(mc, rows);
-        int boxWidth = contentWidth + PINNED_INFO_PANEL_PADDING * 2;
-        int boxHeight = 8;
-        for (InfoRow row : rows) {
-            boxHeight += getPinnedInfoRowHeight(mc, row, contentWidth) + PINNED_INFO_ROW_GAP;
-        }
-        if (!rows.isEmpty()) {
-            boxHeight -= PINNED_INFO_ROW_GAP;
-        }
-        boxHeight += 8;
-        int x = Math.max(8, getArea().width - boxWidth - 18);
-        int y = Math.max(24, (getArea().height - boxHeight) / 2);
-
-        Gui.drawRect(x, y, x + boxWidth, y + boxHeight, 0xFF162133);
-        Gui.drawRect(x, y, x + boxWidth, y + 2, 0xFF7FB6FF);
-        Gui.drawRect(x, y + boxHeight - 2, x + boxWidth, y + boxHeight, 0xFF7FB6FF);
-        Gui.drawRect(x, y, x + 2, y + boxHeight, 0xFF7FB6FF);
-        Gui.drawRect(x + boxWidth - 2, y, x + boxWidth, y + boxHeight, 0xFF7FB6FF);
-
-        int textY = y + 8;
-        for (InfoRow row : rows) {
-            if (row.inlineItems) {
-                drawPinnedInfoInlineRow(mc, row, x + PINNED_INFO_PANEL_PADDING, textY, contentWidth);
-            } else {
-                mc.fontRenderer.drawStringWithShadow(row.label, x + PINNED_INFO_PANEL_PADDING, textY, 0xFF5A63FF);
-            }
-            if (!row.items.isEmpty() && !row.inlineItems) {
-                drawPinnedInfoItems(row.items, x + PINNED_INFO_PANEL_PADDING, textY + 12, contentWidth);
-            } else if (!row.inlineItems) {
-                List<String> wrappedLines = wrapInfoValue(mc, row.value, contentWidth);
-                int lineY = textY + 12;
-                for (String line : wrappedLines) {
-                    mc.fontRenderer.drawStringWithShadow(line, x + PINNED_INFO_PANEL_PADDING, lineY, 0xFFD9E0FF);
-                    lineY += PINNED_INFO_TEXT_LINE_HEIGHT;
-                }
-            }
-            textY += getPinnedInfoRowHeight(mc, row, contentWidth) + PINNED_INFO_ROW_GAP;
-        }
-    }
-
-    private List<InfoRow> buildPinnedInfoRows(OrbitalCelestialBody body) {
-        List<InfoRow> rows = new ArrayList<>();
-        rows.add(new InfoRow("Name", body.displayName()));
-        rows.add(new InfoRow("Type", formatObjectClass(body.objectClass())));
-        rows.add(new InfoRow("Landable", isLandable(body) ? "Yes" : "No"));
-        rows.add(new InfoRow("Dangers", buildDangerSummary(body)));
-        if (body.objectClass() != CelestialObjectClass.STAR && body.objectClass() != CelestialObjectClass.GALAXY) {
-            rows.add(new InfoRow("Surface", formatSurfaceType(body)));
-            if (!body.properties().gtOreVeins().isEmpty()) {
-                rows.add(InfoRow.section("Veins"));
-                for (GtOreVeinDefinition vein : body.properties().gtOreVeins()) {
-                    rows.add(InfoRow.inlineItems(vein.displayName(), resolveGtVeinDisplayItems(vein)));
-                }
-            } else if (body.properties().ores().isEmpty()) {
-                rows.add(new InfoRow("Ores", "Undefined"));
-            } else {
-                rows.add(new InfoRow("Ores", "", body.properties().ores()));
-            }
-        }
-        return rows;
-    }
-
-    private int getPinnedInfoContentWidth(Minecraft mc, List<InfoRow> rows) {
-        int minContentWidth = PINNED_INFO_PANEL_WIDTH - PINNED_INFO_PANEL_PADDING * 2;
-        int maxContentWidth = Math.max(minContentWidth, getArea().width - 34 - PINNED_INFO_PANEL_PADDING * 2);
-        int contentWidth = minContentWidth;
-        for (InfoRow row : rows) {
-            if (!row.inlineItems) {
-                continue;
-            }
-            int rowWidth = mc.fontRenderer.getStringWidth(row.value) + 4
-                + row.items.size() * PINNED_INFO_INLINE_ICON_SIZE
-                + Math.max(0, row.items.size() - 1) * PINNED_INFO_INLINE_ICON_GAP;
-            contentWidth = Math.max(contentWidth, rowWidth);
-        }
-        return Math.min(contentWidth, maxContentWidth);
-    }
-
-    private int getPinnedInfoRowHeight(Minecraft mc, InfoRow row, int contentWidth) {
-        int height = PINNED_INFO_TEXT_LINE_HEIGHT;
-        if (row.inlineItems) {
-            return Math.max(height, PINNED_INFO_INLINE_ICON_SIZE);
-        }
-        if (!row.items.isEmpty()) {
-            int itemsPerRow = Math.max(1, contentWidth / (PINNED_INFO_ICON_SIZE + PINNED_INFO_ICON_GAP));
-            int itemRows = (row.items.size() + itemsPerRow - 1) / itemsPerRow;
-            return height + 4 + itemRows * PINNED_INFO_ICON_SIZE + Math.max(0, itemRows - 1) * PINNED_INFO_ICON_GAP;
-        }
-
-        List<String> wrappedLines = wrapInfoValue(mc, row.value, contentWidth);
-        if (wrappedLines.isEmpty()) {
-            return height;
-        }
-        return height + 4 + wrappedLines.size() * PINNED_INFO_TEXT_LINE_HEIGHT;
-    }
-
-    private List<String> wrapInfoValue(Minecraft mc, String value, int width) {
-        if (value == null || value.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<String> lines = new ArrayList<>();
-        String[] paragraphs = value.split("\\n");
-        for (String paragraph : paragraphs) {
-            if (paragraph.isEmpty()) {
-                lines.add("");
-                continue;
-            }
-            lines.addAll(mc.fontRenderer.listFormattedStringToWidth(paragraph, width));
-        }
-        return lines;
-    }
-
-    private void drawPinnedInfoItems(List<ItemStack> items, int x, int y, int contentWidth) {
-        if (items == null || items.isEmpty()) {
-            return;
-        }
-
-        int itemsPerRow = Math.max(1, contentWidth / (PINNED_INFO_ICON_SIZE + PINNED_INFO_ICON_GAP));
-        for (int i = 0; i < items.size(); i++) {
-            ItemStack stack = items.get(i);
-            if (stack == null) {
-                continue;
-            }
-            int col = i % itemsPerRow;
-            int row = i / itemsPerRow;
-            int itemX = x + col * (PINNED_INFO_ICON_SIZE + PINNED_INFO_ICON_GAP);
-            int itemY = y + row * (PINNED_INFO_ICON_SIZE + PINNED_INFO_ICON_GAP);
-            drawGuiItemStack(stack, itemX, itemY, PINNED_INFO_ICON_SIZE);
-            pinnedInfoItemBounds.add(new PinnedInfoItemBounds(stack, itemX, itemY, PINNED_INFO_ICON_SIZE));
-        }
-    }
-
-    private void drawPinnedInfoInlineRow(Minecraft mc, InfoRow row, int x, int y, int contentWidth) {
-        int itemsWidth = row.items.size() * PINNED_INFO_INLINE_ICON_SIZE
-            + Math.max(0, row.items.size() - 1) * PINNED_INFO_INLINE_ICON_GAP;
-        int iconsStartX = x + Math.max(0, contentWidth - itemsWidth);
-        int labelMaxWidth = Math.max(12, iconsStartX - x - 4);
-        String label = mc.fontRenderer.trimStringToWidth(row.value, labelMaxWidth);
-        mc.fontRenderer.drawStringWithShadow(label, x, y + 1, 0xFFD9E0FF);
-
-        for (int i = 0; i < row.items.size(); i++) {
-            ItemStack stack = row.items.get(i);
-            if (stack == null) {
-                continue;
-            }
-            int itemX = iconsStartX + i * (PINNED_INFO_INLINE_ICON_SIZE + PINNED_INFO_INLINE_ICON_GAP);
-            drawGuiItemStack(stack, itemX, y, PINNED_INFO_INLINE_ICON_SIZE);
-            pinnedInfoItemBounds.add(new PinnedInfoItemBounds(stack, itemX, y, PINNED_INFO_INLINE_ICON_SIZE));
-        }
-    }
-
-    private void drawGuiItemStack(ItemStack stack, int x, int y) {
-        drawGuiItemStack(stack, x, y, 16);
-    }
-
-    private void drawGuiItemStack(ItemStack stack, int x, int y, int size) {
-        Minecraft mc = Minecraft.getMinecraft();
-        float scale = size / 16.0f;
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(x, y, 200f);
-        GlStateManager.scale(scale, scale, 1f);
-        GlStateManager.color(1f, 1f, 1f, 1f);
-        GL11.glEnable(GL12.GL_RESCALE_NORMAL);
-        GL11.glEnable(GL11.GL_ALPHA_TEST);
-        RenderHelper.enableGUIStandardItemLighting();
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        float previousZ = GUI_ITEM_RENDERER.zLevel;
-        GUI_ITEM_RENDERER.zLevel = 200f;
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
-        GUI_ITEM_RENDERER.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-        GUI_ITEM_RENDERER.zLevel = previousZ;
-        RenderHelper.disableStandardItemLighting();
-        GL11.glDisable(GL11.GL_LIGHTING);
-        GL11.glDisable(GL11.GL_COLOR_MATERIAL);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        GL11.glDisable(GL12.GL_RESCALE_NORMAL);
-        GlStateManager.color(1f, 1f, 1f, 1f);
-        GlStateManager.popMatrix();
+        pinnedInfoPanel.draw(body, pinnedInfoContentBuilder.buildRows(body), getArea().width, getArea().height);
     }
 
     private void drawPinnedInfoItemTooltip() {
-        if (pinnedInfoItemBounds.isEmpty()) {
-            return;
-        }
-        int mouseX = getContext().getMouseX();
-        int mouseY = getContext().getMouseY();
-        for (int i = pinnedInfoItemBounds.size() - 1; i >= 0; i--) {
-            PinnedInfoItemBounds bounds = pinnedInfoItemBounds.get(i);
-            if (bounds.contains(mouseX, mouseY)) {
-                drawSimpleTooltip(bounds.stack.getDisplayName(), mouseX, mouseY);
-                return;
-            }
-        }
+        pinnedInfoPanel.drawHoveredItemTooltip(getContext().getMouseX(), getContext().getMouseY());
     }
 
     private void drawSimpleTooltip(String text, int x, int y) {
@@ -1743,55 +1413,15 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         mc.fontRenderer.drawStringWithShadow(text, left + 4, top + 3, 0xFFFFFFFF);
     }
 
-    private String buildDangerSummary(OrbitalCelestialBody body) {
-        List<String> dangers = new ArrayList<>();
-        if (body.properties().radiation() >= 0.25) {
-            dangers.add("Radiation");
-        }
-        if (body.properties().temperature() > 360) {
-            dangers.add("Heat");
-        }
-        if (body.properties().temperature() > 0 && body.properties().temperature() < 120) {
-            dangers.add("Cold");
-        }
-        if (!body.properties().visitable() && body.properties().canCreateOutpost()) {
-            dangers.add("Remote");
-        }
-        return dangers.isEmpty() ? "None" : String.join(", ", dangers);
-    }
-
     private void drawContextMenu() {
-        ContextMenuLayout layout = getContextMenuLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        int mouseX = toLocalMouseX(getContext().getMouseX());
-        int mouseY = toLocalMouseY(getContext().getMouseY());
-
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF111925);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + layout.headerHeight, 0xFF23324B);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 2, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.bottom - 2, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.left + 2, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.right - 2, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
-
-        mc.fontRenderer.drawStringWithShadow(contextMenuBody.displayName(), layout.left + 10, layout.top + 7, 0xFFFFFFFF);
-
-        for (int i = 0; i < layout.actions.size(); i++) {
-            ContextMenuAction action = layout.actions.get(i);
-            int rowTop = layout.top + layout.headerHeight + i * layout.rowHeight;
-            int rowBottom = rowTop + layout.rowHeight;
-            boolean hovered = mouseX >= layout.left && mouseX <= layout.right && mouseY >= rowTop && mouseY < rowBottom;
-
-            if (hovered && action.enabled) {
-                Gui.drawRect(layout.left + 4, rowTop, layout.right - 4, rowBottom - 1, 0xFF375575);
-            }
-
-            int color = action.enabled ? 0xFFD9E0FF : 0xFF6F7A89;
-            mc.fontRenderer.drawStringWithShadow(action.label, layout.left + 10, rowTop + 5, color);
-        }
+        contextMenuPanel.draw(
+            contextMenuState.body(),
+            contextMenuState.x(),
+            contextMenuState.y(),
+            getArea().width,
+            getArea().height,
+            toLocalMouseX(getContext().getMouseX()),
+            toLocalMouseY(getContext().getMouseY()));
     }
 
     private void drawAssetManagementModal() {
@@ -1799,265 +1429,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (layout == null) {
             return;
         }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        CelestialBodyAssetState state = CelestialAssetStore.getState(assetManagementBody.id());
-        int localMouseX = getContext().getMouseX();
-        int localMouseY = getContext().getMouseY();
-        String hoveredTooltip = null;
-
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xAA09111B);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 28, 0xFF22324A);
-
-        int titleX = layout.left + 12;
-        int titleY = layout.top + 10;
-        String title = "Manage Assets";
-        mc.fontRenderer.drawStringWithShadow(title, titleX, titleY, 0xFFFFFFFF);
-
-        int titleRight = titleX + mc.fontRenderer.getStringWidth(title);
-        int assetNameMaxWidth = Math.max(0, layout.closeButton.left - 12 - (titleRight + 12));
-        if (assetNameMaxWidth > 0) {
-            String assetName = mc.fontRenderer.trimStringToWidth(assetManagementBody.displayName(), assetNameMaxWidth);
-            int assetNameWidth = mc.fontRenderer.getStringWidth(assetName);
-            int assetNameX = Math.max(titleRight + 12, layout.closeButton.left - 12 - assetNameWidth);
-            mc.fontRenderer.drawStringWithShadow(assetName, assetNameX, titleY, 0xFFD9E0FF);
-        }
-
-        hoveredTooltip = drawAssetManagerIconButton(
-            layout.closeButton,
-            null,
-            AssetManagerButtonGlyph.CLOSE,
-            "Close",
-            true,
-            localMouseX,
-            localMouseY,
-            hoveredTooltip);
-        hoveredTooltip = drawAssetManagerIconButton(
-            layout.createStationButton,
-            getAssetIconTexture(CelestialAssetKind.STATION),
-            AssetManagerButtonGlyph.NONE,
-            "Create Station",
-            canCreateBaseStation(assetManagementBody),
-            localMouseX,
-            localMouseY,
-            hoveredTooltip);
-        if (isGT5AutomationAvailable()) {
-            hoveredTooltip = drawAssetManagerIconButton(
-                layout.createAutomatedStationButton,
-                getAssetIconTexture(CelestialAssetKind.AUTOMATED_STATION),
-                AssetManagerButtonGlyph.NONE,
-                "Create Automated Station",
-                canCreateAutomatedStation(assetManagementBody),
-                localMouseX,
-                localMouseY,
-                hoveredTooltip);
-            hoveredTooltip = drawAssetManagerIconButton(
-                layout.createOutpostButton,
-                getAssetIconTexture(CelestialAssetKind.AUTOMATED_OUTPOST),
-                AssetManagerButtonGlyph.NONE,
-                "Create Automated Outpost",
-                canCreateAutomatedOutpost(assetManagementBody),
-                localMouseX,
-                localMouseY,
-                hoveredTooltip);
-        } else {
-            mc.fontRenderer.drawStringWithShadow(
-                "GT5U required for automated assets",
-                layout.left + 104,
-                layout.top + 36,
-                0xFF9AA7B8);
-        }
-
-        Gui.drawRect(layout.contentLeft, layout.contentTop, layout.contentRight, layout.contentBottom, 0x3318273A);
-        if (layout.showConstructionSection) {
-            if (layout.constructionHeaderY >= layout.contentTop && layout.constructionHeaderY <= layout.contentBottom - 10) {
-                mc.fontRenderer.drawStringWithShadow("Construction", layout.left + 14, layout.constructionHeaderY, 0xFF5A63FF);
-            }
-            for (ConstructionSiteRow row : layout.siteRows) {
-                CelestialManagedAsset site = row.asset;
-                Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                drawAssetIcon(site.kind(), row.left + 10, row.top + 9, 16, 1.0f);
-                mc.fontRenderer.drawStringWithShadow(
-                    formatAssetDisplayName(site),
-                    row.left + 32,
-                    row.top + 6,
-                    row.nameClickArea.contains(localMouseX, localMouseY) ? 0xFF8CE4FF : 0xFFFFFFFF);
-                mc.fontRenderer.drawStringWithShadow(
-                    (site.status() == CelestialAssetStatus.DECONSTRUCTION ? "Stored: " : "Inventory: ")
-                        + buildConstructionInventorySummary(site),
-                    row.left + 32,
-                    row.top + 18,
-                    0xFFD9E0FF);
-                hoveredTooltip = drawAssetManagerIconButton(
-                    row.actionButton,
-                    null,
-                    row.actionType == ConstructionRowActionType.SEND_RESOURCES
-                        ? AssetManagerButtonGlyph.SEND
-                        : AssetManagerButtonGlyph.CANCEL,
-                    row.actionType.buttonLabel,
-                    true,
-                    localMouseX,
-                    localMouseY,
-                    hoveredTooltip);
-            }
-        }
-
-        if (layout.assetsHeaderY >= layout.contentTop && layout.assetsHeaderY <= layout.contentBottom - 10) {
-            mc.fontRenderer.drawStringWithShadow("Assets", layout.left + 14, layout.assetsHeaderY, 0xFF5A63FF);
-        }
-        if (layout.assetRows.isEmpty() && layout.noAssetsMessageY >= layout.contentTop
-            && layout.noAssetsMessageY <= layout.contentBottom - 10) {
-            mc.fontRenderer.drawStringWithShadow("No deployed assets", layout.left + 18, layout.noAssetsMessageY, 0xFF9AA7B8);
-        } else {
-            for (AssetRow row : layout.assetRows) {
-                CelestialManagedAsset asset = row.asset;
-                Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                drawAssetIcon(asset.kind(), row.left + 10, row.top + 9, 16, 1.0f);
-                mc.fontRenderer.drawStringWithShadow(
-                    formatAssetDisplayName(asset),
-                    row.left + 32,
-                    row.top + 6,
-                    row.nameClickArea.contains(localMouseX, localMouseY) ? 0xFF8CE4FF : 0xFFFFFFFF);
-                mc.fontRenderer.drawStringWithShadow(
-                    formatAssetKind(asset.kind()) + " | " + formatAssetLocation(asset.location()),
-                    row.left + 32,
-                    row.top + 16,
-                    0xFFD9E0FF);
-                if (row.manageButton != null) {
-                    hoveredTooltip = drawAssetManagerIconButton(
-                        row.manageButton,
-                        null,
-                        AssetManagerButtonGlyph.MANAGE,
-                        "Manage",
-                        true,
-                        localMouseX,
-                        localMouseY,
-                        hoveredTooltip);
-                }
-                hoveredTooltip = drawAssetManagerIconButton(
-                    row.destroyButton,
-                    null,
-                    AssetManagerButtonGlyph.DESTROY,
-                    "Destroy",
-                    true,
-                    localMouseX,
-                    localMouseY,
-                    hoveredTooltip);
-            }
-        }
-        drawAssetManagementScrollbar(layout);
-
-        drawPendingAssetCreationModal();
-        drawPendingAssetDestructionModal();
-        drawPendingConstructionCancellationModal();
-        drawPendingResourceTransferModal();
-        drawPendingAssetManagementModal();
-        drawPendingAssetRenameModal();
-        if (hoveredTooltip != null && pendingAssetCreation == null && pendingAssetDestruction == null
-            && pendingConstructionCancellation == null && pendingResourceTransfer == null
-            && pendingAssetManagement == null
-            && pendingAssetRename == null) {
-            drawSimpleTooltip(hoveredTooltip, localMouseX, localMouseY);
-        }
-    }
-
-    private String drawAssetManagerIconButton(ButtonRect rect, ResourceLocation icon, AssetManagerButtonGlyph glyph, String tooltip,
-        boolean enabled, int mouseX, int mouseY, String currentTooltip) {
-        boolean hovered = rect.contains(mouseX, mouseY);
-        int bg = !enabled ? 0xFF243041 : hovered ? 0xFF3A5678 : 0xFF2D435D;
-        int border = enabled ? 0xFF7FB6FF : 0xFF556577;
-        Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, bg);
-        Gui.drawRect(rect.left, rect.top, rect.right, rect.top + 1, border);
-        Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, border);
-        Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, border);
-        Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, border);
-
-        if (icon != null) {
-            drawUiSprite(icon, rect.left + (rect.right - rect.left - 14) / 2, rect.top + (rect.bottom - rect.top - 14) / 2, 14, enabled ? 1.0f : 0.45f);
-        } else if (glyph != AssetManagerButtonGlyph.NONE) {
-            drawAssetManagerGlyph(rect, glyph, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
-        }
-
-        if (hovered && currentTooltip == null) {
-            return tooltip;
-        }
-        return currentTooltip;
-    }
-
-    private void drawAssetManagerGlyph(ButtonRect rect, AssetManagerButtonGlyph glyph, int color) {
-        int centerX = (rect.left + rect.right) / 2;
-        int centerY = (rect.top + rect.bottom) / 2;
-        switch (glyph) {
-            case CLOSE, CANCEL, DESTROY -> drawGlyphX(centerX, centerY, 5, color);
-            case SEND -> drawGlyphSend(centerX, centerY, color);
-            case MANAGE -> drawGlyphManage(centerX, centerY, color);
-            case NONE -> {}
-        }
-    }
-
-    private void drawGlyphX(int centerX, int centerY, int radius, int color) {
-        for (int i = -radius; i <= radius; i++) {
-            Gui.drawRect(centerX + i, centerY + i, centerX + i + 1, centerY + i + 1, color);
-            Gui.drawRect(centerX + i, centerY - i, centerX + i + 1, centerY - i + 1, color);
-        }
-    }
-
-    private void drawGlyphSend(int centerX, int centerY, int color) {
-        Gui.drawRect(centerX - 5, centerY - 1, centerX + 3, centerY + 1, color);
-        Gui.drawRect(centerX + 2, centerY - 3, centerX + 3, centerY + 4, color);
-        Gui.drawRect(centerX + 3, centerY - 2, centerX + 4, centerY + 3, color);
-        Gui.drawRect(centerX + 4, centerY - 1, centerX + 5, centerY + 2, color);
-        Gui.drawRect(centerX + 5, centerY, centerX + 6, centerY + 1, color);
-    }
-
-    private void drawGlyphManage(int centerX, int centerY, int color) {
-        Gui.drawRect(centerX - 5, centerY - 4, centerX + 6, centerY - 3, color);
-        Gui.drawRect(centerX - 5, centerY, centerX + 6, centerY + 1, color);
-        Gui.drawRect(centerX - 5, centerY + 4, centerX + 6, centerY + 5, color);
-    }
-
-    private void drawModalButton(ButtonRect rect, String label, boolean enabled, boolean hovered) {
-        drawModalButton(rect, label, null, enabled, hovered);
-    }
-
-    private void drawModalButton(ButtonRect rect, String label, ResourceLocation icon, boolean enabled, boolean hovered) {
-        int bg = !enabled ? 0xFF243041 : hovered ? 0xFF3A5678 : 0xFF2D435D;
-        int border = enabled ? 0xFF7FB6FF : 0xFF556577;
-        Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, bg);
-        Gui.drawRect(rect.left, rect.top, rect.right, rect.top + 1, border);
-        Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, border);
-        Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, border);
-        Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, border);
-        int textX = rect.left + 8;
-        if (icon != null) {
-            drawUiSprite(icon, rect.left + 5, rect.top + 2, 14, enabled ? 1.0f : 0.45f);
-            textX = rect.left + 24;
-        }
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, textX, rect.top + 5, enabled ? 0xFFFFFFFF : 0xFF94A0AF);
-    }
-
-    private void drawDangerButton(ButtonRect rect, String label) {
-        Gui.drawRect(rect.left, rect.top, rect.right, rect.bottom, 0xFF5A1E24);
-        Gui.drawRect(rect.left, rect.top, rect.right, rect.top + 1, 0xFFFF5A5A);
-        Gui.drawRect(rect.left, rect.bottom - 1, rect.right, rect.bottom, 0xFFFF5A5A);
-        Gui.drawRect(rect.left, rect.top, rect.left + 1, rect.bottom, 0xFFFF5A5A);
-        Gui.drawRect(rect.right - 1, rect.top, rect.right, rect.bottom, 0xFFFF5A5A);
-        Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(label, rect.left + 8, rect.top + 5, 0xFFFFFFFF);
-    }
-
-    private void drawCenteredLargeString(String text, float x, float y, float scale, int colour) {
-        Minecraft mc = Minecraft.getMinecraft();
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(x, y, 0);
-        GlStateManager.scale(scale, scale, 1f);
-        float w = mc.fontRenderer.getStringWidth(text);
-        mc.fontRenderer.drawStringWithShadow(text, Math.round(-w / 2f), 0, colour);
-        GlStateManager.popMatrix();
+        assetManagementPanel.draw(layout, assetUiState, getArea().width, getArea().height, getContext().getMouseX(), getContext().getMouseY());
+        assetPendingModalPanel.draw(assetUiState, getArea().width, getArea().height);
     }
 
     private void drawActionStatusMessage() {
@@ -2076,135 +1449,37 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             closeContextMenu();
             return;
         }
-        contextMenuBody = body;
-        contextMenuX = localMouseX;
-        contextMenuY = localMouseY;
+        contextMenuState.open(body, localMouseX, localMouseY);
     }
 
     private void closeContextMenu() {
-        contextMenuBody = null;
+        contextMenuState.close();
     }
 
     private boolean handleContextMenuClick(int localMouseX, int localMouseY) {
-        ContextMenuLayout layout = getContextMenuLayout();
-        if (layout == null) {
-            return false;
+        boolean handled = contextMenuPanel.handleClick(
+            contextMenuState.body(),
+            contextMenuState.x(),
+            contextMenuState.y(),
+            getArea().width,
+            getArea().height,
+            localMouseX,
+            localMouseY);
+        if (handled) {
+            closeContextMenu();
         }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            return false;
-        }
-        if (localMouseY < layout.top + layout.headerHeight) {
-            return true;
-        }
-
-        int rowIndex = (localMouseY - layout.top - layout.headerHeight) / layout.rowHeight;
-        if (rowIndex < 0 || rowIndex >= layout.actions.size()) {
-            return true;
-        }
-
-        ContextMenuAction action = layout.actions.get(rowIndex);
-        if (!action.enabled) {
-            return true;
-        }
-
-        if (action.actionType == ContextMenuActionType.MANAGE_ASSETS) {
-            openAssetManagement(contextMenuBody);
-        } else if (action.actionType == ContextMenuActionType.CREATE_STATION) {
-            CelestialAssetStore.createOperationalAsset(
-                contextMenuBody.id(),
-                contextMenuBody.displayName() + " Station",
-                CelestialAssetKind.STATION,
-                CelestialAssetLocation.ORBIT);
-            showActionStatus("Station created");
-        } else if (action.actionType == ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM) {
-            if (isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.createOperationalAsset(
-                    contextMenuBody.id(),
-                    contextMenuBody.displayName() + " Automated Station",
-                    CelestialAssetKind.AUTOMATED_STATION,
-                    CelestialAssetLocation.ORBIT);
-                showActionStatus("Automated station created");
-            } else {
-                openAssetManagement(contextMenuBody);
-                openPendingAssetCreation(
-                    contextMenuBody,
-                    contextMenuBody.displayName() + " Automated Station",
-                    CelestialAssetKind.AUTOMATED_STATION,
-                    CelestialAssetLocation.ORBIT);
-            }
-        } else if (action.actionType == ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM) {
-            if (isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.createOperationalAsset(
-                    contextMenuBody.id(),
-                    contextMenuBody.displayName() + " Automated Outpost",
-                    CelestialAssetKind.AUTOMATED_OUTPOST,
-                    CelestialAssetLocation.SURFACE);
-                showActionStatus("Automated outpost created");
-            } else {
-                openAssetManagement(contextMenuBody);
-                openPendingAssetCreation(
-                    contextMenuBody,
-                    contextMenuBody.displayName() + " Automated Outpost",
-                    CelestialAssetKind.AUTOMATED_OUTPOST,
-                    CelestialAssetLocation.SURFACE);
-            }
-        } else {
-            actionStatusMessage = action.feedbackMessage;
-            actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
-        }
-        closeContextMenu();
-        return true;
+        return handled;
     }
 
     private boolean isWithinContextMenu(int localMouseX, int localMouseY) {
-        ContextMenuLayout layout = getContextMenuLayout();
-        return layout != null && localMouseX >= layout.left && localMouseX <= layout.right && localMouseY >= layout.top
-            && localMouseY <= layout.bottom;
-    }
-
-    private ContextMenuLayout getContextMenuLayout() {
-        if (contextMenuBody == null) {
-            return null;
-        }
-
-        List<ContextMenuAction> actions = buildContextMenuActions(contextMenuBody);
-        Minecraft mc = Minecraft.getMinecraft();
-        int maxTextWidth = mc.fontRenderer.getStringWidth(contextMenuBody.displayName());
-        for (ContextMenuAction action : actions) {
-            maxTextWidth = Math.max(maxTextWidth, mc.fontRenderer.getStringWidth(action.label));
-        }
-
-        int width = Math.max(150, maxTextWidth + 20);
-        int headerHeight = 22;
-        int rowHeight = 18;
-        int height = headerHeight + actions.size() * rowHeight;
-        int left = clamp(contextMenuX, 8, Math.max(8, getArea().width - width - 8));
-        int top = clamp(contextMenuY, 8, Math.max(8, getArea().height - height - 8));
-        return new ContextMenuLayout(left, top, left + width, top + height, headerHeight, rowHeight, actions);
-    }
-
-    private List<ContextMenuAction> buildContextMenuActions(OrbitalCelestialBody body) {
-        List<ContextMenuAction> actions = new ArrayList<>();
-        actions.add(new ContextMenuAction("Manage Assets", true, "", ContextMenuActionType.MANAGE_ASSETS));
-        if (canCreateBaseStation(body)) {
-            actions.add(
-                new ContextMenuAction("Create Station", true, "", ContextMenuActionType.CREATE_STATION));
-        }
-        if (canCreateAutomatedStation(body)) {
-            actions.add(
-                new ContextMenuAction("Create Automated Station", true, "",
-                    ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM));
-        }
-        if (canCreateAutomatedOutpost(body)) {
-            actions.add(
-                new ContextMenuAction("Create Automated Outpost", true, "",
-                    ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM));
-        }
-        if (actions.size() == 1) {
-            actions.add(new ContextMenuAction("No actions available", false, "", ContextMenuActionType.MESSAGE));
-        }
-        return actions;
+        return contextMenuPanel.isWithin(
+            contextMenuState.body(),
+            contextMenuState.x(),
+            contextMenuState.y(),
+            getArea().width,
+            getArea().height,
+            localMouseX,
+            localMouseY);
     }
 
     private int clamp(int value, int min, int max) {
@@ -2212,7 +1487,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private boolean shouldRenderBodyAtCurrentZoom(OrbitalCelestialBody body) {
-        if (isometricProgress > 0.01 || body == viewRoot || body == focusedBody) {
+        if (viewState.isometricProgress > 0.01 || body == viewRoot || body == focusedBody) {
             return true;
         }
         if (!shouldUseOverlapDeclutter(body)) {
@@ -2223,7 +1498,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (parent == null || parent.objectClass() == CelestialObjectClass.GALAXY) {
             return true;
         }
-        if (usesAbsolutePosition(parent, body)) {
+        if (OrbitalWorldStateCache.usesAbsolutePosition(parent, body)) {
             return true;
         }
         float separation = (float) (body.orbitalParams().perigee() * getScale());
@@ -2235,283 +1510,19 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return body != root;
     }
 
-    private void openAssetManagement(OrbitalCelestialBody body) {
-        if (body == null || body.objectClass() == CelestialObjectClass.GALAXY) {
-            return;
-        }
-        assetManagementBody = body;
-        assetManagementScroll = 0;
-        pendingAssetCreation = null;
-        pendingAssetDestruction = null;
-        pendingConstructionCancellation = null;
-        pendingResourceTransfer = null;
-        closePendingAssetRename();
-    }
-
-    private void closeAssetManagement() {
-        assetManagementBody = null;
-        assetManagementScroll = 0;
-        pendingAssetCreation = null;
-        pendingAssetDestruction = null;
-        pendingConstructionCancellation = null;
-        pendingResourceTransfer = null;
-        pendingAssetManagement = null;
-        closePendingAssetRename();
-    }
-
     private boolean handleAssetManagementClick(int localMouseX, int localMouseY) {
         AssetManagementLayout layout = getAssetManagementLayout();
         if (layout == null) {
             return false;
         }
-        if (pendingAssetRename != null) {
-            return handlePendingAssetRenameClick(localMouseX, localMouseY);
+        if (assetUiState.hasBlockingModal()) {
+            return assetPendingModalPanel.handleClick(assetUiState, getArea().width, getArea().height, localMouseX, localMouseY);
         }
-        if (pendingResourceTransfer != null) {
-            return handlePendingResourceTransferClick(localMouseX, localMouseY);
-        }
-        if (pendingAssetManagement != null) {
-            return handlePendingAssetManagementClick(localMouseX, localMouseY);
-        }
-        if (pendingConstructionCancellation != null) {
-            return handlePendingConstructionCancellationClick(localMouseX, localMouseY);
-        }
-        if (pendingAssetDestruction != null) {
-            return handlePendingAssetDestructionClick(localMouseX, localMouseY);
-        }
-        if (pendingAssetCreation != null) {
-            return handlePendingAssetCreationClick(localMouseX, localMouseY);
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            closeAssetManagement();
-            return true;
-        }
-
-        if (layout.closeButton.contains(localMouseX, localMouseY)) {
-            closeAssetManagement();
-            return true;
-        }
-        if (layout.createStationButton.contains(localMouseX, localMouseY) && canCreateBaseStation(assetManagementBody)) {
-            CelestialAssetStore.createOperationalAsset(
-                assetManagementBody.id(),
-                assetManagementBody.displayName() + " Station",
-                CelestialAssetKind.STATION,
-                CelestialAssetLocation.ORBIT);
-            showActionStatus("Station created");
-            return true;
-        }
-        if (layout.createAutomatedStationButton.contains(localMouseX, localMouseY)
-            && canCreateAutomatedStation(assetManagementBody)) {
-            if (isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.createOperationalAsset(
-                    assetManagementBody.id(),
-                    assetManagementBody.displayName() + " Automated Station",
-                    CelestialAssetKind.AUTOMATED_STATION,
-                    CelestialAssetLocation.ORBIT);
-                showActionStatus("Automated station created");
-            } else {
-                openPendingAssetCreation(
-                    assetManagementBody,
-                    assetManagementBody.displayName() + " Automated Station",
-                    CelestialAssetKind.AUTOMATED_STATION,
-                    CelestialAssetLocation.ORBIT);
-            }
-            return true;
-        }
-        if (layout.createOutpostButton.contains(localMouseX, localMouseY) && canCreateAutomatedOutpost(assetManagementBody)) {
-            if (isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.createOperationalAsset(
-                    assetManagementBody.id(),
-                    assetManagementBody.displayName() + " Automated Outpost",
-                    CelestialAssetKind.AUTOMATED_OUTPOST,
-                    CelestialAssetLocation.SURFACE);
-                showActionStatus("Automated outpost created");
-            } else {
-                openPendingAssetCreation(
-                    assetManagementBody,
-                    assetManagementBody.displayName() + " Automated Outpost",
-                    CelestialAssetKind.AUTOMATED_OUTPOST,
-                    CelestialAssetLocation.SURFACE);
-            }
-            return true;
-        }
-
-        for (ConstructionSiteRow row : layout.siteRows) {
-            if (row.nameClickArea.contains(localMouseX, localMouseY)) {
-                openPendingAssetRename(row.asset);
-                return true;
-            }
-            if (row.actionButton.contains(localMouseX, localMouseY)) {
-                if (row.actionType == ConstructionRowActionType.CANCEL_BUILD) {
-                    if (isCreativeBuildModeEnabled()) {
-                        CelestialAssetStore.cancelConstruction(row.asset.assetId());
-                        showActionStatus("Construction canceled");
-                    } else if (hasStoredConstructionResources(row.asset)) {
-                        openPendingConstructionCancellation(row.asset);
-                    } else {
-                        CelestialAssetStore.cancelConstruction(row.asset.assetId());
-                        showActionStatus("Construction canceled");
-                    }
-                } else if (row.actionType == ConstructionRowActionType.SEND_RESOURCES) {
-                    openPendingResourceTransfer(row.asset);
-                }
-                return true;
-            }
-        }
-
-        for (AssetRow row : layout.assetRows) {
-            if (row.nameClickArea.contains(localMouseX, localMouseY)) {
-                openPendingAssetRename(row.asset);
-                return true;
-            }
-            if (row.manageButton != null && row.manageButton.contains(localMouseX, localMouseY)) {
-                openPendingAssetManagement(row.asset);
-                return true;
-            }
-            if (row.destroyButton.contains(localMouseX, localMouseY)) {
-                openPendingAssetDestruction(row.asset);
-                return true;
-            }
-        }
-
-        return true;
+        return assetManagementPanel.handleClick(layout, assetUiState, localMouseX, localMouseY);
     }
 
     private AssetManagementLayout getAssetManagementLayout() {
-        if (assetManagementBody == null) {
-            return null;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        CelestialBodyAssetState state = CelestialAssetStore.getState(assetManagementBody.id());
-        int width = Math.min(520, getArea().width - 80);
-        int height = Math.min(420, getArea().height - 60);
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-
-        ButtonRect closeButton = new ButtonRect(right - 28, top + 6, right - 10, top + 24);
-        ButtonRect createStationButton = new ButtonRect(left + 14, top + 30, left + 36, top + 52);
-        ButtonRect createAutomatedStationButton = new ButtonRect(left + 42, top + 30, left + 64, top + 52);
-        ButtonRect createOutpostButton = new ButtonRect(left + 70, top + 30, left + 92, top + 52);
-        int contentLeft = left + 10;
-        int contentTop = top + 54;
-        int contentRight = right - 24;
-        int contentBottom = bottom - 12;
-        int contentViewportHeight = Math.max(1, contentBottom - contentTop);
-
-        List<CelestialManagedAsset> constructionAssets = new ArrayList<>();
-        constructionAssets.addAll(getAssetsWithStatus(state.assets(), CelestialAssetStatus.CONSTRUCTION_SITE));
-        constructionAssets.addAll(getAssetsWithStatus(state.assets(), CelestialAssetStatus.DECONSTRUCTION));
-        List<CelestialManagedAsset> deployedAssets = getAssetsWithStatus(state.assets(), CelestialAssetStatus.OPERATIONAL);
-
-        int siteRowHeight = 42;
-        int rowSpacing = 6;
-        boolean showConstructionSection = !constructionAssets.isEmpty();
-        int constructionHeaderBaseY = 0;
-        int noConstructionMessageBaseY = 16;
-        int siteRowsBaseY = 16;
-        int constructionRowsHeight = constructionAssets.isEmpty()
-            ? 0
-            : constructionAssets.size() * siteRowHeight + Math.max(0, constructionAssets.size() - 1) * rowSpacing;
-        int afterConstructionBaseY = showConstructionSection
-            ? siteRowsBaseY + constructionRowsHeight
-            : 0;
-        int assetsHeaderBaseY = showConstructionSection ? afterConstructionBaseY + 4 : 0;
-        int noAssetsMessageBaseY = assetsHeaderBaseY + 16;
-        int assetRowsBaseY = assetsHeaderBaseY + 16;
-        int deployedRowsHeight = deployedAssets.isEmpty()
-            ? 0
-            : deployedAssets.size() * siteRowHeight + Math.max(0, deployedAssets.size() - 1) * rowSpacing;
-        int totalContentHeight = deployedAssets.isEmpty()
-            ? noAssetsMessageBaseY + 24
-            : assetRowsBaseY + deployedRowsHeight + 8;
-        int maxScroll = Math.max(0, totalContentHeight - contentViewportHeight);
-        assetManagementScroll = clamp(assetManagementScroll, 0, maxScroll);
-
-        List<ConstructionSiteRow> siteRows = new ArrayList<>();
-        for (int i = 0; i < constructionAssets.size(); i++) {
-            CelestialManagedAsset site = constructionAssets.get(i);
-            int rowTop = contentTop + siteRowsBaseY + i * (siteRowHeight + rowSpacing) - assetManagementScroll;
-            int rowBottom = rowTop + siteRowHeight;
-            if (rowTop < contentTop || rowBottom > contentBottom) {
-                continue;
-            }
-            int rowLeft = left + 14;
-            int rowRight = contentRight;
-            int nameWidth = mc.fontRenderer.getStringWidth(formatAssetDisplayName(site));
-            ButtonRect nameClickArea = new ButtonRect(
-                rowLeft + 30,
-                rowTop + 4,
-                Math.min(rowRight - 42, rowLeft + 32 + nameWidth),
-                rowTop + 16);
-            siteRows.add(
-                new ConstructionSiteRow(
-                    site,
-                    rowLeft,
-                    rowTop,
-                    rowRight,
-                    rowBottom,
-                    nameClickArea,
-                    new ButtonRect(rowRight - 34, rowTop + 9, rowRight - 10, rowTop + 33),
-                    site.status() == CelestialAssetStatus.DECONSTRUCTION
-                        ? ConstructionRowActionType.SEND_RESOURCES
-                        : ConstructionRowActionType.CANCEL_BUILD));
-        }
-
-        List<AssetRow> assetRows = new ArrayList<>();
-        for (int i = 0; i < deployedAssets.size(); i++) {
-            CelestialManagedAsset asset = deployedAssets.get(i);
-            int rowTop = contentTop + assetRowsBaseY + i * (siteRowHeight + rowSpacing) - assetManagementScroll;
-            int rowBottom = rowTop + siteRowHeight;
-            if (rowTop < contentTop || rowBottom > contentBottom) {
-                continue;
-            }
-            int rowLeft = left + 14;
-            int rowRight = contentRight;
-            int nameWidth = mc.fontRenderer.getStringWidth(formatAssetDisplayName(asset));
-            boolean manageable = isManageableStationAsset(asset);
-            ButtonRect manageButton = manageable ? new ButtonRect(rowRight - 62, rowTop + 9, rowRight - 38, rowTop + 33) : null;
-            assetRows.add(
-                new AssetRow(
-                    asset,
-                    rowLeft,
-                    rowTop,
-                    rowRight,
-                    rowBottom,
-                    new ButtonRect(
-                        rowLeft + 30,
-                        rowTop + 4,
-                        Math.min(manageable ? rowRight - 70 : rowRight - 42, rowLeft + 32 + nameWidth),
-                        rowTop + 16),
-                    manageButton,
-                    new ButtonRect(rowRight - 34, rowTop + 9, rowRight - 10, rowTop + 33)));
-        }
-
-        return new AssetManagementLayout(
-            left,
-            top,
-            right,
-            bottom,
-            contentLeft,
-            contentTop,
-            contentRight,
-            contentBottom,
-            showConstructionSection,
-            contentTop + constructionHeaderBaseY - assetManagementScroll,
-            contentTop + noConstructionMessageBaseY - assetManagementScroll,
-            contentTop + assetsHeaderBaseY - assetManagementScroll,
-            contentTop + noAssetsMessageBaseY - assetManagementScroll,
-            totalContentHeight,
-            maxScroll,
-            closeButton,
-            createStationButton,
-            createAutomatedStationButton,
-            createOutpostButton,
-            siteRows,
-            assetRows);
+        return assetManagementPanel.getLayout(getArea().width, getArea().height, assetUiState);
     }
 
     private void showActionStatus(String message) {
@@ -2519,519 +1530,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
     }
 
-    private void drawAssetManagementScrollbar(AssetManagementLayout layout) {
-        if (layout == null || layout.maxScroll <= 0) {
-            return;
-        }
-
-        int trackLeft = layout.contentRight + 4;
-        int trackRight = trackLeft + 6;
-        Gui.drawRect(trackLeft, layout.contentTop, trackRight, layout.contentBottom, 0x55304157);
-
-        int viewportHeight = Math.max(1, layout.contentBottom - layout.contentTop);
-        int thumbHeight = Math.max(24, Math.round((viewportHeight / (float) layout.totalContentHeight) * viewportHeight));
-        int travel = Math.max(0, viewportHeight - thumbHeight);
-        int thumbTop = layout.contentTop + Math.round((assetManagementScroll / (float) layout.maxScroll) * travel);
-        Gui.drawRect(trackLeft, thumbTop, trackRight, thumbTop + thumbHeight, 0xFF59BFD9);
-    }
-
-    private void openPendingAssetCreation(OrbitalCelestialBody body, String displayName, CelestialAssetKind kind,
-        CelestialAssetLocation location) {
-        if (body == null) {
-            return;
-        }
-        pendingAssetCreation = new PendingAssetCreation(
-            body.id(),
-            displayName,
-            kind,
-            location,
-            CelestialAssetStore.previewRequirements(kind));
-    }
-
-    private void openPendingAssetRename(CelestialManagedAsset asset) {
-        if (asset == null) {
-            return;
-        }
-        pendingAssetRename = new PendingAssetRename(asset);
-        if (renameField != null) {
-            renameField.setText(asset.displayName());
-            if (renameField.isValid()) {
-                getContext().focus(renameField);
-            }
-        }
-    }
-
-    private void closePendingAssetRename() {
-        pendingAssetRename = null;
-        if (renameField != null && renameField.isValid() && getContext().isFocused(renameField)) {
-            getContext().removeFocus();
-        }
-    }
-
-    private void openPendingAssetDestruction(CelestialManagedAsset asset) {
-        if (asset == null) {
-            return;
-        }
-        pendingAssetDestruction = new PendingAssetDestruction(asset, false);
-    }
-
-    private void openPendingAssetManagement(CelestialManagedAsset asset) {
-        if (asset == null || !isManageableStationAsset(asset)) {
-            return;
-        }
-        pendingAssetManagement = new PendingAssetManagement(asset);
-    }
-
-    private boolean hasStoredConstructionResources(CelestialManagedAsset asset) {
-        if (asset == null) {
-            return false;
-        }
-        for (CelestialAssetRequirement entry : asset.constructionInventory()) {
-            if (entry.amount() > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isManageableStationAsset(CelestialManagedAsset asset) {
-        if (asset == null || asset.status() != CelestialAssetStatus.OPERATIONAL) {
-            return false;
-        }
-        return asset.kind() == CelestialAssetKind.STATION || asset.kind() == CelestialAssetKind.AUTOMATED_STATION;
-    }
-
-    private void openPendingConstructionCancellation(CelestialManagedAsset asset) {
-        if (asset == null) {
-            return;
-        }
-        pendingConstructionCancellation = new PendingConstructionCancellation(asset);
-    }
-
-    private void openPendingResourceTransfer(CelestialManagedAsset asset) {
-        if (asset == null) {
-            return;
-        }
-        pendingResourceTransfer = new PendingResourceTransfer(asset, getTransferTargetsInSystem(assetManagementBody));
-    }
-
-    private boolean handlePendingAssetCreationClick(int localMouseX, int localMouseY) {
-        PendingAssetCreationLayout layout = getPendingAssetCreationLayout();
-        if (layout == null) {
-            return true;
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            pendingAssetCreation = null;
-            return true;
-        }
-        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
-            pendingAssetCreation = null;
-            return true;
-        }
-        if (layout.confirmButton.contains(localMouseX, localMouseY)) {
-            if (isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.createOperationalAsset(
-                    pendingAssetCreation.celestialObjectId,
-                    pendingAssetCreation.displayName,
-                    pendingAssetCreation.kind,
-                    pendingAssetCreation.location);
-                showActionStatus(formatAssetKind(pendingAssetCreation.kind) + " created");
-            } else {
-                CelestialAssetStore.createAssetInConstruction(
-                    pendingAssetCreation.celestialObjectId,
-                    pendingAssetCreation.displayName,
-                    pendingAssetCreation.kind,
-                    pendingAssetCreation.location);
-                showActionStatus(formatAssetKind(pendingAssetCreation.kind) + " construction planned");
-            }
-            pendingAssetCreation = null;
-            return true;
-        }
-        return true;
-    }
-
-    private boolean handlePendingAssetRenameClick(int localMouseX, int localMouseY) {
-        PendingAssetRenameLayout layout = getPendingAssetRenameLayout();
-        if (layout == null) {
-            return true;
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            closePendingAssetRename();
-            return true;
-        }
-        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
-            closePendingAssetRename();
-            return true;
-        }
-        if (layout.confirmButton.contains(localMouseX, localMouseY)) {
-            confirmPendingAssetRename();
-            return true;
-        }
-        return true;
-    }
-
-    private void confirmPendingAssetRename() {
-        if (pendingAssetRename == null) {
-            return;
-        }
-        String renamed = renameField == null ? "" : renameField.getText().trim();
-        if (renamed.isEmpty()) {
-            showActionStatus("Name cannot be empty");
-            return;
-        }
-        if (renamed.equals(pendingAssetRename.asset.displayName())) {
-            closePendingAssetRename();
-            return;
-        }
-        if (CelestialAssetStore.renameAsset(pendingAssetRename.asset.assetId(), renamed)) {
-            showActionStatus("Asset renamed");
-            closePendingAssetRename();
-            return;
-        }
-        showActionStatus("Rename failed");
-    }
-
-    private boolean handlePendingAssetDestructionClick(int localMouseX, int localMouseY) {
-        PendingAssetDestructionLayout layout = getPendingAssetDestructionLayout();
-        if (layout == null) {
-            return true;
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            pendingAssetDestruction = null;
-            return true;
-        }
-        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
-            pendingAssetDestruction = null;
-            return true;
-        }
-        if (layout.destroyButton.contains(localMouseX, localMouseY)) {
-            if (!pendingAssetDestruction.armed) {
-                pendingAssetDestruction = new PendingAssetDestruction(pendingAssetDestruction.asset, true);
-            } else {
-                CelestialAssetStore.destroyAsset(pendingAssetDestruction.asset.assetId());
-                showActionStatus("Asset destroyed");
-                pendingAssetDestruction = null;
-            }
-            return true;
-        }
-        return true;
-    }
-
-    private boolean handlePendingConstructionCancellationClick(int localMouseX, int localMouseY) {
-        PendingConstructionCancellationLayout layout = getPendingConstructionCancellationLayout();
-        if (layout == null) {
-            return true;
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            pendingConstructionCancellation = null;
-            return true;
-        }
-        if (layout.cancelButton.contains(localMouseX, localMouseY)) {
-            pendingConstructionCancellation = null;
-            return true;
-        }
-        if (layout.confirmButton.contains(localMouseX, localMouseY)) {
-            CelestialAssetStore.startDeconstruction(pendingConstructionCancellation.asset.assetId());
-            showActionStatus("Construction site converted to deconstruction");
-            pendingConstructionCancellation = null;
-            return true;
-        }
-        return true;
-    }
-
-    private boolean handlePendingResourceTransferClick(int localMouseX, int localMouseY) {
-        PendingResourceTransferLayout layout = getPendingResourceTransferLayout();
-        if (layout == null) {
-            return true;
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            pendingResourceTransfer = null;
-            return true;
-        }
-        if (layout.closeButton.contains(localMouseX, localMouseY)) {
-            pendingResourceTransfer = null;
-            return true;
-        }
-        for (TransferTargetRow row : layout.rows) {
-            if (row.sendButton.contains(localMouseX, localMouseY)) {
-                // TODO: validate an orbital rocket with enough free capacity before allowing resource recovery transfer.
-                // TODO: consume the construction inventory and create an actual logistics job toward the selected station.
-                showActionStatus("Resource transfer planning is not implemented yet");
-                pendingResourceTransfer = null;
-                return true;
-            }
-        }
-        return true;
-    }
-
-    private boolean handlePendingAssetManagementClick(int localMouseX, int localMouseY) {
-        PendingAssetManagementLayout layout = getPendingAssetManagementLayout();
-        if (layout == null) {
-            return true;
-        }
-        if (localMouseX < layout.left || localMouseX > layout.right || localMouseY < layout.top
-            || localMouseY > layout.bottom) {
-            pendingAssetManagement = null;
-            return true;
-        }
-        if (layout.closeButton.contains(localMouseX, localMouseY)) {
-            pendingAssetManagement = null;
-            return true;
-        }
-        return true;
-    }
-
-    private void drawPendingAssetCreationModal() {
-        PendingAssetCreationLayout layout = getPendingAssetCreationLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
-
-        drawAssetIcon(pendingAssetCreation.kind, layout.left + 12, layout.top + 10, 18, 1.0f);
-        mc.fontRenderer.drawStringWithShadow(
-            "Confirm " + formatAssetKind(pendingAssetCreation.kind),
-            layout.left + 36,
-            layout.top + 10,
-            0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(
-            pendingAssetCreation.displayName,
-            layout.left + 36,
-            layout.top + 28,
-            0xFFD9E0FF);
-        mc.fontRenderer.drawStringWithShadow("Required resources", layout.left + 12, layout.top + 52, 0xFF5A63FF);
-
-        int resourceY = layout.top + 68;
-        for (CelestialAssetRequirement requirement : pendingAssetCreation.requiredResources) {
-            mc.fontRenderer.drawStringWithShadow(
-                "- " + requirement.amount() + " " + requirement.displayName(),
-                layout.left + 16,
-                resourceY,
-                0xFFD9E0FF);
-            resourceY += 12;
-        }
-
-        drawModalButton(layout.cancelButton, "Cancel", true, false);
-        drawModalButton(layout.confirmButton, "Confirm", true, false);
-    }
-
-    private void drawPendingAssetRenameModal() {
-        PendingAssetRenameLayout layout = getPendingAssetRenameLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
-
-        mc.fontRenderer.drawStringWithShadow("Rename Asset", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(
-            formatAssetDisplayName(pendingAssetRename.asset),
-            layout.left + 12,
-            layout.top + 28,
-            0xFFD9E0FF);
-
-        drawModalButton(layout.cancelButton, "Cancel", true, false);
-        drawModalButton(layout.confirmButton, "Confirm", true, false);
-    }
-
-    private void drawPendingAssetDestructionModal() {
-        PendingAssetDestructionLayout layout = getPendingAssetDestructionLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0xAA000000);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF1A1012);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFFD14A4A);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFFD14A4A);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFFD14A4A);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFFD14A4A);
-
-        drawCenteredLargeString("THIS IS IRREVERSIBLE", (layout.left + layout.right) / 2f, layout.top + 16, 1.45f, 0xFFFF5A5A);
-        mc.fontRenderer.drawStringWithShadow(
-            "You are about to destroy:",
-            layout.left + 18,
-            layout.top + 52,
-            0xFFD9E0FF);
-        mc.fontRenderer.drawStringWithShadow(
-            formatAssetDisplayName(pendingAssetDestruction.asset),
-            layout.left + 18,
-            layout.top + 68,
-            0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(
-            pendingAssetDestruction.armed ? "Click Destroy again to confirm." : "Press Destroy to arm confirmation.",
-            layout.left + 18,
-            layout.top + 92,
-            0xFFFFB3B3);
-
-        drawModalButton(layout.cancelButton, "Cancel", true, false);
-        drawDangerButton(layout.destroyButton, "Destroy");
-    }
-
-    private void drawPendingConstructionCancellationModal() {
-        PendingConstructionCancellationLayout layout = getPendingConstructionCancellationLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFFE6B35A);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFFE6B35A);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFFE6B35A);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFFE6B35A);
-
-        mc.fontRenderer.drawStringWithShadow("Cancel Construction?", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(
-            formatAssetDisplayName(pendingConstructionCancellation.asset),
-            layout.left + 12,
-            layout.top + 28,
-            0xFFD9E0FF);
-        mc.fontRenderer.drawStringWithShadow(
-            "Stored resources will be moved into deconstruction recovery.",
-            layout.left + 12,
-            layout.top + 54,
-            0xFFFFD59A);
-
-        drawModalButton(layout.cancelButton, "Cancel", true, false);
-        drawModalButton(layout.confirmButton, "Confirm", true, false);
-    }
-
-    private void drawPendingResourceTransferModal() {
-        PendingResourceTransferLayout layout = getPendingResourceTransferLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
-
-        mc.fontRenderer.drawStringWithShadow("Send Resources To", layout.left + 12, layout.top + 10, 0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(
-            formatAssetDisplayName(pendingResourceTransfer.asset),
-            layout.left + 12,
-            layout.top + 28,
-            0xFFD9E0FF);
-        mc.fontRenderer.drawStringWithShadow(
-            "Requires an orbital rocket with enough capacity.",
-            layout.left + 12,
-            layout.top + 46,
-            0xFF9AA7B8);
-
-        if (layout.rows.isEmpty()) {
-            mc.fontRenderer.drawStringWithShadow("No stations available in this system", layout.left + 16, layout.top + 74, 0xFF9AA7B8);
-        } else {
-            for (TransferTargetRow row : layout.rows) {
-                Gui.drawRect(row.left, row.top, row.right, row.bottom, 0x55213144);
-                drawAssetIcon(CelestialAssetKind.STATION, row.left + 10, row.top + 9, 16, 1.0f);
-                mc.fontRenderer.drawStringWithShadow(row.target.displayName, row.left + 32, row.top + 6, 0xFFFFFFFF);
-                mc.fontRenderer.drawStringWithShadow(row.target.hostBodyName, row.left + 32, row.top + 18, 0xFFD9E0FF);
-                drawModalButton(row.sendButton, "Send", true, false);
-            }
-        }
-
-        drawModalButton(layout.closeButton, "Close", true, false);
-    }
-
-    private void drawPendingAssetManagementModal() {
-        PendingAssetManagementLayout layout = getPendingAssetManagementLayout();
-        if (layout == null) {
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        Gui.drawRect(0, 0, getArea().width, getArea().height, 0x88000000);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.bottom, 0xFF121B28);
-        Gui.drawRect(layout.left, layout.top, layout.right, layout.top + 3, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.bottom - 3, layout.right, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.left, layout.top, layout.left + 3, layout.bottom, 0xFF59BFD9);
-        Gui.drawRect(layout.right - 3, layout.top, layout.right, layout.bottom, 0xFF59BFD9);
-
-        drawAssetIcon(pendingAssetManagement.asset.kind(), layout.left + 12, layout.top + 10, 18, 1.0f);
-        mc.fontRenderer.drawStringWithShadow("Manage Station", layout.left + 36, layout.top + 10, 0xFFFFFFFF);
-        mc.fontRenderer.drawStringWithShadow(
-            formatAssetDisplayName(pendingAssetManagement.asset),
-            layout.left + 36,
-            layout.top + 28,
-            0xFFD9E0FF);
-        mc.fontRenderer.drawStringWithShadow("This panel is not implemented yet.", layout.left + 14, layout.top + 62, 0xFF9AA7B8);
-
-        drawModalButton(layout.closeButton, "Close", true, false);
-    }
-
-    private PendingAssetCreationLayout getPendingAssetCreationLayout() {
-        if (pendingAssetCreation == null) {
-            return null;
-        }
-
-        int width = 320;
-        int height = 150 + Math.max(0, pendingAssetCreation.requiredResources.size() - 2) * 12;
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-
-        return new PendingAssetCreationLayout(
-            left,
-            top,
-            right,
-            bottom,
-            new ButtonRect(left + 16, bottom - 34, left + 126, bottom - 14),
-            new ButtonRect(right - 126, bottom - 34, right - 16, bottom - 14));
-    }
-
-    private PendingAssetRenameLayout getPendingAssetRenameLayout() {
-        if (pendingAssetRename == null) {
-            return null;
-        }
-
-        int width = 340;
-        int height = 126;
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-
-        return new PendingAssetRenameLayout(
-            left,
-            top,
-            right,
-            bottom,
-            new ButtonRect(left + 14, top + 54, right - 14, top + 76),
-            new ButtonRect(left + 18, bottom - 34, left + 128, bottom - 14),
-            new ButtonRect(right - 128, bottom - 34, right - 18, bottom - 14));
-    }
-
     private void updateRenameFieldLayout() {
         if (renameField == null) {
             return;
         }
-        PendingAssetRenameLayout layout = getPendingAssetRenameLayout();
+        PendingAssetRenameLayout layout = assetPendingModalPanel.getPendingAssetRenameLayout(assetUiState, getArea().width, getArea().height);
         if (layout == null) {
             renameField.top(-1000);
             return;
@@ -3042,350 +1545,8 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             .height(layout.inputField.bottom - layout.inputField.top);
     }
 
-    private PendingAssetDestructionLayout getPendingAssetDestructionLayout() {
-        if (pendingAssetDestruction == null) {
-            return null;
-        }
-
-        int width = 360;
-        int height = 150;
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-
-        ButtonRect leftButton = new ButtonRect(left + 18, bottom - 34, left + 148, bottom - 14);
-        ButtonRect rightButton = new ButtonRect(right - 148, bottom - 34, right - 18, bottom - 14);
-
-        return pendingAssetDestruction.armed
-            ? new PendingAssetDestructionLayout(left, top, right, bottom, rightButton, leftButton)
-            : new PendingAssetDestructionLayout(left, top, right, bottom, leftButton, rightButton);
-    }
-
-    private PendingAssetManagementLayout getPendingAssetManagementLayout() {
-        if (pendingAssetManagement == null) {
-            return null;
-        }
-
-        int width = 360;
-        int height = 150;
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-
-        return new PendingAssetManagementLayout(
-            left,
-            top,
-            right,
-            bottom,
-            new ButtonRect(right - 128, bottom - 34, right - 18, bottom - 14));
-    }
-
-    private PendingConstructionCancellationLayout getPendingConstructionCancellationLayout() {
-        if (pendingConstructionCancellation == null) {
-            return null;
-        }
-
-        int width = 360;
-        int height = 124;
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-        return new PendingConstructionCancellationLayout(
-            left,
-            top,
-            right,
-            bottom,
-            new ButtonRect(left + 18, bottom - 34, left + 148, bottom - 14),
-            new ButtonRect(right - 148, bottom - 34, right - 18, bottom - 14));
-    }
-
-    private PendingResourceTransferLayout getPendingResourceTransferLayout() {
-        if (pendingResourceTransfer == null) {
-            return null;
-        }
-
-        int width = 420;
-        int height = Math.min(280, 120 + pendingResourceTransfer.targets.size() * 42);
-        int left = (getArea().width - width) / 2;
-        int top = (getArea().height - height) / 2;
-        int right = left + width;
-        int bottom = top + height;
-
-        List<TransferTargetRow> rows = new ArrayList<>();
-        int rowTop = top + 66;
-        for (int i = 0; i < pendingResourceTransfer.targets.size(); i++) {
-            StationTransferTarget target = pendingResourceTransfer.targets.get(i);
-            int currentTop = rowTop + i * 42;
-            int currentBottom = currentTop + 36;
-            rows.add(new TransferTargetRow(
-                target,
-                left + 14,
-                currentTop,
-                right - 14,
-                currentBottom,
-                new ButtonRect(right - 92, currentTop + 8, right - 20, currentTop + 26)));
-        }
-
-        return new PendingResourceTransferLayout(
-            left,
-            top,
-            right,
-            bottom,
-            new ButtonRect(right - 96, top + 8, right - 18, top + 26),
-            rows);
-    }
-
-    private List<CelestialManagedAsset> getAssetsWithStatus(List<CelestialManagedAsset> assets, CelestialAssetStatus status) {
-        List<CelestialManagedAsset> filtered = new ArrayList<>();
-        for (CelestialManagedAsset asset : assets) {
-            if (asset.status() == status) {
-                filtered.add(asset);
-            }
-        }
-        return filtered;
-    }
-
-    private String formatAssetDisplayName(CelestialManagedAsset asset) {
-        return switch (asset.status()) {
-            case CONSTRUCTION_SITE -> asset.displayName() + " (In construction)";
-            case DECONSTRUCTION -> asset.displayName() + " (Deconstruction)";
-            default -> asset.displayName();
-        };
-    }
-
-    private String buildRequirementsSummary(List<CelestialAssetRequirement> requiredResources) {
-        if (requiredResources.isEmpty()) {
-            return "No requirements";
-        }
-        List<String> parts = new ArrayList<>();
-        for (CelestialAssetRequirement requirement : requiredResources) {
-            parts.add(requirement.amount() + " " + requirement.displayName());
-        }
-        return String.join(", ", parts);
-    }
-
-    private String buildConstructionInventorySummary(CelestialManagedAsset asset) {
-        if (asset.status() == CelestialAssetStatus.DECONSTRUCTION) {
-            return buildStoredInventorySummary(asset.constructionInventory());
-        }
-        if (asset.requiredResources().isEmpty()) {
-            return "Empty";
-        }
-        List<String> parts = new ArrayList<>();
-        for (CelestialAssetRequirement required : asset.requiredResources()) {
-            long storedAmount = 0;
-            for (CelestialAssetRequirement stored : asset.constructionInventory()) {
-                if (required.matches(stored.stack())) {
-                    storedAmount += stored.amount();
-                }
-            }
-            parts.add(storedAmount + "/" + required.amount() + " " + required.displayName());
-        }
-        return String.join(", ", parts);
-    }
-
-    private String buildStoredInventorySummary(List<CelestialAssetRequirement> storedResources) {
-        if (storedResources.isEmpty()) {
-            return "Empty";
-        }
-        List<String> parts = new ArrayList<>();
-        for (CelestialAssetRequirement stored : storedResources) {
-            parts.add(stored.amount() + " " + stored.displayName());
-        }
-        return String.join(", ", parts);
-    }
-
-    private List<StationTransferTarget> getTransferTargetsInSystem(OrbitalCelestialBody body) {
-        List<StationTransferTarget> targets = new ArrayList<>();
-        if (body == null) {
-            return targets;
-        }
-
-        OrbitalCelestialBody hostStar = findHostStar(root, body, null);
-        if (hostStar == null) {
-            return targets;
-        }
-
-        List<OrbitalCelestialBody> systemBodies = new ArrayList<>();
-        collectBodies(hostStar, systemBodies);
-        for (OrbitalCelestialBody systemBody : systemBodies) {
-            CelestialBodyAssetState state = CelestialAssetStore.getState(systemBody.id());
-            for (CelestialManagedAsset asset : state.assets()) {
-                boolean isStationTarget = asset.status() == CelestialAssetStatus.OPERATIONAL
-                    && asset.location() == CelestialAssetLocation.ORBIT
-                    && (asset.kind() == CelestialAssetKind.STATION
-                        || asset.kind() == CelestialAssetKind.AUTOMATED_STATION);
-                if (isStationTarget) {
-                    targets.add(new StationTransferTarget(asset.assetId(), asset.displayName(), systemBody.displayName()));
-                }
-            }
-        }
-        return targets;
-    }
-
-    private OrbitalCelestialBody findHostStar(OrbitalCelestialBody current, OrbitalCelestialBody target,
-        OrbitalCelestialBody currentStar) {
-        OrbitalCelestialBody nextStar = current.objectClass() == CelestialObjectClass.STAR ? current : currentStar;
-        if (current == target) {
-            return nextStar;
-        }
-        for (OrbitalCelestialBody child : current.children()) {
-            OrbitalCelestialBody found = findHostStar(child, target, nextStar);
-            if (found != null) {
-                return found;
-            }
-        }
-        return null;
-    }
-
-    private void collectBodies(OrbitalCelestialBody current, List<OrbitalCelestialBody> out) {
-        out.add(current);
-        for (OrbitalCelestialBody child : current.children()) {
-            collectBodies(child, out);
-        }
-    }
-
-    private String formatAssetKind(CelestialAssetKind kind) {
-        return switch (kind) {
-            case STATION -> "Station";
-            case AUTOMATED_STATION -> "Automated Station";
-            case AUTOMATED_OUTPOST -> "Automated Outpost";
-        };
-    }
-
     private ResourceLocation getAssetIconTexture(CelestialAssetKind kind) {
         return CelestialAssetIcons.get(kind);
-    }
-
-    private String formatAssetLocation(CelestialAssetLocation location) {
-        return switch (location) {
-            case ORBIT -> "Orbit";
-            case SURFACE -> "Surface";
-        };
-    }
-
-    private String formatObjectClass(CelestialObjectClass objectClass) {
-        String raw = objectClass.name().toLowerCase().replace('_', ' ');
-        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
-    }
-
-    private boolean isLandable(OrbitalCelestialBody body) {
-        return switch (body.objectClass()) {
-            case PLANET, MOON, ASTEROID -> body.properties().visitable();
-            default -> false;
-        };
-    }
-
-    private String formatSurfaceType(OrbitalCelestialBody body) {
-        String surfaceType = body.properties().metadata().get("surface");
-        if (surfaceType == null || surfaceType.isEmpty()) {
-            return "Undefined";
-        }
-        return formatInfoToken(surfaceType);
-    }
-
-    private String formatInfoToken(String value) {
-        String[] parts = value.split("_");
-        StringBuilder out = new StringBuilder();
-        for (String part : parts) {
-            if (part.isEmpty()) continue;
-            if (out.length() > 0) out.append(' ');
-            out.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
-        }
-        return out.toString();
-    }
-
-    private String formatGtVeinList(List<GtOreVeinDefinition> veins) {
-        if (veins == null || veins.isEmpty()) {
-            return "Undefined";
-        }
-        List<String> lines = new ArrayList<>();
-        for (GtOreVeinDefinition vein : veins) {
-            if (vein != null && vein.displayName() != null && !vein.displayName().isEmpty()) {
-                lines.add(vein.displayName());
-            }
-        }
-        return lines.isEmpty() ? "Undefined" : String.join("\n", lines);
-    }
-
-    private List<ItemStack> resolveGtVeinDisplayItems(GtOreVeinDefinition vein) {
-        List<ItemStack> items = new ArrayList<>();
-        if (vein == null) {
-            return items;
-        }
-        for (String oreName : vein.ores()) {
-            ItemStack stack = resolveGtOreDisplayStack(oreName);
-            if (stack != null) {
-                items.add(stack);
-            }
-        }
-        return items;
-    }
-
-    private ItemStack resolveGtOreDisplayStack(String oreName) {
-        if (oreName == null || oreName.isEmpty()) {
-            return null;
-        }
-
-        String materialKey = oreName.replaceAll("[^A-Za-z0-9]", "");
-        String[] oreDictKeys = new String[] {
-            "ore" + materialKey,
-            "gem" + materialKey,
-            "dust" + materialKey,
-            "dustImpure" + materialKey,
-            "crushed" + materialKey
-        };
-
-        for (String oreDictKey : oreDictKeys) {
-            List<ItemStack> matches = OreDictionary.getOres(oreDictKey, false);
-            if (matches == null || matches.isEmpty()) {
-                continue;
-            }
-            ItemStack match = matches.get(0);
-            if (match != null) {
-                return match.copy();
-            }
-        }
-        return null;
-    }
-
-    private void drawSelectionOverlay(float centerX, float centerY, float boxSize, float alpha) {
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        int color = withAlpha(0xFF18C8FF, alpha);
-        int thickness = 2;
-        int left = Math.round(centerX - boxSize);
-        int right = Math.round(centerX + boxSize);
-        int top = Math.round(centerY - boxSize);
-        int bottom = Math.round(centerY + boxSize);
-        int corner = Math.max(5, Math.min(12, Math.round(boxSize * 0.55f)));
-
-        drawCorner(left, top, corner, thickness, true, true, color);
-        drawCorner(right, top, corner, thickness, false, true, color);
-        drawCorner(left, bottom, corner, thickness, true, false, color);
-        drawCorner(right, bottom, corner, thickness, false, false, color);
-    }
-
-    private void drawCorner(int x, int y, int length, int thickness, boolean leftAligned, boolean topAligned, int color) {
-        int horizontalStart = leftAligned ? x : x - length;
-        int horizontalEnd = leftAligned ? x + length : x;
-        int horizontalTop = topAligned ? y : y - thickness;
-        int horizontalBottom = topAligned ? y + thickness : y;
-
-        int verticalLeft = leftAligned ? x : x - thickness;
-        int verticalRight = leftAligned ? x + thickness : x;
-        int verticalTop = topAligned ? y : y - length;
-        int verticalBottom = topAligned ? y + length : y;
-
-        Gui.drawRect(horizontalStart, horizontalTop, horizontalEnd, horizontalBottom, color);
-        Gui.drawRect(verticalLeft, verticalTop, verticalRight, verticalBottom, color);
-    }
-
-    private float getSelectionBoxRadius(OrbitalCelestialBody body) {
-        return getRenderedBodyRadius(body) + 4f;
     }
 
     private float getSelectionBoxRadius(ScreenBodyBounds bounds) {
@@ -3409,7 +1570,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private float getInteractionRadius(OrbitalCelestialBody body) {
-        return Math.max(5f, getRenderedBodyRadius(body));
+        return getInteractionRadius(getRenderedBodyRadius(body));
+    }
+
+    private float getInteractionRadius(float renderedRadius) {
+        return Math.max(5f, renderedRadius);
     }
 
     private boolean isOnScreen(float sx, float sy, float radius) {
@@ -3417,557 +1582,16 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     }
 
     private float getLabelYOffset(OrbitalCelestialBody body) {
-        return getRenderedBodyRadius(body) + 6f;
+        return getLabelYOffset(getRenderedBodyRadius(body));
+    }
+
+    private float getLabelYOffset(float renderedRadius) {
+        return renderedRadius + 6f;
     }
 
     private static int withAlpha(int colour, float alpha) {
         int a = Math.max(0, Math.min(255, (int) (((colour >> 24) & 0xFF) * alpha)));
         return (colour & 0x00FFFFFF) | (a << 24);
-    }
-
-    private static int getFallbackBodyColor(CelestialObjectClass objectClass) {
-        return switch (objectClass) {
-            case GALAXY -> 0xFFFFFFFF;
-            case BLACK_HOLE -> 0xFF5A4B7A;
-            case STAR -> 0xFFFFD36B;
-            case GAS_GIANT -> 0xFFD9A066;
-            case PLANET -> 0xFF7FC7A6;
-            case MOON -> 0xFFD8DCE6;
-            case ASTEROID, ASTEROID_BELT -> 0xFF9CA3AF;
-            case STATION -> 0xFF89C2FF;
-            case COMET -> 0xFFAEE7FF;
-        };
-    }
-
-    private static final class ScreenBodyBounds {
-
-        private final OrbitalCelestialBody body;
-        private final float centerX;
-        private final float centerY;
-        private final float renderedRadius;
-        private final float interactionRadius;
-
-        private ScreenBodyBounds(OrbitalCelestialBody body, float centerX, float centerY, float renderedRadius,
-            float interactionRadius) {
-            this.body = body;
-            this.centerX = centerX;
-            this.centerY = centerY;
-            this.renderedRadius = renderedRadius;
-            this.interactionRadius = interactionRadius;
-        }
-
-        private double bodyScore(float x, float y) {
-            double dx = x - centerX;
-            double dy = y - centerY;
-            double absDx = Math.abs(dx);
-            double absDy = Math.abs(dy);
-            if (absDx > interactionRadius || absDy > interactionRadius) {
-                return Double.MAX_VALUE;
-            }
-            double normalizedDx = absDx / Math.max(1.0, interactionRadius);
-            double normalizedDy = absDy / Math.max(1.0, interactionRadius);
-            return Math.max(normalizedDx, normalizedDy);
-        }
-    }
-
-    private static final class LabelDrawCall {
-
-        private final String text;
-        private final float x;
-        private final float y;
-        private final int color;
-
-        private LabelDrawCall(String text, float x, float y, int color) {
-            this.text = text;
-            this.x = x;
-            this.y = y;
-            this.color = color;
-        }
-    }
-
-    private static final class MarkerDrawCall {
-
-        private final ResourceLocation texture;
-        private final int x;
-        private final int y;
-        private final int size;
-        private final float alpha;
-
-        private MarkerDrawCall(ResourceLocation texture, int x, int y, int size, float alpha) {
-            this.texture = texture;
-            this.x = x;
-            this.y = y;
-            this.size = size;
-            this.alpha = alpha;
-        }
-    }
-
-    private static final class ContextMenuAction {
-
-        private final String label;
-        private final boolean enabled;
-        private final String feedbackMessage;
-        private final ContextMenuActionType actionType;
-
-        private ContextMenuAction(String label, boolean enabled, String feedbackMessage, ContextMenuActionType actionType) {
-            this.label = label;
-            this.enabled = enabled;
-            this.feedbackMessage = feedbackMessage;
-            this.actionType = actionType;
-        }
-    }
-
-    private enum ContextMenuActionType {
-        MESSAGE,
-        MANAGE_ASSETS,
-        CREATE_STATION,
-        OPEN_AUTOMATED_STATION_CONFIRM,
-        OPEN_AUTOMATED_OUTPOST_CONFIRM
-    }
-
-    private enum LayerSwitchPhase {
-        NONE,
-        SYSTEM_PRE_CUT,
-        SYSTEM_POST_CUT,
-        GALAXY_PRE_CUT,
-        GALAXY_POST_CUT
-    }
-
-    private static final class ContextMenuLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final int headerHeight;
-        private final int rowHeight;
-        private final List<ContextMenuAction> actions;
-
-        private ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
-            List<ContextMenuAction> actions) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.headerHeight = headerHeight;
-            this.rowHeight = rowHeight;
-            this.actions = actions;
-        }
-    }
-
-    private static final class ButtonRect {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-
-        private ButtonRect(int left, int top, int right, int bottom) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-        }
-
-        private boolean contains(int x, int y) {
-            return x >= left && x <= right && y >= top && y <= bottom;
-        }
-    }
-
-    private static final class ConstructionSiteRow {
-
-        private final CelestialManagedAsset asset;
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect nameClickArea;
-        private final ButtonRect actionButton;
-        private final ConstructionRowActionType actionType;
-
-        private ConstructionSiteRow(CelestialManagedAsset asset, int left, int top, int right, int bottom,
-            ButtonRect nameClickArea, ButtonRect actionButton, ConstructionRowActionType actionType) {
-            this.asset = asset;
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.nameClickArea = nameClickArea;
-            this.actionButton = actionButton;
-            this.actionType = actionType;
-        }
-    }
-
-    private enum ConstructionRowActionType {
-        CANCEL_BUILD("Cancel Build"),
-        SEND_RESOURCES("Send To...");
-
-        private final String buttonLabel;
-
-        ConstructionRowActionType(String buttonLabel) {
-            this.buttonLabel = buttonLabel;
-        }
-    }
-
-    private enum AssetManagerButtonGlyph {
-        NONE,
-        CLOSE,
-        CANCEL,
-        SEND,
-        MANAGE,
-        DESTROY
-    }
-
-    private static final class AssetRow {
-
-        private final CelestialManagedAsset asset;
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect nameClickArea;
-        private final ButtonRect manageButton;
-        private final ButtonRect destroyButton;
-
-        private AssetRow(CelestialManagedAsset asset, int left, int top, int right, int bottom,
-            ButtonRect nameClickArea, ButtonRect manageButton, ButtonRect destroyButton) {
-            this.asset = asset;
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.nameClickArea = nameClickArea;
-            this.manageButton = manageButton;
-            this.destroyButton = destroyButton;
-        }
-    }
-
-    private static final class AssetManagementLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final int contentLeft;
-        private final int contentTop;
-        private final int contentRight;
-        private final int contentBottom;
-        private final boolean showConstructionSection;
-        private final int constructionHeaderY;
-        private final int noConstructionMessageY;
-        private final int assetsHeaderY;
-        private final int noAssetsMessageY;
-        private final int totalContentHeight;
-        private final int maxScroll;
-        private final ButtonRect closeButton;
-        private final ButtonRect createStationButton;
-        private final ButtonRect createAutomatedStationButton;
-        private final ButtonRect createOutpostButton;
-        private final List<ConstructionSiteRow> siteRows;
-        private final List<AssetRow> assetRows;
-
-        private AssetManagementLayout(int left, int top, int right, int bottom, int contentLeft, int contentTop,
-            int contentRight, int contentBottom, boolean showConstructionSection, int constructionHeaderY,
-            int noConstructionMessageY, int assetsHeaderY,
-            int noAssetsMessageY, int totalContentHeight, int maxScroll,
-            ButtonRect closeButton, ButtonRect createStationButton, ButtonRect createAutomatedStationButton,
-            ButtonRect createOutpostButton,
-            List<ConstructionSiteRow> siteRows, List<AssetRow> assetRows) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.contentLeft = contentLeft;
-            this.contentTop = contentTop;
-            this.contentRight = contentRight;
-            this.contentBottom = contentBottom;
-            this.showConstructionSection = showConstructionSection;
-            this.constructionHeaderY = constructionHeaderY;
-            this.noConstructionMessageY = noConstructionMessageY;
-            this.assetsHeaderY = assetsHeaderY;
-            this.noAssetsMessageY = noAssetsMessageY;
-            this.totalContentHeight = totalContentHeight;
-            this.maxScroll = maxScroll;
-            this.closeButton = closeButton;
-            this.createStationButton = createStationButton;
-            this.createAutomatedStationButton = createAutomatedStationButton;
-            this.createOutpostButton = createOutpostButton;
-            this.siteRows = siteRows;
-            this.assetRows = assetRows;
-        }
-
-        private boolean isInScrollViewport(int x, int y) {
-            return x >= contentLeft && x <= contentRight && y >= contentTop && y <= contentBottom;
-        }
-    }
-
-    private static final class PendingAssetCreation {
-
-        private final String celestialObjectId;
-        private final String displayName;
-        private final CelestialAssetKind kind;
-        private final CelestialAssetLocation location;
-        private final List<CelestialAssetRequirement> requiredResources;
-
-        private PendingAssetCreation(String celestialObjectId, String displayName, CelestialAssetKind kind,
-            CelestialAssetLocation location, List<CelestialAssetRequirement> requiredResources) {
-            this.celestialObjectId = celestialObjectId;
-            this.displayName = displayName;
-            this.kind = kind;
-            this.location = location;
-            this.requiredResources = requiredResources;
-        }
-    }
-
-    private static final class PendingAssetRename {
-
-        private final CelestialManagedAsset asset;
-
-        private PendingAssetRename(CelestialManagedAsset asset) {
-            this.asset = asset;
-        }
-    }
-
-    private static final class PendingAssetCreationLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect cancelButton;
-        private final ButtonRect confirmButton;
-
-        private PendingAssetCreationLayout(int left, int top, int right, int bottom, ButtonRect cancelButton,
-            ButtonRect confirmButton) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.cancelButton = cancelButton;
-            this.confirmButton = confirmButton;
-        }
-    }
-
-    private static final class PendingAssetRenameLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect inputField;
-        private final ButtonRect cancelButton;
-        private final ButtonRect confirmButton;
-
-        private PendingAssetRenameLayout(int left, int top, int right, int bottom, ButtonRect inputField,
-            ButtonRect cancelButton, ButtonRect confirmButton) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.inputField = inputField;
-            this.cancelButton = cancelButton;
-            this.confirmButton = confirmButton;
-        }
-    }
-
-    private static final class PendingAssetDestruction {
-
-        private final CelestialManagedAsset asset;
-        private final boolean armed;
-
-        private PendingAssetDestruction(CelestialManagedAsset asset, boolean armed) {
-            this.asset = asset;
-            this.armed = armed;
-        }
-    }
-
-    private static final class PendingAssetManagement {
-
-        private final CelestialManagedAsset asset;
-
-        private PendingAssetManagement(CelestialManagedAsset asset) {
-            this.asset = asset;
-        }
-    }
-
-    private static final class PendingAssetManagementLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect closeButton;
-
-        private PendingAssetManagementLayout(int left, int top, int right, int bottom, ButtonRect closeButton) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.closeButton = closeButton;
-        }
-    }
-
-    private static final class PendingAssetDestructionLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect cancelButton;
-        private final ButtonRect destroyButton;
-
-        private PendingAssetDestructionLayout(int left, int top, int right, int bottom, ButtonRect cancelButton,
-            ButtonRect destroyButton) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.cancelButton = cancelButton;
-            this.destroyButton = destroyButton;
-        }
-    }
-
-    private static final class PendingConstructionCancellation {
-
-        private final CelestialManagedAsset asset;
-
-        private PendingConstructionCancellation(CelestialManagedAsset asset) {
-            this.asset = asset;
-        }
-    }
-
-    private static final class PendingConstructionCancellationLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect cancelButton;
-        private final ButtonRect confirmButton;
-
-        private PendingConstructionCancellationLayout(int left, int top, int right, int bottom, ButtonRect cancelButton,
-            ButtonRect confirmButton) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.cancelButton = cancelButton;
-            this.confirmButton = confirmButton;
-        }
-    }
-
-    private static final class PendingResourceTransfer {
-
-        private final CelestialManagedAsset asset;
-        private final List<StationTransferTarget> targets;
-
-        private PendingResourceTransfer(CelestialManagedAsset asset, List<StationTransferTarget> targets) {
-            this.asset = asset;
-            this.targets = targets;
-        }
-    }
-
-    private static final class PendingResourceTransferLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect closeButton;
-        private final List<TransferTargetRow> rows;
-
-        private PendingResourceTransferLayout(int left, int top, int right, int bottom, ButtonRect closeButton,
-            List<TransferTargetRow> rows) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.closeButton = closeButton;
-            this.rows = rows;
-        }
-    }
-
-    private static final class StationTransferTarget {
-
-        private final String assetId;
-        private final String displayName;
-        private final String hostBodyName;
-
-        private StationTransferTarget(String assetId, String displayName, String hostBodyName) {
-            this.assetId = assetId;
-            this.displayName = displayName;
-            this.hostBodyName = hostBodyName;
-        }
-    }
-
-    private static final class TransferTargetRow {
-
-        private final StationTransferTarget target;
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final ButtonRect sendButton;
-
-        private TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
-            ButtonRect sendButton) {
-            this.target = target;
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.sendButton = sendButton;
-        }
-    }
-
-    private static final class InfoRow {
-
-        private final String label;
-        private final String value;
-        private final List<ItemStack> items;
-        private final boolean inlineItems;
-
-        private InfoRow(String label, String value) {
-            this(label, value, Collections.emptyList(), false);
-        }
-
-        private InfoRow(String label, String value, List<ItemStack> items) {
-            this(label, value, items, false);
-        }
-
-        private InfoRow(String label, String value, List<ItemStack> items, boolean inlineItems) {
-            this.label = label;
-            this.value = value;
-            this.items = items == null ? Collections.emptyList() : items;
-            this.inlineItems = inlineItems;
-        }
-
-        private static InfoRow section(String label) {
-            return new InfoRow(label, "", Collections.emptyList(), false);
-        }
-
-        private static InfoRow inlineItems(String value, List<ItemStack> items) {
-            return new InfoRow("", value, items, true);
-        }
-    }
-
-    private static final class PinnedInfoItemBounds {
-
-        private final ItemStack stack;
-        private final int left;
-        private final int top;
-        private final int size;
-
-        private PinnedInfoItemBounds(ItemStack stack, int left, int top, int size) {
-            this.stack = stack;
-            this.left = left;
-            this.top = top;
-            this.size = size;
-        }
-
-        private boolean contains(int x, int y) {
-            return x >= left && x <= left + size && y >= top && y <= top + size;
-        }
     }
 
 }
