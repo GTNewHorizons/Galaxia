@@ -31,6 +31,9 @@ public enum EnumColors {
     MapSidebarSearchInput(0xFFFFFFFF),
     MapSidebarListNormal(0xFFCCEEFF),
     MapSidebarListHovered(0xFF88EEFF),
+    MapSidebarButtonBackground(0x66202A36),
+    MapSidebarButtonSelectedBackground(0xCC2E435C),
+    MapSidebarButtonBorder(0x6699AABB),
 
     // Celestial Map
     MapBackground(0xFF0F1621),
@@ -79,6 +82,16 @@ public enum EnumColors {
     MapColorTextButtonEnabled(0xFFFFFFFF),
     MapColorTextButtonDisabled(0xFF94A0AF),
     MapColorTransferRowBackground(0x55213144),
+    MapColorTextInteractive(0xFF8CE4FF),
+
+    // Context menu
+    MapContextMenuBackground(0xFF111925),
+    MapContextMenuHeader(0xFF23324B),
+    MapContextMenuRowHoverBackground(0xFF375575),
+    MapContextMenuTextDisabled(0xFF6F7A89),
+
+    // Pinned info
+    MapPinnedInfoBackground(0xFF162133),
 
     // Other UI elements
     OrbitEllipse(0xEBFFFFFF), // 0.92 alpha white

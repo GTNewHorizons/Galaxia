@@ -18,6 +18,7 @@ import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 @Desugar
 record ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
@@ -137,7 +138,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         menuRoot = root;
 
         root.child(
-            new TextWidget<>(body.displayName()).color(0xFFFFFFFF)
+            new TextWidget<>(body.displayName()).color(EnumColors.MapColorTextTitle.getColor())
                 .shadow(true)
                 .pos(HEADER_TEXT_X, HEADER_TEXT_Y));
 
@@ -150,7 +151,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         }
 
         child(root);
-        child(WidgetOutline.create(root, MENU_OUTLINE_THICKNESS, 0xFF59BFD9));
+        child(WidgetOutline.create(root, MENU_OUTLINE_THICKNESS, EnumColors.MapColorModalAccent.getColor()));
     }
 
     private ParentWidget<?> createActionRow(OrbitalCelestialBody body, ContextMenuAction action, int height) {
@@ -163,21 +164,28 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     .widthRelOffset(1f, -ROW_HOVER_INSET_X * 2)
                     .height(height - ROW_HOVER_INSET_Y * 2)
                     .background(IDrawable.EMPTY)
-                    .hoverBackground(drawable((context, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, 0xFF375575)))
+                    .hoverBackground(
+                        drawable(
+                            (context, x, y, w, h) -> Gui.drawRect(
+                                x,
+                                y,
+                                x + w,
+                                y + h,
+                                EnumColors.MapContextMenuRowHoverBackground.getColor())))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
                         handleAction(body, action.actionType());
                         return true;
                     }));
             row.child(
-                new TextWidget<>(action.label()).color(0xFFD9E0FF)
+                new TextWidget<>(action.label()).color(EnumColors.MapColorTextBody.getColor())
                     .shadow(true)
                     .pos(ROW_TEXT_X, ROW_TEXT_Y));
             return row;
         }
 
         row.child(
-            new TextWidget<>(action.label()).color(0xFF6F7A89)
+            new TextWidget<>(action.label()).color(EnumColors.MapContextMenuTextDisabled.getColor())
                 .shadow(true)
                 .pos(ROW_TEXT_X, ROW_TEXT_Y));
         return row;
@@ -258,8 +266,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private IDrawable createMenuBackgroundDrawable() {
         return drawable((context, x, y, width, height) -> {
-            Gui.drawRect(x, y, x + width, y + height, 0xFF111925);
-            Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, 0xFF23324B);
+            Gui.drawRect(x, y, x + width, y + height, EnumColors.MapContextMenuBackground.getColor());
+            Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, EnumColors.MapContextMenuHeader.getColor());
         });
     }
 

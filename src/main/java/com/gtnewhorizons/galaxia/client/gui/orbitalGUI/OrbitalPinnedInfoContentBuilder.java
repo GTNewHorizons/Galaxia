@@ -27,6 +27,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 import com.gtnewhorizons.galaxia.registry.celestial.GtOreVeinDefinition;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 public final class OrbitalPinnedInfoContentBuilder {
 
@@ -262,7 +263,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                 .heightRel(1f)
                 .background(createBackgroundDrawable());
             root.child(backgroundLayer);
-            root.child(WidgetOutline.create(backgroundLayer, 2, 0xFF7FB6FF));
+            root.child(WidgetOutline.create(backgroundLayer, 2, EnumColors.MapColorRenameBorder.getColor()));
             int currentY = 8;
             for (PinnedInfoRow row : rows) {
                 buildRow(root, mc, row, contentWidth, currentY);
@@ -277,7 +278,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                 return;
             }
             root.child(
-                new TextWidget<>(row.label()).color(0xFF5A63FF)
+                new TextWidget<>(row.label()).color(EnumColors.MapColorTextSection.getColor())
                     .shadow(true)
                     .pos(PANEL_PADDING, y));
             if (!row.items()
@@ -289,7 +290,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             int lineY = y + 12;
             for (String line : wrappedLines) {
                 root.child(
-                    new TextWidget<>(line).color(0xFFD9E0FF)
+                    new TextWidget<>(line).color(EnumColors.MapColorTextBody.getColor())
                         .shadow(true)
                         .pos(PANEL_PADDING, lineY));
                 lineY += TEXT_LINE_HEIGHT;
@@ -324,7 +325,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             int labelMaxWidth = Math.max(12, iconsStartX - PANEL_PADDING - 4);
             String label = mc.fontRenderer.trimStringToWidth(row.value(), labelMaxWidth);
             root.child(
-                new TextWidget<>(label).color(0xFFD9E0FF)
+                new TextWidget<>(label).color(EnumColors.MapColorTextBody.getColor())
                     .shadow(true)
                     .pos(PANEL_PADDING, y + 1));
             for (int i = 0; i < row.items()
@@ -420,7 +421,13 @@ public final class OrbitalPinnedInfoContentBuilder {
         }
 
         private IDrawable createBackgroundDrawable() {
-            return drawable((context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, 0xFF162133));
+            return drawable(
+                (context, x, y, width, height) -> Gui.drawRect(
+                    x,
+                    y,
+                    x + width,
+                    y + height,
+                    EnumColors.MapPinnedInfoBackground.getColor()));
         }
 
         private IDrawable drawable(DrawCommand drawCommand) {

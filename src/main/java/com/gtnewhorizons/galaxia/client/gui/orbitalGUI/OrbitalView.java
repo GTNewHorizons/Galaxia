@@ -1512,7 +1512,8 @@ public class OrbitalView {
                 actionStatusMessage = "";
                 return;
             }
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(actionStatusMessage, 12, 24, 0xFFD9E0FF);
+            Minecraft.getMinecraft().fontRenderer
+                .drawStringWithShadow(actionStatusMessage, 12, 24, EnumColors.MapColorTextBody.getColor());
         }
 
         private void openContextMenu(OrbitalCelestialBody body, int localMouseX, int localMouseY) {

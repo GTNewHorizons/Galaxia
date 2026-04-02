@@ -244,8 +244,9 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private void drawLayerButton(int x, int y, int width, String label, boolean selected) {
-        int bg = selected ? 0xCC2E435C : 0x66202A36;
-        int border = selected ? EnumColors.MapSidebarListHovered.getColor() : 0x6699AABB;
+        int bg = selected ? EnumColors.MapSidebarButtonSelectedBackground.getColor()
+            : EnumColors.MapSidebarButtonBackground.getColor();
+        int border = selected ? EnumColors.MapSidebarListHovered.getColor() : EnumColors.MapSidebarButtonBorder.getColor();
         Gui.drawRect(x, y, x + width, y + LAYER_BUTTON_HEIGHT, bg);
         Gui.drawRect(x, y, x + width, y + 1, border);
         Gui.drawRect(x, y + LAYER_BUTTON_HEIGHT - 1, x + width, y + LAYER_BUTTON_HEIGHT, border);
@@ -305,7 +306,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             int textX = 22 + e.depth() * 24;
             String text = e.body()
                 .displayName();
-            int color = hovered ? 0xFF59BFD9 : EnumColors.MapSidebarListNormal.getColor();
+            int color = hovered ? EnumColors.MapColorModalAccent.getColor() : EnumColors.MapSidebarListNormal.getColor();
             if (e.hasChildren()) {
                 IDrawable play = IDrawable.of(GuiTextures.PLAY);
                 if (expanded.contains(e.body())) {

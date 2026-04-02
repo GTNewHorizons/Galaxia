@@ -1217,7 +1217,7 @@ public final class AssetManagementSystem {
                 .hoverOverlay(
                     IKey.str(text)
                         .alignment(Alignment.CenterLeft)
-                        .color(0xFF8CE4FF)
+                        .color(EnumColors.MapColorTextInteractive.getColor())
                         .shadow(true))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0) return true;
