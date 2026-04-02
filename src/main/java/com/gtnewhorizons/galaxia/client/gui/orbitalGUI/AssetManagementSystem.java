@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.utility.EnumColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.item.ItemStack;
@@ -33,6 +32,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyAssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialManagedAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 @Desugar
 record ButtonRect(int left, int top, int right, int bottom) {
@@ -567,8 +567,9 @@ public final class AssetManagementSystem {
             this.state = state;
             this.callbacks = callbacks;
             setEnabled(false);
-            background(drawable((c, x, y, w, h) ->
-                Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_OVERLAY_BG.getColor())));
+            background(
+                drawable(
+                    (c, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_OVERLAY_BG.getColor())));
         }
 
         public void markStructureDirty() {
@@ -707,7 +708,9 @@ public final class AssetManagementSystem {
                     () -> callbacks.triggerAssetCreation(body, CelestialAssetKind.AUTOMATED_OUTPOST, false))
                         .pos(70, 30));
             if (!callbacks.isGT5AutomationAvailable()) {
-                modal.child(createBodyText("GT5U required for automated assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(104, 36));
+                modal.child(
+                    createBodyText("GT5U required for automated assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+                        .pos(104, 36));
             }
             VerticalScrollData scrollData = new VerticalScrollData();
             mainScrollData = scrollData;
@@ -716,7 +719,8 @@ public final class AssetManagementSystem {
                 .heightRelOffset(1f, -(CONTENT_TOP + 12))
                 .background(
                     drawable(
-                        (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
+                        (context, x, y, width, height) -> Gui
+                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
             activeScrollWidget = scroll;
             mainScrollWidget = scroll;
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f)
@@ -789,8 +793,9 @@ public final class AssetManagementSystem {
             int resourceY = 68;
             for (CelestialAssetRequirement requirement : creation.requiredResources()) {
                 modal.child(
-                    createBodyText("- " + requirement.amount() + " " + requirement.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                        .pos(16, resourceY));
+                    createBodyText(
+                        "- " + requirement.amount() + " " + requirement.displayName(),
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(16, resourceY));
                 resourceY += 12;
             }
             addFooterButtons(
@@ -811,9 +816,11 @@ public final class AssetManagementSystem {
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Rename Asset").pos(12, 10));
             modal.child(
-                createBodyText(callbacks.formatAssetDisplayName(state.pendingAssetRename.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .pos(12, 28));
-            modal.child(createBodyText("New name", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(RENAME_INPUT_PADDING, 42));
+                createBodyText(
+                    callbacks.formatAssetDisplayName(state.pendingAssetRename.asset()),
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
+            modal.child(
+                createBodyText("New name", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(RENAME_INPUT_PADDING, 42));
             modal.child(drawable((context, x, y, width, height) -> {
                 Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_INPUT_BG.getColor());
                 Gui.drawRect(x, y, x + width, y + 1, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
@@ -849,11 +856,15 @@ public final class AssetManagementSystem {
                 EnumColors.MAP_COLOR_MODAL_DANGER_ACCENT.getColor(),
                 -1);
             modal.child(
-                createCenteredLargeText("THIS IS IRREVERSIBLE", 1.45f, EnumColors.MAP_COLOR_TEXT_DANGER.getColor()).pos(12, 16)
+                createCenteredLargeText("THIS IS IRREVERSIBLE", 1.45f, EnumColors.MAP_COLOR_TEXT_DANGER.getColor())
+                    .pos(12, 16)
                     .size(modalWidth - 24, 22));
-            modal.child(createBodyText("You are about to destroy:", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(18, 52));
             modal.child(
-                createBodyText(callbacks.formatAssetDisplayName(destruction.asset()), EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(18, 68));
+                createBodyText("You are about to destroy:", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(18, 52));
+            modal.child(
+                createBodyText(
+                    callbacks.formatAssetDisplayName(destruction.asset()),
+                    EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(18, 68));
             modal.child(
                 createBodyText(
                     destruction.armed() ? "Click Destroy again to confirm." : "Press Destroy to arm confirmation.",
@@ -886,8 +897,9 @@ public final class AssetManagementSystem {
                     callbacks.formatAssetDisplayName(state.pendingConstructionCancellation.asset()),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
-                createBodyText("Stored resources will be moved into deconstruction recovery.", EnumColors.MAP_COLOR_TEXT_WARNING.getColor())
-                    .pos(12, 54));
+                createBodyText(
+                    "Stored resources will be moved into deconstruction recovery.",
+                    EnumColors.MAP_COLOR_TEXT_WARNING.getColor()).pos(12, 54));
             addFooterButtons(
                 modal,
                 bounds,
@@ -910,17 +922,23 @@ public final class AssetManagementSystem {
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Send Resources To").pos(12, 10));
-            modal
-                .child(createBodyText(callbacks.formatAssetDisplayName(transfer.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
-                createBodyText("Requires an orbital rocket with enough capacity.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 46));
+                createBodyText(
+                    callbacks.formatAssetDisplayName(transfer.asset()),
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
+            modal.child(
+                createBodyText(
+                    "Requires an orbital rocket with enough capacity.",
+                    EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 46));
             modal.child(
                 createFooterButton("Close", true, callbacks::dismissPendingResourceTransfer)
                     .pos(bounds.right() - 96, bounds.top() + 8)
                     .size(78, FOOTER_BUTTON_HEIGHT));
             if (transfer.targets()
                 .isEmpty()) {
-                modal.child(createBodyText("No stations available in this system", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(16, 74));
+                modal.child(
+                    createBodyText("No stations available in this system", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+                        .pos(16, 74));
                 child(modal);
                 return;
             }
@@ -931,17 +949,21 @@ public final class AssetManagementSystem {
                     .get(i);
                 int currentTop = rowTop + i * 42;
                 modal.child(
-                    drawable((context, x, y, width, h) -> Gui.drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_TRANSFER_ROW_BG.getColor()))
-                        .asWidget()
-                        .pos(bounds.left() + 14, currentTop)
-                        .size(bounds.right() - bounds.left() - 28, 36));
+                    drawable(
+                        (context, x, y, width, h) -> Gui
+                            .drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_TRANSFER_ROW_BG.getColor()))
+                                .asWidget()
+                                .pos(bounds.left() + 14, currentTop)
+                                .size(bounds.right() - bounds.left() - 28, 36));
                 modal.child(
                     createAssetIconWidget(CelestialAssetKind.STATION, 1.0f).pos(bounds.left() + 24, currentTop + 9)
                         .size(16, 16));
                 modal.child(
-                    createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(bounds.left() + 46, currentTop + 6));
+                    createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                        .pos(bounds.left() + 46, currentTop + 6));
                 modal.child(
-                    createBodyText(target.hostBodyName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(bounds.left() + 46, currentTop + 18));
+                    createBodyText(target.hostBodyName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                        .pos(bounds.left() + 46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))
                         .pos(bounds.right() - 92, currentTop + 8)
@@ -963,9 +985,12 @@ public final class AssetManagementSystem {
                         .size(18, 18));
             modal.child(createTitleText("Manage Station").pos(36, 10));
             modal.child(
-                createBodyText(callbacks.formatAssetDisplayName(state.pendingAssetManagement.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .pos(36, 28));
-            modal.child(createBodyText("This panel is not implemented yet.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(14, 62));
+                createBodyText(
+                    callbacks.formatAssetDisplayName(state.pendingAssetManagement.asset()),
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(36, 28));
+            modal.child(
+                createBodyText("This panel is not implemented yet.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+                    .pos(14, 62));
             modal.child(
                 createFooterButton("Close", true, callbacks::closePendingAssetManagement)
                     .pos(bounds.right() - 18 - 110, bounds.top() + 8)
@@ -1038,7 +1063,8 @@ public final class AssetManagementSystem {
             content.child(createSectionText("Assets").pos(4, y));
             y += 16;
             if (deployed.isEmpty()) {
-                content.child(createBodyText("No deployed assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, y));
+                content
+                    .child(createBodyText("No deployed assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, y));
                 return;
             }
             for (CelestialManagedAsset a : deployed) {
@@ -1052,7 +1078,8 @@ public final class AssetManagementSystem {
                 .height(ROW_HEIGHT)
                 .background(
                     drawable(
-                        (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+                        (context, x, y, width, height) -> Gui
+                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
             row.child(
                 createAssetIconWidget(asset.kind(), 1.0f).pos(10, 9)
                     .size(16, 16));
@@ -1079,7 +1106,8 @@ public final class AssetManagementSystem {
                 .height(ROW_HEIGHT)
                 .background(
                     drawable(
-                        (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+                        (context, x, y, width, height) -> Gui
+                            .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
             row.child(
                 createAssetIconWidget(asset.kind(), 1.0f).pos(10, 9)
                     .size(16, 16));
@@ -1164,12 +1192,25 @@ public final class AssetManagementSystem {
         }
 
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom) {
-            return createModalRoot(left, top, right, bottom, EnumColors.MAP_COLOR_MODAL_BG.getColor(), EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
+            return createModalRoot(
+                left,
+                top,
+                right,
+                bottom,
+                EnumColors.MAP_COLOR_MODAL_BG.getColor(),
+                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
         }
 
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor,
             int accentColor) {
-            return createModalRoot(left, top, right, bottom, backgroundColor, accentColor, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
+            return createModalRoot(
+                left,
+                top,
+                right,
+                bottom,
+                backgroundColor,
+                accentColor,
+                EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
         }
 
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor,
@@ -1222,7 +1263,11 @@ public final class AssetManagementSystem {
                     return true;
                 });
             if (iconKind != null) button.overlay(createAssetIconDrawable(iconKind, enabled ? 1.0f : 0.45f));
-            else button.overlay(createGlyphDrawable(glyph, enabled ? EnumColors.MAP_COLOR_TEXT_TITLE.getColor() : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor()));
+            else button.overlay(
+                createGlyphDrawable(
+                    glyph,
+                    enabled ? EnumColors.MAP_COLOR_TEXT_TITLE.getColor()
+                        : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor()));
             return button;
         }
 
@@ -1240,7 +1285,9 @@ public final class AssetManagementSystem {
                 .overlay(
                     IKey.str(label)
                         .alignment(Alignment.Center)
-                        .color(enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor() : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor())
+                        .color(
+                            enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
+                                : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor())
                         .shadow(true))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0 || !enabled) return true;
@@ -1250,14 +1297,18 @@ public final class AssetManagementSystem {
         }
 
         private IDrawable createButtonBackground(boolean enabled, boolean hovered) {
-            int bg = !enabled ? EnumColors.MAP_COLOR_BTN_DISABLED.getColor() : hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor() : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor();
-            int border = enabled ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor() : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor();
+            int bg = !enabled ? EnumColors.MAP_COLOR_BTN_DISABLED.getColor()
+                : hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
+                    : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor();
+            int border = enabled ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
+                : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor();
             return createRectFrameDrawable(bg, border);
         }
 
         private IDrawable createTextButtonBackground(boolean enabled, boolean hovered, boolean danger) {
             if (danger) {
-                int bg = hovered ? EnumColors.MAP_COLOR_BTN_DANGER_HOVERED.getColor() : EnumColors.MAP_COLOR_BTN_DANGER_DEFAULT.getColor();
+                int bg = hovered ? EnumColors.MAP_COLOR_BTN_DANGER_HOVERED.getColor()
+                    : EnumColors.MAP_COLOR_BTN_DANGER_DEFAULT.getColor();
                 return createRectFrameDrawable(bg, EnumColors.MAP_COLOR_BTN_DANGER_BORDER.getColor());
             }
             return createButtonBackground(enabled, hovered);
