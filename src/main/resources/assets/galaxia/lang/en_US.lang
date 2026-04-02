@@ -249,6 +249,9 @@ galaxia.gui.rocket_trophy.title=Rocket Trophy Positioning
 galaxia.gui.rocket_trophy.schematic_loaded=Schematic loaded!
 galaxia.gui.rocket_trophy.schematic_none=No schematic to load
 galaxia.gui.rocket_trophy.position=Render Position:
+galaxia.gui.rocket_trophy.yaw=Yaw
+galaxia.gui.rocket_trophy.pitch=Pitch
+galaxia.gui.rocket_trophy.scale=Scale
 
 # Elements - "Tooltip"
 galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments

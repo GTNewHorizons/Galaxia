@@ -71,6 +71,7 @@ public class ItemRocketSchematic extends Item {
             result.add(
                 list.getCompoundTagAt(i)
                     .getInteger("type"));
+
         }
         return result;
     }
@@ -84,7 +85,9 @@ public class ItemRocketSchematic extends Item {
 
         List<Integer> modules = readModules(stack);
         if (modules.isEmpty()) {
-            tooltip.add(EnumChatFormatting.RED + StatCollector.translateToLocal("item.galaxia.rocket_schematic.empty"));
+            tooltip.add(
+                EnumChatFormatting.RED + StatCollector.translateToLocal("item.galaxia.rocket_schematic.empty")
+                    + EnumChatFormatting.RESET);
             return;
         }
 

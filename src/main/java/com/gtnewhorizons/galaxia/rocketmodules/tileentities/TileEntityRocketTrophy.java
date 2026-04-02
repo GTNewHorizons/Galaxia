@@ -88,9 +88,13 @@ public class TileEntityRocketTrophy extends TileEntity implements IGuiHolder<Pos
             .padding(2);
 
         String[] rowTopLabels = { "X", "Y", "Z" };
-        String[] rowBotLabels = { "Yaw", "Pitch", "Scale" };
+        String[] rowBotLabels = { StatCollector.translateToLocal("galaxia.gui.rocket_trophy.yaw"),
+            StatCollector.translateToLocal("galaxia.gui.rocket_trophy.pitch"),
+            StatCollector.translateToLocal("galaxia.gui.rocket_trophy.scale") };
+
         float[] rowTopSteps = { 0.5f, 0.5f, 0.5f };
         float[] rowBotSteps = { 5f, 5f, 0.1f };
+
         StringSyncValue[] syncsTop = new StringSyncValue[] {
             new StringSyncValue(() -> String.format("%.2f", offsetX), s -> setOffsetX(Float.parseFloat(s))),
             new StringSyncValue(() -> String.format("%.2f", offsetY), s -> setOffsetY(Float.parseFloat(s))),
@@ -108,7 +112,7 @@ public class TileEntityRocketTrophy extends TileEntity implements IGuiHolder<Pos
                 IKey.str(label)
                     .asWidget()
                     .marginLeft(15)
-                    .size(56, 10));
+                    .size(45, 10));
 
             controlRowTop.child(
                 new ButtonWidget<>().size(14, 18)
@@ -147,7 +151,7 @@ public class TileEntityRocketTrophy extends TileEntity implements IGuiHolder<Pos
                 IKey.str(label)
                     .asWidget()
                     .marginLeft(15)
-                    .size(56, 10));
+                    .size(45, 10));
 
             controlRowBot.child(
                 new ButtonWidget<>().size(14, 18)
