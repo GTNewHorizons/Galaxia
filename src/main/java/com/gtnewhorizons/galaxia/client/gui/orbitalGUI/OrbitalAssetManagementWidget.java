@@ -29,7 +29,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyAssetState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialManagedAsset;
 
-final class OrbitalAssetManagementMuiWidget extends ParentWidget<OrbitalAssetManagementMuiWidget> {
+final class OrbitalAssetManagementWidget extends ParentWidget<OrbitalAssetManagementWidget> {
 
     interface Callbacks {
 
@@ -133,7 +133,7 @@ final class OrbitalAssetManagementMuiWidget extends ParentWidget<OrbitalAssetMan
     private int mainContentWidth;
     private int mainContentHeight;
 
-    OrbitalAssetManagementMuiWidget(OrbitalAssetUiState state, Callbacks callbacks) {
+    OrbitalAssetManagementWidget(OrbitalAssetUiState state, Callbacks callbacks) {
         this.state = state;
         this.callbacks = callbacks;
         setEnabled(false);
@@ -927,9 +927,15 @@ final class OrbitalAssetManagementMuiWidget extends ParentWidget<OrbitalAssetMan
 
     private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor, int accentColor,
         int headerColor) {
-        return new ParentWidget<>().pos(left, top)
-            .size(right - left, bottom - top)
-            .background(createModalFrameDrawable(backgroundColor, accentColor, headerColor));
+        ParentWidget<?> modal = new ParentWidget<>().pos(left, top)
+            .size(right - left, bottom - top);
+        PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
+            .widthRel(1f)
+            .heightRel(1f)
+            .background(createModalBackgroundDrawable(backgroundColor, headerColor));
+        modal.child(backgroundLayer);
+        modal.child(WidgetOutline.create(backgroundLayer, 3, accentColor));
+        return modal;
     }
 
     private TextWidget<?> createTitleText(String text) {
@@ -1090,13 +1096,9 @@ final class OrbitalAssetManagementMuiWidget extends ParentWidget<OrbitalAssetMan
         Gui.drawRect(centerX - 5, centerY + 4, centerX + 6, centerY + 5, color);
     }
 
-    private IDrawable createModalFrameDrawable(int backgroundColor, int accentColor, int headerColor) {
+    private IDrawable createModalBackgroundDrawable(int backgroundColor, int headerColor) {
         return drawable((context, x, y, width, height) -> {
             Gui.drawRect(x, y, x + width, y + height, backgroundColor);
-            Gui.drawRect(x, y, x + width, y + 3, accentColor);
-            Gui.drawRect(x, y + height - 3, x + width, y + height, accentColor);
-            Gui.drawRect(x, y, x + 3, y + height, accentColor);
-            Gui.drawRect(x + width - 3, y, x + width, y + height, accentColor);
             if (headerColor >= 0) {
                 Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, headerColor);
             }
@@ -1191,6 +1193,19 @@ final class OrbitalAssetManagementMuiWidget extends ParentWidget<OrbitalAssetMan
     }
 
     private final class PassiveRow extends ParentWidget<PassiveRow> {
+
+        @Override
+        public boolean canHover() {
+            return false;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+    }
+
+    private final class PassiveLayer extends ParentWidget<PassiveLayer> {
 
         @Override
         public boolean canHover() {

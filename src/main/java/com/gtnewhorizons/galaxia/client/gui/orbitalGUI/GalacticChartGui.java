@@ -35,7 +35,9 @@ public class GalacticChartGui {
 
         OrbitalMapWidget map = new OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar)
             .attachRenameField(renameField);
-        OrbitalAssetManagementMuiWidget assetManagementOverlay = map.createAssetManagementMuiWidget();
+        OrbitalPinnedInfoWidget pinnedInfoOverlay = map.createPinnedInfoWidget();
+        OrbitalContextMenuWidget contextMenuOverlay = map.createContextMenuWidget();
+        OrbitalAssetManagementWidget assetManagementOverlay = map.createAssetManagementWidget();
         CelestialSidebarWidget sidebar = new CelestialSidebarWidget(galaxyRoot, currentStar, map);
 
         return panel.child(
@@ -45,6 +47,16 @@ public class GalacticChartGui {
                 .heightRel(1f))
             .child(
                 (IWidget) map.left(LEFT_PANEL_WIDTH)
+                    .top(0)
+                    .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
+                    .heightRel(1f))
+            .child(
+                (IWidget) pinnedInfoOverlay.left(LEFT_PANEL_WIDTH)
+                    .top(0)
+                    .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
+                    .heightRel(1f))
+            .child(
+                (IWidget) contextMenuOverlay.left(LEFT_PANEL_WIDTH)
                     .top(0)
                     .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
                     .heightRel(1f))

@@ -106,9 +106,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             }
         });
     private final OrbitalAssetUiState assetUiState = new OrbitalAssetUiState();
-    private final OrbitalAssetManagementMuiWidget assetManagementMuiWidget = new OrbitalAssetManagementMuiWidget(
+    private final OrbitalAssetManagementWidget assetManagementWidget = new OrbitalAssetManagementWidget(
         assetUiState,
-        new OrbitalAssetManagementMuiWidget.Callbacks() {
+        new OrbitalAssetManagementWidget.Callbacks() {
 
             @Override
             public void closeAssetManagement() {
@@ -313,17 +313,23 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             return OrbitalMapWidget.this.getAssetIconTexture(kind);
         }
     });
-    private final OrbitalPinnedInfoPanel pinnedInfoPanel = new OrbitalPinnedInfoPanel(
-        new OrbitalPinnedInfoPanel.Callbacks() {
+    private final OrbitalPinnedInfoContentBuilder pinnedInfoContentBuilder = new OrbitalPinnedInfoContentBuilder();
+    private final OrbitalPinnedInfoWidget pinnedInfoWidget = new OrbitalPinnedInfoWidget(
+        new OrbitalPinnedInfoWidget.Callbacks() {
 
             @Override
-            public void drawTooltip(String text, int x, int y) {
-                OrbitalMapWidget.this.drawSimpleTooltip(text, x, y);
+            public OrbitalCelestialBody getPinnedInfoBody() {
+                return OrbitalMapWidget.this.getPinnedInfoBody();
+            }
+
+            @Override
+            public List<PinnedInfoRow> buildRows(OrbitalCelestialBody body) {
+                return pinnedInfoContentBuilder.buildRows(body);
             }
         });
-    private final OrbitalPinnedInfoContentBuilder pinnedInfoContentBuilder = new OrbitalPinnedInfoContentBuilder();
-    private final OrbitalContextMenuPanel contextMenuPanel = new OrbitalContextMenuPanel(
-        new OrbitalContextMenuPanel.Callbacks() {
+    private final OrbitalContextMenuWidget contextMenuWidget = new OrbitalContextMenuWidget(
+        contextMenuState,
+        new OrbitalContextMenuWidget.Callbacks() {
 
             @Override
             public boolean canCreateBaseStation(OrbitalCelestialBody body) {
@@ -354,6 +360,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             public void triggerAssetCreation(OrbitalCelestialBody body, CelestialAssetKind kind,
                 boolean openManagementFirst) {
                 assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
+            }
+
+            @Override
+            public void closeContextMenu() {
+                OrbitalMapWidget.this.closeContextMenu();
             }
         });
     private final OrbitalSceneFrameBuilder sceneFrameBuilder = new OrbitalSceneFrameBuilder(
@@ -432,8 +443,16 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return this;
     }
 
-    public OrbitalAssetManagementMuiWidget createAssetManagementMuiWidget() {
-        return assetManagementMuiWidget;
+    public OrbitalAssetManagementWidget createAssetManagementWidget() {
+        return assetManagementWidget;
+    }
+
+    public OrbitalPinnedInfoWidget createPinnedInfoWidget() {
+        return pinnedInfoWidget;
+    }
+
+    public OrbitalContextMenuWidget createContextMenuWidget() {
+        return contextMenuWidget;
     }
 
     public void showLayer(OrbitalCelestialBody layerRoot) {
@@ -515,10 +534,16 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                 return button == 1;
             }
             if (button == 0 && contextMenuState.isOpen()) {
+                int localMouseX = toLocalMouseX(getContext().getMouseX());
+                int localMouseY = toLocalMouseY(getContext().getMouseY());
                 clickCandidate = false;
                 dragging = false;
                 dragEnabledForCurrentPress = false;
                 pressedBodyCandidate = null;
+                if (contextMenuWidget.isPointInMenu(localMouseX, localMouseY)) {
+                    return false;
+                }
+                closeContextMenu();
                 return true;
             }
             if (button != 0) return false;
@@ -551,7 +576,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
             if (contextMenuState.isOpen()) {
                 if (mouseButton == 0) {
-                    if (handleContextMenuClick(localMouseX, localMouseY)) {
+                    if (contextMenuWidget.isPointInMenu(localMouseX, localMouseY)) {
                         clickCandidate = false;
                         dragging = false;
                         dragEnabledForCurrentPress = false;
@@ -559,7 +584,12 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
                         return true;
                     }
                     closeContextMenu();
-                } else if (mouseButton == 1 && isWithinContextMenu(localMouseX, localMouseY)) {
+                    clickCandidate = false;
+                    dragging = false;
+                    dragEnabledForCurrentPress = false;
+                    pressedBodyCandidate = null;
+                    return true;
+                } else if (mouseButton == 1 && contextMenuWidget.isPointInMenu(localMouseX, localMouseY)) {
                     return true;
                 }
             }
@@ -644,7 +674,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             if (assetUiState.hasBlockingModal()) {
                 return true;
             }
-            return !assetManagementMuiWidget.isPointInScrollViewport(toLocalMouseX(mx), toLocalMouseY(my));
+            return !assetManagementWidget.isPointInScrollViewport(toLocalMouseX(mx), toLocalMouseY(my));
         }
 
         double oldScale = getScale();
@@ -1270,13 +1300,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             drawDebugOverlay();
         }
 
-        OrbitalCelestialBody infoBody = getPinnedInfoBody();
-        if (infoBody != null) {
-            drawPinnedInfoPanel(infoBody);
-        }
-
-        drawContextMenu();
-        drawPinnedInfoItemTooltip();
     }
 
     private ResolvedBodyDrawState resolveBodyDrawState(OrbitalCelestialBody body, OrbitalCelestialBody parent,
@@ -1398,42 +1421,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return null;
     }
 
-    private void drawPinnedInfoPanel(OrbitalCelestialBody body) {
-        pinnedInfoPanel.draw(body, pinnedInfoContentBuilder.buildRows(body), getArea().width, getArea().height);
-    }
-
-    private void drawPinnedInfoItemTooltip() {
-        pinnedInfoPanel.drawHoveredItemTooltip(getContext().getMouseX(), getContext().getMouseY());
-    }
-
-    private void drawSimpleTooltip(String text, int x, int y) {
-        Minecraft mc = Minecraft.getMinecraft();
-        int width = mc.fontRenderer.getStringWidth(text);
-        int outerWidth = width + 8;
-        int outerHeight = 14;
-        int right = Math.max(8 + outerWidth, Math.min(x, getArea().width - 8));
-        int bottom = Math.max(8 + outerHeight, Math.min(y - Math.round(outerHeight * 0.2f), getArea().height - 8));
-        int left = right - outerWidth;
-        int top = bottom - outerHeight;
-        Gui.drawRect(left, top, right, bottom, 0xEE101723);
-        Gui.drawRect(left, top, right, top + 1, 0xFF7FB6FF);
-        Gui.drawRect(left, bottom - 1, right, bottom, 0xFF7FB6FF);
-        Gui.drawRect(left, top, left + 1, bottom, 0xFF7FB6FF);
-        Gui.drawRect(right - 1, top, right, bottom, 0xFF7FB6FF);
-        mc.fontRenderer.drawStringWithShadow(text, left + 4, top + 3, 0xFFFFFFFF);
-    }
-
-    private void drawContextMenu() {
-        contextMenuPanel.draw(
-            contextMenuState.body(),
-            contextMenuState.x(),
-            contextMenuState.y(),
-            getArea().width,
-            getArea().height,
-            toLocalMouseX(getContext().getMouseX()),
-            toLocalMouseY(getContext().getMouseY()));
-    }
-
     private void drawActionStatusMessage() {
         if (actionStatusMessage == null || actionStatusMessage.isEmpty()) {
             return;
@@ -1455,36 +1442,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private void closeContextMenu() {
         contextMenuState.close();
-    }
-
-    private boolean handleContextMenuClick(int localMouseX, int localMouseY) {
-        boolean handled = contextMenuPanel.handleClick(
-            contextMenuState.body(),
-            contextMenuState.x(),
-            contextMenuState.y(),
-            getArea().width,
-            getArea().height,
-            localMouseX,
-            localMouseY);
-        if (handled) {
-            closeContextMenu();
-        }
-        return handled;
-    }
-
-    private boolean isWithinContextMenu(int localMouseX, int localMouseY) {
-        return contextMenuPanel.isWithin(
-            contextMenuState.body(),
-            contextMenuState.x(),
-            contextMenuState.y(),
-            getArea().width,
-            getArea().height,
-            localMouseX,
-            localMouseY);
-    }
-
-    private int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
     }
 
     private boolean shouldRenderBodyAtCurrentZoom(OrbitalCelestialBody body) {
@@ -1520,7 +1477,7 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (renameField == null) {
             return;
         }
-        ButtonRect layout = assetManagementMuiWidget.getRenameInputBounds();
+        ButtonRect layout = assetManagementWidget.getRenameInputBounds();
         if (layout == null) {
             renameField.top(-1000);
             return;

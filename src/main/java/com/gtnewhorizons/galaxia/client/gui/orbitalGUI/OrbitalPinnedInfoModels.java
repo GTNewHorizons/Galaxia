@@ -35,22 +35,3 @@ final class PinnedInfoRow {
         return new PinnedInfoRow("", value, items, true);
     }
 }
-
-final class PinnedInfoItemBounds {
-
-    final ItemStack stack;
-    final int left;
-    final int top;
-    final int size;
-
-    PinnedInfoItemBounds(ItemStack stack, int left, int top, int size) {
-        this.stack = stack;
-        this.left = left;
-        this.top = top;
-        this.size = size;
-    }
-
-    boolean contains(int x, int y) {
-        return x >= left && x <= left + size && y >= top && y <= top + size;
-    }
-}
