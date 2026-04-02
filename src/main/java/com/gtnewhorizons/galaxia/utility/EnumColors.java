@@ -16,7 +16,7 @@ public enum EnumColors {
     SubTitle(0xAAAAFF),
     Value(0xFFFFFF),
 
-    // Icon
+    // Icon(s)
     IconGreen(0x55FF55),
 
     // Effect(s)
@@ -32,51 +32,67 @@ public enum EnumColors {
     MapSidebarListNormal(0xFFCCEEFF),
     MapSidebarListHovered(0xFF88EEFF),
 
-    // Map
+    // Celestial Map
     MapBackground(0xFF0F1621),
     MapCelestialLabelText(0xFFFFFFFF),
     MapStatusText(0xAAFFFFFF),
+    MapTitleBannerBackground(0xEE162133),
+    MapTitleBannerBorder(0xFF7FB6FF),
+    MapSelectionOverlay(0xFF18C8FF),
 
-    // Debug overlay
-    DebugOverlayTitle(0xFFFF5555),
-    DebugOverlayInfo(0x88FF88),
-    DebugOverlayFollow(0xFFDD88),
+    MapBodyBlackHole(0xFF5A4B7A),
+    MapBodyStar(0xFFFFD36B),
+    MapBodyGasGiant(0xFFD9A066),
+    MapBodyPlanet(0xFF7FC7A6),
+    MapBodyMoon(0xFFD8DCE6),
+    MapBodyAsteroid(0xFF9CA3AF),
+    MapBodyStation(0xFF89C2FF),
+    MapBodyComet(0xFFAEE7FF),
+
+    MapColorOverlayBackground(0xAA09111B),
+    MapColorModalBackground(0xFF121B28),
+    MapColorModalHeader(0xFF22324A),
+    MapColorModalAccent(0xFF59BFD9),
+    MapColorModalDangerBackground(0xFF1A1012),
+    MapColorModalDangerAccent(0xFFD14A4A),
+    MapColorModalWarningBackground(0xFF121B28),
+    MapColorModalWarningAccent(0xFFE6B35A),
+    MapColorTextTitle(0xFFFFFFFF),
+    MapColorTextSection(0xFF5A63FF),
+    MapColorTextBody(0xFFD9E0FF),
+    MapColorTextMuted(0xFF9AA7B8),
+    MapColorTextDanger(0xFFFF5A5A),
+    MapColorTextWarning(0xFFFFD59A),
+    MapColorTextDangerBody(0xFFFFB3B3),
+    MapColorScrollBackground(0x3318273A),
+    MapColorRowBackground(0x55213144),
+    MapColorRenameBorder(0xFF7FB6FF),
+    MapColorRenameInputBackground(0xFF0F1621),
+    MapColorButtonEnabledDefault(0xFF2D435D),
+    MapColorButtonEnabledHovered(0xFF3A5678),
+    MapColorButtonDisabled(0xFF243041),
+    MapColorButtonBorderEnabled(0xFF7FB6FF),
+    MapColorButtonBorderDisabled(0xFF556577),
+    MapColorButtonDangerDefault(0xFF5A1E24),
+    MapColorButtonDangerHovered(0xFF6D252D),
+    MapColorButtonDangerBorder(0xFFFF5A5A),
+    MapColorTextButtonEnabled(0xFFFFFFFF),
+    MapColorTextButtonDisabled(0xFF94A0AF),
+    MapColorTransferRowBackground(0x55213144),
 
     // Other UI elements
     OrbitEllipse(0xEBFFFFFF), // 0.92 alpha white
     SpriteTint(0xFFFFFFFF),
 
-    // Celestial Map
-    MAP_COLOR_OVERLAY_BG(0xAA09111B),
-    MAP_COLOR_MODAL_BG(0xFF121B28),
-    MAP_COLOR_MODAL_HEADER(0xFF22324A),
-    MAP_COLOR_MODAL_ACCENT(0xFF59BFD9),
-    MAP_COLOR_MODAL_DANGER_BG(0xFF1A1012),
-    MAP_COLOR_MODAL_DANGER_ACCENT(0xFFD14A4A),
-    MAP_COLOR_MODAL_WARNING_BG(0xFF121B28),
-    MAP_COLOR_MODAL_WARNING_ACCENT(0xFFE6B35A),
-    MAP_COLOR_TEXT_TITLE(0xFFFFFFFF),
-    MAP_COLOR_TEXT_SECTION(0xFF5A63FF),
-    MAP_COLOR_TEXT_BODY(0xFFD9E0FF),
-    MAP_COLOR_TEXT_MUTED(0xFF9AA7B8),
-    MAP_COLOR_TEXT_DANGER(0xFFFF5A5A),
-    MAP_COLOR_TEXT_WARNING(0xFFFFD59A),
-    MAP_COLOR_TEXT_DANGER_BODY(0xFFFFB3B3),
-    MAP_COLOR_SCROLL_BG(0x3318273A),
-    MAP_COLOR_ROW_BG(0x55213144),
-    MAP_COLOR_RENAME_BORDER(0xFF7FB6FF),
-    MAP_COLOR_RENAME_INPUT_BG(0xFF0F1621),
-    MAP_COLOR_BTN_ENABLED_DEFAULT(0xFF2D435D),
-    MAP_COLOR_BTN_ENABLED_HOVERED(0xFF3A5678),
-    MAP_COLOR_BTN_DISABLED(0xFF243041),
-    MAP_COLOR_BTN_BORDER_ENABLED(0xFF7FB6FF),
-    MAP_COLOR_BTN_BORDER_DISABLED(0xFF556577),
-    MAP_COLOR_BTN_DANGER_DEFAULT(0xFF5A1E24),
-    MAP_COLOR_BTN_DANGER_HOVERED(0xFF6D252D),
-    MAP_COLOR_BTN_DANGER_BORDER(0xFFFF5A5A),
-    MAP_COLOR_TEXT_BTN_ENABLED(0xFFFFFFFF),
-    MAP_COLOR_TEXT_BTN_DISABLED(0xFF94A0AF),
-    MAP_COLOR_TRANSFER_ROW_BG(0x55213144),
+    // Debug overlay
+    MapDebugPanelBackground(0x990B111C),
+    MapDebugBodyHitzones(0xFF7FFFD4),
+    MapDebugToggleHint(0xFFB8C7D9),
+    MapDebugHitboxOutline(0xFF00E5FF),
+    MapDebugHitboxCenter(0xFF9BFF7A),
+    DebugOverlayTitle(0xFFFF5555),
+    DebugOverlayInfo(0x88FF88),
+    DebugOverlayFollow(0xFFDD88),
 
     // Add more colors here
     ; // leave trailing semicolon
