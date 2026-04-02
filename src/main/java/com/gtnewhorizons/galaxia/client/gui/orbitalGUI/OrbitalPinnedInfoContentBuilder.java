@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.oredict.OreDictionary;
 
 import org.lwjgl.opengl.GL11;
@@ -31,27 +32,47 @@ public final class OrbitalPinnedInfoContentBuilder {
 
     List<PinnedInfoRow> buildRows(OrbitalCelestialBody body) {
         List<PinnedInfoRow> rows = new ArrayList<>();
-        rows.add(new PinnedInfoRow("Name", body.displayName()));
-        rows.add(new PinnedInfoRow("Type", formatObjectClass(body.objectClass())));
-        rows.add(new PinnedInfoRow("Landable", isLandable(body) ? "Yes" : "No"));
-        rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
+        rows.add(
+            new PinnedInfoRow(
+                StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.name"),
+                body.displayName()));
+        rows.add(
+            new PinnedInfoRow(
+                StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.type"),
+                formatObjectClass(body.objectClass())));
+        rows.add(
+            new PinnedInfoRow(
+                StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.landable"),
+                isLandable(body) ? StatCollector.translateToLocal("galaxia.gui.orbital.pinned.value.yes")
+                    : StatCollector.translateToLocal("galaxia.gui.orbital.pinned.value.no")));
+        rows.add(
+            new PinnedInfoRow(
+                StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.dangers"),
+                buildDangerSummary(body)));
         if (body.objectClass() != CelestialObjectClass.STAR && body.objectClass() != CelestialObjectClass.GALAXY) {
-            rows.add(new PinnedInfoRow("Surface", formatSurfaceType(body)));
+            rows.add(
+                new PinnedInfoRow(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.surface"),
+                    formatSurfaceType(body)));
             if (!body.properties()
                 .gtOreVeins()
                 .isEmpty()) {
-                rows.add(PinnedInfoRow.section("Veins"));
+                rows.add(
+                    PinnedInfoRow.section(StatCollector.translateToLocal("galaxia.gui.orbital.pinned.section.veins")));
                 for (GtOreVeinDefinition vein : body.properties()
                     .gtOreVeins())
                     rows.add(PinnedInfoRow.inlineItems(vein.displayName(), resolveGtVeinDisplayItems(vein)));
             } else if (body.properties()
                 .ores()
                 .isEmpty()) {
-                    rows.add(new PinnedInfoRow("Ores", "Undefined"));
+                    rows.add(
+                        new PinnedInfoRow(
+                            StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.ores"),
+                            StatCollector.translateToLocal("galaxia.gui.orbital.pinned.value.undefined")));
                 } else {
                     rows.add(
                         new PinnedInfoRow(
-                            "Ores",
+                            StatCollector.translateToLocal("galaxia.gui.orbital.pinned.row.ores"),
                             "",
                             body.properties()
                                 .ores()));
@@ -63,26 +84,37 @@ public final class OrbitalPinnedInfoContentBuilder {
     private String buildDangerSummary(OrbitalCelestialBody body) {
         List<String> dangers = new ArrayList<>();
         if (body.properties()
-            .radiation() >= 0.25) dangers.add("Radiation");
+            .radiation() >= 0.25)
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned.danger.radiation"));
         if (body.properties()
-            .temperature() > 360) dangers.add("Heat");
+            .temperature() > 360) dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned.danger.heat"));
         if (body.properties()
             .temperature() > 0
             && body.properties()
                 .temperature() < 120)
-            dangers.add("Cold");
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned.danger.cold"));
         if (!body.properties()
             .visitable() && body.properties()
                 .canCreateOutpost())
-            dangers.add("Remote");
-        return dangers.isEmpty() ? "None" : String.join(", ", dangers);
+            dangers.add(StatCollector.translateToLocal("galaxia.gui.orbital.pinned.danger.remote"));
+        return dangers.isEmpty() ? StatCollector.translateToLocal("galaxia.gui.orbital.pinned.danger.none")
+            : String.join(", ", dangers);
     }
 
     private String formatObjectClass(CelestialObjectClass objectClass) {
-        String raw = objectClass.name()
-            .toLowerCase()
-            .replace('_', ' ');
-        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+        return switch (objectClass) {
+            case GALAXY -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.galaxy");
+            case STAR -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.star");
+            case GAS_GIANT -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.gas_giant");
+            case PLANET -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.planet");
+            case MOON -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.moon");
+            case ASTEROID -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.asteroid");
+            case ASTEROID_BELT -> StatCollector
+                .translateToLocal("galaxia.gui.orbital.pinned.object_class.asteroid_belt");
+            case STATION -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.station");
+            case BLACK_HOLE -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.black_hole");
+            case COMET -> StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.comet");
+        };
     }
 
     private boolean isLandable(OrbitalCelestialBody body) {
@@ -97,7 +129,8 @@ public final class OrbitalPinnedInfoContentBuilder {
         String surfaceType = body.properties()
             .metadata()
             .get("surface");
-        if (surfaceType == null || surfaceType.isEmpty()) return "Undefined";
+        if (surfaceType == null || surfaceType.isEmpty())
+            return StatCollector.translateToLocal("galaxia.gui.orbital.pinned.value.undefined");
         return formatInfoToken(surfaceType);
     }
 

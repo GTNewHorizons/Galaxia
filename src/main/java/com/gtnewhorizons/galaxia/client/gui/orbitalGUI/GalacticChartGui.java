@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -30,7 +31,7 @@ public class GalacticChartGui {
             .height(22)
             .setMaxLength(48)
             .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
-            .hintText("Asset name")
+            .hintText(StatCollector.translateToLocal("galaxia.gui.orbital.label.asset_name"))
             .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
             .setFocusOnGuiOpen(false);
         OrbitalView.OrbitalMapWidget map = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar)

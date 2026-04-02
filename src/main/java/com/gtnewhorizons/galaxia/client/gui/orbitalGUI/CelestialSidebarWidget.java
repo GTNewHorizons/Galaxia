@@ -69,7 +69,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             .height(16)
             .setMaxLength(64)
             .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
-            .hintText(StatCollector.translateToLocal("galaxia.gui.orbital.search.placeholder"))
+            .hintText(StatCollector.translateToLocal("galaxia.gui.orbital.sidebar.search.placeholder"))
             .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
             .setFocusOnGuiOpen(false);
         child(searchField);
@@ -163,7 +163,8 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private String getCurrentSystemLabel() {
-        return currentSystem == null ? "System" : currentSystem.displayName();
+        return currentSystem == null ? StatCollector.translateToLocal("galaxia.gui.orbital.sidebar.system")
+            : currentSystem.displayName();
     }
 
     private boolean shouldShowCreativeButton() {
@@ -187,7 +188,10 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private int getCreativeButtonWidth() {
-        return Math.max(112, Minecraft.getMinecraft().fontRenderer.getStringWidth("Creative Mode") + 18);
+        return Math.max(
+            112,
+            Minecraft.getMinecraft().fontRenderer
+                .getStringWidth(StatCollector.translateToLocal("galaxia.gui.orbital.sidebar.creative_mode")) + 18);
     }
 
     private boolean handleLayerButtonClick(int localX, int localY) {
@@ -263,7 +267,12 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         }
         if (searchField != null) searchField.top(activeLayer == root ? -1000 : getSearchFieldTop());
         Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapSidebarBackground.getColor());
-        drawLayerButton(18, LAYER_BUTTON_TOP, 70, "Galaxy", activeLayer == root);
+        drawLayerButton(
+            18,
+            LAYER_BUTTON_TOP,
+            70,
+            StatCollector.translateToLocal("galaxia.gui.orbital.pinned.object_class.galaxy"),
+            activeLayer == root);
         drawLayerButton(
             18 + 70 + LAYER_BUTTON_GAP,
             LAYER_BUTTON_TOP,
@@ -274,11 +283,11 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             18,
             CREATIVE_BUTTON_TOP,
             getCreativeButtonWidth(),
-            "Creative Mode",
+            StatCollector.translateToLocal("galaxia.gui.orbital.sidebar.creative_mode"),
             map.isCreativeBuildModeEnabled());
         if (activeLayer == root) return;
         Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-            StatCollector.translateToLocal("galaxia.gui.orbital.search"),
+            StatCollector.translateToLocal("galaxia.gui.orbital.sidebar.search"),
             18,
             getSearchLabelTop(),
             EnumColors.MapSidebaSearchLabel.getColor());

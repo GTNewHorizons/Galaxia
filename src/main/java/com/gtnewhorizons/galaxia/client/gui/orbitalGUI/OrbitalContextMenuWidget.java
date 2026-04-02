@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
@@ -219,26 +220,38 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private List<ContextMenuAction> buildActions(OrbitalCelestialBody body) {
         List<ContextMenuAction> actions = new ArrayList<>();
-        actions.add(new ContextMenuAction("Manage Assets", true, ContextMenuActionType.MANAGE_ASSETS));
+        actions.add(
+            new ContextMenuAction(
+                StatCollector.translateToLocal("galaxia.gui.orbital.context_menu.manage_assets"),
+                true,
+                ContextMenuActionType.MANAGE_ASSETS));
         if (callbacks.canCreateBaseStation(body)) {
-            actions.add(new ContextMenuAction("Create Station", true, ContextMenuActionType.CREATE_STATION));
+            actions.add(
+                new ContextMenuAction(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.context_menu.create_station"),
+                    true,
+                    ContextMenuActionType.CREATE_STATION));
         }
         if (callbacks.canCreateAutomatedStation(body)) {
             actions.add(
                 new ContextMenuAction(
-                    "Create Automated Station",
+                    StatCollector.translateToLocal("galaxia.gui.orbital.context_menu.create_automated_station"),
                     true,
                     ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM));
         }
         if (callbacks.canCreateAutomatedOutpost(body)) {
             actions.add(
                 new ContextMenuAction(
-                    "Create Automated Outpost",
+                    StatCollector.translateToLocal("galaxia.gui.orbital.context_menu.create_automated_outpost"),
                     true,
                     ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM));
         }
         if (actions.size() == 1) {
-            actions.add(new ContextMenuAction("No actions available", false, ContextMenuActionType.MESSAGE));
+            actions.add(
+                new ContextMenuAction(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.context_menu.no_actions_available"),
+                    false,
+                    ContextMenuActionType.MESSAGE));
         }
         return actions;
     }

@@ -109,14 +109,12 @@ public final class AssetManagementSystem {
 
         String formatAssetDisplayName(CelestialManagedAsset asset) {
             return switch (asset.status()) {
-                case CONSTRUCTION_SITE -> StatCollector.translateToLocalFormatted(
-                    "galaxia.gui.orbital.asset.display_name.construction",
-                    asset.displayName());
-                case DECONSTRUCTION -> StatCollector.translateToLocalFormatted(
-                    "galaxia.gui.orbital.asset.display_name.deconstruction",
-                    asset.displayName());
+                case CONSTRUCTION_SITE -> StatCollector
+                    .translateToLocalFormatted("galaxia.gui.orbital.display_name.construction", asset.displayName());
+                case DECONSTRUCTION -> StatCollector
+                    .translateToLocalFormatted("galaxia.gui.orbital.display_name.deconstruction", asset.displayName());
                 default -> StatCollector
-                    .translateToLocalFormatted("galaxia.gui.orbital.asset.display_name.default", asset.displayName());
+                    .translateToLocalFormatted("galaxia.gui.orbital.display_name.default", asset.displayName());
             };
         }
 
@@ -124,8 +122,7 @@ public final class AssetManagementSystem {
             if (asset.status() == CelestialAssetStatus.DECONSTRUCTION)
                 return buildStoredInventorySummary(asset.constructionInventory());
             if (asset.requiredResources()
-                .isEmpty())
-                return StatCollector.translateToLocal("galaxia.gui.orbital.asset.construction_inventory.empty");
+                .isEmpty()) return StatCollector.translateToLocal("galaxia.gui.orbital.construction_inventory.empty");
             List<String> parts = new ArrayList<>();
             for (CelestialAssetRequirement required : asset.requiredResources()) {
                 long storedAmount = 0;
@@ -160,24 +157,22 @@ public final class AssetManagementSystem {
 
         String formatAssetKind(CelestialAssetKind kind) {
             return switch (kind) {
-                case STATION -> StatCollector.translateToLocal("galaxia.gui.orbital.asset.kind.station");
-                case AUTOMATED_STATION -> StatCollector
-                    .translateToLocal("galaxia.gui.orbital.asset.kind.automated_station");
-                case AUTOMATED_OUTPOST -> StatCollector
-                    .translateToLocal("galaxia.gui.orbital.asset.kind.automated_outpost");
+                case STATION -> StatCollector.translateToLocal("galaxia.gui.orbital.kind.station");
+                case AUTOMATED_STATION -> StatCollector.translateToLocal("galaxia.gui.orbital.kind.automated_station");
+                case AUTOMATED_OUTPOST -> StatCollector.translateToLocal("galaxia.gui.orbital.kind.automated_outpost");
             };
         }
 
         String formatAssetLocation(CelestialAssetLocation location) {
             return switch (location) {
-                case ORBIT -> StatCollector.translateToLocal("galaxia.gui.orbital.asset.location.orbit");
-                case SURFACE -> StatCollector.translateToLocal("galaxia.gui.orbital.asset.location.surface");
+                case ORBIT -> StatCollector.translateToLocal("galaxia.gui.orbital.location.orbit");
+                case SURFACE -> StatCollector.translateToLocal("galaxia.gui.orbital.location.surface");
             };
         }
 
         private String buildStoredInventorySummary(List<CelestialAssetRequirement> storedResources) {
             if (storedResources.isEmpty())
-                return StatCollector.translateToLocal("galaxia.gui.orbital.asset.construction_inventory.empty");
+                return StatCollector.translateToLocal("galaxia.gui.orbital.construction_inventory.empty");
             List<String> parts = new ArrayList<>();
             for (CelestialAssetRequirement stored : storedResources)
                 parts.add(stored.amount() + " " + stored.displayName());
@@ -242,8 +237,7 @@ public final class AssetManagementSystem {
                 buildDefaultAssetDisplayName(body, CelestialAssetKind.STATION),
                 CelestialAssetKind.STATION,
                 getDefaultAssetLocation(CelestialAssetKind.STATION));
-            callbacks
-                .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.station_created"));
+            callbacks.showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.station_created"));
         }
 
         void triggerAssetCreation(OrbitalAssetUiState state, OrbitalCelestialBody body, CelestialAssetKind kind,
@@ -256,7 +250,7 @@ public final class AssetManagementSystem {
                 CelestialAssetStore.createOperationalAsset(body.id(), displayName, kind, location);
                 callbacks.showActionStatus(
                     StatCollector.translateToLocalFormatted(
-                        "galaxia.gui.orbital.asset.status.kind.created",
+                        "galaxia.gui.orbital.status.kind.created",
                         assetSupport.formatAssetKind(kind)));
                 return;
             }
@@ -278,7 +272,7 @@ public final class AssetManagementSystem {
                     state.pendingAssetCreation.location());
                 callbacks.showActionStatus(
                     StatCollector.translateToLocalFormatted(
-                        "galaxia.gui.orbital.asset.status.kind.created",
+                        "galaxia.gui.orbital.status.kind.created",
                         assetSupport.formatAssetKind(state.pendingAssetCreation.kind())));
             } else {
                 CelestialAssetStore.createAssetInConstruction(
@@ -288,7 +282,7 @@ public final class AssetManagementSystem {
                     state.pendingAssetCreation.location());
                 callbacks.showActionStatus(
                     StatCollector.translateToLocalFormatted(
-                        "galaxia.gui.orbital.asset.status.kind.construction_planned",
+                        "galaxia.gui.orbital.status.kind.construction_planned",
                         assetSupport.formatAssetKind(state.pendingAssetCreation.kind())));
             }
             state.pendingAssetCreation = null;
@@ -329,8 +323,7 @@ public final class AssetManagementSystem {
             CelestialAssetStore.destroyAsset(
                 state.pendingAssetDestruction.asset()
                     .assetId());
-            callbacks
-                .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.asset_destroyed"));
+            callbacks.showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.asset_destroyed"));
             state.pendingAssetDestruction = null;
         }
 
@@ -358,7 +351,7 @@ public final class AssetManagementSystem {
                 state.pendingConstructionCancellation.asset()
                     .assetId());
             callbacks.showActionStatus(
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.construction_site_converted"));
+                StatCollector.translateToLocal("galaxia.gui.orbital.status.construction_site_converted"));
             state.pendingConstructionCancellation = null;
         }
 
@@ -376,7 +369,7 @@ public final class AssetManagementSystem {
 
         void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
             callbacks.showActionStatus(
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.resource_transfer_not_implemented"));
+                StatCollector.translateToLocal("galaxia.gui.orbital.status.resource_transfer_not_implemented"));
             state.pendingResourceTransfer = null;
         }
 
@@ -385,8 +378,7 @@ public final class AssetManagementSystem {
             String renamed = callbacks.getRenameInput()
                 .trim();
             if (renamed.isEmpty()) {
-                callbacks
-                    .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.name_empty"));
+                callbacks.showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.name_empty"));
                 return;
             }
             if (renamed.equals(
@@ -399,13 +391,11 @@ public final class AssetManagementSystem {
                 state.pendingAssetRename.asset()
                     .assetId(),
                 renamed)) {
-                callbacks
-                    .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.asset_renamed"));
+                callbacks.showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.asset_renamed"));
                 closePendingAssetRename(state);
                 return;
             }
-            callbacks
-                .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.rename_failed"));
+            callbacks.showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.rename_failed"));
         }
 
         void dismissPendingModalByOutsideClick(OrbitalAssetUiState state) {
@@ -699,7 +689,7 @@ public final class AssetManagementSystem {
             mainContentWidth = contentWidth;
             mainContentHeight = contentHeight;
             ParentWidget<?> modal = createModalRoot(bounds);
-            String manageAssetsTitle = StatCollector.translateToLocal("galaxia.gui.orbital.asset.title.manage_assets");
+            String manageAssetsTitle = StatCollector.translateToLocal("galaxia.gui.orbital.title.manage_assets");
             modal.child(createTitleText(manageAssetsTitle).pos(12, 10));
             int titleRight = 12 + Minecraft.getMinecraft().fontRenderer.getStringWidth(manageAssetsTitle);
             int assetNameMaxWidth = Math.max(0, modalWidth - 40 - (titleRight + 24));
@@ -738,8 +728,7 @@ public final class AssetManagementSystem {
             if (!callbacks.isGT5AutomationAvailable()) {
                 modal.child(
                     createBodyText(
-                        StatCollector
-                            .translateToLocal("galaxia.gui.orbital.asset.warning.gt5u_required_for_automation"),
+                        StatCollector.translateToLocal("galaxia.gui.orbital.warning.gt5u_required_for_automation"),
                         EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(104, 36));
             }
             VerticalScrollData scrollData = new VerticalScrollData();
@@ -820,13 +809,12 @@ public final class AssetManagementSystem {
             modal.child(
                 createTitleText(
                     StatCollector.translateToLocalFormatted(
-                        "galaxia.gui.orbital.asset.title.confirm_kind",
+                        "galaxia.gui.orbital.title.confirm_kind",
                         callbacks.formatAssetKind(creation.kind()))).pos(36, 10));
             modal.child(createBodyText(creation.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(36, 28));
             modal.child(
-                createSectionText(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.section.required_resources"))
-                        .pos(12, 52));
+                createSectionText(StatCollector.translateToLocal("galaxia.gui.orbital.section.required_resources"))
+                    .pos(12, 52));
             int resourceY = 68;
             for (CelestialAssetRequirement requirement : creation.requiredResources()) {
                 modal.child(
@@ -838,9 +826,9 @@ public final class AssetManagementSystem {
             addFooterButtons(
                 modal,
                 bounds,
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.cancel"),
+                StatCollector.translateToLocal("galaxia.gui.orbital.button.cancel"),
                 callbacks::dismissPendingAssetCreation,
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.confirm"),
+                StatCollector.translateToLocal("galaxia.gui.orbital.button.confirm"),
                 callbacks::confirmPendingAssetCreation,
                 false);
             child(modal);
@@ -852,15 +840,14 @@ public final class AssetManagementSystem {
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(
-                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.title.rename_asset"))
-                    .pos(12, 10));
+                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.title.rename_asset")).pos(12, 10));
             modal.child(
                 createBodyText(
                     callbacks.formatAssetDisplayName(state.pendingAssetRename.asset()),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
                 createBodyText(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.label.new_name"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.label.new_name"),
                     EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(RENAME_INPUT_PADDING, 42));
             modal.child(drawable((context, x, y, width, height) -> {
                 Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_INPUT_BG.getColor());
@@ -874,9 +861,9 @@ public final class AssetManagementSystem {
             addFooterButtons(
                 modal,
                 bounds,
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.cancel"),
+                StatCollector.translateToLocal("galaxia.gui.orbital.button.cancel"),
                 callbacks::closePendingAssetRename,
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.confirm"),
+                StatCollector.translateToLocal("galaxia.gui.orbital.button.confirm"),
                 callbacks::confirmPendingAssetRename,
                 false);
             child(modal);
@@ -898,35 +885,35 @@ public final class AssetManagementSystem {
                 -1);
             modal.child(
                 createCenteredLargeText(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.title.irreversible"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.title.irreversible"),
                     1.45f,
                     EnumColors.MAP_COLOR_TEXT_DANGER.getColor()).pos(12, 16)
                         .size(modalWidth - 24, 22));
             modal.child(
                 createBodyText(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.label.about_to_destroy") + ":",
+                    StatCollector.translateToLocal("galaxia.gui.orbital.label.about_to_destroy") + ":",
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(18, 52));
             modal.child(
                 createBodyText(
                     callbacks.formatAssetDisplayName(destruction.asset()),
                     EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(18, 68));
-            modal.child(
-                createBodyText(
-                    destruction.armed()
-                        ? StatCollector.translateToLocal("galaxia.gui.orbital.asset.warning.destroy_confirm_armed")
-                            + "."
-                        : StatCollector.translateToLocal("galaxia.gui.orbital.asset.warning.destroy_confirm_unarmed")
-                            + ".",
-                    EnumColors.MAP_COLOR_TEXT_DANGER_BODY.getColor()).pos(18, 92));
+            modal
+                .child(
+                    createBodyText(
+                        destruction.armed()
+                            ? StatCollector.translateToLocal("galaxia.gui.orbital.warning.destroy_confirm_armed") + "."
+                            : StatCollector.translateToLocal("galaxia.gui.orbital.warning.destroy_confirm_unarmed")
+                                + ".",
+                        EnumColors.MAP_COLOR_TEXT_DANGER_BODY.getColor()).pos(18, 92));
             modal.child(
                 createFooterButton(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.cancel"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.button.cancel"),
                     true,
                     callbacks::dismissPendingAssetDestruction).pos(bounds.left() + 18, bounds.bottom() - 34)
                         .size(130, FOOTER_BUTTON_HEIGHT));
             modal.child(
                 createDangerFooterButton(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.destroy"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.button.destroy"),
                     callbacks::advancePendingAssetDestruction).pos(bounds.right() - 18 - 130, bounds.bottom() - 34)
                         .size(130, FOOTER_BUTTON_HEIGHT));
             child(modal);
@@ -944,7 +931,7 @@ public final class AssetManagementSystem {
                 EnumColors.MAP_COLOR_MODAL_WARNING_BG.getColor(),
                 EnumColors.MAP_COLOR_MODAL_WARNING_ACCENT.getColor());
             modal.child(
-                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.title.cancel_construction"))
+                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.title.cancel_construction"))
                     .pos(12, 10));
             modal.child(
                 createBodyText(
@@ -952,14 +939,14 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
                 createBodyText(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.warning.stored_recovery") + ".",
+                    StatCollector.translateToLocal("galaxia.gui.orbital.warning.stored_recovery") + ".",
                     EnumColors.MAP_COLOR_TEXT_WARNING.getColor()).pos(12, 54));
             addFooterButtons(
                 modal,
                 bounds,
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.cancel"),
+                StatCollector.translateToLocal("galaxia.gui.orbital.button.cancel"),
                 callbacks::dismissPendingConstructionCancellation,
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.confirm"),
+                StatCollector.translateToLocal("galaxia.gui.orbital.button.confirm"),
                 callbacks::confirmPendingConstructionCancellation,
                 false);
             child(modal);
@@ -976,7 +963,7 @@ public final class AssetManagementSystem {
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(
-                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.title.send_resources_to"))
+                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.title.send_resources_to"))
                     .pos(12, 10));
             modal.child(
                 createBodyText(
@@ -984,12 +971,12 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
                 createBodyText(
-                    StatCollector
-                        .translateToLocal("galaxia.gui.orbital.asset.warning.resource_transfer_requires_rocket") + ".",
+                    StatCollector.translateToLocal("galaxia.gui.orbital.warning.resource_transfer_requires_rocket")
+                        + ".",
                     EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 46));
             modal.child(
                 createFooterButton(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.close"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.button.close"),
                     true,
                     callbacks::dismissPendingResourceTransfer).pos(bounds.right() - 96, bounds.top() + 8)
                         .size(78, FOOTER_BUTTON_HEIGHT));
@@ -997,7 +984,7 @@ public final class AssetManagementSystem {
                 .isEmpty()) {
                 modal.child(
                     createBodyText(
-                        StatCollector.translateToLocal("galaxia.gui.orbital.asset.warning.no_stations_available"),
+                        StatCollector.translateToLocal("galaxia.gui.orbital.warning.no_stations_available"),
                         EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(16, 74));
                 child(modal);
                 return;
@@ -1026,7 +1013,7 @@ public final class AssetManagementSystem {
                         .pos(bounds.left() + 46, currentTop + 18));
                 modal.child(
                     createFooterButton(
-                        StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.send"),
+                        StatCollector.translateToLocal("galaxia.gui.orbital.button.send"),
                         true,
                         () -> callbacks.sendPendingResourceTransfer(target)).pos(bounds.right() - 92, currentTop + 8)
                             .size(72, FOOTER_BUTTON_HEIGHT));
@@ -1046,7 +1033,7 @@ public final class AssetManagementSystem {
                     1.0f).pos(12, 10)
                         .size(18, 18));
             modal.child(
-                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.title.manage_station"))
+                createTitleText(StatCollector.translateToLocal("galaxia.gui.orbital.title.manage_station"))
                     .pos(36, 10));
             modal.child(
                 createBodyText(
@@ -1054,11 +1041,11 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(36, 28));
             modal.child(
                 createBodyText(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.warning.panel_not_implemented") + ".",
+                    StatCollector.translateToLocal("galaxia.gui.orbital.warning.panel_not_implemented") + ".",
                     EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(14, 62));
             modal.child(
                 createFooterButton(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.button.close"),
+                    StatCollector.translateToLocal("galaxia.gui.orbital.button.close"),
                     true,
                     callbacks::closePendingAssetManagement).pos(bounds.right() - 18 - 110, bounds.top() + 8)
                         .size(110, FOOTER_BUTTON_HEIGHT));
@@ -1120,7 +1107,7 @@ public final class AssetManagementSystem {
             int y = 0;
             if (!construction.isEmpty()) {
                 content.child(
-                    createSectionText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.section.construction"))
+                    createSectionText(StatCollector.translateToLocal("galaxia.gui.orbital.section.construction"))
                         .pos(4, y));
                 y += 16;
                 for (CelestialManagedAsset a : construction) {
@@ -1130,13 +1117,12 @@ public final class AssetManagementSystem {
                 y += 4;
             }
             content.child(
-                createSectionText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.section.assets"))
-                    .pos(4, y));
+                createSectionText(StatCollector.translateToLocal("galaxia.gui.orbital.section.assets")).pos(4, y));
             y += 16;
             if (deployed.isEmpty()) {
                 content.child(
                     createBodyText(
-                        StatCollector.translateToLocal("galaxia.gui.orbital.asset.warning.no_deployed_assets"),
+                        StatCollector.translateToLocal("galaxia.gui.orbital.warning.no_deployed_assets"),
                         EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, y));
                 return;
             }
@@ -1162,8 +1148,8 @@ public final class AssetManagementSystem {
             row.child(createNameButton(asset, textWidth).pos(32, 4));
             row.child(
                 createBodyText(
-                    (deconstruction ? StatCollector.translateToLocal("galaxia.gui.orbital.asset.label.stored")
-                        : StatCollector.translateToLocal("galaxia.gui.orbital.asset.label.inventory")) + ": "
+                    (deconstruction ? StatCollector.translateToLocal("galaxia.gui.orbital.label.stored")
+                        : StatCollector.translateToLocal("galaxia.gui.orbital.label.inventory")) + ": "
                         + callbacks.buildConstructionInventorySummary(asset),
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(32, 18)
                         .width(textWidth));
@@ -1490,7 +1476,7 @@ public final class AssetManagementSystem {
             if (callbacks.isCreativeBuildModeEnabled()) {
                 CelestialAssetStore.cancelConstruction(asset.assetId());
                 callbacks.showActionStatus(
-                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.construction_canceled"));
+                    StatCollector.translateToLocal("galaxia.gui.orbital.status.construction_canceled"));
                 return;
             }
             if (callbacks.hasStoredConstructionResources(asset)) {
@@ -1498,8 +1484,8 @@ public final class AssetManagementSystem {
                 return;
             }
             CelestialAssetStore.cancelConstruction(asset.assetId());
-            callbacks.showActionStatus(
-                StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.construction_canceled"));
+            callbacks
+                .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.construction_canceled"));
         }
 
         private void updateModalBounds(int left, int top, int right, int bottom) {

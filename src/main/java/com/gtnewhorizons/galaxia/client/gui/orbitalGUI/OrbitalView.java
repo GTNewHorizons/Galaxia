@@ -1407,10 +1407,10 @@ public class OrbitalView {
             GlStateManager.popMatrix();
             sceneRenderer.drawCollectedLabels(sceneFrame);
             sceneRenderer.drawCollectedMarkers(sceneFrame);
-            String speedText = paused ? StatCollector.translateToLocal("galaxia.gui.orbital.paused")
-                : StatCollector.translateToLocalFormatted("galaxia.gui.orbital.speed_multiplier", timeScale);
+            String speedText = paused ? StatCollector.translateToLocal("galaxia.gui.orbital.hud.paused")
+                : StatCollector.translateToLocalFormatted("galaxia.gui.orbital.hud.speed_multiplier", timeScale);
             Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-                StatCollector.translateToLocalFormatted("galaxia.gui.orbital.status", getScale(), speedText),
+                StatCollector.translateToLocalFormatted("galaxia.gui.orbital.hud.status", getScale(), speedText),
                 12,
                 12,
                 EnumColors.MapStatusText.getColor());
