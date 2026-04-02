@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 
@@ -260,7 +261,10 @@ public class OrbitalScene {
         void drawViewTitleBanner(OrbitalCelestialBody viewRoot, int widgetWidth) {
             if (viewRoot == null) return;
             String title = viewRoot.objectClass() == CelestialObjectClass.GALAXY ? viewRoot.displayName()
-                : viewRoot.objectClass() == CelestialObjectClass.STAR ? viewRoot.displayName() + " System" : null;
+                : viewRoot.objectClass() == CelestialObjectClass.STAR
+                    ? StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.label.system_name", viewRoot.displayName())
+                    : null;
             if (title == null) return;
             Minecraft mc = Minecraft.getMinecraft();
             int textWidth = mc.fontRenderer.getStringWidth(title);

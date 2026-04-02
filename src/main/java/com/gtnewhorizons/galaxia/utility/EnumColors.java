@@ -47,7 +47,6 @@ public enum EnumColors {
     SpriteTint(0xFFFFFFFF),
 
     // Celestial Map
-
     MAP_COLOR_OVERLAY_BG(0xAA09111B),
     MAP_COLOR_MODAL_BG(0xFF121B28),
     MAP_COLOR_MODAL_HEADER(0xFF22324A),

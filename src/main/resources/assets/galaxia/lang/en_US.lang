@@ -195,118 +195,117 @@ galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
 
 # Elements - GUI - "Orbital GUI"
+galaxia.gui.orbital.hud.paused=PAUSED
+galaxia.gui.orbital.hud.zoom=Zoom
+galaxia.gui.orbital.hud.speed=Speed
+
+galaxia.gui.orbital.sidebar.creative_mode=Creative Mode
+galaxia.gui.orbital.sidebar.galaxy=Galaxy
 galaxia.gui.orbital.sidebar.search=Search
 galaxia.gui.orbital.sidebar.search.placeholder=Enter name...
-galaxia.gui.orbital.hud.status=Zoom: x%.2f   Speed: %s
-galaxia.gui.orbital.hud.paused=§cPAUSED§r
-galaxia.gui.orbital.hud.speed_multiplier=§a×%.1f§r
+galaxia.gui.orbital.sidebar.system=System
+
+galaxia.gui.orbital.context_menu.create_automated_outpost=Create Automated Outpost
+galaxia.gui.orbital.context_menu.create_automated_station=Create Automated Station
+galaxia.gui.orbital.context_menu.create_station=Create Station
+galaxia.gui.orbital.context_menu.manage_assets=Manage Assets
+galaxia.gui.orbital.context_menu.no_actions_available=No actions available
 
 galaxia.gui.orbital.display_name.construction=%s (In construction)
 galaxia.gui.orbital.display_name.deconstruction=%s (Deconstruction)
 galaxia.gui.orbital.display_name.default=%s
 galaxia.gui.orbital.construction_inventory.empty=Empty
-galaxia.gui.orbital.kind.station=Station
-galaxia.gui.orbital.kind.automated_station=Automated Station
+
 galaxia.gui.orbital.kind.automated_outpost=Automated Outpost
+galaxia.gui.orbital.kind.automated_station=Automated Station
+galaxia.gui.orbital.kind.station=Station
 galaxia.gui.orbital.location.orbit=Orbit
 galaxia.gui.orbital.location.surface=Surface
-galaxia.gui.orbital.status.station_created=Station created
-galaxia.gui.orbital.status.kind.created=%s created
-galaxia.gui.orbital.status.kind.construction_planned=%s construction planned
-galaxia.gui.orbital.status.asset_destroyed=Asset destroyed
-galaxia.gui.orbital.status.construction_site_converted=Construction site converted to deconstruction
-galaxia.gui.orbital.status.resource_transfer_not_implemented=Resource transfer planning is not implemented yet
-galaxia.gui.orbital.status.name_empty=Name cannot be empty
-galaxia.gui.orbital.status.asset_renamed=Asset renamed
-galaxia.gui.orbital.status.rename_failed=Rename failed
-galaxia.gui.orbital.title.manage_assets=Manage Assets
-galaxia.gui.orbital.warning.gt5u_required_for_automation=GT5U required for automated assets
-galaxia.gui.orbital.title.confirm_kind=Confirm %s
+
+galaxia.gui.orbital.section.assets=Assets
+galaxia.gui.orbital.section.construction=Construction
 galaxia.gui.orbital.section.required_resources=Required resources
-galaxia.gui.orbital.button.cancel=Cancel
-galaxia.gui.orbital.button.confirm=Confirm
-galaxia.gui.orbital.title.rename_asset=Rename Asset
-galaxia.gui.orbital.label.new_name=New name
-galaxia.gui.orbital.title.irreversible=THIS IS IRREVERSIBLE
+
 galaxia.gui.orbital.label.about_to_destroy=You are about to destroy
+galaxia.gui.orbital.label.asset_name=Asset name
+galaxia.gui.orbital.label.inventory=Inventory
+galaxia.gui.orbital.label.new_name=New name
+galaxia.gui.orbital.label.stored=Stored
+galaxia.gui.orbital.label.system_name=%s System
+
+galaxia.gui.orbital.button.cancel=Cancel
+galaxia.gui.orbital.button.close=Close
+galaxia.gui.orbital.button.confirm=Confirm
+galaxia.gui.orbital.button.destroy=Destroy
+galaxia.gui.orbital.button.send=Send
+
+galaxia.gui.orbital.title.cancel_construction=Cancel Construction?
+galaxia.gui.orbital.title.confirm_kind=Confirm %s
+galaxia.gui.orbital.title.irreversible=THIS IS IRREVERSIBLE
+galaxia.gui.orbital.title.manage_assets=Manage Assets
+galaxia.gui.orbital.title.manage_station=Manage Station
+galaxia.gui.orbital.title.rename_asset=Rename Asset
+galaxia.gui.orbital.title.send_resources_to=Send Resources To
+
 galaxia.gui.orbital.warning.destroy_confirm_armed=Click Destroy again to confirm
 galaxia.gui.orbital.warning.destroy_confirm_unarmed=Press Destroy to arm confirmation
-galaxia.gui.orbital.button.destroy=Destroy
-galaxia.gui.orbital.title.cancel_construction=Cancel Construction?
-galaxia.gui.orbital.warning.stored_recovery=Stored resources will be moved into deconstruction recovery
-galaxia.gui.orbital.title.send_resources_to=Send Resources To
-galaxia.gui.orbital.warning.resource_transfer_requires_rocket=Requires an orbital rocket with enough capacity
-galaxia.gui.orbital.warning.no_stations_available=No stations available in this system
-galaxia.gui.orbital.button.close=Close
-galaxia.gui.orbital.button.send=Send
-galaxia.gui.orbital.title.manage_station=Manage Station
-galaxia.gui.orbital.warning.panel_not_implemented=This panel is not implemented yet
-galaxia.gui.orbital.section.construction=Construction
-galaxia.gui.orbital.section.assets=Assets
+galaxia.gui.orbital.warning.gt5u_required_for_automation=GT5U required for automated assets
 galaxia.gui.orbital.warning.no_deployed_assets=No deployed assets
-galaxia.gui.orbital.label.stored=Stored
-galaxia.gui.orbital.label.inventory=Inventory
+galaxia.gui.orbital.warning.no_stations_available=No stations available in this system
+galaxia.gui.orbital.warning.panel_not_implemented=This panel is not implemented yet
+galaxia.gui.orbital.warning.resource_transfer_requires_rocket=Requires an orbital rocket with enough capacity
+galaxia.gui.orbital.warning.stored_recovery=Stored resources will be moved into deconstruction recovery
+
+galaxia.gui.orbital.status.asset_destroyed=Asset destroyed
+galaxia.gui.orbital.status.asset_renamed=Asset renamed
 galaxia.gui.orbital.status.construction_canceled=Construction canceled
-galaxia.gui.orbital.sidebar.system=System
-galaxia.gui.orbital.sidebar.system=System
-galaxia.gui.orbital.sidebar.creative_mode=Creative Mode
-galaxia.gui.orbital.label.asset_name=Asset name
-galaxia.gui.orbital.context_menu.manage_assets=Manage Assets
-galaxia.gui.orbital.context_menu.create_station=Create Station
-galaxia.gui.orbital.context_menu.create_automated_station=Create Automated Station
-galaxia.gui.orbital.context_menu.create_automated_outpost=Create Automated Outpost
-galaxia.gui.orbital.context_menu.no_actions_available=No actions available
-galaxia.gui.orbital.pinned.row.name=Name
-galaxia.gui.orbital.pinned.row.type=Type
-galaxia.gui.orbital.pinned.row.landable=Landable
+galaxia.gui.orbital.status.construction_site_converted=Construction site converted to deconstruction
+galaxia.gui.orbital.status.creative_build_mode=Creative build mode %s
+galaxia.gui.orbital.status.kind.construction_planned=%s construction planned
+galaxia.gui.orbital.status.kind.created=%s created
+galaxia.gui.orbital.status.name_empty=Name cannot be empty
+galaxia.gui.orbital.status.rename_failed=Rename failed
+galaxia.gui.orbital.status.resource_transfer_not_implemented=Resource transfer planning is not implemented yet
+galaxia.gui.orbital.status.station_created=Station created
+
+galaxia.gui.orbital.value.disabled=disabled
+galaxia.gui.orbital.value.enabled=enabled
+
 galaxia.gui.orbital.pinned.row.dangers=Dangers
-galaxia.gui.orbital.pinned.row.surface=Surface
+galaxia.gui.orbital.pinned.row.landable=Landable
+galaxia.gui.orbital.pinned.row.name=Name
 galaxia.gui.orbital.pinned.row.ores=Ores
+galaxia.gui.orbital.pinned.row.surface=Surface
+galaxia.gui.orbital.pinned.row.type=Type
 galaxia.gui.orbital.pinned.section.veins=Veins
-galaxia.gui.orbital.pinned.value.yes=Yes
 galaxia.gui.orbital.pinned.value.no=No
 galaxia.gui.orbital.pinned.value.undefined=Undefined
+galaxia.gui.orbital.pinned.value.yes=Yes
+galaxia.gui.orbital.pinned.danger.cold=Cold
+galaxia.gui.orbital.pinned.danger.heat=Heat
 galaxia.gui.orbital.pinned.danger.none=None
 galaxia.gui.orbital.pinned.danger.radiation=Radiation
-galaxia.gui.orbital.pinned.danger.heat=Heat
-galaxia.gui.orbital.pinned.danger.cold=Cold
 galaxia.gui.orbital.pinned.danger.remote=Remote
-
-galaxia.gui.orbital.pinned.object_class.galaxy=Galaxy
-galaxia.gui.orbital.pinned.object_class.star=Star
-galaxia.gui.orbital.pinned.object_class.gas_giant=Gas Giant
-galaxia.gui.orbital.pinned.object_class.planet=Planet
-galaxia.gui.orbital.pinned.object_class.moon=Moon
 galaxia.gui.orbital.pinned.object_class.asteroid=Asteroid
 galaxia.gui.orbital.pinned.object_class.asteroid_belt=Asteroid Belt
-galaxia.gui.orbital.pinned.object_class.station=Station
 galaxia.gui.orbital.pinned.object_class.black_hole=Black Hole
 galaxia.gui.orbital.pinned.object_class.comet=Comet
-
-
-
-
-
-
-
+galaxia.gui.orbital.pinned.object_class.galaxy=Galaxy
+galaxia.gui.orbital.pinned.object_class.gas_giant=Gas Giant
+galaxia.gui.orbital.pinned.object_class.moon=Moon
+galaxia.gui.orbital.pinned.object_class.planet=Planet
+galaxia.gui.orbital.pinned.object_class.star=Star
+galaxia.gui.orbital.pinned.object_class.station=Station
 
 # Orbital Tooltips under here:
-galaxia.tooltip.orbital.asset.button.close=Close
-galaxia.tooltip.orbital.asset.button.create_station=Create Station
-galaxia.tooltip.orbital.asset.button.create_automated_station=Create Automated Station
-galaxia.tooltip.orbital.asset.button.create_automated_outpost=Create Automated Outpost
-galaxia.tooltip.orbital.asset.button.send_to=Send To
 galaxia.tooltip.orbital.asset.button.cancel_build=Cancel Build
-galaxia.tooltip.orbital.asset.button.manage=Manage
+galaxia.tooltip.orbital.asset.button.close=Close
+galaxia.tooltip.orbital.asset.button.create_automated_outpost=Create Automated Outpost
+galaxia.tooltip.orbital.asset.button.create_automated_station=Create Automated Station
+galaxia.tooltip.orbital.asset.button.create_station=Create Station
 galaxia.tooltip.orbital.asset.button.destroy=Destroy
-
-
-
-
-
-
-
-
+galaxia.tooltip.orbital.asset.button.manage=Manage
+galaxia.tooltip.orbital.asset.button.send_to=Send To
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo

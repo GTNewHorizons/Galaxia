@@ -2,10 +2,12 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
@@ -749,7 +751,12 @@ public class OrbitalView {
                 return;
             }
             creativeBuildMode = !creativeBuildMode;
-            showActionStatus("Creative build mode " + (creativeBuildMode ? "enabled" : "disabled"));
+            showActionStatus(
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.orbital.status.creative_build_mode",
+                    StatCollector.translateToLocal(
+                        creativeBuildMode ? "galaxia.gui.orbital.value.enabled"
+                            : "galaxia.gui.orbital.value.disabled")));
         }
 
         @Override
@@ -1407,10 +1414,16 @@ public class OrbitalView {
             GlStateManager.popMatrix();
             sceneRenderer.drawCollectedLabels(sceneFrame);
             sceneRenderer.drawCollectedMarkers(sceneFrame);
-            String speedText = paused ? StatCollector.translateToLocal("galaxia.gui.orbital.hud.paused")
-                : StatCollector.translateToLocalFormatted("galaxia.gui.orbital.hud.speed_multiplier", timeScale);
+            String speedText = paused
+                ? EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.orbital.hud.paused")
+                    + EnumChatFormatting.RESET
+                : EnumChatFormatting.GREEN + "x"
+                    + String.format(Locale.ROOT, "%.1f", timeScale)
+                    + EnumChatFormatting.RESET;
+            String zoomText = StatCollector.translateToLocal("galaxia.gui.orbital.hud.zoom") + ": x"
+                + String.format(Locale.ROOT, "%.2f", getScale());
             Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-                StatCollector.translateToLocalFormatted("galaxia.gui.orbital.hud.status", getScale(), speedText),
+                zoomText + "   " + StatCollector.translateToLocal("galaxia.gui.orbital.hud.speed") + " " + speedText,
                 12,
                 12,
                 EnumColors.MapStatusText.getColor());
