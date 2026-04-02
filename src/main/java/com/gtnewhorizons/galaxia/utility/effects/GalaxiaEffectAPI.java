@@ -7,12 +7,12 @@ public class GalaxiaEffectAPI {
 
     public static float getSpeedMultiplier(EntityLivingBase entity) {
         PotionEffect lowOxygen = entity.getActivePotionEffect(GalaxiaEffects.lowOxygen);
-        PotionEffect overcooling = entity.getActivePotionEffect(GalaxiaEffects.overcooling);
+        PotionEffect freezing = entity.getActivePotionEffect(GalaxiaEffects.freezing);
         PotionEffect overheating = entity.getActivePotionEffect(GalaxiaEffects.overheating);
 
         int amp = -1;
         if (lowOxygen != null) amp = Math.max(amp, lowOxygen.getAmplifier());
-        if (overcooling != null) amp = Math.max(amp, overcooling.getAmplifier());
+        if (freezing != null) amp = Math.max(amp, freezing.getAmplifier());
         if (overheating != null) amp = Math.max(amp, overheating.getAmplifier());
 
         return amp >= 0 ? oxygenSpeedMultiplier(amp) : 1f;

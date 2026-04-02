@@ -8,10 +8,12 @@ import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
+import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -23,11 +25,17 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.relauncher.Side;
 
-@Mod(modid = Galaxia.MODID, name = Galaxia.NAME, version = Tags.VERSION, acceptedMinecraftVersions = "[1.7.10]")
+@Mod(
+    modid = Galaxia.MODID,
+    name = Galaxia.NAME,
+    version = Tags.VERSION,
+    acceptedMinecraftVersions = "[1.7.10]",
+    dependencies = "after:gregtech")
 public final class Galaxia {
 
     // spotless:off
     public static final String MODID = "galaxia";
+    public static final String GT5U_MODID = "gregtech";
     public static final String NAME = "Galaxia";
     public static final String UNLOCALIZED_PREFIX = MODID + ".";
     public static final String TEXTURE_PREFIX = MODID + ":";
@@ -82,6 +90,7 @@ public final class Galaxia {
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++, Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
                 Side.SERVER);
     }
@@ -94,4 +103,8 @@ public final class Galaxia {
             return GalaxiaItemList.GALAXIA_LOGO.getItem();
         }
     };
+
+    public static boolean hasGT5U() {
+        return Loader.isModLoaded(GT5U_MODID);
+    }
 }

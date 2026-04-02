@@ -27,26 +27,28 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class GantryRenderer extends TileEntitySpecialRenderer {
 
-    private static final float MODULE_SCALE = 1;
-    private static final float GANTRY_SCALE = 1;
+    private static final float MODULE_SCALE = 1f;
+    private static final float GANTRY_SCALE = 1f;
+    private static final float CARRIAGE_SCALE = 1f;
 
     private static final IModelCustom carriageModel = AdvancedModelLoader
         .loadModel(LocationGalaxia("textures/model/gantry/carriage.obj"));
 
     // spotless:off
     private static final Vec3[] CARDINAL_DIRECTIONS = {
-        Vec3.createVectorHelper(1, 0, 0),
-        Vec3.createVectorHelper(-1, 0, 0),
-        Vec3.createVectorHelper(0, 0, 1),
-        Vec3.createVectorHelper(0, 0, -1)
+            Vec3.createVectorHelper(1, 0, 0),
+            Vec3.createVectorHelper(-1, 0, 0),
+            Vec3.createVectorHelper(0, 0, 1),
+            Vec3.createVectorHelper(0, 0, -1)
     };
-    //spotless:on
+    // spotless:on
 
     @Override
     public void renderTileEntityAt(TileEntity tileEntity, double x, double y, double z, float partialTicks) {
         if (!(tileEntity instanceof TileEntityGantry gantry)) return;
 
-        // Invalid gantry (stacked directly on another) renders error and doesnt affect anything else
+        // Invalid gantry (stacked directly on another) renders error and doesnt affect
+        // anything else
         if (gantry.isInvalid()) {
             renderErrorBeam(gantry, x, y, z);
             return;
@@ -113,7 +115,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPushMatrix();
         applyGantryOrientation(x, y, z, dx, dy, dz, yaw, pitch);
         GL11.glRotatef(90, 0, 1, 0);
-        GL11.glScalef(GANTRY_SCALE, GANTRY_SCALE, GANTRY_SCALE);
+        GL11.glScalef(CARRIAGE_SCALE, CARRIAGE_SCALE, CARRIAGE_SCALE);
 
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -333,7 +335,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     }
 
     /**
-     * Returns true if the given cardinal direction has a direct cardinal neighbour in the list.
+     * Returns true if the given cardinal direction has a direct cardinal neighbour
+     * in the list.
      */
     private boolean hasDirectCardinal(Vec3 candidate, List<Vec3> dirs) {
         for (Vec3 d : dirs) {
@@ -345,7 +348,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
     }
 
     /**
-     * Returns true if the cardinal direction is covered by either a direct cardinal or a diagonal ramp.
+     * Returns true if the cardinal direction is covered by either a direct cardinal
+     * or a diagonal ramp.
      */
     private boolean isCovered(Vec3 candidate, List<Vec3> dirs) {
         return hasDirectCardinal(candidate, dirs) || hasDiagonalCoveringDirection(dirs, candidate);
