@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.mixin;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockAir;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.EntityLivingBase;
@@ -31,9 +32,11 @@ public abstract class RelativeMovementMixin {
         float verticalMomentum = 0;
         if (self instanceof EntityPlayer player) {
             if (!GalaxiaAPI.hasReactionControlSystem(player)) {
-                final boolean isAribourne = player.worldObj
-                    .getBlock((int) player.posX, (int) (player.posY - 1), (int) player.posZ) instanceof BlockAir;
-                if (!isAribourne) {
+                final boolean isAirBorne =
+                    player.worldObj
+                    .getBlock((int) player.posX, (int) (player.posY - (player.worldObj.isRemote ? -2 : -1)), (int) player.posZ) instanceof BlockAir;
+
+                if (!isAirBorne) {
                     self.moveFlying(strafe, forward, friction);
                 }
                 return;
@@ -48,7 +51,7 @@ public abstract class RelativeMovementMixin {
             }
         }
 
-        // do nothing if no input
+         // do nothing if no input
          if (strafe == 0 && forward == 0 && verticalMomentum == 0) {
              return;
          }
