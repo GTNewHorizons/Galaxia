@@ -131,10 +131,15 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         if (layout == null) return;
 
         ParentWidget<?> root = new ParentWidget<>().pos(layout.left(), layout.top())
-            .size(layout.right() - layout.left(), layout.bottom() - layout.top())
-            .background(createMenuBackgroundDrawable());
+            .size(layout.right() - layout.left(), layout.bottom() - layout.top());
         menuRoot = root;
 
+        PassiveBackgroundLayer backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
+            .widthRel(1f)
+            .heightRel(1f)
+            .background(createMenuBackgroundDrawable());
+        root.child(backgroundLayer);
+        root.child(WidgetOutline.create(backgroundLayer, MENU_OUTLINE_THICKNESS, 0xFF59BFD9));
         root.child(
             new TextWidget<>(body.displayName()).color(0xFFFFFFFF)
                 .shadow(true)
@@ -149,7 +154,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         }
 
         child(root);
-        child(WidgetOutline.create(root, MENU_OUTLINE_THICKNESS, 0xFF59BFD9));
     }
 
     private ParentWidget<?> createActionRow(OrbitalCelestialBody body, ContextMenuAction action, int height) {
@@ -242,6 +246,20 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         }
         return actions;
     }
+
+    private static final class PassiveBackgroundLayer extends ParentWidget<PassiveBackgroundLayer> {
+
+        @Override
+        public boolean canHover() {
+            return false;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+    }
+
 
     private IDrawable createMenuBackgroundDrawable() {
         return drawable((context, x, y, width, height) -> {

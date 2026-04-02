@@ -828,7 +828,7 @@ public final class AssetManagementSystem {
                 Gui.drawRect(x, y, x + 1, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
                 Gui.drawRect(x + width - 1, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
             }).asWidget()
-                .pos(bounds.left() + RENAME_INPUT_PADDING, bounds.top() + CONTENT_TOP + 4)
+                .pos(RENAME_INPUT_PADDING, CONTENT_TOP + 4)
                 .size(312, RENAME_INPUT_HEIGHT));
             addFooterButtons(
                 modal,
@@ -871,11 +871,11 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_DANGER_BODY.getColor()).pos(18, 92));
             modal.child(
                 createFooterButton("Cancel", true, callbacks::dismissPendingAssetDestruction)
-                    .pos(bounds.left() + 18, bounds.bottom() - 34)
+                    .pos(18, bounds.bottom() - bounds.top() - 34)
                     .size(130, FOOTER_BUTTON_HEIGHT));
             modal.child(
                 createDangerFooterButton("Destroy", callbacks::advancePendingAssetDestruction)
-                    .pos(bounds.right() - 18 - 130, bounds.bottom() - 34)
+                    .pos(bounds.right() - bounds.left() - 18 - 130, bounds.bottom() - bounds.top() - 34)
                     .size(130, FOOTER_BUTTON_HEIGHT));
             child(modal);
         }
@@ -932,7 +932,7 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 46));
             modal.child(
                 createFooterButton("Close", true, callbacks::dismissPendingResourceTransfer)
-                    .pos(bounds.right() - 96, bounds.top() + 8)
+                    .pos(bounds.right() - bounds.left() - 96, 8)
                     .size(78, FOOTER_BUTTON_HEIGHT));
             if (transfer.targets()
                 .isEmpty()) {
@@ -942,7 +942,7 @@ public final class AssetManagementSystem {
                 child(modal);
                 return;
             }
-            int rowTop = bounds.top() + 66;
+            int rowTop = 66;
             for (int i = 0; i < transfer.targets()
                 .size(); i++) {
                 StationTransferTarget target = transfer.targets()
@@ -953,20 +953,20 @@ public final class AssetManagementSystem {
                         (context, x, y, width, h) -> Gui
                             .drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_TRANSFER_ROW_BG.getColor()))
                                 .asWidget()
-                                .pos(bounds.left() + 14, currentTop)
+                                .pos(14, currentTop)
                                 .size(bounds.right() - bounds.left() - 28, 36));
                 modal.child(
-                    createAssetIconWidget(CelestialAssetKind.STATION, 1.0f).pos(bounds.left() + 24, currentTop + 9)
+                    createAssetIconWidget(CelestialAssetKind.STATION, 1.0f).pos(24, currentTop + 9)
                         .size(16, 16));
                 modal.child(
                     createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                        .pos(bounds.left() + 46, currentTop + 6));
+                        .pos(46, currentTop + 6));
                 modal.child(
                     createBodyText(target.hostBodyName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                        .pos(bounds.left() + 46, currentTop + 18));
+                        .pos(46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))
-                        .pos(bounds.right() - 92, currentTop + 8)
+                        .pos(bounds.right() - bounds.left() - 92, currentTop + 8)
                         .size(72, FOOTER_BUTTON_HEIGHT));
             }
             child(modal);
@@ -993,7 +993,7 @@ public final class AssetManagementSystem {
                     .pos(14, 62));
             modal.child(
                 createFooterButton("Close", true, callbacks::closePendingAssetManagement)
-                    .pos(bounds.right() - 18 - 110, bounds.top() + 8)
+                    .pos(bounds.right() - bounds.left() - 18 - 110, 8)
                     .size(110, FOOTER_BUTTON_HEIGHT));
             child(modal);
         }
@@ -1001,17 +1001,18 @@ public final class AssetManagementSystem {
         private void addFooterButtons(ParentWidget<?> modal, ModalBounds bounds, String cancelLabel,
             Runnable cancelAction, String confirmLabel, Runnable confirmAction, boolean confirmDanger) {
             int btnWidth = 110;
-            int btnY = bounds.bottom() - 34;
+            int modalWidth = bounds.right() - bounds.left();
+            int btnY = bounds.bottom() - bounds.top() - 34;
             modal.child(
-                createFooterButton(cancelLabel, true, cancelAction).pos(bounds.left() + 18, btnY)
+                createFooterButton(cancelLabel, true, cancelAction).pos(18, btnY)
                     .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             if (confirmDanger) {
                 modal.child(
-                    createDangerFooterButton(confirmLabel, confirmAction).pos(bounds.right() - 18 - btnWidth, btnY)
+                    createDangerFooterButton(confirmLabel, confirmAction).pos(modalWidth - 18 - btnWidth, btnY)
                         .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             } else {
                 modal.child(
-                    createFooterButton(confirmLabel, true, confirmAction).pos(bounds.right() - 18 - btnWidth, btnY)
+                    createFooterButton(confirmLabel, true, confirmAction).pos(modalWidth - 18 - btnWidth, btnY)
                         .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             }
         }

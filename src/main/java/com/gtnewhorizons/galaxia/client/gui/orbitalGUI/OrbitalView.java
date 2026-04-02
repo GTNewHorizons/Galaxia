@@ -393,6 +393,7 @@ public class OrbitalView {
                     @Override
                     public void closeAssetManagement() {
                         assetActionController.closeAssetManagement(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
@@ -458,97 +459,121 @@ public class OrbitalView {
                     @Override
                     public void createBaseStation(OrbitalCelestialBody body) {
                         assetActionController.createBaseStation(body);
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void triggerAssetCreation(OrbitalCelestialBody body, CelestialAssetKind kind,
                         boolean openManagementFirst) {
                         assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
+                        assetManagementWidget.markStructureDirty();
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void openPendingAssetRename(CelestialManagedAsset asset) {
                         assetActionController.openPendingAssetRename(assetUiState, asset);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingConstructionCancellation(CelestialManagedAsset asset) {
                         assetActionController.openPendingConstructionCancellation(assetUiState, asset);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingResourceTransfer(CelestialManagedAsset asset) {
                         assetActionController.openPendingResourceTransfer(assetUiState, root, asset);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingAssetManagement(CelestialManagedAsset asset) {
                         assetActionController.openPendingAssetManagement(assetUiState, asset);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void openPendingAssetDestruction(CelestialManagedAsset asset) {
                         assetActionController.openPendingAssetDestruction(assetUiState, asset);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void confirmPendingAssetCreation() {
                         assetActionController.confirmPendingAssetCreation(assetUiState);
+                        assetManagementWidget.markStructureDirty();
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingAssetCreation() {
                         assetActionController.dismissPendingAssetCreation(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void closePendingAssetRename() {
                         assetActionController.closePendingAssetRename(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void confirmPendingAssetRename() {
                         assetActionController.confirmPendingAssetRename(assetUiState);
+                        assetManagementWidget.markStructureDirty();
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingAssetDestruction() {
                         assetActionController.dismissPendingAssetDestruction(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void advancePendingAssetDestruction() {
                         assetActionController.advancePendingAssetDestruction(assetUiState);
+                        assetManagementWidget.markStructureDirty();
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingConstructionCancellation() {
                         assetActionController.dismissPendingConstructionCancellation(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void confirmPendingConstructionCancellation() {
                         assetActionController.confirmPendingConstructionCancellation(assetUiState);
+                        assetManagementWidget.markStructureDirty();
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void dismissPendingResourceTransfer() {
                         assetActionController.dismissPendingResourceTransfer(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void sendPendingResourceTransfer(StationTransferTarget target) {
                         assetActionController.sendPendingResourceTransfer(assetUiState, target);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void closePendingAssetManagement() {
                         assetActionController.closePendingAssetManagement(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void dismissPendingModalByOutsideClick() {
                         assetActionController.dismissPendingModalByOutsideClick(assetUiState);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
@@ -629,17 +654,21 @@ public class OrbitalView {
                     @Override
                     public void openAssetManagement(OrbitalCelestialBody body) {
                         assetActionController.openAssetManagement(assetUiState, body);
+                        assetManagementWidget.markStructureDirty();
                     }
 
                     @Override
                     public void createBaseStation(OrbitalCelestialBody body) {
                         assetActionController.createBaseStation(body);
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
                     public void triggerAssetCreation(OrbitalCelestialBody body, CelestialAssetKind kind,
                         boolean openManagementFirst) {
                         assetActionController.triggerAssetCreation(assetUiState, body, kind, openManagementFirst);
+                        assetManagementWidget.markStructureDirty();
+                        assetManagementWidget.markContentDirty();
                     }
 
                     @Override
