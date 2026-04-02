@@ -323,11 +323,11 @@ public class OrbitalScene {
             GL11.glColor4f(1f, 1f, 1f, 1f);
         }
 
-        private void drawFilledCircle(float x, float y, float r, int colour, float alpha) {
+        private void drawFilledCircle(float x, float y, float r, int color, float alpha) {
             GlStateManager.disableTexture2D();
-            float red = ((colour >> 16) & 0xFF) / 255f;
-            float green = ((colour >> 8) & 0xFF) / 255f;
-            float blue = (colour & 0xFF) / 255f;
+            float red = ((color >> 16) & 0xFF) / 255f;
+            float green = ((color >> 8) & 0xFF) / 255f;
+            float blue = (color & 0xFF) / 255f;
             GlStateManager.color(red, green, blue, alpha);
             GL11.glBegin(GL11.GL_TRIANGLE_FAN);
             GL11.glVertex2f(x, y);
@@ -339,11 +339,11 @@ public class OrbitalScene {
             GlStateManager.color(1f, 1f, 1f, 1f);
         }
 
-        private void drawSquareOutline(float x, float y, float halfSize, int colour, float alpha, float lineWidth) {
+        private void drawSquareOutline(float x, float y, float halfSize, int color, float alpha, float lineWidth) {
             GlStateManager.disableTexture2D();
-            float red = ((colour >> 16) & 0xFF) / 255f;
-            float green = ((colour >> 8) & 0xFF) / 255f;
-            float blue = (colour & 0xFF) / 255f;
+            float red = ((color >> 16) & 0xFF) / 255f;
+            float green = ((color >> 8) & 0xFF) / 255f;
+            float blue = (color & 0xFF) / 255f;
             GlStateManager.color(red, green, blue, alpha);
             GL11.glLineWidth(lineWidth);
             GL11.glBegin(GL11.GL_LINE_LOOP);
@@ -356,7 +356,7 @@ public class OrbitalScene {
             GlStateManager.color(1f, 1f, 1f, 1f);
         }
 
-        private void drawCenteredString(String text, float x, float y, int colour) {
+        private void drawCenteredString(String text, float x, float y, int color) {
             Minecraft mc = Minecraft.getMinecraft();
             int w = mc.fontRenderer.getStringWidth(text);
             GlStateManager.pushMatrix();
@@ -365,38 +365,38 @@ public class OrbitalScene {
                 text,
                 Math.round((x / MAP_LABEL_SCALE) - (w / 2f)),
                 Math.round(y / MAP_LABEL_SCALE),
-                colour);
+                color);
             GlStateManager.popMatrix();
         }
 
-        private void drawCenteredBannerString(String text, float x, float y, int colour) {
+        private void drawCenteredBannerString(String text, float x, float y, int color) {
             Minecraft mc = Minecraft.getMinecraft();
             int w = mc.fontRenderer.getStringWidth(text);
-            mc.fontRenderer.drawStringWithShadow(text, Math.round(x - w / 2f), Math.round(y), colour);
+            mc.fontRenderer.drawStringWithShadow(text, Math.round(x - w / 2f), Math.round(y), color);
         }
 
         private void drawFilledTrapezoid(float centerX, int top, int bottom, float topHalfWidth, float bottomHalfWidth,
-            int colour) {
-            prepareFilledShapeDraw(colour);
+            int color) {
+            prepareFilledShapeDraw(color);
             for (int y = top; y < bottom; y++) {
                 float t = (y - top) / (float) Math.max(1, bottom - top);
                 float halfWidth = topHalfWidth + (bottomHalfWidth - topHalfWidth) * t;
                 int left = Math.round(centerX - halfWidth);
                 int right = Math.round(centerX + halfWidth);
-                Gui.drawRect(left, y, right, y + 1, colour);
+                Gui.drawRect(left, y, right, y + 1, color);
             }
             finishFilledShapeDraw();
         }
 
         private void drawTrapezoidOutline(float centerX, int top, int bottom, float topHalfWidth, float bottomHalfWidth,
-            int colour, float lineWidth) {
+            int color, float lineWidth) {
             GlStateManager.disableTexture2D();
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            float red = ((colour >> 16) & 0xFF) / 255f;
-            float green = ((colour >> 8) & 0xFF) / 255f;
-            float blue = (colour & 0xFF) / 255f;
-            float alpha = ((colour >> 24) & 0xFF) / 255f;
+            float red = ((color >> 16) & 0xFF) / 255f;
+            float green = ((color >> 8) & 0xFF) / 255f;
+            float blue = (color & 0xFF) / 255f;
+            float alpha = ((color >> 24) & 0xFF) / 255f;
             GlStateManager.color(red, green, blue, alpha);
             GL11.glLineWidth(lineWidth);
             GL11.glBegin(GL11.GL_LINE_LOOP);
@@ -410,15 +410,15 @@ public class OrbitalScene {
             GlStateManager.enableTexture2D();
         }
 
-        private void prepareFilledShapeDraw(int colour) {
+        private void prepareFilledShapeDraw(int color) {
             GlStateManager.disableTexture2D();
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             GL11.glDisable(GL11.GL_CULL_FACE);
-            float red = ((colour >> 16) & 0xFF) / 255f;
-            float green = ((colour >> 8) & 0xFF) / 255f;
-            float blue = (colour & 0xFF) / 255f;
-            float alpha = ((colour >> 24) & 0xFF) / 255f;
+            float red = ((color >> 16) & 0xFF) / 255f;
+            float green = ((color >> 8) & 0xFF) / 255f;
+            float blue = (color & 0xFF) / 255f;
+            float alpha = ((color >> 24) & 0xFF) / 255f;
             GlStateManager.color(red, green, blue, alpha);
         }
 
@@ -480,9 +480,9 @@ public class OrbitalScene {
             Gui.drawRect(verticalLeft, verticalTop, verticalRight, verticalBottom, color);
         }
 
-        private int withAlpha(int colour, float alpha) {
-            int a = Math.max(0, Math.min(255, (int) (((colour >> 24) & 0xFF) * alpha)));
-            return (colour & 0x00FFFFFF) | (a << 24);
+        private int withAlpha(int color, float alpha) {
+            int a = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
+            return (color & 0x00FFFFFF) | (a << 24);
         }
 
         private int getFallbackBodyColor(CelestialObjectClass objectClass) {
