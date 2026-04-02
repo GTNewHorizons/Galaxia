@@ -4,15 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
-
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
@@ -80,7 +75,7 @@ record TransferTargetRow(StationTransferTarget target, int left, int top, int ri
 record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean inlineItems) {
 
     static PinnedInfoRow section(String label) {
-        return new PinnedInfoRow(label, "", Collections.EMPTY_LIST, false);
+        return new PinnedInfoRow(label, "", Collections.emptyList(), false);
     }
 
     static PinnedInfoRow inlineItems(String value, List<ItemStack> items) {
@@ -88,7 +83,7 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
     }
 
     PinnedInfoRow(String label, String value) {
-        this(label, value, Collections.EMPTY_LIST, false);
+        this(label, value, Collections.emptyList(), false);
     }
 
     PinnedInfoRow(String label, String value, List<ItemStack> items) {
@@ -548,6 +543,10 @@ public final class AssetManagementSystem {
         private static final int ROW_SPACING = 6;
         private static final int ICON_BUTTON_SIZE = 22;
         private static final int FOOTER_BUTTON_HEIGHT = 20;
+        private static final int RENAME_INPUT_HEIGHT = 22;
+        private static final int RENAME_MODAL_WIDTH = 340;
+        private static final int RENAME_INPUT_PADDING = 14;
+
         private final OrbitalAssetUiState state;
         private final Callbacks callbacks;
         private String lastStructureSignature = "";
@@ -559,21 +558,14 @@ public final class AssetManagementSystem {
         private ParentWidget<?> mainScrollContent;
         private VerticalScrollData mainScrollData;
         private int mainContentWidth, mainContentHeight;
-        private final RenderItem GUI_ITEM_RENDERER = new RenderItem();
 
         OrbitalAssetManagementWidget(OrbitalAssetUiState state, Callbacks callbacks) {
             this.state = state;
             this.callbacks = callbacks;
             setEnabled(false);
             background(
-                drawable((context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, 0xAA09111B)));
-        }
-
-        boolean isPointInModal(int localX, int localY) {
-            return shouldShowOverlay() && localX >= modalLeft
-                && localX <= modalRight
-                && localY >= modalTop
-                && localY <= modalBottom;
+                drawable(
+                    (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_OVERLAY_BG.getColor())));
         }
 
         boolean isPointInScrollViewport(int localX, int localY) {
@@ -585,8 +577,12 @@ public final class AssetManagementSystem {
 
         ButtonRect getRenameInputBounds() {
             if (state.pendingAssetRename == null) return null;
-            ModalBounds bounds = createCenteredModalBounds(340, 126);
-            return new ButtonRect(bounds.left() + 14, bounds.top() + 54, bounds.right() - 14, bounds.top() + 76);
+            ModalBounds bounds = createCenteredModalBounds(RENAME_MODAL_WIDTH, 126);
+            return new ButtonRect(
+                bounds.left() + RENAME_INPUT_PADDING,
+                bounds.top() + CONTENT_TOP + 4,
+                bounds.right() - RENAME_INPUT_PADDING,
+                bounds.top() + CONTENT_TOP + 4 + RENAME_INPUT_HEIGHT);
         }
 
         @Override
@@ -713,9 +709,9 @@ public final class AssetManagementSystem {
             if (!shouldShowPanel()) return "";
             OrbitalCelestialBody body = state.assetManagementBody;
             CelestialBodyAssetState assetState = CelestialAssetStore.getState(body.id());
-            StringBuilder signature = new StringBuilder(512);
+            StringBuilder sig = new StringBuilder(512);
             for (CelestialManagedAsset asset : assetState.assets()) {
-                signature.append('|')
+                sig.append('|')
                     .append(asset.assetId())
                     .append(':')
                     .append(asset.displayName())
@@ -728,7 +724,7 @@ public final class AssetManagementSystem {
                     .append(':')
                     .append(callbacks.buildConstructionInventorySummary(asset));
             }
-            return signature.toString();
+            return sig.toString();
         }
 
         private void rebuildChildren() {
@@ -768,7 +764,7 @@ public final class AssetManagementSystem {
                 String assetName = trimToWidth(body.displayName(), assetNameMaxWidth);
                 int assetNameWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(assetName);
                 int assetNameX = Math.max(titleRight + 12, modalWidth - 40 - assetNameWidth);
-                modal.child(createBodyText(assetName, 0xFFD9E0FF).pos(assetNameX, 10));
+                modal.child(createBodyText(assetName, EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(assetNameX, 10));
             }
             modal.child(
                 createGlyphButton(AssetManagerButtonGlyph.CLOSE, "Close", true, callbacks::closeAssetManagement)
@@ -793,15 +789,17 @@ public final class AssetManagementSystem {
                     callbacks.canCreateAutomatedOutpost(body),
                     () -> callbacks.triggerAssetCreation(body, CelestialAssetKind.AUTOMATED_OUTPOST, false))
                         .pos(70, 30));
-            if (!callbacks.isGT5AutomationAvailable())
-                modal.child(createBodyText("GT5U required for automated assets", 0xFF9AA7B8).pos(104, 36));
+            if (!callbacks.isGT5AutomationAvailable()) {
+                modal.child(createBodyText("GT5U required for automated assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(104, 36));
+            }
             VerticalScrollData scrollData = new VerticalScrollData();
             mainScrollData = scrollData;
             ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_PADDING, CONTENT_TOP)
                 .widthRelOffset(1f, -(CONTENT_PADDING * 2) - CONTENT_SCROLLBAR_GAP)
                 .heightRelOffset(1f, -(CONTENT_TOP + 12))
                 .background(
-                    drawable((context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, 0x3318273A)));
+                    drawable(
+                        (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
             activeScrollWidget = scroll;
             mainScrollWidget = scroll;
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f)
@@ -851,9 +849,7 @@ public final class AssetManagementSystem {
                 buildPendingAssetManagementModal();
                 return;
             }
-            if (state.pendingAssetRename != null) {
-                buildPendingAssetRenameModal();
-            }
+            if (state.pendingAssetRename != null) buildPendingAssetRenameModal();
         }
 
         private void buildPendingAssetCreationModal() {
@@ -871,53 +867,53 @@ public final class AssetManagementSystem {
                 createAssetIconWidget(creation.kind(), 1.0f).pos(12, 10)
                     .size(18, 18));
             modal.child(createTitleText("Confirm " + callbacks.formatAssetKind(creation.kind())).pos(36, 10));
-            modal.child(createBodyText(creation.displayName(), 0xFFD9E0FF).pos(36, 28));
+            modal.child(createBodyText(creation.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(36, 28));
             modal.child(createSectionText("Required resources").pos(12, 52));
             int resourceY = 68;
             for (CelestialAssetRequirement requirement : creation.requiredResources()) {
                 modal.child(
-                    createBodyText("- " + requirement.amount() + " " + requirement.displayName(), 0xFFD9E0FF)
+                    createBodyText("- " + requirement.amount() + " " + requirement.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                         .pos(16, resourceY));
                 resourceY += 12;
             }
-            modal.child(
-                createFooterButton("Cancel", true, callbacks::dismissPendingAssetCreation)
-                    .pos(bounds.left() + 18, bounds.bottom() - 34)
-                    .size(110, FOOTER_BUTTON_HEIGHT));
-            modal.child(
-                createFooterButton("Confirm", true, callbacks::confirmPendingAssetCreation)
-                    .pos(bounds.right() - 18 - 110, bounds.bottom() - 34)
-                    .size(110, FOOTER_BUTTON_HEIGHT));
+            addFooterButtons(
+                modal,
+                bounds,
+                "Cancel",
+                callbacks::dismissPendingAssetCreation,
+                "Confirm",
+                callbacks::confirmPendingAssetCreation,
+                false);
             child(modal);
         }
 
         private void buildPendingAssetRenameModal() {
             if (state.pendingAssetRename == null) return;
-            ModalBounds bounds = createCenteredModalBounds(340, 126);
+            ModalBounds bounds = createCenteredModalBounds(RENAME_MODAL_WIDTH, 126);
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Rename Asset").pos(12, 10));
             modal.child(
-                createBodyText(callbacks.formatAssetDisplayName(state.pendingAssetRename.asset()), 0xFFD9E0FF)
+                createBodyText(callbacks.formatAssetDisplayName(state.pendingAssetRename.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .pos(12, 28));
-            modal.child(createBodyText("New name", 0xFF9AA7B8).pos(14, 42));
+            modal.child(createBodyText("New name", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(RENAME_INPUT_PADDING, 42));
             modal.child(drawable((context, x, y, width, height) -> {
-                Gui.drawRect(x, y, x + width, y + height, 0xFF0F1621);
-                Gui.drawRect(x, y, x + width, y + 1, 0xFF7FB6FF);
-                Gui.drawRect(x, y + height - 1, x + width, y + height, 0xFF7FB6FF);
-                Gui.drawRect(x, y, x + 1, y + height, 0xFF7FB6FF);
-                Gui.drawRect(x + width - 1, y, x + width, y + height, 0xFF7FB6FF);
+                Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_INPUT_BG.getColor());
+                Gui.drawRect(x, y, x + width, y + 1, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
+                Gui.drawRect(x, y + height - 1, x + width, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
+                Gui.drawRect(x, y, x + 1, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
+                Gui.drawRect(x + width - 1, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
             }).asWidget()
-                .pos(bounds.left() + 14, bounds.top() + 54)
-                .size(312, 22));
-            modal.child(
-                createFooterButton("Cancel", true, callbacks::closePendingAssetRename)
-                    .pos(bounds.left() + 18, bounds.bottom() - 34)
-                    .size(110, FOOTER_BUTTON_HEIGHT));
-            modal.child(
-                createFooterButton("Confirm", true, callbacks::confirmPendingAssetRename)
-                    .pos(bounds.right() - 18 - 110, bounds.bottom() - 34)
-                    .size(110, FOOTER_BUTTON_HEIGHT));
+                .pos(bounds.left() + RENAME_INPUT_PADDING, bounds.top() + CONTENT_TOP + 4)
+                .size(312, RENAME_INPUT_HEIGHT));
+            addFooterButtons(
+                modal,
+                bounds,
+                "Cancel",
+                callbacks::closePendingAssetRename,
+                "Confirm",
+                callbacks::confirmPendingAssetRename,
+                false);
             child(modal);
         }
 
@@ -926,24 +922,25 @@ public final class AssetManagementSystem {
             if (destruction == null) return;
             ModalBounds bounds = createCenteredModalBounds(360, 150);
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
+            int modalWidth = bounds.right() - bounds.left();
             ParentWidget<?> modal = createModalRoot(
                 bounds.left(),
                 bounds.top(),
                 bounds.right(),
                 bounds.bottom(),
-                0xFF1A1012,
-                0xFFD14A4A,
+                EnumColors.MAP_COLOR_MODAL_DANGER_BG.getColor(),
+                EnumColors.MAP_COLOR_MODAL_DANGER_ACCENT.getColor(),
                 -1);
-            int modalWidth = bounds.right() - bounds.left();
             modal.child(
-                createCenteredLargeText("THIS IS IRREVERSIBLE", 1.45f, 0xFFFF5A5A).pos(12, 16)
+                createCenteredLargeText("THIS IS IRREVERSIBLE", 1.45f, EnumColors.MAP_COLOR_TEXT_DANGER.getColor()).pos(12, 16)
                     .size(modalWidth - 24, 22));
-            modal.child(createBodyText("You are about to destroy:", 0xFFD9E0FF).pos(18, 52));
-            modal.child(createBodyText(callbacks.formatAssetDisplayName(destruction.asset()), 0xFFFFFFFF).pos(18, 68));
+            modal.child(createBodyText("You are about to destroy:", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(18, 52));
+            modal.child(
+                createBodyText(callbacks.formatAssetDisplayName(destruction.asset()), EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(18, 68));
             modal.child(
                 createBodyText(
                     destruction.armed() ? "Click Destroy again to confirm." : "Press Destroy to arm confirmation.",
-                    0xFFFFB3B3).pos(18, 92));
+                    EnumColors.MAP_COLOR_TEXT_DANGER_BODY.getColor()).pos(18, 92));
             modal.child(
                 createFooterButton("Cancel", true, callbacks::dismissPendingAssetDestruction)
                     .pos(bounds.left() + 18, bounds.bottom() - 34)
@@ -964,23 +961,24 @@ public final class AssetManagementSystem {
                 bounds.top(),
                 bounds.right(),
                 bounds.bottom(),
-                0xFF121B28,
-                0xFFE6B35A);
+                EnumColors.MAP_COLOR_MODAL_WARNING_BG.getColor(),
+                EnumColors.MAP_COLOR_MODAL_WARNING_ACCENT.getColor());
             modal.child(createTitleText("Cancel Construction?").pos(12, 10));
             modal.child(
                 createBodyText(
                     callbacks.formatAssetDisplayName(state.pendingConstructionCancellation.asset()),
-                    0xFFD9E0FF).pos(12, 28));
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
             modal.child(
-                createBodyText("Stored resources will be moved into deconstruction recovery.", 0xFFFFD59A).pos(12, 54));
-            modal.child(
-                createFooterButton("Cancel", true, callbacks::dismissPendingConstructionCancellation)
-                    .pos(bounds.left() + 18, bounds.bottom() - 34)
-                    .size(130, FOOTER_BUTTON_HEIGHT));
-            modal.child(
-                createFooterButton("Confirm", true, callbacks::confirmPendingConstructionCancellation)
-                    .pos(bounds.right() - 18 - 130, bounds.bottom() - 34)
-                    .size(130, FOOTER_BUTTON_HEIGHT));
+                createBodyText("Stored resources will be moved into deconstruction recovery.", EnumColors.MAP_COLOR_TEXT_WARNING.getColor())
+                    .pos(12, 54));
+            addFooterButtons(
+                modal,
+                bounds,
+                "Cancel",
+                callbacks::dismissPendingConstructionCancellation,
+                "Confirm",
+                callbacks::confirmPendingConstructionCancellation,
+                false);
             child(modal);
         }
 
@@ -995,15 +993,17 @@ public final class AssetManagementSystem {
             updateModalBounds(bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
             ParentWidget<?> modal = createModalRoot(bounds);
             modal.child(createTitleText("Send Resources To").pos(12, 10));
-            modal.child(createBodyText(callbacks.formatAssetDisplayName(transfer.asset()), 0xFFD9E0FF).pos(12, 28));
-            modal.child(createBodyText("Requires an orbital rocket with enough capacity.", 0xFF9AA7B8).pos(12, 46));
+            modal
+                .child(createBodyText(callbacks.formatAssetDisplayName(transfer.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 28));
+            modal.child(
+                createBodyText("Requires an orbital rocket with enough capacity.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 46));
             modal.child(
                 createFooterButton("Close", true, callbacks::dismissPendingResourceTransfer)
                     .pos(bounds.right() - 96, bounds.top() + 8)
                     .size(78, FOOTER_BUTTON_HEIGHT));
             if (transfer.targets()
                 .isEmpty()) {
-                modal.child(createBodyText("No stations available in this system", 0xFF9AA7B8).pos(16, 74));
+                modal.child(createBodyText("No stations available in this system", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(16, 74));
                 child(modal);
                 return;
             }
@@ -1013,16 +1013,18 @@ public final class AssetManagementSystem {
                 StationTransferTarget target = transfer.targets()
                     .get(i);
                 int currentTop = rowTop + i * 42;
-                int currentBottom = currentTop + 36;
                 modal.child(
-                    drawable((context, x, y, width, h) -> Gui.drawRect(x, y, x + width, y + h, 0x55213144)).asWidget()
+                    drawable((context, x, y, width, h) -> Gui.drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_TRANSFER_ROW_BG.getColor()))
+                        .asWidget()
                         .pos(bounds.left() + 14, currentTop)
                         .size(bounds.right() - bounds.left() - 28, 36));
                 modal.child(
                     createAssetIconWidget(CelestialAssetKind.STATION, 1.0f).pos(bounds.left() + 24, currentTop + 9)
                         .size(16, 16));
-                modal.child(createBodyText(target.displayName(), 0xFFFFFFFF).pos(bounds.left() + 46, currentTop + 6));
-                modal.child(createBodyText(target.hostBodyName(), 0xFFD9E0FF).pos(bounds.left() + 46, currentTop + 18));
+                modal.child(
+                    createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(bounds.left() + 46, currentTop + 6));
+                modal.child(
+                    createBodyText(target.hostBodyName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(bounds.left() + 46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))
                         .pos(bounds.right() - 92, currentTop + 8)
@@ -1044,14 +1046,32 @@ public final class AssetManagementSystem {
                         .size(18, 18));
             modal.child(createTitleText("Manage Station").pos(36, 10));
             modal.child(
-                createBodyText(callbacks.formatAssetDisplayName(state.pendingAssetManagement.asset()), 0xFFD9E0FF)
+                createBodyText(callbacks.formatAssetDisplayName(state.pendingAssetManagement.asset()), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .pos(36, 28));
-            modal.child(createBodyText("This panel is not implemented yet.", 0xFF9AA7B8).pos(14, 62));
+            modal.child(createBodyText("This panel is not implemented yet.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(14, 62));
             modal.child(
                 createFooterButton("Close", true, callbacks::closePendingAssetManagement)
                     .pos(bounds.right() - 18 - 110, bounds.top() + 8)
                     .size(110, FOOTER_BUTTON_HEIGHT));
             child(modal);
+        }
+
+        private void addFooterButtons(ParentWidget<?> modal, ModalBounds bounds, String cancelLabel,
+            Runnable cancelAction, String confirmLabel, Runnable confirmAction, boolean confirmDanger) {
+            int btnWidth = 110;
+            int btnY = bounds.bottom() - 34;
+            modal.child(
+                createFooterButton(cancelLabel, true, cancelAction).pos(bounds.left() + 18, btnY)
+                    .size(btnWidth, FOOTER_BUTTON_HEIGHT));
+            if (confirmDanger) {
+                modal.child(
+                    createDangerFooterButton(confirmLabel, confirmAction).pos(bounds.right() - 18 - btnWidth, btnY)
+                        .size(btnWidth, FOOTER_BUTTON_HEIGHT));
+            } else {
+                modal.child(
+                    createFooterButton(confirmLabel, true, confirmAction).pos(bounds.right() - 18 - btnWidth, btnY)
+                        .size(btnWidth, FOOTER_BUTTON_HEIGHT));
+            }
         }
 
         private ModalBounds calculateManagementBounds() {
@@ -1101,7 +1121,7 @@ public final class AssetManagementSystem {
             content.child(createSectionText("Assets").pos(4, y));
             y += 16;
             if (deployed.isEmpty()) {
-                content.child(createBodyText("No deployed assets", 0xFF9AA7B8).pos(8, y));
+                content.child(createBodyText("No deployed assets", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, y));
                 return;
             }
             for (CelestialManagedAsset a : deployed) {
@@ -1114,7 +1134,8 @@ public final class AssetManagementSystem {
             ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -8)
                 .height(ROW_HEIGHT)
                 .background(
-                    drawable((context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, 0x55213144)));
+                    drawable(
+                        (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
             row.child(
                 createAssetIconWidget(asset.kind(), 1.0f).pos(10, 9)
                     .size(16, 16));
@@ -1125,7 +1146,7 @@ public final class AssetManagementSystem {
             row.child(
                 createBodyText(
                     (deconstruction ? "Stored: " : "Inventory: ") + callbacks.buildConstructionInventorySummary(asset),
-                    0xFFD9E0FF).pos(32, 18)
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(32, 18)
                         .width(textWidth));
             row.child(
                 createGlyphButton(
@@ -1140,7 +1161,8 @@ public final class AssetManagementSystem {
             ParentWidget<?> row = new PassiveRow().widthRelOffset(1f, -8)
                 .height(ROW_HEIGHT)
                 .background(
-                    drawable((context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, 0x55213144)));
+                    drawable(
+                        (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_ROW_BG.getColor())));
             row.child(
                 createAssetIconWidget(asset.kind(), 1.0f).pos(10, 9)
                     .size(16, 16));
@@ -1154,15 +1176,17 @@ public final class AssetManagementSystem {
                         callbacks.formatAssetKind(asset.kind()) + " | "
                             + callbacks.formatAssetLocation(asset.location()),
                         textWidth),
-                    0xFFD9E0FF).pos(32, 16)
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(32, 16)
                         .width(textWidth));
             int buttonX = rowWidth - 34;
-            if (manageable) row.child(
-                createGlyphButton(
-                    AssetManagerButtonGlyph.MANAGE,
-                    "Manage",
-                    true,
-                    () -> callbacks.openPendingAssetManagement(asset)).pos(buttonX - 28, 9));
+            if (manageable) {
+                row.child(
+                    createGlyphButton(
+                        AssetManagerButtonGlyph.MANAGE,
+                        "Manage",
+                        true,
+                        () -> callbacks.openPendingAssetManagement(asset)).pos(buttonX - 28, 9));
+            }
             row.child(
                 createGlyphButton(
                     AssetManagerButtonGlyph.DESTROY,
@@ -1180,7 +1204,7 @@ public final class AssetManagementSystem {
                 .overlay(
                     IKey.str(text)
                         .alignment(Alignment.CenterLeft)
-                        .color(0xFFFFFFFF)
+                        .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                         .shadow(true))
                 .hoverOverlay(
                     IKey.str(text)
@@ -1218,17 +1242,17 @@ public final class AssetManagementSystem {
                 bounds.top(),
                 bounds.right(),
                 bounds.bottom(),
-                0xFF121B28,
-                0xFF59BFD9);
+                EnumColors.MAP_COLOR_MODAL_BG.getColor(),
+                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
         }
 
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom) {
-            return createModalRoot(left, top, right, bottom, 0xFF121B28, 0xFF59BFD9);
+            return createModalRoot(left, top, right, bottom, EnumColors.MAP_COLOR_MODAL_BG.getColor(), EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
         }
 
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor,
             int accentColor) {
-            return createModalRoot(left, top, right, bottom, backgroundColor, accentColor, 0xFF22324A);
+            return createModalRoot(left, top, right, bottom, backgroundColor, accentColor, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
         }
 
         private ParentWidget<?> createModalRoot(int left, int top, int right, int bottom, int backgroundColor,
@@ -1245,12 +1269,12 @@ public final class AssetManagementSystem {
         }
 
         private TextWidget<?> createTitleText(String text) {
-            return new TextWidget<>(text).color(0xFFFFFFFF)
+            return new TextWidget<>(text).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true);
         }
 
         private TextWidget<?> createSectionText(String text) {
-            return new TextWidget<>(text).color(0xFF5A63FF)
+            return new TextWidget<>(text).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                 .shadow(true);
         }
 
@@ -1281,7 +1305,7 @@ public final class AssetManagementSystem {
                     return true;
                 });
             if (iconKind != null) button.overlay(createAssetIconDrawable(iconKind, enabled ? 1.0f : 0.45f));
-            else button.overlay(createGlyphDrawable(glyph, enabled ? 0xFFFFFFFF : 0xFF94A0AF));
+            else button.overlay(createGlyphDrawable(glyph, enabled ? EnumColors.MAP_COLOR_TEXT_TITLE.getColor() : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor()));
             return button;
         }
 
@@ -1299,7 +1323,7 @@ public final class AssetManagementSystem {
                 .overlay(
                     IKey.str(label)
                         .alignment(Alignment.Center)
-                        .color(enabled ? 0xFFFFFFFF : 0xFF94A0AF)
+                        .color(enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor() : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor())
                         .shadow(true))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0 || !enabled) return true;
@@ -1309,15 +1333,15 @@ public final class AssetManagementSystem {
         }
 
         private IDrawable createButtonBackground(boolean enabled, boolean hovered) {
-            int bg = !enabled ? 0xFF243041 : hovered ? 0xFF3A5678 : 0xFF2D435D;
-            int border = enabled ? 0xFF7FB6FF : 0xFF556577;
+            int bg = !enabled ? EnumColors.MAP_COLOR_BTN_DISABLED.getColor() : hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor() : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor();
+            int border = enabled ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor() : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor();
             return createRectFrameDrawable(bg, border);
         }
 
         private IDrawable createTextButtonBackground(boolean enabled, boolean hovered, boolean danger) {
             if (danger) {
-                int bg = hovered ? 0xFF6D252D : 0xFF5A1E24;
-                return createRectFrameDrawable(bg, 0xFFFF5A5A);
+                int bg = hovered ? EnumColors.MAP_COLOR_BTN_DANGER_HOVERED.getColor() : EnumColors.MAP_COLOR_BTN_DANGER_DEFAULT.getColor();
+                return createRectFrameDrawable(bg, EnumColors.MAP_COLOR_BTN_DANGER_BORDER.getColor());
             }
             return createButtonBackground(enabled, hovered);
         }
@@ -1369,25 +1393,25 @@ public final class AssetManagementSystem {
             }
         }
 
-        private void drawGlyphX(int centerX, int centerY, int radius, int color) {
+        private void drawGlyphX(int cx, int cy, int radius, int color) {
             for (int i = -radius; i <= radius; i++) {
-                Gui.drawRect(centerX + i, centerY + i, centerX + i + 1, centerY + i + 1, color);
-                Gui.drawRect(centerX + i, centerY - i, centerX + i + 1, centerY - i + 1, color);
+                Gui.drawRect(cx + i, cy + i, cx + i + 1, cy + i + 1, color);
+                Gui.drawRect(cx + i, cy - i, cx + i + 1, cy - i + 1, color);
             }
         }
 
-        private void drawGlyphSend(int centerX, int centerY, int color) {
-            Gui.drawRect(centerX - 5, centerY - 1, centerX + 3, centerY + 1, color);
-            Gui.drawRect(centerX + 2, centerY - 3, centerX + 3, centerY + 4, color);
-            Gui.drawRect(centerX + 3, centerY - 2, centerX + 4, centerY + 3, color);
-            Gui.drawRect(centerX + 4, centerY - 1, centerX + 5, centerY + 2, color);
-            Gui.drawRect(centerX + 5, centerY, centerX + 6, centerY + 1, color);
+        private void drawGlyphSend(int cx, int cy, int color) {
+            Gui.drawRect(cx - 5, cy - 1, cx + 3, cy + 1, color);
+            Gui.drawRect(cx + 2, cy - 3, cx + 3, cy + 4, color);
+            Gui.drawRect(cx + 3, cy - 2, cx + 4, cy + 3, color);
+            Gui.drawRect(cx + 4, cy - 1, cx + 5, cy + 2, color);
+            Gui.drawRect(cx + 5, cy, cx + 6, cy + 1, color);
         }
 
-        private void drawGlyphManage(int centerX, int centerY, int color) {
-            Gui.drawRect(centerX - 5, centerY - 4, centerX + 6, centerY - 3, color);
-            Gui.drawRect(centerX - 5, centerY, centerX + 6, centerY + 1, color);
-            Gui.drawRect(centerX - 5, centerY + 4, centerX + 6, centerY + 5, color);
+        private void drawGlyphManage(int cx, int cy, int color) {
+            Gui.drawRect(cx - 5, cy - 4, cx + 6, cy - 3, color);
+            Gui.drawRect(cx - 5, cy, cx + 6, cy + 1, color);
+            Gui.drawRect(cx - 5, cy + 4, cx + 6, cy + 5, color);
         }
 
         private IDrawable createModalBackgroundDrawable(int backgroundColor, int headerColor) {
@@ -1399,15 +1423,18 @@ public final class AssetManagementSystem {
 
         private List<CelestialManagedAsset> getConstructionAssets(List<CelestialManagedAsset> assets) {
             List<CelestialManagedAsset> matching = new ArrayList<>();
-            for (CelestialManagedAsset asset : assets) if (asset.status() == CelestialAssetStatus.CONSTRUCTION_SITE
-                || asset.status() == CelestialAssetStatus.DECONSTRUCTION) matching.add(asset);
+            for (CelestialManagedAsset asset : assets) {
+                if (asset.status() == CelestialAssetStatus.CONSTRUCTION_SITE
+                    || asset.status() == CelestialAssetStatus.DECONSTRUCTION) matching.add(asset);
+            }
             return matching;
         }
 
         private List<CelestialManagedAsset> getOperationalAssets(List<CelestialManagedAsset> assets) {
             List<CelestialManagedAsset> matching = new ArrayList<>();
-            for (CelestialManagedAsset asset : assets)
+            for (CelestialManagedAsset asset : assets) {
                 if (asset.status() == CelestialAssetStatus.OPERATIONAL) matching.add(asset);
+            }
             return matching;
         }
 
@@ -1516,31 +1543,6 @@ public final class AssetManagementSystem {
             public boolean onMouseScroll(UpOrDown scrollDirection, int amount) {
                 return super.onMouseScroll(scrollDirection, amount) || forwardActiveScroll(scrollDirection, amount);
             }
-        }
-
-        private void drawGuiItemStack(ItemStack stack, int x, int y, int size) {
-            Minecraft mc = Minecraft.getMinecraft();
-            float scale = size / 16.0f;
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(x, y, 200f);
-            GlStateManager.scale(scale, scale, 1f);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
-            GL11.glEnable(GL11.GL_ALPHA_TEST);
-            RenderHelper.enableGUIStandardItemLighting();
-            GL11.glEnable(GL11.GL_DEPTH_TEST);
-            float previousZ = GUI_ITEM_RENDERER.zLevel;
-            GUI_ITEM_RENDERER.zLevel = 200f;
-            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
-            GUI_ITEM_RENDERER.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-            GUI_ITEM_RENDERER.zLevel = previousZ;
-            RenderHelper.disableStandardItemLighting();
-            GL11.glDisable(GL11.GL_LIGHTING);
-            GL11.glDisable(GL11.GL_COLOR_MATERIAL);
-            GL11.glDisable(GL11.GL_DEPTH_TEST);
-            GL11.glDisable(GL12.GL_RESCALE_NORMAL);
-            GlStateManager.color(1f, 1f, 1f, 1f);
-            GlStateManager.popMatrix();
         }
     }
 }
