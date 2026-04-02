@@ -5,7 +5,6 @@ import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 final class OrbitalAssetUiState {
 
     OrbitalCelestialBody assetManagementBody;
-    int assetManagementScroll;
     PendingAssetCreation pendingAssetCreation;
     PendingAssetDestruction pendingAssetDestruction;
     PendingConstructionCancellation pendingConstructionCancellation;
@@ -28,13 +27,11 @@ final class OrbitalAssetUiState {
 
     void openAssetManagement(OrbitalCelestialBody body) {
         assetManagementBody = body;
-        assetManagementScroll = 0;
         clearTransientState();
     }
 
     void closeAssetManagement() {
         assetManagementBody = null;
-        assetManagementScroll = 0;
         clearTransientState();
     }
 

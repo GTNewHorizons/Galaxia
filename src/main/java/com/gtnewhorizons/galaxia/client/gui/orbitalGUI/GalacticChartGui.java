@@ -35,18 +35,24 @@ public class GalacticChartGui {
 
         OrbitalMapWidget map = new OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar)
             .attachRenameField(renameField);
+        OrbitalAssetManagementMuiWidget assetManagementOverlay = map.createAssetManagementMuiWidget();
         CelestialSidebarWidget sidebar = new CelestialSidebarWidget(galaxyRoot, currentStar, map);
 
         return panel.child(
             (IWidget) sidebar.left(0)
                 .top(0)
                 .width(LEFT_PANEL_WIDTH)
-                .bottom(0))
+                .heightRel(1f))
             .child(
                 (IWidget) map.left(LEFT_PANEL_WIDTH)
                     .top(0)
-                    .right(0)
-                    .bottom(0))
+                    .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
+                    .heightRel(1f))
+            .child(
+                (IWidget) assetManagementOverlay.left(LEFT_PANEL_WIDTH)
+                    .top(0)
+                    .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
+                    .heightRel(1f))
             .child((IWidget) renameField);
     }
 }

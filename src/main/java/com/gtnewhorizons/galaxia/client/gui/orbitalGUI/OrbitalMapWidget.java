@@ -106,8 +106,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             }
         });
     private final OrbitalAssetUiState assetUiState = new OrbitalAssetUiState();
-    private final OrbitalAssetManagementPanel assetManagementPanel = new OrbitalAssetManagementPanel(
-        new OrbitalAssetManagementPanel.Callbacks() {
+    private final OrbitalAssetManagementMuiWidget assetManagementMuiWidget = new OrbitalAssetManagementMuiWidget(
+        assetUiState,
+        new OrbitalAssetManagementMuiWidget.Callbacks() {
 
             @Override
             public void closeAssetManagement() {
@@ -175,11 +176,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             }
 
             @Override
-            public void drawTooltip(String tooltip, int mouseX, int mouseY) {
-                OrbitalMapWidget.this.drawSimpleTooltip(tooltip, mouseX, mouseY);
-            }
-
-            @Override
             public void createBaseStation(OrbitalCelestialBody body) {
                 assetActionController.createBaseStation(body);
             }
@@ -216,31 +212,13 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             }
 
             @Override
-            public void showActionStatus(String message) {
-                OrbitalMapWidget.this.showActionStatus(message);
-            }
-        });
-    private final OrbitalAssetPendingModalPanel assetPendingModalPanel = new OrbitalAssetPendingModalPanel(
-        new OrbitalAssetPendingModalPanel.Callbacks() {
-
-            @Override
-            public void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
-                OrbitalMapWidget.this.drawAssetIcon(kind, x, y, size, alpha);
-            }
-
-            @Override
-            public String formatAssetKind(CelestialAssetKind kind) {
-                return assetSupport.formatAssetKind(kind);
-            }
-
-            @Override
-            public String formatAssetDisplayName(CelestialManagedAsset asset) {
-                return assetSupport.formatAssetDisplayName(asset);
-            }
-
-            @Override
             public void confirmPendingAssetCreation() {
                 assetActionController.confirmPendingAssetCreation(assetUiState);
+            }
+
+            @Override
+            public void dismissPendingAssetCreation() {
+                assetActionController.dismissPendingAssetCreation(assetUiState);
             }
 
             @Override
@@ -251,6 +229,46 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             @Override
             public void confirmPendingAssetRename() {
                 assetActionController.confirmPendingAssetRename(assetUiState);
+            }
+
+            @Override
+            public void dismissPendingAssetDestruction() {
+                assetActionController.dismissPendingAssetDestruction(assetUiState);
+            }
+
+            @Override
+            public void advancePendingAssetDestruction() {
+                assetActionController.advancePendingAssetDestruction(assetUiState);
+            }
+
+            @Override
+            public void dismissPendingConstructionCancellation() {
+                assetActionController.dismissPendingConstructionCancellation(assetUiState);
+            }
+
+            @Override
+            public void confirmPendingConstructionCancellation() {
+                assetActionController.confirmPendingConstructionCancellation(assetUiState);
+            }
+
+            @Override
+            public void dismissPendingResourceTransfer() {
+                assetActionController.dismissPendingResourceTransfer(assetUiState);
+            }
+
+            @Override
+            public void sendPendingResourceTransfer(StationTransferTarget target) {
+                assetActionController.sendPendingResourceTransfer(assetUiState, target);
+            }
+
+            @Override
+            public void closePendingAssetManagement() {
+                assetActionController.closePendingAssetManagement(assetUiState);
+            }
+
+            @Override
+            public void dismissPendingModalByOutsideClick() {
+                assetActionController.dismissPendingModalByOutsideClick(assetUiState);
             }
 
             @Override
@@ -393,7 +411,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     private static final float MAP_ICON_ZOOM_SCALE = 0.8f;
     private static final float GALAXY_MAP_STAR_SPRITE_SIZE = 0.5f;
     private static final double SYSTEM_DEPARTURE_EXTENT_MULTIPLIER = 24.0;
-    private static final int ASSET_MODAL_SCROLL_STEP = 36;
     public OrbitalMapWidget(OrbitalCelestialBody root) {
         this.root = root;
         this.viewRoot = root;
@@ -413,6 +430,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
     public OrbitalMapWidget attachRenameField(TextFieldWidget field) {
         this.renameField = field;
         return this;
+    }
+
+    public OrbitalAssetManagementMuiWidget createAssetManagementMuiWidget() {
+        return assetManagementMuiWidget;
     }
 
     public void showLayer(OrbitalCelestialBody layerRoot) {
@@ -487,7 +508,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         listenGuiAction((IGuiAction.MousePressed) button -> {
             if (assetUiState.isAssetManagementOpen()) {
-                return true;
+                clickCandidate = false;
+                dragging = false;
+                dragEnabledForCurrentPress = false;
+                pressedBodyCandidate = null;
+                return button == 1;
             }
             if (button == 0 && contextMenuState.isOpen()) {
                 clickCandidate = false;
@@ -517,16 +542,11 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             int localMouseY = toLocalMouseY(getContext().getMouseY());
 
             if (assetUiState.isAssetManagementOpen()) {
-                if (mouseButton == 0 && handleAssetManagementClick(localMouseX, localMouseY)) {
-                    clickCandidate = false;
-                    dragging = false;
-                    dragEnabledForCurrentPress = false;
-                    pressedBodyCandidate = null;
-                    return true;
-                }
-                if (mouseButton == 1) {
-                    return true;
-                }
+                clickCandidate = false;
+                dragging = false;
+                dragEnabledForCurrentPress = false;
+                pressedBodyCandidate = null;
+                return mouseButton == 1;
             }
 
             if (contextMenuState.isOpen()) {
@@ -621,21 +641,10 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (sign == 0) return false;
 
         if (assetUiState.isAssetManagementOpen()) {
-            if (assetUiState.pendingAssetCreation != null || assetUiState.pendingAssetDestruction != null
-                || assetUiState.pendingConstructionCancellation != null || assetUiState.pendingAssetRename != null
-                || assetUiState.pendingResourceTransfer != null) {
+            if (assetUiState.hasBlockingModal()) {
                 return true;
             }
-            int localMouseX = toLocalMouseX(mx);
-            int localMouseY = toLocalMouseY(my);
-            AssetManagementLayout layout = getAssetManagementLayout();
-            if (layout != null && layout.isInScrollViewport(localMouseX, localMouseY)) {
-                assetUiState.assetManagementScroll = clamp(
-                    assetUiState.assetManagementScroll - sign * ASSET_MODAL_SCROLL_STEP,
-                    0,
-                    layout.maxScroll);
-            }
-            return true;
+            return !assetManagementMuiWidget.isPointInScrollViewport(toLocalMouseX(mx), toLocalMouseY(my));
         }
 
         double oldScale = getScale();
@@ -659,7 +668,9 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
     private boolean handleMouseDragged(int mx, int my, int button, long time) {
         if (button != 0) return false;
-        if (assetUiState.isAssetManagementOpen()) return true;
+        if (assetUiState.isAssetManagementOpen()) {
+            return false;
+        }
         return true;
     }
 
@@ -1264,7 +1275,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             drawPinnedInfoPanel(infoBody);
         }
 
-        drawAssetManagementModal();
         drawContextMenu();
         drawPinnedInfoItemTooltip();
     }
@@ -1424,15 +1434,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
             toLocalMouseY(getContext().getMouseY()));
     }
 
-    private void drawAssetManagementModal() {
-        AssetManagementLayout layout = getAssetManagementLayout();
-        if (layout == null) {
-            return;
-        }
-        assetManagementPanel.draw(layout, assetUiState, getArea().width, getArea().height, getContext().getMouseX(), getContext().getMouseY());
-        assetPendingModalPanel.draw(assetUiState, getArea().width, getArea().height);
-    }
-
     private void drawActionStatusMessage() {
         if (actionStatusMessage == null || actionStatusMessage.isEmpty()) {
             return;
@@ -1510,21 +1511,6 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         return body != root;
     }
 
-    private boolean handleAssetManagementClick(int localMouseX, int localMouseY) {
-        AssetManagementLayout layout = getAssetManagementLayout();
-        if (layout == null) {
-            return false;
-        }
-        if (assetUiState.hasBlockingModal()) {
-            return assetPendingModalPanel.handleClick(assetUiState, getArea().width, getArea().height, localMouseX, localMouseY);
-        }
-        return assetManagementPanel.handleClick(layout, assetUiState, localMouseX, localMouseY);
-    }
-
-    private AssetManagementLayout getAssetManagementLayout() {
-        return assetManagementPanel.getLayout(getArea().width, getArea().height, assetUiState);
-    }
-
     private void showActionStatus(String message) {
         actionStatusMessage = message;
         actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
@@ -1534,15 +1520,15 @@ public class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
         if (renameField == null) {
             return;
         }
-        PendingAssetRenameLayout layout = assetPendingModalPanel.getPendingAssetRenameLayout(assetUiState, getArea().width, getArea().height);
+        ButtonRect layout = assetManagementMuiWidget.getRenameInputBounds();
         if (layout == null) {
             renameField.top(-1000);
             return;
         }
-        renameField.left(getArea().rx + layout.inputField.left)
-            .top(getArea().ry + layout.inputField.top)
-            .width(layout.inputField.right - layout.inputField.left)
-            .height(layout.inputField.bottom - layout.inputField.top);
+        renameField.left(getArea().rx + layout.left)
+            .top(getArea().ry + layout.top)
+            .width(layout.right - layout.left)
+            .height(layout.bottom - layout.top);
     }
 
     private ResourceLocation getAssetIconTexture(CelestialAssetKind kind) {

@@ -101,6 +101,10 @@ final class OrbitalAssetActionController {
         state.pendingAssetCreation = null;
     }
 
+    void dismissPendingAssetCreation(OrbitalAssetUiState state) {
+        state.pendingAssetCreation = null;
+    }
+
     void openPendingAssetRename(OrbitalAssetUiState state, CelestialManagedAsset asset) {
         if (asset == null) {
             return;
@@ -121,11 +125,32 @@ final class OrbitalAssetActionController {
         state.pendingAssetDestruction = new PendingAssetDestruction(asset, false);
     }
 
+    void dismissPendingAssetDestruction(OrbitalAssetUiState state) {
+        state.pendingAssetDestruction = null;
+    }
+
+    void advancePendingAssetDestruction(OrbitalAssetUiState state) {
+        if (state.pendingAssetDestruction == null) {
+            return;
+        }
+        if (!state.pendingAssetDestruction.armed) {
+            state.pendingAssetDestruction = new PendingAssetDestruction(state.pendingAssetDestruction.asset, true);
+            return;
+        }
+        CelestialAssetStore.destroyAsset(state.pendingAssetDestruction.asset.assetId());
+        callbacks.showActionStatus("Asset destroyed");
+        state.pendingAssetDestruction = null;
+    }
+
     void openPendingAssetManagement(OrbitalAssetUiState state, CelestialManagedAsset asset) {
         if (asset == null || !assetSupport.isManageableStationAsset(asset)) {
             return;
         }
         state.pendingAssetManagement = new PendingAssetManagement(asset);
+    }
+
+    void closePendingAssetManagement(OrbitalAssetUiState state) {
+        state.pendingAssetManagement = null;
     }
 
     void openPendingConstructionCancellation(OrbitalAssetUiState state, CelestialManagedAsset asset) {
@@ -135,6 +160,19 @@ final class OrbitalAssetActionController {
         state.pendingConstructionCancellation = new PendingConstructionCancellation(asset);
     }
 
+    void dismissPendingConstructionCancellation(OrbitalAssetUiState state) {
+        state.pendingConstructionCancellation = null;
+    }
+
+    void confirmPendingConstructionCancellation(OrbitalAssetUiState state) {
+        if (state.pendingConstructionCancellation == null) {
+            return;
+        }
+        CelestialAssetStore.startDeconstruction(state.pendingConstructionCancellation.asset.assetId());
+        callbacks.showActionStatus("Construction site converted to deconstruction");
+        state.pendingConstructionCancellation = null;
+    }
+
     void openPendingResourceTransfer(OrbitalAssetUiState state, OrbitalCelestialBody root, CelestialManagedAsset asset) {
         if (asset == null) {
             return;
@@ -142,6 +180,15 @@ final class OrbitalAssetActionController {
         state.pendingResourceTransfer = new PendingResourceTransfer(
             asset,
             assetSupport.getTransferTargetsInSystem(root, state.assetManagementBody));
+    }
+
+    void dismissPendingResourceTransfer(OrbitalAssetUiState state) {
+        state.pendingResourceTransfer = null;
+    }
+
+    void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
+        callbacks.showActionStatus("Resource transfer planning is not implemented yet");
+        state.pendingResourceTransfer = null;
     }
 
     void confirmPendingAssetRename(OrbitalAssetUiState state) {
@@ -163,6 +210,32 @@ final class OrbitalAssetActionController {
             return;
         }
         callbacks.showActionStatus("Rename failed");
+    }
+
+    void dismissPendingModalByOutsideClick(OrbitalAssetUiState state) {
+        if (state.pendingAssetRename != null) {
+            closePendingAssetRename(state);
+            return;
+        }
+        if (state.pendingResourceTransfer != null) {
+            dismissPendingResourceTransfer(state);
+            return;
+        }
+        if (state.pendingAssetManagement != null) {
+            closePendingAssetManagement(state);
+            return;
+        }
+        if (state.pendingConstructionCancellation != null) {
+            dismissPendingConstructionCancellation(state);
+            return;
+        }
+        if (state.pendingAssetDestruction != null) {
+            dismissPendingAssetDestruction(state);
+            return;
+        }
+        if (state.pendingAssetCreation != null) {
+            dismissPendingAssetCreation(state);
+        }
     }
 
     private String buildDefaultAssetDisplayName(OrbitalCelestialBody body, CelestialAssetKind kind) {
