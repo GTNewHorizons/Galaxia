@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemReactionControlSyste
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
+import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 
 import baubles.api.BaublesApi;
 
@@ -110,9 +111,24 @@ public final class GalaxiaAPI {
      * @param player player
      * @return player's temperature (synced with HUD bars)
      */
-    public static float getPlayerTemperature(EntityPlayer player) {
-        // TODO replace with proper logic
-        return .5f;
+    public static float getPlayerTemperature(@Nonnull EntityPlayer player) {
+        if (!isInGalaxiaDimension(player)) {
+            return .5f;
+        }
+        EffectBuilder def = SolarSystemRegistry.getById(player.dimension)
+            .effects();
+
+        int temp = def.getTemperature(player);
+        int acceptableMaxTemp = HazardTemperature.getAcceptableMaxTemp(player);
+        int acceptableMinTemp = HazardTemperature.getAcceptableMinTemp(player);
+
+        if (temp < acceptableMinTemp) {
+            return 0.f;
+        } else if (temp > acceptableMaxTemp) {
+            return 1.f;
+        }
+
+        return (float) (temp - acceptableMinTemp) / (acceptableMaxTemp - acceptableMinTemp);
     }
 
     public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {

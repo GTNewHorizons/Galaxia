@@ -17,9 +17,17 @@ public class HazardTemperature extends EnvironmentalHazard {
     public static int DEFAULT_MIN = 268; // -5 Celsius
     public static int DEFAULT_MAX = 323; // 50 Celsius
 
-    // Temp until space suit added
-    public int acceptableMinTemp = DEFAULT_MIN;
-    public int acceptableMaxTemp = DEFAULT_MAX;
+    public static int getAcceptableMinTemp(EntityPlayer player) {
+        int coldProtection = getThermalProtection(player, false);
+
+        return DEFAULT_MIN - coldProtection;
+    }
+
+    public static int getAcceptableMaxTemp(EntityPlayer player) {
+        int heatProtection = getThermalProtection(player, true);
+
+        return DEFAULT_MAX + heatProtection;
+    }
 
     /**
      * Applies the effects of Temperature for the player:
@@ -34,24 +42,22 @@ public class HazardTemperature extends EnvironmentalHazard {
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
         int temp = def.getTemperature(player);
-        int heatProtection = getThermalProtection(player, true);
-        int coldProtection = getThermalProtection(player, false);
 
-        this.acceptableMaxTemp += heatProtection;
-        this.acceptableMinTemp -= coldProtection;
+        int acceptableMaxTemp = getAcceptableMaxTemp(player);
+        int acceptableMinTemp = getAcceptableMinTemp(player);
 
-        if (temp < this.acceptableMaxTemp && temp > this.acceptableMinTemp) return null;
-        if (temp < this.acceptableMinTemp) {
-            return applyFreeze(player, temp);
-        } else if (temp > this.acceptableMaxTemp) {
-            return applyBurning(player, temp);
+        if (temp < acceptableMaxTemp && temp > acceptableMinTemp) return HazardWarnings.FINE;
+        if (temp < acceptableMinTemp) {
+            return applyFreeze(player, temp, acceptableMinTemp);
+        } else if (temp > acceptableMaxTemp) {
+            return applyBurning(player, temp, acceptableMaxTemp);
         }
 
         return HazardWarnings.FINE;
     }
 
-    private HazardWarnings applyFreeze(EntityPlayer player, int temperature) {
-        final int diff = this.acceptableMinTemp - temperature;
+    private HazardWarnings applyFreeze(EntityPlayer player, int temperature, int acceptableMinTemp) {
+        final int diff = acceptableMinTemp - temperature;
         final int harshness;
         if (diff < 20) {
             harshness = 0;
@@ -69,8 +75,8 @@ public class HazardTemperature extends EnvironmentalHazard {
         return HazardWarnings.FREEZING;
     }
 
-    private HazardWarnings applyBurning(EntityPlayer player, int temperature) {
-        final int diff = temperature - this.acceptableMaxTemp;
+    private HazardWarnings applyBurning(EntityPlayer player, int temperature, int acceptableMaxTemp) {
+        final int diff = temperature - acceptableMaxTemp;
         final int harshness;
         if (diff < 20) {
             harshness = 0;
