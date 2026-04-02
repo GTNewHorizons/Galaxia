@@ -1609,9 +1609,9 @@ public class OrbitalView {
             return renderedRadius + 6f;
         }
 
-        private static int withAlpha(int colour, float alpha) {
-            int a = Math.max(0, Math.min(255, (int) (((colour >> 24) & 0xFF) * alpha)));
-            return (colour & 0x00FFFFFF) | (a << 24);
+        private static int withAlpha(int color, float alpha) {
+            int a = Math.max(0, Math.min(255, (int) (((color >> 24) & 0xFF) * alpha)));
+            return (color & 0x00FFFFFF) | (a << 24);
         }
 
         private OrbitalCelestialBody getPinnedInfoBody() {

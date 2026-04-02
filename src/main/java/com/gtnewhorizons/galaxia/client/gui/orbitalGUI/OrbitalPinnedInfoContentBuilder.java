@@ -422,12 +422,8 @@ public final class OrbitalPinnedInfoContentBuilder {
 
         private IDrawable createBackgroundDrawable() {
             return drawable(
-                (context, x, y, width, height) -> Gui.drawRect(
-                    x,
-                    y,
-                    x + width,
-                    y + height,
-                    EnumColors.MapPinnedInfoBackground.getColor()));
+                (context, x, y, width, height) -> Gui
+                    .drawRect(x, y, x + width, y + height, EnumColors.MapPinnedInfoBackground.getColor()));
         }
 
         private IDrawable drawable(DrawCommand drawCommand) {

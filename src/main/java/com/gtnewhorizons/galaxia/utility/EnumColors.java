@@ -7,7 +7,7 @@ import net.minecraft.util.StatCollector;
 import cpw.mods.fml.common.FMLLog;
 
 /**
- * ENUM for custom colours to be implemented in UIs and such
+ * ENUM for custom colors to be implemented in UIs and such
  */
 public enum EnumColors {
 
@@ -118,7 +118,7 @@ public enum EnumColors {
     }
 
     /**
-     * Gets the colour as a parsed form if possible, or default.
+     * Gets the color as a parsed form if possible, or default.
      * <br>
      * Optional resource pack color override
      * <p>
@@ -126,7 +126,7 @@ public enum EnumColors {
      * - <code>galaxia.color.override.title=FFFFFF</code>
      * - <code>galaxia.color.override.subtitle=CD7F32</code>
      *
-     * @return Parsed colour from ENUM, or default
+     * @return Parsed color from ENUM, or default
      */
     public int getColor() {
         String key = getUnlocalized();
@@ -138,19 +138,19 @@ public enum EnumColors {
     }
 
     /**
-     * Gets the unlocalized colour name
+     * Gets the unlocalized color name
      *
-     * @return Unlocalized colour name
+     * @return Unlocalized color name
      */
     public String getUnlocalized() {
         return PREFIX + name().toLowerCase(Locale.ROOT);
     }
 
     /**
-     * Colour parser given a colour string
+     * Color parser given a color string
      *
      * @param raw      The string to parse
-     * @param fallback A default colour if parsing failed
+     * @param fallback A default color if parsing failed
      * @return Color parsed, or fallback if failed
      */
     private static int parseColor(String raw, int fallback) {

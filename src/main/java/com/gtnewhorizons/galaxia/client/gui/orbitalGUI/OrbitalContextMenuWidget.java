@@ -166,12 +166,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     .background(IDrawable.EMPTY)
                     .hoverBackground(
                         drawable(
-                            (context, x, y, w, h) -> Gui.drawRect(
-                                x,
-                                y,
-                                x + w,
-                                y + h,
-                                EnumColors.MapContextMenuRowHoverBackground.getColor())))
+                            (context, x, y, w, h) -> Gui
+                                .drawRect(x, y, x + w, y + h, EnumColors.MapContextMenuRowHoverBackground.getColor())))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
                         handleAction(body, action.actionType());
