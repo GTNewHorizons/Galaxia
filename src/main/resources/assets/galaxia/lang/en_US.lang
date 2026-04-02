@@ -195,18 +195,82 @@ galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
 
 # Elements - GUI - "Orbital GUI"
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.search=Search
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.search.placeholder=Enter name...
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.paused=§cPAUSED§r
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
-# I GUESS YOU WANT THIS OFF? 
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.camera=Camera: %.3f, %.3f
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.following=Following: %s  |  Paused: %b
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.time=Time: %.1fs  |  Speed: ×%.1f
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.none=none
+galaxia.gui.orbital.search=Search
+galaxia.gui.orbital.search.placeholder=Enter name...
+galaxia.gui.orbital.status=Zoom: x%.2f   Speed: %s
+galaxia.gui.orbital.paused=§cPAUSED§r
+galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
+galaxia.gui.orbital.asset.display_name.construction=%s (In construction)
+galaxia.gui.orbital.asset.display_name.deconstruction=%s (Deconstruction)
+galaxia.gui.orbital.asset.display_name.default=%s
+galaxia.gui.orbital.asset.construction_inventory.empty=Empty
+galaxia.gui.orbital.asset.kind.station=Station
+galaxia.gui.orbital.asset.kind.automated_station=Automated Station
+galaxia.gui.orbital.asset.kind.automated_outpost=Automated Outpost
+galaxia.gui.orbital.asset.location.orbit=Orbit
+galaxia.gui.orbital.asset.location.surface=Surface
+galaxia.gui.orbital.asset.status.station_created=Station created
+galaxia.gui.orbital.asset.status.kind.created=%s created
+galaxia.gui.orbital.asset.status.kind.construction_planned=%s construction planned
+galaxia.gui.orbital.asset.status.asset_destroyed=Asset destroyed
+galaxia.gui.orbital.asset.status.construction_site_converted=Construction site converted to deconstruction
+galaxia.gui.orbital.asset.status.resource_transfer_not_implemented=Resource transfer planning is not implemented yet
+galaxia.gui.orbital.asset.status.name_empty=Name cannot be empty
+galaxia.gui.orbital.asset.status.asset_renamed=Asset renamed
+galaxia.gui.orbital.asset.status.rename_failed=Rename failed
+galaxia.gui.orbital.asset.title.manage_assets=Manage Assets
+galaxia.gui.orbital.asset.warning.gt5u_required_for_automation=GT5U required for automated assets
+galaxia.gui.orbital.asset.title.confirm_kind=Confirm %s
+galaxia.gui.orbital.asset.section.required_resources=Required resources
+galaxia.gui.orbital.asset.button.cancel=Cancel
+galaxia.gui.orbital.asset.button.confirm=Confirm
+galaxia.gui.orbital.asset.title.rename_asset=Rename Asset
+galaxia.gui.orbital.asset.label.new_name=New name
+galaxia.gui.orbital.asset.title.irreversible=THIS IS IRREVERSIBLE
+galaxia.gui.orbital.asset.label.about_to_destroy=You are about to destroy
+galaxia.gui.orbital.asset.warning.destroy_confirm_armed=Click Destroy again to confirm
+galaxia.gui.orbital.asset.warning.destroy_confirm_unarmed=Press Destroy to arm confirmation
+galaxia.gui.orbital.asset.button.destroy=Destroy
+galaxia.gui.orbital.asset.title.cancel_construction=Cancel Construction?
+galaxia.gui.orbital.asset.warning.stored_recovery=Stored resources will be moved into deconstruction recovery
+galaxia.gui.orbital.asset.title.send_resources_to=Send Resources To
+galaxia.gui.orbital.asset.warning.resource_transfer_requires_rocket=Requires an orbital rocket with enough capacity
+galaxia.gui.orbital.asset.warning.no_stations_available=No stations available in this system
+galaxia.gui.orbital.asset.button.close=Close
+galaxia.gui.orbital.asset.button.send=Send
+galaxia.gui.orbital.asset.title.manage_station=Manage Station
+galaxia.gui.orbital.asset.warning.panel_not_implemented=This panel is not implemented yet
+galaxia.gui.orbital.asset.section.construction=Construction
+galaxia.gui.orbital.asset.section.assets=Assets
+galaxia.gui.orbital.asset.warning.no_deployed_assets=No deployed assets
+galaxia.gui.orbital.asset.label.stored=Stored
+galaxia.gui.orbital.asset.label.inventory=Inventory
+galaxia.gui.orbital.asset.status.construction_canceled=Construction canceled
+
+
+
+
+
+
+
+
+
+
+# Orbital Tooltips under here:
+galaxia.tooltip.orbital.asset.button.close=Close
+galaxia.tooltip.orbital.asset.button.create_station=Create Station
+galaxia.tooltip.orbital.asset.button.create_automated_station=Create Automated Station
+galaxia.tooltip.orbital.asset.button.create_automated_outpost=Create Automated Outpost
+galaxia.tooltip.orbital.asset.button.send_to=Send To
+galaxia.tooltip.orbital.asset.button.cancel_build=Cancel Build
+galaxia.tooltip.orbital.asset.button.manage=Manage
+galaxia.tooltip.orbital.asset.button.destroy=Destroy
+
+
+
+
+
+
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo
@@ -304,7 +368,7 @@ galaxia.config.overlay.pulse.amplitude=Global bars pulse amplitude
 galaxia.config.overlay.pulse.amplitude.tooltip=Pulse intensity for bars, used to dim the bar
 
 # Config - Overlay - "Oxygen Bar"
-galaxia.config.category.overlay_oxygen_bar=Oxygen Bar
+galaxia.config.category.overlay_oxygen_bar=Oxygen bar
 galaxia.config.category.overlay_oxygen_bar.tooltip=Overlay settings for the Oxygen Bar
 galaxia.config.overlay.show_oxygen_bar=Oxygen bar display
 galaxia.config.overlay.show_oxygen_bar.tooltip=Enable or disable rendering of the oxygen bar
@@ -320,10 +384,10 @@ galaxia.config.overlay.texture.oxygen_bar_height=Oxygen bar texture height
 galaxia.config.overlay.texture.oxygen_bar_height.tooltip=Oxygen bar texture height in pixels
 
 # Config - Overlay - "Temperature Bar"
-galaxia.config.category.overlay_temperature_bar=Temperature Bar
+galaxia.config.category.overlay_temperature_bar=Temperature bar
 galaxia.config.category.overlay_temperature_bar.tooltip=Overlay settings for the Temperature Bar
 galaxia.config.overlay.show_temperature_bar=Temperature bar display
-galaxia.config.overlay.show_temperature_bar.tooltip=Enable or disable rendering of the temperature bar
+galaxia.config.overlay.show_temperature_bar.tooltip=Enable or disable the rendering of the temperature bar
 galaxia.config.overlay.temperature_bar_horizontal_offset=Temperature bar horizontal offset
 galaxia.config.overlay.temperature_bar_horizontal_offset.tooltip=Additional horizontal offset for temperature bar in pixels
 galaxia.config.overlay.temperature_bar_vertical_offset=Temperature bar vertical offset
@@ -338,15 +402,15 @@ galaxia.config.overlay.texture.temperature_bar_height=Temperature bar texture he
 galaxia.config.overlay.texture.temperature_bar_height.tooltip=Temperature bar texture height in pixels
 
 # Config - Overlay - "Warnings"
-galaxia.config.category.overlay_hazard=Hazard Warning Overlay
-galaxia.config.category.overlay_hazard.tooltip=Overlay setting for the environmental hazard warnings
-galaxia.config.category.show_hazard_warnings=Show Warnings
+galaxia.config.category.overlay_hazard=Hazard warning overlay
+galaxia.config.category.overlay_hazard.tooltip=Overlay settings for the environmental hazard warnings
+galaxia.config.category.show_hazard_warnings=Show warnings
 galaxia.config.category.show_hazard_warnings.tooltip=Make the overlay show environmental hazard warnings
-galaxia.config.category.hazard_horizontal_offset=Horizontal Offset
+galaxia.config.category.hazard_horizontal_offset=Horizontal offset
 galaxia.config.category.hazard_horizontal_offset.tooltip=Horizontal offset from the left\positive = right
-galaxia.config.category.hazard_vertical_offset=Vertical Offset
+galaxia.config.category.hazard_vertical_offset=Vertical offset
 galaxia.config.category.hazard_vertical_offset.tooltip=Vertical offset from the center\npositive = down
-galaxia.config.category.hazard_scale=Pulse Scaling Coefficient
+galaxia.config.category.hazard_scale=Pulse scaling coefficient
 galaxia.config.category.hazard_scale.tooltip=How much to scale the warnings when pulsing
-galaxia.config.category.hazard_pulse=Enable Pulse
+galaxia.config.category.hazard_pulse=Enable pulse
 galaxia.config.category.hazard_pulse.tooltip=Enable pulse animation
