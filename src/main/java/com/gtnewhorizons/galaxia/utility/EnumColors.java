@@ -22,6 +22,9 @@ public enum EnumColors {
     // Effect(s)
     EffectBad(0x66CCFF),
 
+    // Warning(s)
+    Warning(0xFF4444),
+
     // Map Sidebar
     MapSidebarBackground(0xE60F1621),
     MapSidebaSearchLabel(0x99FFFFFF),

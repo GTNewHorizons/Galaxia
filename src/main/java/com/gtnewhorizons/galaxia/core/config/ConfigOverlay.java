@@ -119,4 +119,35 @@ public class ConfigOverlay {
         @Config.RangeInt(min = 1, max = 2048)
         public int temperatureTextureHeight;
     }
+
+    @Config.LangKey("galaxia.config.category.overlay_hazard")
+    public static final ConfigOverlayHazards ConfigOverlayHazards = new ConfigOverlayHazards();
+
+    @Config.LangKey("galaxia.config.category.overlay_hazard")
+    public static class ConfigOverlayHazards {
+
+        @Config.LangKey("galaxia.config.overlay.show_hazard_warnings")
+        @Config.DefaultBoolean(true)
+        public boolean showHazards;
+
+        @Config.LangKey("galaxia.config.overlay.hazard_horizontal_offset")
+        @Config.DefaultInt(0)
+        @Config.RangeInt(min = -300, max = 300)
+        public int hazardOffsetX;
+
+        @Config.LangKey("galaxia.config.overlay.hazard_vertical_offset")
+        @Config.DefaultInt(-40)
+        @Config.RangeInt(min = -300, max = 300)
+        public int hazardOffsetY;
+
+        @Config.LangKey("galaxia.config.overlay.hazard_scale")
+        @Config.DefaultDouble(1.0D)
+        @Config.RangeDouble(min = 0.5D, max = 5.0D)
+        public double hazardScale;
+
+        @Config.LangKey("galaxia.config.overlay.hazard_pulse")
+        @Config.DefaultBoolean(true)
+        public boolean pulse;
+
+    }
 }
