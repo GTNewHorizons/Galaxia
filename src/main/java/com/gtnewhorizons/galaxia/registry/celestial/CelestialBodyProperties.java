@@ -17,7 +17,8 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
 
     public CelestialBodyProperties {
         ores = copyOres(ores);
-        gtOreVeins = gtOreVeins == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(gtOreVeins));
+        gtOreVeins = gtOreVeins == null ? Collections.emptyList()
+            : Collections.unmodifiableList(new ArrayList<>(gtOreVeins));
         metadata = metadata == null ? Collections.emptyMap()
             : Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
     }

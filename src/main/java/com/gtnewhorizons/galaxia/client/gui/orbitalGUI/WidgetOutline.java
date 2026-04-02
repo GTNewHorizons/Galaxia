@@ -3,19 +3,20 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import net.minecraft.client.gui.Gui;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
+import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 
-final class WidgetOutline {
+public final class WidgetOutline {
 
     private WidgetOutline() {}
 
-    static ParentWidget<?> create(ParentWidget<?> target, int thickness, int color) {
+    public static ParentWidget<?> create(ParentWidget<?> target, int thickness, int color) {
         return create(target, thickness, color, color, color, color);
     }
 
-    static ParentWidget<?> create(ParentWidget<?> target, int thickness, int topColor, int rightColor, int bottomColor,
-        int leftColor) {
+    public static ParentWidget<?> create(ParentWidget<?> target, int thickness, int topColor, int rightColor,
+        int bottomColor, int leftColor) {
         return new OutlineOverlayWidget(target, thickness, topColor, rightColor, bottomColor, leftColor);
     }
 
@@ -28,15 +29,30 @@ final class WidgetOutline {
         private final ParentWidget<?> target;
         private final int thickness;
 
-        private OutlineOverlayWidget(ParentWidget<?> target, int thickness, int topColor, int rightColor, int bottomColor,
-            int leftColor) {
+        private OutlineOverlayWidget(ParentWidget<?> target, int thickness, int topColor, int rightColor,
+            int bottomColor, int leftColor) {
             this.target = target;
             this.thickness = thickness;
-
-            child(new BorderEdgeWidget(topColor).left(0).top(0).widthRel(1f).height(thickness));
-            child(new BorderEdgeWidget(leftColor).left(0).top(0).width(thickness).heightRel(1f));
-            child(new BorderEdgeWidget(rightColor).right(0).top(0).width(thickness).heightRel(1f));
-            child(new BorderEdgeWidget(bottomColor).left(0).bottom(0).widthRel(1f).height(thickness));
+            child(
+                new BorderEdgeWidget(topColor).left(0)
+                    .top(0)
+                    .widthRel(1f)
+                    .height(thickness));
+            child(
+                new BorderEdgeWidget(leftColor).left(0)
+                    .top(0)
+                    .width(thickness)
+                    .heightRel(1f));
+            child(
+                new BorderEdgeWidget(rightColor).right(0)
+                    .top(0)
+                    .width(thickness)
+                    .heightRel(1f));
+            child(
+                new BorderEdgeWidget(bottomColor).left(0)
+                    .bottom(0)
+                    .widthRel(1f)
+                    .height(thickness));
         }
 
         @Override
@@ -82,8 +98,7 @@ final class WidgetOutline {
         }
 
         @Override
-        public void drawBackground(com.cleanroommc.modularui.screen.viewport.ModularGuiContext context,
-            WidgetThemeEntry<?> widgetTheme) {
+        public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
             drawSolid(context, 0, 0, getArea().width, getArea().height, color);
         }
     }

@@ -8,15 +8,24 @@ import net.minecraft.client.gui.Gui;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
+import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
+import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 
-final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidget> {
+@Desugar
+record ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
+
+@Desugar
+record ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
+    List<ContextMenuAction> actions) {}
+
+public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidget> {
 
     private static final int MENU_SIDE_PADDING = 14;
     private static final int MENU_OUTLINE_THICKNESS = 2;
@@ -46,22 +55,19 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
         void closeContextMenu();
     }
 
-    private final OrbitalContextMenuState state;
+    private final OrbitalView.OrbitalContextMenuState state;
     private final Callbacks callbacks;
-
     private String lastSignature = "";
     private ParentWidget<?> menuRoot;
 
-    OrbitalContextMenuWidget(OrbitalContextMenuState state, Callbacks callbacks) {
+    OrbitalContextMenuWidget(OrbitalView.OrbitalContextMenuState state, Callbacks callbacks) {
         this.state = state;
         this.callbacks = callbacks;
         setEnabled(false);
     }
 
     boolean isPointInMenu(int localX, int localY) {
-        if (!state.isOpen() || menuRoot == null || !menuRoot.isValid()) {
-            return false;
-        }
+        if (!state.isOpen() || menuRoot == null || !menuRoot.isValid()) return false;
         return localX >= menuRoot.getArea().x - MENU_OUTLINE_THICKNESS
             && localX <= menuRoot.getArea().x + menuRoot.getArea().width + MENU_OUTLINE_THICKNESS
             && localY >= menuRoot.getArea().y - MENU_OUTLINE_THICKNESS
@@ -71,7 +77,6 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
     @Override
     public void onUpdate() {
         super.onUpdate();
-
         if (!state.isOpen()) {
             if (isEnabled()) {
                 removeAll();
@@ -82,7 +87,6 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
             setEnabled(false);
             return;
         }
-
         setEnabled(true);
         String signature = buildSignature();
         if (!signature.equals(lastSignature)) {
@@ -92,21 +96,15 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
     }
 
     @Override
-    public void drawBackground(com.cleanroommc.modularui.screen.viewport.ModularGuiContext context,
-        WidgetThemeEntry<?> widgetTheme) {
-        if (!state.isOpen()) {
-            return;
-        }
+    public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
+        if (!state.isOpen()) return;
         super.drawBackground(context, widgetTheme);
     }
 
     private String buildSignature() {
         OrbitalCelestialBody body = state.body();
-        if (body == null) {
-            return "";
-        }
-        return body.id()
-            + '|'
+        if (body == null) return "";
+        return body.id() + '|'
             + body.displayName()
             + '|'
             + state.x()
@@ -130,20 +128,24 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
 
         OrbitalCelestialBody body = state.body();
         ContextMenuLayout layout = getLayout(body, state.x(), state.y(), getArea().width, getArea().height);
-        if (layout == null) {
-            return;
-        }
+        if (layout == null) return;
 
-        ParentWidget<?> root = new ParentWidget<>().pos(layout.left, layout.top)
-            .size(layout.right - layout.left, layout.bottom - layout.top)
+        ParentWidget<?> root = new ParentWidget<>().pos(layout.left(), layout.top())
+            .size(layout.right() - layout.left(), layout.bottom() - layout.top())
             .background(createMenuBackgroundDrawable());
         menuRoot = root;
 
-        root.child(new TextWidget<>(body.displayName()).color(0xFFFFFFFF).shadow(true).pos(HEADER_TEXT_X, HEADER_TEXT_Y));
-        for (int i = 0; i < layout.actions.size(); i++) {
-            ContextMenuAction action = layout.actions.get(i);
-            int rowTop = layout.headerHeight + i * layout.rowHeight;
-            root.child(createActionRow(body, action, layout.rowHeight).pos(0, rowTop));
+        root.child(
+            new TextWidget<>(body.displayName()).color(0xFFFFFFFF)
+                .shadow(true)
+                .pos(HEADER_TEXT_X, HEADER_TEXT_Y));
+
+        for (int i = 0; i < layout.actions()
+            .size(); i++) {
+            ContextMenuAction action = layout.actions()
+                .get(i);
+            int rowTop = layout.headerHeight() + i * layout.rowHeight();
+            root.child(createActionRow(body, action, layout.rowHeight()).pos(0, rowTop));
         }
 
         child(root);
@@ -154,7 +156,7 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
         ParentWidget<?> row = new ParentWidget<>().widthRel(1f)
             .height(height);
 
-        if (action.enabled) {
+        if (action.enabled()) {
             row.child(
                 new ButtonWidget<>().pos(ROW_HOVER_INSET_X, ROW_HOVER_INSET_Y)
                     .widthRelOffset(1f, -ROW_HOVER_INSET_X * 2)
@@ -162,18 +164,21 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
                     .background(IDrawable.EMPTY)
                     .hoverBackground(drawable((context, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, 0xFF375575)))
                     .onMousePressed(mouseButton -> {
-                        if (mouseButton != 0) {
-                            return true;
-                        }
-                        handleAction(body, action.actionType);
+                        if (mouseButton != 0) return true;
+                        handleAction(body, action.actionType());
                         return true;
                     }));
             row.child(
-                new TextWidget<>(action.label).color(0xFFD9E0FF).shadow(true).pos(ROW_TEXT_X, ROW_TEXT_Y));
+                new TextWidget<>(action.label()).color(0xFFD9E0FF)
+                    .shadow(true)
+                    .pos(ROW_TEXT_X, ROW_TEXT_Y));
             return row;
         }
 
-        row.child(new TextWidget<>(action.label).color(0xFF6F7A89).shadow(true).pos(ROW_TEXT_X, ROW_TEXT_Y));
+        row.child(
+            new TextWidget<>(action.label()).color(0xFF6F7A89)
+                .shadow(true)
+                .pos(ROW_TEXT_X, ROW_TEXT_Y));
         return row;
     }
 
@@ -181,35 +186,34 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
         switch (actionType) {
             case MANAGE_ASSETS -> callbacks.openAssetManagement(body);
             case CREATE_STATION -> callbacks.createBaseStation(body);
-            case OPEN_AUTOMATED_STATION_CONFIRM ->
-                callbacks.triggerAssetCreation(body, CelestialAssetKind.AUTOMATED_STATION, true);
-            case OPEN_AUTOMATED_OUTPOST_CONFIRM ->
-                callbacks.triggerAssetCreation(body, CelestialAssetKind.AUTOMATED_OUTPOST, true);
-            case MESSAGE -> {
-            }
+            case OPEN_AUTOMATED_STATION_CONFIRM -> callbacks
+                .triggerAssetCreation(body, CelestialAssetKind.AUTOMATED_STATION, true);
+            case OPEN_AUTOMATED_OUTPOST_CONFIRM -> callbacks
+                .triggerAssetCreation(body, CelestialAssetKind.AUTOMATED_OUTPOST, true);
+            case MESSAGE -> {}
         }
         callbacks.closeContextMenu();
     }
 
     private ContextMenuLayout getLayout(OrbitalCelestialBody body, int menuX, int menuY, int widgetWidth,
         int widgetHeight) {
-        if (body == null || body.objectClass() == CelestialObjectClass.GALAXY) {
-            return null;
-        }
+        if (body == null || body.objectClass() == CelestialObjectClass.GALAXY) return null;
 
         List<ContextMenuAction> actions = buildActions(body);
         Minecraft mc = Minecraft.getMinecraft();
         int maxTextWidth = mc.fontRenderer.getStringWidth(body.displayName());
         for (ContextMenuAction action : actions) {
-            maxTextWidth = Math.max(maxTextWidth, mc.fontRenderer.getStringWidth(action.label));
+            maxTextWidth = Math.max(maxTextWidth, mc.fontRenderer.getStringWidth(action.label()));
         }
 
         int width = Math.max(160, maxTextWidth + MENU_SIDE_PADDING * 2);
         int headerHeight = HEADER_HEIGHT;
         int rowHeight = ROW_HEIGHT;
         int height = headerHeight + actions.size() * rowHeight;
-        int left = clamp(menuX, 8, Math.max(8, widgetWidth - width - 8));
-        int top = clamp(menuY, 8, Math.max(8, widgetHeight - height - 8));
+
+        int left = Math.max(8, Math.min(menuX, widgetWidth - width - 8));
+        int top = Math.max(8, Math.min(menuY, widgetHeight - height - 8));
+
         return new ContextMenuLayout(left, top, left + width, top + height, headerHeight, rowHeight, actions);
     }
 
@@ -221,20 +225,22 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
         }
         if (callbacks.canCreateAutomatedStation(body)) {
             actions.add(
-                new ContextMenuAction("Create Automated Station", true, ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM));
+                new ContextMenuAction(
+                    "Create Automated Station",
+                    true,
+                    ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM));
         }
         if (callbacks.canCreateAutomatedOutpost(body)) {
             actions.add(
-                new ContextMenuAction("Create Automated Outpost", true, ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM));
+                new ContextMenuAction(
+                    "Create Automated Outpost",
+                    true,
+                    ContextMenuActionType.OPEN_AUTOMATED_OUTPOST_CONFIRM));
         }
         if (actions.size() == 1) {
             actions.add(new ContextMenuAction("No actions available", false, ContextMenuActionType.MESSAGE));
         }
         return actions;
-    }
-
-    private int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
     }
 
     private IDrawable createMenuBackgroundDrawable() {
@@ -254,46 +260,11 @@ final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidg
         void draw(GuiContext context, int x, int y, int width, int height);
     }
 
-    private enum ContextMenuActionType {
+    public enum ContextMenuActionType {
         MESSAGE,
         MANAGE_ASSETS,
         CREATE_STATION,
         OPEN_AUTOMATED_STATION_CONFIRM,
         OPEN_AUTOMATED_OUTPOST_CONFIRM
-    }
-
-    private static final class ContextMenuAction {
-
-        private final String label;
-        private final boolean enabled;
-        private final ContextMenuActionType actionType;
-
-        private ContextMenuAction(String label, boolean enabled, ContextMenuActionType actionType) {
-            this.label = label;
-            this.enabled = enabled;
-            this.actionType = actionType;
-        }
-    }
-
-    private static final class ContextMenuLayout {
-
-        private final int left;
-        private final int top;
-        private final int right;
-        private final int bottom;
-        private final int headerHeight;
-        private final int rowHeight;
-        private final List<ContextMenuAction> actions;
-
-        private ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
-            List<ContextMenuAction> actions) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-            this.headerHeight = headerHeight;
-            this.rowHeight = rowHeight;
-            this.actions = actions;
-        }
     }
 }

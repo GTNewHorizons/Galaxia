@@ -11,13 +11,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
+
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 public final class CelestialRegistry {
 
@@ -30,12 +30,15 @@ public final class CelestialRegistry {
     private CelestialRegistry() {}
 
     private static double seededPhase(String id) {
-        long hash = Objects.requireNonNull(id, "id").hashCode() & 0xFFFFFFFFL;
+        long hash = Objects.requireNonNull(id, "id")
+            .hashCode() & 0xFFFFFFFFL;
         return (hash / (double) 0xFFFFFFFFL) * Math.PI * 2.0;
     }
 
-    // TODO: Replace these placeholder vanilla ore tables with GT5U ore definitions once the GregTech ore layer is designed.
-    private static CelestialBodyProperties.Builder withVanillaOres(CelestialBodyProperties.Builder builder, Block... ores) {
+    // TODO: Replace these placeholder vanilla ore tables with GT5U ore definitions once the GregTech ore layer is
+    // designed.
+    private static CelestialBodyProperties.Builder withVanillaOres(CelestialBodyProperties.Builder builder,
+        Block... ores) {
         for (Block ore : ores) {
             builder.ore(new ItemStack(ore));
         }
@@ -154,8 +157,7 @@ public final class CelestialRegistry {
                         Blocks.iron_ore,
                         Blocks.gold_ore,
                         Blocks.redstone_ore,
-                        Blocks.diamond_ore)
-                            .build())
+                        Blocks.diamond_ore).build())
                 .build());
 
         register(
@@ -180,8 +182,7 @@ public final class CelestialRegistry {
                         Blocks.coal_ore,
                         Blocks.iron_ore,
                         Blocks.lapis_ore,
-                        Blocks.redstone_ore)
-                            .build())
+                        Blocks.redstone_ore).build())
                 .build());
 
         register(
@@ -203,17 +204,49 @@ public final class CelestialRegistry {
                             .radiation(0.05)
                             .oreProfile("undefined")
                             .gtOreVeins(
-                                gtVein("lapis", "Lapis Vein", "Lazurite", "Sodalite", "Lapis", "Calcite", 20, 50, 40, 4, 16),
-                                gtVein("iron", "Iron Vein", "Brown Limonite", "Yellow Limonite", "Banded Iron", "Malachite", 10, 40, 120, 3, 24),
-                                gtVein("redstone", "Redstone Vein", "Redstone", "Redstone", "Ruby", "Cinnabar", 5, 40, 60, 2, 24))
+                                gtVein(
+                                    "lapis",
+                                    "Lapis Vein",
+                                    "Lazurite",
+                                    "Sodalite",
+                                    "Lapis",
+                                    "Calcite",
+                                    20,
+                                    50,
+                                    40,
+                                    4,
+                                    16),
+                                gtVein(
+                                    "iron",
+                                    "Iron Vein",
+                                    "Brown Limonite",
+                                    "Yellow Limonite",
+                                    "Banded Iron",
+                                    "Malachite",
+                                    10,
+                                    40,
+                                    120,
+                                    3,
+                                    24),
+                                gtVein(
+                                    "redstone",
+                                    "Redstone Vein",
+                                    "Redstone",
+                                    "Redstone",
+                                    "Ruby",
+                                    "Cinnabar",
+                                    5,
+                                    40,
+                                    60,
+                                    2,
+                                    24))
                             .metadata("surface", "undefined")
                             .metadata("status", "placeholder_homeworld"),
                         Blocks.coal_ore,
                         Blocks.iron_ore,
                         Blocks.gold_ore,
                         Blocks.redstone_ore,
-                        Blocks.diamond_ore)
-                            .build())
+                        Blocks.diamond_ore).build())
                 .build());
 
         register(
@@ -237,8 +270,7 @@ public final class CelestialRegistry {
                         Blocks.iron_ore,
                         Blocks.gold_ore,
                         Blocks.redstone_ore,
-                        Blocks.emerald_ore)
-                            .build())
+                        Blocks.emerald_ore).build())
                 .build());
 
         register(
@@ -263,8 +295,7 @@ public final class CelestialRegistry {
                         Blocks.iron_ore,
                         Blocks.gold_ore,
                         Blocks.lapis_ore,
-                        Blocks.diamond_ore)
-                            .build())
+                        Blocks.diamond_ore).build())
                 .build());
 
         register(
@@ -287,8 +318,7 @@ public final class CelestialRegistry {
                             .metadata("surface", "undefined"),
                         Blocks.coal_ore,
                         Blocks.iron_ore,
-                        Blocks.gold_ore)
-                            .build())
+                        Blocks.gold_ore).build())
                 .build());
 
         register(

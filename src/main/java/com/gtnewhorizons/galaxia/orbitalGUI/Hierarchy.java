@@ -24,8 +24,14 @@ public final class Hierarchy {
 
         public OrbitalParams(double semiMajorAxis, double eccentricity, double inclination,
             double longitudeOfAscendingNode, double argumentOfPeriapsis, double meanAnomalyAtEpoch) {
-            this(semiMajorAxis, eccentricity, inclination, longitudeOfAscendingNode, argumentOfPeriapsis,
-                meanAnomalyAtEpoch, 0.0);
+            this(
+                semiMajorAxis,
+                eccentricity,
+                inclination,
+                longitudeOfAscendingNode,
+                argumentOfPeriapsis,
+                meanAnomalyAtEpoch,
+                0.0);
         }
 
         public static OrbitalParams circular(double radius, double orbitSpeed) {
@@ -51,8 +57,8 @@ public final class Hierarchy {
     @Desugar
     public record OrbitalCelestialBody(String id, String name, String nameKey, int dimensionId,
         DimensionEnum dimensionEnum, CelestialObjectClass objectClass, OrbitalParams orbitalParams,
-        AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize, CelestialBodyProperties properties,
-        List<OrbitalCelestialBody> children) {
+        AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,
+        CelestialBodyProperties properties, List<OrbitalCelestialBody> children) {
 
         public OrbitalCelestialBody {
             children = children == null ? Collections.emptyList()

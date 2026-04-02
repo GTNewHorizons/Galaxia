@@ -29,10 +29,13 @@ public final class CelestialAssetStore {
         return state.snapshot();
     }
 
-    public static synchronized CelestialManagedAsset createAssetInConstruction(String celestialObjectId, String displayName,
-        CelestialAssetKind kind, CelestialAssetLocation location) {
+    public static synchronized CelestialManagedAsset createAssetInConstruction(String celestialObjectId,
+        String displayName, CelestialAssetKind kind, CelestialAssetLocation location) {
         MutableBodyState state = STATE_BY_BODY.computeIfAbsent(celestialObjectId, MutableBodyState::new);
-        String assetId = "asset_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String assetId = "asset_" + UUID.randomUUID()
+            .toString()
+            .replace("-", "")
+            .substring(0, 8);
         List<CelestialAssetRequirement> required = defaultRequirements(kind);
         CelestialManagedAsset asset = new CelestialManagedAsset(
             assetId,
@@ -47,11 +50,14 @@ public final class CelestialAssetStore {
         return asset;
     }
 
-    public static synchronized CelestialManagedAsset createOperationalAsset(String celestialObjectId, String displayName,
-        CelestialAssetKind kind, CelestialAssetLocation location) {
+    public static synchronized CelestialManagedAsset createOperationalAsset(String celestialObjectId,
+        String displayName, CelestialAssetKind kind, CelestialAssetLocation location) {
         MutableBodyState state = STATE_BY_BODY.computeIfAbsent(celestialObjectId, MutableBodyState::new);
         CelestialManagedAsset asset = new CelestialManagedAsset(
-            "asset_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8),
+            "asset_" + UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 8),
             celestialObjectId,
             displayName,
             kind,
@@ -67,7 +73,8 @@ public final class CelestialAssetStore {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
-                if (asset.assetId().equals(assetId) && asset.status() == CelestialAssetStatus.CONSTRUCTION_SITE) {
+                if (asset.assetId()
+                    .equals(assetId) && asset.status() == CelestialAssetStatus.CONSTRUCTION_SITE) {
                     state.assets.remove(i);
                     return true;
                 }
@@ -80,7 +87,8 @@ public final class CelestialAssetStore {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
-                if (!asset.assetId().equals(assetId) || asset.status() != CelestialAssetStatus.CONSTRUCTION_SITE) {
+                if (!asset.assetId()
+                    .equals(assetId) || asset.status() != CelestialAssetStatus.CONSTRUCTION_SITE) {
                     continue;
                 }
                 state.assets.set(
@@ -104,7 +112,8 @@ public final class CelestialAssetStore {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
-                if (!asset.assetId().equals(assetId) || asset.status() != CelestialAssetStatus.CONSTRUCTION_SITE) {
+                if (!asset.assetId()
+                    .equals(assetId) || asset.status() != CelestialAssetStatus.CONSTRUCTION_SITE) {
                     continue;
                 }
                 state.assets.set(i, toOperationalAsset(asset));
@@ -122,11 +131,15 @@ public final class CelestialAssetStore {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
-                if (!asset.assetId().equals(assetId) || asset.status() != CelestialAssetStatus.CONSTRUCTION_SITE) {
+                if (!asset.assetId()
+                    .equals(assetId) || asset.status() != CelestialAssetStatus.CONSTRUCTION_SITE) {
                     continue;
                 }
 
-                List<CelestialAssetRequirement> inventory = mergeIntoConstructionInventory(asset.constructionInventory(), stack, amount);
+                List<CelestialAssetRequirement> inventory = mergeIntoConstructionInventory(
+                    asset.constructionInventory(),
+                    stack,
+                    amount);
                 CelestialManagedAsset updated = new CelestialManagedAsset(
                     asset.assetId(),
                     asset.celestialObjectId(),
@@ -146,7 +159,9 @@ public final class CelestialAssetStore {
     public static synchronized boolean destroyAsset(String assetId) {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
-                if (state.assets.get(i).assetId().equals(assetId)) {
+                if (state.assets.get(i)
+                    .assetId()
+                    .equals(assetId)) {
                     state.assets.remove(i);
                     return true;
                 }
@@ -156,14 +171,16 @@ public final class CelestialAssetStore {
     }
 
     public static synchronized boolean renameAsset(String assetId, String displayName) {
-        if (displayName == null || displayName.trim().isEmpty()) {
+        if (displayName == null || displayName.trim()
+            .isEmpty()) {
             return false;
         }
         String trimmedName = displayName.trim();
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
-                if (!asset.assetId().equals(assetId)) {
+                if (!asset.assetId()
+                    .equals(assetId)) {
                     continue;
                 }
                 state.assets.set(

@@ -14,7 +14,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 @Desugar
 public record CelestialObjectRegistration(String id, String name, String nameKey, String parentId,
     DimensionEnum dimensionEnum, CelestialObjectClass objectClass, OrbitalParams orbitalParams,
-    AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize, CelestialBodyProperties properties) {
+    AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,
+    CelestialBodyProperties properties) {
 
     public static Builder builder() {
         return new Builder();
@@ -32,7 +33,8 @@ public record CelestialObjectRegistration(String id, String name, String nameKey
         private AbsolutePosition absolutePosition;
         private ResourceLocation texture;
         private double spriteSize;
-        private CelestialBodyProperties properties = CelestialBodyProperties.builder().build();
+        private CelestialBodyProperties properties = CelestialBodyProperties.builder()
+            .build();
 
         public Builder id(String value) {
             this.id = value;

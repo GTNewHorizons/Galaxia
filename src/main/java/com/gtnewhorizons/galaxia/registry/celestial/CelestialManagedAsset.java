@@ -7,9 +7,9 @@ import java.util.List;
 import com.github.bsideup.jabel.Desugar;
 
 @Desugar
-public record CelestialManagedAsset(String assetId, String celestialObjectId, String displayName, CelestialAssetKind kind,
-    CelestialAssetLocation location, CelestialAssetStatus status, List<CelestialAssetRequirement> requiredResources,
-    List<CelestialAssetRequirement> constructionInventory) {
+public record CelestialManagedAsset(String assetId, String celestialObjectId, String displayName,
+    CelestialAssetKind kind, CelestialAssetLocation location, CelestialAssetStatus status,
+    List<CelestialAssetRequirement> requiredResources, List<CelestialAssetRequirement> constructionInventory) {
 
     public CelestialManagedAsset {
         requiredResources = requiredResources == null ? Collections.emptyList()
