@@ -549,8 +549,12 @@ public final class AssetManagementSystem {
 
         private final OrbitalAssetUiState state;
         private final Callbacks callbacks;
-        private String lastStructureSignature = "";
-        private String lastContentSignature = "";
+
+        private int structureVersion = 0;
+        private int contentVersion = 0;
+        private int lastStructureVersion = -1;
+        private int lastContentVersion = -1;
+
         private int modalLeft, modalTop, modalRight, modalBottom;
         private int scrollLeft, scrollTop, scrollRight, scrollBottom;
         private ScrollWidget<?> activeScrollWidget;
@@ -563,9 +567,16 @@ public final class AssetManagementSystem {
             this.state = state;
             this.callbacks = callbacks;
             setEnabled(false);
-            background(
-                drawable(
-                    (context, x, y, width, height) -> Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_OVERLAY_BG.getColor())));
+            background(drawable((c, x, y, w, h) ->
+                Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_OVERLAY_BG.getColor())));
+        }
+
+        public void markStructureDirty() {
+            structureVersion++;
+        }
+
+        public void markContentDirty() {
+            contentVersion++;
         }
 
         boolean isPointInScrollViewport(int localX, int localY) {
@@ -588,6 +599,7 @@ public final class AssetManagementSystem {
         @Override
         public void onUpdate() {
             super.onUpdate();
+
             boolean visible = shouldShowOverlay();
             if (!visible) {
                 if (isEnabled()) {
@@ -597,25 +609,24 @@ public final class AssetManagementSystem {
                 clearBounds();
                 clearMainPanelState();
                 activeScrollWidget = null;
-                lastStructureSignature = "";
-                lastContentSignature = "";
+                lastStructureVersion = -1;
+                lastContentVersion = -1;
                 setEnabled(false);
                 return;
             }
+
             setEnabled(true);
-            String structureSignature = buildStructureSignature();
-            if (!structureSignature.equals(lastStructureSignature)) {
+
+            if (structureVersion != lastStructureVersion) {
                 rebuildChildren();
-                lastStructureSignature = structureSignature;
-                lastContentSignature = buildContentSignature();
+                lastStructureVersion = structureVersion;
+                lastContentVersion = contentVersion;
                 return;
             }
-            if (shouldShowPanel()) {
-                String contentSignature = buildContentSignature();
-                if (!contentSignature.equals(lastContentSignature)) {
-                    refreshMainPanelContent();
-                    lastContentSignature = contentSignature;
-                }
+
+            if (shouldShowPanel() && contentVersion != lastContentVersion) {
+                refreshMainPanelContent();
+                lastContentVersion = contentVersion;
             }
         }
 
@@ -631,100 +642,6 @@ public final class AssetManagementSystem {
 
         private boolean shouldShowPanel() {
             return state.isAssetManagementOpen() && !state.hasBlockingModal();
-        }
-
-        private String buildStructureSignature() {
-            if (!shouldShowOverlay()) return "";
-            OrbitalCelestialBody body = state.assetManagementBody;
-            StringBuilder signature = new StringBuilder(256);
-            signature.append(getAvailableOverlayWidth())
-                .append('|')
-                .append(getAvailableOverlayHeight())
-                .append('|')
-                .append(body.id())
-                .append('|')
-                .append(body.displayName())
-                .append('|')
-                .append(callbacks.isCreativeBuildModeEnabled())
-                .append('|')
-                .append(callbacks.isGT5AutomationAvailable())
-                .append('|')
-                .append(callbacks.canCreateBaseStation(body))
-                .append('|')
-                .append(callbacks.canCreateAutomatedStation(body))
-                .append('|')
-                .append(callbacks.canCreateAutomatedOutpost(body))
-                .append('|')
-                .append(state.pendingAssetCreation != null)
-                .append('|')
-                .append(state.pendingAssetDestruction != null ? state.pendingAssetDestruction.armed() : false)
-                .append('|')
-                .append(state.pendingConstructionCancellation != null)
-                .append('|')
-                .append(state.pendingResourceTransfer != null)
-                .append('|')
-                .append(state.pendingAssetManagement != null)
-                .append('|')
-                .append(state.pendingAssetRename != null);
-            if (state.pendingAssetCreation != null) signature.append('|')
-                .append(state.pendingAssetCreation.kind())
-                .append('|')
-                .append(state.pendingAssetCreation.displayName())
-                .append('|')
-                .append(
-                    state.pendingAssetCreation.requiredResources()
-                        .size());
-            if (state.pendingAssetDestruction != null) signature.append('|')
-                .append(
-                    state.pendingAssetDestruction.asset()
-                        .assetId());
-            if (state.pendingConstructionCancellation != null) signature.append('|')
-                .append(
-                    state.pendingConstructionCancellation.asset()
-                        .assetId());
-            if (state.pendingAssetManagement != null) signature.append('|')
-                .append(
-                    state.pendingAssetManagement.asset()
-                        .assetId());
-            if (state.pendingAssetRename != null) signature.append('|')
-                .append(
-                    state.pendingAssetRename.asset()
-                        .assetId());
-            if (state.pendingResourceTransfer != null) {
-                signature.append('|')
-                    .append(
-                        state.pendingResourceTransfer.asset()
-                            .assetId())
-                    .append('|')
-                    .append(
-                        state.pendingResourceTransfer.targets()
-                            .size());
-                for (StationTransferTarget target : state.pendingResourceTransfer.targets()) signature.append('|')
-                    .append(target.assetId());
-            }
-            return signature.toString();
-        }
-
-        private String buildContentSignature() {
-            if (!shouldShowPanel()) return "";
-            OrbitalCelestialBody body = state.assetManagementBody;
-            CelestialBodyAssetState assetState = CelestialAssetStore.getState(body.id());
-            StringBuilder sig = new StringBuilder(512);
-            for (CelestialManagedAsset asset : assetState.assets()) {
-                sig.append('|')
-                    .append(asset.assetId())
-                    .append(':')
-                    .append(asset.displayName())
-                    .append(':')
-                    .append(asset.kind())
-                    .append(':')
-                    .append(asset.status())
-                    .append(':')
-                    .append(asset.location())
-                    .append(':')
-                    .append(callbacks.buildConstructionInventorySummary(asset));
-            }
-            return sig.toString();
         }
 
         private void rebuildChildren() {
