@@ -1,13 +1,12 @@
 package com.gtnewhorizons.galaxia.mixin;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockAir;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.MathHelper;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
@@ -32,16 +31,21 @@ public abstract class RelativeMovementMixin {
         float verticalMomentum = 0;
         if (self instanceof EntityPlayer player) {
             if (!GalaxiaAPI.hasReactionControlSystem(player)) {
-                final boolean isAirBorne =
-                    player.worldObj
-                    .getBlock((int) player.posX, (int) (player.posY - (player.worldObj.isRemote ? -2 : -1)), (int) player.posZ) instanceof BlockAir;
+                // The normal accessor is not reliable at this stage
+                final boolean isGrounded = player.worldObj
+                    .getBlock(
+                        MathHelper.floor_double(player.posX),
+                        MathHelper.floor_double(player.boundingBox.minY) - 1,
+                        MathHelper.floor_double(player.posZ))
+                    .getMaterial()
+                    .isSolid();
 
-                if (!isAirBorne) {
+                if (isGrounded) {
                     self.moveFlying(strafe, forward, friction);
                 }
+
                 return;
             }
-
             if (player.isSneaking()) {
                 verticalMomentum -= 1;
             }
@@ -51,10 +55,10 @@ public abstract class RelativeMovementMixin {
             }
         }
 
-         // do nothing if no input
-         if (strafe == 0 && forward == 0 && verticalMomentum == 0) {
-             return;
-         }
+//         do nothing if no input
+        if (strafe == 0 && forward == 0 && verticalMomentum == 0) {
+            return;
+        }
 
         float yawRad = self.rotationYaw * (float) Math.PI / 180.0F;
         float pitchRad = self.rotationPitch * (float) Math.PI / 180.0F;
