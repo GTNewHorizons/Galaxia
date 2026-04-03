@@ -6,10 +6,14 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.MathHelper;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * Mixin that changes regular WASD motion with relative motion
@@ -17,18 +21,43 @@ import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 @Mixin(EntityLivingBase.class)
 public abstract class RelativeMovementMixin {
 
+    @Shadow
+    public float prevLimbSwingAmount;
+
+    @SideOnly(Side.CLIENT)
+    private static float getClientJump(EntityPlayer player) {
+        if (player instanceof EntityPlayerSP sp && sp.movementInput.jump) {
+            return 1;
+        }
+        return 0;
+    }
+
     @Redirect(
         method = "moveEntityWithHeading",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/EntityLivingBase;moveFlying(FFF)V"))
     private void galaxia$redirectMoveFlying(EntityLivingBase self, float strafe, float forward, float friction) {
         // use vanilla method if gravity is not 0
         if (GalaxiaAPI.getGravity(self) != 0) {
+            if (!self.worldObj.isRemote && self instanceof EntityPlayer player) {
+                // Don't send capabilities to the client since we don't want double-tap to fly behavior like in creative
+                if (player.capabilities.allowFlying) {
+                    player.capabilities.allowFlying = false;
+                    player.capabilities.isFlying = false;
+                }
+            }
+
             self.moveFlying(strafe, forward, friction);
             return;
         }
 
         float verticalMomentum = 0;
         if (self instanceof EntityPlayer player) {
+            // Don't send capabilities to the client since we don't want double-tap to fly behavior like in creative
+            if (!player.worldObj.isRemote && !player.capabilities.allowFlying) {
+                player.capabilities.allowFlying = true;
+                player.capabilities.isFlying = true;
+            }
+
             if (!GalaxiaAPI.hasZeroGMovementCapability(player)) {
                 // The normal accessor is not reliable at this stage
                 final boolean isGrounded = player.worldObj
@@ -49,8 +78,8 @@ public abstract class RelativeMovementMixin {
                 verticalMomentum -= 1;
             }
 
-            if (player instanceof EntityPlayerSP sp && sp.movementInput.jump) {
-                verticalMomentum += 1;
+            if (player.worldObj.isRemote) {
+                verticalMomentum += getClientJump(player);
             }
         }
 
