@@ -221,9 +221,6 @@ public class DimensionBuilder {
 
         // Register the dimension
         DimensionManager.registerProviderType(id, providerClass, keepLoaded);
-        if (!DimensionManager.isDimensionRegistered(id)) {
-            DimensionManager.registerDimension(id, id);
-        }
 
         // Create DEF with given fields
         DimensionDef def = new DimensionDef(
