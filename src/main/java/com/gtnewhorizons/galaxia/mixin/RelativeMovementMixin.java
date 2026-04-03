@@ -85,10 +85,6 @@ public abstract class RelativeMovementMixin {
         double motionY = lookY * forward * speed + verticalMomentum * speed;
         double motionZ = (lookZ * forward + sinYaw * strafe) * speed;
 
-        if (Math.abs(motionX) < 1e-6) motionX = 0;
-        if (Math.abs(motionY) < 1e-6) motionY = 0;
-        if (Math.abs(motionZ) < 1e-6) motionZ = 0;
-
         // Make it easier to slowdown in a given direction
         if (motionX * self.motionX < 0) motionX -= self.motionX * 0.1f;
         if (motionY * self.motionY < 0) motionY -= self.motionY * 0.1f;
