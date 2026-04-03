@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import net.minecraft.block.Block;
@@ -241,6 +242,13 @@ public class Theia extends BasePlanet {
                     2,
                     new Block[] { PlanetBlocks.THEIA_ANDESITE, PlanetBlocks.THEIA_ANORTHOSITE },
                     new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock())))
+            .wallFeature(
+                new LocationRuleGalaxiaWall(
+                    4,
+                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE, PlanetBlocks.THEIA_ANDESITE },
+                    new GeodeFeature(Blocks.glass, Blocks.stained_glass)
+                )
+            )
             .terrain(terrainConfiguration)
             .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
             .surfaceThickness(4)
