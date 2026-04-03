@@ -459,7 +459,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         .alignment(Alignment.Center))
                                 .tooltip(
                                     t -> t.addLine(
-                                        StatCollector.translateToLocal("galaxia.rocket_silo.builder.return_modules")))
+                                        StatCollector
+                                            .translateToLocal("galaxia.tooltip.rocket_silo.builder.return_modules")))
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
@@ -488,8 +489,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         .isEmpty()) {
                                         t.addLine(
                                             EnumChatFormatting.GRAY
-                                                + StatCollector
-                                                    .translateToLocal("galaxia.rocket_silo.builder.modules_none")
+                                                + StatCollector.translateToLocal(
+                                                    "galaxia.tooltip.rocket_silo.builder.modules_none")
                                                 + EnumChatFormatting.RESET);
                                         return;
                                     }
@@ -822,7 +823,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         super.updateEntity();
 
         if (!worldObj.isRemote) {
-            // TODO: Create a check of sorts to prevent the RocketEntity from uncoupling upon rejoin/server reload
+            // TODO: Create a check of sorts to prevent the RocketEntity from uncoupling
+            // upon rejoin/server reload
             if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid) {
                 spawnRocket();
             }

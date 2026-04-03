@@ -225,7 +225,6 @@ galaxia.gui.rocket_silo.launch=Launch Rocket
 galaxia.gui.rocket_silo.save=Save Schematic
 galaxia.gui.rocket_silo.builder.return_modules=Return Modules
 galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
-galaxia.gui.rocket_silo.builder.modules_none=Add some modules first
 galaxia.gui.rocket_silo.builder.schematic_save=Save build to schematic
 galaxia.gui.rocket_silo.builder.schematic_text=Schematic Name:
 galaxia.gui.rocket_silo.button.viridis=Viridis
@@ -267,7 +266,7 @@ galaxia.tooltip.protection_shield_radiation.low=Low Pressure Shielding: +%s
 galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
-galaxia.tooltip.rocket_silo.builder.enter_rocket=Add some modules first
+galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
 
 # Elements - "Other"
 # Elements - Other - "Effect"
