@@ -1,17 +1,16 @@
 package com.gtnewhorizons.galaxia.mixin;
 
-import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffectAPI;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.MathHelper;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffectAPI;
 
 /**
  * Mixin that changes regular WASD motion with relative motion
@@ -23,7 +22,7 @@ public abstract class RelativeMovementMixin {
         method = "moveEntityWithHeading",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/EntityLivingBase;moveFlying(FFF)V"))
     private void galaxia$redirectMoveFlying(EntityLivingBase self, float strafe, float forward, float friction) {
-        if (!GalaxiaAPI.isInGalaxiaDimension(self))  {
+        if (!GalaxiaAPI.isInGalaxiaDimension(self)) {
             self.moveFlying(strafe, forward, friction);
         }
 

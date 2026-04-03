@@ -9,7 +9,6 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffectAPI;
 
 /**
  * Mixin to deal with gravity and air resistance
