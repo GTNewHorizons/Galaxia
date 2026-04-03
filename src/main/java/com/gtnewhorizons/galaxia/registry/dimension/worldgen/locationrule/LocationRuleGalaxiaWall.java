@@ -13,15 +13,19 @@ public class LocationRuleGalaxiaWall extends LocationRuleGalaxiaBase {
 
     private final int rarity;
     private final Block[] wallRequirements;
+    private final int minimumHeight;
+    private final int maximumHeight;
 
-    public LocationRuleGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature, boolean centered) {
+    public LocationRuleGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature, int minimumHeight, int maximumHeight, boolean centered) {
         super(feature, centered);
         this.rarity = rarity;
         this.wallRequirements = wallRequirements;
+        this.minimumHeight = minimumHeight;
+        this.maximumHeight = maximumHeight;
     }
 
-    public LocationRuleGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature) {
-        this(rarity, wallRequirements, feature, false);
+    public LocationRuleGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature, int minimumHeight, int maximumHeight) {
+        this(rarity, wallRequirements, feature, minimumHeight, maximumHeight, false);
     }
 
     @Override
@@ -46,5 +50,13 @@ public class LocationRuleGalaxiaWall extends LocationRuleGalaxiaBase {
         feature.generateFeature(world, random, x, y, z, wallRequirements);
         feature.finishGeneration();
         return true;
+    }
+
+    public int getMinimumHeight() {
+        return minimumHeight;
+    }
+
+    public int getMaximumHeight() {
+        return maximumHeight;
     }
 }

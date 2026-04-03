@@ -447,7 +447,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     localX += this.rand.nextInt(16);
                     localZ += this.rand.nextInt(16);
                 }
-                int localY = rand.nextInt(Math.max(1, worldObj.getHeightValue(x, z)));
+                int minimumHeight = feature.getMinimumHeight();
+                int localY = minimumHeight;
+                int localHeight = worldObj.getHeightValue(x, z);
+                if (localY > localHeight) {
+                    continue;
+                }
+                localY += rand.nextInt(Math.max(1, Math.min(feature.getMaximumHeight() - minimumHeight, localHeight - minimumHeight)));
                 feature.generate(worldObj, rand, localX, localY, localZ);
                 updateCoordinates.addAll(
                     feature.getFeature()

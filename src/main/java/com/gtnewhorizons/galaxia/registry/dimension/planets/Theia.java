@@ -241,12 +241,18 @@ public class Theia extends BasePlanet {
                 new LocationRuleGalaxiaWall(
                     2,
                     new Block[] { PlanetBlocks.THEIA_ANDESITE, PlanetBlocks.THEIA_ANORTHOSITE },
-                    new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock())))
+                    new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock()),
+                    8,
+                    256
+                )
+            )
             .wallFeature(
                 new LocationRuleGalaxiaWall(
                     4,
                     new Block[] { PlanetBlocks.THEIA_ANORTHOSITE, PlanetBlocks.THEIA_ANDESITE },
-                    new GeodeFeature(Blocks.glass, Blocks.stained_glass)
+                    new GeodeFeature(Blocks.glass, Blocks.stained_glass),
+                    24,
+                    96
                 )
             )
             .terrain(terrainConfiguration)
