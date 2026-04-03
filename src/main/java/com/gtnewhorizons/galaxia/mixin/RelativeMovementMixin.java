@@ -29,7 +29,7 @@ public abstract class RelativeMovementMixin {
 
         float verticalMomentum = 0;
         if (self instanceof EntityPlayer player) {
-            if (!GalaxiaAPI.hasReactionControlSystem(player)) {
+            if (!GalaxiaAPI.hasZeroGMovementCapability(player)) {
                 // The normal accessor is not reliable at this stage
                 final boolean isGrounded = player.worldObj
                     .getBlock(

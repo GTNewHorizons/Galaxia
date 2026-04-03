@@ -218,7 +218,7 @@ public final class GalaxiaAPI {
         return false;
     }
 
-    public static boolean hasReactionControlSystem(@Nonnull EntityPlayer player) {
+    public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
         var baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return false;
 
