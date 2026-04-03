@@ -24,12 +24,12 @@ public abstract class RelativeMovementMixin {
     private void galaxia$redirectMoveFlying(EntityLivingBase self, float strafe, float forward, float friction) {
         if (!GalaxiaAPI.isInGalaxiaDimension(self)) {
             self.moveFlying(strafe, forward, friction);
+            return;
         }
 
-        final double speedDebuffs = GalaxiaEffectAPI.getSpeedMultiplier(self);
-        self.motionX *= speedDebuffs;
-        self.motionY *= speedDebuffs;
-        self.motionZ *= speedDebuffs;
+        final float speedDebuffs = GalaxiaEffectAPI.getSpeedMultiplier(self);
+        strafe *= speedDebuffs;
+        forward *= speedDebuffs;
 
         // use vanilla method if gravity is not 0
         if (GalaxiaAPI.getGravity(self) != 0) {
@@ -99,9 +99,10 @@ public abstract class RelativeMovementMixin {
         if (Math.abs(motionY) < 1e-6) motionY = 0;
         if (Math.abs(motionZ) < 1e-6) motionZ = 0;
 
-        if (motionX * self.motionX < 0) motionX *= 2;
-        if (motionY * self.motionY < 0) motionY *= 2;
-        if (motionZ * self.motionZ < 0) motionZ *= 2;
+        // Make it easier to slowdown in a given direction
+        if (motionX * self.motionX < 0) motionX -= self.motionX * 0.1f;
+        if (motionY * self.motionY < 0) motionY -= self.motionY * 0.1f;
+        if (motionZ * self.motionZ < 0) motionZ -= self.motionZ * 0.1f;
 
         self.motionX += motionX;
         self.motionY += motionY;

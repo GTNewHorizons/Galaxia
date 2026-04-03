@@ -21,10 +21,10 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
-import com.gtnewhorizons.galaxia.registry.items.baubles.ItemReactionControlSystem;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
+import com.gtnewhorizons.galaxia.utility.capabilities.CapabilityZeroGMovement;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 
 import baubles.api.BaublesApi;
@@ -224,7 +224,7 @@ public final class GalaxiaAPI {
 
         for (int slot : Galaxia.reactionControlSystemSlot) {
             var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ItemReactionControlSystem) {
+            if (stack != null && stack.getItem() instanceof CapabilityZeroGMovement) {
                 return true;
             }
         }

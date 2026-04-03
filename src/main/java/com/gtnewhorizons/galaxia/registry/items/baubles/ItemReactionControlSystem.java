@@ -9,13 +9,14 @@ import net.minecraft.world.World;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.utility.capabilities.CapabilityZeroGMovement;
 
 import baubles.api.BaubleType;
 import baubles.api.expanded.IBaubleExpanded;
 import baubles.common.container.InventoryBaubles;
 import baubles.common.lib.PlayerHandler;
 
-public class ItemReactionControlSystem extends Item implements IBaubleExpanded {
+public class ItemReactionControlSystem extends Item implements IBaubleExpanded, CapabilityZeroGMovement {
 
     public static final String BAUBLE_TYPE_REACTION_CONTROL_SYSTEM = "reaction_control_system";
 
