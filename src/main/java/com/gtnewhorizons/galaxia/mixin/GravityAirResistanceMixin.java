@@ -58,7 +58,7 @@ public abstract class GravityAirResistanceMixin {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double res = GalaxiaAPI.getAirResistance(self);
         double exponent = Math.sqrt(res) * (GalaxiaAPI.cancelSpeed(self) ? 0.0 : 1.0);
-        float newFriction = (float) Math.pow(original, exponent) * GalaxiaEffectAPI.getSpeedMultiplier(self);
+        float newFriction = (float) Math.pow(original, exponent);
         this.galaxia$currentFriction = newFriction;
         return newFriction;
     }

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.mixin;
 
+import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffectAPI;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -22,6 +23,15 @@ public abstract class RelativeMovementMixin {
         method = "moveEntityWithHeading",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/EntityLivingBase;moveFlying(FFF)V"))
     private void galaxia$redirectMoveFlying(EntityLivingBase self, float strafe, float forward, float friction) {
+        if (!GalaxiaAPI.isInGalaxiaDimension(self))  {
+            self.moveFlying(strafe, forward, friction);
+        }
+
+        final double speedDebuffs = GalaxiaEffectAPI.getSpeedMultiplier(self);
+        self.motionX *= speedDebuffs;
+        self.motionY *= speedDebuffs;
+        self.motionZ *= speedDebuffs;
+
         // use vanilla method if gravity is not 0
         if (GalaxiaAPI.getGravity(self) != 0) {
             self.moveFlying(strafe, forward, friction);
@@ -55,7 +65,7 @@ public abstract class RelativeMovementMixin {
             }
         }
 
-//         do nothing if no input
+        // do nothing if no input
         if (strafe == 0 && forward == 0 && verticalMomentum == 0) {
             return;
         }
