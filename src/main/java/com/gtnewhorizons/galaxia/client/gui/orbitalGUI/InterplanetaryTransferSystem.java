@@ -290,6 +290,37 @@ public final class InterplanetaryTransferSystem {
         return Math.PI * Math.sqrt(sma * sma * sma / mu);
     }
 
+    /**
+     * Computes periapsis distance for an orbit defined by position and velocity.
+     * Works for elliptic, parabolic and hyperbolic orbits.
+     */
+    private static double computePeriapsis(double rx, double ry, double vx, double vy, double mu) {
+        double r = Math.hypot(rx, ry);
+        if (r < 1e-10) return 0.0;
+        double v2 = vx * vx + vy * vy;
+        double energy = 0.5 * v2 - mu / r;
+        double h = rx * vy - ry * vx;
+        double p = h * h / Math.max(1e-30, mu);
+        double disc = 1.0 + 2.0 * energy * p / mu;
+        double ecc = Math.sqrt(Math.max(0.0, disc));
+        return p / (1.0 + ecc);
+    }
+
+    /**
+     * Evaluates one Lambert candidate and returns [dvDep, dvCap, totalDv] or null if invalid.
+     * Rejects orbits whose periapsis falls below minPeriapsis.
+     */
+    private static double[] evalLambert(double r1x, double r1y, double r2x, double r2y, double tof, double mu,
+        boolean prograde, double vsrcX, double vsrcY, double vdstX, double vdstY, double minPeriapsis) {
+        double[] sol = solveLambert(r1x, r1y, r2x, r2y, tof, mu, prograde);
+        if (sol == null) return null;
+        double peri = computePeriapsis(r1x, r1y, sol[0], sol[1], mu);
+        if (peri < minPeriapsis) return null;
+        double dvDep = Math.hypot(sol[0] - vsrcX, sol[1] - vsrcY);
+        double dvCap = Math.hypot(vdstX - sol[2], vdstY - sol[3]);
+        return new double[] { dvDep, dvCap, dvDep + dvCap };
+    }
+
     // -----------------------------------------------------------------------
     // updatePreview (called from OrbitalView)
     // -----------------------------------------------------------------------
@@ -319,70 +350,81 @@ public final class InterplanetaryTransferSystem {
             return;
         }
 
+        // Minimum periapsis: reject transfers that skim through the star
+        double minPeriapsis = Math.max(0.05, star.spriteSize() * 0.5);
+
         // Scan 64 TOFs from 0.1x to 3.0x Hohmann
         int nScan = 64;
         double bestTof = -1.0;
-        double bestDv = Double.MAX_VALUE;
         double[] bestLambert = null;
-        double bestVbodySrcX = 0, bestVbodySrcY = 0;
+        boolean bestPrograde = true;
         double bestAnchorX = 0, bestAnchorY = 0;
         double bestR1x = 0, bestR1y = 0, bestR2x = 0, bestR2y = 0;
 
-        OrbitalMechanics.OrbitalState starState = OrbitalMechanics.resolveWorldState(root, star, globalTime);
-        if (starState == null) {
+        // Cache departure state — it's the same for every TOF sample
+        OrbitalMechanics.OrbitalState srcStateDep = OrbitalMechanics.resolveWorldState(root, origin, globalTime);
+        OrbitalMechanics.OrbitalState starAtDep = OrbitalMechanics.resolveWorldState(root, star, globalTime);
+        if (srcStateDep == null || starAtDep == null) {
             state.clearPreview();
             return;
         }
+        double r1x0 = srcStateDep.x() - starAtDep.x();
+        double r1y0 = srcStateDep.y() - starAtDep.y();
+        double vsrcX0 = srcStateDep.vx() - starAtDep.vx();
+        double vsrcY0 = srcStateDep.vy() - starAtDep.vy();
 
         for (int i = 0; i < nScan; i++) {
             double frac = 0.1 + (3.0 - 0.1) * i / (nScan - 1);
             double tof = hohmannTof * frac;
             if (tof <= 0.0) continue;
 
-            OrbitalMechanics.OrbitalState srcState = OrbitalMechanics.resolveWorldState(root, origin, globalTime);
             OrbitalMechanics.OrbitalState dstState = OrbitalMechanics
                 .resolveWorldState(root, dest, globalTime + tof);
-            OrbitalMechanics.OrbitalState starAtDep = OrbitalMechanics.resolveWorldState(root, star, globalTime);
-            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics.resolveWorldState(root, star, globalTime + tof);
-            if (srcState == null || dstState == null || starAtDep == null || starAtArr == null) continue;
+            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics
+                .resolveWorldState(root, star, globalTime + tof);
+            if (dstState == null || starAtArr == null) continue;
 
-            // Positions relative to star
-            double r1x = srcState.x() - starAtDep.x();
-            double r1y = srcState.y() - starAtDep.y();
+            double r1x = r1x0;
+            double r1y = r1y0;
             double r2x = dstState.x() - starAtArr.x();
             double r2y = dstState.y() - starAtArr.y();
-
-            // Velocity of origin body relative to star at departure
-            double vsrcX = srcState.vx() - starAtDep.vx();
-            double vsrcY = srcState.vy() - starAtDep.vy();
-            // Velocity of dest body relative to star at arrival
+            double vsrcX = vsrcX0;
+            double vsrcY = vsrcY0;
             double vdstX = dstState.vx() - starAtArr.vx();
             double vdstY = dstState.vy() - starAtArr.vy();
 
-            double[] sol = solveLambert(r1x, r1y, r2x, r2y, tof, mu, true);
-            if (sol == null) {
-                // Try retrograde
-                sol = solveLambert(r1x, r1y, r2x, r2y, tof, mu, false);
+            // Near-180° (and near-0°) singularity guard:
+            // crossZ / (r1*r2) = sin(Δθ), which approaches 0 at both 0° and 180°.
+            // At exactly 180°, the orbit plane is undefined in 2D — skip these cases.
+            double crossZ = r1x * r2y - r1y * r2x;
+            double r1mag = Math.hypot(r1x, r1y);
+            double r2mag = Math.hypot(r2x, r2y);
+            double sinDth = Math.abs(crossZ) / Math.max(1e-20, r1mag * r2mag);
+            if (sinDth < 1e-3) continue;
+
+            // Try both prograde and retrograde; pick whichever has lower dV
+            double[] dvPro = evalLambert(r1x, r1y, r2x, r2y, tof, mu, true,
+                vsrcX, vsrcY, vdstX, vdstY, minPeriapsis);
+            double[] dvRetro = evalLambert(r1x, r1y, r2x, r2y, tof, mu, false,
+                vsrcX, vsrcY, vdstX, vdstY, minPeriapsis);
+
+            // Pick the better one
+            double[] best = null;
+            boolean prograde = true;
+            if (dvPro != null && (dvRetro == null || dvPro[2] <= dvRetro[2])) {
+                best = dvPro;
+                prograde = true;
+            } else if (dvRetro != null) {
+                best = dvRetro;
+                prograde = false;
             }
-            if (sol == null) continue;
+            if (best == null) continue;
 
-            // dV at departure: |v_lambert_dep - v_origin_body|
-            double dvDepX = sol[0] - vsrcX;
-            double dvDepY = sol[1] - vsrcY;
-            double dvDep = Math.hypot(dvDepX, dvDepY);
-
-            // dV at arrival: |v_dest_body - v_lambert_arr|
-            double dvCapX = vdstX - sol[2];
-            double dvCapY = vdstY - sol[3];
-            double dvCap = Math.hypot(dvCapX, dvCapY);
-
-            double totalDv = dvDep + dvCap;
+            double totalDv = best[2];
             if (totalDv <= sliderDv && (bestTof < 0 || tof < bestTof)) {
                 bestTof = tof;
-                bestDv = totalDv;
-                bestLambert = sol;
-                bestVbodySrcX = vsrcX;
-                bestVbodySrcY = vsrcY;
+                bestLambert = solveLambert(r1x, r1y, r2x, r2y, tof, mu, prograde);
+                bestPrograde = prograde;
                 bestAnchorX = starAtDep.x();
                 bestAnchorY = starAtDep.y();
                 bestR1x = r1x;
