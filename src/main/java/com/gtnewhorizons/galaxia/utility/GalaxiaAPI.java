@@ -224,8 +224,8 @@ public final class GalaxiaAPI {
 
         for (int slot : Galaxia.reactionControlSystemSlot) {
             var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider) {
-                return true;
+            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+                return provider.isEnabled();
             }
         }
         return false;

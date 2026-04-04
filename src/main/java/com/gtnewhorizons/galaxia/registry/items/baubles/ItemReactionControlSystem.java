@@ -20,6 +20,8 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
 
     public static final String BAUBLE_TYPE_REACTION_CONTROL_SYSTEM = "reaction_control_system";
 
+    private boolean enabled = false;
+
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (world.isRemote) return stack;
@@ -106,7 +108,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         int oxygen = def.getOxygenPercent((EntityPlayer) player);
 
         // TODO: Adjust for balance
-        GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);
+        enabled = GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);
     }
 
     @Override
@@ -127,5 +129,10 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
     @Override
     public boolean canUnequip(ItemStack itemstack, EntityLivingBase player) {
         return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 }
