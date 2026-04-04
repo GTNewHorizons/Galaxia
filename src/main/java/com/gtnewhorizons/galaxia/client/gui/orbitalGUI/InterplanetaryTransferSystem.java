@@ -603,8 +603,8 @@ public final class InterplanetaryTransferSystem {
             double[] getWorldPosition(OrbitalCelestialBody body);
         }
 
-        private static final int PATH_COLOR = 0x886DDCFF;
-        private static final int PREVIEW_PATH_COLOR = 0xAA00FFCC;
+        private static final int PATH_COLOR = EnumColors.MAP_COLOR_TRANSFER_PATH.getColor();
+        private static final int PREVIEW_PATH_COLOR = EnumColors.MAP_COLOR_TRANSFER_PREVIEW_PATH.getColor();
         private static final float DOT_HALF_SIZE = 4.0f;
         private static final float DOT_HIT_RADIUS = 7.0f;
 
@@ -704,7 +704,7 @@ public final class InterplanetaryTransferSystem {
                 Math.round(sy - DOT_HALF_SIZE),
                 Math.round(sx + DOT_HALF_SIZE),
                 Math.round(sy + DOT_HALF_SIZE),
-                0xFFFFFFFF);
+                EnumColors.MAP_COLOR_TRANSFER_DOT.getColor());
         }
 
         private void applyColor(int color) {
@@ -895,6 +895,10 @@ public final class InterplanetaryTransferSystem {
             OrbitalCelestialBody getCurrentSystemBody();
 
             void onPreviewNeeded();
+
+            void dispatchTransfer();
+
+            double getTimeScale();
         }
 
         private static final int PANEL_LEFT = 28;
@@ -1073,7 +1077,10 @@ public final class InterplanetaryTransferSystem {
             // Preview info rows
             panel.child(
                 new TextWidget<>(IKey.dynamic(
-                    () -> !state.previewPoints().isEmpty() ? String.format("TOF: %.1fs", state.previewTof()) : "TOF: --"))
+                    () -> !state.previewPoints()
+                        .isEmpty()
+                            ? String.format("TOF: %.1fs", state.previewTof() / Math.max(1e-6, callbacks.getTimeScale()))
+                            : "TOF: --"))
                         .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                         .shadow(true)
                         .pos(CONTENT_X, 180));
@@ -1099,11 +1106,11 @@ public final class InterplanetaryTransferSystem {
                             .shadow(true)
                             .pos(CONTENT_X, 222));
 
-            // Close button at bottom
+            // Dispatch button at bottom
             panel.child(
-                createButton("Close", EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                createButton("Dispatch Transfer", EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    callbacks::closeTransferSimulator).pos(CONTENT_X, 240).size(PANEL_WIDTH - 32, 16));
+                    callbacks::dispatchTransfer).pos(CONTENT_X, 240).size(PANEL_WIDTH - 32, 16));
 
             // Position maxDv text field
             maxDvField.setText(dvText);
@@ -1275,7 +1282,13 @@ public final class InterplanetaryTransferSystem {
             PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
                 .widthRel(1f)
                 .heightRel(1f)
-                .background(drawable((ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, 0xEE162133)));
+                .background(drawable(
+                    (ctx, x, y, w, h) -> Gui.drawRect(
+                        x,
+                        y,
+                        x + w,
+                        y + h,
+                        EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor())));
             root.child(backgroundLayer);
             root.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
             root.child(

@@ -681,6 +681,16 @@ public class OrbitalView {
                     public void onPreviewNeeded() {
                         InterplanetaryTransferSystem.updatePreview(transferSimulatorState, root, globalTime);
                     }
+
+                    @Override
+                    public void dispatchTransfer() {
+                        dispatchSimulatedTransfer();
+                    }
+
+                    @Override
+                    public double getTimeScale() {
+                        return timeScale;
+                    }
                 });
             this.sceneRenderer = new OrbitalScene.OrbitalSceneRenderer(
                 new OrbitalScene.OrbitalSceneRenderer.Callbacks() {
@@ -1610,6 +1620,10 @@ public class OrbitalView {
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             float labelAlpha = (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5);
             sceneFrame = sceneFrameBuilder.build(viewRoot, globalTime, labelAlpha);
+            if (transferSimulatorState.isOpen() && !transferSimulatorState.isWaitingForPick()
+                && viewRoot.objectClass() == CelestialObjectClass.STAR) {
+                InterplanetaryTransferSystem.updatePreview(transferSimulatorState, root, globalTime);
+            }
             transferRenderer.drawTransferPaths(
                 transferState,
                 globalTime,
@@ -1776,6 +1790,35 @@ public class OrbitalView {
                 sourceAsset.displayName() + " -> " + target.displayName(),
                 assetSupport.buildConstructionInventorySummary(sourceAsset),
                 globalTime);
+            if (transfer == null) {
+                showActionStatus("Transfer failed");
+                return;
+            }
+            transferState.addTransfer(transfer);
+            showActionStatus("Transfer dispatched");
+        }
+
+        private void dispatchSimulatedTransfer() {
+            if (!transferSimulatorState.isOpen()) return;
+            if (transferSimulatorState.originBody() == null || transferSimulatorState.destinationBody() == null) {
+                showActionStatus("Select transfer origin and destination first");
+                return;
+            }
+            if (transferSimulatorState.previewPoints()
+                .isEmpty() || transferSimulatorState.previewTof() <= 0.0) {
+                showActionStatus("No valid transfer trajectory");
+                return;
+            }
+            InterplanetaryTransferJob transfer = transferSupport.createTransferJob(
+                root,
+                transferSimulatorState.originBody(),
+                transferSimulatorState.destinationBody(),
+                transferSimulatorState.originBody()
+                    .displayName() + " -> " + transferSimulatorState.destinationBody()
+                        .displayName(),
+                "Simulation",
+                globalTime,
+                transferSimulatorState.previewTof());
             if (transfer == null) {
                 showActionStatus("Transfer failed");
                 return;
