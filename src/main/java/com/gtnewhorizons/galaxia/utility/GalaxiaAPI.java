@@ -175,6 +175,18 @@ public final class GalaxiaAPI {
         return protection;
     }
 
+    public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return;
+
+        for (int slot : Galaxia.reactionControlSystemSlot) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+                provider.setEnabled(enabled);
+            }
+        }
+    }
+
     public static boolean hasSporeFilter(@Nonnull EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) {

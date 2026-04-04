@@ -7,10 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
-import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
-import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
+import com.gtnewhorizons.galaxia.core.network.*;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 import cpw.mods.fml.common.Loader;
@@ -94,6 +91,8 @@ public final class Galaxia {
         GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++, Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
                 Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++,
+            Side.SERVER);
     }
     // spotless:on
 

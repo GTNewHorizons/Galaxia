@@ -88,19 +88,19 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
 
     @Override
     public void onWornTick(ItemStack itemstack, EntityLivingBase player) {
+        if (!this.enabled) return;
         if (player.ticksExisted % 40 != 0 || player.worldObj.isRemote) return;
-        if (!GalaxiaAPI.isInGalaxiaDimension(player)) return;
-        if (!(GalaxiaAPI.getGravity(player) != 0)) return;
+        if (GalaxiaAPI.getGravity(player) != 0) return;
 
-        final boolean isThrusting = Math.abs(prevMotionX - player.motionX) < 1e-6
-            || Math.abs(prevMotionY - player.motionY) < 1e-6
-            || Math.abs(prevMotionZ - player.motionZ) < 1e-6;
+        final boolean isThrusting = Math.abs(prevMotionX - player.motionX) > 1e-6
+            || Math.abs(prevMotionY - player.motionY) > 1e-6
+            || Math.abs(prevMotionZ - player.motionZ) > 1e-6;
 
         prevMotionX = player.motionX;
         prevMotionY = player.motionY;
         prevMotionZ = player.motionZ;
 
-        if (!isThrusting) {
+        if (isThrusting) {
             return;
         }
 
@@ -108,7 +108,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         int oxygen = def.getOxygenPercent((EntityPlayer) player);
 
         // TODO: Adjust for balance
-        enabled = GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);
+        this.enabled = GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);
     }
 
     @Override
@@ -133,6 +133,11 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
 
     @Override
     public boolean isEnabled() {
-        return enabled;
+        return this.enabled;
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }
