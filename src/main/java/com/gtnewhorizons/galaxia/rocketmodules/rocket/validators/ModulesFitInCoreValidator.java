@@ -35,6 +35,9 @@ public class ModulesFitInCoreValidator implements IRocketValidator {
             put(EnumModuleCategory.ENGINE, "Engines");
             put(EnumModuleCategory.FUNCTIONAL, "Functional Modules");
             put(EnumModuleCategory.STRUCTURAL, "Structural Modules");
+            put(EnumModuleCategory.CORE, "Rocket Core");
+            put(EnumModuleCategory.PAYLOAD, "Payload");
+            put(EnumModuleCategory.LANDER, "Lander");
         }
     };
 
