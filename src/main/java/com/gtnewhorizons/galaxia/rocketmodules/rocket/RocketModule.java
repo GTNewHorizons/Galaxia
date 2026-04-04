@@ -23,6 +23,8 @@ public abstract class RocketModule {
     private IModelCustom model;
     @SideOnly(Side.CLIENT)
     private ResourceLocation texture;
+    @SideOnly(Side.CLIENT)
+    private ResourceLocation holoTexture;
 
     protected RocketModule(int id, String name, double height, double width, double weight, String modelName) {
         this.id = id;
@@ -81,6 +83,14 @@ public abstract class RocketModule {
             texture = LocationGalaxia("textures/model/modules/" + modelName + "/texture.png");
         }
         return texture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getHoloTexture() {
+        if (holoTexture == null) {
+            holoTexture = LocationGalaxia("textures/model/modules/" + modelName + "/texture_holo.png");
+        }
+        return holoTexture;
     }
 
     public boolean isStackableWith(RocketModule other) {
