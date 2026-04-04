@@ -469,7 +469,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                             + EnumChatFormatting.RESET)
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
-                                    // Flag to indicate validity of rocket launching
+                                    // Add tooltips for invalid setups
                                     getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
                                         .isEmpty()) {
