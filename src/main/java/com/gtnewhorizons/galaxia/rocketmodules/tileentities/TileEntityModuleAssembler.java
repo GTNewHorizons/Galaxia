@@ -58,7 +58,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                     { "C C", "T T", "C C" },
                     { "C C", "C C", "C C" },
                     { "C C", "C C", "C C" },
-                    { "CCC", "C ~C", "CCC" }
+                    { "CCC", "C~C", "CCC" }
             })
             // spotless:on
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
