@@ -1,0 +1,35 @@
+package com.gtnewhorizons.galaxia.mixin;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.world.World;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.utility.ZeroGMovementAPI;
+import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGRecoilProvider;
+
+@Mixin(World.class)
+public class MixinThrowRecoil {
+
+    @Inject(method = "spawnEntityInWorld", at = @At("RETURN"))
+    private void onEntitySpawn(Entity entity, CallbackInfoReturnable<Boolean> cir) {
+        if (entity == null) return;
+
+        if (entity instanceof ZeroGRecoilProvider provider) {
+            EntityLivingBase shooter = provider.galaxia$getShootingEntity();
+            if (shooter == null) return;
+
+            if (GalaxiaAPI.getGravity(entity) != 0) return;
+            if (shooter instanceof EntityPlayer ep && GalaxiaAPI.hasZeroGMovementCapability(ep)) return;
+
+            ZeroGMovementAPI
+                .addThrowRecoil(shooter, entity.motionX, entity.motionY, entity.motionZ, ZeroGMovementAPI.DEFAULT_MASS);
+        }
+    }
+}

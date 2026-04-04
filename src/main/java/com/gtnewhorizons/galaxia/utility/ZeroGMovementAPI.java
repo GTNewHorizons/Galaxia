@@ -1,14 +1,20 @@
 package com.gtnewhorizons.galaxia.utility;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.MathHelper;
 
 public final class ZeroGMovementAPI {
 
+    public static final double THROW_RECOIL_FACTOR = 0.2;
+    public static final double MAX_RECOIL = 1.0;
+    public static final double DEFAULT_MASS = 1.0;
+
     private ZeroGMovementAPI() {}
 
-    public static void handleMovement(EntityLivingBase self, float strafe, float forward, float vertical) {
+    public static void handleMovement(@Nonnull EntityLivingBase self, float strafe, float forward, float vertical) {
         float yawRad = self.rotationYaw * (float) Math.PI / 180.0F;
         float pitchRad = self.rotationPitch * (float) Math.PI / 180.0F;
 
@@ -32,7 +38,7 @@ public final class ZeroGMovementAPI {
         // allow sprinting in space
         float speed = 0.02F * (self.isSprinting() ? 2 : 1);
         double motionX = (lookX * forward + cosYaw * strafe) * speed;
-        double motionY = lookY * forward * speed + vertical* speed;
+        double motionY = lookY * forward * speed + vertical * speed;
         double motionZ = (lookZ * forward + sinYaw * strafe) * speed;
 
         // Make it easier to slowdown in a given direction
@@ -47,7 +53,7 @@ public final class ZeroGMovementAPI {
         self.fallDistance = 0.0F;
     }
 
-    public static void setEnabled(EntityLivingBase self, boolean cap)  {
+    public static void setEnabled(@Nonnull EntityLivingBase self, boolean cap) {
         // Don't send capabilities to the client since we don't want double-tap to fly behavior like in creative
         if (self instanceof EntityPlayer player && !player.worldObj.isRemote && !player.capabilities.allowFlying) {
             player.capabilities.allowFlying = cap;
@@ -55,7 +61,8 @@ public final class ZeroGMovementAPI {
         }
     }
 
-    public static void handleFallbackMovement(EntityPlayer player, float strafe, float forward, float friction) {
+    public static void handleFallbackMovement(@Nonnull EntityPlayer player, float strafe, float forward,
+        float friction) {
         // The normal accessor is not reliable at this stage
         final boolean isGrounded = player.worldObj
             .getBlock(
@@ -68,5 +75,19 @@ public final class ZeroGMovementAPI {
         if (isGrounded) {
             player.moveFlying(strafe, forward, friction);
         }
+    }
+
+    public static void addThrowRecoil(@Nonnull EntityLivingBase entity, double motionX, double motionY, double motionZ,
+        double mass) {
+        double recoilX = MathHelper.clamp_double(motionX * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+        double recoilY = MathHelper.clamp_double(motionY * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+        double recoilZ = MathHelper.clamp_double(motionZ * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+
+        // apply opposite momentum
+        entity.motionX -= recoilX;
+        entity.motionY -= recoilY;
+        entity.motionZ -= recoilZ;
+
+        entity.velocityChanged = true;
     }
 }
