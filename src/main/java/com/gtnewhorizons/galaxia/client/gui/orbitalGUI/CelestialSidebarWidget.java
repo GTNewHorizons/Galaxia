@@ -44,6 +44,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private static final int LAYER_BUTTON_HEIGHT = 18;
     private static final int LAYER_BUTTON_GAP = 8;
     private static final int CREATIVE_BUTTON_TOP = 42;
+    private static final int TRANSFER_SIMULATOR_BUTTON_TOP = 68;
     private static final int SEARCH_LABEL_TOP = 42;
     private static final int SEARCH_FIELD_TOP = 54;
     private static final int LIST_TOP = 82;
@@ -94,6 +95,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return false;
         if (handleLayerButtonClick(localX, localYAbsolute)) return true;
         if (handleCreativeButtonClick(localX, localYAbsolute)) return true;
+        if (handleTransferSimulatorButtonClick(localX, localYAbsolute)) return true;
         if (activeLayer == root) return false;
         VisibleEntry entry = findVisibleRowAt(localX, localYAbsolute);
         if (entry == null) return false;
@@ -170,8 +172,14 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         return map.isCreativeModeAvailable();
     }
 
+    private boolean shouldShowTransferSimulatorButton() {
+        return map.isCreativeBuildModeEnabled();
+    }
+
     private int getSearchOffset() {
-        return shouldShowCreativeButton() ? 28 : 0;
+        int offset = shouldShowCreativeButton() ? 28 : 0;
+        if (shouldShowTransferSimulatorButton()) offset += 26;
+        return offset;
     }
 
     private int getSearchLabelTop() {
@@ -215,6 +223,18 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             && localX >= 18
             && localX <= 18 + width) {
             map.toggleCreativeBuildMode();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean handleTransferSimulatorButtonClick(int localX, int localY) {
+        if (!shouldShowTransferSimulatorButton()) return false;
+        int width = Math.max(132, Minecraft.getMinecraft().fontRenderer.getStringWidth("Transfer Simulator") + 18);
+        if (localY >= TRANSFER_SIMULATOR_BUTTON_TOP && localY <= TRANSFER_SIMULATOR_BUTTON_TOP + LAYER_BUTTON_HEIGHT
+            && localX >= 18
+            && localX <= 18 + width) {
+            map.toggleTransferSimulator();
             return true;
         }
         return false;
@@ -276,6 +296,12 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             getCreativeButtonWidth(),
             "Creative Mode",
             map.isCreativeBuildModeEnabled());
+        if (shouldShowTransferSimulatorButton()) drawLayerButton(
+            18,
+            TRANSFER_SIMULATOR_BUTTON_TOP,
+            Math.max(132, Minecraft.getMinecraft().fontRenderer.getStringWidth("Transfer Simulator") + 18),
+            "Transfer Simulator",
+            map.isTransferSimulatorOpen());
         if (activeLayer == root) return;
         Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
             StatCollector.translateToLocal("galaxia.gui.orbital.search"),

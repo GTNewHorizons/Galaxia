@@ -65,7 +65,7 @@ record PendingConstructionCancellation(CelestialManagedAsset asset) {}
 record PendingResourceTransfer(CelestialManagedAsset asset, List<StationTransferTarget> targets) {}
 
 @Desugar
-record StationTransferTarget(String assetId, String displayName, String hostBodyName) {}
+record StationTransferTarget(String assetId, String displayName, OrbitalCelestialBody hostBody) {}
 
 @Desugar
 record TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
@@ -144,7 +144,7 @@ public final class AssetManagementSystem {
                         && (asset.kind() == CelestialAssetKind.STATION
                             || asset.kind() == CelestialAssetKind.AUTOMATED_STATION)) {
                         targets.add(
-                            new StationTransferTarget(asset.assetId(), asset.displayName(), systemBody.displayName()));
+                            new StationTransferTarget(asset.assetId(), asset.displayName(), systemBody));
                     }
                 }
             }
@@ -204,6 +204,9 @@ public final class AssetManagementSystem {
             void endRenameInput();
 
             String getRenameInput();
+
+            void createResourceTransfer(OrbitalCelestialBody sourceBody, CelestialManagedAsset sourceAsset,
+                StationTransferTarget target);
         }
 
         private final OrbitalAssetSupport assetSupport;
@@ -355,7 +358,12 @@ public final class AssetManagementSystem {
         }
 
         void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
-            callbacks.showActionStatus("Resource transfer planning is not implemented yet");
+            if (state.pendingResourceTransfer != null) {
+                callbacks.createResourceTransfer(
+                    state.assetManagementBody,
+                    state.pendingResourceTransfer.asset(),
+                    target);
+            }
             state.pendingResourceTransfer = null;
         }
 
@@ -962,7 +970,7 @@ public final class AssetManagementSystem {
                     createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                         .pos(46, currentTop + 6));
                 modal.child(
-                    createBodyText(target.hostBodyName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                    createBodyText(target.hostBody().displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                         .pos(46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))

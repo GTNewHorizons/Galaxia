@@ -8,7 +8,7 @@ import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
 import net.minecraftforge.common.util.ForgeDirection;
 
-import org.jetbrains.annotations.NotNull;
+import javax.annotation.Nonnull;
 
 public class TileEntityFumarole extends TileEntity {
 
@@ -177,7 +177,7 @@ public class TileEntityFumarole extends TileEntity {
         }
     }
 
-    public @NotNull AxisAlignedBB getJetCollision() {
+    public @Nonnull AxisAlignedBB getJetCollision() {
         if (ventType == -1) initOffset();
 
         switch (ventType) {

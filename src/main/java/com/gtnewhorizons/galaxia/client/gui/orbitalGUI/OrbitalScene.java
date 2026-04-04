@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.utils.GlStateManager;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.orbitalGUI.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
@@ -170,6 +171,7 @@ public class OrbitalScene {
         private static final float MAP_LABEL_SCALE = 0.82f;
         private static final int GALAXY_TITLE_TOP = 10;
         private static final int GALAXY_TITLE_HEIGHT = 21;
+        private static final int SOI_FILL_COLOR = 0x3300FF66;
         private final Callbacks callbacks;
 
         OrbitalSceneRenderer(Callbacks callbacks) {
@@ -191,6 +193,28 @@ public class OrbitalScene {
                     float radius = state.body() == viewRoot ? 11f : 7f;
                     drawFilledCircle(state.screenX(), state.screenY(), radius, color, state.bodyAlpha());
                 }
+            }
+        }
+
+        void drawSpheresOfInfluence(OrbitalSceneFrame frame) {
+            for (ResolvedBodyDrawState state : frame.resolvedBodies) {
+                if (state.parent() == null || state.bodyAlpha() <= 0.01f || !state.renderBody()) continue;
+                if (state.body()
+                    .objectClass() == CelestialObjectClass.GALAXY
+                    || state.body()
+                        .objectClass() == CelestialObjectClass.STAR) {
+                    continue;
+                }
+                double soiRadius = OrbitalMechanics.getSphereOfInfluenceRadius(state.parent(), state.body());
+                if (soiRadius <= 1e-6) continue;
+                float screenRadius = (float) (soiRadius * callbacks.getScale());
+                if (screenRadius < 1.0f) continue;
+                drawFilledCircle(
+                    state.screenX(),
+                    state.screenY(),
+                    screenRadius,
+                    SOI_FILL_COLOR,
+                    state.bodyAlpha());
             }
         }
 
@@ -325,10 +349,14 @@ public class OrbitalScene {
 
         private void drawFilledCircle(float x, float y, float r, int color, float alpha) {
             GlStateManager.disableTexture2D();
+            GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glDisable(GL11.GL_CULL_FACE);
             float red = ((color >> 16) & 0xFF) / 255f;
             float green = ((color >> 8) & 0xFF) / 255f;
             float blue = (color & 0xFF) / 255f;
-            GlStateManager.color(red, green, blue, alpha);
+            float baseAlpha = ((color >> 24) & 0xFF) / 255f;
+            GlStateManager.color(red, green, blue, baseAlpha * alpha);
             GL11.glBegin(GL11.GL_TRIANGLE_FAN);
             GL11.glVertex2f(x, y);
             for (int i = 0; i <= 32; i++) {
@@ -336,6 +364,7 @@ public class OrbitalScene {
                 GL11.glVertex2f(x + (float) Math.cos(a) * r, y + (float) Math.sin(a) * r);
             }
             GL11.glEnd();
+            GL11.glEnable(GL11.GL_CULL_FACE);
             GlStateManager.color(1f, 1f, 1f, 1f);
         }
 

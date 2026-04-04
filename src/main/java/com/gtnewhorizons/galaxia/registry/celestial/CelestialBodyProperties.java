@@ -11,11 +11,13 @@ import net.minecraft.item.ItemStack;
 import com.github.bsideup.jabel.Desugar;
 
 @Desugar
-public record CelestialBodyProperties(CelestialConstructionProfile construction, String oreProfile,
-    CelestialResourceSet resources, CelestialEnvironmentProfile environment, Map<String, String> metadata) {
+public record CelestialBodyProperties(CelestialConstructionProfile construction, CelestialGravityProfile gravity,
+    String oreProfile, CelestialResourceSet resources, CelestialEnvironmentProfile environment,
+    Map<String, String> metadata) {
 
     public CelestialBodyProperties {
         construction = construction == null ? CelestialConstructionProfile.NONE : construction;
+        gravity = gravity == null ? CelestialGravityProfile.NONE : gravity;
         oreProfile = oreProfile == null ? "" : oreProfile;
         resources = resources == null ? CelestialResourceSet.builder()
             .build() : resources;
@@ -34,6 +36,18 @@ public record CelestialBodyProperties(CelestialConstructionProfile construction,
 
     public boolean canCreateOutpost() {
         return construction.canCreateOutpost();
+    }
+
+    public double standardGravitationalParameter() {
+        return gravity.standardGravitationalParameter();
+    }
+
+    public double sphereOfInfluenceRadius() {
+        return gravity.sphereOfInfluenceRadius();
+    }
+
+    public double parkingOrbitRadius() {
+        return gravity.parkingOrbitRadius();
     }
 
     public double radiation() {
@@ -71,6 +85,7 @@ public record CelestialBodyProperties(CelestialConstructionProfile construction,
     public static final class Builder {
 
         private CelestialConstructionProfile.Builder construction = CelestialConstructionProfile.builder();
+        private CelestialGravityProfile.Builder gravity = CelestialGravityProfile.builder();
         private String oreProfile = "";
         private CelestialResourceSet.Builder resources = CelestialResourceSet.builder();
         private CelestialEnvironmentProfile.Builder environment = CelestialEnvironmentProfile.builder();
@@ -81,6 +96,8 @@ public record CelestialBodyProperties(CelestialConstructionProfile construction,
         public Builder(CelestialBodyProperties source) {
             if (source == null) return;
             this.construction = source.construction()
+                .toBuilder();
+            this.gravity = source.gravity()
                 .toBuilder();
             this.oreProfile = source.oreProfile();
             this.resources = source.resources()
@@ -112,6 +129,31 @@ public record CelestialBodyProperties(CelestialConstructionProfile construction,
 
         public Builder canCreateOutpost(boolean value) {
             this.construction.canCreateOutpost(value);
+            return this;
+        }
+
+        public Builder gravity(CelestialGravityProfile value) {
+            this.gravity = value == null ? CelestialGravityProfile.builder() : value.toBuilder();
+            return this;
+        }
+
+        public Builder gravity(Consumer<CelestialGravityProfile.Builder> mutator) {
+            mutator.accept(this.gravity);
+            return this;
+        }
+
+        public Builder standardGravitationalParameter(double value) {
+            this.gravity.standardGravitationalParameter(value);
+            return this;
+        }
+
+        public Builder sphereOfInfluenceRadius(double value) {
+            this.gravity.sphereOfInfluenceRadius(value);
+            return this;
+        }
+
+        public Builder parkingOrbitRadius(double value) {
+            this.gravity.parkingOrbitRadius(value);
             return this;
         }
 
@@ -193,10 +235,64 @@ public record CelestialBodyProperties(CelestialConstructionProfile construction,
         public CelestialBodyProperties build() {
             return new CelestialBodyProperties(
                 construction.build(),
+                gravity.build(),
                 oreProfile,
                 resources.build(),
                 environment.build(),
                 metadata);
+        }
+    }
+}
+
+@Desugar
+record CelestialGravityProfile(double standardGravitationalParameter, double sphereOfInfluenceRadius,
+    double parkingOrbitRadius) {
+
+    static final CelestialGravityProfile NONE = new CelestialGravityProfile(0.0, 0.0, 0.0);
+
+    Builder toBuilder() {
+        return new Builder(this);
+    }
+
+    static Builder builder() {
+        return new Builder();
+    }
+
+    static final class Builder {
+
+        private double standardGravitationalParameter;
+        private double sphereOfInfluenceRadius;
+        private double parkingOrbitRadius;
+
+        Builder() {}
+
+        Builder(CelestialGravityProfile source) {
+            if (source == null) return;
+            this.standardGravitationalParameter = source.standardGravitationalParameter();
+            this.sphereOfInfluenceRadius = source.sphereOfInfluenceRadius();
+            this.parkingOrbitRadius = source.parkingOrbitRadius();
+        }
+
+        Builder standardGravitationalParameter(double value) {
+            this.standardGravitationalParameter = Math.max(0.0, value);
+            return this;
+        }
+
+        Builder sphereOfInfluenceRadius(double value) {
+            this.sphereOfInfluenceRadius = Math.max(0.0, value);
+            return this;
+        }
+
+        Builder parkingOrbitRadius(double value) {
+            this.parkingOrbitRadius = Math.max(0.0, value);
+            return this;
+        }
+
+        CelestialGravityProfile build() {
+            return new CelestialGravityProfile(
+                standardGravitationalParameter,
+                sphereOfInfluenceRadius,
+                parkingOrbitRadius);
         }
     }
 }

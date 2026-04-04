@@ -12,7 +12,7 @@ import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 
-import org.jetbrains.annotations.NotNull;
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
@@ -145,7 +145,7 @@ public class ItemOxygenTank extends Item implements IBaubleExpanded {
         p_150895_3_.add(getStack(oxygenStorage));
     }
 
-    public @NotNull ItemStack getStack(int amount) {
+    public @Nonnull ItemStack getStack(int amount) {
         ItemStack stack = new ItemStack(this, 1);
 
         NBTTagCompound tag = new NBTTagCompound();
