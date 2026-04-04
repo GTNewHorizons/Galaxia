@@ -58,7 +58,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                     { "C C", "T T", "C C" },
                     { "C C", "C C", "C C" },
                     { "C C", "C C", "C C" },
-                    { "CCC", "C~C", "CCC" }
+                    { "CCC", "C ~C", "CCC" }
             })
             // spotless:on
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
@@ -231,8 +231,8 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        ModularPanel panel = new ModularPanel("galaxia:module_assembler").size(240, 160);
-
+        ModularPanel panel = new ModularPanel("galaxia:module_assembler");
+        panel.size(350, 350);
         // Title
         panel.child(
             IKey.str(

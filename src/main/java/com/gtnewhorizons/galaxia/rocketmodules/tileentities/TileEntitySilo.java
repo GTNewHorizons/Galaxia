@@ -375,7 +375,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         PagedWidget.Controller tabController = new PagedWidget.Controller();
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
-            .size(240, 160);
+            .size(350, 160);
         // Check validity of assembler path on UI build
         updateLinkedAssembler();
 
@@ -709,7 +709,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     /**
      * Receives a list of incoming modules and adds to the silo
      *
-     * @param The incoming module list
+     * @param incomingModules The incoming module list
      */
     public void receiveLandingRocket(List<Integer> incomingModules) {
         modules.clear();
