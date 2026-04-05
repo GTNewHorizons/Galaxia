@@ -2,19 +2,20 @@ package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
-import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 
-public class BlockSilo extends Block implements ITileEntityProvider {
+/**
+ * Block for the Rocket Silo Controller
+ */
+public class BlockSilo extends BlockRocketController implements ITileEntityProvider {
 
     public BlockSilo() {
-        super(Material.rock);
-        this.setBlockTextureName("stone");
-        this.setHardness(1.5F);
+        super("galaxia:machine/silo_on", "galaxia:machine/silo_off", () -> GalaxiaBlocksEnum.RUSTY_PANEL.get());
     }
 
     @Override

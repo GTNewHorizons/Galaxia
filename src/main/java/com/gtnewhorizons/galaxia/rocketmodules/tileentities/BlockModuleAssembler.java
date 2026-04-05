@@ -1,26 +1,23 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
-import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 
 /**
  * Block for the Module Assembler
  */
-public class BlockModuleAssembler extends Block implements ITileEntityProvider {
+public class BlockModuleAssembler extends BlockRocketController implements ITileEntityProvider {
 
-    /**
-     * Constructor class - sets material, textures etc.
-     */
     public BlockModuleAssembler() {
-        super(Material.rock);
-        this.setBlockTextureName("dirt");
-        this.setHardness(1.5F);
+        super(
+            "galaxia:machine/module_assembler_on",
+            "galaxia:machine/module_assembler_off",
+            () -> GalaxiaBlocksEnum.RUSTY_PANEL.get()); // keep as lambda - ensures we load lazily
     }
 
     /**

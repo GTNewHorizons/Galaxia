@@ -26,6 +26,7 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.IntValue;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -166,6 +167,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureFormed() {
         updateLinkedAssembler();
         shouldRender = true;
+
+        // Move to metavalue 6-9, the structure is formed and we have a linked assembler
+        if (hasAssembler) {
+            int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta + 4, 2);
+        }
     }
 
     /**
@@ -176,6 +183,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureDisformed() {
         updateLinkedAssembler();
         shouldRender = false;
+
+        // Move back to metadata 2-5, structure has been broken
+        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        if (currentMeta >= 6) {
+            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
+        }
         this.kill();
     }
 
@@ -371,30 +384,46 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
+        if (!worldObj.isRemote) {
+            markStructureDirty(); // only runs once on the server
+        }
+        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
+        BooleanSyncValue assemblerSync = new BooleanSyncValue(() -> moduleAssembler != null && hasAssembler, v -> {});
+
+        syncManager.syncValue("rocketSiloStructureValid", validSync);
+        syncManager.syncValue("rocketSiloModuleAssembler", assemblerSync);
+
         PagedWidget.Controller tabController = new PagedWidget.Controller();
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(350, 160);
-        // Check validity of assembler path on UI build
-        updateLinkedAssembler();
 
-        if (!hasAssembler) {
-            return panel.child(
-                IKey.str(
-                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
-                        + EnumChatFormatting.RESET)
-                    .asWidget()
-                    .pos(10, 35));
-        }
+        panel.child(
+            IKey.str(
+                EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
+                    + EnumChatFormatting.RESET)
+                .asWidget()
+                .pos(10, 35)
+                .setEnabledIf(w -> validSync.getBoolValue() && !assemblerSync.getBoolValue()));
+
+        panel.child(
+            IKey.str(
+                EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.not_formed")
+                    + EnumChatFormatting.RESET)
+                .asWidget()
+                .pos(10, 35)
+                .setEnabledIf(w -> !validSync.getBoolValue()));
 
         panel.child(
             new PageButton(0, tabController).size(120, 28)
                 .pos(0, -28)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
+                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build")))
+                .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()))
             .child(
                 new PageButton(1, tabController).size(120, 28)
                     .pos(120, -28)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch")))
+                    .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()));
 
         // Title
         panel.child(
@@ -402,12 +431,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                 EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
                     + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(8, 8));
+                .pos(8, 8)
+                .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()));
         // Module addition buttons
         Flow moduleRow = Flow.row()
             .coverChildren()
             .pos(8, 35)
-            .padding(4);
+            .padding(4)
+            .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue());
         for (RocketModule m : ModuleRegistry.getAll()) {
             moduleRow.child(createModuleButton(m, moduleAssembler));
         }
@@ -415,7 +446,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         Flow destRow = Flow.row()
             .coverChildren()
             .pos(10, 35)
-            .padding(4);
+            .padding(4)
+            .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue());
 
         // Add Overworld option if not there
         if (worldObj.provider.dimensionId != 0) {
@@ -493,7 +525,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         md -> {
                                             if (md.mouseButton == 0 && !worldObj.isRemote && isRocketValid())
                                                 enterRocket(data);
-                                        })))));
+                                        }))))
+                .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()));
 
         return panel;
 
