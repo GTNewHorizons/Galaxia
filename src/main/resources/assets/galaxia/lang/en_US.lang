@@ -231,6 +231,9 @@ galaxia.gui.rocket_silo.validator.wrong_tier=Rocket of tier %d cannot reach %s (
 galaxia.gui.module_controller.title=Module Controller
 galaxia.gui.module_controller.button.repressurize=Repressurize
 
+# Elements - GUI - "Module Assembler"
+galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed
+
 # Elements - "Tooltip"
 galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
 galaxia.tooltip.spore_filter.desc=Filters out any atmospheric spores

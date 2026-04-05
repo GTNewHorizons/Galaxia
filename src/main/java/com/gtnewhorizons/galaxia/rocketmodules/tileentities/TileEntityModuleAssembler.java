@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
@@ -119,6 +120,14 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureFormed() {
         shouldRender = true;
+    }
+
+    /**
+     * Handles logic when structure is not formed
+     */
+    @Override
+    protected void onStructureDisformed() {
+        shouldRender = false;
     }
 
     /**
@@ -231,20 +240,37 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
+        if (!worldObj.isRemote) {
+            markStructureDirty(); // only runs once on the server
+        }
         ModularPanel panel = new ModularPanel("galaxia:module_assembler");
         panel.size(350, 350);
+
+        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
+
+        syncManager.syncValue("moduleAssemblerStructureValid", validSync);
+
+        panel.child(
+            IKey.str(
+                EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.module_assembler.not_formed")
+                    + EnumChatFormatting.RESET)
+                .asWidget()
+                .pos(10, 35)
+                .setEnabledIf(w -> !validSync.getBoolValue()));
         // Title
         panel.child(
             IKey.str(
                 EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
                     + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(8, 8));
+                .pos(8, 8)
+                .setEnabledIf(w -> validSync.getBoolValue()));
 
         // Adding module buttons
         Flow row = Flow.row()
             .coverChildren()
-            .padding(4);
+            .padding(4)
+            .setEnabledIf(w -> validSync.getBoolValue());
         for (RocketModule m : ModuleRegistry.getAll()) {
             row.child(createModuleButton(m));
         }
@@ -261,7 +287,8 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 IKey.dynamic(stringSupplier)
                     .asWidget()
                     .padding(4)
-                    .size(40, 20));
+                    .size(40, 20)
+                    .setEnabledIf(w -> validSync.getBoolValue()));
         }
         panel.child(row2);
         return panel;
