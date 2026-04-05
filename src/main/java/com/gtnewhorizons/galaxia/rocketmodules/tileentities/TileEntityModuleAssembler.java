@@ -135,7 +135,9 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
 
         // Move back to metadata 2-5, structure has been broken
         int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
-        worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
+        if (currentMeta >= 6) {
+            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
+        }
     }
 
     /**
