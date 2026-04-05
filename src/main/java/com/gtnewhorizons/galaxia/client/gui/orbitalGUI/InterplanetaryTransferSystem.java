@@ -674,6 +674,8 @@ public final class InterplanetaryTransferSystem {
             if (totalDv <= dvLimit && (bestTof < 0.0 || tof < bestTof)) {
                 bestTof = tof;
                 bestDv = totalDv;
+                // TOF scan is ascending, so first valid candidate is already the minimum-TOF one.
+                break;
             }
         }
 
@@ -760,6 +762,7 @@ public final class InterplanetaryTransferSystem {
             state.clearPreview();
             return;
         }
+        TransferOptimizationMode optimizationMode = state.optimizationMode();
 
         // Minimum periapsis: reject transfers that skim through the star
         double minPeriapsis = Math.max(0.05, star.spriteSize() * 0.5);
@@ -767,6 +770,7 @@ public final class InterplanetaryTransferSystem {
         // Scan 64 TOFs from 0.1x to 3.0x Hohmann
         int nScan = 64;
         double bestTof = -1.0;
+        double bestTotalDv = Double.POSITIVE_INFINITY;
         double bestAnchorX = 0, bestAnchorY = 0;
         double bestR1x = 0, bestR1y = 0, bestR2x = 0, bestR2y = 0;
         OrbitalMechanics.OrbitalState bestDstState = null;
@@ -863,8 +867,19 @@ public final class InterplanetaryTransferSystem {
             }
 
             double totalDv = selectedEvaluation.totalDeltaV();
-            if (totalDv <= sliderDv && (bestTof < 0 || tof < bestTof)) {
+            boolean acceptCandidate = false;
+            if (totalDv <= sliderDv) {
+                if (optimizationMode == TransferOptimizationMode.MIN_TOF) {
+                    acceptCandidate = (bestTof < 0 || tof < bestTof);
+                } else {
+                    acceptCandidate = (bestTof < 0 || totalDv < bestTotalDv
+                        || (Math.abs(totalDv - bestTotalDv) < 1e-9 && tof < bestTof));
+                }
+            }
+
+            if (acceptCandidate) {
                 bestTof = tof;
+                bestTotalDv = totalDv;
                 bestLambert.set(
                     selectedSolution.departureVelocityX(),
                     selectedSolution.departureVelocityY(),
@@ -878,6 +893,10 @@ public final class InterplanetaryTransferSystem {
                 bestR2y = r2y;
                 bestDstState = dstState;
                 bestStarAtArr = starAtArr;
+                if (optimizationMode == TransferOptimizationMode.MIN_TOF) {
+                    // TOF scan is ascending, so first valid candidate is already the minimum-TOF one.
+                    break;
+                }
             }
         }
 
@@ -1240,6 +1259,15 @@ public final class InterplanetaryTransferSystem {
         DESTINATION
     }
 
+    public enum TransferOptimizationMode {
+        MIN_TOF,
+        MIN_DV;
+
+        TransferOptimizationMode toggled() {
+            return this == MIN_TOF ? MIN_DV : MIN_TOF;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // OrbitalTransferSimulatorState
     // -----------------------------------------------------------------------
@@ -1248,6 +1276,7 @@ public final class InterplanetaryTransferSystem {
 
         private boolean open = false;
         private TransferPickMode pickMode = TransferPickMode.NONE;
+        private TransferOptimizationMode optimizationMode = TransferOptimizationMode.MIN_TOF;
         private OrbitalCelestialBody originBody = null;
         private OrbitalCelestialBody destinationBody = null;
         private int version = 0;
@@ -1284,6 +1313,16 @@ public final class InterplanetaryTransferSystem {
 
         OrbitalCelestialBody destinationBody() {
             return destinationBody;
+        }
+
+        TransferOptimizationMode optimizationMode() {
+            return optimizationMode;
+        }
+
+        void toggleOptimizationMode() {
+            optimizationMode = optimizationMode.toggled();
+            clearPreview();
+            version++;
         }
 
         int version() {
@@ -1689,6 +1728,14 @@ public final class InterplanetaryTransferSystem {
                     this::applyMaxDv).pos(168, 112)
                         .size(36, 18));
 
+            panel.child(
+                createButton(
+                    formatOptimizationModeLabel(state.optimizationMode()),
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
+                    this::toggleOptimizationMode).pos(210, 112)
+                        .size(74, 18));
+
             // Slider row
             double maxDvVal = state.maxDv();
             sliderValue = new DoubleValue(Math.max(0.0, Math.min(maxDvVal, state.sliderDv())));
@@ -1776,6 +1823,18 @@ public final class InterplanetaryTransferSystem {
                     lastVersion = state.version();
                 }
             } catch (NumberFormatException ignored) {}
+        }
+
+        private void toggleOptimizationMode() {
+            state.toggleOptimizationMode();
+            callbacks.onPreviewNeeded();
+            rebuildChildren();
+            lastVersion = state.version();
+        }
+
+        private String formatOptimizationModeLabel(TransferOptimizationMode mode) {
+            if (mode == TransferOptimizationMode.MIN_DV) return "Mode: MIN dV";
+            return "Mode: MIN TOF";
         }
 
         private TextFieldWidget createInputField(String hintText) {
