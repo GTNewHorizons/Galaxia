@@ -183,6 +183,8 @@ public final class GalaxiaAPI {
             var stack = baubles.getStackInSlot(slot);
             if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
                 provider.setEnabled(enabled);
+
+                return;
             }
         }
     }
