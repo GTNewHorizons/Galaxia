@@ -296,6 +296,7 @@ record CelestialGravityProfile(double standardGravitationalParameter, double sph
         }
     }
 }
+
 @Desugar
 record CelestialConstructionProfile(boolean visitable, boolean canCreateStation, boolean canCreateOutpost) {
 

@@ -3,11 +3,11 @@ package com.gtnewhorizons.galaxia.core.nei;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
-
-import javax.annotation.Nonnull;
 
 import com.gtnewhorizon.structurelib.alignment.constructable.IConstructable;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;

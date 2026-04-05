@@ -69,8 +69,7 @@ public final class OrbitalMechanics {
         double sqrtOneMinusESq = Math.sqrt(Math.max(0.0, 1.0 - eccentricity * eccentricity));
         double orbitalX = semiMajorAxis * (cosE - eccentricity);
         double orbitalY = semiMajorAxis * sqrtOneMinusESq * sinE;
-        double eccentricAnomalyRate = directionSign * meanMotion
-            / Math.max(MINIMUM_RADIUS, 1.0 - eccentricity * cosE);
+        double eccentricAnomalyRate = directionSign * meanMotion / Math.max(MINIMUM_RADIUS, 1.0 - eccentricity * cosE);
         double orbitalVx = -semiMajorAxis * sinE * eccentricAnomalyRate;
         double orbitalVy = semiMajorAxis * sqrtOneMinusESq * cosE * eccentricAnomalyRate;
         double orbitRotation = params.argumentOfPeriapsis() + params.longitudeOfAscendingNode();
@@ -155,7 +154,8 @@ public final class OrbitalMechanics {
     }
 
     public static boolean usesAbsolutePosition(OrbitalCelestialBody parent, OrbitalCelestialBody child) {
-        return parent != null && child != null && parent.objectClass() == CelestialObjectClass.GALAXY
+        return parent != null && child != null
+            && parent.objectClass() == CelestialObjectClass.GALAXY
             && child.absolutePosition() != null;
     }
 
@@ -197,8 +197,7 @@ public final class OrbitalMechanics {
 
     private static OrbitalDerivative calculateTwoBodyDerivative(OrbitalState state, double attractorMu) {
         double radiusSquared = state.x() * state.x() + state.y() * state.y();
-        double inverseRadiusCubed = 1.0
-            / Math.pow(Math.max(MINIMUM_RADIUS * MINIMUM_RADIUS, radiusSquared), 1.5);
+        double inverseRadiusCubed = 1.0 / Math.pow(Math.max(MINIMUM_RADIUS * MINIMUM_RADIUS, radiusSquared), 1.5);
         double accelerationScale = -attractorMu * inverseRadiusCubed;
         return new OrbitalDerivative(
             state.vx(),

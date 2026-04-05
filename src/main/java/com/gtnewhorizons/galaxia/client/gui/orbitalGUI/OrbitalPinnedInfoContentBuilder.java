@@ -22,7 +22,6 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 import com.gtnewhorizons.galaxia.registry.celestial.GtOreVeinDefinition;
@@ -58,6 +57,69 @@ public final class OrbitalPinnedInfoContentBuilder {
                 }
         }
         return rows;
+    }
+
+    void buildSignatureInto(StringBuilder signature, OrbitalCelestialBody body, int width, int height) {
+        signature.setLength(0);
+        signature.append(body.id())
+            .append('|')
+            .append(width)
+            .append('|')
+            .append(height)
+            .append('|')
+            .append(body.displayName())
+            .append('|')
+            .append(body.objectClass())
+            .append('|')
+            .append(
+                body.properties()
+                    .visitable())
+            .append('|')
+            .append(
+                body.properties()
+                    .canCreateOutpost())
+            .append('|')
+            .append(
+                body.properties()
+                    .radiation())
+            .append('|')
+            .append(
+                body.properties()
+                    .temperature());
+        String surfaceType = body.properties()
+            .metadata()
+            .get("surface");
+        signature.append('|')
+            .append(surfaceType == null ? "" : surfaceType);
+        List<GtOreVeinDefinition> gtOreVeins = body.properties()
+            .gtOreVeins();
+        signature.append('|')
+            .append(gtOreVeins.size());
+        for (GtOreVeinDefinition vein : gtOreVeins) {
+            signature.append('|')
+                .append(vein.displayName())
+                .append(':');
+            for (String oreName : vein.ores()) signature.append(oreName)
+                .append(',');
+        }
+        List<ItemStack> ores = body.properties()
+            .ores();
+        signature.append('|')
+            .append(ores.size());
+        for (ItemStack stack : ores) {
+            if (stack == null || stack.getItem() == null) {
+                signature.append("|null");
+                continue;
+            }
+            signature.append('|')
+                .append(
+                    stack.getItem()
+                        .getUnlocalizedName())
+                .append(':')
+                .append(stack.getItemDamage())
+                .append(':')
+                .append(stack.stackSize);
+        }
     }
 
     private String buildDangerSummary(OrbitalCelestialBody body) {
@@ -143,6 +205,8 @@ public final class OrbitalPinnedInfoContentBuilder {
 
             OrbitalCelestialBody getPinnedInfoBody();
 
+            void buildSignatureInto(StringBuilder buf, OrbitalCelestialBody body, int width, int height);
+
             List<PinnedInfoRow> buildRows(OrbitalCelestialBody body);
         }
 
@@ -156,7 +220,9 @@ public final class OrbitalPinnedInfoContentBuilder {
         private static final int INLINE_ICON_GAP = 1;
         private static final RenderItem GUI_ITEM_RENDERER = new RenderItem();
         private final Callbacks callbacks;
+        private final StringBuilder sigBuf = new StringBuilder(256);
         private String lastSignature = "";
+        private List<PinnedInfoRow> cachedRows = Collections.emptyList();
 
         OrbitalPinnedInfoWidget(Callbacks callbacks) {
             this.callbacks = callbacks;
@@ -173,15 +239,16 @@ public final class OrbitalPinnedInfoContentBuilder {
                     scheduleResize();
                 }
                 lastSignature = "";
+                cachedRows = Collections.emptyList();
                 setEnabled(false);
                 return;
             }
             setEnabled(true);
-            List<PinnedInfoRow> rows = callbacks.buildRows(body);
-            String signature = buildSignature(body, rows);
-            if (!signature.equals(lastSignature)) {
-                rebuildChildren(body, rows);
-                lastSignature = signature;
+            callbacks.buildSignatureInto(sigBuf, body, getArea().width, getArea().height);
+            if (!lastSignature.contentEquals(sigBuf)) {
+                cachedRows = callbacks.buildRows(body);
+                rebuildChildren(body, cachedRows);
+                lastSignature = sigBuf.toString();
             }
         }
 
@@ -191,34 +258,20 @@ public final class OrbitalPinnedInfoContentBuilder {
             super.drawBackground(context, widgetTheme);
         }
 
-        private String buildSignature(OrbitalCelestialBody body, List<PinnedInfoRow> rows) {
-            StringBuilder signature = new StringBuilder(256);
-            signature.append(body.id())
-                .append('|')
-                .append(getArea().width)
-                .append('|')
-                .append(getArea().height);
-            for (PinnedInfoRow row : rows) signature.append('|')
-                .append(row.label())
-                .append(':')
-                .append(row.value())
-                .append(':')
-                .append(row.inlineItems())
-                .append(':')
-                .append(
-                    row.items()
-                        .size());
-            return signature.toString();
-        }
-
         private void rebuildChildren(OrbitalCelestialBody body, List<PinnedInfoRow> rows) {
             removeAll();
             Minecraft mc = Minecraft.getMinecraft();
             int contentWidth = getContentWidth(mc, rows, getArea().width);
             int boxWidth = contentWidth + PANEL_PADDING * 2;
+            // Pre-compute row heights once to avoid double wrapValue calls
+            int n = rows.size();
+            int[] rowHeights = new int[n];
             int boxHeight = 8;
-            for (PinnedInfoRow row : rows) boxHeight += getRowHeight(mc, row, contentWidth) + ROW_GAP;
-            if (!rows.isEmpty()) boxHeight -= ROW_GAP;
+            for (int i = 0; i < n; i++) {
+                rowHeights[i] = getRowHeight(mc, rows.get(i), contentWidth);
+                boxHeight += rowHeights[i] + ROW_GAP;
+            }
+            if (n > 0) boxHeight -= ROW_GAP;
             boxHeight += 8;
             int x = Math.max(8, getArea().width - boxWidth - 18);
             int y = Math.max(24, (getArea().height - boxHeight) / 2);
@@ -231,9 +284,9 @@ public final class OrbitalPinnedInfoContentBuilder {
             root.child(backgroundLayer);
             root.child(WidgetOutline.create(backgroundLayer, 2, 0xFF7FB6FF));
             int currentY = 8;
-            for (PinnedInfoRow row : rows) {
-                buildRow(root, mc, row, contentWidth, currentY);
-                currentY += getRowHeight(mc, row, contentWidth) + ROW_GAP;
+            for (int i = 0; i < n; i++) {
+                buildRow(root, mc, rows.get(i), contentWidth, currentY);
+                currentY += rowHeights[i] + ROW_GAP;
             }
             child(root);
         }
@@ -244,7 +297,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                 return;
             }
             root.child(
-                new TextWidget<>(row.label()).color(0xFF5A63FF)
+                new FastTextWidget(row.label()).color(0xFF5A63FF)
                     .shadow(true)
                     .pos(PANEL_PADDING, y));
             if (!row.items()
@@ -256,7 +309,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             int lineY = y + 12;
             for (String line : wrappedLines) {
                 root.child(
-                    new TextWidget<>(line).color(0xFFD9E0FF)
+                    new FastTextWidget(line).color(0xFFD9E0FF)
                         .shadow(true)
                         .pos(PANEL_PADDING, lineY));
                 lineY += TEXT_LINE_HEIGHT;
@@ -291,7 +344,7 @@ public final class OrbitalPinnedInfoContentBuilder {
             int labelMaxWidth = Math.max(12, iconsStartX - PANEL_PADDING - 4);
             String label = mc.fontRenderer.trimStringToWidth(row.value(), labelMaxWidth);
             root.child(
-                new TextWidget<>(label).color(0xFFD9E0FF)
+                new FastTextWidget(label).color(0xFFD9E0FF)
                     .shadow(true)
                     .pos(PANEL_PADDING, y + 1));
             for (int i = 0; i < row.items()

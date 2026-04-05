@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.items.baubles;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -11,8 +13,6 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
-
-import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 

@@ -59,8 +59,7 @@ public final class CelestialRegistry {
                 .name("Novum Caelum")
                 .objectClass(CelestialObjectClass.GALAXY)
                 .properties(
-                    withGravity(CelestialBodyProperties.builder(), 5.4e8, 0.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 5.4e8, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("mapLayer", "stars")
@@ -77,8 +76,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    withGravity(CelestialBodyProperties.builder(), 7.2e7, 0.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 7.2e7, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "vael")
@@ -95,8 +93,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
                 .properties(
-                    withGravity(CelestialBodyProperties.builder(), 4.2e7, 0.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 4.2e7, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "ilia")
@@ -132,8 +129,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.24)
                 .properties(
                     withVanillaOres(
-                        withGravity(CelestialBodyProperties.builder(), 5.2e6, 1200.0)
-                            .visitable(false)
+                        withGravity(CelestialBodyProperties.builder(), 5.2e6, 1200.0).visitable(false)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(301)
@@ -158,8 +154,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.19)
                 .properties(
                     withVanillaOres(
-                        withGravity(CelestialBodyProperties.builder(), 4.6e6, 1500.0)
-                            .visitable(false)
+                        withGravity(CelestialBodyProperties.builder(), 4.6e6, 1500.0).visitable(false)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(182)
@@ -183,8 +178,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.18)
                 .properties(
                     withVanillaOres(
-                        withGravity(CelestialBodyProperties.builder(), 9.8e6, 2400.0)
-                            .visitable(false)
+                        withGravity(CelestialBodyProperties.builder(), 9.8e6, 2400.0).visitable(false)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(288)
@@ -210,8 +204,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.75)
                 .properties(
                     withVanillaOres(
-                        withGravity(CelestialBodyProperties.builder(), 1.4e7, 3600.0)
-                            .visitable(true)
+                        withGravity(CelestialBodyProperties.builder(), 1.4e7, 3600.0).visitable(true)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(423)
@@ -234,8 +227,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.825)
                 .properties(
                     withVanillaOres(
-                        withGravity(CelestialBodyProperties.builder(), 5.5e8, 9500.0)
-                            .visitable(true)
+                        withGravity(CelestialBodyProperties.builder(), 5.5e8, 9500.0).visitable(true)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(67)
@@ -259,8 +251,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.06)
                 .properties(
                     withVanillaOres(
-                        withGravity(CelestialBodyProperties.builder(), 1.8e6, 480.0)
-                            .visitable(true)
+                        withGravity(CelestialBodyProperties.builder(), 1.8e6, 480.0).visitable(true)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(225)
@@ -281,8 +272,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
-                    withGravity(CelestialBodyProperties.builder(), 3.5e5, 3000.0)
-                        .visitable(true)
+                    withGravity(CelestialBodyProperties.builder(), 3.5e5, 3000.0).visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(67)
@@ -303,8 +293,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.05)
                 .properties(
-                    withGravity(CelestialBodyProperties.builder(), 6.0e4, 140.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 6.0e4, 140.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(true)
                         .temperature(41)
@@ -324,8 +313,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(
-                    withGravity(CelestialBodyProperties.builder(), 0.0, 90.0)
-                        .visitable(true)
+                    withGravity(CelestialBodyProperties.builder(), 0.0, 90.0).visitable(true)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .oreProfile("undefined")
@@ -364,7 +352,8 @@ public final class CelestialRegistry {
         CelestialObjectRegistration.Builder builder = existing.toBuilder();
         mutator.accept(builder);
         CelestialObjectRegistration modified = builder.build();
-        if (!id.equals(modified.id())) throw new IllegalArgumentException("Celestial object id cannot be modified: " + id);
+        if (!id.equals(modified.id()))
+            throw new IllegalArgumentException("Celestial object id cannot be modified: " + id);
         validateRegistration(modified, id);
         if (existing.dimensionEnum() != null) IDS_BY_DIMENSION.remove(existing.dimensionEnum());
         REGISTRATIONS.put(id, modified);

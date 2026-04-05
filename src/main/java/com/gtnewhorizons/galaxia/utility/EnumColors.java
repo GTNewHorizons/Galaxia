@@ -33,7 +33,7 @@ public enum EnumColors {
     MapSidebarListHovered(0xFF88EEFF),
 
     // Map
-    MapBackground(0xFF0F1621),
+    MapBackground(0x800F1621),
     MapCelestialLabelText(0xFFFFFFFF),
     MapStatusText(0xAAFFFFFF),
 
@@ -89,6 +89,10 @@ public enum EnumColors {
     private static final String PREFIX = "galaxia.color.override.";
     private final int defaultColor;
 
+    private String unlocalizedName;
+    private int cachedColor;
+    private boolean hasCachedColor = false;
+
     EnumColors(int defaultColor) {
         this.defaultColor = defaultColor;
     }
@@ -105,12 +109,20 @@ public enum EnumColors {
      * @return Parsed color from ENUM, or default
      */
     public int getColor() {
+        if (!hasCachedColor) {
+            updateCachedColor();
+        }
+        return cachedColor;
+    }
+
+    public void updateCachedColor() {
         String key = getUnlocalized();
         if (!StatCollector.canTranslate(key)) {
-            return defaultColor;
+            cachedColor = defaultColor;
+        } else {
+            cachedColor = parseColor(StatCollector.translateToLocal(key), defaultColor);
         }
-
-        return parseColor(StatCollector.translateToLocal(key), defaultColor);
+        hasCachedColor = true;
     }
 
     /**
@@ -119,7 +131,10 @@ public enum EnumColors {
      * @return Unlocalized color name
      */
     public String getUnlocalized() {
-        return PREFIX + name().toLowerCase(Locale.ROOT);
+        if (unlocalizedName == null) {
+            unlocalizedName = PREFIX + name().toLowerCase(Locale.ROOT);
+        }
+        return unlocalizedName;
     }
 
     /**

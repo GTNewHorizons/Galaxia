@@ -10,18 +10,15 @@ import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
@@ -119,14 +116,16 @@ public final class AssetManagementSystem {
                 return buildStoredInventorySummary(asset.constructionInventory());
             if (asset.requiredResources()
                 .isEmpty()) return "Empty";
-            List<String> parts = new ArrayList<>();
+            StringBuilder sb = new StringBuilder();
             for (CelestialAssetRequirement required : asset.requiredResources()) {
                 long storedAmount = 0;
                 for (CelestialAssetRequirement stored : asset.constructionInventory())
                     if (required.matches(stored.stack())) storedAmount += stored.amount();
-                parts.add(storedAmount + "/" + required.amount() + " " + required.displayName());
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(storedAmount).append('/').append(required.amount()).append(' ')
+                    .append(required.displayName());
             }
-            return String.join(", ", parts);
+            return sb.toString();
         }
 
         List<StationTransferTarget> getTransferTargetsInSystem(OrbitalCelestialBody root, OrbitalCelestialBody body) {
@@ -134,21 +133,21 @@ public final class AssetManagementSystem {
             if (body == null) return targets;
             OrbitalCelestialBody hostStar = findHostStar(root, body, null);
             if (hostStar == null) return targets;
-            List<OrbitalCelestialBody> systemBodies = new ArrayList<>();
-            collectBodies(hostStar, systemBodies);
-            for (OrbitalCelestialBody systemBody : systemBodies) {
-                CelestialBodyAssetState state = CelestialAssetStore.getState(systemBody.id());
-                for (CelestialManagedAsset asset : state.assets()) {
-                    if (asset.status() == CelestialAssetStatus.OPERATIONAL
-                        && asset.location() == CelestialAssetLocation.ORBIT
-                        && (asset.kind() == CelestialAssetKind.STATION
-                            || asset.kind() == CelestialAssetKind.AUTOMATED_STATION)) {
-                        targets.add(
-                            new StationTransferTarget(asset.assetId(), asset.displayName(), systemBody));
-                    }
+            collectTargets(hostStar, targets);
+            return targets;
+        }
+
+        private void collectTargets(OrbitalCelestialBody current, List<StationTransferTarget> targets) {
+            CelestialBodyAssetState state = CelestialAssetStore.getState(current.id());
+            for (CelestialManagedAsset asset : state.assets()) {
+                if (asset.status() == CelestialAssetStatus.OPERATIONAL
+                    && asset.location() == CelestialAssetLocation.ORBIT
+                    && (asset.kind() == CelestialAssetKind.STATION
+                        || asset.kind() == CelestialAssetKind.AUTOMATED_STATION)) {
+                    targets.add(new StationTransferTarget(asset.assetId(), asset.displayName(), current));
                 }
             }
-            return targets;
+            for (OrbitalCelestialBody child : current.children()) collectTargets(child, targets);
         }
 
         String formatAssetKind(CelestialAssetKind kind) {
@@ -168,10 +167,12 @@ public final class AssetManagementSystem {
 
         private String buildStoredInventorySummary(List<CelestialAssetRequirement> storedResources) {
             if (storedResources.isEmpty()) return "Empty";
-            List<String> parts = new ArrayList<>();
-            for (CelestialAssetRequirement stored : storedResources)
-                parts.add(stored.amount() + " " + stored.displayName());
-            return String.join(", ", parts);
+            StringBuilder sb = new StringBuilder();
+            for (CelestialAssetRequirement stored : storedResources) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(stored.amount()).append(' ').append(stored.displayName());
+            }
+            return sb.toString();
         }
 
         private OrbitalCelestialBody findHostStar(OrbitalCelestialBody current, OrbitalCelestialBody target,
@@ -185,10 +186,6 @@ public final class AssetManagementSystem {
             return null;
         }
 
-        private void collectBodies(OrbitalCelestialBody current, List<OrbitalCelestialBody> out) {
-            out.add(current);
-            for (OrbitalCelestialBody child : current.children()) collectBodies(child, out);
-        }
     }
 
     public static final class OrbitalAssetActionController {
@@ -359,10 +356,8 @@ public final class AssetManagementSystem {
 
         void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
             if (state.pendingResourceTransfer != null) {
-                callbacks.createResourceTransfer(
-                    state.assetManagementBody,
-                    state.pendingResourceTransfer.asset(),
-                    target);
+                callbacks
+                    .createResourceTransfer(state.assetManagementBody, state.pendingResourceTransfer.asset(), target);
             }
             state.pendingResourceTransfer = null;
         }
@@ -970,8 +965,10 @@ public final class AssetManagementSystem {
                     createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                         .pos(46, currentTop + 6));
                 modal.child(
-                    createBodyText(target.hostBody().displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                        .pos(46, currentTop + 18));
+                    createBodyText(
+                        target.hostBody()
+                            .displayName(),
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))
                         .pos(bounds.right() - bounds.left() - 92, currentTop + 8)
@@ -1155,16 +1152,20 @@ public final class AssetManagementSystem {
             return new ScrollAwareButtonWidget().size(Math.max(8, width), 12)
                 .background(IDrawable.EMPTY)
                 .hoverBackground(IDrawable.EMPTY)
-                .overlay(
-                    IKey.str(text)
-                        .alignment(Alignment.CenterLeft)
-                        .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                        .shadow(true))
-                .hoverOverlay(
-                    IKey.str(text)
-                        .alignment(Alignment.CenterLeft)
-                        .color(0xFF8CE4FF)
-                        .shadow(true))
+                .overlay(drawable((context, x, y, w, h) -> {
+                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
+                        .getMinecraft().fontRenderer;
+                    fr.drawStringWithShadow(
+                        text,
+                        x,
+                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                        EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+                }))
+                .hoverOverlay(drawable((context, x, y, w, h) -> {
+                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
+                        .getMinecraft().fontRenderer;
+                    fr.drawStringWithShadow(text, x, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF8CE4FF);
+                }))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0) return true;
                     callbacks.openPendingAssetRename(asset);
@@ -1235,18 +1236,18 @@ public final class AssetManagementSystem {
             return modal;
         }
 
-        private TextWidget<?> createTitleText(String text) {
-            return new TextWidget<>(text).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+        private FastTextWidget createTitleText(String text) {
+            return new FastTextWidget(text).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true);
         }
 
-        private TextWidget<?> createSectionText(String text) {
-            return new TextWidget<>(text).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
+        private FastTextWidget createSectionText(String text) {
+            return new FastTextWidget(text).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                 .shadow(true);
         }
 
-        private TextWidget<?> createBodyText(String text, int color) {
-            return new TextWidget<>(text).color(color)
+        private FastTextWidget createBodyText(String text, int color) {
+            return new FastTextWidget(text).color(color)
                 .shadow(true);
         }
 
@@ -1291,13 +1292,14 @@ public final class AssetManagementSystem {
         private ButtonWidget<?> createTextButton(String label, boolean enabled, Runnable action, boolean danger) {
             return new ScrollAwareButtonWidget().background(createTextButtonBackground(enabled, false, danger))
                 .hoverBackground(createTextButtonBackground(enabled, true, danger))
-                .overlay(
-                    IKey.str(label)
-                        .alignment(Alignment.Center)
-                        .color(
-                            enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
-                                : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor())
-                        .shadow(true))
+                .overlay(drawable((context, x, y, w, h) -> {
+                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
+                        .getMinecraft().fontRenderer;
+                    int textW = fr.getStringWidth(label);
+                    int color = enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
+                        : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor();
+                    fr.drawStringWithShadow(label, x + (w - textW) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
+                }))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0 || !enabled) return true;
                     action.run();

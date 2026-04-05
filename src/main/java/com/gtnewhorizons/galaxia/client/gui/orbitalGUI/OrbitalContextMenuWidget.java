@@ -12,7 +12,6 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
@@ -141,7 +140,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         root.child(backgroundLayer);
         root.child(WidgetOutline.create(backgroundLayer, MENU_OUTLINE_THICKNESS, 0xFF59BFD9));
         root.child(
-            new TextWidget<>(body.displayName()).color(0xFFFFFFFF)
+            new FastTextWidget(body.displayName()).color(0xFFFFFFFF)
                 .shadow(true)
                 .pos(HEADER_TEXT_X, HEADER_TEXT_Y));
 
@@ -173,14 +172,14 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                         return true;
                     }));
             row.child(
-                new TextWidget<>(action.label()).color(0xFFD9E0FF)
+                new FastTextWidget(action.label()).color(0xFFD9E0FF)
                     .shadow(true)
                     .pos(ROW_TEXT_X, ROW_TEXT_Y));
             return row;
         }
 
         row.child(
-            new TextWidget<>(action.label()).color(0xFF6F7A89)
+            new FastTextWidget(action.label()).color(0xFF6F7A89)
                 .shadow(true)
                 .pos(ROW_TEXT_X, ROW_TEXT_Y));
         return row;
@@ -259,7 +258,6 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             return true;
         }
     }
-
 
     private IDrawable createMenuBackgroundDrawable() {
         return drawable((context, x, y, width, height) -> {

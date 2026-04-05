@@ -41,7 +41,7 @@ dependencies {
     api("com.github.GTNewHorizons:ModularUI2:2.3.45-1.7.10:dev")
     api("com.github.GTNewHorizons:waila:1.19.22:dev")
 
-    implementation("com.github.GTNewHorizons:Hodgepodge:2.7.82:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.115:dev")
 
     compileOnly('com.github.GTNewHorizons:SC2:2.3.12:dev') {transitive=false}
     compileOnly('curse.maven:PlayerAPI-228969:2248928') {transitive=false}

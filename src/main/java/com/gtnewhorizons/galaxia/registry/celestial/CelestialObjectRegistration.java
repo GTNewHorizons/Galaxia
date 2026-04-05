@@ -207,9 +207,10 @@ public record CelestialObjectRegistration(CelestialObjectIdentity identity, Cele
         }
     }
 }
+
 @Desugar
-record CelestialObjectIdentity(String id, String name, String nameKey, String parentId,
-    DimensionEnum dimensionEnum, CelestialObjectClass objectClass) {
+record CelestialObjectIdentity(String id, String name, String nameKey, String parentId, DimensionEnum dimensionEnum,
+    CelestialObjectClass objectClass) {
 
     CelestialObjectIdentity {
         if (id == null || id.isEmpty()) throw new IllegalStateException("Celestial object id is required");

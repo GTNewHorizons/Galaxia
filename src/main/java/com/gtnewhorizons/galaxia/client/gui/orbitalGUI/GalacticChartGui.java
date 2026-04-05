@@ -36,7 +36,8 @@ public class GalacticChartGui {
         OrbitalView.OrbitalMapWidget map = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar)
             .attachRenameField(renameField);
         OrbitalPinnedInfoContentBuilder.OrbitalPinnedInfoWidget pinnedInfoOverlay = map.createPinnedInfoWidget();
-        InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipOverlay = map.createTransferTooltipWidget();
+        InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipOverlay = map
+            .createTransferTooltipWidget();
         InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget transferSimulatorOverlay = map
             .createTransferSimulatorWidget();
         OrbitalContextMenuWidget contextMenuOverlay = map.createContextMenuWidget();
