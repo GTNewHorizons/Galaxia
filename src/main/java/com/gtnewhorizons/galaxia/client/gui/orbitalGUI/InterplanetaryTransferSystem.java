@@ -608,8 +608,10 @@ public final class InterplanetaryTransferSystem {
             double tof = hohmannTof * frac;
             if (tof <= 0.0) continue;
 
-            OrbitalMechanics.OrbitalState dstState = OrbitalMechanics.resolveWorldState(root, destination, departureTime + tof);
-            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics.resolveWorldState(root, star, departureTime + tof);
+            OrbitalMechanics.OrbitalState dstState = OrbitalMechanics
+                .resolveWorldState(root, destination, departureTime + tof);
+            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics
+                .resolveWorldState(root, star, departureTime + tof);
             if (dstState == null || starAtArr == null) continue;
 
             double r1x = r1x0;

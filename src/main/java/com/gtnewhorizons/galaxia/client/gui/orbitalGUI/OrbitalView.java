@@ -1894,12 +1894,8 @@ public class OrbitalView {
             }
 
             long startNanos = System.nanoTime();
-            InterplanetaryTransferSystem.LambertStressReport report = InterplanetaryTransferSystem.runLambertStress(
-                root,
-                viewRoot,
-                globalTime,
-                1000,
-                500.0);
+            InterplanetaryTransferSystem.LambertStressReport report = InterplanetaryTransferSystem
+                .runLambertStress(root, viewRoot, globalTime, 1000, 500.0);
             long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
 
             if (!report.hasEnoughPlanets()) {
@@ -1909,17 +1905,26 @@ public class OrbitalView {
 
             if (!report.hasSuccesses()) {
                 showActionStatus(
-                    "Stress: " + report.executedSimulations() + " runs, 0 solved within 500 dV in " + elapsedMs
+                    "Stress: " + report.executedSimulations()
+                        + " runs, 0 solved within 500 dV in "
+                        + elapsedMs
                         + " ms");
                 return;
             }
 
             showActionStatus(
-                "Stress: ok " + report.successfulTransfers() + "/" + report.executedSimulations()
-                    + " avg dV=" + formatDecimal1(report.averageTotalDv())
-                    + " best dV=" + formatDecimal1(report.bestTotalDv())
-                    + " worst dV=" + formatDecimal1(report.worstTotalDv())
-                    + " time=" + elapsedMs + "ms");
+                "Stress: ok " + report.successfulTransfers()
+                    + "/"
+                    + report.executedSimulations()
+                    + " avg dV="
+                    + formatDecimal1(report.averageTotalDv())
+                    + " best dV="
+                    + formatDecimal1(report.bestTotalDv())
+                    + " worst dV="
+                    + formatDecimal1(report.worstTotalDv())
+                    + " time="
+                    + elapsedMs
+                    + "ms");
         }
 
         private void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
