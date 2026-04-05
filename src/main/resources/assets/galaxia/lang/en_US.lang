@@ -265,6 +265,7 @@ galaxia.hazard.spores=Spores Detected
 galaxia.hazard.wither=Withering
 galaxia.hazard.low_oxygen=Low Oxygen
 galaxia.hazard.no_oxygen=Oxygen Depleted
+galaxia.hazard.no_zerog_movement=No Movement Controls
 
 # Elements - Other - "Death Messages"
 death.attack.galaxia.temperature=%1$s succumbed to extreme temperature

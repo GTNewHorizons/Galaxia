@@ -12,7 +12,10 @@ public enum HazardWarnings {
     SPORES(StatCollector.translateToLocal("galaxia.hazard.spores")),
     WITHER(StatCollector.translateToLocal("galaxia.hazard.wither")),
     LOW_OXYGEN(StatCollector.translateToLocal("galaxia.hazard.low_oxygen")),
-    NO_OXYGEN(StatCollector.translateToLocal("galaxia.hazard.no_oxygen"));
+    NO_OXYGEN(StatCollector.translateToLocal("galaxia.hazard.no_oxygen")),
+    NO_ZEROG_MOVEMENT(StatCollector.translateToLocal("galaxia.hazard.no_zerog_movement")),
+
+    ;
 
     public final String message;
 

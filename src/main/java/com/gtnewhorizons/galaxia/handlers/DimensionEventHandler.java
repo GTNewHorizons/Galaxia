@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.utility.hazards.HazardSpores;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardWithering;
+import com.gtnewhorizons.galaxia.utility.hazards.HazardZeroG;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
@@ -43,7 +44,8 @@ public class DimensionEventHandler {
             new HazardSpores(),
             new HazardOxygen(),
             new HazardWithering(),
-            new HazardPressure());
+            new HazardPressure(),
+            new HazardZeroG());
     }
 
     public DimensionEventHandler() {
