@@ -120,6 +120,10 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureFormed() {
         shouldRender = true;
+
+        // Move to metavalue 6-9, the structure is formed
+        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta + 4, 2);
     }
 
     /**
@@ -128,6 +132,10 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureDisformed() {
         shouldRender = false;
+
+        // Move back to metadata 2-5, structure has been broken
+        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
     }
 
     /**
