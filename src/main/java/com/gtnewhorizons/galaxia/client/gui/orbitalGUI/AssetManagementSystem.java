@@ -122,7 +122,10 @@ public final class AssetManagementSystem {
                 for (CelestialAssetRequirement stored : asset.constructionInventory())
                     if (required.matches(stored.stack())) storedAmount += stored.amount();
                 if (sb.length() > 0) sb.append(", ");
-                sb.append(storedAmount).append('/').append(required.amount()).append(' ')
+                sb.append(storedAmount)
+                    .append('/')
+                    .append(required.amount())
+                    .append(' ')
                     .append(required.displayName());
             }
             return sb.toString();
@@ -170,7 +173,9 @@ public final class AssetManagementSystem {
             StringBuilder sb = new StringBuilder();
             for (CelestialAssetRequirement stored : storedResources) {
                 if (sb.length() > 0) sb.append(", ");
-                sb.append(stored.amount()).append(' ').append(stored.displayName());
+                sb.append(stored.amount())
+                    .append(' ')
+                    .append(stored.displayName());
             }
             return sb.toString();
         }
