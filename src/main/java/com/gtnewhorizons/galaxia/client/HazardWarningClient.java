@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.client;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.jetbrains.annotations.NotNull;
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
 
@@ -32,7 +32,7 @@ public class HazardWarningClient {
         private long remaining;
 
         @Override
-        public @NotNull Iterator<HazardWarnings> iterator() {
+        public @Nonnull Iterator<HazardWarnings> iterator() {
             this.remaining = warnings;
             return this;
         }

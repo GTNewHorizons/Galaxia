@@ -14,7 +14,6 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
@@ -65,7 +64,7 @@ record PendingConstructionCancellation(CelestialManagedAsset asset) {}
 record PendingResourceTransfer(CelestialManagedAsset asset, List<StationTransferTarget> targets) {}
 
 @Desugar
-record StationTransferTarget(String assetId, String displayName, String hostBodyName) {}
+record StationTransferTarget(String assetId, String displayName, OrbitalCelestialBody hostBody) {}
 
 @Desugar
 record TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
@@ -119,14 +118,19 @@ public final class AssetManagementSystem {
                 return buildStoredInventorySummary(asset.constructionInventory());
             if (asset.requiredResources()
                 .isEmpty()) return "Empty";
-            List<String> parts = new ArrayList<>();
+            StringBuilder sb = new StringBuilder();
             for (CelestialAssetRequirement required : asset.requiredResources()) {
                 long storedAmount = 0;
                 for (CelestialAssetRequirement stored : asset.constructionInventory())
                     if (required.matches(stored.stack())) storedAmount += stored.amount();
-                parts.add(storedAmount + "/" + required.amount() + " " + required.displayName());
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(storedAmount)
+                    .append('/')
+                    .append(required.amount())
+                    .append(' ')
+                    .append(required.displayName());
             }
-            return String.join(", ", parts);
+            return sb.toString();
         }
 
         List<StationTransferTarget> getTransferTargetsInSystem(OrbitalCelestialBody root, OrbitalCelestialBody body) {
@@ -134,21 +138,21 @@ public final class AssetManagementSystem {
             if (body == null) return targets;
             OrbitalCelestialBody hostStar = findHostStar(root, body, null);
             if (hostStar == null) return targets;
-            List<OrbitalCelestialBody> systemBodies = new ArrayList<>();
-            collectBodies(hostStar, systemBodies);
-            for (OrbitalCelestialBody systemBody : systemBodies) {
-                CelestialBodyAssetState state = CelestialAssetStore.getState(systemBody.id());
-                for (CelestialManagedAsset asset : state.assets()) {
-                    if (asset.status() == CelestialAssetStatus.OPERATIONAL
-                        && asset.location() == CelestialAssetLocation.ORBIT
-                        && (asset.kind() == CelestialAssetKind.STATION
-                            || asset.kind() == CelestialAssetKind.AUTOMATED_STATION)) {
-                        targets.add(
-                            new StationTransferTarget(asset.assetId(), asset.displayName(), systemBody.displayName()));
-                    }
+            collectTargets(hostStar, targets);
+            return targets;
+        }
+
+        private void collectTargets(OrbitalCelestialBody current, List<StationTransferTarget> targets) {
+            CelestialBodyAssetState state = CelestialAssetStore.getState(current.id());
+            for (CelestialManagedAsset asset : state.assets()) {
+                if (asset.status() == CelestialAssetStatus.OPERATIONAL
+                    && asset.location() == CelestialAssetLocation.ORBIT
+                    && (asset.kind() == CelestialAssetKind.STATION
+                        || asset.kind() == CelestialAssetKind.AUTOMATED_STATION)) {
+                    targets.add(new StationTransferTarget(asset.assetId(), asset.displayName(), current));
                 }
             }
-            return targets;
+            for (OrbitalCelestialBody child : current.children()) collectTargets(child, targets);
         }
 
         String formatAssetKind(CelestialAssetKind kind) {
@@ -168,10 +172,14 @@ public final class AssetManagementSystem {
 
         private String buildStoredInventorySummary(List<CelestialAssetRequirement> storedResources) {
             if (storedResources.isEmpty()) return "Empty";
-            List<String> parts = new ArrayList<>();
-            for (CelestialAssetRequirement stored : storedResources)
-                parts.add(stored.amount() + " " + stored.displayName());
-            return String.join(", ", parts);
+            StringBuilder sb = new StringBuilder();
+            for (CelestialAssetRequirement stored : storedResources) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(stored.amount())
+                    .append(' ')
+                    .append(stored.displayName());
+            }
+            return sb.toString();
         }
 
         private OrbitalCelestialBody findHostStar(OrbitalCelestialBody current, OrbitalCelestialBody target,
@@ -185,10 +193,6 @@ public final class AssetManagementSystem {
             return null;
         }
 
-        private void collectBodies(OrbitalCelestialBody current, List<OrbitalCelestialBody> out) {
-            out.add(current);
-            for (OrbitalCelestialBody child : current.children()) collectBodies(child, out);
-        }
     }
 
     public static final class OrbitalAssetActionController {
@@ -204,6 +208,9 @@ public final class AssetManagementSystem {
             void endRenameInput();
 
             String getRenameInput();
+
+            void createResourceTransfer(OrbitalCelestialBody sourceBody, CelestialManagedAsset sourceAsset,
+                StationTransferTarget target);
         }
 
         private final OrbitalAssetSupport assetSupport;
@@ -355,7 +362,10 @@ public final class AssetManagementSystem {
         }
 
         void sendPendingResourceTransfer(OrbitalAssetUiState state, StationTransferTarget target) {
-            callbacks.showActionStatus("Resource transfer planning is not implemented yet");
+            if (state.pendingResourceTransfer != null) {
+                callbacks
+                    .createResourceTransfer(state.assetManagementBody, state.pendingResourceTransfer.asset(), target);
+            }
             state.pendingResourceTransfer = null;
         }
 
@@ -828,7 +838,7 @@ public final class AssetManagementSystem {
                 Gui.drawRect(x, y, x + 1, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
                 Gui.drawRect(x + width - 1, y, x + width, y + height, EnumColors.MAP_COLOR_RENAME_BORDER.getColor());
             }).asWidget()
-                .pos(bounds.left() + RENAME_INPUT_PADDING, bounds.top() + CONTENT_TOP + 4)
+                .pos(RENAME_INPUT_PADDING, CONTENT_TOP + 4)
                 .size(312, RENAME_INPUT_HEIGHT));
             addFooterButtons(
                 modal,
@@ -871,11 +881,11 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_DANGER_BODY.getColor()).pos(18, 92));
             modal.child(
                 createFooterButton("Cancel", true, callbacks::dismissPendingAssetDestruction)
-                    .pos(bounds.left() + 18, bounds.bottom() - 34)
+                    .pos(18, bounds.bottom() - bounds.top() - 34)
                     .size(130, FOOTER_BUTTON_HEIGHT));
             modal.child(
                 createDangerFooterButton("Destroy", callbacks::advancePendingAssetDestruction)
-                    .pos(bounds.right() - 18 - 130, bounds.bottom() - 34)
+                    .pos(bounds.right() - bounds.left() - 18 - 130, bounds.bottom() - bounds.top() - 34)
                     .size(130, FOOTER_BUTTON_HEIGHT));
             child(modal);
         }
@@ -932,7 +942,7 @@ public final class AssetManagementSystem {
                     EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 46));
             modal.child(
                 createFooterButton("Close", true, callbacks::dismissPendingResourceTransfer)
-                    .pos(bounds.right() - 96, bounds.top() + 8)
+                    .pos(bounds.right() - bounds.left() - 96, 8)
                     .size(78, FOOTER_BUTTON_HEIGHT));
             if (transfer.targets()
                 .isEmpty()) {
@@ -942,7 +952,7 @@ public final class AssetManagementSystem {
                 child(modal);
                 return;
             }
-            int rowTop = bounds.top() + 66;
+            int rowTop = 66;
             for (int i = 0; i < transfer.targets()
                 .size(); i++) {
                 StationTransferTarget target = transfer.targets()
@@ -953,20 +963,22 @@ public final class AssetManagementSystem {
                         (context, x, y, width, h) -> Gui
                             .drawRect(x, y, x + width, y + h, EnumColors.MAP_COLOR_TRANSFER_ROW_BG.getColor()))
                                 .asWidget()
-                                .pos(bounds.left() + 14, currentTop)
+                                .pos(14, currentTop)
                                 .size(bounds.right() - bounds.left() - 28, 36));
                 modal.child(
-                    createAssetIconWidget(CelestialAssetKind.STATION, 1.0f).pos(bounds.left() + 24, currentTop + 9)
+                    createAssetIconWidget(CelestialAssetKind.STATION, 1.0f).pos(24, currentTop + 9)
                         .size(16, 16));
                 modal.child(
                     createBodyText(target.displayName(), EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                        .pos(bounds.left() + 46, currentTop + 6));
+                        .pos(46, currentTop + 6));
                 modal.child(
-                    createBodyText(target.hostBodyName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                        .pos(bounds.left() + 46, currentTop + 18));
+                    createBodyText(
+                        target.hostBody()
+                            .displayName(),
+                        EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(46, currentTop + 18));
                 modal.child(
                     createFooterButton("Send", true, () -> callbacks.sendPendingResourceTransfer(target))
-                        .pos(bounds.right() - 92, currentTop + 8)
+                        .pos(bounds.right() - bounds.left() - 92, currentTop + 8)
                         .size(72, FOOTER_BUTTON_HEIGHT));
             }
             child(modal);
@@ -993,7 +1005,7 @@ public final class AssetManagementSystem {
                     .pos(14, 62));
             modal.child(
                 createFooterButton("Close", true, callbacks::closePendingAssetManagement)
-                    .pos(bounds.right() - 18 - 110, bounds.top() + 8)
+                    .pos(bounds.right() - bounds.left() - 18 - 110, 8)
                     .size(110, FOOTER_BUTTON_HEIGHT));
             child(modal);
         }
@@ -1001,17 +1013,18 @@ public final class AssetManagementSystem {
         private void addFooterButtons(ParentWidget<?> modal, ModalBounds bounds, String cancelLabel,
             Runnable cancelAction, String confirmLabel, Runnable confirmAction, boolean confirmDanger) {
             int btnWidth = 110;
-            int btnY = bounds.bottom() - 34;
+            int modalWidth = bounds.right() - bounds.left();
+            int btnY = bounds.bottom() - bounds.top() - 34;
             modal.child(
-                createFooterButton(cancelLabel, true, cancelAction).pos(bounds.left() + 18, btnY)
+                createFooterButton(cancelLabel, true, cancelAction).pos(18, btnY)
                     .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             if (confirmDanger) {
                 modal.child(
-                    createDangerFooterButton(confirmLabel, confirmAction).pos(bounds.right() - 18 - btnWidth, btnY)
+                    createDangerFooterButton(confirmLabel, confirmAction).pos(modalWidth - 18 - btnWidth, btnY)
                         .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             } else {
                 modal.child(
-                    createFooterButton(confirmLabel, true, confirmAction).pos(bounds.right() - 18 - btnWidth, btnY)
+                    createFooterButton(confirmLabel, true, confirmAction).pos(modalWidth - 18 - btnWidth, btnY)
                         .size(btnWidth, FOOTER_BUTTON_HEIGHT));
             }
         }
@@ -1146,16 +1159,24 @@ public final class AssetManagementSystem {
             return new ScrollAwareButtonWidget().size(Math.max(8, width), 12)
                 .background(IDrawable.EMPTY)
                 .hoverBackground(IDrawable.EMPTY)
-                .overlay(
-                    IKey.str(text)
-                        .alignment(Alignment.CenterLeft)
-                        .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                        .shadow(true))
-                .hoverOverlay(
-                    IKey.str(text)
-                        .alignment(Alignment.CenterLeft)
-                        .color(0xFF8CE4FF)
-                        .shadow(true))
+                .overlay(drawable((context, x, y, w, h) -> {
+                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
+                        .getMinecraft().fontRenderer;
+                    fr.drawStringWithShadow(
+                        text,
+                        x,
+                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                        EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+                }))
+                .hoverOverlay(drawable((context, x, y, w, h) -> {
+                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
+                        .getMinecraft().fontRenderer;
+                    fr.drawStringWithShadow(
+                        text,
+                        x,
+                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                        EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
+                }))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0) return true;
                     callbacks.openPendingAssetRename(asset);
@@ -1227,17 +1248,17 @@ public final class AssetManagementSystem {
         }
 
         private TextWidget<?> createTitleText(String text) {
-            return new TextWidget<>(text).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+            return new TextWidget<>(IKey.str(text)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true);
         }
 
         private TextWidget<?> createSectionText(String text) {
-            return new TextWidget<>(text).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
+            return new TextWidget<>(IKey.str(text)).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                 .shadow(true);
         }
 
         private TextWidget<?> createBodyText(String text, int color) {
-            return new TextWidget<>(text).color(color)
+            return new TextWidget<>(IKey.str(text)).color(color)
                 .shadow(true);
         }
 
@@ -1282,13 +1303,14 @@ public final class AssetManagementSystem {
         private ButtonWidget<?> createTextButton(String label, boolean enabled, Runnable action, boolean danger) {
             return new ScrollAwareButtonWidget().background(createTextButtonBackground(enabled, false, danger))
                 .hoverBackground(createTextButtonBackground(enabled, true, danger))
-                .overlay(
-                    IKey.str(label)
-                        .alignment(Alignment.Center)
-                        .color(
-                            enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
-                                : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor())
-                        .shadow(true))
+                .overlay(drawable((context, x, y, w, h) -> {
+                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
+                        .getMinecraft().fontRenderer;
+                    int textW = fr.getStringWidth(label);
+                    int color = enabled ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
+                        : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor();
+                    fr.drawStringWithShadow(label, x + (w - textW) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
+                }))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0 || !enabled) return true;
                     action.run();

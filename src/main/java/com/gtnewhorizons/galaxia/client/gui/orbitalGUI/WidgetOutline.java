@@ -58,6 +58,17 @@ public final class WidgetOutline {
         @Override
         public void onUpdate() {
             super.onUpdate();
+            syncToTarget();
+        }
+
+        @Override
+        public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
+            syncToTarget();
+            if (!isEnabled()) return;
+            super.drawBackground(context, widgetTheme);
+        }
+
+        private void syncToTarget() {
             if (target == null || !target.isValid()) {
                 setEnabled(false);
                 return;

@@ -36,6 +36,10 @@ public class GalacticChartGui {
         OrbitalView.OrbitalMapWidget map = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(currentStar)
             .attachRenameField(renameField);
         OrbitalPinnedInfoContentBuilder.OrbitalPinnedInfoWidget pinnedInfoOverlay = map.createPinnedInfoWidget();
+        InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipOverlay = map
+            .createTransferTooltipWidget();
+        InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget transferSimulatorOverlay = map
+            .createTransferSimulatorWidget();
         OrbitalContextMenuWidget contextMenuOverlay = map.createContextMenuWidget();
         AssetManagementSystem.OrbitalAssetManagementWidget assetManagementOverlay = map.createAssetManagementWidget();
         CelestialSidebarWidget sidebar = new CelestialSidebarWidget(galaxyRoot, currentStar, map);
@@ -51,6 +55,16 @@ public class GalacticChartGui {
                     .heightRel(1f))
             .child(
                 (IWidget) pinnedInfoOverlay.left(LEFT_PANEL_WIDTH)
+                    .top(0)
+                    .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
+                    .heightRel(1f))
+            .child(
+                (IWidget) transferTooltipOverlay.left(LEFT_PANEL_WIDTH)
+                    .top(0)
+                    .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
+                    .heightRel(1f))
+            .child(
+                (IWidget) transferSimulatorOverlay.left(LEFT_PANEL_WIDTH)
                     .top(0)
                     .widthRelOffset(1f, -LEFT_PANEL_WIDTH)
                     .heightRel(1f))

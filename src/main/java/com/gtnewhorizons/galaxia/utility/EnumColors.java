@@ -7,7 +7,7 @@ import net.minecraft.util.StatCollector;
 import cpw.mods.fml.common.FMLLog;
 
 /**
- * ENUM for custom colours to be implemented in UIs and such
+ * ENUM for custom colors to be implemented in UIs and such
  */
 public enum EnumColors {
 
@@ -33,7 +33,7 @@ public enum EnumColors {
     MapSidebarListHovered(0xFF88EEFF),
 
     // Map
-    MapBackground(0xFF0F1621),
+    MapBackground(0x800F1621),
     MapCelestialLabelText(0xFFFFFFFF),
     MapStatusText(0xAAFFFFFF),
 
@@ -78,6 +78,10 @@ public enum EnumColors {
     MAP_COLOR_TEXT_BTN_ENABLED(0xFFFFFFFF),
     MAP_COLOR_TEXT_BTN_DISABLED(0xFF94A0AF),
     MAP_COLOR_TRANSFER_ROW_BG(0x55213144),
+    MAP_COLOR_TRANSFER_PATH(0x886DDCFF),
+    MAP_COLOR_TRANSFER_PREVIEW_PATH(0xAA00FFCC),
+    MAP_COLOR_TRANSFER_DOT(0xFFFFFFFF),
+    MAP_COLOR_TRANSFER_TOOLTIP_BG(0xEE162133),
 
     // Add more colors here
     ; // leave trailing semicolon
@@ -85,12 +89,16 @@ public enum EnumColors {
     private static final String PREFIX = "galaxia.color.override.";
     private final int defaultColor;
 
+    private String unlocalizedName;
+    private int cachedColor;
+    private boolean hasCachedColor = false;
+
     EnumColors(int defaultColor) {
         this.defaultColor = defaultColor;
     }
 
     /**
-     * Gets the colour as a parsed form if possible, or default.
+     * Gets the color as a parsed form if possible, or default.
      * <br>
      * Optional resource pack color override
      * <p>
@@ -98,31 +106,42 @@ public enum EnumColors {
      * - <code>galaxia.color.override.title=FFFFFF</code>
      * - <code>galaxia.color.override.subtitle=CD7F32</code>
      *
-     * @return Parsed colour from ENUM, or default
+     * @return Parsed color from ENUM, or default
      */
     public int getColor() {
+        if (!hasCachedColor) {
+            updateCachedColor();
+        }
+        return cachedColor;
+    }
+
+    public void updateCachedColor() {
         String key = getUnlocalized();
         if (!StatCollector.canTranslate(key)) {
-            return defaultColor;
+            cachedColor = defaultColor;
+        } else {
+            cachedColor = parseColor(StatCollector.translateToLocal(key), defaultColor);
         }
-
-        return parseColor(StatCollector.translateToLocal(key), defaultColor);
+        hasCachedColor = true;
     }
 
     /**
-     * Gets the unlocalized colour name
+     * Gets the unlocalized color name
      *
-     * @return Unlocalized colour name
+     * @return Unlocalized color name
      */
     public String getUnlocalized() {
-        return PREFIX + name().toLowerCase(Locale.ROOT);
+        if (unlocalizedName == null) {
+            unlocalizedName = PREFIX + name().toLowerCase(Locale.ROOT);
+        }
+        return unlocalizedName;
     }
 
     /**
-     * Colour parser given a colour string
+     * Color parser given a color string
      *
      * @param raw      The string to parse
-     * @param fallback A default colour if parsing failed
+     * @param fallback A default color if parsing failed
      * @return Color parsed, or fallback if failed
      */
     private static int parseColor(String raw, int fallback) {

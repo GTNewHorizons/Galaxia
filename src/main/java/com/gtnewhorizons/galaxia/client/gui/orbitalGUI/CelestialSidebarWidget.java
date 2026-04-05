@@ -39,11 +39,19 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private final Set<OrbitalCelestialBody> expanded = new HashSet<>();
     private double scrollOffset = 0;
     private TextFieldWidget searchField;
+    private final List<VisibleEntry> cachedVisibleEntries = new ArrayList<>();
+    private final List<RowLayout> cachedRowLayouts = new ArrayList<>();
+    private boolean visibleEntriesDirty = true;
+    private boolean rowLayoutsDirty = true;
+    private double cachedRowLayoutScrollOffset = Double.NaN;
+    private int cachedRowLayoutHeight = -1;
+    private int cachedRowLayoutWidth = -1;
 
     private static final int LAYER_BUTTON_TOP = 14;
     private static final int LAYER_BUTTON_HEIGHT = 18;
     private static final int LAYER_BUTTON_GAP = 8;
     private static final int CREATIVE_BUTTON_TOP = 42;
+    private static final int TRANSFER_SIMULATOR_BUTTON_TOP = 68;
     private static final int SEARCH_LABEL_TOP = 42;
     private static final int SEARCH_FIELD_TOP = 54;
     private static final int LIST_TOP = 82;
@@ -77,6 +85,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         listenGuiAction((IGuiAction.MouseScroll) (dir, amt) -> {
             scrollOffset += dir.isUp() ? -35 : 35;
             scrollOffset = Math.max(0, Math.min(scrollOffset, getMaxScroll()));
+            rowLayoutsDirty = true;
             return true;
         });
         listenGuiAction((IGuiAction.MousePressed) button -> {
@@ -94,23 +103,33 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return false;
         if (handleLayerButtonClick(localX, localYAbsolute)) return true;
         if (handleCreativeButtonClick(localX, localYAbsolute)) return true;
+        if (handleTransferSimulatorButtonClick(localX, localYAbsolute)) return true;
         if (activeLayer == root) return false;
         VisibleEntry entry = findVisibleRowAt(localX, localYAbsolute);
         if (entry == null) return false;
         if (entry.hasChildren() && localX < ARROW_ZONE + entry.depth() * 24) {
             if (expanded.contains(entry.body())) expanded.remove(entry.body());
             else expanded.add(entry.body());
+            markEntriesDirty();
             return true;
         }
         map.focusOn(entry.body());
         return true;
     }
 
-    private List<VisibleEntry> getVisibleEntries() {
-        List<VisibleEntry> list = new ArrayList<>();
-        if (activeLayer == root) return list;
-        for (OrbitalCelestialBody child : activeLayer.children()) collect(child, 0, list);
-        return list;
+    private void markEntriesDirty() {
+        visibleEntriesDirty = true;
+        rowLayoutsDirty = true;
+    }
+
+    private void ensureVisibleEntries() {
+        if (!visibleEntriesDirty) return;
+        cachedVisibleEntries.clear();
+        if (activeLayer != root) {
+            for (OrbitalCelestialBody child : activeLayer.children()) collect(child, 0, cachedVisibleEntries);
+        }
+        visibleEntriesDirty = false;
+        rowLayoutsDirty = true;
     }
 
     private void collect(OrbitalCelestialBody body, int depth, List<VisibleEntry> list) {
@@ -131,16 +150,23 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     }
 
     private double getMaxScroll() {
-        return Math.max(0, getVisibleEntries().size() * LINE_HEIGHT - getArea().height + getListTop() + 20);
+        ensureVisibleEntries();
+        return Math.max(0, cachedVisibleEntries.size() * LINE_HEIGHT - getArea().height + getListTop() + 20);
     }
 
-    private List<RowLayout> buildVisibleRowLayouts(List<VisibleEntry> visible) {
-        List<RowLayout> rows = new ArrayList<>();
+    private void ensureRowLayouts() {
+        ensureVisibleEntries();
+        if (!rowLayoutsDirty && Double.compare(cachedRowLayoutScrollOffset, scrollOffset) == 0
+            && cachedRowLayoutHeight == getArea().height
+            && cachedRowLayoutWidth == getArea().width) {
+            return;
+        }
+        cachedRowLayouts.clear();
         int y = getListTop() - (int) scrollOffset;
-        for (int i = 0; i < visible.size(); i++) {
+        for (int i = 0; i < cachedVisibleEntries.size(); i++) {
             int sy = y + i * LINE_HEIGHT;
             if (sy < 50 || sy > getArea().height - 10) continue;
-            VisibleEntry entry = visible.get(i);
+            VisibleEntry entry = cachedVisibleEntries.get(i);
             int iconX = 10 + entry.depth() * 24;
             int textX = 22 + entry.depth() * 24;
             int textWidth = Minecraft.getMinecraft().fontRenderer.getStringWidth(
@@ -148,14 +174,17 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
                     .displayName());
             int rowLeft = Math.max(0, iconX - 4);
             int rowRight = Math.min(getArea().width - 10, Math.max(textX + textWidth + 4, rowLeft + 16));
-            rows.add(new RowLayout(entry, rowLeft, rowRight, sy, sy + LINE_HEIGHT));
+            cachedRowLayouts.add(new RowLayout(entry, rowLeft, rowRight, sy, sy + LINE_HEIGHT));
         }
-        return rows;
+        cachedRowLayoutScrollOffset = scrollOffset;
+        cachedRowLayoutHeight = getArea().height;
+        cachedRowLayoutWidth = getArea().width;
+        rowLayoutsDirty = false;
     }
 
     private VisibleEntry findVisibleRowAt(int localX, int localYAbsolute) {
-        List<VisibleEntry> visible = getVisibleEntries();
-        for (RowLayout row : buildVisibleRowLayouts(visible)) {
+        ensureRowLayouts();
+        for (RowLayout row : cachedRowLayouts) {
             if (localX < row.left() || localX > row.right()) continue;
             if (localYAbsolute >= row.top() && localYAbsolute < row.bottom()) return row.entry();
         }
@@ -170,8 +199,14 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         return map.isCreativeModeAvailable();
     }
 
+    private boolean shouldShowTransferSimulatorButton() {
+        return map.isCreativeBuildModeEnabled();
+    }
+
     private int getSearchOffset() {
-        return shouldShowCreativeButton() ? 28 : 0;
+        int offset = shouldShowCreativeButton() ? 28 : 0;
+        if (shouldShowTransferSimulatorButton()) offset += 26;
+        return offset;
     }
 
     private int getSearchLabelTop() {
@@ -220,10 +255,23 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         return false;
     }
 
+    private boolean handleTransferSimulatorButtonClick(int localX, int localY) {
+        if (!shouldShowTransferSimulatorButton()) return false;
+        int width = Math.max(132, Minecraft.getMinecraft().fontRenderer.getStringWidth("Transfer Simulator") + 18);
+        if (localY >= TRANSFER_SIMULATOR_BUTTON_TOP && localY <= TRANSFER_SIMULATOR_BUTTON_TOP + LAYER_BUTTON_HEIGHT
+            && localX >= 18
+            && localX <= 18 + width) {
+            map.toggleTransferSimulator();
+            return true;
+        }
+        return false;
+    }
+
     private void selectLayer(OrbitalCelestialBody layerRoot) {
         activeLayer = layerRoot == null ? root : layerRoot;
         if (activeLayer != null) expanded.add(activeLayer);
         scrollOffset = 0;
+        markEntriesDirty();
         map.showLayer(activeLayer);
     }
 
@@ -234,6 +282,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
                 activeLayer = body;
                 scrollOffset = 0;
                 expanded.add(body);
+                markEntriesDirty();
                 map.showLayer(body);
             }
         }
@@ -260,8 +309,17 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         if (!newQuery.equals(searchQuery)) {
             searchQuery = newQuery;
             scrollOffset = 0;
+            markEntriesDirty();
         }
-        if (searchField != null) searchField.top(activeLayer == root ? -1000 : getSearchFieldTop());
+        if (searchField != null) {
+            if (activeLayer == root) {
+                searchField.top(-1000);
+                if (searchField.isEnabled()) searchField.setEnabled(false);
+            } else {
+                searchField.top(getSearchFieldTop());
+                if (!searchField.isEnabled()) searchField.setEnabled(true);
+            }
+        }
         Gui.drawRect(0, 0, getArea().width, getArea().height, EnumColors.MapSidebarBackground.getColor());
         drawLayerButton(18, LAYER_BUTTON_TOP, 70, "Galaxy", activeLayer == root);
         drawLayerButton(
@@ -276,19 +334,24 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             getCreativeButtonWidth(),
             "Creative Mode",
             map.isCreativeBuildModeEnabled());
+        if (shouldShowTransferSimulatorButton()) drawLayerButton(
+            18,
+            TRANSFER_SIMULATOR_BUTTON_TOP,
+            Math.max(132, Minecraft.getMinecraft().fontRenderer.getStringWidth("Transfer Simulator") + 18),
+            "Transfer Simulator",
+            map.isTransferSimulatorOpen());
         if (activeLayer == root) return;
         Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
             StatCollector.translateToLocal("galaxia.gui.orbital.search"),
             18,
             getSearchLabelTop(),
             EnumColors.MapSidebaSearchLabel.getColor());
-        List<VisibleEntry> visible = getVisibleEntries();
-        List<RowLayout> rowLayouts = buildVisibleRowLayouts(visible);
+        ensureRowLayouts();
         int mouseLocalX = getContext().getMouseX() - getArea().rx;
         int mouseLocalY = getContext().getMouseY() - getArea().ry;
         VisibleEntry hoveredEntry = findVisibleRowAt(mouseLocalX, mouseLocalY);
         OrbitalCelestialBody hoveredBody = hoveredEntry == null ? null : hoveredEntry.body();
-        for (RowLayout row : rowLayouts) {
+        for (RowLayout row : cachedRowLayouts) {
             VisibleEntry e = row.entry();
             int sy = row.top();
             boolean hovered = hoveredBody != null && e.body() == hoveredBody;
