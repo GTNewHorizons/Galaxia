@@ -142,10 +142,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             .background(createMenuBackgroundDrawable());
         root.child(backgroundLayer);
         root.child(
-            WidgetOutline.create(
-                backgroundLayer,
-                MENU_OUTLINE_THICKNESS,
-                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
+            WidgetOutline
+                .create(backgroundLayer, MENU_OUTLINE_THICKNESS, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
         root.child(
             new TextWidget<>(IKey.str(body.displayName())).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
@@ -174,12 +172,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     .background(IDrawable.EMPTY)
                     .hoverBackground(
                         drawable(
-                            (context, x, y, w, h) -> Gui.drawRect(
-                                x,
-                                y,
-                                x + w,
-                                y + h,
-                                EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
+                            (context, x, y, w, h) -> Gui
+                                .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
                         handleAction(body, action.actionType());

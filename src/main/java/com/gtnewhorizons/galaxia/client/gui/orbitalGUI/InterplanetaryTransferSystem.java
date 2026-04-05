@@ -1262,6 +1262,7 @@ public final class InterplanetaryTransferSystem {
     }
 
     public enum TransferOptimizationMode {
+
         MIN_TOF,
         MIN_DV;
 
