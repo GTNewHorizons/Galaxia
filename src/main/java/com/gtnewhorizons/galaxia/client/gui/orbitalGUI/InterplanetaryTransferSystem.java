@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import net.minecraft.client.gui.Gui;
 
@@ -157,6 +158,68 @@ public final class InterplanetaryTransferSystem {
             captureDeltaV = 0.0;
             totalDeltaV = 0.0;
             valid = false;
+        }
+    }
+
+    public static final class LambertStressReport {
+
+        private final int requestedSimulations;
+        private final int executedSimulations;
+        private final int candidatePlanetCount;
+        private final int successfulTransfers;
+        private final double averageTotalDv;
+        private final double bestTotalDv;
+        private final double worstTotalDv;
+
+        LambertStressReport(int requestedSimulations, int executedSimulations, int candidatePlanetCount,
+            int successfulTransfers, double averageTotalDv, double bestTotalDv, double worstTotalDv) {
+            this.requestedSimulations = Math.max(0, requestedSimulations);
+            this.executedSimulations = Math.max(0, executedSimulations);
+            this.candidatePlanetCount = Math.max(0, candidatePlanetCount);
+            this.successfulTransfers = Math.max(0, successfulTransfers);
+            this.averageTotalDv = averageTotalDv;
+            this.bestTotalDv = bestTotalDv;
+            this.worstTotalDv = worstTotalDv;
+        }
+
+        public int requestedSimulations() {
+            return requestedSimulations;
+        }
+
+        public int executedSimulations() {
+            return executedSimulations;
+        }
+
+        public int candidatePlanetCount() {
+            return candidatePlanetCount;
+        }
+
+        public int successfulTransfers() {
+            return successfulTransfers;
+        }
+
+        public int failedTransfers() {
+            return Math.max(0, executedSimulations - successfulTransfers);
+        }
+
+        public boolean hasEnoughPlanets() {
+            return candidatePlanetCount >= 2;
+        }
+
+        public boolean hasSuccesses() {
+            return successfulTransfers > 0;
+        }
+
+        public double averageTotalDv() {
+            return averageTotalDv;
+        }
+
+        public double bestTotalDv() {
+            return bestTotalDv;
+        }
+
+        public double worstTotalDv() {
+            return worstTotalDv;
         }
     }
 
@@ -448,6 +511,171 @@ public final class InterplanetaryTransferSystem {
             0.0,
             body.properties()
                 .standardGravitationalParameter());
+    }
+
+    public static LambertStressReport runLambertStress(OrbitalCelestialBody root, OrbitalCelestialBody star,
+        double globalTime, int simulations, double maxDvLimit) {
+        int requested = Math.max(0, simulations);
+        if (requested == 0 || root == null || star == null || star.objectClass() != CelestialObjectClass.STAR) {
+            return new LambertStressReport(requested, 0, 0, 0, 0.0, 0.0, 0.0);
+        }
+
+        List<OrbitalCelestialBody> candidatePlanets = new ArrayList<>();
+        collectStressPlanets(star, candidatePlanets);
+        if (candidatePlanets.size() < 2) {
+            return new LambertStressReport(requested, 0, candidatePlanets.size(), 0, 0.0, 0.0, 0.0);
+        }
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        int successCount = 0;
+        double sumDv = 0.0;
+        double bestDv = Double.POSITIVE_INFINITY;
+        double worstDv = 0.0;
+        double dvLimit = Math.max(0.0, maxDvLimit);
+
+        for (int i = 0; i < requested; i++) {
+            int sourceIndex = random.nextInt(candidatePlanets.size());
+            int destinationIndex = random.nextInt(candidatePlanets.size() - 1);
+            if (destinationIndex >= sourceIndex) destinationIndex++;
+
+            OrbitalCelestialBody source = candidatePlanets.get(sourceIndex);
+            OrbitalCelestialBody destination = candidatePlanets.get(destinationIndex);
+
+            double departureOffset = random.nextDouble(0.0, 600.0);
+            double departureTime = globalTime + departureOffset;
+            double solvedDv = findBestLambertWithinDvLimit(root, star, source, destination, departureTime, dvLimit);
+            if (solvedDv < 0.0) continue;
+
+            successCount++;
+            sumDv += solvedDv;
+            if (solvedDv < bestDv) bestDv = solvedDv;
+            if (solvedDv > worstDv) worstDv = solvedDv;
+        }
+
+        double avgDv = successCount > 0 ? sumDv / successCount : 0.0;
+        double clampedBestDv = successCount > 0 ? bestDv : 0.0;
+        double clampedWorstDv = successCount > 0 ? worstDv : 0.0;
+        return new LambertStressReport(
+            requested,
+            requested,
+            candidatePlanets.size(),
+            successCount,
+            avgDv,
+            clampedBestDv,
+            clampedWorstDv);
+    }
+
+    private static void collectStressPlanets(OrbitalCelestialBody current, List<OrbitalCelestialBody> out) {
+        if (current == null || out == null) return;
+        CelestialObjectClass objectClass = current.objectClass();
+        if (objectClass == CelestialObjectClass.PLANET || objectClass == CelestialObjectClass.GAS_GIANT) {
+            out.add(current);
+        }
+        for (OrbitalCelestialBody child : current.children()) {
+            collectStressPlanets(child, out);
+        }
+    }
+
+    private static double findBestLambertWithinDvLimit(OrbitalCelestialBody root, OrbitalCelestialBody star,
+        OrbitalCelestialBody origin, OrbitalCelestialBody destination, double departureTime, double dvLimit) {
+        if (root == null || star == null || origin == null || destination == null || origin == destination) return -1.0;
+
+        double mu = Math.max(1e-6, getBodyMu(star));
+        double hohmannTof = getHohmannTof(star, origin, destination, root, departureTime);
+        if (hohmannTof <= 0.0) return -1.0;
+
+        double minPeriapsis = Math.max(0.05, star.spriteSize() * 0.5);
+        OrbitalMechanics.OrbitalState srcStateDep = OrbitalMechanics.resolveWorldState(root, origin, departureTime);
+        OrbitalMechanics.OrbitalState starAtDep = OrbitalMechanics.resolveWorldState(root, star, departureTime);
+        if (srcStateDep == null || starAtDep == null) return -1.0;
+
+        double r1x0 = srcStateDep.x() - starAtDep.x();
+        double r1y0 = srcStateDep.y() - starAtDep.y();
+        double vsrcX0 = srcStateDep.vx() - starAtDep.vx();
+        double vsrcY0 = srcStateDep.vy() - starAtDep.vy();
+
+        MutableLambertSolution progradeSolution = new MutableLambertSolution();
+        MutableLambertSolution retrogradeSolution = new MutableLambertSolution();
+        MutableLambertEvaluation progradeEvaluation = new MutableLambertEvaluation();
+        MutableLambertEvaluation retrogradeEvaluation = new MutableLambertEvaluation();
+
+        int nScan = 64;
+        double bestTof = -1.0;
+        double bestDv = -1.0;
+
+        for (int i = 0; i < nScan; i++) {
+            double frac = 0.1 + (3.0 - 0.1) * i / (nScan - 1);
+            double tof = hohmannTof * frac;
+            if (tof <= 0.0) continue;
+
+            OrbitalMechanics.OrbitalState dstState = OrbitalMechanics.resolveWorldState(root, destination, departureTime + tof);
+            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics.resolveWorldState(root, star, departureTime + tof);
+            if (dstState == null || starAtArr == null) continue;
+
+            double r1x = r1x0;
+            double r1y = r1y0;
+            double r2x = dstState.x() - starAtArr.x();
+            double r2y = dstState.y() - starAtArr.y();
+            double vsrcX = vsrcX0;
+            double vsrcY = vsrcY0;
+            double vdstX = dstState.vx() - starAtArr.vx();
+            double vdstY = dstState.vy() - starAtArr.vy();
+
+            double crossZ = r1x * r2y - r1y * r2x;
+            double r1mag = Math.hypot(r1x, r1y);
+            double r2mag = Math.hypot(r2x, r2y);
+            double sinDth = Math.abs(crossZ) / Math.max(1e-20, r1mag * r2mag);
+            if (sinDth < 1e-3) continue;
+
+            boolean hasPrograde = evalLambertInto(
+                r1x,
+                r1y,
+                r2x,
+                r2y,
+                tof,
+                mu,
+                true,
+                vsrcX,
+                vsrcY,
+                vdstX,
+                vdstY,
+                minPeriapsis,
+                progradeSolution,
+                progradeEvaluation);
+            boolean hasRetrograde = evalLambertInto(
+                r1x,
+                r1y,
+                r2x,
+                r2y,
+                tof,
+                mu,
+                false,
+                vsrcX,
+                vsrcY,
+                vdstX,
+                vdstY,
+                minPeriapsis,
+                retrogradeSolution,
+                retrogradeEvaluation);
+
+            MutableLambertEvaluation selectedEvaluation;
+            if (hasPrograde
+                && (!hasRetrograde || progradeEvaluation.totalDeltaV() <= retrogradeEvaluation.totalDeltaV())) {
+                selectedEvaluation = progradeEvaluation;
+            } else if (hasRetrograde) {
+                selectedEvaluation = retrogradeEvaluation;
+            } else {
+                continue;
+            }
+
+            double totalDv = selectedEvaluation.totalDeltaV();
+            if (totalDv <= dvLimit && (bestTof < 0.0 || tof < bestTof)) {
+                bestTof = tof;
+                bestDv = totalDv;
+            }
+        }
+
+        return bestDv;
     }
 
     private static double getHohmannTof(OrbitalCelestialBody star, OrbitalCelestialBody source,
@@ -1231,6 +1459,8 @@ public final class InterplanetaryTransferSystem {
 
             void dispatchTransfer();
 
+            void runLambertStressTest();
+
             double getTimeScale();
         }
 
@@ -1499,11 +1729,19 @@ public final class InterplanetaryTransferSystem {
             // Dispatch button at bottom
             panel.child(
                 createButton(
+                    "Stress",
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
+                    callbacks::runLambertStressTest).pos(CONTENT_X, 240)
+                        .size(72, 16));
+
+            panel.child(
+                createButton(
                     "Dispatch Transfer",
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
                     EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    callbacks::dispatchTransfer).pos(CONTENT_X, 240)
-                        .size(PANEL_WIDTH - 32, 16));
+                    callbacks::dispatchTransfer).pos(CONTENT_X + 80, 240)
+                        .size(PANEL_WIDTH - 32 - 80, 16));
 
             // Position maxDv text field
             maxDvField.setText(dvText);

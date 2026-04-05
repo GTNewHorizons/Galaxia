@@ -708,6 +708,11 @@ public class OrbitalView {
                     }
 
                     @Override
+                    public void runLambertStressTest() {
+                        runTransferPlannerStressTest();
+                    }
+
+                    @Override
                     public double getTimeScale() {
                         return timeScale;
                     }
@@ -1881,6 +1886,42 @@ public class OrbitalView {
             showActionStatus("Transfer dispatched");
         }
 
+        private void runTransferPlannerStressTest() {
+            if (!transferSimulatorState.isOpen()) return;
+            if (viewRoot.objectClass() != CelestialObjectClass.STAR) {
+                showActionStatus("Open a star system first");
+                return;
+            }
+
+            long startNanos = System.nanoTime();
+            InterplanetaryTransferSystem.LambertStressReport report = InterplanetaryTransferSystem.runLambertStress(
+                root,
+                viewRoot,
+                globalTime,
+                1000,
+                500.0);
+            long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+
+            if (!report.hasEnoughPlanets()) {
+                showActionStatus("Stress: need at least 2 planets in this system (" + elapsedMs + " ms)");
+                return;
+            }
+
+            if (!report.hasSuccesses()) {
+                showActionStatus(
+                    "Stress: " + report.executedSimulations() + " runs, 0 solved within 500 dV in " + elapsedMs
+                        + " ms");
+                return;
+            }
+
+            showActionStatus(
+                "Stress: ok " + report.successfulTransfers() + "/" + report.executedSimulations()
+                    + " avg dV=" + formatDecimal1(report.averageTotalDv())
+                    + " best dV=" + formatDecimal1(report.bestTotalDv())
+                    + " worst dV=" + formatDecimal1(report.worstTotalDv())
+                    + " time=" + elapsedMs + "ms");
+        }
+
         private void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
             sceneRenderer.drawAssetIcon(kind, x, y, size, alpha);
         }
@@ -1925,6 +1966,11 @@ public class OrbitalView {
         private void showActionStatus(String message) {
             actionStatusMessage = message;
             actionStatusExpiresAt = System.currentTimeMillis() + 2500L;
+        }
+
+        private String formatDecimal1(double value) {
+            long scaled = Math.round(value * 10.0);
+            return (scaled / 10L) + "." + Math.abs(scaled % 10L);
         }
 
         private void updateRenameFieldLayout() {
