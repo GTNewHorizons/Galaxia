@@ -7,15 +7,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.TextWidget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
+import com.gtnewhorizons.galaxia.utility.EnumColors;
 
 @Desugar
 record ContextMenuAction(String label, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
@@ -138,9 +141,13 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             .heightRel(1f)
             .background(createMenuBackgroundDrawable());
         root.child(backgroundLayer);
-        root.child(WidgetOutline.create(backgroundLayer, MENU_OUTLINE_THICKNESS, 0xFF59BFD9));
         root.child(
-            new FastTextWidget(body.displayName()).color(0xFFFFFFFF)
+            WidgetOutline.create(
+                backgroundLayer,
+                MENU_OUTLINE_THICKNESS,
+                EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
+        root.child(
+            new TextWidget<>(IKey.str(body.displayName())).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
                 .pos(HEADER_TEXT_X, HEADER_TEXT_Y));
 
@@ -165,21 +172,28 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     .widthRelOffset(1f, -ROW_HOVER_INSET_X * 2)
                     .height(height - ROW_HOVER_INSET_Y * 2)
                     .background(IDrawable.EMPTY)
-                    .hoverBackground(drawable((context, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, 0xFF375575)))
+                    .hoverBackground(
+                        drawable(
+                            (context, x, y, w, h) -> Gui.drawRect(
+                                x,
+                                y,
+                                x + w,
+                                y + h,
+                                EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
                     .onMousePressed(mouseButton -> {
                         if (mouseButton != 0) return true;
                         handleAction(body, action.actionType());
                         return true;
                     }));
             row.child(
-                new FastTextWidget(action.label()).color(0xFFD9E0FF)
+                new TextWidget<>(IKey.str(action.label())).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(ROW_TEXT_X, ROW_TEXT_Y));
             return row;
         }
 
         row.child(
-            new FastTextWidget(action.label()).color(0xFF6F7A89)
+            new TextWidget<>(IKey.str(action.label())).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                 .shadow(true)
                 .pos(ROW_TEXT_X, ROW_TEXT_Y));
         return row;
@@ -261,8 +275,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
     private IDrawable createMenuBackgroundDrawable() {
         return drawable((context, x, y, width, height) -> {
-            Gui.drawRect(x, y, x + width, y + height, 0xFF111925);
-            Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, 0xFF23324B);
+            Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
+            Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
         });
     }
 

@@ -10,6 +10,7 @@ import net.minecraft.client.gui.Gui;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -18,6 +19,7 @@ import com.cleanroommc.modularui.value.DoubleValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.SliderWidget;
+import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
@@ -1658,7 +1660,7 @@ public final class InterplanetaryTransferSystem {
 
             // Title
             panel.child(
-                new FastTextWidget("Transfer Planner").color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                new TextWidget<>(IKey.str("Transfer Planner")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 12));
 
@@ -1704,7 +1706,7 @@ public final class InterplanetaryTransferSystem {
 
             // Ship dV row: label + field + Set button
             panel.child(
-                new FastTextWidget("Ship dV:").color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
+                new TextWidget<>(IKey.str("Ship dV:")).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 116));
 
@@ -1747,7 +1749,7 @@ public final class InterplanetaryTransferSystem {
 
             // dV label (dynamic: show current sliderDv)
             panel.child(
-                new FastTextWidget(() -> cachedDvLabel).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedDvLabel)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 158));
 
@@ -1756,22 +1758,22 @@ public final class InterplanetaryTransferSystem {
 
             // Preview info rows
             panel.child(
-                new FastTextWidget(() -> cachedTof).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedTof)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 180));
 
             panel.child(
-                new FastTextWidget(() -> cachedDepDv).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedDepDv)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 194));
 
             panel.child(
-                new FastTextWidget(() -> cachedCapDv).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedCapDv)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 208));
 
             panel.child(
-                new FastTextWidget(() -> cachedTotalDv).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedTotalDv)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(CONTENT_X, 222));
 
@@ -1849,11 +1851,11 @@ public final class InterplanetaryTransferSystem {
             ParentWidget<?> row = new ParentWidget<>().pos(CONTENT_X, y)
                 .size(PANEL_WIDTH - CONTENT_X * 2, 20);
             row.child(
-                new FastTextWidget(label).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
+                new TextWidget<>(IKey.str(label)).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                     .shadow(true)
                     .pos(0, 0));
             row.child(
-                new FastTextWidget(value).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.str(value)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(72, 0)
                     .width(PANEL_WIDTH - CONTENT_X * 2 - 72 - PICK_BUTTON_WIDTH - 12));
@@ -2007,17 +2009,17 @@ public final class InterplanetaryTransferSystem {
             rootPanel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
             rootPanel.child(
-                new FastTextWidget(() -> cachedTitle).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedTitle)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                     .shadow(true)
                     .pos(PADDING, 8));
 
             rootPanel.child(
-                new FastTextWidget(() -> cachedProgress).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedProgress)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(PADDING, 24));
 
             rootPanel.child(
-                new FastTextWidget(() -> cachedRemaining).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
+                new TextWidget<>(IKey.dynamic(() -> cachedRemaining)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                     .shadow(true)
                     .pos(PADDING, 38));
 

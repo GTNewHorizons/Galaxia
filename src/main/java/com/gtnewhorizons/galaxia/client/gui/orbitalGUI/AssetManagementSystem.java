@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -19,6 +20,7 @@ import com.cleanroommc.modularui.widget.ScrollWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.TextWidget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
@@ -1169,7 +1171,11 @@ public final class AssetManagementSystem {
                 .hoverOverlay(drawable((context, x, y, w, h) -> {
                     net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
                         .getMinecraft().fontRenderer;
-                    fr.drawStringWithShadow(text, x, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF8CE4FF);
+                    fr.drawStringWithShadow(
+                        text,
+                        x,
+                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                        EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
                 }))
                 .onMousePressed(mouseButton -> {
                     if (mouseButton != 0) return true;
@@ -1241,18 +1247,18 @@ public final class AssetManagementSystem {
             return modal;
         }
 
-        private FastTextWidget createTitleText(String text) {
-            return new FastTextWidget(text).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+        private TextWidget<?> createTitleText(String text) {
+            return new TextWidget<>(IKey.str(text)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true);
         }
 
-        private FastTextWidget createSectionText(String text) {
-            return new FastTextWidget(text).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
+        private TextWidget<?> createSectionText(String text) {
+            return new TextWidget<>(IKey.str(text)).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                 .shadow(true);
         }
 
-        private FastTextWidget createBodyText(String text, int color) {
-            return new FastTextWidget(text).color(color)
+        private TextWidget<?> createBodyText(String text, int color) {
+            return new TextWidget<>(IKey.str(text)).color(color)
                 .shadow(true);
         }
 
