@@ -167,6 +167,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureFormed() {
         updateLinkedAssembler();
         shouldRender = true;
+
+        // Move to metavalue 6-9, the structure is formed
+        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta + 4, 2);
     }
 
     /**
@@ -177,6 +181,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureDisformed() {
         updateLinkedAssembler();
         shouldRender = false;
+
+        // Move back to metadata 2-5, structure has been broken
+        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
         this.kill();
     }
 
