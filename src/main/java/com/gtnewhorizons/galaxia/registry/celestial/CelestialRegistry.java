@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -25,6 +26,7 @@ public final class CelestialRegistry {
     private static final Map<DimensionEnum, String> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
 
     private static boolean bootstrapped;
+    private static boolean frozen;
     private static List<OrbitalCelestialBody> cachedRoots;
 
     private CelestialRegistry() {}
@@ -35,31 +37,16 @@ public final class CelestialRegistry {
         return (hash / (double) 0xFFFFFFFFL) * Math.PI * 2.0;
     }
 
-    // TODO: Replace these placeholder vanilla ore tables with GT5U ore definitions once the GregTech ore layer is
-    // designed.
     private static CelestialBodyProperties.Builder withVanillaOres(CelestialBodyProperties.Builder builder,
         Block... ores) {
-        for (Block ore : ores) {
-            builder.ore(new ItemStack(ore));
-        }
-        // gregtech/api ore list goes here later
+        for (Block ore : ores) builder.ore(new ItemStack(ore));
         return builder;
     }
 
-    private static GtOreVeinDefinition gtVein(String id, String displayName, String primaryOre, String secondaryOre,
-        String betweenOre, String sporadicOre, int minY, int maxY, int weight, int density, int size) {
-        return new GtOreVeinDefinition(
-            id,
-            displayName,
-            primaryOre,
-            secondaryOre,
-            betweenOre,
-            sporadicOre,
-            minY,
-            maxY,
-            weight,
-            density,
-            size);
+    private static CelestialBodyProperties.Builder withGravity(CelestialBodyProperties.Builder builder,
+        double standardGravitationalParameter, double sphereOfInfluenceRadius) {
+        return builder.standardGravitationalParameter(standardGravitationalParameter)
+            .sphereOfInfluenceRadius(sphereOfInfluenceRadius);
     }
 
     public static synchronized void registerDefaults() {
@@ -72,8 +59,7 @@ public final class CelestialRegistry {
                 .name("Novum Caelum")
                 .objectClass(CelestialObjectClass.GALAXY)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 5.4e8, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("mapLayer", "stars")
@@ -90,8 +76,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 7.2e7, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "vael")
@@ -108,8 +93,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 4.2e7, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .metadata("system", "ilia")
@@ -145,8 +129,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.24)
                 .properties(
                     withVanillaOres(
-                        CelestialBodyProperties.builder()
-                            .visitable(false)
+                        withGravity(CelestialBodyProperties.builder(), 5.2e6, 1200.0).visitable(false)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(301)
@@ -171,8 +154,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.19)
                 .properties(
                     withVanillaOres(
-                        CelestialBodyProperties.builder()
-                            .visitable(false)
+                        withGravity(CelestialBodyProperties.builder(), 4.6e6, 1500.0).visitable(false)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(182)
@@ -196,50 +178,13 @@ public final class CelestialRegistry {
                 .spriteSize(0.18)
                 .properties(
                     withVanillaOres(
-                        CelestialBodyProperties.builder()
-                            .visitable(false)
+                        withGravity(CelestialBodyProperties.builder(), 9.8e6, 2400.0).visitable(false)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(288)
                             .radiation(0.05)
                             .oreProfile("undefined")
-                            .gtOreVeins(
-                                gtVein(
-                                    "lapis",
-                                    "Lapis Vein",
-                                    "Lazurite",
-                                    "Sodalite",
-                                    "Lapis",
-                                    "Calcite",
-                                    20,
-                                    50,
-                                    40,
-                                    4,
-                                    16),
-                                gtVein(
-                                    "iron",
-                                    "Iron Vein",
-                                    "Brown Limonite",
-                                    "Yellow Limonite",
-                                    "Banded Iron",
-                                    "Malachite",
-                                    10,
-                                    40,
-                                    120,
-                                    3,
-                                    24),
-                                gtVein(
-                                    "redstone",
-                                    "Redstone Vein",
-                                    "Redstone",
-                                    "Redstone",
-                                    "Ruby",
-                                    "Cinnabar",
-                                    5,
-                                    40,
-                                    60,
-                                    2,
-                                    24))
+                            .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
                             .metadata("surface", "undefined")
                             .metadata("status", "placeholder_homeworld"),
                         Blocks.coal_ore,
@@ -259,8 +204,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.75)
                 .properties(
                     withVanillaOres(
-                        CelestialBodyProperties.builder()
-                            .visitable(true)
+                        withGravity(CelestialBodyProperties.builder(), 1.4e7, 3600.0).visitable(true)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(423)
@@ -283,8 +227,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.825)
                 .properties(
                     withVanillaOres(
-                        CelestialBodyProperties.builder()
-                            .visitable(true)
+                        withGravity(CelestialBodyProperties.builder(), 5.5e8, 9500.0).visitable(true)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(67)
@@ -308,8 +251,7 @@ public final class CelestialRegistry {
                 .spriteSize(0.06)
                 .properties(
                     withVanillaOres(
-                        CelestialBodyProperties.builder()
-                            .visitable(true)
+                        withGravity(CelestialBodyProperties.builder(), 1.8e6, 480.0).visitable(true)
                             .canCreateStation(true)
                             .canCreateOutpost(true)
                             .temperature(225)
@@ -330,8 +272,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(true)
+                    withGravity(CelestialBodyProperties.builder(), 3.5e5, 3000.0).visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(67)
@@ -352,8 +293,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.05)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 6.0e4, 140.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(true)
                         .temperature(41)
@@ -373,8 +313,7 @@ public final class CelestialRegistry {
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(
-                    CelestialBodyProperties.builder()
-                        .visitable(true)
+                    withGravity(CelestialBodyProperties.builder(), 0.0, 90.0).visitable(true)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .oreProfile("undefined")
@@ -384,28 +323,54 @@ public final class CelestialRegistry {
                 .build());
     }
 
+    public static synchronized void register(Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
+        Objects.requireNonNull(registrationBuilder, "registrationBuilder");
+        CelestialObjectRegistration.Builder builder = CelestialObjectRegistration.builder();
+        registrationBuilder.accept(builder);
+        register(builder.build());
+    }
+
     public static synchronized void register(CelestialObjectRegistration registration) {
         Objects.requireNonNull(registration, "registration");
-
-        if (REGISTRATIONS.containsKey(registration.id())) {
-            throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
-        }
-        if (registration.parentId() != null && registration.parentId()
-            .equals(registration.id())) {
-            throw new IllegalArgumentException("Celestial object cannot orbit itself: " + registration.id());
-        }
-        if (registration.parentId() != null && !REGISTRATIONS.containsKey(registration.parentId())) {
-            throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentId());
-        }
-        if (registration.dimensionEnum() != null && IDS_BY_DIMENSION.containsKey(registration.dimensionEnum())) {
-            throw new IllegalArgumentException("Duplicate dimension mapping for " + registration.dimensionEnum());
-        }
-
+        registerDefaults();
+        assertMutable();
+        validateRegistration(registration, null);
         REGISTRATIONS.put(registration.id(), registration);
         if (registration.dimensionEnum() != null) {
             IDS_BY_DIMENSION.put(registration.dimensionEnum(), registration.id());
         }
         cachedRoots = null;
+    }
+
+    public static synchronized void modify(String id, Consumer<CelestialObjectRegistration.Builder> mutator) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(mutator, "mutator");
+        registerDefaults();
+        assertMutable();
+        CelestialObjectRegistration existing = REGISTRATIONS.get(id);
+        if (existing == null) throw new IllegalArgumentException("Unknown celestial object id: " + id);
+        CelestialObjectRegistration.Builder builder = existing.toBuilder();
+        mutator.accept(builder);
+        CelestialObjectRegistration modified = builder.build();
+        if (!id.equals(modified.id()))
+            throw new IllegalArgumentException("Celestial object id cannot be modified: " + id);
+        validateRegistration(modified, id);
+        if (existing.dimensionEnum() != null) IDS_BY_DIMENSION.remove(existing.dimensionEnum());
+        REGISTRATIONS.put(id, modified);
+        if (modified.dimensionEnum() != null) IDS_BY_DIMENSION.put(modified.dimensionEnum(), id);
+        cachedRoots = null;
+    }
+
+    public static synchronized void freezeAndBake() {
+        registerDefaults();
+        if (frozen) return;
+        GtOreVeinCatalog.reload();
+        cachedRoots = buildRoots();
+        frozen = true;
+    }
+
+    public static synchronized boolean isFrozen() {
+        return frozen;
     }
 
     public static synchronized Optional<CelestialObjectRegistration> get(String id) {
@@ -420,23 +385,13 @@ public final class CelestialRegistry {
 
     public static synchronized List<OrbitalCelestialBody> getRoots() {
         registerDefaults();
-        if (cachedRoots == null) {
-            List<OrbitalCelestialBody> roots = new ArrayList<>();
-            for (CelestialObjectRegistration registration : REGISTRATIONS.values()) {
-                if (registration.parentId() == null) {
-                    roots.add(buildBody(registration));
-                }
-            }
-            cachedRoots = Collections.unmodifiableList(roots);
-        }
+        if (cachedRoots == null) cachedRoots = buildRoots();
         return cachedRoots;
     }
 
     public static synchronized OrbitalCelestialBody getPrimaryRoot() {
         List<OrbitalCelestialBody> roots = getRoots();
-        if (roots.isEmpty()) {
-            throw new IllegalStateException("No celestial objects have been registered");
-        }
+        if (roots.isEmpty()) throw new IllegalStateException("No celestial objects have been registered");
         return roots.get(0);
     }
 
@@ -449,6 +404,14 @@ public final class CelestialRegistry {
             if (found.isPresent()) return found;
         }
         return Optional.empty();
+    }
+
+    private static List<OrbitalCelestialBody> buildRoots() {
+        List<OrbitalCelestialBody> roots = new ArrayList<>();
+        for (CelestialObjectRegistration registration : REGISTRATIONS.values()) {
+            if (registration.parentId() == null) roots.add(buildBody(registration));
+        }
+        return Collections.unmodifiableList(roots);
     }
 
     private static Optional<OrbitalCelestialBody> findById(OrbitalCelestialBody current, String id) {
@@ -468,10 +431,8 @@ public final class CelestialRegistry {
                 children.add(buildBody(candidate));
             }
         }
-
         DimensionEnum dimensionEnum = registration.dimensionEnum();
         int dimensionId = dimensionEnum == null ? Integer.MIN_VALUE : dimensionEnum.getId();
-
         return new OrbitalCelestialBody(
             registration.id(),
             registration.name(),
@@ -485,5 +446,29 @@ public final class CelestialRegistry {
             registration.spriteSize(),
             registration.properties(),
             children);
+    }
+
+    private static void validateRegistration(CelestialObjectRegistration registration, String existingId) {
+        if (REGISTRATIONS.containsKey(registration.id()) && !registration.id()
+            .equals(existingId)) {
+            throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
+        }
+        if (registration.parentId() != null && registration.parentId()
+            .equals(registration.id())) {
+            throw new IllegalArgumentException("Celestial object cannot orbit itself: " + registration.id());
+        }
+        if (registration.parentId() != null && !REGISTRATIONS.containsKey(registration.parentId())) {
+            throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentId());
+        }
+        if (registration.dimensionEnum() != null) {
+            String existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
+            if (existingDimensionOwner != null && !existingDimensionOwner.equals(existingId)) {
+                throw new IllegalArgumentException("Duplicate dimension mapping for " + registration.dimensionEnum());
+            }
+        }
+    }
+
+    private static void assertMutable() {
+        if (frozen) throw new IllegalStateException("Celestial registry is frozen and can no longer be modified");
     }
 }

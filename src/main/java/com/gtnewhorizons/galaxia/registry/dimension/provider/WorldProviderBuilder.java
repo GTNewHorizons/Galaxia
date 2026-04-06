@@ -75,7 +75,7 @@ public class WorldProviderBuilder {
     }
 
     /**
-     * Sets the colour of the fog required in the world provider (RGB format)
+     * Sets the color of the fog required in the world provider (RGB format)
      *
      * @param r The amount of red
      * @param g The amount of green
@@ -147,7 +147,7 @@ public class WorldProviderBuilder {
     }
 
     /**
-     * Sets the sunrise colour for the provider (RGBA format)
+     * Sets the sunrise color for the provider (RGBA format)
      *
      * @param r The amount of red
      * @param g The amount of green
@@ -161,9 +161,9 @@ public class WorldProviderBuilder {
     }
 
     /**
-     * Sets whether the sky should be coloured
+     * Sets whether the sky should be colored
      *
-     * @param colored Boolean : True => Coloured sky
+     * @param colored Boolean : True => Colored sky
      * @return Configured builder
      */
     public WorldProviderBuilder skyColored(boolean colored) {

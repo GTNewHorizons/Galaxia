@@ -72,6 +72,8 @@ public class CommonProxy {
         Galaxia.witherSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_WITHER_PROTECTION);
         Galaxia.reactionControlSystemSlot = BaubleExpandedSlots
             .getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
+
+        CelestialRegistry.freezeAndBake();
     }
 
     // register server commands in this event handler (Remove if not needed)

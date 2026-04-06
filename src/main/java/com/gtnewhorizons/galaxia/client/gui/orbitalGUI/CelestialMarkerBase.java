@@ -20,8 +20,25 @@ public class CelestialMarkerBase {
     @Desugar
     public record CelestialMarker(String id, ResourceLocation texture, float alpha) {}
 
-    @Desugar
-    public record CelestialMarkerContext(Hierarchy.OrbitalCelestialBody body, CelestialBodyAssetState assetState) {}
+    public static final class CelestialMarkerContext {
+
+        private Hierarchy.OrbitalCelestialBody body;
+        private CelestialBodyAssetState assetState;
+
+        public Hierarchy.OrbitalCelestialBody body() {
+            return body;
+        }
+
+        public CelestialBodyAssetState assetState() {
+            return assetState;
+        }
+
+        public CelestialMarkerContext set(Hierarchy.OrbitalCelestialBody body, CelestialBodyAssetState assetState) {
+            this.body = body;
+            this.assetState = assetState;
+            return this;
+        }
+    }
 
     public interface CelestialMarkerProvider {
 
@@ -36,7 +53,7 @@ public class CelestialMarkerBase {
                 || context.assetState()
                     .assets()
                     .isEmpty()) {
-                return new ArrayList<>();
+                return Collections.emptyList();
             }
             List<CelestialMarker> markers = new ArrayList<>();
             for (CelestialManagedAsset asset : context.assetState()
