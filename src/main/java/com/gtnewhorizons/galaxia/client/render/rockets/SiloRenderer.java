@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.rocketmodules.client.render;
+package com.gtnewhorizons.galaxia.client.render.rockets;
 
 import static com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo.SILO_DEFAULT_X_OFFSET;
 import static com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo.SILO_DEFAULT_Y_OFFSET;

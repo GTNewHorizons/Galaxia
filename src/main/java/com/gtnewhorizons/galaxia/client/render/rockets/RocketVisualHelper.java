@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.rocketmodules.client.render;
+package com.gtnewhorizons.galaxia.client.render.rockets;
 
 import net.minecraft.client.Minecraft;
 
