@@ -398,47 +398,50 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(350, 160);
 
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            !validSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.not_formed")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(10, 35)
-                .setEnabledIf(w -> validSync.getBoolValue() && !assemblerSync.getBoolValue()));
+                .pos(10, 35));
 
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.not_formed")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            validSync.getBoolValue() && !assemblerSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(10, 35)
-                .setEnabledIf(w -> !validSync.getBoolValue()));
+                .pos(10, 35));
 
-        panel.child(
-            new PageButton(0, tabController).size(120, 28)
-                .pos(0, -28)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build")))
-                .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()))
-            .child(
-                new PageButton(1, tabController).size(120, 28)
+        panel
+            .childIf(
+                validSync.getBoolValue() && assemblerSync.getBoolValue(),
+                () -> new PageButton(0, tabController).size(120, 28)
+                    .pos(0, -28)
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
+            .childIf(
+                validSync.getBoolValue() && assemblerSync.getBoolValue(),
+                () -> new PageButton(1, tabController).size(120, 28)
                     .pos(120, -28)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch")))
-                    .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()));
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
 
         // Title
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            validSync.getBoolValue() && assemblerSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(8, 8)
-                .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()));
+                .pos(8, 8));
         // Module addition buttons
         Flow moduleRow = Flow.row()
             .coverChildren()
             .pos(8, 35)
-            .padding(4)
-            .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue());
+            .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
             moduleRow.child(createModuleButton(m, moduleAssembler));
         }
@@ -446,9 +449,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         Flow destRow = Flow.row()
             .coverChildren()
             .pos(10, 35)
-            .padding(4)
-            .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue());
-
+            .padding(4);
         // Add Overworld option if not there
         if (worldObj.provider.dimensionId != 0) {
             destRow.child(
@@ -463,8 +464,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         }
 
         // Builder Page
-        panel.child(
-            new PagedWidget<>().controller(tabController)
+        panel.childIf(
+            validSync.getBoolValue() && assemblerSync.getBoolValue(),
+            () -> new PagedWidget<>().controller(tabController)
                 .addPage(
                     new ParentWidget<>().size(240, 160)
                         .child(moduleRow)
@@ -525,8 +527,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                         md -> {
                                             if (md.mouseButton == 0 && !worldObj.isRemote && isRocketValid())
                                                 enterRocket(data);
-                                        }))))
-                .setEnabledIf(w -> validSync.getBoolValue() && assemblerSync.getBoolValue()));
+                                        })))));
 
         return panel;
 
