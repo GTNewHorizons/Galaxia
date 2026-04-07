@@ -75,76 +75,120 @@ public class Theia extends BasePlanet {
      */
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
+        BiomeGenBase border = createOceanBiome(
+            "Theia Ocean Edge",
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(32)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(4)
+                .height(64)
+                .endFeature()
+                .build());
+        BiomeGenBase smallVolcanoes = createOceanBiome(
+            "Theia Small Volcanoes",
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(32)
+                .endFeature()
+                .feature(TerrainPreset.SHIELD_VOLCANOES)
+                .width(2)
+                .height(16)
+                .replacementBlock(PlanetBlockType.MAGMA)
+                .endFeature()
+                .build());
+        BiomeGenBase bigVolcanoes = createOceanBiome(
+            "Theia Big Volcanoes",
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(32)
+                .endFeature()
+                .feature(TerrainPreset.SHIELD_VOLCANOES)
+                .width(4)
+                .height(64)
+                .replacementBlock(PlanetBlockType.MAGMA)
+                .endFeature()
+                .build());
+        BiomeGenBase hills = createLandBiome(
+            "Theia Hills",
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(64)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(32)
+                .height(32)
+                .endFeature()
+                .feature(TerrainPreset.CANYONS)
+                .width(4)
+                .height(32)
+                .endFeature()
+                .build());
+        BiomeGenBase mountains = createLandBiome(
+            "Theia Mountains",
+            TerrainConfiguration.builder()
+                .feature(TerrainPreset.BASE_HEIGHT)
+                .height(64)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(3)
+                .height(16)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(8)
+                .height(128)
+                .endFeature()
+                .build());
         builder.sky(true)
             .fog(0, 0, 0)
             .skyColor(0, 0, 0.001f)
             .avgGround(80)
-            .biome(
-                createLandBiome(
-                    "Theia Hills",
-                    TerrainConfiguration.builder()
-                        .feature(TerrainPreset.BASE_HEIGHT)
-                        .height(64)
-                        .endFeature()
-                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .width(32)
-                        .height(32)
-                        .endFeature()
-                        .feature(TerrainPreset.CANYONS)
-                        .width(4)
-                        .height(32)
-                        .endFeature()
-                        .build()),
-                0,
-                0)
-            .biome(
-                createLandBiome(
-                    "Theia Mountains",
-                    TerrainConfiguration.builder()
-                        .feature(TerrainPreset.BASE_HEIGHT)
-                        .height(64)
-                        .endFeature()
-                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .width(3)
-                        .height(16)
-                        .endFeature()
-                        .feature(TerrainPreset.MOUNTAIN_RANGES)
-                        .width(8)
-                        .height(128)
-                        .endFeature()
-                        .build()),
-                0,
-                1)
-            .biome(
-                createOceanBiome(
-                    "Theia Small Volcanoes",
-                    TerrainConfiguration.builder()
-                        .feature(TerrainPreset.BASE_HEIGHT)
-                        .height(32)
-                        .endFeature()
-                        .feature(TerrainPreset.SHIELD_VOLCANOES)
-                        .width(2)
-                        .height(16)
-                        .replacementBlock(PlanetBlockType.MAGMA)
-                        .endFeature()
-                        .build()),
-                1,
-                0)
-            .biome(
-                createOceanBiome(
-                    "Theia Big Volcanoes",
-                    TerrainConfiguration.builder()
-                        .feature(TerrainPreset.BASE_HEIGHT)
-                        .height(32)
-                        .endFeature()
-                        .feature(TerrainPreset.SHIELD_VOLCANOES)
-                        .width(4)
-                        .height(64)
-                        .replacementBlock(PlanetBlockType.MAGMA)
-                        .endFeature()
-                        .build()),
-                1,
-                1)
+            // Elevated biomes Layer 1
+            .biome(hills, 0, 0)
+            .biome(mountains, 1, 0)
+            .biome(hills, 2, 0)
+            .biome(mountains, 3, 0)
+            .biome(hills, 4, 0)
+            .biome(mountains, 5, 0)
+            // Elevated biomes Layer 2
+            .biome(mountains, 0, 1)
+            .biome(hills, 5, 1)
+            // Elevated biomes Layer 3
+            .biome(hills, 0, 2)
+            .biome(mountains, 5, 2)
+            // Elevated biomes Layer 4
+            .biome(mountains, 0, 3)
+            .biome(hills, 5, 3)
+            // Elevated biomes Layer 5
+            .biome(hills, 0, 4)
+            .biome(mountains, 5, 4)
+            // Elevated biomes Layer 6
+            .biome(mountains, 0, 5)
+            .biome(hills, 1, 5)
+            .biome(mountains, 2, 5)
+            .biome(hills, 3, 5)
+            .biome(mountains, 4, 5)
+            .biome(hills, 5, 5)
+            // Border
+            .biome(border, 1, 1)
+            .biome(border, 2, 1)
+            .biome(border, 3, 1)
+            .biome(border, 4, 1)
+            .biome(border, 1, 2)
+            .biome(border, 4, 2)
+            .biome(border, 1, 3)
+            .biome(border, 4, 3)
+            .biome(border, 1, 4)
+            .biome(border, 2, 4)
+            .biome(border, 3, 4)
+            .biome(border, 4, 4)
+            // Inner volcanic biomes
+            .biome(smallVolcanoes, 2, 2)
+            .biome(bigVolcanoes, 2, 3)
+            .biome(bigVolcanoes, 3, 2)
+            .biome(smallVolcanoes, 3, 3)
+            // Finish
             .name(ENUM)
             .build();
     }
