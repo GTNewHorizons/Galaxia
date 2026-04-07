@@ -14,11 +14,11 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.HazardWarningClient;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
-import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;

@@ -29,7 +29,8 @@ public class OrbitalCalculatorHelper {
      * @param launchAltitude The altitude above the body from which to launch
      * @return Effective Exhaust Velocity (v_e)
      */
-    public static double calculateEffectiveExhaustVelocity(BasePlanet launchBody, RocketPlaceholder rocket, int launchAltitude) {
+    public static double calculateEffectiveExhaustVelocity(BasePlanet launchBody, RocketPlaceholder rocket,
+        int launchAltitude) {
         return effectiveCorrectiveFactor * rocket.getSpecificImpulse()
             * (launchBody.getDef()
                 .mass())
@@ -47,7 +48,8 @@ public class OrbitalCalculatorHelper {
      * @param launchAltitude The altitude above the body from which to launch
      * @return Maximum Delta V achievable
      */
-    public static double calculateMaxDeltaVelocity(BasePlanet launchBody, RocketPlaceholder rocket, int launchAltitude) {
+    public static double calculateMaxDeltaVelocity(BasePlanet launchBody, RocketPlaceholder rocket,
+        int launchAltitude) {
         final double effectiveExhaustVelocity = calculateEffectiveExhaustVelocity(launchBody, rocket, launchAltitude);
         final double totalMass = rocket.getTotalMass();
         final double dryMass = rocket.getDryMass();

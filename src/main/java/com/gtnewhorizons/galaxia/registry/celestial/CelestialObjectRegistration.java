@@ -2,13 +2,13 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.function.Consumer;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.AbsolutePosition;
 import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 @Desugar
 public record CelestialObjectRegistration(CelestialObjectIdentity identity, CelestialOrbitDefinition orbit,
