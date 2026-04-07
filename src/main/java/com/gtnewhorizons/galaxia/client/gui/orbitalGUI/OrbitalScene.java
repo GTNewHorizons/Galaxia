@@ -12,9 +12,9 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
-import com.gtnewhorizons.galaxia.orbitalGUI.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;

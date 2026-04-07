@@ -17,7 +17,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 public final class CelestialRegistry {

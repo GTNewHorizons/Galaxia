@@ -1,9 +1,9 @@
-package com.gtnewhorizons.galaxia.orbitalGUI;
+package com.gtnewhorizons.galaxia.registry.orbital;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.AbsolutePosition;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 
 public final class OrbitalMechanics {

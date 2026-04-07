@@ -6,8 +6,8 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.AbsolutePosition;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 @Desugar

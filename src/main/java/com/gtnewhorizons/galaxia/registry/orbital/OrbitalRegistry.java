@@ -1,17 +1,17 @@
-package com.gtnewhorizons.galaxia.orbitalGUI;
+package com.gtnewhorizons.galaxia.registry.orbital;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
-public final class GalaxiaRegistry {
+public final class OrbitalRegistry {
 
-    private GalaxiaRegistry() {}
+    private OrbitalRegistry() {}
 
     public static OrbitalCelestialBody root() {
         return CelestialRegistry.getPrimaryRoot();

@@ -22,8 +22,8 @@ import com.cleanroommc.modularui.widgets.SliderWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.orbitalGUI.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 

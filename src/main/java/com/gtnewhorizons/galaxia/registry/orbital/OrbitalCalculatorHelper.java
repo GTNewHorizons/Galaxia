@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.orbitalGUI;
+package com.gtnewhorizons.galaxia.registry.orbital;
 
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.RocketPlaceholder;

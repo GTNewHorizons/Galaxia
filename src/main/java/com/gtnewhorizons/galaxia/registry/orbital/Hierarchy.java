@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.orbitalGUI;
+package com.gtnewhorizons.galaxia.registry.orbital;
 
 import java.util.ArrayList;
 import java.util.Collections;
