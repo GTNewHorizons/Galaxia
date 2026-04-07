@@ -5,10 +5,16 @@ import net.minecraft.entity.projectile.EntityThrowable;
 
 import org.spongepowered.asm.mixin.Mixin;
 
+import com.gtnewhorizons.galaxia.utility.ZeroGMovementAPI;
 import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGRecoilProvider;
 
 @Mixin(EntityThrowable.class)
 public class MixinEntityThrowable implements ZeroGRecoilProvider {
+
+    @Override
+    public double galaxia$getProjectileMass() {
+        return ZeroGMovementAPI.DEFAULT_MASS;
+    }
 
     @Override
     public EntityLivingBase galaxia$getShootingEntity() {
