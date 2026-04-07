@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.hazards;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.*;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;

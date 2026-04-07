@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.function.Consumer;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
@@ -384,7 +385,7 @@ record CelestialVisualProfile(ResourceLocation texture, double spriteSize) {
         }
 
         Builder texture(String path) {
-            this.texture = com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia(path);
+            this.texture = GalaxiaAPI.LocationGalaxia(path);
             return this;
         }
 

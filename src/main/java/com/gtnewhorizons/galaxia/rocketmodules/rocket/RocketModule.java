@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.rocket;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.AdvancedModelLoader;

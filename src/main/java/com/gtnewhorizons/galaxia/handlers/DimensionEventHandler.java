@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.isInGalaxiaDimension;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isInGalaxiaDimension;
 
 import java.util.ArrayList;
 import java.util.Arrays;

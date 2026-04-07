@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.client.render;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import java.util.List;
 

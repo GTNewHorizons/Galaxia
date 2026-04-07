@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.hazards;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getRadiationProtection;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getRadiationProtection;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.DamageSource;

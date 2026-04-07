@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

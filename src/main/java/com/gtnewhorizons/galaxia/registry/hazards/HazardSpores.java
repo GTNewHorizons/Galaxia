@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.hazards;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.hasSporeFilter;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.hasSporeFilter;
 
 import java.util.Arrays;
 import java.util.List;
