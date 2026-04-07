@@ -20,5 +20,9 @@ public class ConfigPlayer {
         @Config.LangKey("galaxia.config.player.max_zerog_speed")
         @Config.DefaultDouble(Double.MAX_VALUE)
         public double max_zerog_speed;
+
+        @Config.LangKey("galaxia.config.player.rcs_zerog_recoil")
+        @Config.DefaultBoolean(true)
+        public boolean recoil_with_zerog_capabilities;
     }
 }

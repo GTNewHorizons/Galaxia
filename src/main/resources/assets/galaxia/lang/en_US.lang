@@ -265,6 +265,7 @@ galaxia.hazard.spores=Spores Detected
 galaxia.hazard.wither=Withering
 galaxia.hazard.low_oxygen=Low Oxygen
 galaxia.hazard.no_oxygen=Oxygen Depleted
+galaxia.hazard.no_zerog_movement=No Movement Controls
 
 # Elements - Other - "Death Messages"
 death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
@@ -287,6 +288,8 @@ galaxia.config.player.debuff_creative=Debuffs to creative mode players
 galaxia.config.player.debuff_creative.tooltip=Apply environmental debuffs when in creative mode
 galaxia.config.player.max_zerog_speed=Max speed in zero gravity
 galaxia.config.player.max_zerog_speed.tooltip=Maximum speed reachable in any direction for zero gravity movement
+galaxia.config.player.rcs_zerog_recoil=Recoil when zero gravity gear equipped
+galaxia.config.player.rcs_zerog_recoil.tooltip=Enable recoil from throwing, dropping or shooting when zero gravity gear is equipped
 
 # Config - "Rocket"
 galaxia.config.category.rocket=Rocket

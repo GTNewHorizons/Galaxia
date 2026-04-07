@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.utility.ZeroGMovementAPI;
 
@@ -20,7 +21,8 @@ public class MixinEntityPlayer {
         if (dropped == null) return;
 
         EntityPlayer player = (EntityPlayer) (Object) this;
-        if (GalaxiaAPI.getGravity(player) != 0 || GalaxiaAPI.hasZeroGMovementCapability(player)) return;
+        if (GalaxiaAPI.getGravity(player) != 0 || (GalaxiaAPI.hasZeroGMovementCapability(player)
+            && !ConfigPlayer.ConfigPlayerGlobal.recoil_with_zerog_capabilities)) return;
 
         double motionX = dropped.motionX;
         double motionY = dropped.motionY;

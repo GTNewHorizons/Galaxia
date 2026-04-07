@@ -79,12 +79,21 @@ public final class ZeroGMovementAPI {
 
     public static void addThrowRecoil(@Nonnull EntityLivingBase entity, double motionX, double motionY, double motionZ,
         double mass) {
-        final double recoilX = MathHelper.clamp_double(motionX * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
-        final double recoilY = MathHelper.clamp_double(motionY * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
-        final double recoilZ = MathHelper.clamp_double(motionZ * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+        final double length = Math.sqrt(motionX * motionX + motionY * motionY + motionZ * motionZ);
+        if (length <= 0) return;
+
+        final double dirX = motionX / length;
+        final double dirY = motionY / length;
+        final double dirZ = motionZ / length;
+
+        final double scaledLength = MathHelper.clamp_double(length * THROW_RECOIL_FACTOR * mass, 0, MAX_RECOIL);
+
+        final double recoilX = dirX * scaledLength;
+        final double recoilY = dirY * scaledLength;
+        final double recoilZ = dirZ * scaledLength;
 
         // apply opposite momentum
-        addMotion(entity, motionX, motionY, motionZ);
+        addMotion(entity, -recoilX, -recoilY, -recoilZ);
 
         entity.velocityChanged = true;
     }
