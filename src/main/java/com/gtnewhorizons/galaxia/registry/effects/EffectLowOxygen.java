@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.effects;
 
-import com.gtnewhorizons.galaxia.utility.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 
 public class EffectLowOxygen extends GalaxiaPotionEffect {
 

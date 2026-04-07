@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility;
+package com.gtnewhorizons.galaxia.client;
 
 import java.util.Locale;
 
