@@ -24,7 +24,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 
 /**
  * The class holding all data related to the dimension Theia

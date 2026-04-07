@@ -9,7 +9,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 
 public class SpaceStation extends BasePlanet {
 

@@ -1,17 +1,17 @@
-package com.gtnewhorizons.galaxia.utility;
+package com.gtnewhorizons.galaxia.rocketmodules;
 
 // THIS CLASS IS TEMPORARY TO ACT AS A DATACLASS UNTIL ROCKETS ARE WORKING AS A FULL CLASS
 // TODO remove after rockets are implemented
 /**
  * Temporary base class to create an example rocket
  */
-public class Rocket {
+public class RocketPlaceholder {
 
     private int dryMass;
     private double specificImpulse;
     private int fuelMass;
 
-    public Rocket(int dryMass, double specificImpulse, int fuelMass) {
+    public RocketPlaceholder(int dryMass, double specificImpulse, int fuelMass) {
         this.dryMass = dryMass;
         this.specificImpulse = specificImpulse;
         this.fuelMass = fuelMass;

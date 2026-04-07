@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility;
+package com.gtnewhorizons.galaxia.orbitalGUI;
 
 import com.github.bsideup.jabel.Desugar;
 

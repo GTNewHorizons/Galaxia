@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility;
+package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 public class BiomeIdOffsetter {
 
