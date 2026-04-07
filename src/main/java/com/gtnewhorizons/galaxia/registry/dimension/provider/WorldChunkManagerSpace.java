@@ -22,6 +22,9 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
     private int cacheBiomeIndexZ = 0;
     private double cacheNoiseX = 0;
     private double cacheNoiseZ = 0;
+    private double xStretch = 0;
+    private double zStretch = 0;
+    private boolean cachedStretching = false;
 
     /**
      * Assigns the seed to generate specific noise outputs
@@ -87,7 +90,12 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      */
     private int getBiomeIndex(int x, int z, int matrixLength, NoiseGeneratorOctaves noiseGenerator,
         boolean firstIndex) {
-        double noise = noiseGenerator.generateNoiseOctaves(null, z, x, 1, 1, 0.02, 0.02, 0)[0];
+        if (!cachedStretching) {
+            xStretch = 0.075 / biomeGeneratorMatrix.length;
+            zStretch = 0.075 / biomeGeneratorMatrix[0].length;
+            cachedStretching = true;
+        }
+        double noise = noiseGenerator.generateNoiseOctaves(null, z, x, 1, 1, xStretch, zStretch, 0)[0];
         // normalize
         noise = (noise + 8) / 16;
         noise *= matrixLength;
