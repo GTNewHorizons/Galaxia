@@ -13,7 +13,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 
 /**

@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.orbitalGUI;
 
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.rocketmodules.RocketPlaceholder;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.RocketPlaceholder;
 
 public class OrbitalCalculatorHelper {
     /*
