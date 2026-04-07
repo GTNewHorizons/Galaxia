@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.util.List;
 
 import com.gtnewhorizons.galaxia.client.HazardWarningClient;
-import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;

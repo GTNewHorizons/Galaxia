@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility.hazards;
+package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPressureProtection;
 

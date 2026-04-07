@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility.effects;
+package com.gtnewhorizons.galaxia.registry.effects;
 
 import com.gtnewhorizons.galaxia.utility.EnumColors;
 

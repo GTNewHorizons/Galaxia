@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
 import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 

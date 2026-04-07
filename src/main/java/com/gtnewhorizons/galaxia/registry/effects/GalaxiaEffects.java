@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility.effects;
+package com.gtnewhorizons.galaxia.registry.effects;
 
 import net.minecraft.potion.Potion;
 

@@ -19,7 +19,7 @@ import com.gtnewhorizons.galaxia.client.HazardWarningClient;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
 import com.gtnewhorizons.galaxia.utility.EnumColors;
 import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 

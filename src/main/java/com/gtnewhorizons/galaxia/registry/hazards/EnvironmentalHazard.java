@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility.hazards;
+package com.gtnewhorizons.galaxia.registry.hazards;
 
 import net.minecraft.entity.player.EntityPlayer;
 

@@ -5,7 +5,7 @@ import java.util.NoSuchElementException;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 
 public class HazardWarningClient {
 
