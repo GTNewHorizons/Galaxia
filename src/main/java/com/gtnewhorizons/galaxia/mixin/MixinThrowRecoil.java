@@ -26,14 +26,16 @@ public class MixinThrowRecoil {
             if (shooter == null) return;
 
             if (GalaxiaAPI.getGravity(entity) != 0) return;
-            if (shooter instanceof EntityPlayer ep && GalaxiaAPI.hasZeroGMovementCapability(ep)) return;
+            if (shooter instanceof EntityPlayer ep) {
+                if (GalaxiaAPI.hasZeroGMovementCapability(ep)) return;
 
-            ZeroGMovementAPI.addThrowRecoil(
-                shooter,
-                entity.motionX,
-                entity.motionY,
-                entity.motionZ,
-                provider.galaxia$getProjectileMass());
+                ZeroGMovementAPI.addThrowRecoil(
+                    shooter,
+                    entity.motionX,
+                    entity.motionY,
+                    entity.motionZ,
+                    provider.galaxia$getProjectileMass());
+            }
         }
     }
 }
