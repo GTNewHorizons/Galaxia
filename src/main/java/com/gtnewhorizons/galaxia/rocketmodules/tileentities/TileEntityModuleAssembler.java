@@ -259,32 +259,32 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
 
         syncManager.syncValue("moduleAssemblerStructureValid", validSync);
-
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.module_assembler.not_formed")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            !validSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.module_assembler.not_formed")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(10, 35)
-                .setEnabledIf(w -> !validSync.getBoolValue()));
+                .pos(10, 35));
         // Title
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            !validSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
-                .pos(8, 8)
-                .setEnabledIf(w -> validSync.getBoolValue()));
+                .pos(8, 8));
 
         // Adding module buttons
         Flow row = Flow.row()
             .coverChildren()
-            .padding(4)
-            .setEnabledIf(w -> validSync.getBoolValue());
+            .padding(4);
         for (RocketModule m : ModuleRegistry.getAll()) {
             row.child(createModuleButton(m));
         }
-        panel.child(row);
+        panel.childIf(!validSync.getBoolValue(), () -> row);
 
         // Module storage counters
         Flow row2 = Flow.row()
@@ -297,10 +297,9 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 IKey.dynamic(stringSupplier)
                     .asWidget()
                     .padding(4)
-                    .size(40, 20)
-                    .setEnabledIf(w -> validSync.getBoolValue()));
+                    .size(40, 20));
         }
-        panel.child(row2);
+        panel.childIf(!validSync.getBoolValue(), () -> row2);
         return panel;
     }
 
