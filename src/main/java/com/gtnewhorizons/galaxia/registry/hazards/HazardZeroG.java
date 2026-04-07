@@ -1,9 +1,9 @@
-package com.gtnewhorizons.galaxia.utility.hazards;
+package com.gtnewhorizons.galaxia.registry.hazards;
 
 import net.minecraft.entity.player.EntityPlayer;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 
 public class HazardZeroG extends EnvironmentalHazard {
 

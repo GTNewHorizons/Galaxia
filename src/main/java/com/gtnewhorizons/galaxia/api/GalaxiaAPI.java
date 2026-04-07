@@ -15,6 +15,7 @@ import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
@@ -25,9 +26,6 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
-import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
-import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGMovementProvider;
-import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 
 import baubles.api.BaublesApi;
 

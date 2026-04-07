@@ -5,8 +5,8 @@ import net.minecraft.entity.projectile.EntityThrowable;
 
 import org.spongepowered.asm.mixin.Mixin;
 
-import com.gtnewhorizons.galaxia.utility.ZeroGMovementAPI;
-import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGRecoilProvider;
+import com.gtnewhorizons.galaxia.api.ZeroGMovementAPI;
+import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGRecoilProvider;
 
 @Mixin(EntityThrowable.class)
 public class MixinEntityThrowable implements ZeroGRecoilProvider {

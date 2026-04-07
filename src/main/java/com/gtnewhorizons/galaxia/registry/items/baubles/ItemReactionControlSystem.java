@@ -6,10 +6,10 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGMovementProvider;
 
 import baubles.api.BaubleType;
 import baubles.api.expanded.IBaubleExpanded;

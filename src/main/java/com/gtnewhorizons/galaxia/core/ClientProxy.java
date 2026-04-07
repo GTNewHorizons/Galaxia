@@ -5,11 +5,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
+import com.gtnewhorizons.galaxia.client.KeyBinds;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
-import com.gtnewhorizons.galaxia.client.KeyBinds;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;

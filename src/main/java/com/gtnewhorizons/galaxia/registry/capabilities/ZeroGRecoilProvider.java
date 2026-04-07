@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.utility.capabilities;
+package com.gtnewhorizons.galaxia.registry.capabilities;
 
 import net.minecraft.entity.EntityLivingBase;
 

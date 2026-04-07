@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.effects;
+package com.gtnewhorizons.galaxia.api;
 
 import java.util.Arrays;
 import java.util.List;
@@ -8,7 +8,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 
 public class GalaxiaEffectAPI {
 

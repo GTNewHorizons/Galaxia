@@ -10,10 +10,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.api.ZeroGMovementAPI;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.utility.ZeroGMovementAPI;
-import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGRecoilProvider;
+import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGRecoilProvider;
 
 @Mixin(World.class)
 public class MixinThrowRecoil {
