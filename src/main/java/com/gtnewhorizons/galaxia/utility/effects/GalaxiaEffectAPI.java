@@ -4,8 +4,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
+
+import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 
 public class GalaxiaEffectAPI {
 
@@ -13,6 +16,8 @@ public class GalaxiaEffectAPI {
         .asList(GalaxiaEffects.lowOxygen, GalaxiaEffects.freezing, GalaxiaEffects.overheating, Potion.moveSlowdown);
 
     public static float getSpeedMultiplier(EntityLivingBase entity) {
+        if (!(entity instanceof EntityPlayer)) return 1; // debuffs only apply for players
+        if (!GalaxiaAPI.isInGalaxiaDimension(entity)) return 1;
         int amp = -1;
         for (Potion p : speedMultiplierEffects) {
             PotionEffect effect = entity.getActivePotionEffect(p);
@@ -21,7 +26,8 @@ public class GalaxiaEffectAPI {
             amp = Math.max(amp, effect.getAmplifier());
         }
 
-        return amp >= 0 ? oxygenSpeedMultiplier(amp) : 1f;
+        if (amp >= 0) return oxygenSpeedMultiplier(amp);
+        return 1;
     }
 
     private static float oxygenSpeedMultiplier(int amp) {

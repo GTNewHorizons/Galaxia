@@ -109,7 +109,7 @@ public class DimensionEventHandler {
     private void applyEffects(EffectBuilder def, EntityPlayer player) {
         this.batchedWarnings.clear();
         for (EnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
-            HazardWarnings w = h.apply(def, player);
+            HazardWarnings w = h.applyTotal(def, player);
             if (w != HazardWarnings.FINE) {
                 batchedWarnings.add(w);
             }

@@ -7,7 +7,6 @@
     "GravityAirResistanceMixin",
     "JumpMixin",
     "MixinEntityArrow",
-    "MixinEntityFireBall",
     "MixinEntityPlayer",
     "MixinEntityThrowable",
     "MixinThrowRecoil",

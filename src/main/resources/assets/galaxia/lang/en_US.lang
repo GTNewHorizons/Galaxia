@@ -278,6 +278,14 @@ entity.galaxia.EntityRocket.lander=Lander
 entity.galaxia.EntityRocket.name=Rocket
 
 #### Config
+
+# Config - "Player"
+galaxia.config.category.player=Player
+galaxia.config.category.player.tooltip=Settings for the player
+galaxia.config.category.player_global=Global
+galaxia.config.category.player_global.tooltip=Global settings for the player
+galaxia.config.player.debuff_creative=Debuffs to creative mode players
+
 # Config - "Rocket"
 galaxia.config.category.rocket=Rocket
 galaxia.config.category.rocket.tooltip=Settings for the Galaxia rockets
