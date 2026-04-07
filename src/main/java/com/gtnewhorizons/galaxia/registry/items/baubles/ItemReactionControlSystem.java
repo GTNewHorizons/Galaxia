@@ -20,7 +20,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
 
     public static final String BAUBLE_TYPE_REACTION_CONTROL_SYSTEM = "reaction_control_system";
 
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
