@@ -148,11 +148,11 @@ public class WorldProviderSpace extends WorldProvider {
     }
 
     /**
-     * Gets the sky colour of the world
+     * Gets the sky color of the world
      *
      * @param cameraEntity The camera entity to use
      * @param partialTicks The partial ticks (how far through current tick)
-     * @return The sky colour as a Vec3
+     * @return The sky color as a Vec3
      */
     @Override
     @SideOnly(Side.CLIENT)
@@ -162,11 +162,11 @@ public class WorldProviderSpace extends WorldProvider {
     }
 
     /**
-     * Gets the sunrise/sunset colours based on celestial angle
+     * Gets the sunrise/sunset colors based on celestial angle
      *
      * @param celestialAngle The angle of the main celestial body in the sky
      * @param partialTicks   The partial ticks (how far through current tick)
-     * @return The sunrise/sunset colours as a float array
+     * @return The sunrise/sunset colors as a float array
      */
     @Override
     @SideOnly(Side.CLIENT)
@@ -176,11 +176,11 @@ public class WorldProviderSpace extends WorldProvider {
     }
 
     /**
-     * Gets the fog colour based on celestial angle
+     * Gets the fog color based on celestial angle
      *
      * @param celestialAngle The angle of the main celestial body in the sky
      * @param partialTicks   The partial ticks (how far through current tick)
-     * @return The fog colour as a Vec3
+     * @return The fog color as a Vec3
      */
     @Override
     @SideOnly(Side.CLIENT)

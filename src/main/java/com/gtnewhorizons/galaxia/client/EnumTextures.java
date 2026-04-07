@@ -27,6 +27,18 @@ public enum EnumTextures {
     TENEBRAE("textures/environment/tenebrae.png"),
     VIRIDIS("textures/environment/viridis.png"),
 
+    SELECTION_FRAME("textures/gui/selection_frame.png"),
+    HAZARD_COLD("textures/gui/icon_cold.png"),
+    HAZARD_OXYGEN("textures/gui/icon_no_oxygen.png"),
+    HAZARD_RADIATION("textures/gui/icon_radiation.png"),
+
+    // Space Object Icons for Galactic map
+    ICON_EGORA("textures/gui/bodyicons/egora.png"),
+    ICON_STATION("textures/gui/bodyicons/station.png"),
+    ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
+    ICON_OUTPOST("textures/gui/bodyicons/outpost.png"),
+    ICON_OUTPOST_AUTOMATED("textures/gui/bodyicons/outpost_automated.png"),
+
     // Add more textures here
     ; // leave trailing semicolon
 

@@ -2,13 +2,13 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
 import net.minecraftforge.common.util.ForgeDirection;
-
-import org.jetbrains.annotations.NotNull;
 
 public class TileEntityFumarole extends TileEntity {
 
@@ -177,7 +177,7 @@ public class TileEntityFumarole extends TileEntity {
         }
     }
 
-    public @NotNull AxisAlignedBB getJetCollision() {
+    public @Nonnull AxisAlignedBB getJetCollision() {
         if (ventType == -1) initOffset();
 
         switch (ventType) {

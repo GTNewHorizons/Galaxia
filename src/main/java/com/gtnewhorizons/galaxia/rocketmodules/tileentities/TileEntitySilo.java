@@ -186,7 +186,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      * @param localY        The y offset local to the controller
      * @param localZ        The z offset local to the controller
      * @param currentFacing The direction the multi is currently facing
-     *
      * @return Array of offsets based on direction and local coordinates
      */
     public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
@@ -375,7 +374,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         PagedWidget.Controller tabController = new PagedWidget.Controller();
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
-            .size(240, 160);
+            .size(350, 160);
         // Check validity of assembler path on UI build
         updateLinkedAssembler();
 
@@ -463,15 +462,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                             new ButtonWidget<>().size(220, 30)
                                 .pos(10, 120)
                                 .overlay(
-                                    IKey.str(
-                                        EnumChatFormatting.GREEN
+                                    IKey.dynamic(
+                                        () -> (isRocketValid() ? EnumChatFormatting.GREEN : EnumChatFormatting.RED)
                                             + StatCollector
                                                 .translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
                                             + EnumChatFormatting.RESET)
                                         .alignment(Alignment.CENTER))
                                 .tooltipDynamic(t -> {
-                                    // Flag to indicate validity of rocket launching
-                                    boolean validFlag = true;
+                                    // Add tooltips for invalid setups
                                     getAssembly().updateDestination(destination);
                                     if (getAssembly().getModules()
                                         .isEmpty()) {
@@ -484,21 +482,35 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
                                     }
                                     for (IRocketValidator v : validators) {
                                         ValidationResult r = v.validate(getAssembly());
-                                        if (!r.valid())
+                                        if (!r.valid()) {
                                             t.addLine(EnumChatFormatting.RED + r.message() + EnumChatFormatting.RESET);
-                                        validFlag = false;
+                                        }
                                     }
-                                    if (!validFlag) return;
                                 })
                                 .tooltipAutoUpdate(true)
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
                                         md -> {
-                                            if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data);
+                                            if (md.mouseButton == 0 && !worldObj.isRemote && isRocketValid())
+                                                enterRocket(data);
                                         })))));
 
         return panel;
 
+    }
+
+    /**
+     * Determines whether a rocket on the silo is good to launch
+     *
+     * @return whether the rocket is formed and passes all validators
+     */
+    private boolean isRocketValid() {
+        getAssembly().updateDestination(destination);
+        return !getAssembly().getModules()
+            .isEmpty() && validators.stream()
+                .allMatch(
+                    v -> v.validate(getAssembly())
+                        .valid());
     }
 
     /**
@@ -527,7 +539,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      * Creates the button for selecting a dimension to travel to
      *
      * @param dim The planet to add an option for
-     *
      * @return ButtonWidget to add to the panel
      */
     private ToggleButton createDestinationButton(BasePlanet dim) {
@@ -582,7 +593,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      * Receives a new module and adds it to the current render stack
      *
      * @param id The module ID to add
-     *
      * @return Boolean : True => Successful reception
      */
     public boolean receiveModule(int id) {
@@ -709,7 +719,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     /**
      * Receives a list of incoming modules and adds to the silo
      *
-     * @param The incoming module list
+     * @param incomingModules The incoming module list
      */
     public void receiveLandingRocket(List<Integer> incomingModules) {
         modules.clear();

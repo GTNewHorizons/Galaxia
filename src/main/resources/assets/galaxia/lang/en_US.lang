@@ -251,7 +251,18 @@ galaxia.tooltip.rocket_silo.builder.enter_rocket=Add some modules first
 # Elements - Other - "Effect"
 galaxia.effect.low_oxygen=Low Oxygen
 galaxia.effect.overheating=Overheating
-galaxia.effect.overcooling=Freezing
+galaxia.effect.freezing=Freezing
+
+# Elements - Other - "Hazards"
+galaxia.hazard.fine=No warnings
+galaxia.hazard.freezing=Freezing
+galaxia.hazard.burning=Burning
+galaxia.hazard.low_pressure=Low Pressure
+galaxia.hazard.high_radiation=High Radiation
+galaxia.hazard.spores=Spores Detected
+galaxia.hazard.wither=Withering
+galaxia.hazard.low_oxygen=Low Oxygen
+galaxia.hazard.no_oxygen=Oxygen Depleted
 
 # Elements - Other - "Death Messages"
 death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
@@ -325,3 +336,17 @@ galaxia.config.overlay.texture.temperature_bar_width=Temperature bar texture wid
 galaxia.config.overlay.texture.temperature_bar_width.tooltip=Temperature bar texture width in pixels
 galaxia.config.overlay.texture.temperature_bar_height=Temperature bar texture height
 galaxia.config.overlay.texture.temperature_bar_height.tooltip=Temperature bar texture height in pixels
+
+# Config - Overlay - "Warnings"
+galaxia.config.category.overlay_hazard=Hazard Warning Overlay
+galaxia.config.category.overlay_hazard.tooltip=Overlay setting for the environmental hazard warnings
+galaxia.config.category.show_hazard_warnings=Show Warnings
+galaxia.config.category.show_hazard_warnings.tooltip=Make the overlay show environmental hazard warnings
+galaxia.config.category.hazard_horizontal_offset=Horizontal Offset
+galaxia.config.category.hazard_horizontal_offset.tooltip=Horizontal offset from the left\positive = right
+galaxia.config.category.hazard_vertical_offset=Vertical Offset
+galaxia.config.category.hazard_vertical_offset.tooltip=Vertical offset from the center\npositive = down
+galaxia.config.category.hazard_scale=Pulse Scaling Coefficient
+galaxia.config.category.hazard_scale.tooltip=How much to scale the warnings when pulsing
+galaxia.config.category.hazard_pulse=Enable Pulse
+galaxia.config.category.hazard_pulse.tooltip=Enable pulse animation
