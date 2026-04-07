@@ -269,7 +269,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 .pos(10, 35));
         // Title
         panel.childIf(
-            !validSync.getBoolValue(),
+            validSync.getBoolValue(),
             () -> IKey
                 .str(
                     EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
@@ -284,7 +284,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         for (RocketModule m : ModuleRegistry.getAll()) {
             row.child(createModuleButton(m));
         }
-        panel.childIf(!validSync.getBoolValue(), () -> row);
+        panel.childIf(validSync.getBoolValue(), () -> row);
 
         // Module storage counters
         Flow row2 = Flow.row()
@@ -299,7 +299,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                     .padding(4)
                     .size(40, 20));
         }
-        panel.childIf(!validSync.getBoolValue(), () -> row2);
+        panel.childIf(validSync.getBoolValue(), () -> row2);
         return panel;
     }
 
