@@ -16,5 +16,9 @@ public class ConfigPlayer {
         @Config.LangKey("galaxia.config.player.debuff_creative")
         @Config.DefaultBoolean(false)
         public boolean applyDebuffsInCreative;
+
+        @Config.LangKey("galaxia.config.player.max_zerog_speed")
+        @Config.DefaultDouble(Double.MAX_VALUE)
+        public double max_zerog_speed;
     }
 }

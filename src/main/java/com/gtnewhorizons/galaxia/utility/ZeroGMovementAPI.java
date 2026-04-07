@@ -6,6 +6,8 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.MathHelper;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
+
 public final class ZeroGMovementAPI {
 
     public static final double THROW_RECOIL_FACTOR = 0.2;
@@ -46,9 +48,7 @@ public final class ZeroGMovementAPI {
         if (motionY * self.motionY < 0) motionY -= self.motionY * 0.1f;
         if (motionZ * self.motionZ < 0) motionZ -= self.motionZ * 0.1f;
 
-        self.motionX += motionX;
-        self.motionY += motionY;
-        self.motionZ += motionZ;
+        addMotion(self, motionX, motionY, motionZ);
 
         self.fallDistance = 0.0F;
     }
@@ -79,15 +79,20 @@ public final class ZeroGMovementAPI {
 
     public static void addThrowRecoil(@Nonnull EntityLivingBase entity, double motionX, double motionY, double motionZ,
         double mass) {
-        double recoilX = MathHelper.clamp_double(motionX * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
-        double recoilY = MathHelper.clamp_double(motionY * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
-        double recoilZ = MathHelper.clamp_double(motionZ * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+        final double recoilX = MathHelper.clamp_double(motionX * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+        final double recoilY = MathHelper.clamp_double(motionY * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
+        final double recoilZ = MathHelper.clamp_double(motionZ * THROW_RECOIL_FACTOR * mass, -MAX_RECOIL, MAX_RECOIL);
 
         // apply opposite momentum
-        entity.motionX -= recoilX;
-        entity.motionY -= recoilY;
-        entity.motionZ -= recoilZ;
+        addMotion(entity, motionX, motionY, motionZ);
 
         entity.velocityChanged = true;
+    }
+
+    private static void addMotion(@Nonnull EntityLivingBase entity, double motionX, double motionY, double motionZ) {
+        final double max_speed = ConfigPlayer.ConfigPlayerGlobal.max_zerog_speed;
+        entity.motionX = MathHelper.clamp_double(entity.motionX + motionX, -max_speed, max_speed);
+        entity.motionY = MathHelper.clamp_double(entity.motionY + motionY, -max_speed, max_speed);
+        entity.motionZ = MathHelper.clamp_double(entity.motionZ + motionZ, -max_speed, max_speed);
     }
 }
