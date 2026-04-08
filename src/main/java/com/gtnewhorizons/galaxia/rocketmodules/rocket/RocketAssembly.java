@@ -145,6 +145,12 @@ public final class RocketAssembly {
         return Collections.unmodifiableList(modules);
     }
 
+    public double getTotalThrust() {
+        return getEngineModules().stream()
+            .mapToDouble(e -> e.getThrust())
+            .sum();
+    }
+
     public List<EngineModule> getEngineModules() {
         return getModules().stream()
             .filter(EngineModule.class::isInstance)

@@ -24,7 +24,7 @@ public abstract class RocketModule {
     @SideOnly(Side.CLIENT)
     private ResourceLocation texture;
     @SideOnly(Side.CLIENT)
-    private ResourceLocation holoTexture;
+    private ResourceLocation schematicSprite;
 
     protected RocketModule(int id, String name, double height, double width, double weight, String modelName) {
         this.id = id;
@@ -86,11 +86,11 @@ public abstract class RocketModule {
     }
 
     @SideOnly(Side.CLIENT)
-    public ResourceLocation getHoloTexture() {
-        if (holoTexture == null) {
-            holoTexture = LocationGalaxia("textures/model/modules/" + modelName + "/texture_holo.png");
+    public ResourceLocation getSchematicSprite() {
+        if (schematicSprite == null) {
+            schematicSprite = LocationGalaxia("textures/model/modules/" + modelName + "/schematic_sprite.png");
         }
-        return holoTexture;
+        return schematicSprite;
     }
 
     public boolean isStackableWith(RocketModule other) {

@@ -5,7 +5,7 @@ import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
+import net.minecraft.item.ItemMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -18,7 +18,7 @@ import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
 
-public class ItemRocketSchematic extends Item {
+public class ItemRocketSchematic extends ItemMap {
 
     public ItemRocketSchematic() {
         super();
@@ -74,6 +74,16 @@ public class ItemRocketSchematic extends Item {
 
         }
         return result;
+    }
+
+    public static String readName(ItemStack stack) {
+        if (stack == null || !stack.hasTagCompound())
+            return StatCollector.translateToLocal("item.galaxia.rocket_schematic.saved_name_none");
+        NBTTagCompound tag = stack.getTagCompound();
+        if (!tag.hasKey("schematicName"))
+            return StatCollector.translateToLocal("item.galaxia.rocket_schematic.saved_name_none");
+
+        return tag.getString("schematicName");
     }
 
     @Override
