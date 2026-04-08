@@ -119,22 +119,37 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * @return An array of BiomeGenBases storing neighbouring biomes
      */
     public BiomeGenBase[] getLocalBiomes(int x, int z) {
-        BiomeGenBase[] localBiomes = new BiomeGenBase[4];
+        BiomeGenBase[] localBiomes = new BiomeGenBase[7];
         localBiomes[0] = this.getBiomeGenAt(x, z);
         int adjacentIndexX = cacheBiomeIndexX + 1 >= biomeGeneratorMatrix.length ? 0 : cacheBiomeIndexX + 1;
         int adjacentIndexZ = cacheBiomeIndexZ + 1 >= biomeGeneratorMatrix[0].length ? 0 : cacheBiomeIndexZ + 1;
+        int adjacentAntiIndexX = cacheBiomeIndexX - 1 < 0 ? biomeGeneratorMatrix.length - 1 : cacheBiomeIndexX - 1;
+        int adjacentAntiIndexZ = cacheBiomeIndexZ - 1 < 0 ? biomeGeneratorMatrix[0].length : cacheBiomeIndexZ - 1;
         localBiomes[1] = biomeGeneratorMatrix[adjacentIndexX][cacheBiomeIndexZ];
         localBiomes[2] = biomeGeneratorMatrix[cacheBiomeIndexX][adjacentIndexZ];
         localBiomes[3] = biomeGeneratorMatrix[adjacentIndexX][adjacentIndexZ];
+        localBiomes[4] = biomeGeneratorMatrix[adjacentAntiIndexX][cacheBiomeIndexZ];
+        localBiomes[5] = biomeGeneratorMatrix[cacheBiomeIndexX][adjacentAntiIndexZ];
+        localBiomes[6] = biomeGeneratorMatrix[adjacentAntiIndexX][adjacentAntiIndexZ];
         return localBiomes;
     }
 
+    /**
+     * Calculates the significance of the terrain features for adjacent biomes
+     *
+     * @param divergence Width of the blending area
+     * @return Significance values for main biome and three corner biomes
+     */
     public double[] getLocalBiomeSignificance(double divergence) {
-        if (divergence == 0) return new double[] { 1, 0, 0, 0 };
-        double d1 = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 1 + divergence) / divergence;
-        double d2 = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + divergence) / divergence;
+        if (divergence == 0) return new double[] { 1, 0, 0, 0, 0, 0, 0 };
+        double xDivergence = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 1 + divergence) / divergence;
+        double zDivergence = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + divergence) / divergence;
+        double xAntiDivergence = -Math.min(0, cacheNoiseX - cacheBiomeIndexX - 1 + divergence) / divergence;
+        double zAntiDivergence = -Math.min(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + divergence) / divergence;
         // four ways normalized symmetric blending in the corner
-        return new double[] { d1 * d2, (1 - d1) * d2, d1 * (1 - d2), (1 - d1) * (1 - d2) };
+        return new double[] { xDivergence * zDivergence + xAntiDivergence * zAntiDivergence, (1 - xDivergence) * zDivergence, xDivergence * (1 - zDivergence), (1 - xDivergence) * (1 - zDivergence),
+            (1 - xAntiDivergence) * zAntiDivergence, xAntiDivergence * (1 - zAntiDivergence), (1 - xAntiDivergence) * (1 - zAntiDivergence)
+        };
     }
 
     public int getBiomeCount() {
