@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
@@ -39,7 +40,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler>
-    implements IGuiHolder<PosGuiData> {
+    implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
     // Hashmap stores <Module ID, Count>
     public HashMap<Integer, Integer> moduleMap = new HashMap<>();
@@ -119,6 +120,14 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureFormed() {
         shouldRender = true;
+    }
+
+    /**
+     * Handles logic when structure is not formed
+     */
+    @Override
+    protected void onStructureDisformed() {
+        shouldRender = false;
     }
 
     /**
@@ -231,13 +240,30 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
+        if (!worldObj.isRemote) {
+            markStructureDirty(); // only runs once on the server
+        }
         ModularPanel panel = new ModularPanel("galaxia:module_assembler");
         panel.size(350, 350);
+
+        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
+
+        syncManager.syncValue("moduleAssemblerStructureValid", validSync);
+        panel.childIf(
+            !validSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.module_assembler.not_formed")
+                        + EnumChatFormatting.RESET)
+                .asWidget()
+                .pos(10, 35));
         // Title
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            validSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.BOLD + StatCollector.translateToLocal("tile.module_assembler_controller.name")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
 
@@ -248,7 +274,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         for (RocketModule m : ModuleRegistry.getAll()) {
             row.child(createModuleButton(m));
         }
-        panel.child(row);
+        panel.childIf(validSync.getBoolValue(), () -> row);
 
         // Module storage counters
         Flow row2 = Flow.row()
@@ -263,7 +289,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                     .padding(4)
                     .size(40, 20));
         }
-        panel.child(row2);
+        panel.childIf(validSync.getBoolValue(), () -> row2);
         return panel;
     }
 
@@ -316,6 +342,28 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         }
     }
 
+    private ForgeDirection placedFacing = ForgeDirection.NORTH; // default
+
+    @Override
+    public ForgeDirection getPlacedFacing() {
+        return placedFacing;
+    }
+
+    @Override
+    public void setPlacedFacing(ForgeDirection dir) {
+        placedFacing = dir;
+    }
+
+    @Override
+    public boolean isStructureValid() {
+        return structureValid;
+    }
+
+    @Override
+    public ExtendedFacing getCurrentFacing() {
+        return currentFacing;
+    }
+
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
@@ -324,6 +372,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         for (String key : mapNbt.func_150296_c()) {
             moduleMap.put(Integer.parseInt(key), mapNbt.getInteger(key));
         }
+        placedFacing = ForgeDirection.getOrientation(tag.getInteger("placedFacing"));
     }
 
     @Override
@@ -337,6 +386,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 e.getValue());
         }
         tag.setTag("moduleMap", mapNbt);
+        tag.setInteger("placedFacing", placedFacing.ordinal());
     }
 
     /**

@@ -26,6 +26,7 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.IntValue;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -60,7 +61,8 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitVali
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implements IGuiHolder<PosGuiData> {
+public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
+    implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
@@ -87,6 +89,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private boolean hasAssembler = false;
     private int foundTerminalCount = 0;
     public ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
+    private ForgeDirection placedFacing = ForgeDirection.NORTH;
 
     public static final int SILO_DEFAULT_X_OFFSET = 0;
     public static final int SILO_DEFAULT_Y_OFFSET = 1;
@@ -176,7 +179,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureDisformed() {
         updateLinkedAssembler();
         shouldRender = false;
-        this.kill();
     }
 
     /**
@@ -371,36 +373,57 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
      */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
+        if (!worldObj.isRemote) {
+            markStructureDirty(); // only runs once on the server
+        }
+        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
+        BooleanSyncValue assemblerSync = new BooleanSyncValue(() -> moduleAssembler != null && hasAssembler, v -> {});
+
+        syncManager.syncValue("rocketSiloStructureValid", validSync);
+        syncManager.syncValue("rocketSiloModuleAssembler", assemblerSync);
+
         PagedWidget.Controller tabController = new PagedWidget.Controller();
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
             .size(350, 160);
-        // Check validity of assembler path on UI build
-        updateLinkedAssembler();
 
-        if (!hasAssembler) {
-            return panel.child(
-                IKey.str(
+        panel.childIf(
+            !validSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.not_formed")
+                        + EnumChatFormatting.RESET)
+                .asWidget()
+                .pos(10, 35));
+
+        panel.childIf(
+            validSync.getBoolValue() && !assemblerSync.getBoolValue(),
+            () -> IKey
+                .str(
                     EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
                         + EnumChatFormatting.RESET)
-                    .asWidget()
-                    .pos(10, 35));
-        }
+                .asWidget()
+                .pos(10, 35));
 
-        panel.child(
-            new PageButton(0, tabController).size(120, 28)
-                .pos(0, -28)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
-            .child(
-                new PageButton(1, tabController).size(120, 28)
+        panel
+            .childIf(
+                validSync.getBoolValue() && assemblerSync.getBoolValue(),
+                () -> new PageButton(0, tabController).size(120, 28)
+                    .pos(0, -28)
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
+            .childIf(
+                validSync.getBoolValue() && assemblerSync.getBoolValue(),
+                () -> new PageButton(1, tabController).size(120, 28)
                     .pos(120, -28)
                     .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
 
         // Title
-        panel.child(
-            IKey.str(
-                EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
-                    + EnumChatFormatting.RESET)
+        panel.childIf(
+            validSync.getBoolValue() && assemblerSync.getBoolValue(),
+            () -> IKey
+                .str(
+                    EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
+                        + EnumChatFormatting.RESET)
                 .asWidget()
                 .pos(8, 8));
         // Module addition buttons
@@ -416,7 +439,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
             .coverChildren()
             .pos(10, 35)
             .padding(4);
-
         // Add Overworld option if not there
         if (worldObj.provider.dimensionId != 0) {
             destRow.child(
@@ -431,8 +453,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         }
 
         // Builder Page
-        panel.child(
-            new PagedWidget<>().controller(tabController)
+        panel.childIf(
+            validSync.getBoolValue() && assemblerSync.getBoolValue(),
+            () -> new PagedWidget<>().controller(tabController)
                 .addPage(
                     new ParentWidget<>().size(240, 160)
                         .child(moduleRow)
@@ -794,6 +817,26 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
     }
 
+    @Override
+    public ForgeDirection getPlacedFacing() {
+        return placedFacing;
+    }
+
+    @Override
+    public void setPlacedFacing(ForgeDirection dir) {
+        placedFacing = dir;
+    }
+
+    @Override
+    public boolean isStructureValid() {
+        return structureValid && hasAssembler;
+    }
+
+    @Override
+    public ExtendedFacing getCurrentFacing() {
+        return currentFacing;
+    }
+
     /**
      * Writes TE data to NBT taq
      *
@@ -819,7 +862,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         nbt.setTag("modules", list);
         nbt.setBoolean("hasAssembler", hasAssembler);
         nbt.setInteger("facing", currentFacing.getIndex());
-
+        nbt.setInteger("placedFacing", placedFacing.ordinal());
     }
 
     /**
@@ -849,6 +892,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         hasAssembler = nbt.getBoolean("hasAssembler");
 
         if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
+        placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
 
     }
 

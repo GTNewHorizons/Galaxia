@@ -1,26 +1,26 @@
-package com.gtnewhorizons.galaxia.rocketmodules.tileentities;
+package com.gtnewhorizons.galaxia.rocketmodules.tileentities.controllers;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
-import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
 
 /**
  * Block for the Module Assembler
  */
-public class BlockModuleAssembler extends Block implements ITileEntityProvider {
+public class BlockModuleAssembler extends BlockRocketController implements ITileEntityProvider {
 
-    /**
-     * Constructor class - sets material, textures etc.
-     */
     public BlockModuleAssembler() {
-        super(Material.rock);
-        this.setBlockTextureName("dirt");
-        this.setHardness(1.5F);
+        super(
+            "galaxia:machine/module_assembler_on",
+            "galaxia:machine/module_assembler_off",
+            () -> GalaxiaBlocksEnum.RUSTY_PANEL.get()); // keep as lambda - ensures we load lazily
     }
 
     /**
@@ -59,5 +59,22 @@ public class BlockModuleAssembler extends Block implements ITileEntityProvider {
         if (te instanceof TileEntityModuleAssembler) GuiFactories.tileEntity()
             .open(player, x, y, z);
         return true;
+    }
+
+    @Override
+    public ForgeDirection getFacing(IBlockAccess world, int x, int y, int z) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileEntityModuleAssembler assembler) {
+            return assembler.isStructureValid() ? assembler.getCurrentFacing()
+                .getDirection() : assembler.getPlacedFacing();
+        }
+        return ForgeDirection.NORTH;
+    }
+
+    @Override
+    public boolean isFormed(IBlockAccess world, int x, int y, int z) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileEntityModuleAssembler assembler) return assembler.isStructureValid();
+        return false;
     }
 }
