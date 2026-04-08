@@ -8,6 +8,8 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.entity.RenderItem;
+import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -29,7 +31,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public boolean handleRenderType(ItemStack stack, ItemRenderType type) {
-        return type == ItemRenderType.FIRST_PERSON_MAP;
+        return type == ItemRenderType.FIRST_PERSON_MAP || (type == ItemRenderType.ENTITY && RenderItem.renderInFrame);
     }
 
     @Override
@@ -39,9 +41,15 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType type, ItemStack stack, Object... data) {
-        if (type != ItemRenderType.FIRST_PERSON_MAP) return;
+        if (type == ItemRenderType.FIRST_PERSON_MAP) {
+            TextureManager renderEngine = (TextureManager) data[1];
+            renderSchematic(stack, renderEngine);
+        } else if (type == ItemRenderType.ENTITY && RenderItem.renderInFrame) {
+            renderSchematicInFrame(stack, RenderManager.instance);
+        }
+    }
 
-        TextureManager renderEngine = (TextureManager) data[1];
+    private void renderSchematic(ItemStack stack, TextureManager renderEngine) {
 
         List<Integer> moduleIds = ItemRocketSchematic.readModules(stack);
         if (moduleIds == null || moduleIds.isEmpty()) return;
@@ -84,6 +92,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
                 .orElse(1);
 
             int usable = SIZE - PADDING * 2;
+
             int pixelsPerBlock = usable / Math.max(totalHeight, maxWidth);
 
             for (ModulePlacement p : placements) {
@@ -108,6 +117,28 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         GL11.glPopMatrix();
 
         drawTexts(assembly, stack);
+    }
+
+    private void renderSchematicInFrame(ItemStack stack, RenderManager renderManager) {
+        GL11.glRotatef(180f, 0f, 1f, 0f);
+        GL11.glRotatef(180f, 0f, 0f, 1f);
+        GL11.glScalef(0.00781250f, 0.00781250f, 0.00781250f);
+        GL11.glTranslatef(-65f, -111f, -3f);
+        GL11.glNormal3f(0f, 0f, -1f);
+
+        renderManager.renderEngine.bindTexture(LocationGalaxia("textures/items/tool/schematic_base.png"));
+        Tessellator t = Tessellator.instance;
+        byte b0 = 7;
+        t.startDrawingQuads();
+        t.addVertexWithUV(0 - b0, 128 + b0, 0, 0, 1);
+        t.addVertexWithUV(128 + b0, 128 + b0, 0, 1, 1);
+        t.addVertexWithUV(128 + b0, 0 - b0, 0, 1, 0);
+        t.addVertexWithUV(0 - b0, 0 - b0, 0, 0, 0);
+        t.draw();
+
+        GL11.glTranslatef(0f, 0f, -1f);
+
+        renderSchematic(stack, renderManager.renderEngine);
     }
 
     private static void drawQuad(TextureManager tm, ResourceLocation tex, float offset, float size, float z) {
@@ -145,7 +176,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
         GL11.glScalef(0.5f, 0.5f, 0.5f);
 
-        GL11.glTranslatef(8f, offsetY, -5f);
+        GL11.glTranslatef(8f, PADDING, -5f);
         for (String line : lines) {
 
             GL11.glTranslatef(0, offsetY, 0);
