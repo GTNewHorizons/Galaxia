@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.client.IItemRenderer;
 
 import org.lwjgl.opengl.GL11;
@@ -167,10 +168,18 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
     private static void drawTexts(RocketAssembly assembly, ItemStack stack) {
         float offsetY = 16f;
         GL11.glPushMatrix();
-        String[] lines = { "Name: " + ItemRocketSchematic.readName(stack), "Modules: " + assembly.getModules()
-            .stream()
-            .count(), "Height: " + assembly.getTotalHeight() + " m", "Width: " + assembly.getTotalWidth() + " m",
-            "Weight: " + assembly.getTotalWeight() + " kg", "Thrust: " + assembly.getTotalThrust() + " N" };
+        String[] lines = {
+            StatCollector
+                .translateToLocalFormatted("galaxia.item.schematic.label.name", ItemRocketSchematic.readName(stack)),
+            StatCollector.translateToLocalFormatted(
+                "galaxia.item.schematic.label.modules",
+                assembly.getModules()
+                    .stream()
+                    .count()),
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.height", assembly.getTotalHeight()),
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.width", assembly.getTotalWidth()),
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.weight", assembly.getTotalWeight()),
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.thrust", assembly.getTotalThrust()) };
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
 
