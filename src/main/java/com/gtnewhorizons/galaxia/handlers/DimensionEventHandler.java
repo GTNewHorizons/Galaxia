@@ -84,9 +84,8 @@ public class DimensionEventHandler {
     @SubscribeEvent
     public void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         EntityPlayerMP player = (EntityPlayerMP) event.player;
-        if (!isInGalaxiaDimension(player)) {
-            Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
-        }
+        if (GalaxiaAPI.isInGalaxiaDimension(player)) return;
+        Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
     }
 
     /**
@@ -97,6 +96,19 @@ public class DimensionEventHandler {
     @SubscribeEvent
     public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         EntityPlayerMP player = (EntityPlayerMP) event.player;
+        if (GalaxiaAPI.isInGalaxiaDimension(player)) return;
+        Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
+    }
+
+    /**
+     * Clear warnings when joining a world
+     *
+     * @param event
+     */
+    @SubscribeEvent
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        EntityPlayerMP player = (EntityPlayerMP) event.player;
+        if (GalaxiaAPI.isInGalaxiaDimension(player)) return;
         Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(new ArrayList<>()), player);
     }
 
