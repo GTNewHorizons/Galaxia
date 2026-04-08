@@ -7,14 +7,14 @@ import net.minecraft.world.biome.BiomeGenBase;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 
 /**
  * The class holding all data related to the dimension Hemateria

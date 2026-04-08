@@ -15,8 +15,8 @@ import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.RocketAssembly;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class ItemRocketSchematic extends ItemMap {
 

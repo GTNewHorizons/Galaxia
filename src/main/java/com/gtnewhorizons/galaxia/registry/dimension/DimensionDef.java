@@ -8,7 +8,7 @@ import net.minecraft.world.WorldProvider;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 
 /**
  * Record to hold characteristics of the dimension (effectively a posh

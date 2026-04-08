@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffectAPI;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.api.GalaxiaEffectAPI;
 
 /**
  * Mixin to deal with gravity and air resistance
@@ -58,7 +58,7 @@ public abstract class GravityAirResistanceMixin {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
         double res = GalaxiaAPI.getAirResistance(self);
         double exponent = Math.sqrt(res) * (GalaxiaAPI.cancelSpeed(self) ? 0.0 : 1.0);
-        float newFriction = (float) Math.pow(original, exponent) * GalaxiaEffectAPI.getSpeedMultiplier(self);
+        float newFriction = (float) Math.pow(original * GalaxiaEffectAPI.getSpeedMultiplier(self), exponent);
         this.galaxia$currentFriction = newFriction;
         return newFriction;
     }

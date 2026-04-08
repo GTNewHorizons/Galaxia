@@ -5,27 +5,30 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
+import com.gtnewhorizons.galaxia.client.KeyBinds;
+import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.RocketRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.RocketSchematicItemRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.RocketTrophyRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
+import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryItemRenderer;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.GantryRenderer;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketRenderer;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketSchematicItemRenderer;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.RocketTrophyRenderer;
-import com.gtnewhorizons.galaxia.rocketmodules.client.render.SiloRenderer;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityRocketTrophy;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 
 import codechicken.nei.api.API;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
@@ -37,6 +40,10 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
+
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new KeyHandler());
     }
 
     @Override
@@ -53,6 +60,8 @@ public class ClientProxy extends CommonProxy {
             .registerItemRenderer(Item.getItemFromBlock(GalaxiaBlocksEnum.GANTRY.get()), new GantryItemRenderer());
         MinecraftForgeClient
             .registerItemRenderer(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem(), new RocketSchematicItemRenderer());
+
+        KeyBinds.registerAll();
     }
 
     @Override
@@ -72,4 +81,5 @@ public class ClientProxy extends CommonProxy {
     public void serverStarting(FMLServerStartingEvent event) {
         super.serverStarting(event);
     }
+
 }

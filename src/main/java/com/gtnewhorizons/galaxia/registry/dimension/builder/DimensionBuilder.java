@@ -12,7 +12,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 
 /**
  * Builder class to configure dimensions properly
@@ -221,9 +221,6 @@ public class DimensionBuilder {
 
         // Register the dimension
         DimensionManager.registerProviderType(id, providerClass, keepLoaded);
-        if (!DimensionManager.isDimensionRegistered(id)) {
-            DimensionManager.registerDimension(id, id);
-        }
 
         // Create DEF with given fields
         DimensionDef def = new DimensionDef(
