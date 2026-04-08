@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
+import com.gtnewhorizons.galaxia.utility.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 
 import baubles.api.BaublesApi;
@@ -174,6 +175,20 @@ public final class GalaxiaAPI {
         return protection;
     }
 
+    public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return;
+
+        for (int slot : Galaxia.reactionControlSystemSlot) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+                provider.setEnabled(enabled);
+
+                return;
+            }
+        }
+    }
+
     public static boolean hasSporeFilter(@Nonnull EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) {
@@ -212,6 +227,19 @@ public final class GalaxiaAPI {
             var stack = baubles.getStackInSlot(slot);
             if (stack != null && stack.getItem() instanceof ItemThermalProtection) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
+        var baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return false;
+
+        for (int slot : Galaxia.reactionControlSystemSlot) {
+            var stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+                return provider.isEnabled();
             }
         }
         return false;

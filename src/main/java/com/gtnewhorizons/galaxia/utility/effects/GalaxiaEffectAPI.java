@@ -1,21 +1,33 @@
 package com.gtnewhorizons.galaxia.utility.effects;
 
+import java.util.Arrays;
+import java.util.List;
+
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
+
+import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
 
 public class GalaxiaEffectAPI {
 
+    public static final List<Potion> speedMultiplierEffects = Arrays
+        .asList(GalaxiaEffects.lowOxygen, GalaxiaEffects.freezing, GalaxiaEffects.overheating, Potion.moveSlowdown);
+
     public static float getSpeedMultiplier(EntityLivingBase entity) {
-        PotionEffect lowOxygen = entity.getActivePotionEffect(GalaxiaEffects.lowOxygen);
-        PotionEffect freezing = entity.getActivePotionEffect(GalaxiaEffects.freezing);
-        PotionEffect overheating = entity.getActivePotionEffect(GalaxiaEffects.overheating);
-
+        if (!(entity instanceof EntityPlayer)) return 1; // debuffs only apply for players
+        if (!GalaxiaAPI.isInGalaxiaDimension(entity)) return 1;
         int amp = -1;
-        if (lowOxygen != null) amp = Math.max(amp, lowOxygen.getAmplifier());
-        if (freezing != null) amp = Math.max(amp, freezing.getAmplifier());
-        if (overheating != null) amp = Math.max(amp, overheating.getAmplifier());
+        for (Potion p : speedMultiplierEffects) {
+            PotionEffect effect = entity.getActivePotionEffect(p);
+            if (effect == null) continue;
 
-        return amp >= 0 ? oxygenSpeedMultiplier(amp) : 1f;
+            amp = Math.max(amp, effect.getAmplifier());
+        }
+
+        if (amp >= 0) return oxygenSpeedMultiplier(amp);
+        return 1;
     }
 
     private static float oxygenSpeedMultiplier(int amp) {

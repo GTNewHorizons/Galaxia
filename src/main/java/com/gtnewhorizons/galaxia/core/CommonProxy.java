@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield.BAUBLE_TYPE_PROTECTION_SHIELD;
+import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemReactionControlSystem.BAUBLE_TYPE_REACTION_CONTROL_SYSTEM;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.BAUBLE_TYPE_SPORE_FILTER;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
@@ -69,6 +70,8 @@ public class CommonProxy {
         Galaxia.sporeFilterSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_SPORE_FILTER);
         Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         Galaxia.witherSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_WITHER_PROTECTION);
+        Galaxia.reactionControlSystemSlot = BaubleExpandedSlots
+            .getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
 
         CelestialRegistry.freezeAndBake();
     }
@@ -97,6 +100,8 @@ public class CommonProxy {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_WITHER_PROTECTION);
         BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_WITHER_PROTECTION);
 
+        BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
+        BaubleExpandedSlots.tryAssignSlotOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
     }
 
 }
