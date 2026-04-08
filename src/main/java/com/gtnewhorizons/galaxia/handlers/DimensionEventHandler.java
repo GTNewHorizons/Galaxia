@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.utility.hazards.HazardSpores;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardTemperature;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
 import com.gtnewhorizons.galaxia.utility.hazards.HazardWithering;
+import com.gtnewhorizons.galaxia.utility.hazards.HazardZeroG;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
@@ -43,7 +44,8 @@ public class DimensionEventHandler {
             new HazardSpores(),
             new HazardOxygen(),
             new HazardWithering(),
-            new HazardPressure());
+            new HazardPressure(),
+            new HazardZeroG());
     }
 
     public DimensionEventHandler() {
@@ -107,7 +109,7 @@ public class DimensionEventHandler {
     private void applyEffects(EffectBuilder def, EntityPlayer player) {
         this.batchedWarnings.clear();
         for (EnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
-            HazardWarnings w = h.apply(def, player);
+            HazardWarnings w = h.applyTotal(def, player);
             if (w != HazardWarnings.FINE) {
                 batchedWarnings.add(w);
             }

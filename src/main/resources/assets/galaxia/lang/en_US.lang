@@ -13,6 +13,7 @@ slot.protection_shield=Protection Shielding
 slot.spore_filter=Spore Filter
 slot.thermal_protection=Thermal Protection
 slot.wither_protection=Wither Protection
+slot.reaction_control_system=Reaction Control System
 
 #### Dimensions
 galaxia.dimension.frozen_belt=Frozen Belt
@@ -174,6 +175,7 @@ item.galaxia.protection_shield_pressure_high.name=High Pressure Shielding
 item.galaxia.protection_shield_pressure_low.name=Low Pressure Shielding
 item.galaxia.spore_filter.name=Spore Filter
 item.galaxia.wither_protection.name=Wither Protection
+item.galaxia.reaction_control_system.name=Reaction Control System
 
 # Items - "Parts"
 item.galaxia.borosilicate_glass_bar.name=Borosilicate Glass Bar
@@ -263,6 +265,7 @@ galaxia.hazard.spores=Spores Detected
 galaxia.hazard.wither=Withering
 galaxia.hazard.low_oxygen=Low Oxygen
 galaxia.hazard.no_oxygen=Oxygen Depleted
+galaxia.hazard.no_zerog_movement=No Movement Controls
 
 # Elements - Other - "Death Messages"
 death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
@@ -275,6 +278,19 @@ entity.galaxia.EntityRocket.lander=Lander
 entity.galaxia.EntityRocket.name=Rocket
 
 #### Config
+
+# Config - "Player"
+galaxia.config.category.player=Player
+galaxia.config.category.player.tooltip=Settings for the player
+galaxia.config.category.player_global=Global
+galaxia.config.category.player_global.tooltip=Global settings for the player
+galaxia.config.player.debuff_creative=Debuffs to creative mode players
+galaxia.config.player.debuff_creative.tooltip=Apply environmental debuffs when in creative mode
+galaxia.config.player.max_zerog_speed=Max speed in zero gravity
+galaxia.config.player.max_zerog_speed.tooltip=Maximum speed reachable in any direction for zero gravity movement
+galaxia.config.player.rcs_zerog_recoil=Recoil when zero gravity gear equipped
+galaxia.config.player.rcs_zerog_recoil.tooltip=Enable recoil from throwing, dropping or shooting when zero gravity gear is equipped
+
 # Config - "Rocket"
 galaxia.config.category.rocket=Rocket
 galaxia.config.category.rocket.tooltip=Settings for the Galaxia rockets
