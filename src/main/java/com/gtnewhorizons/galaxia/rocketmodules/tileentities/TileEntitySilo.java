@@ -61,7 +61,8 @@ import com.gtnewhorizons.galaxia.rocketmodules.rocket.validators.WeightLimitVali
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
-public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implements IGuiHolder<PosGuiData> {
+public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
+    implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
     private EntityRocket entityRocket;
     private RocketAssembly assembly;
@@ -88,6 +89,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     private boolean hasAssembler = false;
     private int foundTerminalCount = 0;
     public ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
+    private ForgeDirection placedFacing = ForgeDirection.NORTH;
 
     public static final int SILO_DEFAULT_X_OFFSET = 0;
     public static final int SILO_DEFAULT_Y_OFFSET = 1;
@@ -167,12 +169,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureFormed() {
         updateLinkedAssembler();
         shouldRender = true;
-
-        // Move to metavalue 6-9, the structure is formed and we have a linked assembler
-        if (hasAssembler) {
-            int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
-            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta + 4, 2);
-        }
     }
 
     /**
@@ -183,13 +179,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
     protected void onStructureDisformed() {
         updateLinkedAssembler();
         shouldRender = false;
-
-        // Move back to metadata 2-5, structure has been broken
-        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
-        if (currentMeta >= 6) {
-            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
-        }
-        this.kill();
     }
 
     /**
@@ -828,6 +817,26 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
     }
 
+    @Override
+    public ForgeDirection getPlacedFacing() {
+        return placedFacing;
+    }
+
+    @Override
+    public void setPlacedFacing(ForgeDirection dir) {
+        placedFacing = dir;
+    }
+
+    @Override
+    public boolean isStructureValid() {
+        return structureValid && hasAssembler;
+    }
+
+    @Override
+    public ExtendedFacing getCurrentFacing() {
+        return currentFacing;
+    }
+
     /**
      * Writes TE data to NBT taq
      *
@@ -853,7 +862,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         nbt.setTag("modules", list);
         nbt.setBoolean("hasAssembler", hasAssembler);
         nbt.setInteger("facing", currentFacing.getIndex());
-
+        nbt.setInteger("placedFacing", placedFacing.ordinal());
     }
 
     /**
@@ -883,6 +892,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo> implem
         hasAssembler = nbt.getBoolean("hasAssembler");
 
         if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
+        placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
 
     }
 

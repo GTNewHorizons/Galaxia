@@ -40,7 +40,7 @@ import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler>
-    implements IGuiHolder<PosGuiData> {
+    implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
     // Hashmap stores <Module ID, Count>
     public HashMap<Integer, Integer> moduleMap = new HashMap<>();
@@ -120,10 +120,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureFormed() {
         shouldRender = true;
-
-        // Move to metavalue 6-9, the structure is formed
-        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
-        worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta + 4, 2);
     }
 
     /**
@@ -132,12 +128,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureDisformed() {
         shouldRender = false;
-
-        // Move back to metadata 2-5, structure has been broken
-        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
-        if (currentMeta >= 6) {
-            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, currentMeta - 4, 2);
-        }
     }
 
     /**
@@ -352,6 +342,28 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         }
     }
 
+    private ForgeDirection placedFacing = ForgeDirection.NORTH; // default
+
+    @Override
+    public ForgeDirection getPlacedFacing() {
+        return placedFacing;
+    }
+
+    @Override
+    public void setPlacedFacing(ForgeDirection dir) {
+        placedFacing = dir;
+    }
+
+    @Override
+    public boolean isStructureValid() {
+        return structureValid;
+    }
+
+    @Override
+    public ExtendedFacing getCurrentFacing() {
+        return currentFacing;
+    }
+
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
@@ -360,6 +372,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         for (String key : mapNbt.func_150296_c()) {
             moduleMap.put(Integer.parseInt(key), mapNbt.getInteger(key));
         }
+        placedFacing = ForgeDirection.getOrientation(tag.getInteger("placedFacing"));
     }
 
     @Override
@@ -373,6 +386,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 e.getValue());
         }
         tag.setTag("moduleMap", mapNbt);
+        tag.setInteger("placedFacing", placedFacing.ordinal());
     }
 
     /**
