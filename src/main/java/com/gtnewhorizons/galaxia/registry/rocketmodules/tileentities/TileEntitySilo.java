@@ -701,6 +701,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         return assembler.moduleMap.getOrDefault(id, 0) > 0;
     }
 
+    /**
+     * Creates a schematic item stack containing the modules and name in the nbt
+     *
+     * @param player The player interacting with the silo
+     */
     public void captureSchematic(EntityPlayer player) {
         if (worldObj.isRemote || modules.isEmpty()) return;
         ItemStack schematic = ItemRocketSchematic.captureFromSilo(this, pendingSchematicName);

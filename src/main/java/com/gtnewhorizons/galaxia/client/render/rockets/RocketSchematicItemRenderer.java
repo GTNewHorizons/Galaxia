@@ -50,6 +50,12 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         }
     }
 
+    /**
+     * Render method for item held in a player hand
+     *
+     * @param stack        The itemstack that needs rendering
+     * @param renderEngine The TextureManager of the minecraft client
+     */
     private void renderSchematic(ItemStack stack, TextureManager renderEngine) {
 
         List<Integer> moduleIds = ItemRocketSchematic.readModules(stack);
@@ -66,8 +72,6 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glDisable(GL11.GL_ALPHA_TEST);
         GL11.glColor4f(1f, 1f, 1f, 1f);
-
-        // ── 1. Blank out vanilla map edges ────────────────────────────────────
 
         drawQuad(renderEngine, SCHEMATIC_BASE, -7f, 128f + 14f, -0.01f);
         GL11.glTranslatef(64f, 64f, 0f);
@@ -109,6 +113,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
                 float px = (float) (PADDING + (usable - maxWidth * pixelsPerBlock) / 2f + p.x() * pixelsPerBlock);
                 float py = (float) (SIZE - PADDING - ((p.y() - baseY) + module.getHeight()) * pixelsPerBlock);
 
+                // -0.02 to avoid z-fighting with map texture
                 drawQuad(renderEngine, sprite, px, py, moduleW, moduleH, -0.02f);
             }
         }
@@ -120,6 +125,12 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         drawTexts(assembly, stack);
     }
 
+    /**
+     * Render method for when placed in an item frame
+     *
+     * @param stack         The item stack being rendered from the frame
+     * @param RenderManager the RenderManager being used in this client instance
+     */
     private void renderSchematicInFrame(ItemStack stack, RenderManager renderManager) {
         GL11.glRotatef(180f, 0f, 1f, 0f);
         GL11.glRotatef(180f, 0f, 0f, 1f);

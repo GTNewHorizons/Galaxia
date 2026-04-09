@@ -76,6 +76,13 @@ public class ItemRocketSchematic extends ItemMap {
         return result;
     }
 
+    /**
+     * Reads the name of a schematic from the NBT data of a supplied schematic ItemStack
+     *
+     * @param stack The item stack to read from
+     *
+     * @return The name given from the NBT tag
+     */
     public static String readName(ItemStack stack) {
         if (stack == null || !stack.hasTagCompound())
             return StatCollector.translateToLocal("item.galaxia.rocket_schematic.saved_name_none");

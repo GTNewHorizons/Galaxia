@@ -85,6 +85,9 @@ public abstract class RocketModule {
         return texture;
     }
 
+    /**
+     * Returns the ResourceLocation of a wireframe texture for use in schematics
+     */
     @SideOnly(Side.CLIENT)
     public ResourceLocation getSchematicSprite() {
         if (schematicSprite == null) {
