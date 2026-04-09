@@ -4,6 +4,7 @@ import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.GeodeFeature;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -26,8 +27,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPrese
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.EnumTiers;
-import com.gtnewhorizons.galaxia.utility.BiomeIdOffsetter;
 
 /**
  * The class holding all data related to the dimension Theia
