@@ -12,14 +12,14 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationModuleController;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationModuleController;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.BlockSilo;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntityModuleAssembler;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.TileEntitySilo;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.BlockGantry;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.BlockGantryTerminal;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantry;
-import com.gtnewhorizons.galaxia.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockSilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.BlockGantry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.BlockGantryTerminal;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 

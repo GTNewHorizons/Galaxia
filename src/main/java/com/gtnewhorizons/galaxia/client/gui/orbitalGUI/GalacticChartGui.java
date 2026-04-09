@@ -6,9 +6,9 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.orbitalGUI.GalaxiaRegistry;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.utility.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalRegistry;
 
 public class GalacticChartGui {
 
@@ -17,12 +17,12 @@ public class GalacticChartGui {
     public ModularPanel build(PanelSyncManager syncManager) {
         ModularPanel panel = ModularPanel.defaultPanel("galactic_orbital_map")
             .fullScreenInvisible();
-        OrbitalCelestialBody galaxyRoot = GalaxiaRegistry.root();
+        OrbitalCelestialBody galaxyRoot = OrbitalRegistry.root();
         int currentDimension = Minecraft.getMinecraft().thePlayer == null ? 0
             : Minecraft.getMinecraft().thePlayer.dimension;
-        OrbitalCelestialBody currentStar = GalaxiaRegistry.findCurrentStar(currentDimension)
+        OrbitalCelestialBody currentStar = OrbitalRegistry.findCurrentStar(currentDimension)
             .orElseGet(
-                () -> GalaxiaRegistry.getPrimaryStar()
+                () -> OrbitalRegistry.getPrimaryStar()
                     .orElse(galaxyRoot));
         TextFieldWidget renameField = new TextFieldWidget().left(LEFT_PANEL_WIDTH)
             .top(-1000)

@@ -8,7 +8,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 
 import mcp.mobius.waila.api.IWailaConfigHandler;
 import mcp.mobius.waila.api.IWailaEntityAccessor;

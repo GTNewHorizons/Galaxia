@@ -5,9 +5,10 @@ import java.util.function.Consumer;
 import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.AbsolutePosition;
-import com.gtnewhorizons.galaxia.orbitalGUI.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.AbsolutePosition;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
 
 @Desugar
 public record CelestialObjectRegistration(CelestialObjectIdentity identity, CelestialOrbitDefinition orbit,
@@ -384,7 +385,7 @@ record CelestialVisualProfile(ResourceLocation texture, double spriteSize) {
         }
 
         Builder texture(String path) {
-            this.texture = com.gtnewhorizons.galaxia.utility.GalaxiaAPI.LocationGalaxia(path);
+            this.texture = GalaxiaAPI.LocationGalaxia(path);
             return this;
         }
 

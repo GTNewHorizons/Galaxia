@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 
 /**
  * Mixin to change fall damage based on gravity

@@ -14,10 +14,10 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
+import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.ModuleRegistry;
-import com.gtnewhorizons.galaxia.rocketmodules.rocket.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.utility.effects.GalaxiaEffects;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 
 import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.FMLCommonHandler;

@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.handlers;
 
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPlayerOxygenLevel;
-import static com.gtnewhorizons.galaxia.utility.GalaxiaAPI.getPlayerTemperature;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getPlayerOxygenLevel;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getPlayerTemperature;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
@@ -14,12 +14,12 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import org.lwjgl.opengl.GL11;
 
 import com.github.bsideup.jabel.Desugar;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.HazardWarningClient;
 import com.gtnewhorizons.galaxia.core.config.ConfigOverlay;
-import com.gtnewhorizons.galaxia.utility.EnumColors;
-import com.gtnewhorizons.galaxia.utility.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.utility.hazards.HazardWarnings;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
