@@ -123,12 +123,21 @@ tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
 tile.gantry_block.name=Gantry Shaft
 tile.gantry_terminal.name=Gantry Terminal
+tile.rocket_trophy.name=Rocket Trophy
 
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
 # Items - "Tools"
 item.galaxia.galactic_map.name=Galactic Map
 item.galaxia.teleporter.name=Teleporter
+
+# Items - Tools - "Rocket Schematic"
+item.galaxia.schematic.name=Rocket Schematic
+item.galaxia.rocket_schematic.saved_name_none=Unnamed Schematic
+item.galaxia.rocket_schematic.empty=Empty schematic
+item.galaxia.rocket_schematic.modules=Modules: %d
+item.galaxia.rocket_schematic.height=Height: %.1fm
+item.galaxia.rocket_schematic.width=Width: %.1fm
 
 # Items - Tools - "Linking Tool"
 ## UNUSED item.galaxia.linking_tool.name=Linking tool
@@ -215,8 +224,11 @@ galaxia.gui.rocket_silo.title=Rocket Silo
 galaxia.gui.rocket_silo.assembler_none=No Module Assembler linked
 galaxia.gui.rocket_silo.build=Build Rocket
 galaxia.gui.rocket_silo.launch=Launch Rocket
+galaxia.gui.rocket_silo.save=Save Schematic
 galaxia.gui.rocket_silo.builder.return_modules=Return Modules
 galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
+galaxia.gui.rocket_silo.builder.schematic_save=Save build to schematic
+galaxia.gui.rocket_silo.builder.schematic_text=Schematic Name:
 galaxia.gui.rocket_silo.button.viridis=Viridis
 galaxia.gui.rocket_silo.not_formed=Rocket Silo not properly formed!
 
@@ -233,6 +245,15 @@ galaxia.gui.rocket_silo.validator.wrong_tier=Rocket of tier %d cannot reach %s (
 # Elements - GUI - "Module Controller"
 galaxia.gui.module_controller.title=Module Controller
 galaxia.gui.module_controller.button.repressurize=Repressurize
+
+# Elements - GUI - "Rocket Trophy"
+galaxia.gui.rocket_trophy.title=Rocket Trophy Positioning
+galaxia.gui.rocket_trophy.schematic_loaded=Schematic loaded!
+galaxia.gui.rocket_trophy.schematic_none=No schematic to load
+galaxia.gui.rocket_trophy.position=Render Position:
+galaxia.gui.rocket_trophy.yaw=Yaw
+galaxia.gui.rocket_trophy.pitch=Pitch
+galaxia.gui.rocket_trophy.scale=Scale
 
 # Elements - GUI - "Module Assembler"
 galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
@@ -251,7 +272,7 @@ galaxia.tooltip.protection_shield_radiation.low=Low Pressure Shielding: +%s
 galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
-galaxia.tooltip.rocket_silo.builder.enter_rocket=Add some modules first
+galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
 
 # Elements - "Other"
 # Elements - Other - "Effect"
@@ -275,6 +296,15 @@ galaxia.hazard.no_zerog_movement=No Movement Controls
 death.attack.galaxia.temperature=%1$s succumbed to extreme temperature
 death.attack.galaxia.noOxygen=%1$s ran out of oxygen
 death.attack.galaxia.radiation=%1$s died from radiation exposure
+
+# Elements - Other - "Schematic Labels"
+galaxia.item.schematic.label.name=Name: %s
+galaxia.item.schematic.label.tier=Tier: %d
+galaxia.item.schematic.label.modules=Modules: %d
+galaxia.item.schematic.label.height=Height: %dm
+galaxia.item.schematic.label.width=Width: %dm
+galaxia.item.schematic.label.weight=Weight: %dkg
+galaxia.item.schematic.label.thrust=Thrust: %dN
 
 ### Entities
 # Entities - "Rocket"
