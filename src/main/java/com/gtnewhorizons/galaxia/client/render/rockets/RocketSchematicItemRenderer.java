@@ -123,8 +123,8 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
     private void renderSchematicInFrame(ItemStack stack, RenderManager renderManager) {
         GL11.glRotatef(180f, 0f, 1f, 0f);
         GL11.glRotatef(180f, 0f, 0f, 1f);
-        GL11.glScalef(0.00781250f, 0.00781250f, 0.00781250f);
-        GL11.glTranslatef(-65f, -111f, -3f);
+        GL11.glScalef(0.00881250f, 0.00881250f, 0.00881250f);
+        GL11.glTranslatef(-64f, -104f, -3f);
         GL11.glNormal3f(0f, 0f, -1f);
 
         renderManager.renderEngine.bindTexture(LocationGalaxia("textures/items/tool/schematic_base.png"));
