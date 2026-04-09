@@ -119,18 +119,13 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * @return An array of BiomeGenBases storing neighbouring biomes
      */
     public BiomeGenBase[] getLocalBiomes(int x, int z) {
-        BiomeGenBase[] localBiomes = new BiomeGenBase[7];
+        BiomeGenBase[] localBiomes = new BiomeGenBase[4];
         localBiomes[0] = this.getBiomeGenAt(x, z);
         int adjacentIndexX = cacheBiomeIndexX + 1 >= biomeGeneratorMatrix.length ? 0 : cacheBiomeIndexX + 1;
         int adjacentIndexZ = cacheBiomeIndexZ + 1 >= biomeGeneratorMatrix[0].length ? 0 : cacheBiomeIndexZ + 1;
-        int adjacentAntiIndexX = cacheBiomeIndexX - 1 < 0 ? biomeGeneratorMatrix.length - 1 : cacheBiomeIndexX - 1;
-        int adjacentAntiIndexZ = cacheBiomeIndexZ - 1 < 0 ? biomeGeneratorMatrix[0].length : cacheBiomeIndexZ - 1;
         localBiomes[1] = biomeGeneratorMatrix[adjacentIndexX][cacheBiomeIndexZ];
         localBiomes[2] = biomeGeneratorMatrix[cacheBiomeIndexX][adjacentIndexZ];
         localBiomes[3] = biomeGeneratorMatrix[adjacentIndexX][adjacentIndexZ];
-        localBiomes[4] = biomeGeneratorMatrix[adjacentAntiIndexX][cacheBiomeIndexZ];
-        localBiomes[5] = biomeGeneratorMatrix[cacheBiomeIndexX][adjacentAntiIndexZ];
-        localBiomes[6] = biomeGeneratorMatrix[adjacentAntiIndexX][adjacentAntiIndexZ];
         return localBiomes;
     }
 
