@@ -171,6 +171,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         String[] lines = {
             StatCollector
                 .translateToLocalFormatted("galaxia.item.schematic.label.name", ItemRocketSchematic.readName(stack)),
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.tier", assembly.getTier()),
             StatCollector.translateToLocalFormatted(
                 "galaxia.item.schematic.label.modules",
                 assembly.getModules()

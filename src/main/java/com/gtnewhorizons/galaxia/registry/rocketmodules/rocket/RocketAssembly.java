@@ -112,6 +112,15 @@ public final class RocketAssembly {
             .orElse(0.0);
     }
 
+    public int getTier() {
+        return getCoreModules().stream()
+            .mapToInt(
+                e -> e.getTier()
+                    .toInt())
+            .max()
+            .orElse(0);
+    }
+
     public double getTotalWidth() {
         return Math.round(
             getPlacements().stream()

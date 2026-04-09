@@ -298,11 +298,12 @@ death.attack.galaxia.noOxygen=%1$s ran out of oxygen
 death.attack.galaxia.radiation=%1$s died from radiation exposure
 
 # Elements - Other - "Schematic Labels"
-galaxia.item.schematic.label.weight=Weight: %dkg
+galaxia.item.schematic.label.name=Name: %s
+galaxia.item.schematic.label.tier=Tier: %d
 galaxia.item.schematic.label.modules=Modules: %d
 galaxia.item.schematic.label.height=Height: %dm
 galaxia.item.schematic.label.width=Width: %dm
-galaxia.item.schematic.label.name=Name: %s
+galaxia.item.schematic.label.weight=Weight: %dkg
 galaxia.item.schematic.label.thrust=Thrust: %dN
 
 ### Entities
