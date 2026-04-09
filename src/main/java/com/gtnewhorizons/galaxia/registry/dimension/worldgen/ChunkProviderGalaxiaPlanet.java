@@ -93,18 +93,18 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     .getLocalBiomeSignificance(allowedDivergence);
                 // smoothing
                 double sum = 0;
-                for (int i = 0; i < 7; i++) {
+                for (int i = 0; i < 4; i++) {
                     final double t = blockContrib[i];
                     final double t2 = t * t;
                     blockContrib[i] = t2 * t * 2 + t2 * 3;
                     sum += blockContrib[i] = t2 * t * 2 + t2 * 3;
                 }
                 // renormalizing
-                for (int i = 0; i < 7; i++) {
+                for (int i = 0; i < 4; i++) {
                     blockContrib[i] /= sum;
                 }
                 double maxContrib = 0;
-                for (int i = 0; i < 7; i++) {
+                for (int i = 0; i < 4; i++) {
                     if (!biomeList.contains(blockBiomes[i])) {
                         biomeList.add(blockBiomes[i]);
                         biomeContrib[biomeList.indexOf(blockBiomes[i])] = new double[256];

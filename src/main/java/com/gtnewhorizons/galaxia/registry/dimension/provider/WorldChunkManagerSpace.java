@@ -141,15 +141,11 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      * @return Significance values for main biome and three corner biomes
      */
     public double[] getLocalBiomeSignificance(double divergence) {
-        if (divergence == 0) return new double[] { 1, 0, 0, 0, 0, 0, 0 };
-        double xDivergence = Math.max(0, cacheNoiseX - cacheBiomeIndexX - 1 + divergence) / divergence;
-        double zDivergence = Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + divergence) / divergence;
-        double xAntiDivergence = -Math.min(0, cacheNoiseX - cacheBiomeIndexX - 1 + divergence) / divergence;
-        double zAntiDivergence = -Math.min(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + divergence) / divergence;
+        if (divergence == 0) return new double[] { 1, 0, 0, 0 };
+        double xDivergence = (Math.max(0, cacheNoiseX - cacheBiomeIndexX - 1 + 2 * divergence) - divergence) / divergence;
+        double zDivergence = (Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + 2 * divergence) - divergence) / divergence;
         // four ways normalized symmetric blending in the corner
-        return new double[] { xDivergence * zDivergence + xAntiDivergence * zAntiDivergence, (1 - xDivergence) * zDivergence, xDivergence * (1 - zDivergence), (1 - xDivergence) * (1 - zDivergence),
-            (1 - xAntiDivergence) * zAntiDivergence, xAntiDivergence * (1 - zAntiDivergence), (1 - xAntiDivergence) * (1 - zAntiDivergence)
-        };
+        return new double[] { xDivergence * zDivergence, (1 - xDivergence) * zDivergence, xDivergence * (1 - zDivergence), (1 - xDivergence) * (1 - zDivergence) };
     }
 
     public int getBiomeCount() {
