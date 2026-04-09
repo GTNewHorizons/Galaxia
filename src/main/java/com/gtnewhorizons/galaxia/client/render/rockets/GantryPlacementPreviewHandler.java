@@ -11,7 +11,6 @@ import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 
-import org.apache.logging.log4j.LogManager;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.BlockGantry;
@@ -77,8 +76,7 @@ public class GantryPlacementPreviewHandler {
 
         // Don't preview if where we want to place isn't legal
         if (!(new BlockGantry().canPlaceBlockAt(world, x, y, z))) return;
-        LogManager.getLogger("GantryPlacementPreviewHandler")
-            .info(world.getBlock(finalX, finalY - 2, finalZ));
+
         renderGhostModel(world, finalX, finalY, finalZ, rx, ry, rz);
 
         if (redirected) {
