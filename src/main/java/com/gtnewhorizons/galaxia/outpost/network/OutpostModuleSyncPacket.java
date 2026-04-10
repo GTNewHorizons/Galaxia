@@ -45,7 +45,10 @@ public final class OutpostModuleSyncPacket implements IMessage {
         buf.writeInt(modules.size());
         for (ModuleState ms : modules) {
             buf.writeInt(ms.index());
-            writeString(buf, ms.status().name());
+            writeString(
+                buf,
+                ms.status()
+                    .name());
             buf.writeFloat(ms.progress());
             buf.writeLong(ms.energy());
         }

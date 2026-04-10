@@ -240,10 +240,8 @@ public final class OutpostPersistenceManager {
                 java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         } catch (java.nio.file.AtomicMoveNotSupportedException e) {
             try {
-                java.nio.file.Files.move(
-                    tmp.toPath(),
-                    file.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                java.nio.file.Files
+                    .move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e2) {
                 Galaxia.LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e2.getMessage());
             }
@@ -533,7 +531,8 @@ public final class OutpostPersistenceManager {
 
         private static String resolveTypeName(Class<?> clazz) {
             String name = TYPE_NAME_MAP.get(clazz);
-            if (name == null) throw new IllegalArgumentException("Unregistered OutpostModuleData class: " + clazz.getName());
+            if (name == null)
+                throw new IllegalArgumentException("Unregistered OutpostModuleData class: " + clazz.getName());
             return name;
         }
     }
