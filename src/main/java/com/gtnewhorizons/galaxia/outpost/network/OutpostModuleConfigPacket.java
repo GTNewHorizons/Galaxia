@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.outpost.network;
 
 import java.nio.charset.StandardCharsets;
 
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.outpost.AutomatedOutpostModule;
 import com.gtnewhorizons.galaxia.outpost.AutomatedOutpostState;
 import com.gtnewhorizons.galaxia.outpost.logistics.AllowShootingConfig;
@@ -10,6 +9,7 @@ import com.gtnewhorizons.galaxia.outpost.module.BigHammerModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.HammerModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.MinerModuleData;
 import com.gtnewhorizons.galaxia.outpost.persistence.OutpostDataStore;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;

@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
+import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
 
 /**
  * Shared (non-client) utilities for interplanetary trajectory planning.

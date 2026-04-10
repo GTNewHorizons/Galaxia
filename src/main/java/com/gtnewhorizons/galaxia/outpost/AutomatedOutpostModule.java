@@ -11,9 +11,9 @@ import com.gtnewhorizons.galaxia.api.celestial.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.outpost.module.MinerModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.OutpostModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.PowerModuleData;
+import com.gtnewhorizons.galaxia.registry.GTUtility;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectRegistration;
 import com.gtnewhorizons.galaxia.registry.celestial.GtOreVeinDefinition;
-import com.gtnewhorizons.galaxia.registry.GTUtility;
 
 /**
  * A single module instance installed in an {@link AutomatedOutpostState}.

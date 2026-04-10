@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.outpost.AutomatedOutpostModule;
 import com.gtnewhorizons.galaxia.outpost.AutomatedOutpostState;
 import com.gtnewhorizons.galaxia.outpost.ItemStackWrapper;
@@ -20,6 +19,7 @@ import com.gtnewhorizons.galaxia.outpost.module.HammerModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.MinerModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.PowerModuleData;
 import com.gtnewhorizons.galaxia.outpost.persistence.OutpostDataStore;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
