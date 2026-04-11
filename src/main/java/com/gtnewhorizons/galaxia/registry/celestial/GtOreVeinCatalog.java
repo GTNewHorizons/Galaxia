@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
 public final class GtOreVeinCatalog {
@@ -45,7 +46,7 @@ public final class GtOreVeinCatalog {
     private static void ensureLoaded() {
         if (loaded) return;
         loaded = true;
-        if (!Galaxia.hasGT5U()) {
+        if (!GTUtility.isGTLoaded) {
             veinsById = Collections.emptyMap();
             return;
         }

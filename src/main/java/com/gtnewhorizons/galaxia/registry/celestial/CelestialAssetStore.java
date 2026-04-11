@@ -18,12 +18,12 @@ public final class CelestialAssetStore {
 
     private CelestialAssetStore() {}
 
-    public static synchronized CelestialBodyAssetState getState(String celestialObjectId) {
+    public static CelestialBodyAssetState getState(String celestialObjectId) {
         MutableBodyState state = STATE_BY_BODY.computeIfAbsent(celestialObjectId, MutableBodyState::new);
         return state.snapshot();
     }
 
-    public static synchronized CelestialBodyAssetState getStateIfPresent(String celestialObjectId) {
+    public static CelestialBodyAssetState getStateIfPresent(String celestialObjectId) {
         MutableBodyState state = STATE_BY_BODY.get(celestialObjectId);
         if (state == null) {
             return new CelestialBodyAssetState(celestialObjectId, Collections.emptyList());
@@ -31,8 +31,8 @@ public final class CelestialAssetStore {
         return state.snapshot();
     }
 
-    public static synchronized CelestialManagedAsset createAssetInConstruction(String celestialObjectId,
-        String displayName, CelestialAssetKind kind, CelestialAssetLocation location) {
+    public static CelestialManagedAsset createAssetInConstruction(String celestialObjectId, String displayName,
+        CelestialAssetKind kind, CelestialAssetLocation location) {
         MutableBodyState state = STATE_BY_BODY.computeIfAbsent(celestialObjectId, MutableBodyState::new);
         String assetId = "asset_" + UUID.randomUUID()
             .toString()
@@ -52,8 +52,8 @@ public final class CelestialAssetStore {
         return asset;
     }
 
-    public static synchronized CelestialManagedAsset createOperationalAsset(String celestialObjectId,
-        String displayName, CelestialAssetKind kind, CelestialAssetLocation location) {
+    public static CelestialManagedAsset createOperationalAsset(String celestialObjectId, String displayName,
+        CelestialAssetKind kind, CelestialAssetLocation location) {
         MutableBodyState state = STATE_BY_BODY.computeIfAbsent(celestialObjectId, MutableBodyState::new);
         CelestialManagedAsset asset = new CelestialManagedAsset(
             "asset_" + UUID.randomUUID()
@@ -71,7 +71,7 @@ public final class CelestialAssetStore {
         return asset;
     }
 
-    public static synchronized boolean cancelConstruction(String assetId) {
+    public static boolean cancelConstruction(String assetId) {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
@@ -86,7 +86,7 @@ public final class CelestialAssetStore {
         return false;
     }
 
-    public static synchronized boolean startDeconstruction(String assetId) {
+    public static boolean startDeconstruction(String assetId) {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
@@ -111,7 +111,7 @@ public final class CelestialAssetStore {
         return false;
     }
 
-    public static synchronized boolean completeConstruction(String assetId) {
+    public static boolean completeConstruction(String assetId) {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 CelestialManagedAsset asset = state.assets.get(i);
@@ -126,7 +126,7 @@ public final class CelestialAssetStore {
         return false;
     }
 
-    public static synchronized boolean addToConstructionInventory(String assetId, ItemStack stack, long amount) {
+    public static boolean addToConstructionInventory(String assetId, ItemStack stack, long amount) {
         if (stack == null || amount <= 0) {
             return false;
         }
@@ -159,7 +159,7 @@ public final class CelestialAssetStore {
         return false;
     }
 
-    public static synchronized CelestialManagedAsset findAsset(String assetId) {
+    public static CelestialManagedAsset findAsset(String assetId) {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (CelestialManagedAsset asset : state.assets) {
                 if (asset.assetId()
@@ -169,7 +169,7 @@ public final class CelestialAssetStore {
         return null;
     }
 
-    public static synchronized boolean destroyAsset(String assetId) {
+    public static boolean destroyAsset(String assetId) {
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             for (int i = 0; i < state.assets.size(); i++) {
                 if (state.assets.get(i)
@@ -184,7 +184,7 @@ public final class CelestialAssetStore {
         return false;
     }
 
-    public static synchronized boolean renameAsset(String assetId, String displayName) {
+    public static boolean renameAsset(String assetId, String displayName) {
         if (displayName == null || displayName.trim()
             .isEmpty()) {
             return false;
@@ -214,11 +214,11 @@ public final class CelestialAssetStore {
         return false;
     }
 
-    public static synchronized void clear() {
+    public static void clear() {
         STATE_BY_BODY.clear();
     }
 
-    public static synchronized List<CelestialManagedAsset> allAssets() {
+    public static List<CelestialManagedAsset> allAssets() {
         List<CelestialManagedAsset> all = new ArrayList<>();
         for (MutableBodyState state : STATE_BY_BODY.values()) {
             all.addAll(state.assets);
@@ -226,7 +226,7 @@ public final class CelestialAssetStore {
         return Collections.unmodifiableList(all);
     }
 
-    public static synchronized void loadAssets(List<CelestialManagedAsset> assets) {
+    public static void loadAssets(List<CelestialManagedAsset> assets) {
         STATE_BY_BODY.clear();
         if (assets == null || assets.isEmpty()) return;
         for (CelestialManagedAsset asset : assets) {
@@ -236,7 +236,7 @@ public final class CelestialAssetStore {
         }
     }
 
-    public static synchronized List<CelestialAssetRequirement> previewRequirements(CelestialAssetKind kind) {
+    public static List<CelestialAssetRequirement> previewRequirements(CelestialAssetKind kind) {
         return Collections.unmodifiableList(new ArrayList<>(defaultRequirements(kind)));
     }
 

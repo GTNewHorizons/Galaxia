@@ -7,7 +7,6 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
@@ -126,13 +125,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             });
     }
 
-    private IDrawable drawable(DrawCommand cmd) {
+    private IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-    }
-
-    @FunctionalInterface
-    private interface DrawCommand {
-
-        void draw(GuiContext ctx, int x, int y, int w, int h);
     }
 }

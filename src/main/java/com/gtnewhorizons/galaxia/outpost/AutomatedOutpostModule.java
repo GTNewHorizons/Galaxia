@@ -8,10 +8,10 @@ import java.util.Random;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.celestial.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.outpost.module.MinerModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.OutpostModuleData;
 import com.gtnewhorizons.galaxia.outpost.module.PowerModuleData;
-import com.gtnewhorizons.galaxia.registry.GTUtility;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectRegistration;
 import com.gtnewhorizons.galaxia.registry.celestial.GtOreVeinDefinition;
 

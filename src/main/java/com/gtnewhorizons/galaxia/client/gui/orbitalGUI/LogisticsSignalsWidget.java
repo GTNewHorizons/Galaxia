@@ -18,7 +18,6 @@ import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.ScrollWidget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
@@ -397,14 +396,8 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         return rows;
     }
 
-    private IDrawable drawable(DrawCommand cmd) {
+    private IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
-    }
-
-    @FunctionalInterface
-    private interface DrawCommand {
-
-        void draw(GuiContext ctx, int x, int y, int w, int h);
     }
 
     private static void renderItemIcon(ItemStack stack, int x, int y) {

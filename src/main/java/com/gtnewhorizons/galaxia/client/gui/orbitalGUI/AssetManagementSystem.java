@@ -21,7 +21,6 @@ import org.lwjgl.input.Keyboard;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -37,6 +36,7 @@ import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.celestial.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
+import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.outpost.AutomatedOutpostModule;
 import com.gtnewhorizons.galaxia.outpost.AutomatedOutpostState;
@@ -55,7 +55,6 @@ import com.gtnewhorizons.galaxia.outpost.network.OutpostModuleActionPacket;
 import com.gtnewhorizons.galaxia.outpost.network.OutpostModuleConfigPacket;
 import com.gtnewhorizons.galaxia.outpost.network.OutpostRequestSyncPacket;
 import com.gtnewhorizons.galaxia.outpost.persistence.OutpostDataStore;
-import com.gtnewhorizons.galaxia.registry.GTUtility;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetLocation;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetRequirement;
@@ -183,7 +182,7 @@ public final class AssetManagementSystem {
         List<StationTransferTarget> getTransferTargetsInSystem(OrbitalCelestialBody root, OrbitalCelestialBody body) {
             List<StationTransferTarget> targets = new ArrayList<>();
             if (body == null) return targets;
-            OrbitalCelestialBody hostStar = findHostStar(root, body, null);
+            OrbitalCelestialBody hostStar = OrbitalTransferPlanner.findHostStar(root, body);
             if (hostStar == null) return targets;
             collectTargets(hostStar, targets);
             return targets;
@@ -227,17 +226,6 @@ public final class AssetManagementSystem {
                     .append(stored.displayName());
             }
             return sb.toString();
-        }
-
-        private OrbitalCelestialBody findHostStar(OrbitalCelestialBody current, OrbitalCelestialBody target,
-            OrbitalCelestialBody currentStar) {
-            OrbitalCelestialBody nextStar = current.objectClass() == CelestialObjectClass.STAR ? current : currentStar;
-            if (current == target) return nextStar;
-            for (OrbitalCelestialBody child : current.children()) {
-                OrbitalCelestialBody found = findHostStar(child, target, nextStar);
-                if (found != null) return found;
-            }
-            return null;
         }
 
     }
@@ -2965,14 +2953,8 @@ public final class AssetManagementSystem {
             return Minecraft.getMinecraft().fontRenderer.trimStringToWidth(text, width);
         }
 
-        private IDrawable drawable(DrawCommand drawCommand) {
+        private IDrawable drawable(DrawableCommand drawCommand) {
             return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
-        }
-
-        @FunctionalInterface
-        private interface DrawCommand {
-
-            void draw(GuiContext context, int x, int y, int width, int height);
         }
 
         private enum AssetManagerButtonGlyph {
@@ -2985,19 +2967,6 @@ public final class AssetManagementSystem {
         }
 
         private final class PassiveRow extends ParentWidget<PassiveRow> {
-
-            @Override
-            public boolean canHover() {
-                return false;
-            }
-
-            @Override
-            public boolean canHoverThrough() {
-                return true;
-            }
-        }
-
-        private final class PassiveLayer extends ParentWidget<PassiveLayer> {
 
             @Override
             public boolean canHover() {

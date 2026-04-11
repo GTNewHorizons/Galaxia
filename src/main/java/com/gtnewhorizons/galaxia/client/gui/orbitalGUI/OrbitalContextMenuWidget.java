@@ -8,7 +8,6 @@ import net.minecraft.client.gui.Gui;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -286,14 +285,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         });
     }
 
-    private IDrawable drawable(DrawCommand drawCommand) {
+    private IDrawable drawable(DrawableCommand drawCommand) {
         return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
-    }
-
-    @FunctionalInterface
-    private interface DrawCommand {
-
-        void draw(GuiContext context, int x, int y, int width, int height);
     }
 
     public enum ContextMenuActionType {
