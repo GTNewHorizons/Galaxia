@@ -12,9 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import javax.annotation.Nonnull;
-
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
@@ -22,8 +22,8 @@ import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody
 
 public final class CelestialRegistry {
 
-    private static final Map<CelestialObjectId, CelestialObjectRegistration> REGISTRATIONS = new LinkedHashMap<>();
-    private static final Map<DimensionEnum, CelestialObjectId> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
+    private static final Map<String, CelestialObjectRegistration> REGISTRATIONS = new LinkedHashMap<>();
+    private static final Map<DimensionEnum, String> IDS_BY_DIMENSION = new EnumMap<>(DimensionEnum.class);
 
     private static boolean bootstrapped;
     private static boolean frozen;
@@ -37,254 +37,300 @@ public final class CelestialRegistry {
         return (hash / (double) 0xFFFFFFFFL) * Math.PI * 2.0;
     }
 
+    private static CelestialBodyProperties.Builder withVanillaOres(CelestialBodyProperties.Builder builder,
+        Block... ores) {
+        for (Block ore : ores) builder.ore(new ItemStack(ore));
+        return builder;
+    }
+
+    private static CelestialBodyProperties.Builder withGravity(CelestialBodyProperties.Builder builder,
+        double standardGravitationalParameter, double sphereOfInfluenceRadius) {
+        return builder.standardGravitationalParameter(standardGravitationalParameter)
+            .sphereOfInfluenceRadius(sphereOfInfluenceRadius);
+    }
+
     public static synchronized void registerDefaults() {
         if (bootstrapped) return;
         bootstrapped = true;
 
         register(
-            CelestialObjectId.NOVA_CAELUM,
-            builder -> builder.objectClass(CelestialObjectClass.GALAXY)
+            CelestialObjectRegistration.builder()
+                .id("novum_caelum")
+                .name("Novum Caelum")
+                .objectClass(CelestialObjectClass.GALAXY)
                 .properties(
-                    b -> b.withGravity(5.4e8, 0.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 5.4e8, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
-                        .metadata("mapLayer", "stars")));
+                        .metadata("mapLayer", "stars")
+                        .build())
+                .build());
 
         register(
-            CelestialObjectId.VAEL,
-            builder -> builder.parent(CelestialObjectId.NOVA_CAELUM)
+            CelestialObjectRegistration.builder()
+                .id("vael")
+                .name("Vael")
+                .parent("novum_caelum")
                 .objectClass(CelestialObjectClass.STAR)
                 .absolutePosition(0.0, 0.0)
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(1.0)
                 .properties(
-                    b -> b.withGravity(7.2e7, 0.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 7.2e7, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
-                        .metadata("system", "vael")));
+                        .metadata("system", "vael")
+                        .build())
+                .build());
 
         register(
-            CelestialObjectId.ILIA,
-            builder -> builder.parent(CelestialObjectId.NOVA_CAELUM)
+            CelestialObjectRegistration.builder()
+                .id("ilia")
+                .name("Ilia")
+                .parent("novum_caelum")
                 .objectClass(CelestialObjectClass.STAR)
                 .absolutePosition(5800.0, -2600.0)
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.92)
                 .properties(
-                    b -> b.withGravity(4.2e7, 0.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 4.2e7, 0.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
-                        .metadata("system", "ilia")));
+                        .metadata("system", "ilia")
+                        .build())
+                .build());
 
         register(
-            CelestialObjectId.PROXIMA_CENTAURI,
-            builder -> builder.parent(CelestialObjectId.NOVA_CAELUM)
+            CelestialObjectRegistration.builder()
+                .id("proxima_centauri")
+                .name("Proxima Centauri")
+                .parent("novum_caelum")
                 .objectClass(CelestialObjectClass.STAR)
                 .absolutePosition(-4900.0, 3400.0)
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.88)
                 .properties(
-                    b -> b.visitable(false)
+                    CelestialBodyProperties.builder()
+                        .visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
-                        .metadata("system", "proxima_centauri")));
+                        .metadata("system", "proxima_centauri")
+                        .build())
+                .build());
 
         register(
-            CelestialObjectId.ROMULUS,
-            builder -> builder.parent(CelestialObjectId.ILIA)
+            CelestialObjectRegistration.builder()
+                .id("romulus")
+                .name("Romulus")
+                .parent("ilia")
                 .objectClass(CelestialObjectClass.PLANET)
                 .circularOrbit(0.296 * earthRadiusToAU, 0.00031, seededPhase("ilia_romulus"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.24)
                 .properties(
-                    b -> b.withGravity(5.2e6, 1200.0)
-                        .visitable(false)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(301)
-                        .radiation(0.08)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_colony_world")
-                        .withVanillaOres(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.diamond_ore)));
+                    withVanillaOres(
+                        withGravity(CelestialBodyProperties.builder(), 5.2e6, 1200.0).visitable(false)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(301)
+                            .radiation(0.08)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined")
+                            .metadata("status", "placeholder_colony_world"),
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.redstone_ore,
+                        Blocks.diamond_ore).build())
+                .build());
 
         register(
-            CelestialObjectId.REMUS,
-            builder -> builder.parent(CelestialObjectId.ILIA)
+            CelestialObjectRegistration.builder()
+                .id("remus")
+                .name("Remus")
+                .parent("ilia")
                 .objectClass(CelestialObjectClass.PLANET)
                 .circularOrbit(0.726 * earthRadiusToAU, 0.00018, seededPhase("ilia_remus"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.19)
                 .properties(
-                    b -> b.withGravity(4.6e6, 1500.0)
-                        .visitable(false)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(182)
-                        .radiation(0.14)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .withVanillaOres(Blocks.coal_ore, Blocks.iron_ore, Blocks.lapis_ore, Blocks.redstone_ore)));
+                    withVanillaOres(
+                        withGravity(CelestialBodyProperties.builder(), 4.6e6, 1500.0).visitable(false)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(182)
+                            .radiation(0.14)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.lapis_ore,
+                        Blocks.redstone_ore).build())
+                .build());
 
         register(
-            CelestialObjectId.EGORA,
-            builder -> builder.parent(CelestialObjectId.VAEL)
+            CelestialObjectRegistration.builder()
+                .id("egora")
+                .name("Egora")
+                .parent("vael")
                 .objectClass(CelestialObjectClass.PLANET)
                 .circularOrbit(0.92 * earthRadiusToAU, 0.00022, seededPhase("egora"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.18)
                 .properties(
-                    b -> b.withGravity(9.8e6, 2400.0)
-                        .visitable(false)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(288)
-                        .radiation(0.05)
-                        .oreProfile("undefined")
-                        .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
-                        .metadata("surface", "undefined")
-                        .metadata("status", "placeholder_homeworld")
-                        .withVanillaOres(
-                            Blocks.coal_ore,
-                            Blocks.iron_ore,
-                            Blocks.gold_ore,
-                            Blocks.redstone_ore,
-                            Blocks.diamond_ore)));
+                    withVanillaOres(
+                        withGravity(CelestialBodyProperties.builder(), 9.8e6, 2400.0).visitable(false)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(288)
+                            .radiation(0.05)
+                            .oreProfile("undefined")
+                            .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
+                            .metadata("surface", "undefined")
+                            .metadata("status", "placeholder_homeworld"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.redstone_ore,
+                        Blocks.diamond_ore).build())
+                .build());
+
         register(
-            DimensionEnum.PANSPIRA,
-            builder -> builder.parent(CelestialObjectId.VAEL)
+            CelestialObjectRegistration.builder()
+                .dimension(DimensionEnum.PANSPIRA)
+                .parent("vael")
                 .objectClass(CelestialObjectClass.PLANET)
                 .circularOrbit(0.60 * earthRadiusToAU, 0.00057, seededPhase("panspira"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.75)
                 .properties(
-                    b -> b.withGravity(1.4e7, 3600.0)
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(423)
-                        .radiation(0.20)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .withVanillaOres(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore)));
+                    withVanillaOres(
+                        withGravity(CelestialBodyProperties.builder(), 1.4e7, 3600.0).visitable(true)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(423)
+                            .radiation(0.20)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.redstone_ore,
+                        Blocks.emerald_ore).build())
+                .build());
 
         register(
-            DimensionEnum.HEMATERIA,
-            builder -> builder.parent(CelestialObjectId.VAEL)
+            CelestialObjectRegistration.builder()
+                .dimension(DimensionEnum.HEMATERIA)
+                .parent("vael")
                 .objectClass(CelestialObjectClass.PLANET)
                 .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("hemateria"))
                 .texture(EnumTextures.HEMATERIA.get())
                 .spriteSize(0.825)
                 .properties(
-                    b -> b.withGravity(5.5e8, 9500.0)
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(67)
-                        .radiation(0.10)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .withVanillaOres(
-                            Blocks.coal_ore,
-                            Blocks.iron_ore,
-                            Blocks.gold_ore,
-                            Blocks.lapis_ore,
-                            Blocks.diamond_ore)));
+                    withVanillaOres(
+                        withGravity(CelestialBodyProperties.builder(), 5.5e8, 9500.0).visitable(true)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(67)
+                            .radiation(0.10)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.gold_ore,
+                        Blocks.lapis_ore,
+                        Blocks.diamond_ore).build())
+                .build());
 
         register(
-            DimensionEnum.THEIA,
-            builder -> builder.parent(CelestialObjectId.HEMATERIA)
+            CelestialObjectRegistration.builder()
+                .dimension(DimensionEnum.THEIA)
+                .parent("hemateria")
                 .objectClass(CelestialObjectClass.MOON)
                 .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("theia"))
                 .texture(EnumTextures.EGORA.get())
                 .spriteSize(0.06)
                 .properties(
-                    b -> b.withGravity(1.8e6, 480.0)
-                        .visitable(true)
-                        .canCreateStation(true)
-                        .canCreateOutpost(true)
-                        .temperature(225)
-                        .radiation(0.18)
-                        .oreProfile("undefined")
-                        .metadata("surface", "undefined")
-                        .withVanillaOres(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore)));
+                    withVanillaOres(
+                        withGravity(CelestialBodyProperties.builder(), 1.8e6, 480.0).visitable(true)
+                            .canCreateStation(true)
+                            .canCreateOutpost(true)
+                            .temperature(225)
+                            .radiation(0.18)
+                            .oreProfile("undefined")
+                            .metadata("surface", "undefined"),
+                        Blocks.coal_ore,
+                        Blocks.iron_ore,
+                        Blocks.gold_ore).build())
+                .build());
 
         register(
-            CelestialObjectId.FROZEN_BELT,
-            builder -> builder.parent(CelestialObjectId.VAEL)
+            CelestialObjectRegistration.builder()
+                .dimension(DimensionEnum.FROZEN_BELT)
+                .parent("vael")
                 .objectClass(CelestialObjectClass.ASTEROID_BELT)
                 .circularOrbit(2.30 * earthRadiusToAU, 0.00005, seededPhase("frozen_belt"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.60)
                 .properties(
-                    b -> b.withGravity(3.5e5, 3000.0)
-                        .visitable(true)
+                    withGravity(CelestialBodyProperties.builder(), 3.5e5, 3000.0).visitable(true)
                         .canCreateStation(true)
                         .canCreateOutpost(false)
                         .temperature(67)
                         .radiation(0.28)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .metadata("minorBodies", "enabled")));
+                        .metadata("minorBodies", "enabled")
+                        .build())
+                .build());
 
         register(
-            CelestialObjectId.AMBERGRIS_FRAGMENT,
-            builder -> builder.parent(CelestialObjectId.FROZEN_BELT)
+            CelestialObjectRegistration.builder()
+                .id("ambergris_fragment")
+                .name("Ambergris Fragment")
+                .parent("frozen_belt")
                 .objectClass(CelestialObjectClass.ASTEROID)
                 .circularOrbit(0.18 * earthRadiusToAU, 0.00091, seededPhase("ambergris_fragment"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.05)
                 .properties(
-                    b -> b.withGravity(6.0e4, 140.0)
-                        .visitable(false)
+                    withGravity(CelestialBodyProperties.builder(), 6.0e4, 140.0).visitable(false)
                         .canCreateStation(false)
                         .canCreateOutpost(true)
                         .temperature(41)
                         .radiation(0.52)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .metadata("sizeClass", "minor")));
+                        .metadata("sizeClass", "minor")
+                        .build())
+                .build());
 
         register(
-            DimensionEnum.VITRIS_SPACE,
-            builder -> builder.parent(CelestialObjectId.HEMATERIA)
+            CelestialObjectRegistration.builder()
+                .dimension(DimensionEnum.VITRIS_SPACE)
+                .parent("hemateria")
                 .objectClass(CelestialObjectClass.STATION)
                 .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("vitris_space"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(
-                    b -> b.withGravity(0.0, 90.0)
-                        .visitable(true)
+                    withGravity(CelestialBodyProperties.builder(), 0.0, 90.0).visitable(true)
                         .canCreateStation(false)
                         .canCreateOutpost(false)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .metadata("stationRole", "orbital_logistics")));
+                        .metadata("stationRole", "orbital_logistics")
+                        .build())
+                .build());
     }
 
-    public static void register(CelestialObjectId id,
-        @Nonnull Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
-        CelestialObjectRegistration.Builder builder = CelestialObjectRegistration.builder()
-            .id(id);
-
-        registrationBuilder.accept(builder);
-        register(builder.build());
-    }
-
-    public static void register(DimensionEnum dimension,
-        Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
-        Objects.requireNonNull(dimension, "dimension");
+    public static synchronized void register(Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
         Objects.requireNonNull(registrationBuilder, "registrationBuilder");
-        CelestialObjectRegistration.Builder builder = CelestialObjectRegistration.builder()
-            .dimension(dimension);
+        CelestialObjectRegistration.Builder builder = CelestialObjectRegistration.builder();
         registrationBuilder.accept(builder);
         register(builder.build());
     }
 
-    public static void register(CelestialObjectRegistration registration) {
+    public static synchronized void register(CelestialObjectRegistration registration) {
         Objects.requireNonNull(registration, "registration");
         registerDefaults();
         assertMutable();
@@ -296,7 +342,7 @@ public final class CelestialRegistry {
         cachedRoots = null;
     }
 
-    public static void modify(CelestialObjectId id, Consumer<CelestialObjectRegistration.Builder> mutator) {
+    public static synchronized void modify(String id, Consumer<CelestialObjectRegistration.Builder> mutator) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(mutator, "mutator");
         registerDefaults();
@@ -315,7 +361,7 @@ public final class CelestialRegistry {
         cachedRoots = null;
     }
 
-    public static void freezeAndBake() {
+    public static synchronized void freezeAndBake() {
         registerDefaults();
         if (frozen) return;
         GtOreVeinCatalog.reload();
@@ -323,11 +369,11 @@ public final class CelestialRegistry {
         frozen = true;
     }
 
-    public static boolean isFrozen() {
+    public static synchronized boolean isFrozen() {
         return frozen;
     }
 
-    public static synchronized Optional<CelestialObjectRegistration> get(CelestialObjectId id) {
+    public static synchronized Optional<CelestialObjectRegistration> get(String id) {
         registerDefaults();
         return Optional.ofNullable(REGISTRATIONS.get(id));
     }
@@ -351,7 +397,7 @@ public final class CelestialRegistry {
 
     public static synchronized Optional<OrbitalCelestialBody> findByDimension(DimensionEnum dimension) {
         registerDefaults();
-        CelestialObjectId objectId = IDS_BY_DIMENSION.get(dimension);
+        String objectId = IDS_BY_DIMENSION.get(dimension);
         if (objectId == null) return Optional.empty();
         for (OrbitalCelestialBody root : getRoots()) {
             Optional<OrbitalCelestialBody> found = findById(root, objectId);
@@ -368,9 +414,9 @@ public final class CelestialRegistry {
         return Collections.unmodifiableList(roots);
     }
 
-    private static Optional<OrbitalCelestialBody> findById(OrbitalCelestialBody current, CelestialObjectId id) {
+    private static Optional<OrbitalCelestialBody> findById(OrbitalCelestialBody current, String id) {
         if (current.id()
-            .equals(id.getId())) return Optional.of(current);
+            .equals(id)) return Optional.of(current);
         for (OrbitalCelestialBody child : current.children()) {
             Optional<OrbitalCelestialBody> found = findById(child, id);
             if (found.isPresent()) return found;
@@ -388,8 +434,7 @@ public final class CelestialRegistry {
         DimensionEnum dimensionEnum = registration.dimensionEnum();
         int dimensionId = dimensionEnum == null ? Integer.MIN_VALUE : dimensionEnum.getId();
         return new OrbitalCelestialBody(
-            registration.id()
-                .getId(),
+            registration.id(),
             registration.name(),
             registration.nameKey(),
             dimensionId,
@@ -403,7 +448,7 @@ public final class CelestialRegistry {
             children);
     }
 
-    private static void validateRegistration(CelestialObjectRegistration registration, CelestialObjectId existingId) {
+    private static void validateRegistration(CelestialObjectRegistration registration, String existingId) {
         if (REGISTRATIONS.containsKey(registration.id()) && !registration.id()
             .equals(existingId)) {
             throw new IllegalArgumentException("Duplicate celestial object id: " + registration.id());
@@ -416,7 +461,7 @@ public final class CelestialRegistry {
             throw new IllegalArgumentException("Unknown parent celestial object id: " + registration.parentId());
         }
         if (registration.dimensionEnum() != null) {
-            CelestialObjectId existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
+            String existingDimensionOwner = IDS_BY_DIMENSION.get(registration.dimensionEnum());
             if (existingDimensionOwner != null && !existingDimensionOwner.equals(existingId)) {
                 throw new IllegalArgumentException("Duplicate dimension mapping for " + registration.dimensionEnum());
             }

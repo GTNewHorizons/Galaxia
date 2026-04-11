@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectRegistration;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
@@ -18,17 +17,11 @@ public final class GalaxiaCelestialAPI {
         CelestialRegistry.register(registration);
     }
 
-    public static void register(CelestialObjectId id,
-        Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
-        CelestialRegistry.register(id, registrationBuilder);
+    public static void register(Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
+        CelestialRegistry.register(registrationBuilder);
     }
 
-    public static void register(DimensionEnum dimension,
-        Consumer<CelestialObjectRegistration.Builder> registrationBuilder) {
-        CelestialRegistry.register(dimension, registrationBuilder);
-    }
-
-    public static void modify(CelestialObjectId id, Consumer<CelestialObjectRegistration.Builder> mutator) {
+    public static void modify(String id, Consumer<CelestialObjectRegistration.Builder> mutator) {
         CelestialRegistry.modify(id, mutator);
     }
 
@@ -40,13 +33,8 @@ public final class GalaxiaCelestialAPI {
         return CelestialRegistry.isFrozen();
     }
 
-    public static Optional<CelestialObjectRegistration> get(CelestialObjectId id) {
-        return CelestialRegistry.get(id);
-    }
-
     public static Optional<CelestialObjectRegistration> get(String id) {
-        CelestialObjectId enumId = CelestialObjectId.fromString(id);
-        return enumId != null ? CelestialRegistry.get(enumId) : Optional.empty();
+        return CelestialRegistry.get(id);
     }
 
     public static List<CelestialObjectRegistration> getAll() {

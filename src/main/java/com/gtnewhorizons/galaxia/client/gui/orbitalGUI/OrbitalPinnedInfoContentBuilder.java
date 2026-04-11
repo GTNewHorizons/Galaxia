@@ -17,6 +17,7 @@ import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -463,9 +464,27 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
         }
 
-        private IDrawable drawable(DrawableCommand drawCommand) {
+        private IDrawable drawable(DrawCommand drawCommand) {
             return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
         }
 
+        @FunctionalInterface
+        private interface DrawCommand {
+
+            void draw(GuiContext context, int x, int y, int width, int height);
+        }
+
+        private static final class PassiveLayer extends ParentWidget<PassiveLayer> {
+
+            @Override
+            public boolean canHover() {
+                return false;
+            }
+
+            @Override
+            public boolean canHoverThrough() {
+                return true;
+            }
+        }
     }
 }

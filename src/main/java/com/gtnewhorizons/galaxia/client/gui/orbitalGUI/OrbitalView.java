@@ -24,7 +24,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.outpost.persistence.OutpostDataStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetLocation;
@@ -2252,7 +2252,7 @@ public class OrbitalView {
         }
 
         private boolean isGT5AutomationAvailable() {
-            return GTUtility.isGTLoaded;
+            return Galaxia.hasGT5U();
         }
 
         private boolean canCreateBaseStation(OrbitalCelestialBody body) {
