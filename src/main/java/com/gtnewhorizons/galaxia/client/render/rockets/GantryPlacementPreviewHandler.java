@@ -157,10 +157,19 @@ public class GantryPlacementPreviewHandler {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glDepthMask(false);
         GL11.glDisable(GL11.GL_CULL_FACE);
+
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glLineWidth(2.0F);
+        GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
+
         GL11.glColor4f(1.0f, 1.0f, 1.0f, GHOST_ALPHA);
     }
 
     private static void restoreGLState() {
+        GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glLineWidth(1.0F);
+
         GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         GL11.glEnable(GL11.GL_CULL_FACE);
         GL11.glDepthMask(true);
