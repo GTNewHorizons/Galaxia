@@ -170,7 +170,8 @@ public final class LambertTransfer {
             double sqrtF = Math.sqrt(f);
             double argAlpha = x + sqrtF; // x + sqrt(x^2 - 1)
             double alpha = 2.0 * Math.log(Math.max(1e-15, argAlpha));
-            double argBeta = lambda * x + Math.sqrt(Math.max(0.0, lambda * lambda * x * x - 1.0 + 1.0 - lambda * lambda));
+            double argBeta = lambda * x
+                + Math.sqrt(Math.max(0.0, lambda * lambda * x * x - 1.0 + 1.0 - lambda * lambda));
             // Correct argBeta for hyperbolic: y = sqrt(1 - l^2 + l^2*x^2)
             double y = Math.sqrt(1.0 - lambda * lambda + lambda * lambda * x * x);
             double beta = 2.0 * Math.log(Math.max(1e-15, lambda * x + y));
