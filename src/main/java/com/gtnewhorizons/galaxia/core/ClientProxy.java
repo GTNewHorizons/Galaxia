@@ -10,6 +10,8 @@ import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.RocketSchematicItemRenderer;
+import com.gtnewhorizons.galaxia.client.render.rockets.RocketTrophyRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
@@ -20,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 
@@ -51,11 +54,14 @@ public class ClientProxy extends CommonProxy {
         IMCForNEI.IMCSender();
 
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityRocketTrophy.class, new RocketTrophyRenderer());
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGantry.class, new GantryRenderer());
         MinecraftForgeClient
             .registerItemRenderer(Item.getItemFromBlock(GalaxiaBlocksEnum.GANTRY.get()), new GantryItemRenderer());
         MinecraftForge.EVENT_BUS.register(new GantryPlacementPreviewHandler());
+        MinecraftForgeClient
+            .registerItemRenderer(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem(), new RocketSchematicItemRenderer());
 
         KeyBinds.registerAll();
     }

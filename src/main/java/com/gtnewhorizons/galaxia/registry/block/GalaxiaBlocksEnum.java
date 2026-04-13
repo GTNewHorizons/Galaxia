@@ -12,7 +12,9 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationModuleController;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationModuleController;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controllers.BlockSilo;
@@ -39,6 +41,7 @@ public enum GalaxiaBlocksEnum {
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "tenebrae_fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),
     GANTRY_TERMINAL(new BlockGantryTerminal(), TileEntityGantryTerminal.class, "gantry_terminal"),
+    ROCKET_TROPHY(new BlockRocketTrophy(), TileEntityRocketTrophy.class, "rocket_trophy"),
 
     // NON-TE
     SPACE_STATION_BLOCK(new BlockSpaceStation(), "space_station_block"),
