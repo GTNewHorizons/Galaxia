@@ -112,13 +112,24 @@ public final class RocketAssembly {
             .orElse(0.0);
     }
 
-    public double getTotalWidth() {
-        return getPlacements().stream()
-            .mapToDouble(
-                p -> p.x() + p.type()
-                    .getWidth())
+    public int getTier() {
+        return getCoreModules().stream()
+            .mapToInt(
+                e -> e.getTier()
+                    .toInt())
             .max()
-            .orElse(0.0);
+            .orElse(0);
+    }
+
+    public double getTotalWidth() {
+        return Math.round(
+            getPlacements().stream()
+                .mapToDouble(
+                    p -> p.x() + p.type()
+                        .getWidth())
+                .max()
+                .orElse(0.0) * 100.0)
+            / 100.0;
     }
 
     public double getTotalWeight() {
@@ -141,6 +152,12 @@ public final class RocketAssembly {
 
     public List<RocketModule> getModules() {
         return Collections.unmodifiableList(modules);
+    }
+
+    public double getTotalThrust() {
+        return getEngineModules().stream()
+            .mapToDouble(e -> e.getThrust())
+            .sum();
     }
 
     public List<EngineModule> getEngineModules() {
