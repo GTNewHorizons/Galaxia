@@ -4,8 +4,6 @@ import java.util.function.BiFunction;
 
 import net.minecraft.entity.player.EntityPlayer;
 
-import com.github.bsideup.jabel.Desugar;
-
 /**
  * Record + Builder class to get a list of effects on each planet as required
  *
@@ -23,7 +21,7 @@ import com.github.bsideup.jabel.Desugar;
  * @param radiationModifier Optional modifier for radiation (can be null)
  * @param pressureModifier  Optional modifier for pressure (can be null)
  */
-@Desugar
+
 public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
     int pressure,
 
@@ -81,7 +79,7 @@ public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, 
      * @param freq frequency is a multiplier on the world's clock cycle
      * @param amp  amplitude is the magnitude of the effect
      */
-    @Desugar
+
     public record ModifierSineWave(float freq, int amp) implements BiFunction<Integer, EntityPlayer, Integer> {
 
         @Override

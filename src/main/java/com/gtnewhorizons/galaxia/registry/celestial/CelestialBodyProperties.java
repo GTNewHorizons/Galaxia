@@ -11,10 +11,8 @@ import javax.annotation.Nonnull;
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 
-@Desugar
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
     List<ItemStack> ores, List<String> gtOreVeinOres, double radiation, double temperature,
@@ -24,14 +22,14 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         if (oreProfile == null) oreProfile = "";
         if (metadata == null) metadata = Collections.emptyMap();
         else metadata = Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
-        if (ores == null) ores = Collections.emptyList();
+        if (ores == null) ores = List.of();
         else ores = copyOres(ores);
-        if (gtOreVeinOres == null) gtOreVeinOres = Collections.emptyList();
+        if (gtOreVeinOres == null) gtOreVeinOres = List.of();
         else gtOreVeinOres = Collections.unmodifiableList(new ArrayList<>(gtOreVeinOres));
     }
 
     private static List<ItemStack> copyOres(List<ItemStack> ores) {
-        if (ores.isEmpty()) return Collections.emptyList();
+        if (ores.isEmpty()) return List.of();
         List<ItemStack> copies = new ArrayList<>();
         for (ItemStack ore : ores) {
             if (ore == null) continue;

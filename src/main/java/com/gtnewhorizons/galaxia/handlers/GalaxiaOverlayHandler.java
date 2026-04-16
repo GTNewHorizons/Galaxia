@@ -13,7 +13,6 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 
 import org.lwjgl.opengl.GL11;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
@@ -215,6 +214,5 @@ public class GalaxiaOverlayHandler {
         t.draw();
     }
 
-    @Desugar
     private record BarScreenPositions(int oxygenX, int oxygenY, int temperatureX, int temperatureY) {}
 }

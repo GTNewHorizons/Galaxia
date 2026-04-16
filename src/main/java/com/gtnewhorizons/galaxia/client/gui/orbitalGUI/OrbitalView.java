@@ -21,7 +21,6 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -52,7 +51,6 @@ public class OrbitalView {
         }
     }
 
-    @Desugar
     record OrbitalLayerTransitionState(CelestialObject pendingTarget, CelestialObject pendingAnchor,
         double pendingStartZoom, double pendingTargetZoom, Phase phase, CelestialObject activeTarget,
         CelestialObject activeAnchor, double activeStartZoom, double activeTargetZoom, float activeStartSpriteSize,

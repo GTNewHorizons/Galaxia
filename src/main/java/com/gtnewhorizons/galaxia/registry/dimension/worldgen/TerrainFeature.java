@@ -3,12 +3,10 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 import java.util.Collections;
 import java.util.Map;
 
-import com.github.bsideup.jabel.Desugar;
-
 /**
  * Data record holding terrain features
  */
-@Desugar
+
 public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams) {
 
     public TerrainFeature {

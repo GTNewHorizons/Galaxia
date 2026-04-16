@@ -212,7 +212,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         private final Callbacks callbacks;
         private final StringBuilder sigBuf = new StringBuilder(256);
         private String lastSignature = "";
-        private List<PinnedInfoRow> cachedRows = Collections.emptyList();
+        private List<PinnedInfoRow> cachedRows = List.of();
 
         OrbitalPinnedInfoWidget(Callbacks callbacks) {
             this.callbacks = callbacks;
@@ -230,7 +230,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                     scheduleResize();
                 }
                 lastSignature = "";
-                cachedRows = Collections.emptyList();
+                cachedRows = List.of();
                 setEnabled(false);
                 size(0, 0);
                 return;

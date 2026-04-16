@@ -34,7 +34,7 @@ public final class GTUtility {
     private GTUtility() {}
 
     public static List<String> getGtVeinOres(@Nonnull String veinId) {
-        if (!isGTLoaded || veinId.isEmpty()) return Collections.emptyList();
+        if (!isGTLoaded || veinId.isEmpty()) return List.of();
 
         OreMixes oreMix = null;
         for (OreMixes mix : OreMixes.values()) {
@@ -44,10 +44,10 @@ public final class GTUtility {
                 break;
             }
         }
-        if (oreMix == null) return Collections.emptyList();
+        if (oreMix == null) return List.of();
 
         OreMixBuilder builder = oreMix.oreMixBuilder;
-        if (builder == null) return Collections.emptyList();
+        if (builder == null) return List.of();
 
         List<String> ores = new ArrayList<>();
         ores.add(getMaterialName(builder.primary));

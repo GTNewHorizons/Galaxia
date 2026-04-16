@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
@@ -49,7 +48,7 @@ public final class OrbitalTransferPlanner {
      * @param totalDv     total delta-V (departure + capture), orbital velocity units
      * @param departureDv departure delta-V only
      */
-    @Desugar
+
     public record TransferRoute(double tofOsu, double totalDv, double departureDv) {
 
         /** Converts TOF to real seconds. */

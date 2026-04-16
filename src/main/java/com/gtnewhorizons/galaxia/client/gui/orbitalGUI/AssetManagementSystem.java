@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,7 +32,6 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -64,7 +62,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
 
-@Desugar
 record ButtonRect(int left, int top, int right, int bottom) {
 
     boolean contains(int x, int y) {
@@ -72,40 +69,30 @@ record ButtonRect(int left, int top, int right, int bottom) {
     }
 }
 
-@Desugar
 record ModalBounds(int left, int top, int right, int bottom) {}
 
-@Desugar
 record PendingAssetCreation(CelestialObjectId celestialObjectId, String displayName, CelestialAsset.Kind kind,
     CelestialAsset.Location location, Map<ItemStack, Long> requiredResources) {}
 
-@Desugar
 record PendingAssetRename(CelestialAsset asset) {}
 
-@Desugar
 record PendingAssetDestruction(CelestialAsset asset, boolean armed) {}
 
-@Desugar
 record PendingAssetManagement(CelestialAsset asset) {}
 
-@Desugar
 record PendingConstructionCancellation(CelestialAsset asset) {}
 
-@Desugar
 record PendingResourceTransfer(CelestialAsset asset, List<StationTransferTarget> targets) {}
 
-@Desugar
 record StationTransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
 
-@Desugar
 record TransferTargetRow(StationTransferTarget target, int left, int top, int right, int bottom,
     ButtonRect sendButton) {}
 
-@Desugar
 record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean inlineItems) {
 
     static PinnedInfoRow section(String label) {
-        return new PinnedInfoRow(label, "", Collections.emptyList(), false);
+        return new PinnedInfoRow(label, "", List.of(), false);
     }
 
     static PinnedInfoRow inlineItems(String value, List<ItemStack> items) {
@@ -113,7 +100,7 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
     }
 
     PinnedInfoRow(String label, String value) {
-        this(label, value, Collections.emptyList(), false);
+        this(label, value, List.of(), false);
     }
 
     PinnedInfoRow(String label, String value, List<ItemStack> items) {
@@ -121,7 +108,6 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
     }
 }
 
-@Desugar
 record MinerOreOption(String key, String displayName, ItemStack displayStack, boolean blacklisted) {}
 
 enum InventorySortMode {
@@ -2176,7 +2162,7 @@ public final class AssetManagementSystem {
                     body -> body.properties()
                         .hasGtOreVeinOres() ? buildGtMinerOreOptions(body, minerData)
                             : buildVanillaMinerOreOptions(body, minerData))
-                .orElse(Collections.emptyList());
+                .orElse(List.of());
         }
 
         private List<MinerOreOption> buildGtMinerOreOptions(CelestialObject body, ModuleMiner minerData) {

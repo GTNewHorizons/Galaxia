@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
@@ -14,7 +13,6 @@ public final class OrbitalMechanics {
 
     private OrbitalMechanics() {}
 
-    @Desugar
     public record OrbitalState(double x, double y, double vx, double vy) {
 
         public OrbitalState add(OrbitalState other) {
@@ -31,7 +29,6 @@ public final class OrbitalMechanics {
         }
     }
 
-    @Desugar
     public record AbsolutePosition(double x, double y) {}
 
     public static OrbitalState resolveWorldState(CelestialObject root, CelestialObject target, double globalTime) {
@@ -214,6 +211,5 @@ public final class OrbitalMechanics {
             state.vy() + derivative.dvy() * deltaTime);
     }
 
-    @Desugar
     private record OrbitalDerivative(double dx, double dy, double dvx, double dvy) {}
 }

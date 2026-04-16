@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.block.Block;
@@ -49,11 +48,11 @@ public class BiomeGenBuilder {
     int oceanCrackComplexity;
     StratificationPreset fillerBlocks;
 
-    List<FlowerEntry> flowers = Collections.emptyList();
-    List<SpawnListEntry> mobsWater = Collections.emptyList();
-    List<SpawnListEntry> mobsCave = Collections.emptyList();
-    List<SpawnListEntry> mobsGeneral = Collections.emptyList();
-    List<SpawnListEntry> mobsMonster = Collections.emptyList();
+    List<FlowerEntry> flowers = List.of();
+    List<SpawnListEntry> mobsWater = List.of();
+    List<SpawnListEntry> mobsCave = List.of();
+    List<SpawnListEntry> mobsGeneral = List.of();
+    List<SpawnListEntry> mobsMonster = List.of();
 
     /**
      * Instantiates a builder for a given biome ID

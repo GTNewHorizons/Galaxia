@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +52,7 @@ public class DimensionBuilder {
     private double gravity = 1;
     private double air_resistance = 1;
     private boolean removeSpeedCancelation = false;
-    private List<CelestialBody> celestialBodies = Collections.emptyList();
+    private List<CelestialBody> celestialBodies = List.of();
     private EffectBuilder effects;
     private EnumTiers tier = EnumTiers.TIER_1;
 

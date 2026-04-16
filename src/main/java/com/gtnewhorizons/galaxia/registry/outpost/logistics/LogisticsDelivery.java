@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
 import java.util.UUID;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -10,7 +9,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-@Desugar
 public class LogisticsDelivery {
 
     public final ID deliveryId;
@@ -23,7 +21,6 @@ public class LogisticsDelivery {
         this.data = data;
     }
 
-    @Desugar
     public record Data(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId, ItemStackWrapper resourceId,
         long amount, LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
         double departureOrbitalTime, double tofOrbitalSeconds) {}
@@ -99,7 +96,6 @@ public class LogisticsDelivery {
         return this.remainingTicks;
     }
 
-    @Desugar
     public record ID(UUID id) implements WithUUID {
 
         public static ID create() {

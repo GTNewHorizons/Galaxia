@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 
 import net.minecraftforge.event.world.WorldEvent;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
@@ -73,7 +72,7 @@ public final class CelestialClient {
     /// This is just used in the UI, I mark it as deprecated since it's just duplicate copied stuff, but I can't be
     /// bothered to fix the UI
     @Deprecated
-    @Desugar
+
     public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {

@@ -1,8 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
-import com.github.bsideup.jabel.Desugar;
-
-@Desugar
 public record OrbitalParams(double semiMajorAxis, double eccentricity, double inclination,
     double longitudeOfAscendingNode, double argumentOfPeriapsis, double meanAnomalyAtEpoch, double orbitSpeed) {
 

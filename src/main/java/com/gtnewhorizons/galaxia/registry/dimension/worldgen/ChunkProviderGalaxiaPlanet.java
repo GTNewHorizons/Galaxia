@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -482,7 +481,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
      */
     @Override
     public List<BiomeGenBase.SpawnListEntry> getPossibleCreatures(EnumCreatureType type, int x, int y, int z) {
-        return Collections.emptyList();
+        return List.of();
     }
 
     /**

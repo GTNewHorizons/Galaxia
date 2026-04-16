@@ -8,14 +8,12 @@ import java.util.Map;
 
 import net.minecraft.util.ResourceLocation;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public class CelestialMarkerBase {
 
-    @Desugar
     public record CelestialMarker(String id, ResourceLocation texture, float alpha) {}
 
     /// This is just duplication of what we have in the store
@@ -52,7 +50,7 @@ public class CelestialMarkerBase {
             if (context == null || context.assetState() == null
                 || context.assetState()
                     .isEmpty()) {
-                return Collections.emptyList();
+                return List.of();
             }
             List<CelestialMarker> markers = new ArrayList<>();
             for (CelestialAsset asset : context.assetState()) {

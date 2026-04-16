@@ -10,7 +10,6 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
@@ -181,7 +180,6 @@ public abstract class CelestialAsset implements Buildable {
         return Objects.hash(assetId);
     }
 
-    @Desugar
     public record ID(UUID id) implements WithUUID {
 
         public static ID create() {

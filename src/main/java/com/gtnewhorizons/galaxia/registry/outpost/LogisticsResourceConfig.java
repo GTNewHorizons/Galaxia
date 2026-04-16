@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
-import com.github.bsideup.jabel.Desugar;
-
 /**
  * Immutable logistics configuration for a single resource in a single outpost.
  *
@@ -12,7 +10,7 @@ import com.github.bsideup.jabel.Desugar;
  * <li>{@code isSupplyEnabled} – whether this outpost may export surplus items above the reserve.</li>
  * </ul>
  */
-@Desugar
+
 public record LogisticsResourceConfig(int minReserve, int orderSize, boolean isImportEnabled, boolean isSupplyEnabled) {
 
     public static final LogisticsResourceConfig DEFAULT = new LogisticsResourceConfig(0, 1, false, false);

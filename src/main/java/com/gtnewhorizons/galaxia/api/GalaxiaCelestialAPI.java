@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.api;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,12 +61,12 @@ public final class GalaxiaCelestialAPI {
 
     public static List<CelestialObject> getChildren(CelestialObject parent) {
         return CelestialRegistry.hierarchy.childrenByParentId()
-            .getOrDefault(parent.id(), Collections.emptyList());
+            .getOrDefault(parent.id(), List.of());
     }
 
     public static List<CelestialObject> getChildren(CelestialObjectId parentId) {
         return CelestialRegistry.hierarchy.childrenByParentId()
-            .getOrDefault(parentId, Collections.emptyList());
+            .getOrDefault(parentId, List.of());
     }
 
     public static Map<CelestialObjectId, CelestialObject> getAllBodies() {

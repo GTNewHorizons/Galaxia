@@ -4,7 +4,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -12,7 +11,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
 /**
  * NBT-aware wrapper for ItemStack to be used as a key in HashMaps.
  */
-@Desugar
+
 public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
 
     public static ItemStackWrapper of(ItemStack stack) {

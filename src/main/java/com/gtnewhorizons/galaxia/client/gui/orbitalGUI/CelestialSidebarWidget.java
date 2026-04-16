@@ -22,7 +22,6 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -35,10 +34,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-@Desugar
 record VisibleEntry(CelestialObject body, int depth, boolean hasChildren) {}
 
-@Desugar
 record RowLayout(VisibleEntry entry, int left, int right, int top, int bottom) {}
 
 public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget> {

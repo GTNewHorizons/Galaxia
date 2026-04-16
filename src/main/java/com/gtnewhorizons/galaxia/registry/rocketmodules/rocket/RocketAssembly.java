@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankModule;
@@ -18,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.rules.PropulsionP
 
 public final class RocketAssembly {
 
-    @Desugar
     public record ModulePlacement(RocketModule type, double x, double y, double z) {}
 
     private final List<RocketModule> modules;

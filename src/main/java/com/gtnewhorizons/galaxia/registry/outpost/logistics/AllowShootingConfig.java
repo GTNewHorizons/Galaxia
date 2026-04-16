@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
-import com.github.bsideup.jabel.Desugar;
-
 /**
  * Per-module shooting permission configuration.
  *
@@ -13,7 +11,7 @@ import com.github.bsideup.jabel.Desugar;
  * <li>{@link Mode#WHEN_TOF_UNDER} – time-of-flight in real seconds.</li>
  * </ul>
  */
-@Desugar
+
 public record AllowShootingConfig(Mode mode, double threshold) {
 
     /**

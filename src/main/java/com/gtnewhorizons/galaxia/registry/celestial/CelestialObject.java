@@ -7,13 +7,11 @@ import javax.annotation.Nonnull;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 
-@Desugar
 public record CelestialObject(CelestialObjectId id, String name, String nameKey, CelestialObjectId parentId,
     DimensionEnum dimensionEnum, Class objectClass, OrbitalParams orbitalParams,
     OrbitalMechanics.AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,

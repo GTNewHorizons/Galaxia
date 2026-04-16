@@ -7,9 +7,6 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
-import com.github.bsideup.jabel.Desugar;
-
-@Desugar
 public record CelestialHierarchy(Map<CelestialObjectId, CelestialObject> bodiesById,
     Map<CelestialObjectId, List<CelestialObject>> childrenByParentId, List<CelestialObject> roots) {
 

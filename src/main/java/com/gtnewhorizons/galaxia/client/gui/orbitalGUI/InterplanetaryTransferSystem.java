@@ -20,7 +20,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.SliderWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -31,7 +30,6 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 // Package-level records
 // ---------------------------------------------------------------------------
 
-@Desugar
 record InterplanetaryTransferJob(String transferId, String displayName, String inventorySummary,
     CelestialObject rootBody, CelestialObject sourceBody, CelestialObject destinationBody,
     CelestialObject orbitAnchorBody, double departureTime, double arrivalTime, double[] trajectoryXs,
@@ -83,7 +81,6 @@ public final class InterplanetaryTransferSystem {
 
     private InterplanetaryTransferSystem() {}
 
-    @Desugar
     public record LambertStressReport(int requestedSimulations, int executedSimulations, int candidatePlanetCount,
         int successfulTransfers, double averageTotalDv, double bestTotalDv, double worstTotalDv) {
 

@@ -1,13 +1,11 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.LambertTransfer;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 
 public final class TransferScanner {
 
-    @Desugar
     public record ScanResult(double tof, double totalDv, double depDv, double r1x, double r1y, double r2x, double r2y,
         double anchorX, double anchorY, LambertTransfer.Solution solution, OrbitalMechanics.OrbitalState dstState,
         OrbitalMechanics.OrbitalState attractorAtArr) {

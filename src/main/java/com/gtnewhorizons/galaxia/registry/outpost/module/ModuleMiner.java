@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +56,7 @@ public class ModuleMiner extends AutomatedOutpostModule {
     }
 
     public static ModuleMiner getDefault() {
-        return new ModuleMiner(Collections.emptyList());
+        return new ModuleMiner(List.of());
     }
 
     public boolean isBlacklisted(ItemStackWrapper item) {

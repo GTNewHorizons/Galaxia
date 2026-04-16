@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.utility;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -10,7 +9,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.Tile
  * @param module      The rocket module being moved
  * @param destination The terminal endpoint of the journey
  */
-@Desugar
+
 public record TransitModule(RocketModule module, TileEntityGantryTerminal destination) {
 
     /**

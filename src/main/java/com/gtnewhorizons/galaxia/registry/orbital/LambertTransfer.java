@@ -1,11 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class LambertTransfer {
 
-    @Desugar
     public record Solution(double dvx1, double dvy1, double dvx2, double dvy2, double depDv, double capDv,
         double totalDv, double periapsis, boolean valid) {
 

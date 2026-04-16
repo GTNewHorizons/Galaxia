@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-import com.github.bsideup.jabel.Desugar;
-
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
@@ -44,6 +42,5 @@ public class ServerTickTaskQueue {
         conditional.addAll(notReady);
     }
 
-    @Desugar
     private record PendingTask(Supplier<Boolean> condition, Runnable task) {}
 }

@@ -1,11 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-@Desugar
 public record LogisticSignal(CelestialAsset.ID outpostAssetId, CelestialObjectId systemId, ItemStackWrapper resourceId,
     long amount, Scope scope, CelestialObjectId bodyId, CelestialObjectId planetaryAnchorBodyId) {
 
