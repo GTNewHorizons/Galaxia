@@ -90,7 +90,6 @@ public final class OutpostPersistenceManager {
         worldSaveDir = saveHandler.getWorldDirectory();
         CelestialAssetStore.clear();
         LogisticStore.clearDeliveries();
-        CelestialClient.clear();
         loadAll();
     }
 
@@ -108,7 +107,6 @@ public final class OutpostPersistenceManager {
         if (event.world.provider.dimensionId != 0) return;
         if (worldSaveDir != null) saveAll();
         CelestialAssetStore.clear();
-        CelestialClient.clear();
         LogisticStore.clearDeliveries();
         worldSaveDir = null;
     }
