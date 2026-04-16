@@ -79,8 +79,8 @@ public final class LogisticsSyncPacket implements IMessage {
             buf.writeLong(d.amount());
             buf.writeInt(t.getRemainingTicks());
             PacketUtil.writeEnum(buf, d.scope());
-            PacketUtil.writeCelestialObjectId(buf, d.fromBodyId());
-            PacketUtil.writeCelestialObjectId(buf, d.toBodyId());
+            PacketUtil.writeEnum(buf, d.fromBodyId());
+            PacketUtil.writeEnum(buf, d.toBodyId());
             buf.writeDouble(d.departureOrbitalTime());
             buf.writeDouble(d.tofOrbitalSeconds());
         }
@@ -103,8 +103,8 @@ public final class LogisticsSyncPacket implements IMessage {
                     buf.readLong(),
                     buf.readInt(),
                     PacketUtil.readEnum(buf, LogisticSignal.Scope.class),
-                    PacketUtil.readCelestialObjectId(buf),
-                    PacketUtil.readCelestialObjectId(buf),
+                    PacketUtil.readEnum(buf, CelestialObjectId.class),
+                    PacketUtil.readEnum(buf, CelestialObjectId.class),
                     buf.readDouble(),
                     buf.readDouble()));
         }
@@ -130,7 +130,7 @@ public final class LogisticsSyncPacket implements IMessage {
     private static void writeAggMap(ByteBuf buf, @UnknownNullability Map<CelestialObjectId, Map<String, Long>> map) {
         buf.writeInt(map.size());
         for (Map.Entry<CelestialObjectId, Map<String, Long>> outer : map.entrySet()) {
-            PacketUtil.writeCelestialObjectId(buf, outer.getKey());
+            PacketUtil.writeEnum(buf, outer.getKey());
             Map<String, Long> inner = outer.getValue();
             buf.writeInt(inner.size());
             for (Map.Entry<String, Long> e : inner.entrySet()) {
@@ -144,7 +144,7 @@ public final class LogisticsSyncPacket implements IMessage {
         int outerCount = buf.readInt();
         Map<CelestialObjectId, Map<String, Long>> map = new LinkedHashMap<>(outerCount);
         for (int i = 0; i < outerCount; i++) {
-            CelestialObjectId outerKey = PacketUtil.readCelestialObjectId(buf);
+            CelestialObjectId outerKey = PacketUtil.readEnum(buf, CelestialObjectId.class);
             int innerCount = buf.readInt();
             Map<String, Long> inner = new LinkedHashMap<>(innerCount);
             for (int j = 0; j < innerCount; j++) {

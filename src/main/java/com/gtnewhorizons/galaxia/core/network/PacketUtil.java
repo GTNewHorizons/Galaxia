@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 
@@ -50,18 +49,6 @@ final class PacketUtil {
 
     public static LogisticsDelivery.ID readDeliveryId(ByteBuf buf) {
         return new LogisticsDelivery.ID(readId(buf));
-    }
-
-    @Deprecated
-    static void writeCelestialObjectId(ByteBuf buf, CelestialObjectId id) {
-        buf.writeByte(id.ordinal());
-    }
-
-    @Deprecated
-    static CelestialObjectId readCelestialObjectId(ByteBuf buf) {
-        int ordinal = buf.readUnsignedByte();
-        CelestialObjectId[] values = CelestialObjectId.values();
-        return ordinal < values.length ? values[ordinal] : CelestialObjectId.INVALID;
     }
 
     // ── Enum helpers ───────────────────────────────────────────────────────

@@ -176,9 +176,9 @@ public final class OutpostSyncPacket implements IMessage {
             case FULL_SYNC -> {
                 buf.writeLong(teamId.getMostSignificantBits());
                 buf.writeLong(teamId.getLeastSignificantBits());
-                PacketUtil.writeCelestialObjectId(buf, celestialBodyId);
-                PacketUtil.writeCelestialObjectId(buf, systemId);
-                PacketUtil.writeCelestialObjectId(buf, planetaryAnchorBodyId);
+                PacketUtil.writeEnum(buf, celestialBodyId);
+                PacketUtil.writeEnum(buf, systemId);
+                PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
                 PacketUtil.writeEnum(buf, assetStatus);
                 buf.writeLong(energyStored);
 
@@ -201,9 +201,9 @@ public final class OutpostSyncPacket implements IMessage {
         switch (syncType) {
             case FULL_SYNC -> {
                 teamId = new UUID(buf.readLong(), buf.readLong());
-                celestialBodyId = PacketUtil.readCelestialObjectId(buf);
-                systemId = PacketUtil.readCelestialObjectId(buf);
-                planetaryAnchorBodyId = PacketUtil.readCelestialObjectId(buf);
+                celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                systemId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+                planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 PacketUtil.readEnum(buf, Buildable.Status.class);
                 energyStored = buf.readLong();
 

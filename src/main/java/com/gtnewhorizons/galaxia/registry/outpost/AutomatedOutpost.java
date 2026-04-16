@@ -25,7 +25,6 @@ public final class AutomatedOutpost extends CelestialAsset {
     /**
      * The stellar system id (host star body id) used to bucket this outpost in {@code LogisticsSignalStore}.
      */
-    @Deprecated
     public final CelestialObjectId systemId;
 
     /**
@@ -35,7 +34,6 @@ public final class AutomatedOutpost extends CelestialAsset {
      * For moons/stations/asteroids: the parent planet id.
      * Falls back to {@code celestialBodyId} if resolution fails.
      */
-    @Deprecated
     public final CelestialObjectId planetaryAnchorBodyId;
 
     /** Installed modules; ordering is significant for multi-module interactions. */

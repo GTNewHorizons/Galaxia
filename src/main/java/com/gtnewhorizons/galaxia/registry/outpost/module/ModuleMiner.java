@@ -32,7 +32,6 @@ public class ModuleMiner extends AutomatedOutpostModule {
     public static final int POWER_DRAW_EU_PER_TICK = 128;
     public static final int COOLDOWN_TICKS = 20;
 
-    @Deprecated
     private boolean copySettingsToOtherMiners = false;
 
     @Override
@@ -52,7 +51,6 @@ public class ModuleMiner extends AutomatedOutpostModule {
 
     private static final java.util.Random RANDOM = new java.util.Random();
 
-    @Deprecated
     public ModuleMiner(List<String> blacklistedItemKeys) {
         super(BASE_ENERGY_CAPACITY, POWER_DRAW_EU_PER_TICK, COOLDOWN_TICKS);
         this.blacklistedItemKeys = blacklistedItemKeys;
@@ -66,7 +64,6 @@ public class ModuleMiner extends AutomatedOutpostModule {
         return blacklistedItemKeys.contains(item.toKey());
     }
 
-    @Deprecated
     public boolean isBlacklisted(@Nonnull String item) {
         return blacklistedItemKeys.contains(item);
     }
@@ -83,13 +80,11 @@ public class ModuleMiner extends AutomatedOutpostModule {
         return this;
     }
 
-    @Deprecated
     public ModuleMiner withCopySettingsToOtherMiners(boolean enabled) {
         this.copySettingsToOtherMiners = enabled;
         return this;
     }
 
-    @Deprecated
     public boolean getCopySettingsToOtherMiners() {
         return this.copySettingsToOtherMiners;
     }
