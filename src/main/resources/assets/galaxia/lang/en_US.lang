@@ -23,6 +23,21 @@ galaxia.dimension.tenebrae=Tenebrae
 galaxia.dimension.theia=Theia
 galaxia.dimension.vitris_space=Vitris Space Stations
 
+#### Celestial Bodies
+galaxia.celestial.novum_caelum=Novum Caelum
+galaxia.celestial.vael=Vael
+galaxia.celestial.ilia=Ilia
+galaxia.celestial.proxima_centauri=Proxima Centauri
+galaxia.celestial.romulus=Romulus
+galaxia.celestial.remus=Remus
+galaxia.celestial.egora=Egora
+galaxia.celestial.panspira=Panspira
+galaxia.celestial.hemateria=Hemateria
+galaxia.celestial.theia=Theia
+galaxia.celestial.frozen_belt=Frozen Belt
+galaxia.celestial.ambergris_fragment=Ambergris Fragment
+galaxia.celestial.vitris_space=Vitris Space
+
 #### Blocks
 # Blocks - "Theia"
 tile.theia_andesite.name=Theia Andesite
@@ -206,8 +221,8 @@ galaxia.gui.planet_teleporter.teleport=Teleport
 galaxia.gui.planet_teleporter.selected=Selected: %s
 
 # Elements - GUI - "Orbital GUI"
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.search=Search
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.search.placeholder=Enter name...
+galaxia.gui.orbital.search=Search
+galaxia.gui.orbital.search.placeholder=Enter name...
 # I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
 # I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.paused=§cPAUSED§r
 # I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
@@ -273,6 +288,17 @@ galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
 galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
+
+# Outpost Modules
+galaxia.outpost.module.hammer=HAMMER
+galaxia.outpost.module.big_hammer=BIG HAMMER
+galaxia.outpost.module.miner=MINER
+galaxia.outpost.module.power=POWER
+galaxia.outpost.module.kind.station=STATION
+galaxia.outpost.module.kind.automated_station=AUTOMATED STATION
+galaxia.outpost.module.kind.automated_outpost=AUTOMATED OUTPOST
+galaxia.outpost.module.location.orbit=ORBIT
+galaxia.outpost.module.location.surface=SURFACE
 
 # Elements - "Other"
 # Elements - Other - "Effect"
@@ -400,3 +426,7 @@ galaxia.config.category.hazard_scale=Pulse Scaling Coefficient
 galaxia.config.category.hazard_scale.tooltip=How much to scale the warnings when pulsing
 galaxia.config.category.hazard_pulse=Enable Pulse
 galaxia.config.category.hazard_pulse.tooltip=Enable pulse animation
+
+galaxia.gui.orbital.status=Zoom: x%.2f   Speed: %s
+galaxia.gui.orbital.paused=PAUSED
+galaxia.gui.orbital.speed_multiplier=x%.1f

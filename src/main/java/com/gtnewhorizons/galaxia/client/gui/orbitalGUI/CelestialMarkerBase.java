@@ -10,30 +10,30 @@ import net.minecraft.util.ResourceLocation;
 
 import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialBodyAssetState;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialManagedAsset;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public class CelestialMarkerBase {
 
     @Desugar
     public record CelestialMarker(String id, ResourceLocation texture, float alpha) {}
 
+    /// This is just duplication of what we have in the store
+    @Deprecated
     public static final class CelestialMarkerContext {
 
-        private Hierarchy.OrbitalCelestialBody body;
-        private CelestialBodyAssetState assetState;
+        private CelestialObject body;
+        private List<CelestialAsset> assetState;
 
-        public Hierarchy.OrbitalCelestialBody body() {
+        public CelestialObject body() {
             return body;
         }
 
-        public CelestialBodyAssetState assetState() {
+        public List<CelestialAsset> assetState() {
             return assetState;
         }
 
-        public CelestialMarkerContext set(Hierarchy.OrbitalCelestialBody body, CelestialBodyAssetState assetState) {
+        public CelestialMarkerContext set(CelestialObject body, List<CelestialAsset> assetState) {
             this.body = body;
             this.assetState = assetState;
             return this;
@@ -51,27 +51,26 @@ public class CelestialMarkerBase {
         public List<CelestialMarker> getMarkers(CelestialMarkerContext context) {
             if (context == null || context.assetState() == null
                 || context.assetState()
-                    .assets()
                     .isEmpty()) {
                 return Collections.emptyList();
             }
             List<CelestialMarker> markers = new ArrayList<>();
-            for (CelestialManagedAsset asset : context.assetState()
-                .assets()) {
-                ResourceLocation texture = CelestialAssetIcons.get(asset.kind());
+            for (CelestialAsset asset : context.assetState()) {
+                ResourceLocation texture = CelestialAssetIcons.get(asset.kind);
                 if (texture == null) continue;
+                // TODO: Put these values in the colors maybe
                 float alpha = switch (asset.status()) {
                     case OPERATIONAL -> 1.0f;
                     case CONSTRUCTION_SITE -> 0.85f;
                     case DECONSTRUCTION -> 0.65f;
                     case DISABLED -> 0.45f;
+                    case IN_CONSTRUCTION -> 0.0F;
                     case DESTROYED -> 0.0f;
                 };
                 if (alpha <= 0.0f) continue;
                 markers.add(
                     new CelestialMarker(
-                        "asset:" + asset.kind()
-                            .name()
+                        "asset:" + asset.kind.name()
                             .toLowerCase(),
                         texture,
                         alpha));
@@ -84,7 +83,7 @@ public class CelestialMarkerBase {
 
         private CelestialAssetIcons() {}
 
-        public static ResourceLocation get(CelestialAssetKind kind) {
+        public static ResourceLocation get(CelestialAsset.Kind kind) {
             return switch (kind) {
                 case STATION -> EnumTextures.ICON_STATION.get();
                 case AUTOMATED_STATION -> EnumTextures.ICON_STATION_AUTOMATED.get();

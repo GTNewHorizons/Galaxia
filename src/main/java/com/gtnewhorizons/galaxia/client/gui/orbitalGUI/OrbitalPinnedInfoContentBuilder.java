@@ -17,7 +17,6 @@ import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -25,44 +24,36 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
-import com.gtnewhorizons.galaxia.registry.celestial.GtOreVeinDefinition;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class OrbitalPinnedInfoContentBuilder {
 
-    List<PinnedInfoRow> buildRows(OrbitalCelestialBody body) {
+    List<PinnedInfoRow> buildRows(CelestialObject body) {
         List<PinnedInfoRow> rows = new ArrayList<>();
+        // TODO: Localize
         rows.add(new PinnedInfoRow("Name", body.displayName()));
         rows.add(new PinnedInfoRow("Type", formatObjectClass(body.objectClass())));
         rows.add(new PinnedInfoRow("Landable", isLandable(body) ? "Yes" : "No"));
         rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
-        if (body.objectClass() != CelestialObjectClass.STAR && body.objectClass() != CelestialObjectClass.GALAXY) {
+        if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
             rows.add(new PinnedInfoRow("Surface", formatSurfaceType(body)));
-            if (!body.properties()
-                .gtOreVeins()
-                .isEmpty()) {
-                rows.add(PinnedInfoRow.section("Veins"));
-                for (GtOreVeinDefinition vein : body.properties()
-                    .gtOreVeins())
-                    rows.add(PinnedInfoRow.inlineItems(vein.displayName(), resolveGtVeinDisplayItems(vein)));
-            } else if (body.properties()
+            if (body.properties()
                 .ores()
                 .isEmpty()) {
-                    rows.add(new PinnedInfoRow("Ores", "Undefined"));
-                } else {
-                    rows.add(
-                        new PinnedInfoRow(
-                            "Ores",
-                            "",
-                            body.properties()
-                                .ores()));
-                }
+                rows.add(new PinnedInfoRow("Ores", "Undefined"));
+            } else {
+                rows.add(
+                    new PinnedInfoRow(
+                        "Ores",
+                        "",
+                        body.properties()
+                            .ores()));
+            }
         }
         return rows;
     }
 
-    void buildSignatureInto(StringBuilder signature, OrbitalCelestialBody body, int width, int height) {
+    void buildSignatureInto(StringBuilder signature, CelestialObject body, int width, int height) {
         signature.setLength(0);
         signature.append(body.id())
             .append('|')
@@ -94,15 +85,13 @@ public final class OrbitalPinnedInfoContentBuilder {
             .get("surface");
         signature.append('|')
             .append(surfaceType == null ? "" : surfaceType);
-        List<GtOreVeinDefinition> gtOreVeins = body.properties()
-            .gtOreVeins();
+        List<String> gtOreVeinOres = body.properties()
+            .gtOreVeinOres();
         signature.append('|')
-            .append(gtOreVeins.size());
-        for (GtOreVeinDefinition vein : gtOreVeins) {
+            .append(gtOreVeinOres.size());
+        for (String oreName : gtOreVeinOres) {
             signature.append('|')
-                .append(vein.displayName())
-                .append(':');
-            for (String oreName : vein.ores()) signature.append(oreName)
+                .append(oreName)
                 .append(',');
         }
         List<ItemStack> ores = body.properties()
@@ -125,7 +114,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         }
     }
 
-    private String buildDangerSummary(OrbitalCelestialBody body) {
+    private String buildDangerSummary(CelestialObject body) {
         List<String> dangers = new ArrayList<>();
         if (body.properties()
             .radiation() >= 0.25) dangers.add("Radiation");
@@ -143,22 +132,18 @@ public final class OrbitalPinnedInfoContentBuilder {
         return dangers.isEmpty() ? "None" : String.join(", ", dangers);
     }
 
-    private String formatObjectClass(CelestialObjectClass objectClass) {
+    private String formatObjectClass(CelestialObject.Class objectClass) {
         String raw = objectClass.name()
             .toLowerCase()
             .replace('_', ' ');
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
-    private boolean isLandable(OrbitalCelestialBody body) {
-        return switch (body.objectClass()) {
-            case PLANET, MOON, ASTEROID -> body.properties()
-                .visitable();
-            default -> false;
-        };
+    private boolean isLandable(CelestialObject body) {
+        return body.isLandable();
     }
 
-    private String formatSurfaceType(OrbitalCelestialBody body) {
+    private String formatSurfaceType(CelestialObject body) {
         String surfaceType = body.properties()
             .metadata()
             .get("surface");
@@ -178,13 +163,11 @@ public final class OrbitalPinnedInfoContentBuilder {
         return out.toString();
     }
 
-    private List<ItemStack> resolveGtVeinDisplayItems(GtOreVeinDefinition vein) {
+    private List<ItemStack> resolveGtVeinDisplayItems(String oreName) {
         List<ItemStack> items = new ArrayList<>();
-        if (vein == null) return items;
-        for (String oreName : vein.ores()) {
-            ItemStack stack = resolveGtOreDisplayStack(oreName);
-            if (stack != null) items.add(stack);
-        }
+        if (oreName == null || oreName.isEmpty()) return items;
+        ItemStack stack = resolveGtOreDisplayStack(oreName);
+        if (stack != null) items.add(stack);
         return items;
     }
 
@@ -206,11 +189,15 @@ public final class OrbitalPinnedInfoContentBuilder {
 
         interface Callbacks {
 
-            OrbitalCelestialBody getPinnedInfoBody();
+            CelestialObject getPinnedInfoBody();
 
-            void buildSignatureInto(StringBuilder buf, OrbitalCelestialBody body, int width, int height);
+            int getViewportWidth();
 
-            List<PinnedInfoRow> buildRows(OrbitalCelestialBody body);
+            int getViewportHeight();
+
+            void buildSignatureInto(StringBuilder buf, CelestialObject body, int width, int height);
+
+            List<PinnedInfoRow> buildRows(CelestialObject body);
         }
 
         private static final int PANEL_WIDTH = 116;
@@ -230,12 +217,13 @@ public final class OrbitalPinnedInfoContentBuilder {
         OrbitalPinnedInfoWidget(Callbacks callbacks) {
             this.callbacks = callbacks;
             setEnabled(false);
+            size(0, 0);
         }
 
         @Override
         public void onUpdate() {
             super.onUpdate();
-            OrbitalCelestialBody body = callbacks.getPinnedInfoBody();
+            CelestialObject body = callbacks.getPinnedInfoBody();
             if (body == null) {
                 if (isEnabled()) {
                     removeAll();
@@ -244,10 +232,11 @@ public final class OrbitalPinnedInfoContentBuilder {
                 lastSignature = "";
                 cachedRows = Collections.emptyList();
                 setEnabled(false);
+                size(0, 0);
                 return;
             }
             setEnabled(true);
-            callbacks.buildSignatureInto(sigBuf, body, getArea().width, getArea().height);
+            callbacks.buildSignatureInto(sigBuf, body, callbacks.getViewportWidth(), callbacks.getViewportHeight());
             if (!lastSignature.contentEquals(sigBuf)) {
                 cachedRows = callbacks.buildRows(body);
                 rebuildChildren(body, cachedRows);
@@ -261,10 +250,17 @@ public final class OrbitalPinnedInfoContentBuilder {
             super.drawBackground(context, widgetTheme);
         }
 
-        private void rebuildChildren(OrbitalCelestialBody body, List<PinnedInfoRow> rows) {
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+
+        private void rebuildChildren(CelestialObject body, List<PinnedInfoRow> rows) {
             removeAll();
             Minecraft mc = Minecraft.getMinecraft();
-            int contentWidth = getContentWidth(mc, rows, getArea().width);
+            int viewportWidth = callbacks.getViewportWidth();
+            int viewportHeight = callbacks.getViewportHeight();
+            int contentWidth = getContentWidth(mc, rows, viewportWidth);
             int boxWidth = contentWidth + PANEL_PADDING * 2;
             // Pre-compute row heights once to avoid double wrapValue calls
             int n = rows.size();
@@ -276,9 +272,11 @@ public final class OrbitalPinnedInfoContentBuilder {
             }
             if (n > 0) boxHeight -= ROW_GAP;
             boxHeight += 8;
-            int x = Math.max(8, getArea().width - boxWidth - 18);
-            int y = Math.max(24, (getArea().height - boxHeight) / 2);
-            ParentWidget<?> root = new ParentWidget<>().pos(x, y)
+            int x = Math.max(8, viewportWidth - boxWidth - 18);
+            int y = Math.max(24, (viewportHeight - boxHeight) / 2);
+            pos(x, y);
+            size(boxWidth, boxHeight);
+            ParentWidget<?> root = new ParentWidget<>().pos(0, 0)
                 .size(boxWidth, boxHeight);
             PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
                 .widthRel(1f)
@@ -292,6 +290,7 @@ public final class OrbitalPinnedInfoContentBuilder {
                 currentY += rowHeights[i] + ROW_GAP;
             }
             child(root);
+            scheduleResize();
         }
 
         private void buildRow(ParentWidget<?> root, Minecraft mc, PinnedInfoRow row, int contentWidth, int y) {
@@ -448,27 +447,9 @@ public final class OrbitalPinnedInfoContentBuilder {
                     .drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
         }
 
-        private IDrawable drawable(DrawCommand drawCommand) {
+        private IDrawable drawable(DrawableCommand drawCommand) {
             return (context, x, y, width, height, widgetTheme) -> drawCommand.draw(context, x, y, width, height);
         }
 
-        @FunctionalInterface
-        private interface DrawCommand {
-
-            void draw(GuiContext context, int x, int y, int width, int height);
-        }
-
-        private static final class PassiveLayer extends ParentWidget<PassiveLayer> {
-
-            @Override
-            public boolean canHover() {
-                return false;
-            }
-
-            @Override
-            public boolean canHoverThrough() {
-                return true;
-            }
-        }
     }
 }

@@ -1,10 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.AbsolutePosition;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class OrbitalMechanics {
 
@@ -33,13 +31,15 @@ public final class OrbitalMechanics {
         }
     }
 
-    public static OrbitalState resolveWorldState(OrbitalCelestialBody root, OrbitalCelestialBody target,
-        double globalTime) {
+    @Desugar
+    public record AbsolutePosition(double x, double y) {}
+
+    public static OrbitalState resolveWorldState(CelestialObject root, CelestialObject target, double globalTime) {
         if (root == null || target == null) return null;
-        return resolveWorldState(root, target, null, new OrbitalState(0.0, 0.0, 0.0, 0.0), globalTime);
+        return resolveWorldState(root, target, new OrbitalState(0.0, 0.0, 0.0, 0.0), globalTime);
     }
 
-    public static OrbitalState resolveChildWorldState(OrbitalCelestialBody parent, OrbitalCelestialBody child,
+    public static OrbitalState resolveChildWorldState(CelestialObject parent, CelestialObject child,
         OrbitalState parentState, double globalTime) {
         OrbitalState safeParentState = parentState == null ? new OrbitalState(0.0, 0.0, 0.0, 0.0) : parentState;
         if (usesAbsolutePosition(parent, child)) {
@@ -99,7 +99,7 @@ public final class OrbitalMechanics {
             state.vy() + deltaTime * (k1.dvy() + 2.0 * k2.dvy() + 2.0 * k3.dvy() + k4.dvy()) / 6.0);
     }
 
-    public static double resolveAttractorMu(OrbitalCelestialBody attractor, OrbitalParams orbit) {
+    public static double resolveAttractorMu(CelestialObject attractor, OrbitalParams orbit) {
         if (attractor != null && attractor.properties() != null
             && attractor.properties()
                 .standardGravitationalParameter() > 0.0) {
@@ -115,13 +115,13 @@ public final class OrbitalMechanics {
         return DEFAULT_STANDARD_GRAVITATIONAL_PARAMETER;
     }
 
-    public static double getOrbitalPeriod(OrbitalCelestialBody attractor, OrbitalParams orbit) {
+    public static double getOrbitalPeriod(CelestialObject attractor, OrbitalParams orbit) {
         double meanMotion = resolveMeanMotion(orbit, resolveAttractorMu(attractor, orbit));
         if (meanMotion <= MINIMUM_MEAN_MOTION) return Double.POSITIVE_INFINITY;
         return Math.PI * 2.0 / meanMotion;
     }
 
-    public static double getOrbitDirectionSign(OrbitalCelestialBody body) {
+    public static double getOrbitDirectionSign(CelestialObject body) {
         return body == null ? 1.0 : getOrbitDirectionSign(body.orbitalParams());
     }
 
@@ -130,7 +130,7 @@ public final class OrbitalMechanics {
         return params.orbitSpeed() < 0.0 ? -1.0 : 1.0;
     }
 
-    public static double getSphereOfInfluenceRadius(OrbitalCelestialBody parent, OrbitalCelestialBody body) {
+    public static double getSphereOfInfluenceRadius(CelestialObject parent, CelestialObject body) {
         if (body == null) return 0.0;
         if (body.properties() != null && body.properties()
             .sphereOfInfluenceRadius() > 0.0) {
@@ -153,18 +153,18 @@ public final class OrbitalMechanics {
         return Math.max(0.08, orbit.semiMajorAxis() * Math.pow(childMu / parentMu, 0.4));
     }
 
-    public static boolean usesAbsolutePosition(OrbitalCelestialBody parent, OrbitalCelestialBody child) {
+    public static boolean usesAbsolutePosition(CelestialObject parent, CelestialObject child) {
         return parent != null && child != null
-            && parent.objectClass() == CelestialObjectClass.GALAXY
+            && parent.objectClass() == CelestialObject.Class.GALAXY
             && child.absolutePosition() != null;
     }
 
-    private static OrbitalState resolveWorldState(OrbitalCelestialBody current, OrbitalCelestialBody target,
-        OrbitalCelestialBody parent, OrbitalState currentState, double globalTime) {
+    private static OrbitalState resolveWorldState(CelestialObject current, CelestialObject target,
+        OrbitalState currentState, double globalTime) {
         if (current == target) return currentState;
-        for (OrbitalCelestialBody child : current.children()) {
+        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
             OrbitalState childState = resolveChildWorldState(current, child, currentState, globalTime);
-            OrbitalState resolved = resolveWorldState(child, target, current, childState, globalTime);
+            OrbitalState resolved = resolveWorldState(child, target, childState, globalTime);
             if (resolved != null) return resolved;
         }
         return null;

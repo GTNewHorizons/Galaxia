@@ -44,8 +44,11 @@ dependencies {
     devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.115:dev")
 
     compileOnly('com.github.GTNewHorizons:SC2:2.3.12:dev') {transitive=false}
-    // Needed for NH ores
-    // devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.370:dev")
+    // Needed for NH ores and automation
+    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.370:dev")
+    //
+
+
     devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.5:dev'){transitive=false}
 
     // Uncomment for profiling
