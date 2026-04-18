@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.gtnewhorizons.galaxia.core.network.OutpostBuildModulePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
@@ -15,18 +14,19 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.OutpostBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -122,8 +122,8 @@ public final class CelestialClient {
         }
         state.addModule(module);
 
-        Galaxia.GALAXIA_NETWORK.sendToServer(
-            new OutpostBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled));
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(new OutpostBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled));
     }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
@@ -155,20 +155,13 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
+        if (!(module.component() instanceof ModuleMiner miner)) return;
         switch (configAction) {
-            case ADD_MINER_BLACKLIST -> {
-                if (module.component() instanceof ModuleMiner miner) {
-                    miner.addToBlacklist(payload);
-                }
-            }
-            case REMOVE_MINER_BLACKLIST -> {
-                if (module.component() instanceof ModuleMiner miner) {
-                    miner.removeFromBlacklist(payload);
-                }
-            }
-            default -> {}
+            case ADD_MINER_BLACKLIST -> miner.addToBlacklist(payload);
+            case REMOVE_MINER_BLACKLIST -> miner.removeFromBlacklist(payload);
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
@@ -191,7 +184,8 @@ public final class CelestialClient {
             }
             default -> {}
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
@@ -203,36 +197,45 @@ public final class CelestialClient {
         switch (configAction) {
             case SET_ALLOW_SHOOTING_THRESHOLD -> {
                 if (module.component() instanceof ModuleHammer hammer) {
-                    hammer.setConfig(new AllowShootingConfig(hammer.config().mode(), payload));
+                    hammer.setConfig(
+                        new AllowShootingConfig(
+                            hammer.config()
+                                .mode(),
+                            payload));
                 }
             }
             default -> {}
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
-    public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, T payload) {
+    public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
+        T payload) {
         AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
+        if (!(module.component() instanceof ModuleHammer hammer)) return;
+
         switch (configAction) {
             case SET_ALLOW_SHOOTING_MODE -> {
-                if (module.component() instanceof ModuleHammer hammer) {
-                    AllowShootingConfig.Mode mode = (AllowShootingConfig.Mode) (Object) payload;
-                    hammer.setConfig(new AllowShootingConfig(mode, hammer.config().threshold()));
-                }
+                AllowShootingConfig.Mode mode = (AllowShootingConfig.Mode) payload;
+                hammer.setConfig(
+                    new AllowShootingConfig(
+                        mode,
+                        hammer.config()
+                            .threshold()));
             }
             case SET_ROUTE_PRIORITY -> {
-                if (module.component() instanceof ModuleHammer hammer) {
-                    OrbitalTransferPlanner.RoutePriority priority = (OrbitalTransferPlanner.RoutePriority) (Object) payload;
-                    hammer.setRoutePriority(priority);
-                }
+                OrbitalTransferPlanner.RoutePriority priority = (OrbitalTransferPlanner.RoutePriority) payload;
+                hammer.setRoutePriority(priority);
             }
             default -> {}
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     /**

@@ -97,7 +97,8 @@ public class OutpostModuleRegistry {
         return createInstance(moduleId, kind, null);
     }
 
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, OutpostModuleKind kind, ModuleComponent component) {
+    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, OutpostModuleKind kind,
+        ModuleComponent component) {
         Definition def = get(kind);
         if (def == null) {
             throw new IllegalArgumentException("Unknown module kind: " + kind);

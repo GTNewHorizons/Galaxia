@@ -15,8 +15,6 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-import java.util.UUID;
-
 /**
  * Client → Server: requests that a new module be queued for construction on an outpost.
  *
@@ -38,7 +36,8 @@ public final class OutpostBuildModulePacket implements IMessage {
 
     public OutpostBuildModulePacket() {}
 
-    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, ModuleInstance.ID moduleId, boolean instantBuild) {
+    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, ModuleInstance.ID moduleId,
+        boolean instantBuild) {
         this.assetId = assetId;
         this.moduleKind = kind;
         this.moduleId = moduleId;

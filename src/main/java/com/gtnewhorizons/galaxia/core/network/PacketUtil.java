@@ -6,8 +6,8 @@ import java.util.UUID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+
 import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */

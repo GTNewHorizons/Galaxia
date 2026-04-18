@@ -407,7 +407,8 @@ public final class OutpostSyncPacket implements IMessage {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
                         state.modulesInternal()
-                            .get(packet.moduleIndex).updateStatus(packet.moduleData.status());
+                            .get(packet.moduleIndex)
+                            .updateStatus(packet.moduleData.status());
                     }
                 }
                 case INVENTORY_UPDATE -> {

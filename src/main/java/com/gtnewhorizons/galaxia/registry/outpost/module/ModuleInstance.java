@@ -5,11 +5,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 
 public class ModuleInstance implements Buildable {
@@ -46,8 +46,8 @@ public class ModuleInstance implements Buildable {
     }
 
     public ModuleInstance(ID id, OutpostModuleRegistry.Definition definition) {
-       this.id = id;
-       this.definition = definition;
+        this.id = id;
+        this.definition = definition;
     }
 
     public ModuleInstance(OutpostModuleRegistry.Definition definition) {
