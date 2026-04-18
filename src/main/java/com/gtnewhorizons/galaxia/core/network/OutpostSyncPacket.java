@@ -406,10 +406,8 @@ public final class OutpostSyncPacket implements IMessage {
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
-                        applyModuleUpdate(
-                            state.modulesInternal()
-                                .get(packet.moduleIndex),
-                            packet.moduleData);
+                        state.modulesInternal()
+                            .get(packet.moduleIndex).updateStatus(packet.moduleData.status());
                     }
                 }
                 case INVENTORY_UPDATE -> {
@@ -432,22 +430,6 @@ public final class OutpostSyncPacket implements IMessage {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                     if (r != null) state.logisticsConfig.reset(r);
                 }
-            }
-        }
-
-        private void applyModuleUpdate(ModuleInstance target, ModuleInstance source) {
-            target.updateStatus(source.status());
-
-            if (target.kind() == OutpostModuleKind.MINER && source.component() instanceof ModuleMiner sm) {
-                target.setComponent(sm);
-            }
-
-            if (target.kind() == OutpostModuleKind.HAMMER && source.component() instanceof ModuleHammer sh) {
-                target.setComponent(sh);
-            }
-
-            if (target.kind() == OutpostModuleKind.BIG_HAMMER && source.component() instanceof ModuleHammer sbh) {
-                target.setComponent(sbh);
             }
         }
     }

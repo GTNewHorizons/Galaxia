@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
@@ -41,6 +42,10 @@ final class PacketUtil {
         long mostSig = buf.readLong();
         long leastSig = buf.readLong();
         return new UUID(mostSig, leastSig);
+    }
+
+    static ModuleInstance.ID readModuleId(ByteBuf buf) {
+        return new ModuleInstance.ID(readId(buf));
     }
 
     static CelestialAsset.ID readAssetId(ByteBuf buf) {

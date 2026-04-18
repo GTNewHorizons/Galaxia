@@ -19,7 +19,11 @@ public enum OutpostModuleKind {
         return OutpostModuleRegistry.createInstance(this);
     }
 
+    public ModuleInstance createInstance(ModuleInstance.ID id) {
+        return OutpostModuleRegistry.createInstance(id, this);
+    }
+
     public ModuleInstance createInstance(ModuleComponent component) {
-        return OutpostModuleRegistry.createInstance(this, component);
+        return OutpostModuleRegistry.createInstance(null, this, component);
     }
 }

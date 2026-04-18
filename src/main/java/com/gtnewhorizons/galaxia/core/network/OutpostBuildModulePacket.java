@@ -15,6 +15,8 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
+import java.util.UUID;
+
 /**
  * Client → Server: requests that a new module be queued for construction on an outpost.
  *
@@ -30,20 +32,23 @@ import io.netty.buffer.ByteBuf;
 public final class OutpostBuildModulePacket implements IMessage {
 
     private CelestialAsset.ID assetId;
+    private ModuleInstance.ID moduleId;
     private OutpostModuleKind moduleKind;
     private boolean instantBuild;
 
     public OutpostBuildModulePacket() {}
 
-    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, boolean instantBuild) {
+    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, ModuleInstance.ID moduleId, boolean instantBuild) {
         this.assetId = assetId;
         this.moduleKind = kind;
+        this.moduleId = moduleId;
         this.instantBuild = instantBuild;
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
+        PacketUtil.writeId(buf, moduleId);
         PacketUtil.writeEnum(buf, moduleKind);
         buf.writeBoolean(instantBuild);
     }
@@ -51,6 +56,7 @@ public final class OutpostBuildModulePacket implements IMessage {
     @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
+        moduleId = PacketUtil.readModuleId(buf);
         moduleKind = PacketUtil.readEnum(buf, OutpostModuleKind.class);
         instantBuild = buf.readBoolean();
     }
@@ -94,15 +100,7 @@ public final class OutpostBuildModulePacket implements IMessage {
                 return null;
             }
 
-            ModuleInstance module = kind.createInstance();
-            if (module == null) {
-                Galaxia.LOG.warn(
-                    "[Outpost] BuildModule: no module for kind {} (player {})",
-                    kind,
-                    player.getGameProfile()
-                        .getName());
-                return null;
-            }
+            ModuleInstance module = kind.createInstance(packet.moduleId);
             if (packet.instantBuild && player.capabilities.isCreativeMode) {
                 module.completeConstruction();
             }

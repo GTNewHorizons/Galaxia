@@ -90,15 +90,25 @@ public class OutpostModuleRegistry {
     }
 
     public static ModuleInstance createInstance(OutpostModuleKind kind) {
-        return createInstance(kind, null);
+        return createInstance(null, kind, null);
     }
 
-    public static ModuleInstance createInstance(OutpostModuleKind kind, ModuleComponent component) {
+    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, OutpostModuleKind kind) {
+        return createInstance(moduleId, kind, null);
+    }
+
+    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, OutpostModuleKind kind, ModuleComponent component) {
         Definition def = get(kind);
         if (def == null) {
             throw new IllegalArgumentException("Unknown module kind: " + kind);
         }
-        ModuleInstance instance = new ModuleInstance(def);
+        ModuleInstance instance;
+        if (moduleId == null) {
+            instance = new ModuleInstance(def);
+        } else {
+            instance = new ModuleInstance(moduleId, def);
+        }
+
         if (component != null) {
             instance.setComponent(component);
         } else {

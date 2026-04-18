@@ -2,7 +2,11 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -10,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 
 public class ModuleInstance implements Buildable {
 
+    public final ID id;
     private final Map<ItemStack, Long> consumedResources = new HashMap<>();
     private final OutpostModuleRegistry.Definition definition;
     private ModuleComponent component;
@@ -40,8 +45,13 @@ public class ModuleInstance implements Buildable {
         }
     }
 
+    public ModuleInstance(ID id, OutpostModuleRegistry.Definition definition) {
+       this.id = id;
+       this.definition = definition;
+    }
+
     public ModuleInstance(OutpostModuleRegistry.Definition definition) {
-        this.definition = definition;
+        this(ID.create(), definition);
     }
 
     public ModuleComponent component() {
@@ -125,5 +135,43 @@ public class ModuleInstance implements Buildable {
 
     public Map<ItemStack, Long> getConstructionCost() {
         return definition.constructionCost();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        ModuleInstance that = (ModuleInstance) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
+
+    public record ID(UUID id) implements WithUUID {
+
+        public static ID create() {
+            return new ID(UUID.randomUUID());
+        }
+
+        public static ID from(String value) {
+            if (value == null) return null;
+            return new ID(UUID.fromString(value));
+        }
+
+        public static ID from(UUID value) {
+            return value == null ? null : new ID(value);
+        }
+
+        public static ID from(CelestialAsset.ID id) {
+            if (id == null) return null;
+            return new ID(id.id());
+        }
+
+        @Override
+        public String toString() {
+            return id.toString();
+        }
     }
 }

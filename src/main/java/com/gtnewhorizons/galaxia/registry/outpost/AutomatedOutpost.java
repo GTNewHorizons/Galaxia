@@ -45,6 +45,7 @@ public final class AutomatedOutpost extends CelestialAsset {
     }
 
     public void addModule(ModuleInstance module) {
+        if (modules.contains(module)) return;
         modules.add(module);
     }
 
