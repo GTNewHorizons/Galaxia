@@ -339,7 +339,7 @@ public class OrbitalView {
         private boolean dragging = false;
         private double lastMouseX, lastMouseY;
         private double globalTime = 0.0;
-        private double timeScale = 20.0;
+        private double timeScale = OrbitalTransferPlanner.OSU_PER_TICK * 20.0;
         private boolean paused = false;
         private long lastFrameTime = System.currentTimeMillis();
         private double displayOrbitalTimeAnchor = 0.0;

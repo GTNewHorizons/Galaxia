@@ -53,12 +53,12 @@ public final class OrbitalTransferPlanner {
 
         /** Converts TOF to real seconds. */
         public double tofSeconds() {
-            return tofOsu / 20.0;
+            return tofOsu / (OSU_PER_TICK * 20.0);
         }
 
         /** Converts TOF to server ticks (minimum 1). */
         public int tofTicks() {
-            return Math.max(1, (int) (tofOsu * 20.0 / 20.0));
+            return Math.max(1, (int) (tofOsu / OSU_PER_TICK));
         }
     }
 
