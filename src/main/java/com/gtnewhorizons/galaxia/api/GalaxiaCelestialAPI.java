@@ -234,7 +234,7 @@ public final class GalaxiaCelestialAPI {
 
     /**
      * Returns the current orbital simulation time in OSU (orbital simulation units).
-     * Server-side: based on world tick count, converted with 42 OSU/s at 20 TPS.
+     * Server-side: based on world tick count, converted with 20 OSU/s at 20 TPS.
      */
     public static double currentOrbitalTime() {
         MinecraftServer server = MinecraftServer.getServer();
