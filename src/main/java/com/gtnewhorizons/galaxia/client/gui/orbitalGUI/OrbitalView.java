@@ -338,7 +338,7 @@ public class OrbitalView {
         private boolean dragging = false;
         private double lastMouseX, lastMouseY;
         private double globalTime = 0.0;
-        private double timeScale = OrbitalTransferPlanner.OSU_PER_TICK * 20.0;
+        private double timeScale = OrbitalTransferPlanner.OSU_PER_SECOND;
         private boolean paused = false;
         private long lastFrameTime = System.currentTimeMillis();
         private double displayOrbitalTimeAnchor = 0.0;
@@ -385,7 +385,7 @@ public class OrbitalView {
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
         private static final double ZOOM_BASE = 1.18;
         private static final double BASE_SCALE = 82.0;
-        private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_TICK * 20.0;
+        private static final double SERVER_OSU_PER_SECOND = OrbitalTransferPlanner.OSU_PER_SECOND;
         private static final double LERP_SPEED = 0.045;
         private static final double PENDING_LAYER_CENTER_LERP_SPEED = 0.08;
         private static final double LAYER_SWITCH_LERP_SPEED = 0.036;

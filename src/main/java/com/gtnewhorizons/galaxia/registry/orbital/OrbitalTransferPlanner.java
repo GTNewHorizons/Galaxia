@@ -15,15 +15,17 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
  * Time unit convention:
  * <ul>
  * <li>All orbital times are in "orbital simulation units" (OSU). The client viewer
- * advances OSU at 20× real time: {@code osu = world_ticks / 20.0 * 20.0}.</li>
- * <li>To convert a TOF in OSU to real seconds: {@code tofSeconds = tof / 20.0}.</li>
- * <li>To convert to server ticks: {@code ticks = (int)(tof * 20.0 / 20.0)}.</li>
+ * advances OSU at {@code OSU_PER_SECOND}× real time: {@code osu = world_ticks * OSU_PER_TICK}.</li>
+ * <li>To convert a TOF in OSU to real seconds: {@code tofSeconds = tof / OSU_PER_SECOND}.</li>
+ * <li>To convert to server ticks: {@code ticks = (int)(tof / OSU_PER_TICK)}.</li>
  * </ul>
  */
 public final class OrbitalTransferPlanner {
 
-    /** OSU advance per server tick (20 TPS × 20 OSU/s). */
+    /** OSU advance per server tick. */
     public static final double OSU_PER_TICK = 20.0 / 20.0;
+    /** OSU advance per real second at 20 TPS. */
+    public static final double OSU_PER_SECOND = OSU_PER_TICK * 20.0;
 
     private OrbitalTransferPlanner() {}
 
@@ -53,7 +55,7 @@ public final class OrbitalTransferPlanner {
 
         /** Converts TOF to real seconds. */
         public double tofSeconds() {
-            return tofOsu / (OSU_PER_TICK * 20.0);
+            return tofOsu / OSU_PER_SECOND;
         }
 
         /** Converts TOF to server ticks (minimum 1). */
