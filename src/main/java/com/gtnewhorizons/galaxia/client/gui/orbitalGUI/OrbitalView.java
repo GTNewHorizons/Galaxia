@@ -339,7 +339,7 @@ public class OrbitalView {
         private boolean dragging = false;
         private double lastMouseX, lastMouseY;
         private double globalTime = 0.0;
-        private double timeScale = 42.0;
+        private double timeScale = 20.0;
         private boolean paused = false;
         private long lastFrameTime = System.currentTimeMillis();
         private double displayOrbitalTimeAnchor = 0.0;
@@ -1231,18 +1231,6 @@ public class OrbitalView {
                 reanchorOrbitalClock(displayTime);
                 return true;
             }
-            if (ch == '+' || ch == '=') {
-                double displayTime = captureCurrentDisplayOrbitalTime();
-                timeScale = Math.min(timeScale * 1.35, 800_000.0);
-                reanchorOrbitalClock(displayTime);
-                return true;
-            }
-            if (ch == '-') {
-                double displayTime = captureCurrentDisplayOrbitalTime();
-                timeScale = Math.max(timeScale / 1.35, 0.01);
-                reanchorOrbitalClock(displayTime);
-                return true;
-            }
             if (keyCode == Keyboard.KEY_B) {
                 debugOverlayEnabled = !debugOverlayEnabled;
                 return true;
@@ -1355,6 +1343,18 @@ public class OrbitalView {
 
         private double getScale() {
             return BASE_SCALE * Math.pow(ZOOM_BASE, viewState.zoomLevel);
+        }
+
+        private double getScaleForZoomLevel(double zoomLevel) {
+            return BASE_SCALE * Math.pow(ZOOM_BASE, zoomLevel);
+        }
+
+        private double getDisplayZoomMultiplier() {
+            CelestialObject referenceBody = viewRoot != null ? viewRoot : root;
+            if (referenceBody == null) return 1.0;
+            double referenceScale = getScaleForZoomLevel(getOverviewZoomForBody(referenceBody));
+            if (referenceScale <= 1e-9) return 1.0;
+            return getScale() / referenceScale;
         }
 
         private float worldToScreenX(double wx) {
@@ -2170,9 +2170,7 @@ public class OrbitalView {
                 : viewRoot.objectClass() == CelestialObject.Class.STAR ? viewRoot.displayName() + " System" : null;
             if (title == null) return;
 
-            String speedText = paused ? StatCollector.translateToLocal("galaxia.gui.orbital.paused")
-                : "x" + formatCompactDecimal(timeScale, timeScale >= 100.0 ? 0 : 1);
-            String statusText = "Zoom: x" + formatCompactDecimal(getScale(), 3) + "   Speed: " + speedText;
+            String statusText = "Zoom: x" + formatCompactDecimal(getDisplayZoomMultiplier(), 3);
 
             Minecraft mc = Minecraft.getMinecraft();
             int titleWidth = mc.fontRenderer.getStringWidth(title);
