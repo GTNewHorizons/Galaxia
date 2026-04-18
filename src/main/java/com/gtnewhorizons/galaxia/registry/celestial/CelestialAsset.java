@@ -114,6 +114,11 @@ public abstract class CelestialAsset implements Buildable {
         return constructionInventory;
     }
 
+    @Override
+    public void clearConsumedResources() {
+        constructionInventory.clear();
+    }
+
     public void setConstructionInventory(Map<ItemStack, Long> constructionInventory) {
         this.constructionInventory = constructionInventory;
     }

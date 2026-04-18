@@ -7,11 +7,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
-import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleBigHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePower;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -98,7 +94,7 @@ public final class OutpostBuildModulePacket implements IMessage {
                 return null;
             }
 
-            AutomatedOutpostModule module = createModule(kind);
+            ModuleInstance module = kind.createInstance();
             if (module == null) {
                 Galaxia.LOG.warn(
                     "[Outpost] BuildModule: no module for kind {} (player {})",
@@ -119,19 +115,9 @@ public final class OutpostBuildModulePacket implements IMessage {
                 player.getGameProfile()
                     .getName());
 
-            // Send a sync packet back so the requesting client sees the new module immediately.
             int moduleIndex = state.modules()
                 .size() - 1;
             return OutpostSyncPacket.moduleAdded(packet.assetId, moduleIndex, module);
-        }
-
-        private AutomatedOutpostModule createModule(OutpostModuleKind kind) {
-            return switch (kind) {
-                case HAMMER -> ModuleHammer.getDefault();
-                case BIG_HAMMER -> ModuleBigHammer.getDefault();
-                case MINER -> ModuleMiner.getDefault();
-                case POWER -> ModulePower.getDefault();
-            };
         }
     }
 }
