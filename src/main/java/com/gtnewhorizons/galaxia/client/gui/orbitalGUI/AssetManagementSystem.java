@@ -2195,7 +2195,7 @@ public final class AssetManagementSystem {
         }
 
         private String buildPowerSummary(AutomatedOutpost outpost) {
-            long generationPerTick = AutomatedOutpost.PASSIVE_GENERATION;
+            long generationPerTick = 0L;
             long drawPerTick = 0L;
             for (ModuleInstance module : outpost.modules()) {
                 if (module.status() != Buildable.Status.OPERATIONAL) continue;
@@ -2210,6 +2210,7 @@ public final class AssetManagementSystem {
         }
 
         private String buildModuleDescription(OutpostModuleKind kind) {
+            // TODO: Localize
             return switch (kind) {
                 case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
                 case BIG_HAMMER -> "Heavy logistics launcher for larger interstation packages.";

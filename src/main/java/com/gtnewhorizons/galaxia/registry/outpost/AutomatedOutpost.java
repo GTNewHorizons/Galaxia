@@ -26,7 +26,6 @@ public final class AutomatedOutpost extends CelestialAsset {
     private long energyStored;
 
     public static final long MAX_ENERGY = 1_000_000L;
-    public static final long PASSIVE_GENERATION = 512L;
 
     public AutomatedOutpost(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Status status) {
         super(assetId, celestialBodyId, Kind.AUTOMATED_OUTPOST, status, null);
@@ -86,7 +85,6 @@ public final class AutomatedOutpost extends CelestialAsset {
     }
 
     public void tick() {
-        energyStored = Math.min(MAX_ENERGY, energyStored + PASSIVE_GENERATION);
         for (ModuleInstance module : modules) {
             module.tick(this);
         }
