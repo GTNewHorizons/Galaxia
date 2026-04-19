@@ -71,7 +71,9 @@ final class AssetPanelIcons {
         CelestialObjectId key = body.id();
         ResourceLocation cached = BODY_ICON_CACHE.get(key);
         if (cached != null) return cached;
-        ResourceLocation candidate = res("textures/gui/bodyicons/" + key.name().toLowerCase() + ".png");
+        ResourceLocation candidate = res(
+            "textures/gui/bodyicons/" + key.name()
+                .toLowerCase() + ".png");
         ResourceLocation resolved;
         try {
             Minecraft.getMinecraft()
