@@ -21,12 +21,16 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int TOP_BUTTON_H = 16;
     private static final int TRANSFERS_X = 82;
     private static final int TRANSFERS_W = 92;
+    private static final int ASSETS_X = 180;
+    private static final int ASSETS_W = 66;
 
     private final OrbitalView.OrbitalMapWidget mapWidget;
     private final ButtonWidget<?> signalsButton;
     private final ButtonWidget<?> transferVisibilityButton;
+    private final ButtonWidget<?> assetsPanelButton;
     private String signalsLabel = "Signals";
     private String transfersLabel = "Hide Transfers";
+    private String assetsLabel = "Assets";
 
     public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, TextFieldWidget renameField) {
         this.mapWidget = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(initialLayer)
@@ -41,6 +45,11 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             updateTopBarLabels();
         }).pos(TRANSFERS_X, TOP_BUTTON_Y)
             .size(TRANSFERS_W, TOP_BUTTON_H);
+        this.assetsPanelButton = createTopBarButton(() -> assetsLabel, () -> {
+            mapWidget.toggleAssetsPanel();
+            updateTopBarLabels();
+        }).pos(ASSETS_X, TOP_BUTTON_Y)
+            .size(ASSETS_W, TOP_BUTTON_H);
 
         child(
             (IWidget) mapWidget.left(0)
@@ -85,6 +94,13 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 .width(1)
                 .height(1));
         child(transferVisibilityButton);
+        child(assetsPanelButton);
+        child(
+            (IWidget) mapWidget.createAssetsPanelWidget()
+                .left(0)
+                .top(0)
+                .width(1)
+                .height(1));
     }
 
     public OrbitalView.OrbitalMapWidget mapWidget() {
@@ -100,6 +116,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private void updateTopBarLabels() {
         signalsLabel = mapWidget.isSignalsOpen() ? "Signals \u25b2" : "Signals";
         transfersLabel = mapWidget.areTransfersHidden() ? "Show Transfers" : "Hide Transfers";
+        assetsLabel = mapWidget.isAssetsPanelOpen() ? "Assets \u25b2" : "Assets";
     }
 
     private ButtonWidget<?> createTopBarButton(Supplier<String> labelSupplier, Runnable onClick) {

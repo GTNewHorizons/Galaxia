@@ -374,6 +374,8 @@ public class OrbitalView {
         private final OrbitalContextMenuWidget contextMenuWidget;
         private final LogisticsSignalsWidget signalsWidget;
         private boolean signalsOpen = false;
+        private final SolarSystemAssetPanelWidget assetsPanelWidget;
+        private boolean assetsPanelOpen = false;
         private boolean transfersHidden = false;
         private final OrbitalScene.OrbitalSceneFrameBuilder sceneFrameBuilder;
         private int lastRenderedLogisticsTaskRevision = Integer.MIN_VALUE;
@@ -930,6 +932,11 @@ public class OrbitalView {
                     }
                 });
             this.signalsWidget = new LogisticsSignalsWidget(root, () -> this.viewRoot, () -> this.signalsOpen);
+            this.assetsPanelWidget = new SolarSystemAssetPanelWidget(
+                root,
+                () -> this.viewRoot,
+                () -> this.assetsPanelOpen,
+                body -> assetActionController.openAssetManagement(assetUiState, body));
         }
 
         public OrbitalMapWidget withInitialLayer(CelestialObject layerRoot) {
@@ -977,6 +984,18 @@ public class OrbitalView {
 
         public void toggleSignals() {
             signalsOpen = !signalsOpen;
+        }
+
+        public SolarSystemAssetPanelWidget createAssetsPanelWidget() {
+            return assetsPanelWidget;
+        }
+
+        public boolean isAssetsPanelOpen() {
+            return assetsPanelOpen;
+        }
+
+        public void toggleAssetsPanel() {
+            assetsPanelOpen = !assetsPanelOpen;
         }
 
         public boolean areTransfersHidden() {
