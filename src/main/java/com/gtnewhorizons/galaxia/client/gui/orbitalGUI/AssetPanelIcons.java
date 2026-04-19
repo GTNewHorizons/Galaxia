@@ -1,5 +1,9 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
@@ -7,9 +11,9 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
 /**
@@ -32,6 +36,7 @@ final class AssetPanelIcons {
     static final ResourceLocation WARN_DANGER = res("textures/gui/asset_panel/warning.png");
     static final ResourceLocation WARN_IDLE = res("textures/gui/asset_panel/warning_idle.png");
     static final ResourceLocation MISSING = res("textures/gui/asset_panel/missing.png");
+    static final ResourceLocation BODY_PLACEHOLDER = res("textures/gui/bodyicons/egora.png");
 
     private AssetPanelIcons() {}
 
@@ -55,45 +60,29 @@ final class AssetPanelIcons {
         };
     }
 
-    /**
-     * Per-class fallback color for body discs in the row, mirroring the starmap fallback in
-     * {@code OrbitalScene.getFallbackBodyColor} so the asset panel and orbital map agree on body identity at a glance.
-     */
-    static int bodyDiscColor(CelestialObject.Class objectClass) {
-        if (objectClass == null) return EnumColors.MAP_COLOR_BODY_PLANET.getColor();
-        return switch (objectClass) {
-            case GALAXY -> EnumColors.MAP_COLOR_BODY_GALAXY.getColor();
-            case BLACK_HOLE -> EnumColors.MAP_COLOR_BODY_BLACK_HOLE.getColor();
-            case STAR -> EnumColors.MAP_COLOR_BODY_STAR.getColor();
-            case GAS_GIANT -> EnumColors.MAP_COLOR_BODY_GAS_GIANT.getColor();
-            case PLANET -> EnumColors.MAP_COLOR_BODY_PLANET.getColor();
-            case MOON -> EnumColors.MAP_COLOR_BODY_MOON.getColor();
-            case ASTEROID, ASTEROID_BELT -> EnumColors.MAP_COLOR_BODY_ASTEROID.getColor();
-            case STATION -> EnumColors.MAP_COLOR_BODY_STATION.getColor();
-            case COMET -> EnumColors.MAP_COLOR_BODY_COMET.getColor();
-        };
-    }
+    private static final Map<CelestialObjectId, ResourceLocation> BODY_ICON_CACHE = new HashMap<>();
 
-    /** Filled-circle body placeholder; matches the starmap's missing-texture fallback. */
-    static void drawBodyDisc(int cx, int cy, int radius, int color) {
-        GlStateManager.disableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        float a = ((color >> 24) & 0xFF) / 255f;
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >> 8) & 0xFF) / 255f;
-        float b = (color & 0xFF) / 255f;
-        GlStateManager.color(r, g, b, a == 0f ? 1f : a);
-        GL11.glBegin(GL11.GL_TRIANGLE_FAN);
-        GL11.glVertex2f(cx, cy);
-        int seg = 18;
-        for (int i = 0; i <= seg; i++) {
-            double angle = (Math.PI * 2.0 * i) / seg;
-            GL11.glVertex2f(cx + (float) Math.cos(angle) * radius, cy + (float) Math.sin(angle) * radius);
+    /**
+     * Resolves a per-body icon at {@code textures/gui/bodyicons/<id>.png}, caching the result.
+     * Falls back to {@link #BODY_PLACEHOLDER} when no per-body PNG exists in the resource pack.
+     */
+    static ResourceLocation iconForBody(CelestialObject body) {
+        if (body == null || body.id() == null) return BODY_PLACEHOLDER;
+        CelestialObjectId key = body.id();
+        ResourceLocation cached = BODY_ICON_CACHE.get(key);
+        if (cached != null) return cached;
+        ResourceLocation candidate = res("textures/gui/bodyicons/" + key.name().toLowerCase() + ".png");
+        ResourceLocation resolved;
+        try {
+            Minecraft.getMinecraft()
+                .getResourceManager()
+                .getResource(candidate);
+            resolved = candidate;
+        } catch (IOException e) {
+            resolved = BODY_PLACEHOLDER;
         }
-        GL11.glEnd();
-        GlStateManager.color(1f, 1f, 1f, 1f);
-        GlStateManager.enableTexture2D();
+        BODY_ICON_CACHE.put(key, resolved);
+        return resolved;
     }
 
     /** Blits a 2D sprite at the given screen rect; falls back to the missing-art tile if {@code tex} is null. */
