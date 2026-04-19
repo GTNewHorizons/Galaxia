@@ -58,7 +58,6 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private static final int CAP_ICON_GAP = 2;
     private static final int ROW_PAD_X = 4;
     private static final int NAME_W = 132;
-    private static final int BODY_NAME_W = 80;
 
     private final CelestialObject galaxyRoot;
     private final Supplier<CelestialObject> viewRootSupplier;
@@ -249,9 +248,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private ButtonWidget<?> buildRowWidget(SystemAssetRowView row) {
         CelestialObject hostBody = GalaxiaCelestialAPI.findBodyById(galaxyRoot, row.hostBodyId);
         String displayName = trimToPixels(row.displayName, NAME_W);
-        String bodyLabel = trimToPixels(hostBody != null ? hostBody.displayName() : "?", BODY_NAME_W);
-        int bodyColor = AssetPanelIcons
-            .bodyDiscColor(hostBody != null ? hostBody.objectClass() : CelestialObject.Class.PLANET);
+        ResourceLocation bodyIcon = AssetPanelIcons.iconForBody(hostBody);
 
         ButtonWidget<?> button = new ButtonWidget<>().widthRel(1f)
             .height(ROW_H)
@@ -266,7 +263,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                         x + w,
                         y + h,
                         EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawRowContent(row, displayName, bodyLabel, bodyColor, x, y, h)))
+            .overlay(drawable((ctx, x, y, w, h) -> drawRowContent(row, displayName, bodyIcon, x, y, h)))
             .onMousePressed(btn -> {
                 if (btn != 0 || onAssetSelect == null || hostBody == null) return false;
                 onAssetSelect.accept(hostBody);
@@ -298,10 +295,10 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     /**
      * Draws every visible row element in one overlay pass so the row owns no extra child widgets
      * (avoids hover-blocking surfaces wider than the thing they render).
-     * Order left-to-right per design brief: name -> body texture -> body name -> capability icons.
+     * Order left-to-right per design brief: name -> body icon -> capability icons.
      */
-    private static void drawRowContent(SystemAssetRowView row, String displayName, String bodyLabel,
-        int bodyColor, int x, int y, int h) {
+    private static void drawRowContent(SystemAssetRowView row, String displayName, ResourceLocation bodyIcon,
+        int x, int y, int h) {
         net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         int textY = y + (h - fr.FONT_HEIGHT) / 2 + 1;
         int cursor = x + ROW_PAD_X;
@@ -309,12 +306,9 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         fr.drawStringWithShadow(displayName, cursor, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
         cursor += NAME_W + ROW_PAD_X;
 
-        int discRadius = BODY_ICON_SIZE / 2;
-        AssetPanelIcons.drawBodyDisc(cursor + discRadius, y + h / 2, discRadius, bodyColor);
+        int iconY = y + (h - BODY_ICON_SIZE) / 2;
+        AssetPanelIcons.drawSprite(bodyIcon, cursor, iconY, BODY_ICON_SIZE);
         cursor += BODY_ICON_SIZE + ROW_PAD_X;
-
-        fr.drawString(bodyLabel, cursor, textY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        cursor += BODY_NAME_W + ROW_PAD_X;
 
         int capY = y + (h - CAP_ICON_SIZE) / 2;
         if (row.hasMining) {

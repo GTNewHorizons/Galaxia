@@ -25,7 +25,7 @@ public enum OutpostModuleKind {
     }
 
     public boolean isMiningCapability() {
-        return this == HAMMER || this == BIG_HAMMER || this == MINER;
+        return this == MINER;
     }
 
     public static AutomatedOutpostModule forKind(OutpostModuleKind kind) {

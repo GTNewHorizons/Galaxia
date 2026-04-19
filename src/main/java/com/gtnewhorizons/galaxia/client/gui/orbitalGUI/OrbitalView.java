@@ -2087,7 +2087,8 @@ public class OrbitalView {
                 base.arrivalTime(),
                 base.trajectoryXs(),
                 base.trajectoryYs(),
-                base.trajectoryPointCount());
+                base.trajectoryPointCount(),
+                base.packageKind());
         }
 
         private String formatTransportKindLabel(LogisticSignal.Scope transportType) {

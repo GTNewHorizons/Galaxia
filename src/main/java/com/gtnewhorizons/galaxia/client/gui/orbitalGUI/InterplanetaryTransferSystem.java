@@ -30,15 +30,25 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 // Package-level records
 // ---------------------------------------------------------------------------
 
+/**
+ * Visual classification of an in-flight transfer package. Drives which sprite the orbital
+ * renderer blits at the transfer point. New kinds are added by extending this enum and
+ * wiring an entry in {@link TransferPackageIcons#texture}.
+ */
+enum TransferPackageKind {
+    HAMMER
+}
+
 record InterplanetaryTransferJob(String transferId, String displayName, String inventorySummary,
     CelestialObject rootBody, CelestialObject sourceBody, CelestialObject destinationBody,
     CelestialObject orbitAnchorBody, double departureTime, double arrivalTime, double[] trajectoryXs,
-    double[] trajectoryYs, int trajectoryPointCount) {
+    double[] trajectoryYs, int trajectoryPointCount, TransferPackageKind packageKind) {
 
     public InterplanetaryTransferJob {
         transferId = transferId == null ? "" : transferId;
         displayName = displayName == null ? "" : displayName;
         inventorySummary = inventorySummary == null ? "Empty" : inventorySummary;
+        packageKind = packageKind == null ? TransferPackageKind.HAMMER : packageKind;
         trajectoryPointCount = Math.max(
             0,
             Math.min(
@@ -565,7 +575,8 @@ public final class InterplanetaryTransferSystem {
                 departureTime + tof,
                 trajectoryXs,
                 trajectoryYs,
-                trajectoryPointCount);
+                trajectoryPointCount,
+                TransferPackageKind.HAMMER);
         }
 
         double getTransferDuration(CelestialObject sourceBody, CelestialObject destinationBody) {
@@ -602,8 +613,8 @@ public final class InterplanetaryTransferSystem {
 
         private static final int PATH_COLOR = EnumColors.MAP_COLOR_TRANSFER_PATH.getColor();
         private static final int PREVIEW_PATH_COLOR = EnumColors.MAP_COLOR_TRANSFER_PREVIEW_PATH.getColor();
-        private static final float DOT_HALF_SIZE = 4.0f;
         private static final float DOT_HIT_RADIUS = 7.0f;
+        private static final float PACKAGE_SPRITE_SIZE = 12.0f;
 
         private final Callbacks callbacks;
         private final MutableTransferPoint transferPoint = new MutableTransferPoint();
@@ -630,7 +641,7 @@ public final class InterplanetaryTransferSystem {
             if (state.transfers()
                 .isEmpty() || alpha <= 0.01f) return;
             GlStateManager.disableDepth();
-            GlStateManager.disableTexture2D();
+            GlStateManager.enableTexture2D();
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             for (InterplanetaryTransferJob transfer : state.transfers()) {
@@ -640,7 +651,6 @@ public final class InterplanetaryTransferSystem {
                     alpha);
             }
             GlStateManager.color(1f, 1f, 1f, 1f);
-            GlStateManager.enableTexture2D();
             GlStateManager.enableDepth();
         }
 
@@ -705,13 +715,7 @@ public final class InterplanetaryTransferSystem {
             if (!writeCurrentTransferPoint(transfer, currentTime, transferPoint) || !transferPoint.valid()) return;
             float sx = callbacks.worldToScreenX(transferPoint.worldX());
             float sy = callbacks.worldToScreenY(transferPoint.worldY());
-            GlStateManager.color(1f, 1f, 1f, alpha);
-            Gui.drawRect(
-                Math.round(sx - DOT_HALF_SIZE),
-                Math.round(sy - DOT_HALF_SIZE),
-                Math.round(sx + DOT_HALF_SIZE),
-                Math.round(sy + DOT_HALF_SIZE),
-                EnumColors.MAP_COLOR_TRANSFER_DOT.getColor());
+            TransferPackageIcons.drawCentered(transfer.packageKind(), sx, sy, PACKAGE_SPRITE_SIZE, alpha);
         }
 
         private void applyColor(int color) {
