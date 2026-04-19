@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
 
 /**
  * Complete runtime state for a single automated outpost.
@@ -138,6 +139,41 @@ public final class AutomatedOutpost extends CelestialAsset {
         if (energyStored < amount) return false;
         energyStored -= amount;
         return true;
+    }
+
+    @Override
+    public boolean hasMiningCapability() {
+        for (int i = 0; i < modules.size(); i++) {
+            if (modules.get(i)
+                .getKind()
+                .isMiningCapability()) return true;
+        }
+        return false;
+    }
+
+    public boolean hasCategory(StationModuleCategory category) {
+        for (int i = 0; i < modules.size(); i++) {
+            if (modules.get(i)
+                .getKind()
+                .getCategory() == category) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public WarningPriority warningPriority() {
+        if (!isOperational()) return WarningPriority.NONE;
+        if (energyStored == 0L) return WarningPriority.NO_POWER;
+        boolean anyOperational = false;
+        for (int i = 0; i < modules.size(); i++) {
+            if (modules.get(i)
+                .isOperational()) {
+                anyOperational = true;
+                break;
+            }
+        }
+        if (!anyOperational) return WarningPriority.IDLE;
+        return WarningPriority.NONE;
     }
 
     /**
