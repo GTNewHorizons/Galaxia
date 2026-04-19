@@ -101,8 +101,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         }
         refreshRows(viewRoot);
         String signature = buildStructureSignature();
-        boolean structureChanged = !signature.equals(lastStructureSignature)
-            || viewRoot != lastViewRoot
+        boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
             || currentFilter != lastFilter
             || currentSort != lastSort
             || rowsContainer == null;
@@ -253,16 +252,11 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         ButtonWidget<?> button = new ButtonWidget<>().widthRel(1f)
             .height(ROW_H)
             .background(
-                drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())))
+                drawable((ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())))
             .hoverBackground(
                 drawable(
-                    (ctx, x, y, w, h) -> Gui.drawRect(
-                        x,
-                        y,
-                        x + w,
-                        y + h,
-                        EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
+                    (ctx, x, y, w, h) -> Gui
+                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor())))
             .overlay(drawable((ctx, x, y, w, h) -> drawRowContent(row, displayName, bodyIcon, x, y, h)))
             .onMousePressed(btn -> {
                 if (btn != 0 || onAssetSelect == null || hostBody == null) return false;
@@ -271,16 +265,16 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             });
         button.tooltip(t -> {
             t.addLine(row.displayName);
-            t.addLine(StatCollector.translateToLocalFormatted(
-                "galaxia.system_asset.tooltip.body",
-                hostBody != null ? hostBody.displayName() : "?"));
+            t.addLine(
+                StatCollector.translateToLocalFormatted(
+                    "galaxia.system_asset.tooltip.body",
+                    hostBody != null ? hostBody.displayName() : "?"));
             t.addLine(
                 StatCollector.translateToLocalFormatted("galaxia.system_asset.tooltip.status", row.status.name()));
             if (row.warning.isWarning()) {
                 t.addLine(
-                    StatCollector.translateToLocalFormatted(
-                        "galaxia.system_asset.tooltip.warning",
-                        row.warning.name()));
+                    StatCollector
+                        .translateToLocalFormatted("galaxia.system_asset.tooltip.warning", row.warning.name()));
             }
             if (row.underConstruction) {
                 t.addLine(
@@ -297,8 +291,8 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
      * (avoids hover-blocking surfaces wider than the thing they render).
      * Order left-to-right per design brief: name -> body icon -> capability icons.
      */
-    private static void drawRowContent(SystemAssetRowView row, String displayName, ResourceLocation bodyIcon,
-        int x, int y, int h) {
+    private static void drawRowContent(SystemAssetRowView row, String displayName, ResourceLocation bodyIcon, int x,
+        int y, int h) {
         net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         int textY = y + (h - fr.FONT_HEIGHT) / 2 + 1;
         int cursor = x + ROW_PAD_X;
@@ -334,15 +328,16 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private ButtonWidget<?> cycleButton(Supplier<String> labelSupplier, Runnable onClick) {
-        return new ButtonWidget<>().background(
-            drawable(
-                (ctx, x, y, w, h) -> BorderedRect.draw(
-                    x,
-                    y,
-                    w,
-                    h,
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+        return new ButtonWidget<>()
+            .background(
+                drawable(
+                    (ctx, x, y, w, h) -> BorderedRect.draw(
+                        x,
+                        y,
+                        w,
+                        h,
+                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
             .hoverBackground(
                 drawable(
                     (ctx, x, y, w, h) -> BorderedRect.draw(
