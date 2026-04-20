@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 public final class AutomatedOutpost extends CelestialAsset {
 
@@ -82,6 +83,34 @@ public final class AutomatedOutpost extends CelestialAsset {
         if (energyStored < amount) return false;
         energyStored -= amount;
         return true;
+    }
+
+    @Override
+    public boolean hasMiningCapability() {
+        for (ModuleInstance m : modules) {
+            if (m.kind() == OutpostModuleKind.MINER && m.isOperational()) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hasProductionCapability() {
+        for (ModuleInstance m : modules) {
+            OutpostModuleKind k = m.kind();
+            if ((k == OutpostModuleKind.HAMMER || k == OutpostModuleKind.BIG_HAMMER) && m.isOperational())
+                return true;
+        }
+        return false;
+    }
+
+    @Override
+    public WarningPriority warningPriority() {
+        if (!isOperational()) return WarningPriority.NONE;
+        if (energyStored == 0L) return WarningPriority.NO_POWER;
+        for (ModuleInstance m : modules) {
+            if (m.isOperational()) return WarningPriority.NONE;
+        }
+        return WarningPriority.IDLE;
     }
 
     public void tick() {
