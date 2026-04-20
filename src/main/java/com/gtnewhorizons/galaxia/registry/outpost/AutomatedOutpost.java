@@ -97,8 +97,7 @@ public final class AutomatedOutpost extends CelestialAsset {
     public boolean hasProductionCapability() {
         for (ModuleInstance m : modules) {
             OutpostModuleKind k = m.kind();
-            if ((k == OutpostModuleKind.HAMMER || k == OutpostModuleKind.BIG_HAMMER) && m.isOperational())
-                return true;
+            if ((k == OutpostModuleKind.HAMMER || k == OutpostModuleKind.BIG_HAMMER) && m.isOperational()) return true;
         }
         return false;
     }
