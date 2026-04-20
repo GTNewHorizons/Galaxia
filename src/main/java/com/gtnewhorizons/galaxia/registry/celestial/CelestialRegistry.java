@@ -99,7 +99,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.ILIA)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.296 * earthRadiusToAU, 0.00031, seededPhase("ilia_romulus"))
-                .texture(EnumTextures.EGORA.get())
+                .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.24)
                 .properties(
                     b -> b.withGravity(5.2e6, 1200.0)
@@ -118,7 +118,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.ILIA)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.726 * earthRadiusToAU, 0.00018, seededPhase("ilia_remus"))
-                .texture(EnumTextures.EGORA.get())
+                .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.19)
                 .properties(
                     b -> b.withGravity(4.6e6, 1500.0)
@@ -136,7 +136,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.92 * earthRadiusToAU, 0.00022, seededPhase("egora"))
-                .texture(EnumTextures.EGORA.get())
+                .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.18)
                 .properties(
                     b -> b.withGravity(9.8e6, 2400.0)
@@ -160,7 +160,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(0.60 * earthRadiusToAU, 0.00057, seededPhase("panspira"))
-                .texture(EnumTextures.EGORA.get())
+                .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.75)
                 .properties(
                     b -> b.withGravity(1.4e7, 3600.0)
@@ -178,7 +178,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("hemateria"))
-                .texture(EnumTextures.HEMATERIA.get())
+                .texture(EnumTextures.ICON_HEMATERIA.get())
                 .spriteSize(0.825)
                 .properties(
                     b -> b.withGravity(5.5e8, 9500.0)
@@ -201,7 +201,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.HEMATERIA)
                 .objectClass(CelestialObject.Class.MOON)
                 .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("theia"))
-                .texture(EnumTextures.EGORA.get())
+                .texture(EnumTextures.ICON_THEIA.get())
                 .spriteSize(0.06)
                 .properties(
                     b -> b.withGravity(1.8e6, 480.0)
@@ -237,7 +237,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.FROZEN_BELT)
                 .objectClass(CelestialObject.Class.ASTEROID)
                 .circularOrbit(0.18 * earthRadiusToAU, 0.00091, seededPhase("ambergris_fragment"))
-                .texture(EnumTextures.ICON_EGORA.get())
+                .texture(EnumTextures.ICON_AMBERGRIS.get())
                 .spriteSize(0.05)
                 .properties(
                     b -> b.withGravity(6.0e4, 140.0)

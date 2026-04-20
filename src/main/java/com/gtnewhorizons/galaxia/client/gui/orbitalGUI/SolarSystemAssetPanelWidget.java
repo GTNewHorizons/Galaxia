@@ -47,14 +47,14 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private static final int PANEL_W = 348;
     private static final int HEADER_H = 24;
     private static final int CONTROLS_H = 22;
-    private static final int ROW_H = 18;
+    private static final int ROW_H = 20;
     private static final int MAX_VISIBLE_ROWS = 16;
     private static final int CONTENT_SCROLLBAR_GAP = 14;
     private static final int FILTER_BTN_W = 96;
     private static final int SORT_BTN_W = 96;
     private static final int CTRL_GAP = 6;
-    private static final int BODY_ICON_SIZE = 14;
-    private static final int CAP_ICON_SIZE = 12;
+    private static final int BODY_ICON_SIZE = 16;
+    private static final int CAP_ICON_SIZE = 16;
     private static final int CAP_ICON_GAP = 2;
     private static final int ROW_PAD_X = 4;
     private static final int NAME_W = 132;

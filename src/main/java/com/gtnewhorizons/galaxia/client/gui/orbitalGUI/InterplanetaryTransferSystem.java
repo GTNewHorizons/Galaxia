@@ -36,7 +36,11 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
  * wiring an entry in {@link TransferPackageIcons#texture}.
  */
 enum TransferPackageKind {
-    HAMMER
+    HAMMER;
+
+    String displayName() {
+        return "Hammer Package";
+    }
 }
 
 record InterplanetaryTransferJob(String transferId, String displayName, String inventorySummary,

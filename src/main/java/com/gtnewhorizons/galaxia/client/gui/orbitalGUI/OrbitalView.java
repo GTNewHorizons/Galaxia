@@ -1479,9 +1479,9 @@ public class OrbitalView {
         }
 
         private boolean isMapBodyIcon(ResourceLocation texture) {
-            return texture != null && texture.getResourcePath() != null
-                && texture.getResourcePath()
-                    .contains("textures/gui/bodyicons/");
+            if (texture == null || texture.getResourcePath() == null) return false;
+            String path = texture.getResourcePath();
+            return path.contains("textures/gui/bodyicons/") || path.startsWith("textures/gui/icon_");
         }
 
         public void focusOn(CelestialObject body) {
@@ -2060,7 +2060,6 @@ public class OrbitalView {
                 .toStack(1)
                 .getDisplayName();
             String summary = delivery.data.amount() + " x " + itemName;
-            String transportLabel = formatTransportKindLabel(delivery.data.scope());
             double departureDisplayTime = mapServerOrbitalTimeToDisplay(delivery.data.departureOrbitalTime());
             double arrivalDisplayTime = mapServerOrbitalTimeToDisplay(
                 delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalSeconds());
@@ -2069,7 +2068,7 @@ public class OrbitalView {
                 root,
                 sourceBody,
                 destinationBody,
-                transportLabel + " Package",
+                TransferPackageKind.HAMMER.displayName(),
                 summary,
                 departureDisplayTime,
                 displayedTof);
@@ -2089,12 +2088,6 @@ public class OrbitalView {
                 base.trajectoryYs(),
                 base.trajectoryPointCount(),
                 base.packageKind());
-        }
-
-        private String formatTransportKindLabel(LogisticSignal.Scope transportType) {
-            /// TODO: LOCALLIZE
-            if (transportType == null) return "Logistics";
-            return transportType.toString();
         }
 
         private void dispatchSimulatedTransfer() {

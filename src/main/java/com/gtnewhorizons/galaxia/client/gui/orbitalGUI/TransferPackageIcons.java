@@ -15,7 +15,7 @@ import com.cleanroommc.modularui.utils.GlStateManager;
  */
 final class TransferPackageIcons {
 
-    static final ResourceLocation HAMMER = res("textures/gui/transfer_package/hammer.png");
+    static final ResourceLocation HAMMER = res("textures/items/module/item_hammer_package.png");
     static final ResourceLocation MISSING = res("textures/gui/asset_panel/missing.png");
 
     private TransferPackageIcons() {}

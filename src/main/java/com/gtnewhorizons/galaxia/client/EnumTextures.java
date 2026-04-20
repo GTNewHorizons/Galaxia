@@ -33,10 +33,12 @@ public enum EnumTextures {
     HAZARD_RADIATION("textures/gui/icon_radiation.png"),
 
     // Space Object Icons for Galactic map
-    ICON_EGORA("textures/gui/bodyicons/egora.png"),
+    ICON_EGORA("textures/gui/icon_egora.png"),
+    ICON_HEMATERIA("textures/gui/icon_hemateria.png"),
+    ICON_THEIA("textures/gui/icon_theia.png"),
+    ICON_AMBERGRIS("textures/gui/icon_ambergris.png"),
     ICON_STATION("textures/gui/bodyicons/station.png"),
     ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
-    ICON_OUTPOST("textures/gui/bodyicons/outpost.png"),
     ICON_OUTPOST_AUTOMATED("textures/gui/bodyicons/outpost_automated.png"),
 
     // Add more textures here

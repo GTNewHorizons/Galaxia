@@ -1,9 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
@@ -13,13 +9,10 @@ import org.lwjgl.opengl.GL11;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
 /**
  * Texture catalogue + low-level sprite blitter for solar-system asset rows.
- * Placeholder PNGs live under {@code assets/galaxia/textures/gui/asset_panel/} and
- * {@code assets/galaxia/textures/gui/bodyicons/} — final art replaces these without code changes.
  */
 final class AssetPanelIcons {
 
@@ -27,16 +20,13 @@ final class AssetPanelIcons {
     static final ResourceLocation KIND_STATION_AUTOMATED = res("textures/gui/bodyicons/station_automated.png");
     static final ResourceLocation KIND_OUTPOST_AUTOMATED = res("textures/gui/bodyicons/outpost_automated.png");
 
-    static final ResourceLocation CAP_MINING = res("textures/gui/asset_panel/mining.png");
-    static final ResourceLocation CAP_MINING_OFF = res("textures/gui/asset_panel/mining_off.png");
-    static final ResourceLocation CAP_PRODUCTION = res("textures/gui/asset_panel/production.png");
-    static final ResourceLocation CAP_PRODUCTION_OFF = res("textures/gui/asset_panel/production_off.png");
-    static final ResourceLocation CAP_CONSTRUCTION = res("textures/gui/asset_panel/construction.png");
-    static final ResourceLocation CAP_DECONSTRUCTION = res("textures/gui/asset_panel/deconstruction.png");
-    static final ResourceLocation WARN_DANGER = res("textures/gui/asset_panel/warning.png");
-    static final ResourceLocation WARN_IDLE = res("textures/gui/asset_panel/warning_idle.png");
+    static final ResourceLocation CAP_MINING = res("textures/gui/outpost_mining.png");
+    static final ResourceLocation CAP_PRODUCTION = res("textures/gui/outpost_processing.png");
+    static final ResourceLocation CAP_CONSTRUCTION = res("textures/gui/outpost_building.png");
+    static final ResourceLocation CAP_DECONSTRUCTION = res("textures/gui/outpost_destroying.png");
+    static final ResourceLocation WARN_POWERFAIL = res("textures/gui/outpost_powerfail.png");
+    static final ResourceLocation WARN_GENERIC = res("textures/gui/outpost_warning.png");
     static final ResourceLocation MISSING = res("textures/gui/asset_panel/missing.png");
-    static final ResourceLocation BODY_PLACEHOLDER = res("textures/gui/bodyicons/egora.png");
 
     private AssetPanelIcons() {}
 
@@ -54,37 +44,16 @@ final class AssetPanelIcons {
 
     static ResourceLocation warningIcon(WarningPriority warning) {
         return switch (warning) {
-            case NO_POWER, BLOCKED_LOGISTICS -> WARN_DANGER;
-            case MISSING_INPUT, IDLE -> WARN_IDLE;
+            case NO_POWER -> WARN_POWERFAIL;
+            case BLOCKED_LOGISTICS, MISSING_INPUT, IDLE -> WARN_GENERIC;
             case NONE -> null;
         };
     }
 
-    private static final Map<CelestialObjectId, ResourceLocation> BODY_ICON_CACHE = new HashMap<>();
-
-    /**
-     * Resolves a per-body icon at {@code textures/gui/bodyicons/<id>.png}, caching the result.
-     * Falls back to {@link #BODY_PLACEHOLDER} when no per-body PNG exists in the resource pack.
-     */
     static ResourceLocation iconForBody(CelestialObject body) {
-        if (body == null || body.id() == null) return BODY_PLACEHOLDER;
-        CelestialObjectId key = body.id();
-        ResourceLocation cached = BODY_ICON_CACHE.get(key);
-        if (cached != null) return cached;
-        ResourceLocation candidate = res(
-            "textures/gui/bodyicons/" + key.name()
-                .toLowerCase() + ".png");
-        ResourceLocation resolved;
-        try {
-            Minecraft.getMinecraft()
-                .getResourceManager()
-                .getResource(candidate);
-            resolved = candidate;
-        } catch (IOException e) {
-            resolved = BODY_PLACEHOLDER;
-        }
-        BODY_ICON_CACHE.put(key, resolved);
-        return resolved;
+        if (body == null) return MISSING;
+        ResourceLocation tex = body.texture();
+        return tex != null ? tex : MISSING;
     }
 
     /** Blits a 2D sprite at the given screen rect; falls back to the missing-art tile if {@code tex} is null. */
