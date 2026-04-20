@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import net.minecraft.util.StatCollector;
 
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
 
 public enum OutpostModuleKind {
 
@@ -17,23 +16,15 @@ public enum OutpostModuleKind {
                 .toLowerCase());
     }
 
-    public StationModuleCategory getCategory() {
-        return switch (this) {
-            case HAMMER, BIG_HAMMER, MINER -> StationModuleCategory.MINING_SUPPORT;
-            case POWER -> StationModuleCategory.POWER;
-        };
+    public ModuleInstance createInstance() {
+        return OutpostModuleRegistry.createInstance(this);
     }
 
-    public boolean hasMiningCapability() {
-        return this == MINER;
+    public ModuleInstance createInstance(ModuleInstance.ID id) {
+        return OutpostModuleRegistry.createInstance(id, this);
     }
 
-    public static AutomatedOutpostModule forKind(OutpostModuleKind kind) {
-        return switch (kind) {
-            case HAMMER -> ModuleHammer.getDefault();
-            case BIG_HAMMER -> ModuleBigHammer.getDefault();
-            case MINER -> ModuleMiner.getDefault();
-            case POWER -> ModulePower.getDefault();
-        };
+    public ModuleInstance createInstance(ModuleComponent component) {
+        return OutpostModuleRegistry.createInstance(null, this, component);
     }
 }

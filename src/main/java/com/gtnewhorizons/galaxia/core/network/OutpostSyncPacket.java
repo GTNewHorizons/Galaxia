@@ -17,11 +17,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleBigHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePower;
 import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -44,7 +42,6 @@ public final class OutpostSyncPacket implements IMessage {
     private CelestialAsset.ID assetId;
     private byte syncType;
 
-    // FULL SYNC HEADER
     private UUID teamId;
     private CelestialObjectId celestialBodyId;
     private CelestialObjectId systemId;
@@ -52,14 +49,11 @@ public final class OutpostSyncPacket implements IMessage {
     private Buildable.Status assetStatus;
     private long energyStored;
 
-    // FULL SYNC AS DELTAS
     private List<OutpostSyncPacket> fullSyncDeltas;
 
-    // MODULE DELTAS
     private int moduleIndex;
-    private AutomatedOutpostModule moduleData;
+    private ModuleInstance moduleData;
 
-    // INVENTORY / LOGISTICS DELTAS
     private String resourceKey;
     private long inventoryDelta;
     private LogisticsResourceConfig logConfig;
@@ -80,7 +74,7 @@ public final class OutpostSyncPacket implements IMessage {
 
         pkt.fullSyncDeltas = new ArrayList<>();
 
-        List<AutomatedOutpostModule> modules = state.modules();
+        List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
             pkt.fullSyncDeltas.add(moduleAdded(state.assetId, i, modules.get(i)));
         }
@@ -112,8 +106,7 @@ public final class OutpostSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static OutpostSyncPacket moduleAdded(CelestialAsset.ID assetId, int moduleIndex,
-        AutomatedOutpostModule module) {
+    public static OutpostSyncPacket moduleAdded(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance module) {
         OutpostSyncPacket pkt = new OutpostSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = MODULE_ADDED;
@@ -130,8 +123,7 @@ public final class OutpostSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static OutpostSyncPacket moduleUpdated(CelestialAsset.ID assetId, int moduleIndex,
-        AutomatedOutpostModule module) {
+    public static OutpostSyncPacket moduleUpdated(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance module) {
         OutpostSyncPacket pkt = new OutpostSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = MODULE_UPDATED;
@@ -151,7 +143,6 @@ public final class OutpostSyncPacket implements IMessage {
 
     public static OutpostSyncPacket logisticsConfigUpdated(CelestialAsset.ID assetId, String resourceKey,
         int minReserve, int orderSize, boolean importEnabled, boolean supplyEnabled) {
-
         OutpostSyncPacket pkt = new OutpostSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = LOGISTICS_CONFIG_UPDATED;
@@ -189,7 +180,6 @@ public final class OutpostSyncPacket implements IMessage {
                     d.writeDelta(buf);
                 }
             }
-
             default -> writeDelta(buf);
         }
     }
@@ -219,7 +209,6 @@ public final class OutpostSyncPacket implements IMessage {
                     fullSyncDeltas.add(d);
                 }
             }
-
             default -> readDelta(buf);
         }
     }
@@ -231,17 +220,14 @@ public final class OutpostSyncPacket implements IMessage {
                 writeModule(buf, moduleData);
             }
             case MODULE_REMOVED -> buf.writeInt(moduleIndex);
-
             case INVENTORY_UPDATE -> {
                 PacketUtil.writeString(buf, resourceKey);
                 buf.writeLong(inventoryDelta);
             }
-
             case LOGISTICS_CONFIG_UPDATED -> {
                 PacketUtil.writeString(buf, resourceKey);
                 writeLogisticsConfig(buf, logConfig);
             }
-
             case LOGISTICS_CONFIG_REMOVED -> PacketUtil.writeString(buf, resourceKey);
         }
     }
@@ -253,88 +239,91 @@ public final class OutpostSyncPacket implements IMessage {
                 moduleData = readModule(buf);
             }
             case MODULE_REMOVED -> moduleIndex = buf.readInt();
-
             case INVENTORY_UPDATE -> {
                 resourceKey = PacketUtil.readString(buf);
                 inventoryDelta = buf.readLong();
             }
-
             case LOGISTICS_CONFIG_UPDATED -> {
                 resourceKey = PacketUtil.readString(buf);
                 logConfig = readLogisticsConfig(buf);
             }
-
             case LOGISTICS_CONFIG_REMOVED -> resourceKey = PacketUtil.readString(buf);
         }
     }
 
-    private static void writeModule(ByteBuf buf, AutomatedOutpostModule module) {
-        PacketUtil.writeEnum(buf, module.getKind());
+    private static void writeModule(ByteBuf buf, ModuleInstance module) {
+        PacketUtil.writeEnum(buf, module.kind());
         PacketUtil.writeEnum(buf, module.status());
 
-        switch (module.getKind()) {
+        switch (module.kind()) {
             case MINER -> {
-                ModuleMiner m = (ModuleMiner) module;
-                buf.writeInt(m.blacklistedItemKeys.size());
-                for (String k : m.blacklistedItemKeys) PacketUtil.writeString(buf, k);
-                buf.writeBoolean(m.getCopySettingsToOtherMiners());
+                ModuleMiner m = (ModuleMiner) module.component();
+                buf.writeInt(
+                    m.blacklistedItemKeys()
+                        .size());
+                for (String k : m.blacklistedItemKeys()) PacketUtil.writeString(buf, k);
+                buf.writeBoolean(m.copySettingsToOtherMiners());
             }
             case HAMMER -> {
-                ModuleHammer h = (ModuleHammer) module;
+                ModuleHammer h = (ModuleHammer) module.component();
                 PacketUtil.writeEnum(
                     buf,
-                    h.getConfig()
+                    h.config()
                         .mode());
                 buf.writeDouble(
-                    h.getConfig()
+                    h.config()
                         .threshold());
-                PacketUtil.writeEnum(buf, h.getRoutePriority());
+                PacketUtil.writeEnum(buf, h.routePriority());
             }
             case BIG_HAMMER -> {
-                ModuleBigHammer bh = (ModuleBigHammer) module;
+                ModuleHammer bh = (ModuleHammer) module.component();
                 PacketUtil.writeEnum(
                     buf,
-                    bh.getConfig()
+                    bh.config()
                         .mode());
                 buf.writeDouble(
-                    bh.getConfig()
+                    bh.config()
                         .threshold());
-                buf.writeBoolean(bh.getPlanetaryHandling());
-                PacketUtil.writeEnum(buf, bh.getRoutePriority());
+                buf.writeBoolean(bh.planetaryHandling());
+                PacketUtil.writeEnum(buf, bh.routePriority());
             }
             case POWER -> {}
         }
     }
 
-    private static AutomatedOutpostModule readModule(ByteBuf buf) {
+    private static ModuleInstance readModule(ByteBuf buf) {
         OutpostModuleKind kind = PacketUtil.readEnum(buf, OutpostModuleKind.class);
-        AutomatedOutpostModule.Status status = PacketUtil.readEnum(buf, AutomatedOutpostModule.Status.class);
+        Buildable.Status status = PacketUtil.readEnum(buf, Buildable.Status.class);
 
-        AutomatedOutpostModule module = switch (kind) {
+        ModuleInstance module = kind.createInstance();
+
+        switch (kind) {
             case MINER -> {
                 int c = buf.readInt();
                 List<String> blacklist = new ArrayList<>(c);
                 for (int i = 0; i < c; i++) blacklist.add(PacketUtil.readString(buf));
-                yield new ModuleMiner(blacklist).withCopySettingsToOtherMiners(buf.readBoolean());
+                boolean copySettings = buf.readBoolean();
+                module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
             }
             case HAMMER -> {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
                     buf.readDouble());
-                yield new ModuleHammer(cfg, PacketUtil.readEnum(buf, OrbitalTransferPlanner.RoutePriority.class));
+                OrbitalTransferPlanner.RoutePriority priority = PacketUtil
+                    .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
+                module.setComponent(new ModuleHammer(kind, cfg, priority, false, true, false, 64));
             }
             case BIG_HAMMER -> {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
                     buf.readDouble());
                 boolean planetary = buf.readBoolean();
-                yield new ModuleBigHammer(
-                    planetary,
-                    cfg,
-                    PacketUtil.readEnum(buf, OrbitalTransferPlanner.RoutePriority.class));
+                OrbitalTransferPlanner.RoutePriority priority = PacketUtil
+                    .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
+                module.setComponent(new ModuleHammer(kind, cfg, priority, false, planetary, true, 128));
             }
-            case POWER -> new ModulePower();
-        };
+            case POWER -> {}
+        }
 
         module.updateStatus(status);
         return module;
@@ -401,7 +390,7 @@ public final class OutpostSyncPacket implements IMessage {
                 case MODULE_ADDED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
-                        state.modules()
+                        state.modulesInternal()
                             .set(packet.moduleIndex, packet.moduleData);
                     } else {
                         state.addModule(packet.moduleData);
@@ -410,17 +399,16 @@ public final class OutpostSyncPacket implements IMessage {
                 case MODULE_REMOVED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
-                        state.modules()
+                        state.modulesInternal()
                             .remove(packet.moduleIndex);
                     }
                 }
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
-                        applyModuleUpdate(
-                            state.modules()
-                                .get(packet.moduleIndex),
-                            packet.moduleData);
+                        state.modulesInternal()
+                            .get(packet.moduleIndex)
+                            .updateStatus(packet.moduleData.status());
                     }
                 }
                 case INVENTORY_UPDATE -> {
@@ -443,25 +431,6 @@ public final class OutpostSyncPacket implements IMessage {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                     if (r != null) state.logisticsConfig.reset(r);
                 }
-            }
-        }
-
-        private void applyModuleUpdate(AutomatedOutpostModule target, AutomatedOutpostModule source) {
-            target.updateStatus(source.status());
-
-            if (target instanceof ModuleMiner tm && source instanceof ModuleMiner sm) {
-                tm.blacklistedItemKeys.clear();
-                tm.blacklistedItemKeys.addAll(sm.blacklistedItemKeys);
-                tm.withCopySettingsToOtherMiners(sm.getCopySettingsToOtherMiners());
-            }
-
-            if (target instanceof ModuleHammer th && source instanceof ModuleHammer sh) {
-                th.setConfig(sh.getConfig());
-                th.setPriority(sh.getRoutePriority());
-            }
-
-            if (target instanceof ModuleBigHammer tbh && source instanceof ModuleBigHammer sbh) {
-                tbh.setPlanetaryHandling(sbh.getPlanetaryHandling());
             }
         }
     }

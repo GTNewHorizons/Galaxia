@@ -7,11 +7,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
-import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleBigHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePower;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -34,20 +30,24 @@ import io.netty.buffer.ByteBuf;
 public final class OutpostBuildModulePacket implements IMessage {
 
     private CelestialAsset.ID assetId;
+    private ModuleInstance.ID moduleId;
     private OutpostModuleKind moduleKind;
     private boolean instantBuild;
 
     public OutpostBuildModulePacket() {}
 
-    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, boolean instantBuild) {
+    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, ModuleInstance.ID moduleId,
+        boolean instantBuild) {
         this.assetId = assetId;
         this.moduleKind = kind;
+        this.moduleId = moduleId;
         this.instantBuild = instantBuild;
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
+        PacketUtil.writeId(buf, moduleId);
         PacketUtil.writeEnum(buf, moduleKind);
         buf.writeBoolean(instantBuild);
     }
@@ -55,6 +55,7 @@ public final class OutpostBuildModulePacket implements IMessage {
     @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
+        moduleId = PacketUtil.readModuleId(buf);
         moduleKind = PacketUtil.readEnum(buf, OutpostModuleKind.class);
         instantBuild = buf.readBoolean();
     }
@@ -98,15 +99,7 @@ public final class OutpostBuildModulePacket implements IMessage {
                 return null;
             }
 
-            AutomatedOutpostModule module = createModule(kind);
-            if (module == null) {
-                Galaxia.LOG.warn(
-                    "[Outpost] BuildModule: no module for kind {} (player {})",
-                    kind,
-                    player.getGameProfile()
-                        .getName());
-                return null;
-            }
+            ModuleInstance module = kind.createInstance(packet.moduleId);
             if (packet.instantBuild && player.capabilities.isCreativeMode) {
                 module.completeConstruction();
             }
@@ -119,19 +112,9 @@ public final class OutpostBuildModulePacket implements IMessage {
                 player.getGameProfile()
                     .getName());
 
-            // Send a sync packet back so the requesting client sees the new module immediately.
             int moduleIndex = state.modules()
                 .size() - 1;
             return OutpostSyncPacket.moduleAdded(packet.assetId, moduleIndex, module);
-        }
-
-        private AutomatedOutpostModule createModule(OutpostModuleKind kind) {
-            return switch (kind) {
-                case HAMMER -> ModuleHammer.getDefault();
-                case BIG_HAMMER -> ModuleBigHammer.getDefault();
-                case MINER -> ModuleMiner.getDefault();
-                case POWER -> ModulePower.getDefault();
-            };
         }
     }
 }

@@ -8,10 +8,10 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleBigHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -162,22 +162,20 @@ public final class OutpostModuleUpdatePacket implements IMessage {
             var modules = state.modules();
             if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
 
-            AutomatedOutpostModule module = modules.get(packet.moduleIndex);
+            ModuleInstance module = modules.get(packet.moduleIndex);
 
             switch (packet.type) {
                 case 0 -> handleAction(packet, state, module);
                 case 1 -> handleConfig(packet, state, module);
             }
 
-            // Return sync packet instead of full sync
             if (packet.type == 0 && packet.getAction() == Action.DESTROY) {
                 return OutpostSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex);
             }
             return OutpostSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
         }
 
-        private void handleAction(OutpostModuleUpdatePacket packet, AutomatedOutpost state,
-            AutomatedOutpostModule module) {
+        private void handleAction(OutpostModuleUpdatePacket packet, AutomatedOutpost state, ModuleInstance module) {
             switch (packet.getAction()) {
                 case ENABLE -> {
                     if (module.status() == Buildable.Status.DISABLED) {
@@ -189,8 +187,7 @@ public final class OutpostModuleUpdatePacket implements IMessage {
             }
         }
 
-        private void handleConfig(OutpostModuleUpdatePacket packet, AutomatedOutpost state,
-            AutomatedOutpostModule module) {
+        private void handleConfig(OutpostModuleUpdatePacket packet, AutomatedOutpost state, ModuleInstance module) {
             switch (packet.getConfigAction()) {
                 case ADD_MINER_BLACKLIST -> handleMinerBlacklist(
                     module,
@@ -213,56 +210,55 @@ public final class OutpostModuleUpdatePacket implements IMessage {
                     AllowShootingConfig.Mode mode = packet.getEnumPayload(AllowShootingConfig.Mode.class);
                     return new AllowShootingConfig(
                         mode,
-                        h.getConfig()
+                        h.config()
                             .threshold());
                 });
                 case SET_ALLOW_SHOOTING_THRESHOLD -> handleHammerConfig(
                     module,
-                    h -> {
-                        return new AllowShootingConfig(
-                            h.getConfig()
-                                .mode(),
-                            packet.getDoublePayload());
-                    });
+                    h -> new AllowShootingConfig(
+                        h.config()
+                            .mode(),
+                        packet.getDoublePayload()));
                 case SET_PLANETARY_HANDLING -> {
-                    if (module instanceof ModuleBigHammer hammer) {
+                    if (module.kind() == OutpostModuleKind.BIG_HAMMER
+                        && module.component() instanceof ModuleHammer hammer) {
                         hammer.setPlanetaryHandling(packet.getBooleanPayload());
                     }
                 }
-                case SET_ROUTE_PRIORITY -> handleHammerConfig(module, h -> {
+                case SET_ROUTE_PRIORITY -> {
+                    if (!(module.component() instanceof ModuleHammer hammer)) return;
                     OrbitalTransferPlanner.RoutePriority priority = packet
                         .getEnumPayload(OrbitalTransferPlanner.RoutePriority.class);
-                    h.setPriority(priority);
-                    return h.getConfig();
-                });
+                    hammer.setRoutePriority(priority);
+                }
             }
         }
 
-        private void handleMinerBlacklist(AutomatedOutpostModule module, String payload, boolean add,
-            AutomatedOutpost state, int moduleIndex) {
-            if (!(module instanceof ModuleMiner miner)) return;
+        private void handleMinerBlacklist(ModuleInstance module, String payload, boolean add, AutomatedOutpost state,
+            int moduleIndex) {
+            if (!(module.component() instanceof ModuleMiner miner)) return;
             if (add) {
-                miner.withAddedBlacklist(payload);
+                miner.addToBlacklist(payload);
             } else {
-                miner.withRemovedBlacklist(payload);
+                miner.removeFromBlacklist(payload);
             }
-            if (miner.getCopySettingsToOtherMiners()) {
+            if (miner.copySettingsToOtherMiners()) {
                 copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
             }
         }
 
-        private void handleMinerCopySettings(AutomatedOutpostModule module, boolean payload, AutomatedOutpost state,
+        private void handleMinerCopySettings(ModuleInstance module, boolean payload, AutomatedOutpost state,
             int moduleIndex) {
-            if (!(module instanceof ModuleMiner miner)) return;
-            miner.withCopySettingsToOtherMiners(payload);
+            if (!(module.component() instanceof ModuleMiner miner)) return;
+            miner.setCopySettingToOtherMiners(payload);
             if (payload) {
                 copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
             }
         }
 
-        private void handleHammerConfig(AutomatedOutpostModule module,
-            Function<IHammer, AllowShootingConfig> configUpdater) {
-            if (!(module instanceof IHammer hammer)) return;
+        private void handleHammerConfig(ModuleInstance module,
+            Function<ModuleHammer, AllowShootingConfig> configUpdater) {
+            if (!(module.component() instanceof ModuleHammer hammer)) return;
             AllowShootingConfig newConfig = configUpdater.apply(hammer);
             if (newConfig != null) {
                 hammer.setConfig(newConfig);
@@ -275,12 +271,12 @@ public final class OutpostModuleUpdatePacket implements IMessage {
         for (int i = 0; i < state.modules()
             .size(); i++) {
             if (i == sourceModuleIndex) continue;
-            AutomatedOutpostModule other = state.modules()
+            ModuleInstance other = state.modules()
                 .get(i);
-            if (!(other instanceof ModuleMiner miner)) continue;
-            miner.withCopySettingsToOtherMiners(sourceMiner.getCopySettingsToOtherMiners());
-            miner.blacklistedItemKeys.clear();
-            miner.blacklistedItemKeys.addAll(sourceMiner.blacklistedItemKeys);
+            if (other.component() instanceof ModuleMiner miner) {
+                miner.setCopySettingToOtherMiners(sourceMiner.copySettingsToOtherMiners());
+                miner.setBlacklist(sourceMiner.blacklistedItemKeys());
+            }
         }
     }
 }

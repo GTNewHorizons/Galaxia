@@ -4,13 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.IIcon;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants.NBT;
 
@@ -29,7 +27,7 @@ public class ItemRocketSchematic extends ItemMap {
      * schematic item
      *
      * @param silo The rocket silo being saved from
-     * @param The  name entered for the schematic build
+     * @param name The name entered for the schematic build
      *
      * @return The ItemStack with the schematic
      */
@@ -114,11 +112,5 @@ public class ItemRocketSchematic extends ItemMap {
             StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.height", assembly.getTotalHeight()));
         tooltip.add(
             StatCollector.translateToLocalFormatted("item.galaxia.rocket_schematic.width", assembly.getTotalWidth()));
-    }
-
-    // TODO: REMOVE ONCE A TEXTURE IS CREATED
-    @Override
-    public IIcon getIconFromDamage(int damage) {
-        return Items.paper.getIconFromDamage(0);
     }
 }
