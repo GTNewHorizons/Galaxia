@@ -24,7 +24,7 @@ public enum OutpostModuleKind {
         };
     }
 
-    public boolean isMiningCapability() {
+    public boolean hasMiningCapability() {
         return this == MINER;
     }
 

@@ -146,7 +146,7 @@ public final class AutomatedOutpost extends CelestialAsset {
         for (int i = 0; i < modules.size(); i++) {
             if (modules.get(i)
                 .getKind()
-                .isMiningCapability()) return true;
+                .hasMiningCapability()) return true;
         }
         return false;
     }

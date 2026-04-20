@@ -7,27 +7,20 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 
 /**
- * Texture catalogue + sprite blitter for transfer-package dots on the orbital map.
+ * Sprite blitter for transfer-package dots on the orbital map. Textures live in {@link EnumTextures}.
  * Add a new {@link TransferPackageKind} value and a matching {@code case} below to extend.
- * Placeholder PNGs live under {@code assets/galaxia/textures/gui/transfer_package/}.
  */
 final class TransferPackageIcons {
 
-    static final ResourceLocation HAMMER = res("textures/items/module/item_hammer_package.png");
-    static final ResourceLocation MISSING = res("textures/gui/asset_panel/missing.png");
-
     private TransferPackageIcons() {}
 
-    private static ResourceLocation res(String path) {
-        return new ResourceLocation("galaxia", path);
-    }
-
     static ResourceLocation texture(TransferPackageKind kind) {
-        if (kind == null) return MISSING;
+        if (kind == null) return EnumTextures.ICON_MISSING.get();
         return switch (kind) {
-            case HAMMER -> HAMMER;
+            case HAMMER -> EnumTextures.ICON_TRANSFER_HAMMER.get();
         };
     }
 

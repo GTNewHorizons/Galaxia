@@ -41,6 +41,16 @@ public enum EnumTextures {
     ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
     ICON_OUTPOST_AUTOMATED("textures/gui/bodyicons/outpost_automated.png"),
 
+    // Asset panel / transfer package icons
+    ICON_CAP_MINING("textures/gui/outpost_mining.png"),
+    ICON_CAP_PRODUCTION("textures/gui/outpost_processing.png"),
+    ICON_CAP_CONSTRUCTION("textures/gui/outpost_building.png"),
+    ICON_CAP_DECONSTRUCTION("textures/gui/outpost_destroying.png"),
+    ICON_WARN_POWERFAIL("textures/gui/outpost_powerfail.png"),
+    ICON_WARN_GENERIC("textures/gui/outpost_warning.png"),
+    ICON_MISSING("textures/gui/asset_panel/missing.png"),
+    ICON_TRANSFER_HAMMER("textures/items/module/item_hammer_package.png"),
+
     // Add more textures here
     ; // leave trailing semicolon
 
