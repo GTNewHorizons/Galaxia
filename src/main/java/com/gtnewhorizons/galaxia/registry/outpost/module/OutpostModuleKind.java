@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import net.minecraft.util.StatCollector;
 
-
 public enum OutpostModuleKind {
 
     HAMMER,
