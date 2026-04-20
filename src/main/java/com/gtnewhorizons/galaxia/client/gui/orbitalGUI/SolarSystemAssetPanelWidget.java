@@ -58,6 +58,9 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private static final int CAP_ICON_GAP = 2;
     private static final int ROW_PAD_X = 4;
     private static final int NAME_W = 132;
+    private static final int ROW_GAP = 2;
+    private static final int PANEL_PAD_X = 10;
+    private static final int SCROLL_PAD_X = 4;
 
     private final CelestialObject galaxyRoot;
     private final Supplier<CelestialObject> viewRootSupplier;
@@ -179,7 +182,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private void rebuildPanel(CelestialObject viewRoot) {
         String title = "Assets \u2014 " + viewRoot.displayName() + " system";
         int rowsToShow = Math.min(MAX_VISIBLE_ROWS, Math.max(1, visibleRows.size()));
-        int viewportH = visibleRows.isEmpty() ? 18 : rowsToShow * (ROW_H + 2);
+        int viewportH = visibleRows.isEmpty() ? 18 : rowsToShow * (ROW_H + ROW_GAP);
         int panelH = HEADER_H + CONTROLS_H + viewportH + 8;
 
         panelRoot.removeAll();
@@ -202,19 +205,19 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         panelRoot.child(
             new TextWidget<>(IKey.str(title)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(10, 7));
+                .pos(PANEL_PAD_X, 7));
 
         int controlsY = HEADER_H + 3;
         panelRoot.child(
             cycleButton(
                 () -> "Filter: " + currentFilter.getDisplayName(),
-                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values())).pos(10, controlsY)
+                () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values())).pos(PANEL_PAD_X, controlsY)
                     .size(FILTER_BTN_W, CONTROLS_H - 6));
         panelRoot.child(
             cycleButton(
                 () -> "Sort: " + currentSort.getDisplayName(),
                 () -> currentSort = cycleEnum(currentSort, SystemAssetSort.values()))
-                    .pos(10 + FILTER_BTN_W + CTRL_GAP, controlsY)
+                    .pos(PANEL_PAD_X + FILTER_BTN_W + CTRL_GAP, controlsY)
                     .size(SORT_BTN_W, CONTROLS_H - 6));
 
         int listY = HEADER_H + CONTROLS_H + 2;
@@ -222,22 +225,22 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             panelRoot.child(
                 new TextWidget<>(IKey.str("No assets in this system."))
                     .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                    .pos(10, listY + 4));
+                    .pos(PANEL_PAD_X, listY + 4));
             panelRoot.scheduleResize();
             scheduleResize();
             return;
         }
 
-        int contentHeight = visibleRows.size() * (ROW_H + 2);
+        int contentHeight = visibleRows.size() * (ROW_H + ROW_GAP);
         rowsContainer = new ParentWidget<>().widthRel(1f)
             .height(contentHeight);
         scrollData = new VerticalScrollData();
-        scrollWidget = new ScrollWidget<>(scrollData).pos(4, listY)
-            .size(PANEL_W - 8 - CONTENT_SCROLLBAR_GAP, viewportH);
+        scrollWidget = new ScrollWidget<>(scrollData).pos(SCROLL_PAD_X, listY)
+            .size(PANEL_W - 2 * SCROLL_PAD_X - CONTENT_SCROLLBAR_GAP, viewportH);
         scrollWidget.child(rowsContainer);
         panelRoot.child(scrollWidget);
         for (int i = 0; i < visibleRows.size(); i++) {
-            rowsContainer.child(buildRowWidget(visibleRows.get(i)).pos(0, i * (ROW_H + 2)));
+            rowsContainer.child(buildRowWidget(visibleRows.get(i)).pos(0, i * (ROW_H + ROW_GAP)));
         }
         scrollData.setScrollSize(contentHeight);
         panelRoot.scheduleResize();
