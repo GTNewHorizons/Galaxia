@@ -18,15 +18,10 @@ import net.minecraftforge.event.world.WorldEvent;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -40,31 +35,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleBigHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePower;
+import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
-/**
- * Handles JSON persistence for station and outpost state.
- *
- * <p>
- * There is one canonical persisted station registry:
- *
- * <pre>
- * world/galaxiadata/
- *   _assets.json   <- all celestial assets, with embedded outpost state where applicable
- *   _tasks.json    <- global in-flight LogisticsDelivery list
- * </pre>
- *
- * <p>
- * {@link CelestialAssetStore} is restored from `_assets.json`.
- * {@link CelestialClient} is then reconstructed from the embedded outpost payloads
- * inside those same asset records. There is no second persisted outpost registry.
- */
 public final class OutpostPersistenceManager {
 
     private static final String DATA_DIR = "galaxiadata";
@@ -76,9 +53,7 @@ public final class OutpostPersistenceManager {
     private File worldSaveDir;
 
     public OutpostPersistenceManager() {
-        gson = new GsonBuilder()
-            .registerTypeHierarchyAdapter(AutomatedOutpostModule.class, new OutpostModuleDataAdapter())
-            .setPrettyPrinting()
+        gson = new GsonBuilder().setPrettyPrinting()
             .create();
     }
 
@@ -278,31 +253,27 @@ public final class OutpostPersistenceManager {
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
         out.modules = new ArrayList<>();
-        for (AutomatedOutpostModule m : state.modules()) {
+        for (ModuleInstance m : state.modules()) {
             ModuleJson mj = new ModuleJson();
-            mj.kind = m.getKind()
+            mj.kind = m.kind()
                 .name();
             mj.status = m.status()
                 .name();
-            mj.constructionProgress = m.getConstructionProgress();
-            mj.cooldownTicks = m.cooldownTicks;
-            mj.energyBuffer = m.energyBuffer;
+            mj.constructionProgress = 0f;
+            mj.cooldownTicks = m.cooldownTicks();
+            mj.energyBuffer = m.energyBuffer();
             JsonObject moduleData = new JsonObject();
-            if (m instanceof ModuleMiner miner) {
-                moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys));
-            } else if (m instanceof ModuleHammer hammer) {
-                moduleData.add("config", PURE_GSON.toJsonTree(hammer.getConfig()));
-                moduleData.add("routePriority", PURE_GSON.toJsonTree(hammer.getRoutePriority()));
-            } else if (m instanceof ModuleBigHammer bigHammer) {
-                moduleData.add("config", PURE_GSON.toJsonTree(bigHammer.getConfig()));
-                moduleData.add("routePriority", PURE_GSON.toJsonTree(bigHammer.getRoutePriority()));
-                moduleData.addProperty("planetaryHandling", bigHammer.getPlanetaryHandling());
-            } else if (m instanceof ModulePower) {
-                // No extra data for ModulePower
+            if (m.component() instanceof ModuleMiner miner) {
+                moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
+                moduleData.addProperty("copySettingsToOtherMiners", miner.copySettingsToOtherMiners());
+            } else if (m.component() instanceof ModuleHammer hammer) {
+                moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
+                moduleData.add("routePriority", PURE_GSON.toJsonTree(hammer.routePriority()));
+                moduleData.addProperty("planetaryHandling", hammer.planetaryHandling());
             }
             mj.data = moduleData;
             mj.consumedResources = new LinkedHashMap<>();
-            for (Map.Entry<ItemStack, Long> e : m.getConsumedResources()
+            for (Map.Entry<ItemStack, Long> e : m.getConstructionInventory()
                 .entrySet()) {
                 mj.consumedResources.put(
                     ItemStackWrapper.of(e.getKey())
@@ -346,13 +317,14 @@ public final class OutpostPersistenceManager {
 
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
-                AutomatedOutpostModule module;
-                if (mj.kind == null) {
-                    continue;
-                }
+                if (mj.kind == null) continue;
+                OutpostModuleKind kind = OutpostModuleKind.valueOf(mj.kind);
+                ModuleInstance module = kind.createInstance();
+
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
-                switch (mj.kind) {
-                    case "HAMMER" -> {
+
+                switch (kind) {
+                    case HAMMER -> {
                         AllowShootingConfig config = AllowShootingConfig.ALWAYS;
                         OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
                         if (data.has("config")) {
@@ -362,9 +334,9 @@ public final class OutpostPersistenceManager {
                             priority = PURE_GSON
                                 .fromJson(data.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
                         }
-                        module = new ModuleHammer(config, priority);
+                        module.setComponent(new ModuleHammer(kind, config, priority, false, true, false, 64));
                     }
-                    case "BIG_HAMMER" -> {
+                    case BIG_HAMMER -> {
                         AllowShootingConfig config = AllowShootingConfig.ALWAYS;
                         OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
                         boolean planetaryHandling = false;
@@ -379,36 +351,37 @@ public final class OutpostPersistenceManager {
                             planetaryHandling = data.get("planetaryHandling")
                                 .getAsBoolean();
                         }
-                        module = new ModuleBigHammer(planetaryHandling, config, priority);
+                        module.setComponent(
+                            new ModuleHammer(kind, config, priority, false, planetaryHandling, true, 128));
                     }
-                    case "MINER" -> {
+                    case MINER -> {
                         List<String> blacklist = new ArrayList<>();
+                        boolean copySettings = false;
                         if (data.has("blacklistedItemKeys")) {
                             blacklist = PURE_GSON.fromJson(
                                 data.get("blacklistedItemKeys"),
                                 new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
                         }
-                        module = new ModuleMiner(blacklist);
+                        if (data.has("copySettingsToOtherMiners")) {
+                            copySettings = data.get("copySettingsToOtherMiners")
+                                .getAsBoolean();
+                        }
+                        module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
                     }
-                    case "POWER" -> {
-                        module = new ModulePower();
-                    }
-                    default -> {
-                        continue;
-                    }
+                    case POWER -> {}
                 }
+
                 if (mj.status != null) {
                     module.updateStatus(Buildable.Status.valueOf(mj.status));
                 }
-                module.setConstructionProgress(mj.constructionProgress);
-                module.cooldownTicks = mj.cooldownTicks;
-                module.energyBuffer = mj.energyBuffer;
+                module.setTicks(mj.cooldownTicks);
+                module.setEnergyBuffer(mj.energyBuffer);
                 module.clearConsumedResources();
                 if (mj.consumedResources != null) {
                     for (Map.Entry<String, Long> e : mj.consumedResources.entrySet()) {
                         ItemStackWrapper key = ItemStackWrapper.fromKey(e.getKey());
                         if (key != null) {
-                            module.getConsumedResources()
+                            module.getConstructionInventory()
                                 .put(key.toStack(e.getValue()), e.getValue());
                         }
                     }
@@ -530,81 +503,5 @@ public final class OutpostPersistenceManager {
         String toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
-    }
-
-    private static final class OutpostModuleDataAdapter
-        implements JsonSerializer<AutomatedOutpostModule>, JsonDeserializer<AutomatedOutpostModule> {
-
-        private static final String TYPE_FIELD = "type";
-
-        @Override
-        public JsonElement serialize(AutomatedOutpostModule src, Type typeOfSrc, JsonSerializationContext context) {
-            JsonObject obj = new JsonObject();
-            obj.addProperty(
-                TYPE_FIELD,
-                src.getKind()
-                    .name());
-            if (src instanceof ModuleMiner miner) {
-                obj.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys));
-            } else if (src instanceof ModuleHammer hammer) {
-                obj.add("config", PURE_GSON.toJsonTree(hammer.getConfig()));
-                obj.add("routePriority", PURE_GSON.toJsonTree(hammer.getRoutePriority()));
-            } else if (src instanceof ModuleBigHammer bigHammer) {
-                obj.add("config", PURE_GSON.toJsonTree(bigHammer.getConfig()));
-                obj.add("routePriority", PURE_GSON.toJsonTree(bigHammer.getRoutePriority()));
-                obj.addProperty("planetaryHandling", bigHammer.getPlanetaryHandling());
-            }
-            return obj;
-        }
-
-        @Override
-        public AutomatedOutpostModule deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-            throws JsonParseException {
-            JsonObject obj = json.getAsJsonObject();
-            String type = obj.get(TYPE_FIELD)
-                .getAsString();
-            return switch (type) {
-                case "HAMMER" -> {
-                    AllowShootingConfig config = AllowShootingConfig.ALWAYS;
-                    OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
-                    if (obj.has("config")) {
-                        config = PURE_GSON.fromJson(obj.get("config"), AllowShootingConfig.class);
-                    }
-                    if (obj.has("routePriority")) {
-                        priority = PURE_GSON
-                            .fromJson(obj.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
-                    }
-                    yield new ModuleHammer(config, priority);
-                }
-                case "BIG_HAMMER" -> {
-                    AllowShootingConfig config = AllowShootingConfig.ALWAYS;
-                    OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
-                    boolean planetaryHandling = false;
-                    if (obj.has("config")) {
-                        config = PURE_GSON.fromJson(obj.get("config"), AllowShootingConfig.class);
-                    }
-                    if (obj.has("routePriority")) {
-                        priority = PURE_GSON
-                            .fromJson(obj.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
-                    }
-                    if (obj.has("planetaryHandling")) {
-                        planetaryHandling = obj.get("planetaryHandling")
-                            .getAsBoolean();
-                    }
-                    yield new ModuleBigHammer(planetaryHandling, config, priority);
-                }
-                case "MINER" -> {
-                    List<String> blacklist = new ArrayList<>();
-                    if (obj.has("blacklistedItemKeys")) {
-                        blacklist = PURE_GSON.fromJson(
-                            obj.get("blacklistedItemKeys"),
-                            new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
-                    }
-                    yield new ModuleMiner(blacklist);
-                }
-                case "POWER" -> new ModulePower();
-                default -> throw new JsonParseException("Unknown module type: " + type);
-            };
-        }
     }
 }

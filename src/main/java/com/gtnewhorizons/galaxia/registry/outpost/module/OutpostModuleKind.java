@@ -15,12 +15,15 @@ public enum OutpostModuleKind {
                 .toLowerCase());
     }
 
-    public static AutomatedOutpostModule forKind(OutpostModuleKind kind) {
-        return switch (kind) {
-            case HAMMER -> ModuleHammer.getDefault();
-            case BIG_HAMMER -> ModuleBigHammer.getDefault();
-            case MINER -> ModuleMiner.getDefault();
-            case POWER -> ModulePower.getDefault();
-        };
+    public ModuleInstance createInstance() {
+        return OutpostModuleRegistry.createInstance(this);
+    }
+
+    public ModuleInstance createInstance(ModuleInstance.ID id) {
+        return OutpostModuleRegistry.createInstance(id, this);
+    }
+
+    public ModuleInstance createInstance(ModuleComponent component) {
+        return OutpostModuleRegistry.createInstance(null, this, component);
     }
 }

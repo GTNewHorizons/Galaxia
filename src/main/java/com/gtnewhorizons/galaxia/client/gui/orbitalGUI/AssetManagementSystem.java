@@ -39,7 +39,6 @@ import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostRequestSyncPacket;
@@ -47,16 +46,15 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.AutomatedOutpostModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleBigHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePower;
 import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import codechicken.nei.recipe.GuiCraftingRecipe;
@@ -798,9 +796,9 @@ public final class AssetManagementSystem {
                 }
                 if (outpost != null && state.configuringModuleIndex < outpost.modules()
                     .size()) {
-                    AutomatedOutpostModule module = outpost.modules()
+                    ModuleInstance module = outpost.modules()
                         .get(state.configuringModuleIndex);
-                    if (module.getKind() == OutpostModuleKind.MINER) {
+                    if (module.kind() == OutpostModuleKind.MINER) {
                         state.minerConfigScrollPosition = scroll;
                     } else {
                         state.logisticsScrollPosition = scroll;
@@ -825,9 +823,9 @@ public final class AssetManagementSystem {
                 }
                 if (outpost != null && state.configuringModuleIndex < outpost.modules()
                     .size()) {
-                    AutomatedOutpostModule module = outpost.modules()
+                    ModuleInstance module = outpost.modules()
                         .get(state.configuringModuleIndex);
-                    return module.getKind() == OutpostModuleKind.MINER ? state.minerConfigScrollPosition
+                    return module.kind() == OutpostModuleKind.MINER ? state.minerConfigScrollPosition
                         : state.logisticsScrollPosition;
                 }
             }
@@ -1199,13 +1197,13 @@ public final class AssetManagementSystem {
             } else {
                 if (state.configuringModuleIndex >= 0 && state.configuringModuleIndex < outpost.modules()
                     .size()) {
-                    AutomatedOutpostModule module = outpost.modules()
+                    ModuleInstance module = outpost.modules()
                         .get(state.configuringModuleIndex);
-                    if (module instanceof IHammer) {
+                    if (module.component() instanceof ModuleHammer) {
                         buildLogisticsSubMenu(modal, outpost);
-                    } else if (module.getKind() == OutpostModuleKind.MINER) {
+                    } else if (module.kind() == OutpostModuleKind.MINER) {
                         buildMinerConfigSubMenu(modal, outpost, module);
-                    } else if (module.getKind() == OutpostModuleKind.POWER) {
+                    } else if (module.kind() == OutpostModuleKind.POWER) {
                         buildPowerConfigSubMenu(modal, outpost, module);
                     }
                 } else if (state.assetManagementTab == 0) {
@@ -1281,9 +1279,9 @@ public final class AssetManagementSystem {
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f);
             int y = 0;
 
-            List<AutomatedOutpostModule> modules = outpost.modules();
+            List<ModuleInstance> modules = outpost.modules();
             for (int i = 0; i < modules.size(); i++) {
-                AutomatedOutpostModule m = modules.get(i);
+                ModuleInstance m = modules.get(i);
                 final int index = i;
                 ParentWidget<?> row = new ParentWidget<>().pos(0, y)
                     .widthRel(1f)
@@ -1295,31 +1293,29 @@ public final class AssetManagementSystem {
 
                 row.child(
                     createBodyText(
-                        m.getKind()
+                        m.kind()
                             .getDisplayName(),
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(8, 6));
 
-                boolean isHammer = m.getKind() == OutpostModuleKind.HAMMER
-                    || m.getKind() == OutpostModuleKind.BIG_HAMMER;
-                boolean isConfigurable = isHammer || m.getKind() == OutpostModuleKind.MINER
-                    || m.getKind() == OutpostModuleKind.POWER;
-                boolean operational = m.status() != AutomatedOutpostModule.Status.IN_CONSTRUCTION;
-                boolean isDisabled = m.status() == AutomatedOutpostModule.Status.DISABLED;
+                boolean isHammer = m.kind() == OutpostModuleKind.HAMMER || m.kind() == OutpostModuleKind.BIG_HAMMER;
+                boolean isConfigurable = isHammer || m.kind() == OutpostModuleKind.MINER
+                    || m.kind() == OutpostModuleKind.POWER;
+                boolean operational = m.status() != Buildable.Status.IN_CONSTRUCTION;
+                boolean isDisabled = m.status() == Buildable.Status.DISABLED;
 
                 if (!operational) {
                     row.child(
-                        createBodyText(
-                            "Building... " + (int) (m.getConstructionProgress() * 100) + "%",
-                            EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, 22));
+                        createBodyText("Building... " + 0 + "%", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+                            .pos(8, 22));
                     row.child(drawable((c, x, y1, w, h) -> {
                         Gui.drawRect(x, y1, x + 100, y1 + 4, 0xFF333333);
-                        Gui.drawRect(x, y1, x + (int) (m.getConstructionProgress() * 100), y1 + 4, 0xFF00FF00);
+                        Gui.drawRect(x, y1, x + 0, y1 + 4, 0xFF00FF00);
                     }).asWidget()
                         .pos(130, 24)
                         .size(100, 4));
                 } else {
                     String statusLabel = isDisabled ? "Disabled" : "Active";
-                    String powerLabel = m.getKind() == OutpostModuleKind.POWER
+                    String powerLabel = m.kind() == OutpostModuleKind.POWER
                         ? "Generating power: " + (isDisabled ? 0 : -m.getDisplayedPowerEuPerTick()) + " EU/t"
                         : "Power: " + Math.max(0L, m.getDisplayedPowerEuPerTick()) + " EU/t";
                     row.child(
@@ -1337,17 +1333,15 @@ public final class AssetManagementSystem {
                     OutpostModuleUpdatePacket.Action action = isDisabled ? OutpostModuleUpdatePacket.Action.ENABLE
                         : OutpostModuleUpdatePacket.Action.DISABLE;
                     state.armedModuleDestroyIndex = -1;
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(OutpostModuleUpdatePacket.action(outpost.assetId, index, action));
+                    CelestialClient.updateModuleAction(outpost.assetId, index, action);
                 }).pos(disableX, 12)
                     .size(disableWidth, 20));
                 boolean armedDestroy = state.armedModuleDestroyIndex == index;
                 row.child(createTwoStageDestructiveButton("Destroy", armedDestroy, true, () -> {
                     if (state.armedModuleDestroyIndex == index) {
                         state.armedModuleDestroyIndex = -1;
-                        Galaxia.GALAXIA_NETWORK.sendToServer(
-                            OutpostModuleUpdatePacket
-                                .action(outpost.assetId, index, OutpostModuleUpdatePacket.Action.DESTROY));
+                        CelestialClient
+                            .updateModuleAction(outpost.assetId, index, OutpostModuleUpdatePacket.Action.DESTROY);
                     } else {
                         state.armedModuleDestroyIndex = index;
                         markStructureDirty();
@@ -1450,8 +1444,7 @@ public final class AssetManagementSystem {
                     createBodyText(buildModuleCost(kind), EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(8, 64)
                         .size(Math.max(250, pickerWidth - 160), 20));
                 row.child(createFooterButton(buildEnabled ? "Build" : "Unavailable", buildEnabled, () -> {
-                    Galaxia.GALAXIA_NETWORK.sendToServer(
-                        new OutpostBuildModulePacket(outpost.assetId, kind, callbacks.isCreativeBuildModeEnabled()));
+                    CelestialClient.createModule(outpost.assetId, kind, callbacks.isCreativeBuildModeEnabled());
                     state.selectingModuleBuild = false;
                     markStructureDirty();
                 }).pos(pickerWidth - 100, 34)
@@ -1747,18 +1740,19 @@ public final class AssetManagementSystem {
          */
         private void buildLogisticsSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost) {
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 106);
-            List<AutomatedOutpostModule> modules = outpost.modules();
-            AutomatedOutpostModule module = (state.configuringModuleIndex >= 0
-                && state.configuringModuleIndex < modules.size()) ? modules.get(state.configuringModuleIndex) : null;
-            String moduleLabel = module != null ? module.getKind()
+            List<ModuleInstance> modules = outpost.modules();
+            ModuleInstance module = (state.configuringModuleIndex >= 0 && state.configuringModuleIndex < modules.size())
+                ? modules.get(state.configuringModuleIndex)
+                : null;
+            String moduleLabel = module != null ? module.kind()
                 .getDisplayName() : "HAMMER";
-            boolean isBigHammer = module instanceof ModuleBigHammer;
-            IHammer hammer = (IHammer) module;
+            boolean isBigHammer = module.component() instanceof ModuleHammer;
+            ModuleHammer hammer = (ModuleHammer) module.component();
 
             // Extract current shooting config and planetary flag from live module data
-            AllowShootingConfig shootingCfg = hammer.getConfig();
-            boolean planetaryHandling = hammer.getPlanetaryHandling();
-            OrbitalTransferPlanner.RoutePriority routePriority = hammer.getRoutePriority();
+            AllowShootingConfig shootingCfg = hammer.config();
+            boolean planetaryHandling = hammer.planetaryHandling();
+            OrbitalTransferPlanner.RoutePriority routePriority = hammer.routePriority();
             AllowShootingConfig.Mode currentMode = shootingCfg.mode();
             double currentThreshold = shootingCfg.threshold();
 
@@ -1790,7 +1784,7 @@ public final class AssetManagementSystem {
                     case WHEN_DV_UNDER -> AllowShootingConfig.Mode.WHEN_TOF_UNDER;
                     case WHEN_TOF_UNDER -> AllowShootingConfig.Mode.ALWAYS;
                 };
-                applyShootingModeUpdate(hammer, outpost, modIdx, isBigHammer, next, currentThreshold);
+                applyShootingModeUpdate(module, outpost, modIdx, isBigHammer, next, currentThreshold);
                 markStructureDirty();
             }).pos(74, 52)
                 .size(56, 18));
@@ -1799,21 +1793,21 @@ public final class AssetManagementSystem {
                 double step = currentMode == AllowShootingConfig.Mode.WHEN_DV_UNDER ? 1.0 : 3600.0;
                 modal.child(createFooterButton("-", module != null, () -> {
                     double newT = Math.max(0.0, currentThreshold - step);
-                    applyShootingThresholdUpdate(hammer, outpost, modIdx, isBigHammer, currentMode, newT);
+                    applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, newT);
                     markStructureDirty();
                 }).pos(136, 52)
                     .size(18, 18));
                 modal.child(
                     createDecimalValueWidget(
-                        () -> getCurrentShootingThreshold(hammer, isBigHammer),
-                        value -> applyShootingThresholdUpdate(hammer, outpost, modIdx, isBigHammer, currentMode, value),
+                        () -> getCurrentShootingThreshold(module, isBigHammer),
+                        value -> applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, value),
                         0.0,
                         999999999.0,
                         currentMode == AllowShootingConfig.Mode.WHEN_TOF_UNDER).pos(158, 52)
                             .size(44, 18));
                 modal.child(createFooterButton("+", module != null, () -> {
                     double newT = currentThreshold + step;
-                    applyShootingThresholdUpdate(hammer, outpost, modIdx, isBigHammer, currentMode, newT);
+                    applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, newT);
                     markStructureDirty();
                 }).pos(206, 52)
                     .size(18, 18));
@@ -1822,14 +1816,11 @@ public final class AssetManagementSystem {
             if (isBigHammer) {
                 modal.child(createBodyText("Planetary:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(234, 56));
                 modal.child(createFooterButton(planetaryHandling ? "ON" : "OFF", true, () -> {
-                    ModuleBigHammer bh = (ModuleBigHammer) hammer;
-                    bh.setPlanetaryHandling(!planetaryHandling);
-                    Galaxia.GALAXIA_NETWORK.sendToServer(
-                        OutpostModuleUpdatePacket.config(
-                            outpost.assetId,
-                            modIdx,
-                            OutpostModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING,
-                            !planetaryHandling));
+                    CelestialClient.updateModuleConfig(
+                        outpost.assetId,
+                        modIdx,
+                        OutpostModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING,
+                        !planetaryHandling);
                     markStructureDirty();
                 }).pos(296, 52)
                     .size(34, 18));
@@ -1840,9 +1831,9 @@ public final class AssetManagementSystem {
             modal.child(
                 createFooterButton(
                     routePriority == OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV ? "dV" : "TOF",
-                    hammer != null,
+                    module != null,
                     () -> {
-                        applyRoutePriorityUpdate(hammer, outpost, modIdx, routePriority.toggled());
+                        applyRoutePriorityUpdate(module, outpost, modIdx, routePriority.toggled());
                         markStructureDirty();
                     }).pos(74, 74)
                         .size(56, 18));
@@ -2010,54 +2001,46 @@ public final class AssetManagementSystem {
             modal.child(scroll);
         }
 
-        private void applyShootingModeUpdate(IHammer module, AutomatedOutpost outpost, int modIdx, boolean isBigHammer,
-            AllowShootingConfig.Mode newMode, double threshold) {
+        private void applyShootingModeUpdate(ModuleInstance module, AutomatedOutpost outpost, int modIdx,
+            boolean isBigHammer, AllowShootingConfig.Mode newMode, double threshold) {
             if (module == null) return;
-            AllowShootingConfig newCfg = new AllowShootingConfig(newMode, threshold);
-            module.setConfig(newCfg);
-            Galaxia.GALAXIA_NETWORK.sendToServer(
-                OutpostModuleUpdatePacket.config(
-                    outpost.assetId,
-                    modIdx,
-                    OutpostModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE,
-                    newMode));
+            CelestialClient.updateModuleConfig(
+                outpost.assetId,
+                modIdx,
+                OutpostModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE,
+                newMode);
         }
 
-        private void applyShootingThresholdUpdate(IHammer module, AutomatedOutpost outpost, int modIdx,
+        private void applyShootingThresholdUpdate(ModuleInstance module, AutomatedOutpost outpost, int modIdx,
             boolean isBigHammer, AllowShootingConfig.Mode mode, double newThreshold) {
             if (module == null) return;
-            AllowShootingConfig newCfg = new AllowShootingConfig(mode, newThreshold);
-            module.setConfig(newCfg);
-            Galaxia.GALAXIA_NETWORK.sendToServer(
-                OutpostModuleUpdatePacket.config(
-                    outpost.assetId,
-                    modIdx,
-                    OutpostModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD,
-                    newThreshold));
+            CelestialClient.updateModuleConfig(
+                outpost.assetId,
+                modIdx,
+                OutpostModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD,
+                newThreshold);
         }
 
-        private double getCurrentShootingThreshold(IHammer module, boolean isBigHammer) {
+        private double getCurrentShootingThreshold(ModuleInstance module, boolean isBigHammer) {
             if (module == null) return 0.0;
-            return module.getConfig()
+            if (!(module.component() instanceof ModuleHammer hc)) return 0.0;
+            return hc.config()
                 .threshold();
         }
 
-        private void applyRoutePriorityUpdate(IHammer module, AutomatedOutpost outpost, int modIdx,
+        private void applyRoutePriorityUpdate(ModuleInstance module, AutomatedOutpost outpost, int modIdx,
             OrbitalTransferPlanner.RoutePriority priority) {
             if (module == null || priority == null) return;
-            module.setPriority(priority);
-            Galaxia.GALAXIA_NETWORK.sendToServer(
-                OutpostModuleUpdatePacket.config(
-                    outpost.assetId,
-                    modIdx,
-                    OutpostModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY,
-                    priority));
+            CelestialClient.updateModuleConfig(
+                outpost.assetId,
+                modIdx,
+                OutpostModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY,
+                priority);
         }
 
-        private void buildMinerConfigSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost,
-            AutomatedOutpostModule module) {
+        private void buildMinerConfigSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost, ModuleInstance module) {
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 88);
-            ModuleMiner miner = (ModuleMiner) module;
+            ModuleMiner miner = (ModuleMiner) module.component();
             List<MinerOreOption> options = buildMinerOreOptions(outpost, miner);
 
             modal.child(createTitleText("Miner Configuration").pos(12, 10));
@@ -2067,14 +2050,12 @@ public final class AssetManagementSystem {
             }).pos(12, 32)
                 .size(60, 20));
             modal.child(
-                createFooterButton(miner.getCopySettingsToOtherMiners() ? "Copy: ON" : "Copy Settings", true, () -> {
-                    miner.withCopySettingsToOtherMiners(!miner.getCopySettingsToOtherMiners());
-                    Galaxia.GALAXIA_NETWORK.sendToServer(
-                        OutpostModuleUpdatePacket.config(
-                            outpost.assetId,
-                            state.configuringModuleIndex,
-                            OutpostModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS,
-                            miner.getCopySettingsToOtherMiners()));
+                createFooterButton(miner.copySettingsToOtherMiners() ? "Copy: ON" : "Copy Settings", true, () -> {
+                    CelestialClient.updateModuleConfig(
+                        outpost.assetId,
+                        state.configuringModuleIndex,
+                        OutpostModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS,
+                        !miner.copySettingsToOtherMiners());
                     markStructureDirty();
                 }).pos(82, 32)
                     .size(100, 20)
@@ -2123,18 +2104,11 @@ public final class AssetManagementSystem {
                         .width(360));
                 row.child(createCheckboxButton(option.blacklisted(), () -> {
                     boolean blacklisted = miner.isBlacklisted(option.key());
-                    if (blacklisted) {
-                        miner.withRemovedBlacklist(option.key());
-                    } else {
-                        miner.withAddedBlacklist(option.key());
-                    }
-                    Galaxia.GALAXIA_NETWORK.sendToServer(
-                        OutpostModuleUpdatePacket.config(
-                            outpost.assetId,
-                            state.configuringModuleIndex,
-                            blacklisted ? OutpostModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST
-                                : OutpostModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST,
-                            option.key()));
+                    OutpostModuleUpdatePacket.ConfigAction action = blacklisted
+                        ? OutpostModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST
+                        : OutpostModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST;
+                    CelestialClient
+                        .updateModuleConfig(outpost.assetId, state.configuringModuleIndex, action, option.key());
                     markStructureDirty();
                 }).pos(434, 4)
                     .size(20, 20));
@@ -2199,8 +2173,7 @@ public final class AssetManagementSystem {
             return options;
         }
 
-        private void buildPowerConfigSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost,
-            AutomatedOutpostModule module) {
+        private void buildPowerConfigSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost, ModuleInstance module) {
             modal.child(createTitleText("Power Configuration").pos(12, 10));
             modal.child(createFooterButton("Back", true, () -> {
                 state.configuringModuleIndex = -1;
@@ -2210,7 +2183,8 @@ public final class AssetManagementSystem {
             modal.child(createBodyText("No settings yet.", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 70));
             modal.child(
                 createBodyText(
-                    "Generating power: " + ModulePower.GENERATION_EU_PER_TICK + " EU/t",
+                    "Generating power: " + OutpostModuleKind.POWER.createInstance()
+                        .getDisplayedPowerEuPerTick() + " EU/t",
                     EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(12, 92));
         }
 
@@ -2221,10 +2195,10 @@ public final class AssetManagementSystem {
         }
 
         private String buildPowerSummary(AutomatedOutpost outpost) {
-            long generationPerTick = AutomatedOutpost.PASSIVE_GENERATION;
+            long generationPerTick = 0L;
             long drawPerTick = 0L;
-            for (AutomatedOutpostModule module : outpost.modules()) {
-                if (!module.isOperational()) continue;
+            for (ModuleInstance module : outpost.modules()) {
+                if (module.status() != Buildable.Status.OPERATIONAL) continue;
                 long power = module.getDisplayedPowerEuPerTick();
                 if (power < 0) generationPerTick -= power;
                 else drawPerTick += power;
@@ -2236,6 +2210,7 @@ public final class AssetManagementSystem {
         }
 
         private String buildModuleDescription(OutpostModuleKind kind) {
+            // TODO: Localize
             return switch (kind) {
                 case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
                 case BIG_HAMMER -> "Heavy logistics launcher for larger interstation packages.";
@@ -2245,16 +2220,16 @@ public final class AssetManagementSystem {
         }
 
         private String buildModuleStats(OutpostModuleKind kind) {
-            var data = OutpostModuleKind.forKind(kind);
+            var data = kind.createInstance();
             String powerLine = kind == OutpostModuleKind.POWER
                 ? "Generates " + (-data.getDisplayedPowerEuPerTick()) + " EU/t"
                 : "Consumes " + data.getDisplayedPowerEuPerTick() + " EU/t";
             String restrictionLine = kind == OutpostModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
-            return powerLine + " | Cap " + data.baseEnergyCapacity + " EU | " + restrictionLine;
+            return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
         }
 
         private String buildModuleCost(OutpostModuleKind kind) {
-            var data = OutpostModuleKind.forKind(kind);
+            var data = kind.createInstance();
             StringBuilder sb = new StringBuilder("Cost: ");
             boolean first = true;
             for (Map.Entry<ItemStack, Long> entry : data.getConstructionCost()

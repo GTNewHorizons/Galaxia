@@ -7,17 +7,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.OutpostBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -30,8 +43,39 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public final class CelestialClient {
 
+    /// This is just used in the UI, I mark it as deprecated since it's just duplicate copied stuff, but I can't be
+    /// bothered to fix the UI
+    @Deprecated
+
+    public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
+
+    /**
+     * Client-side snapshot of in-flight logistics tasks. Updated by
+     * {@link LogisticsSyncPacket}.
+     * Always empty on the server; never null.
+     */
+    private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
+    private static int deliveryRevision = 0;
+    private static int signalRevision = 0;
+
+    /**
+     * Client-side snapshot of aggregated logistics signals, indexed by system id.
+     * Updated by {@link LogisticsSyncPacket}.
+     * Always empty on the server; never null.
+     * <p>
+     * Inner map: resourceKey → net signed amount (positive = surplus, negative = deficit).
+     */
+    private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
+
+    /**
+     * Client-side snapshot of aggregated logistics signals, indexed by planetary anchor body id.
+     * Updated alongside {@link #systemSignals}.
+     */
+    private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+
+    private CelestialClient() {}
+
     public static List<CelestialAsset> getState(CelestialObjectId celestialObjectId) {
-        // TODO: Is it safe to use the store here? (Store = server state)
         return CelestialAssetStore.getState(TempTeamCompat.getTeam(), celestialObjectId);
     }
 
@@ -69,11 +113,18 @@ public final class CelestialClient {
         signalRevision = 0;
     }
 
-    /// This is just used in the UI, I mark it as deprecated since it's just duplicate copied stuff, but I can't be
-    /// bothered to fix the UI
-    @Deprecated
+    public static void createModule(ID assetId, OutpostModuleKind kind, boolean creativeBuildModeEnabled) {
+        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        if (state == null) return;
+        ModuleInstance module = kind.createInstance();
+        if (creativeBuildModeEnabled && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode) {
+            module.completeConstruction();
+        }
+        state.addModule(module);
 
-    public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(new OutpostBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled));
+    }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
         List<TransferTarget> targets = new ArrayList<>();
@@ -84,31 +135,108 @@ public final class CelestialClient {
         return targets;
     }
 
-    /**
-     * Client-side snapshot of in-flight logistics tasks. Updated by
-     * {@link LogisticsSyncPacket}.
-     * Always empty on the server; never null.
-     */
-    private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
-    private static int deliveryRevision = 0;
-    private static int signalRevision = 0;
+    public static void updateModuleAction(ID assetId, int moduleIndex, OutpostModuleUpdatePacket.Action action) {
+        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        if (state == null) return;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
+        ModuleInstance module = modules.get(moduleIndex);
+        switch (action) {
+            case ENABLE -> module.updateStatus(Buildable.Status.OPERATIONAL);
+            case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
+            case DESTROY -> state.removeModule(moduleIndex);
+        }
+        Galaxia.GALAXIA_NETWORK.sendToServer(OutpostModuleUpdatePacket.action(assetId, moduleIndex, action));
+    }
 
-    /**
-     * Client-side snapshot of aggregated logistics signals, indexed by system id.
-     * Updated by {@link LogisticsSyncPacket}.
-     * Always empty on the server; never null.
-     * <p>
-     * Inner map: resourceKey → net signed amount (positive = surplus, negative = deficit).
-     */
-    private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
+    public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
+        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        if (state == null) return;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
+        ModuleInstance module = modules.get(moduleIndex);
+        if (!(module.component() instanceof ModuleMiner miner)) return;
+        switch (configAction) {
+            case ADD_MINER_BLACKLIST -> miner.addToBlacklist(payload);
+            case REMOVE_MINER_BLACKLIST -> miner.removeFromBlacklist(payload);
+        }
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+    }
 
-    /**
-     * Client-side snapshot of aggregated logistics signals, indexed by planetary anchor body id.
-     * Updated alongside {@link #systemSignals}.
-     */
-    private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+    public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
+        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        if (state == null) return;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
+        ModuleInstance module = modules.get(moduleIndex);
+        switch (configAction) {
+            case SET_MINER_COPY_SETTINGS -> {
+                if (module.component() instanceof ModuleMiner miner) {
+                    miner.setCopySettingToOtherMiners(payload);
+                }
+            }
+            case SET_PLANETARY_HANDLING -> {
+                if (module.kind() == OutpostModuleKind.BIG_HAMMER
+                    && module.component() instanceof ModuleHammer hammer) {
+                    hammer.setPlanetaryHandling(payload);
+                }
+            }
+            default -> {}
+        }
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+    }
 
-    private CelestialClient() {}
+    public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
+        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        if (state == null) return;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
+        ModuleInstance module = modules.get(moduleIndex);
+        switch (configAction) {
+            case SET_ALLOW_SHOOTING_THRESHOLD -> {
+                if (module.component() instanceof ModuleHammer hammer) {
+                    hammer.setConfig(
+                        new AllowShootingConfig(
+                            hammer.config()
+                                .mode(),
+                            payload));
+                }
+            }
+            default -> {}
+        }
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+    }
+
+    public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
+        T payload) {
+        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        if (state == null) return;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
+        ModuleInstance module = modules.get(moduleIndex);
+        if (!(module.component() instanceof ModuleHammer hammer)) return;
+
+        switch (configAction) {
+            case SET_ALLOW_SHOOTING_MODE -> {
+                AllowShootingConfig.Mode mode = (AllowShootingConfig.Mode) payload;
+                hammer.setConfig(
+                    new AllowShootingConfig(
+                        mode,
+                        hammer.config()
+                            .threshold()));
+            }
+            case SET_ROUTE_PRIORITY -> {
+                OrbitalTransferPlanner.RoutePriority priority = (OrbitalTransferPlanner.RoutePriority) payload;
+                hammer.setRoutePriority(priority);
+            }
+            default -> {}
+        }
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+    }
 
     /**
      * Replaces the client signal maps and bumps the signal revision counter.
