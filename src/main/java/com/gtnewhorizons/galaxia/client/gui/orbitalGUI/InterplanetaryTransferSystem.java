@@ -36,6 +36,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
  * wiring an entry in {@link TransferPackageIcons#texture}.
  */
 enum TransferPackageKind {
+
     HAMMER;
 
     String displayName() {
