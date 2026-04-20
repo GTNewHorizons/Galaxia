@@ -29,7 +29,7 @@ public final class SystemAssetRowView {
         this.hostBodyId = asset.celestialObjectId;
         this.displayName = asset.displayName();
         this.status = asset.status();
-        this.underConstruction = asset.isUnderConstruction();
+        this.underConstruction = asset.isInConstruction();
         this.underDeconstruction = asset.isUnderDeconstruction();
         this.hasMining = asset.hasMiningCapability();
         this.hasProduction = asset.hasProductionCapability();

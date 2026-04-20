@@ -149,14 +149,6 @@ public abstract class CelestialAsset implements Buildable {
         return false;
     }
 
-    public boolean isUnderConstruction() {
-        return status == Status.CONSTRUCTION_SITE || status == Status.IN_CONSTRUCTION;
-    }
-
-    public boolean isUnderDeconstruction() {
-        return status == Status.DECONSTRUCTION;
-    }
-
     public boolean hasMiningCapability() {
         return false;
     }

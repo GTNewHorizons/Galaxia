@@ -97,6 +97,10 @@ public interface Buildable {
         return status() == Status.IN_CONSTRUCTION || status() == Status.CONSTRUCTION_SITE;
     }
 
+    default boolean isUnderDeconstruction() {
+        return status() == Status.DECONSTRUCTION;
+    }
+
     default boolean isManageable() {
         return status() == Status.OPERATIONAL;
     }

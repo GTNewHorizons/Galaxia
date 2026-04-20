@@ -20,7 +20,7 @@ public enum SystemAssetFilter {
             case STATIONS -> asset.kind == CelestialAsset.Kind.STATION
                 || asset.kind == CelestialAsset.Kind.AUTOMATED_STATION;
             case OUTPOSTS -> asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST;
-            case CONSTRUCTION -> asset.isUnderConstruction();
+            case CONSTRUCTION -> asset.isInConstruction();
             case MINING -> asset.hasMiningCapability();
             case PRODUCTION -> asset.hasProductionCapability();
             case WARNINGS -> asset.warningPriority()
