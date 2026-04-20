@@ -129,7 +129,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
      * Render method for when placed in an item frame
      *
      * @param stack         The item stack being rendered from the frame
-     * @param RenderManager the RenderManager being used in this client instance
+     * @param renderManager the RenderManager being used in this client instance
      */
     private void renderSchematicInFrame(ItemStack stack, RenderManager renderManager) {
         GL11.glRotatef(180f, 0f, 1f, 0f);

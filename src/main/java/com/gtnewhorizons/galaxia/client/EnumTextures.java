@@ -32,8 +32,20 @@ public enum EnumTextures {
     HAZARD_OXYGEN("textures/gui/icon_no_oxygen.png"),
     HAZARD_RADIATION("textures/gui/icon_radiation.png"),
 
+    // Space Body Icons for Galactic map
+    ICON_AMBERGRIS("textures/gui/bodyicons/icon_ambergris.png"),
+    ICON_ANAMNESIS("textures/gui/bodyicons/icon_anamnesis.png"),
+    ICON_ATARAXIA("textures/gui/bodyicons/icon_ataraxia.png"),
+    ICON_EDIACARA("textures/gui/bodyicons/icon_ediacara.png"),
+    ICON_EGORA("textures/gui/bodyicons/icon_egora.png"),
+    ICON_HEMATERIA("textures/gui/bodyicons/icon_hemateria.png"),
+    ICON_MYKELIA("textures/gui/bodyicons/icon_mykelia.png"),
+    ICON_PLEURA("textures/gui/bodyicons/icon_pleura.png"),
+    ICON_TENEBRAE("textures/gui/bodyicons/icon_tenebrae.png"),
+    ICON_THEIA("textures/gui/bodyicons/icon_theia.png"),
+    ICON_VIRIDIS("textures/gui/bodyicons/icon_viridis.png"),
+
     // Space Object Icons for Galactic map
-    ICON_EGORA("textures/gui/bodyicons/egora.png"),
     ICON_STATION("textures/gui/bodyicons/station.png"),
     ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
     ICON_OUTPOST("textures/gui/bodyicons/outpost.png"),

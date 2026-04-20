@@ -178,7 +178,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
                 .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("hemateria"))
-                .texture(EnumTextures.HEMATERIA.get())
+                .texture(EnumTextures.ICON_HEMATERIA.get())
                 .spriteSize(0.825)
                 .properties(
                     b -> b.withGravity(5.5e8, 9500.0)
@@ -201,7 +201,7 @@ public final class CelestialRegistry {
             builder -> builder.parent(CelestialObjectId.HEMATERIA)
                 .objectClass(CelestialObject.Class.MOON)
                 .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("theia"))
-                .texture(EnumTextures.EGORA.get())
+                .texture(EnumTextures.ICON_THEIA.get())
                 .spriteSize(0.06)
                 .properties(
                     b -> b.withGravity(1.8e6, 480.0)
