@@ -105,7 +105,7 @@ public final class AutomatedOutpost extends CelestialAsset {
     @Override
     public WarningPriority warningPriority() {
         if (!isOperational()) return WarningPriority.NONE;
-        if (energyStored == 0L) return WarningPriority.NO_POWER;
+        if (energyStored <= 0L) return WarningPriority.NO_POWER;
         for (ModuleInstance m : modules) {
             if (m.isOperational()) return WarningPriority.NONE;
         }
