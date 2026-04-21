@@ -20,8 +20,7 @@ public enum SystemAssetSort {
             case BY_KIND -> Comparator.comparing((CelestialAsset a) -> a.kind.ordinal())
                 .thenComparing(CelestialAsset::displayName);
             case BY_NAME -> Comparator.comparing(CelestialAsset::displayName);
-            case BY_WARNINGS_FIRST -> Comparator.comparingInt(
-                (CelestialAsset a) -> -a.warningPriority().priority)
+            case BY_WARNINGS_FIRST -> Comparator.comparingInt((CelestialAsset a) -> -a.warningPriority().priority)
                 .thenComparing((CelestialAsset a) -> a.isInConstruction() ? 0 : 1)
                 .thenComparing(CelestialAsset::displayName);
         };
