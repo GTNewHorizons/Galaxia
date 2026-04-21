@@ -61,6 +61,14 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private static final int ROW_GAP = 2;
     private static final int PANEL_PAD_X = 10;
     private static final int SCROLL_PAD_X = 4;
+    private static final int PANEL_BOTTOM_PAD = 8;
+    private static final int EMPTY_VIEWPORT_H = 18;
+    private static final int OUTLINE_THICKNESS = 3;
+    private static final int TITLE_Y = 7;
+    private static final int CONTROLS_TOP_GAP = 3;
+    private static final int CTRL_BTN_H = CONTROLS_H - 6;
+    private static final int LIST_TOP_GAP = 2;
+    private static final int EMPTY_TEXT_NUDGE_Y = 4;
 
     private final CelestialObject galaxyRoot;
     private final Supplier<CelestialObject> viewRootSupplier;
@@ -182,8 +190,8 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private void rebuildPanel(CelestialObject viewRoot) {
         String title = "Assets \u2014 " + viewRoot.displayName() + " system";
         int rowsToShow = Math.min(MAX_VISIBLE_ROWS, Math.max(1, visibleRows.size()));
-        int viewportH = visibleRows.isEmpty() ? 18 : rowsToShow * (ROW_H + ROW_GAP);
-        int panelH = HEADER_H + CONTROLS_H + viewportH + 8;
+        int viewportH = visibleRows.isEmpty() ? EMPTY_VIEWPORT_H : rowsToShow * (ROW_H + ROW_GAP);
+        int panelH = HEADER_H + CONTROLS_H + viewportH + PANEL_BOTTOM_PAD;
 
         panelRoot.removeAll();
         scrollWidget = null;
@@ -200,32 +208,33 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                 Gui.drawRect(x, y, x + w, y + HEADER_H, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
             }));
         panelRoot.child(backgroundLayer);
-        panelRoot.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
+        panelRoot.child(
+            WidgetOutline.create(backgroundLayer, OUTLINE_THICKNESS, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
         panelRoot.child(
             new TextWidget<>(IKey.str(title)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(PANEL_PAD_X, 7));
+                .pos(PANEL_PAD_X, TITLE_Y));
 
-        int controlsY = HEADER_H + 3;
+        int controlsY = HEADER_H + CONTROLS_TOP_GAP;
         panelRoot.child(
             cycleButton(
                 () -> "Filter: " + currentFilter.getDisplayName(),
                 () -> currentFilter = cycleEnum(currentFilter, SystemAssetFilter.values())).pos(PANEL_PAD_X, controlsY)
-                    .size(FILTER_BTN_W, CONTROLS_H - 6));
+                    .size(FILTER_BTN_W, CTRL_BTN_H));
         panelRoot.child(
             cycleButton(
                 () -> "Sort: " + currentSort.getDisplayName(),
                 () -> currentSort = cycleEnum(currentSort, SystemAssetSort.values()))
                     .pos(PANEL_PAD_X + FILTER_BTN_W + CTRL_GAP, controlsY)
-                    .size(SORT_BTN_W, CONTROLS_H - 6));
+                    .size(SORT_BTN_W, CTRL_BTN_H));
 
-        int listY = HEADER_H + CONTROLS_H + 2;
+        int listY = HEADER_H + CONTROLS_H + LIST_TOP_GAP;
         if (visibleRows.isEmpty()) {
             panelRoot.child(
                 new TextWidget<>(IKey.str("No assets in this system."))
                     .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                    .pos(PANEL_PAD_X, listY + 4));
+                    .pos(PANEL_PAD_X, listY + EMPTY_TEXT_NUDGE_Y));
             panelRoot.scheduleResize();
             scheduleResize();
             return;
