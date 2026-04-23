@@ -2,8 +2,9 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.function.Function;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -20,10 +21,14 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetModuleUpdatePacket implements IMessage {
 
+    private static final int ACTION_TYPE = 0;
+    private static final int CONFIG_TYPE = 1;
+
     private CelestialAsset.ID assetId;
     private int moduleIndex;
     private int type;
-    private int action;
+    private Action action;
+    private ConfigAction configAction;
 
     private String stringPayload;
     private byte bytePayload;
@@ -35,8 +40,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
         AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;
-        pkt.type = 0; // ACTION
-        pkt.action = action.ordinal();
+        pkt.type = ACTION_TYPE;
+        pkt.action = action;
         return pkt;
     }
 
@@ -44,8 +49,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
         AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;
-        pkt.type = 1; // CONFIG
-        pkt.action = action.ordinal();
+        pkt.type = CONFIG_TYPE;
+        pkt.configAction = action;
         return pkt;
     }
 
@@ -98,10 +103,16 @@ public final class AssetModuleUpdatePacket implements IMessage {
         PacketUtil.writeId(buf, assetId);
         buf.writeInt(moduleIndex);
         buf.writeByte(type);
-        buf.writeByte(action);
+        if (type == ACTION_TYPE) {
+            PacketUtil.writeEnum(buf, action);
+        } else if (type == CONFIG_TYPE) {
+            PacketUtil.writeEnum(buf, configAction);
+        } else {
+            buf.writeByte(0);
+        }
 
-        if (type == 1) { // CONFIG
-            switch (ConfigAction.values()[action]) {
+        if (type == CONFIG_TYPE && configAction != null) {
+            switch (configAction) {
                 case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> PacketUtil.writeString(buf, stringPayload);
                 case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
@@ -115,24 +126,31 @@ public final class AssetModuleUpdatePacket implements IMessage {
         assetId = PacketUtil.readAssetId(buf);
         moduleIndex = buf.readInt();
         type = buf.readUnsignedByte();
-        action = buf.readUnsignedByte();
+        int rawAction = buf.readUnsignedByte();
 
-        if (type == 1) { // CONFIG
-            switch (ConfigAction.values()[action]) {
+        if (type == ACTION_TYPE) {
+            action = PacketUtil.fromOrdinalOrNull(rawAction, Action.class);
+            return;
+        }
+        if (type != CONFIG_TYPE) return;
+
+        configAction = PacketUtil.fromOrdinalOrNull(rawAction, ConfigAction.class);
+        if (configAction == null) return;
+
+        switch (configAction) {
                 case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
                 case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> bytePayload = buf.readByte();
                 case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
                 case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
-            }
         }
     }
 
     public Action getAction() {
-        return type == 0 ? Action.values()[action] : null;
+        return type == ACTION_TYPE ? action : null;
     }
 
     public ConfigAction getConfigAction() {
-        return type == 1 ? ConfigAction.values()[action] : null;
+        return type == CONFIG_TYPE ? configAction : null;
     }
 
     public String getStringPayload() {
@@ -148,16 +166,21 @@ public final class AssetModuleUpdatePacket implements IMessage {
     }
 
     public <T extends Enum<T>> T getEnumPayload(Class<T> enumClass) {
-        return enumClass.getEnumConstants()[bytePayload];
+        return PacketUtil.fromOrdinalOrNull(Byte.toUnsignedInt(bytePayload), enumClass);
     }
 
     public static final class Handler implements IMessageHandler<AssetModuleUpdatePacket, IMessage> {
 
         @Override
         public IMessage onMessage(AssetModuleUpdatePacket packet, MessageContext ctx) {
-            AutomatedFacility state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o
-                : null;
-            if (state == null) return null;
+            if (ctx.getServerHandler() == null || ctx.getServerHandler().playerEntity == null) return null;
+
+            CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
+            if (!(asset instanceof AutomatedFacility state)) return null;
+            if (!CelestialAssetStore.isOwnedBy(TempTeamCompat.getTeam(ctx.getServerHandler().playerEntity), packet.assetId))
+                return null;
+            if (packet.type == ACTION_TYPE && packet.action == null) return null;
+            if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
 
             var modules = state.modules();
             if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
@@ -165,11 +188,14 @@ public final class AssetModuleUpdatePacket implements IMessage {
             ModuleInstance module = modules.get(packet.moduleIndex);
 
             switch (packet.type) {
-                case 0 -> handleAction(packet, state, module);
-                case 1 -> handleConfig(packet, state, module);
+                case ACTION_TYPE -> handleAction(packet, state, module);
+                case CONFIG_TYPE -> handleConfig(packet, state, module);
+                default -> {
+                    return null;
+                }
             }
 
-            if (packet.type == 0 && packet.getAction() == Action.DESTROY) {
+            if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
                 return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex);
             }
             return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
@@ -229,6 +255,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     if (!(module.component() instanceof ModuleHammer hammer)) return;
                     OrbitalTransferPlanner.RoutePriority priority = packet
                         .getEnumPayload(OrbitalTransferPlanner.RoutePriority.class);
+                    if (priority == null) return;
                     hammer.setRoutePriority(priority);
                 }
             }

@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -67,19 +67,6 @@ public final class AssetBuildModulePacket implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
 
-            AutomatedFacility state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o
-                : null;
-            if (state == null) {
-                Galaxia.LOG.warn(
-                    "[Outpost] BuildModule: unknown assetId {} from player {}",
-                    packet.assetId,
-                    player.getGameProfile()
-                        .getName());
-                return null;
-            }
-
-            FacilityModuleKind kind = packet.moduleKind;
-
             CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
             if (asset == null) {
                 Galaxia.LOG.warn(
@@ -89,6 +76,24 @@ public final class AssetBuildModulePacket implements IMessage {
                         .getName());
                 return null;
             }
+            if (!(asset instanceof AutomatedFacility state)) {
+                Galaxia.LOG.warn(
+                    "[Outpost] BuildModule: asset {} is not an automated facility for player {}",
+                    packet.assetId,
+                    player.getGameProfile()
+                        .getName());
+                return null;
+            }
+            if (!CelestialAssetStore.isOwnedBy(TempTeamCompat.getTeam(player), packet.assetId)) {
+                Galaxia.LOG.warn(
+                    "[Outpost] BuildModule: unauthorized access to asset {} by player {}",
+                    packet.assetId,
+                    player.getGameProfile()
+                        .getName());
+                return null;
+            }
+
+            FacilityModuleKind kind = packet.moduleKind;
             if (kind == FacilityModuleKind.MINER && asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST) {
                 Galaxia.LOG.warn(
                     "[Outpost] BuildModule: rejected MINER on {} ({}) from player {}",

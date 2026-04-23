@@ -79,8 +79,17 @@ final class PacketUtil {
     @SuppressWarnings("unchecked")
     static <T extends Enum<T>> T readEnum(ByteBuf buf, Class<T> enumClass) {
         int ordinal = buf.readUnsignedByte();
+        return fromOrdinal(ordinal, enumClass);
+    }
+
+    static <T extends Enum<T>> T fromOrdinal(int ordinal, Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
-        return ordinal < values.length ? values[ordinal] : values[0];
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : values[0];
+    }
+
+    static <T extends Enum<T>> T fromOrdinalOrNull(int ordinal, Class<T> enumClass) {
+        T[] values = enumClass.getEnumConstants();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
     }
 
 }
