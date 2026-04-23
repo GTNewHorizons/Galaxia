@@ -36,6 +36,9 @@ public class ModuleInstance implements Buildable {
             ticks = 0;
             return;
         }
+        if (powerDraw < 0) {
+            outpost.addEnergy(-powerDraw);
+        }
 
         this.ticks += 1;
         if (this.ticks >= this.cooldownTicks()) {

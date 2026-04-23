@@ -2183,15 +2183,16 @@ public final class AssetManagementSystem {
             modal.child(createBodyText("No settings yet.", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 70));
             modal.child(
                 createBodyText(
-                    "Generating power: " + FacilityModuleKind.POWER.createInstance()
-                        .getDisplayedPowerEuPerTick() + " EU/t",
+                    "Generating power: " + Math.max(0L, -module.getDisplayedPowerEuPerTick()) + " EU/t",
                     EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(12, 92));
         }
 
         private String formatAmount(long amount) {
             if (amount < 1000) return String.valueOf(amount);
             if (amount < 1000000) return (amount / 1000) + "k";
-            return (amount / 1000000) + "M";
+            if (amount < 1000000000L) return (amount / 1000000) + "M";
+            if (amount < 1000000000000L) return (amount / 1000000000L) + "B";
+            return (amount / 1000000000000L) + "T";
         }
 
         private String buildPowerSummary(AutomatedFacility outpost) {
