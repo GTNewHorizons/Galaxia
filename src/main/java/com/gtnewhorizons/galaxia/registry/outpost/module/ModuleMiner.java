@@ -6,26 +6,26 @@ import java.util.Random;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public final class ModuleMiner implements ModuleComponent {
 
-    public final OutpostModuleKind kind;
+    public final FacilityModuleKind kind;
 
-    public static final OutpostModuleKind KIND = OutpostModuleKind.MINER;
+    public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
     private final List<String> blacklistedItemKeys;
     private boolean copySettingsToOtherMiners;
 
     private static final Random RANDOM = new java.util.Random();
 
-    public ModuleMiner(OutpostModuleKind kind, List<String> blacklistedItemKeys, boolean copySettingsToOtherMiners) {
+    public ModuleMiner(FacilityModuleKind kind, List<String> blacklistedItemKeys, boolean copySettingsToOtherMiners) {
         this.kind = kind;
         this.blacklistedItemKeys = blacklistedItemKeys;
         this.copySettingsToOtherMiners = copySettingsToOtherMiners;
     }
 
-    public static void generateOre(ModuleInstance instance, AutomatedOutpost outpost) {
+    public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
         ModuleMiner miner = (ModuleMiner) instance.component();
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {

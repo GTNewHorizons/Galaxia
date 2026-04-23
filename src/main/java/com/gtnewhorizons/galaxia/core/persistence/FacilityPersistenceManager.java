@@ -28,21 +28,21 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
-public final class OutpostPersistenceManager {
+public final class FacilityPersistenceManager {
 
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
@@ -52,7 +52,7 @@ public final class OutpostPersistenceManager {
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
 
-    public OutpostPersistenceManager() {
+    public FacilityPersistenceManager() {
         gson = new GsonBuilder().setPrettyPrinting()
             .create();
     }
@@ -111,7 +111,7 @@ public final class OutpostPersistenceManager {
                 CelestialAsset asset = decodeAsset(json);
                 if (asset == null) continue;
                 UUID teamId = UUID.fromString(json.teamId);
-                decodeOutpostState(asset, json.outpost);
+                decodeFacilityState(asset, json.facility);
                 CelestialAssetStore.add(teamId, asset);
             }
         } catch (IOException | JsonParseException | IllegalArgumentException e) {
@@ -123,9 +123,9 @@ public final class OutpostPersistenceManager {
         List<AssetJson> list = new ArrayList<>();
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             AssetJson json = encodeAsset(asset);
-            CelestialAsset outpost = CelestialAssetStore.findAsset(asset.assetId);
-            if (outpost instanceof AutomatedOutpost o) {
-                json.outpost = encodeOutpostState(o);
+            CelestialAsset facility = CelestialAssetStore.findAsset(asset.assetId);
+            if (facility instanceof AutomatedFacility o) {
+                json.facility = encodeFacilityState(o);
             }
             list.add(json);
         }
@@ -246,8 +246,8 @@ public final class OutpostPersistenceManager {
         return asset;
     }
 
-    private OutpostStateJson encodeOutpostState(AutomatedOutpost state) {
-        OutpostStateJson out = new OutpostStateJson();
+    private FacilityStateJson encodeFacilityState(AutomatedFacility state) {
+        FacilityStateJson out = new FacilityStateJson();
         out.celestialBodyId = String.valueOf(state.celestialObjectId);
         out.systemId = String.valueOf(state.systemId);
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
@@ -310,15 +310,15 @@ public final class OutpostPersistenceManager {
         return out;
     }
 
-    private AutomatedOutpost decodeOutpostState(CelestialAsset asset, OutpostStateJson json) {
+    private AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
         if (asset == null || json == null || json.systemId == null) return null;
-        if (!(asset instanceof AutomatedOutpost state)) return null;
+        if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
 
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
                 if (mj.kind == null) continue;
-                OutpostModuleKind kind = OutpostModuleKind.valueOf(mj.kind);
+                FacilityModuleKind kind = FacilityModuleKind.valueOf(mj.kind);
                 ModuleInstance module = kind.createInstance();
 
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
@@ -457,10 +457,10 @@ public final class OutpostPersistenceManager {
         String status;
         Map<String, Long> requiredResources;
         Map<String, Long> constructionInventory;
-        OutpostStateJson outpost;
+        FacilityStateJson facility;
     }
 
-    static final class OutpostStateJson {
+    static final class FacilityStateJson {
 
         String celestialBodyId;
         String systemId;

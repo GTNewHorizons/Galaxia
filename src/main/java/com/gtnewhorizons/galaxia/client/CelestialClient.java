@@ -13,10 +13,10 @@ import net.minecraftforge.event.world.WorldEvent;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostBuildModulePacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -24,13 +24,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -95,15 +95,15 @@ public final class CelestialClient {
         return CelestialAssetStore.findAsset(assetId);
     }
 
-    public static void add(AutomatedOutpost state) {
+    public static void add(AutomatedFacility state) {
         CelestialAssetStore.add(TempTeamCompat.getTeam(), state);
     }
 
-    public static List<AutomatedOutpost> allOutposts() {
+    public static List<AutomatedFacility> allOutposts() {
         return CelestialAssetStore.allAssets()
             .stream()
-            .filter(a -> a instanceof AutomatedOutpost)
-            .map(a -> (AutomatedOutpost) a)
+            .filter(a -> a instanceof AutomatedFacility)
+            .map(a -> (AutomatedFacility) a)
             .collect(Collectors.toList());
     }
 
@@ -113,8 +113,8 @@ public final class CelestialClient {
         signalRevision = 0;
     }
 
-    public static void createModule(ID assetId, OutpostModuleKind kind, boolean creativeBuildModeEnabled) {
-        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+    public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled) {
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         ModuleInstance module = kind.createInstance();
         if (creativeBuildModeEnabled && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode) {
@@ -123,7 +123,7 @@ public final class CelestialClient {
         state.addModule(module);
 
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(new OutpostBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled));
+            .sendToServer(new AssetBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled));
     }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
@@ -135,8 +135,8 @@ public final class CelestialClient {
         return targets;
     }
 
-    public static void updateModuleAction(ID assetId, int moduleIndex, OutpostModuleUpdatePacket.Action action) {
-        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+    public static void updateModuleAction(ID assetId, int moduleIndex, AssetModuleUpdatePacket.Action action) {
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -146,11 +146,11 @@ public final class CelestialClient {
             case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
             case DESTROY -> state.removeModule(moduleIndex);
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(OutpostModuleUpdatePacket.action(assetId, moduleIndex, action));
+        Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, action));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
-        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -161,11 +161,11 @@ public final class CelestialClient {
             case REMOVE_MINER_BLACKLIST -> miner.removeFromBlacklist(payload);
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
-        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -177,7 +177,7 @@ public final class CelestialClient {
                 }
             }
             case SET_PLANETARY_HANDLING -> {
-                if (module.kind() == OutpostModuleKind.BIG_HAMMER
+                if (module.kind() == FacilityModuleKind.BIG_HAMMER
                     && module.component() instanceof ModuleHammer hammer) {
                     hammer.setPlanetaryHandling(payload);
                 }
@@ -185,11 +185,11 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
-        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -207,12 +207,12 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
         T payload) {
-        AutomatedOutpost state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedOutpost o ? o : null;
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -235,7 +235,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(OutpostModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
     }
 
     /**

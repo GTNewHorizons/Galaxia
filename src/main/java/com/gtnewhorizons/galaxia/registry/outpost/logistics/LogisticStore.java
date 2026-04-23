@@ -11,7 +11,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -54,7 +54,7 @@ public final class LogisticStore {
                         ticked.data.toAssetId());
                     return;
                 }
-                if (destination instanceof AutomatedOutpost outpost) {
+                if (destination instanceof AutomatedFacility outpost) {
                     outpost.inventory.add(ticked.data.resourceId(), ticked.data.amount());
                     Galaxia.LOG.debug(
                         "[Logistics] Task {} delivered {} x {} to {}",
@@ -69,7 +69,7 @@ public final class LogisticStore {
         }
     }
 
-    public static void updateSignalsForOutpost(AutomatedOutpost outpost) {
+    public static void updateSignalsForFacility(AutomatedFacility outpost) {
         CelestialAsset.ID outpostAssetId = outpost.assetId;
         Map<ItemStackWrapper, Long> snapshot = outpost.inventory.snapshot();
         LogisticsConfiguration config = outpost.logisticsConfig;

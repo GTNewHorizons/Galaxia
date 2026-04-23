@@ -11,7 +11,7 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtect
 import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
-import com.gtnewhorizons.galaxia.core.persistence.OutpostPersistenceManager;
+import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -49,7 +49,7 @@ public class CommonProxy {
             .bus()
             .register(new ServerTickTaskQueue());
 
-        OutpostPersistenceManager outpostPersistence = new OutpostPersistenceManager();
+        FacilityPersistenceManager outpostPersistence = new FacilityPersistenceManager();
         MinecraftForge.EVENT_BUS.register(outpostPersistence);
         FMLCommonHandler.instance()
             .bus()

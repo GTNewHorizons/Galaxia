@@ -9,7 +9,7 @@ import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -20,13 +20,13 @@ import io.netty.buffer.ByteBuf;
 /**
  * Client → Server: requests a full sync for a single outpost.
  */
-public final class OutpostRequestSyncPacket implements IMessage {
+public final class AssetRequestSyncPacket implements IMessage {
 
     private CelestialAsset.ID assetId;
 
-    public OutpostRequestSyncPacket() {}
+    public AssetRequestSyncPacket() {}
 
-    public OutpostRequestSyncPacket(CelestialAsset.ID assetId) {
+    public AssetRequestSyncPacket(CelestialAsset.ID assetId) {
         this.assetId = assetId;
     }
 
@@ -40,12 +40,12 @@ public final class OutpostRequestSyncPacket implements IMessage {
         assetId = PacketUtil.readAssetId(buf);
     }
 
-    public static final class Handler implements IMessageHandler<OutpostRequestSyncPacket, IMessage> {
+    public static final class Handler implements IMessageHandler<AssetRequestSyncPacket, IMessage> {
 
         @Override
-        public IMessage onMessage(OutpostRequestSyncPacket packet, MessageContext ctx) {
+        public IMessage onMessage(AssetRequestSyncPacket packet, MessageContext ctx) {
             if (ctx.side != Side.SERVER) return null;
-            AutomatedOutpost state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedOutpost o ? o
+            AutomatedFacility state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o
                 : null;
             if (state == null) {
                 CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
@@ -58,11 +58,11 @@ public final class OutpostRequestSyncPacket implements IMessage {
                         packet.assetId,
                         player != null ? player.getGameProfile()
                             .getName() : "unknown");
-                    state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedOutpost o ? o : null;
+                    state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o : null;
                 }
             }
             if (state != null) {
-                return OutpostSyncPacket.fullSync(state);
+                return AssetSyncPacket.fullSync(state);
             }
             return null;
         }

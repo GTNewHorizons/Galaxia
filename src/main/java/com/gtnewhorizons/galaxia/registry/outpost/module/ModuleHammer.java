@@ -1,12 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 
 public final class ModuleHammer implements ModuleComponent {
 
-    public final OutpostModuleKind kind;
+    public final FacilityModuleKind kind;
     public final boolean crossPlanetaryCapability;
 
     private final int maxBatchSize;
@@ -16,7 +16,7 @@ public final class ModuleHammer implements ModuleComponent {
     private boolean planetaryHandling;
     private AllowShootingConfig config;
 
-    public ModuleHammer(OutpostModuleKind kind, AllowShootingConfig config,
+    public ModuleHammer(FacilityModuleKind kind, AllowShootingConfig config,
         OrbitalTransferPlanner.RoutePriority routePriority, boolean canFire, boolean planetaryHandling,
         boolean crossPlanetaryCapability, int maxBatchSize) {
         this.kind = kind;
@@ -28,7 +28,7 @@ public final class ModuleHammer implements ModuleComponent {
         this.maxBatchSize = maxBatchSize;
     }
 
-    public static void prepareToFire(ModuleInstance instance, AutomatedOutpost outpost) {
+    public static void prepareToFire(ModuleInstance instance, AutomatedFacility outpost) {
         ModuleHammer hammer = (ModuleHammer) instance.component();
         hammer.canFire = true;
     }

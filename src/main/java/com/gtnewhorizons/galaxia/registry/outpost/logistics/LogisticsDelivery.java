@@ -6,7 +6,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public class LogisticsDelivery {
@@ -28,8 +28,8 @@ public class LogisticsDelivery {
     public static LogisticsDelivery create(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope) {
 
-        AutomatedOutpost from = CelestialClient.getByAssetId(fromAssetId) instanceof AutomatedOutpost o ? o : null;
-        AutomatedOutpost to = CelestialClient.getByAssetId(toAssetId) instanceof AutomatedOutpost o ? o : null;
+        AutomatedFacility from = CelestialClient.getByAssetId(fromAssetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility to = CelestialClient.getByAssetId(toAssetId) instanceof AutomatedFacility o ? o : null;
         CelestialObjectId fromBody = from != null ? from.celestialObjectId : CelestialObjectId.INVALID;
         CelestialObjectId toBody = to != null ? to.celestialObjectId : CelestialObjectId.INVALID;
 

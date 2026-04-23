@@ -12,8 +12,7 @@ import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedStation;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
@@ -70,16 +69,18 @@ public abstract class CelestialAsset implements Buildable {
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, Status status) {
         return switch (kind) {
             case STATION -> new Station(ID.create(), celestialObjectId, status);
-            case AUTOMATED_STATION -> new AutomatedStation(ID.create(), celestialObjectId, status);
-            case AUTOMATED_OUTPOST -> new AutomatedOutpost(ID.create(), celestialObjectId, status);
+            case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(
+                ID.create(),
+                celestialObjectId,
+                kind,
+                status);
         };
     }
 
     public static CelestialAsset create(ID id, CelestialObjectId celestialObjectId, Kind kind, Status status) {
         return switch (kind) {
             case STATION -> new Station(id, celestialObjectId, status);
-            case AUTOMATED_STATION -> new AutomatedStation(id, celestialObjectId, status);
-            case AUTOMATED_OUTPOST -> new AutomatedOutpost(id, celestialObjectId, status);
+            case AUTOMATED_STATION, AUTOMATED_OUTPOST -> new AutomatedFacility(id, celestialObjectId, kind, status);
         };
     }
 

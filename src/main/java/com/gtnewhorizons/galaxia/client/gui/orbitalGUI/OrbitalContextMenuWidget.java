@@ -45,7 +45,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
 
         boolean canCreateAutomatedStation(CelestialObject body);
 
-        boolean canCreateAutomatedOutpost(CelestialObject body);
+        boolean canCreateAutomatedFacility(CelestialObject body);
 
         void openAssetManagement(CelestialObject body);
 
@@ -129,7 +129,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             + '|'
             + callbacks.canCreateAutomatedStation(body)
             + '|'
-            + callbacks.canCreateAutomatedOutpost(body);
+            + callbacks.canCreateAutomatedFacility(body);
     }
 
     private void rebuildChildren() {
@@ -248,7 +248,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
                     true,
                     ContextMenuActionType.OPEN_AUTOMATED_STATION_CONFIRM));
         }
-        if (callbacks.canCreateAutomatedOutpost(body)) {
+        if (callbacks.canCreateAutomatedFacility(body)) {
             actions.add(
                 new ContextMenuAction(
                     "Create Automated Outpost",

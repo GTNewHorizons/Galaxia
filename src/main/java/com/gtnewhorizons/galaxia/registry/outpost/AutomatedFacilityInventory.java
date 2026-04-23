@@ -14,7 +14,7 @@ import org.jetbrains.annotations.UnmodifiableView;
  * <p>
  * This class is NOT thread-safe and must only be accessed from the server thread.
  */
-public final class AutomatedOutpostInventory {
+public final class AutomatedFacilityInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
 
