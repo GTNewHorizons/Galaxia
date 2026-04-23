@@ -14,6 +14,9 @@ public record StationTileCoord(byte dx, byte dy) {
     }
 
     public static StationTileCoord of(int dx, int dy) {
+        if (dx < MIN || dx > MAX || dy < MIN || dy > MAX) {
+            throw new IllegalArgumentException("StationTileCoord out of range: " + dx + "," + dy);
+        }
         return new StationTileCoord((byte) dx, (byte) dy);
     }
 

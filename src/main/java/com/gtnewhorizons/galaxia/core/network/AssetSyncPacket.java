@@ -303,6 +303,7 @@ public final class AssetSyncPacket implements IMessage {
     }
 
     private static void writeModule(ByteBuf buf, ModuleInstance module) {
+        PacketUtil.writeId(buf, module.id);
         PacketUtil.writeEnum(buf, module.kind());
         PacketUtil.writeEnum(buf, module.status());
 
@@ -343,10 +344,11 @@ public final class AssetSyncPacket implements IMessage {
     }
 
     private static ModuleInstance readModule(ByteBuf buf) {
+        ModuleInstance.ID id = PacketUtil.readModuleId(buf);
         FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
         Buildable.Status status = PacketUtil.readEnum(buf, Buildable.Status.class);
 
-        ModuleInstance module = kind.createInstance();
+        ModuleInstance module = kind.createInstance(id);
 
         switch (kind) {
             case MINER -> {

@@ -105,20 +105,35 @@ public final class FacilityPersistenceManager {
 
     private void loadAssets(File file) {
         if (!file.exists()) return;
+        List<AssetJson> list;
         try (FileReader reader = new FileReader(file)) {
             Type listType = new TypeToken<List<AssetJson>>() {}.getType();
-            List<AssetJson> list = gson.fromJson(reader, listType);
-            if (list == null) return;
+            list = gson.fromJson(reader, listType);
+        } catch (IOException | JsonParseException e) {
+            Galaxia.LOG.error("[Logistics] Failed to read asset registry {}: {}", file, e.getMessage());
+            return;
+        }
+        if (list == null) return;
 
-            for (AssetJson json : list) {
+        for (AssetJson json : list) {
+            try {
                 CelestialAsset asset = decodeAsset(json);
                 if (asset == null) continue;
                 UUID teamId = UUID.fromString(json.teamId);
                 decodeFacilityState(asset, json.facility);
                 CelestialAssetStore.add(teamId, asset);
+            } catch (RuntimeException e) {
+                Galaxia.LOG.error("[Logistics] Skipping malformed asset entry in {}: {}", file, e.getMessage());
             }
-        } catch (IOException | JsonParseException | IllegalArgumentException e) {
-            Galaxia.LOG.error("[Logistics] Failed to load station registry from {}: {}", file, e.getMessage());
+        }
+    }
+
+    private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
+        if (name == null) return null;
+        try {
+            return Enum.valueOf(cls, name);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 
@@ -239,11 +254,10 @@ public final class FacilityPersistenceManager {
         }
         CelestialObjectId objectId = CelestialObjectId.fromString(json.celestialObjectId);
         if (objectId == null) return null;
-        CelestialAsset asset = CelestialAsset.create(
-            json.assetId,
-            objectId,
-            CelestialAsset.Kind.valueOf(json.kind),
-            Buildable.Status.valueOf(json.status));
+        CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
+        Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
+        if (kind == null || status == null) return null;
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         return asset;
@@ -258,6 +272,7 @@ public final class FacilityPersistenceManager {
         out.modules = new ArrayList<>();
         for (ModuleInstance m : state.modules()) {
             ModuleJson mj = new ModuleJson();
+            mj.moduleId = m.id.toString();
             mj.kind = m.kind()
                 .name();
             mj.status = m.status()
@@ -336,9 +351,10 @@ public final class FacilityPersistenceManager {
 
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
-                if (mj.kind == null) continue;
-                FacilityModuleKind kind = FacilityModuleKind.valueOf(mj.kind);
-                ModuleInstance module = kind.createInstance();
+                FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
+                if (kind == null) continue;
+                ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
+                ModuleInstance module = moduleId == null ? kind.createInstance() : kind.createInstance(moduleId);
 
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
 
@@ -390,8 +406,9 @@ public final class FacilityPersistenceManager {
                     case POWER -> {}
                 }
 
-                if (mj.status != null) {
-                    module.updateStatus(Buildable.Status.valueOf(mj.status));
+                Buildable.Status moduleStatus = safeValueOf(Buildable.Status.class, mj.status);
+                if (moduleStatus != null) {
+                    module.updateStatus(moduleStatus);
                 }
                 module.setTicks(mj.cooldownTicks);
                 module.setEnergyBuffer(mj.energyBuffer);
@@ -445,9 +462,20 @@ public final class FacilityPersistenceManager {
             }
             Map<StationTileCoord, PlacedTile> layoutSnapshot = new LinkedHashMap<>();
             for (StationTileJson tj : json.layoutTiles) {
-                if (tj == null || tj.state == null) continue;
+                if (tj == null) continue;
+                StationTileState tileState = safeValueOf(StationTileState.class, tj.state);
+                if (tileState == null) continue;
+                if (tj.dx < StationTileCoord.MIN || tj.dx > StationTileCoord.MAX
+                    || tj.dy < StationTileCoord.MIN
+                    || tj.dy > StationTileCoord.MAX) {
+                    Galaxia.LOG.warn(
+                        "[Logistics] Skipping layout tile out of range: ({}, {}) state={}",
+                        tj.dx,
+                        tj.dy,
+                        tj.state);
+                    continue;
+                }
                 StationTileCoord coord = StationTileCoord.of(tj.dx, tj.dy);
-                StationTileState tileState = StationTileState.valueOf(tj.state);
                 ModuleInstance module = tj.moduleId == null ? null
                     : modulesById.get(ModuleInstance.ID.from(tj.moduleId));
                 layoutSnapshot.put(coord, new PlacedTile(module, tileState));
@@ -518,6 +546,7 @@ public final class FacilityPersistenceManager {
 
     static final class ModuleJson {
 
+        String moduleId;
         String kind;
         String status;
         float constructionProgress;
