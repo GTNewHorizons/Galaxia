@@ -21,6 +21,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -38,6 +41,8 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte INVENTORY_UPDATE = 4;
     public static final byte LOGISTICS_CONFIG_UPDATED = 6;
     public static final byte LOGISTICS_CONFIG_REMOVED = 7;
+    public static final byte LAYOUT_TILE_UPDATED = 8;
+    public static final byte LAYOUT_TILE_REMOVED = 9;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -47,6 +52,7 @@ public final class AssetSyncPacket implements IMessage {
     private CelestialObjectId systemId;
     private CelestialObjectId planetaryAnchorBodyId;
     private Buildable.Status assetStatus;
+    private CelestialAsset.Kind assetKind;
     private long energyStored;
 
     private List<AssetSyncPacket> fullSyncDeltas;
@@ -57,6 +63,10 @@ public final class AssetSyncPacket implements IMessage {
     private String resourceKey;
     private long inventoryDelta;
     private LogisticsResourceConfig logConfig;
+
+    private StationTileCoord tileCoord;
+    private StationTileState tileState;
+    private ModuleInstance.ID tileModuleId;
 
     public AssetSyncPacket() {}
 
@@ -70,6 +80,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.systemId = state.systemId;
         pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
         pkt.assetStatus = state.status();
+        pkt.assetKind = state.kind;
         pkt.energyStored = state.getEnergyStored();
 
         pkt.fullSyncDeltas = new ArrayList<>();
@@ -101,6 +112,11 @@ public final class AssetSyncPacket implements IMessage {
                     cfg.orderSize(),
                     cfg.isImportEnabled(),
                     cfg.isSupplyEnabled()));
+        }
+
+        for (Map.Entry<StationTileCoord, PlacedTile> e : state.layout.snapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
         }
 
         return pkt;
@@ -159,6 +175,25 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    public static AssetSyncPacket layoutTileUpdated(CelestialAsset.ID assetId, StationTileCoord coord,
+        PlacedTile tile) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = LAYOUT_TILE_UPDATED;
+        pkt.tileCoord = coord;
+        pkt.tileState = tile.state();
+        pkt.tileModuleId = tile.module() == null ? null : tile.module().id;
+        return pkt;
+    }
+
+    public static AssetSyncPacket layoutTileRemoved(CelestialAsset.ID assetId, StationTileCoord coord) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = LAYOUT_TILE_REMOVED;
+        pkt.tileCoord = coord;
+        return pkt;
+    }
+
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
@@ -172,6 +207,7 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeEnum(buf, systemId);
                 PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
                 PacketUtil.writeEnum(buf, assetStatus);
+                PacketUtil.writeEnum(buf, assetKind);
                 buf.writeLong(energyStored);
 
                 buf.writeInt(fullSyncDeltas.size());
@@ -195,7 +231,8 @@ public final class AssetSyncPacket implements IMessage {
                 celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 systemId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
-                PacketUtil.readEnum(buf, Buildable.Status.class);
+                assetStatus = PacketUtil.readEnum(buf, Buildable.Status.class);
+                assetKind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
                 energyStored = buf.readLong();
 
                 int count = buf.readInt();
@@ -229,6 +266,14 @@ public final class AssetSyncPacket implements IMessage {
                 writeLogisticsConfig(buf, logConfig);
             }
             case LOGISTICS_CONFIG_REMOVED -> PacketUtil.writeString(buf, resourceKey);
+            case LAYOUT_TILE_UPDATED -> {
+                PacketUtil.writeTileCoord(buf, tileCoord);
+                PacketUtil.writeEnum(buf, tileState);
+                boolean hasModule = tileModuleId != null;
+                buf.writeBoolean(hasModule);
+                if (hasModule) PacketUtil.writeId(buf, tileModuleId);
+            }
+            case LAYOUT_TILE_REMOVED -> PacketUtil.writeTileCoord(buf, tileCoord);
         }
     }
 
@@ -248,6 +293,12 @@ public final class AssetSyncPacket implements IMessage {
                 logConfig = readLogisticsConfig(buf);
             }
             case LOGISTICS_CONFIG_REMOVED -> resourceKey = PacketUtil.readString(buf);
+            case LAYOUT_TILE_UPDATED -> {
+                tileCoord = PacketUtil.readTileCoord(buf);
+                tileState = PacketUtil.readEnum(buf, StationTileState.class);
+                tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
+            }
+            case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readTileCoord(buf);
         }
     }
 
@@ -366,7 +417,7 @@ public final class AssetSyncPacket implements IMessage {
                 : null;
             if (state == null) {
                 CelestialAsset newAsset = CelestialAsset
-                    .create(packet.celestialBodyId, CelestialAsset.Kind.AUTOMATED_OUTPOST, packet.assetStatus);
+                    .create(packet.celestialBodyId, packet.assetKind, packet.assetStatus);
                 if (!(newAsset instanceof AutomatedFacility newState)) return;
                 state = newState;
                 CelestialClient.add(newState);
@@ -377,6 +428,7 @@ public final class AssetSyncPacket implements IMessage {
             state.clearModules();
             state.inventory.clear();
             state.logisticsConfig.clear();
+            state.layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
             for (AssetSyncPacket d : packet.fullSyncDeltas) {
                 handleDelta(state, d);
@@ -431,6 +483,19 @@ public final class AssetSyncPacket implements IMessage {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                     if (r != null) state.logisticsConfig.reset(r);
                 }
+                case LAYOUT_TILE_UPDATED -> {
+                    ModuleInstance module = null;
+                    if (packet.tileModuleId != null) {
+                        for (ModuleInstance m : state.modules()) {
+                            if (m.id.equals(packet.tileModuleId)) {
+                                module = m;
+                                break;
+                            }
+                        }
+                    }
+                    state.layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
+                }
+                case LAYOUT_TILE_REMOVED -> state.layout.remove(packet.tileCoord);
             }
         }
     }

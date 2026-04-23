@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import io.netty.buffer.ByteBuf;
 
@@ -54,6 +55,19 @@ final class PacketUtil {
 
     public static LogisticsDelivery.ID readDeliveryId(ByteBuf buf) {
         return new LogisticsDelivery.ID(readId(buf));
+    }
+
+    // ── Station tile helpers ───────────────────────────────────────────────
+
+    static void writeTileCoord(ByteBuf buf, StationTileCoord coord) {
+        buf.writeByte(coord.dx());
+        buf.writeByte(coord.dy());
+    }
+
+    static StationTileCoord readTileCoord(ByteBuf buf) {
+        byte dx = buf.readByte();
+        byte dy = buf.readByte();
+        return new StationTileCoord(dx, dy);
     }
 
     // ── Enum helpers ───────────────────────────────────────────────────────
