@@ -140,6 +140,7 @@ public final class FacilityPersistenceManager {
         try {
             return Enum.valueOf(cls, name);
         } catch (IllegalArgumentException e) {
+            Galaxia.LOG.warn("[Logistics] Unknown enum value {} for {}", name, cls.getSimpleName());
             return null;
         }
     }
