@@ -138,10 +138,10 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (configAction == null) return;
 
         switch (configAction) {
-                case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
-                case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> bytePayload = buf.readByte();
-                case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
-                case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
+            case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
+            case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> bytePayload = buf.readByte();
+            case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
+            case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
         }
     }
 
@@ -177,8 +177,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
             CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
             if (!(asset instanceof AutomatedFacility state)) return null;
-            if (!CelestialAssetStore.isOwnedBy(TempTeamCompat.getTeam(ctx.getServerHandler().playerEntity), packet.assetId))
-                return null;
+            if (!CelestialAssetStore
+                .isOwnedBy(TempTeamCompat.getTeam(ctx.getServerHandler().playerEntity), packet.assetId)) return null;
             if (packet.type == ACTION_TYPE && packet.action == null) return null;
             if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
 
