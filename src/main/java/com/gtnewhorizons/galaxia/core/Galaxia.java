@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostRequestSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -97,13 +98,15 @@ public final class Galaxia {
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++, Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++,
+                Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++, Side.SERVER);
         GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class,
                 id++, Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(OutpostInventoryUpdatePacket.Handler.class, OutpostInventoryUpdatePacket.class, id++,
+        GALAXIA_NETWORK.registerMessage(OutpostInventoryUpdatePacket.Handler.class, OutpostInventoryUpdatePacket.class,
+                id++,
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(OutpostSyncPacket.Handler.class, OutpostSyncPacket.class, id++, Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(OutpostRequestSyncPacket.Handler.class, OutpostRequestSyncPacket.class, id++,
@@ -114,6 +117,7 @@ public final class Galaxia {
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
                 Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(RocketLaunchPacket.class, RocketLaunchPacket.class, id++, Side.SERVER);
     }
     // spotless:on
 

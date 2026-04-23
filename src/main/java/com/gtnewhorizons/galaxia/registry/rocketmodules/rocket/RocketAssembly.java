@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsuleMo
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.rules.ClusteredPlacementRule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.rules.LinearPlacementRule;
@@ -148,6 +149,15 @@ public final class RocketAssembly {
         return getTotalHeight();
     }
 
+    public double getRiderYOffset(RiderModule riderModule) {
+        return getPlacements().stream()
+            .filter(p -> p.type() == riderModule)
+            .mapToDouble(p -> p.y())
+            .max()
+            .orElse(0) + riderModule.getHeight() + riderModule.getYOffset();
+
+    }
+
     public List<RocketModule> getModules() {
         return Collections.unmodifiableList(modules);
     }
@@ -162,6 +172,13 @@ public final class RocketAssembly {
         return getModules().stream()
             .filter(EngineModule.class::isInstance)
             .map(EngineModule.class::cast)
+            .collect(Collectors.toList());
+    }
+
+    public List<RiderModule> getRiderModules() {
+        return getModules().stream()
+            .filter(RiderModule.class::isInstance)
+            .map(RiderModule.class::cast)
             .collect(Collectors.toList());
     }
 

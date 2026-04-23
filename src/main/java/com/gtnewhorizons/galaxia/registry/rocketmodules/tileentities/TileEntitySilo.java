@@ -635,12 +635,13 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (getAssembly().getModules()
             .stream()
             .noneMatch(m -> m instanceof CapsuleModule)) return;
+
         EntityRocket rocket = getEntityRocket();
         if (rocket == null || rocket.isDead) return;
+
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
         rocket.setDestination(destination);
-        data.getPlayer()
-            .mountEntity(rocket);
+        rocket.interactFirst(data.getPlayer());
         if (!rocket.shouldRender()) rocket.launch();
     }
 

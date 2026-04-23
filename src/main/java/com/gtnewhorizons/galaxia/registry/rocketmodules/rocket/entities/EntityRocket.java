@@ -12,6 +12,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
@@ -19,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketAssembly;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.relauncher.Side;
@@ -68,6 +70,8 @@ public class EntityRocket extends Entity {
     private double targetZ;
     private int groundY = -1;
     private EntityPlayerMP lastRider = null;
+
+    private final List<EntityRocketSeat> passengerSeats = new ArrayList<>();
 
     private String lastKnownModules = "";
 
@@ -209,6 +213,10 @@ public class EntityRocket extends Entity {
      * @return Boolean : True => should be rendered as an entity
      */
     public boolean shouldRender() {
+        if (worldObj.isRemote) {
+            String syncedModules = dataWatcher.getWatchableObjectString(DW_MODULES);
+            return getPhase() != Phase.IDLE || (syncedModules != null && !syncedModules.isEmpty());
+        }
         return getPhase() != Phase.IDLE;
     }
 
@@ -222,6 +230,37 @@ public class EntityRocket extends Entity {
         modules.addAll(moduleList);
         assembly = null;
         syncModules();
+    }
+
+    public void initializeSeats() {
+        if (worldObj.isRemote || !passengerSeats.isEmpty() || getAssembly() == null) return;
+
+        int seatIndex = 0;
+        List<RiderModule> riderModules = getAssembly().getRiderModules();
+
+        for (RiderModule rm : riderModules) {
+            int cap = rm.getCapacity();
+            double yOff = assembly.getRiderYOffset(rm);
+
+            for (int i = 0; i < cap; i++) {
+                double radius = (rm.getWidth() - 0.5) / 2;
+                double angle = (2 * Math.PI / cap) * i;
+
+                double seatOffsetX = Math.cos(angle) * radius;
+                double seatOffsetZ = Math.sin(angle) * radius;
+
+                EntityRocketSeat seat = new EntityRocketSeat(
+                    worldObj,
+                    this,
+                    seatIndex++,
+                    seatOffsetX,
+                    yOff,
+                    seatOffsetZ);
+                seat.setPosition(this.posX + seatOffsetX, this.posY + yOff, this.posZ + seatOffsetZ);
+                worldObj.spawnEntityInWorld(seat);
+                passengerSeats.add(seat);
+            }
+        }
     }
 
     /**
@@ -245,6 +284,22 @@ public class EntityRocket extends Entity {
         dataWatcher.updateObject(DW_IS_LANDER, (byte) 1);
         destination = 0;
         syncModules();
+    }
+
+    @Override
+    public void setDead() {
+        super.setDead();
+        if (!worldObj.isRemote) {
+            for (EntityRocketSeat seat : passengerSeats) {
+                if (seat != null && !seat.isDead) {
+                    if (seat.riddenByEntity != null) {
+                        seat.riddenByEntity.mountEntity(null);
+                    }
+                    seat.setDead();
+                }
+            }
+            passengerSeats.clear();
+        }
     }
 
     /**
@@ -286,8 +341,6 @@ public class EntityRocket extends Entity {
             syncModules();
             silo.launch();
         }
-
-        setPhase(Phase.LAUNCHING);
     }
 
     /**
@@ -302,12 +355,27 @@ public class EntityRocket extends Entity {
     public boolean interactFirst(EntityPlayer player) {
         if (worldObj.isRemote) return true;
         if (!(player instanceof EntityPlayerMP)) return false;
-        if (getPhase() != Phase.TOUCHDOWN) return false;
-        if (!isLander) return false;
 
-        player.mountEntity(this);
-        launch();
-        return true;
+        if (getAssembly() == null) return false;
+        initializeSeats();
+
+        if (riddenByEntity == null) {
+            player.mountEntity(this);
+            return true;
+        }
+
+        if (riddenByEntity == player) {
+            return true;
+        }
+
+        for (EntityRocketSeat seat : passengerSeats) {
+            if (seat != null && !seat.isDead && seat.riddenByEntity == null) {
+                player.mountEntity(seat);
+                return true;
+            }
+        }
+        player.addChatMessage(new ChatComponentTranslation("chat.galaxia.rocket.rocket_full"));
+        return false;
     }
 
     // ---------------------------------------------------------------------------------
@@ -603,7 +671,7 @@ public class EntityRocket extends Entity {
     // Phase updates
     // ---------------------------------------------------------------------------------
 
-    private void setPhase(Phase p) {
+    public void setPhase(Phase p) {
         dataWatcher.updateObject(DW_PHASE, (byte) p.ordinal());
     }
 
