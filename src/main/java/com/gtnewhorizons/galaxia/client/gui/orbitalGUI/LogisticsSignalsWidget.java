@@ -150,7 +150,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     }
 
     private int currentDataRevision(CelestialObject viewRoot) {
-        // TODO Colors
         int r = 0x1A2B3C4D;
         r = r * 31 + CelestialClient.clientSignalRevision();
         r = r * 31 + CelestialClient.clientDeliveryRevision();
@@ -170,6 +169,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                     .toKey())
                 .append(':')
                 .append(row.net() >= 0 ? '+' : '-')
+                .append(row.net())
                 .append('|');
         }
         return sig.toString();

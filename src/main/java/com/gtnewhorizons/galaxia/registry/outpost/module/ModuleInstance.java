@@ -32,7 +32,7 @@ public class ModuleInstance implements Buildable {
     private void tickOperational(AutomatedFacility outpost) {
         long powerDraw = this.powerDrawEuPerTick();
 
-        if (outpost.tryConsumeEnergy(powerDraw)) {
+        if (!outpost.tryConsumeEnergy(powerDraw)) {
             ticks = 0;
             return;
         }
