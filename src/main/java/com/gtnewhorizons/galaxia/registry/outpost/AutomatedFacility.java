@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 
 public final class AutomatedFacility extends CelestialAsset {
 
@@ -23,6 +24,8 @@ public final class AutomatedFacility extends CelestialAsset {
     public final AutomatedFacilityInventory inventory;
 
     public final LogisticsConfiguration logisticsConfig;
+
+    public final StationLayout layout;
 
     private long energyStored;
 
@@ -41,6 +44,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.modules = new ArrayList<>();
         this.inventory = new AutomatedFacilityInventory();
         this.logisticsConfig = new LogisticsConfiguration();
+        this.layout = new StationLayout();
         this.energyStored = 0;
     }
 

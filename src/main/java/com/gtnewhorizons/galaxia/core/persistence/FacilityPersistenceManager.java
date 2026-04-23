@@ -39,6 +39,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
@@ -307,6 +310,22 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 cj);
         }
+        out.layoutTiles = new ArrayList<>();
+        for (Map.Entry<StationTileCoord, PlacedTile> e : state.layout.snapshot()
+            .entrySet()) {
+            StationTileJson tj = new StationTileJson();
+            tj.dx = e.getKey()
+                .dx();
+            tj.dy = e.getKey()
+                .dy();
+            tj.state = e.getValue()
+                .state()
+                .name();
+            ModuleInstance module = e.getValue()
+                .module();
+            tj.moduleId = module == null ? null : module.id.toString();
+            out.layoutTiles.add(tj);
+        }
         return out;
     }
 
@@ -419,6 +438,23 @@ public final class FacilityPersistenceManager {
             state.logisticsConfig.loadFromSnapshot(cfgSnapshot);
         }
 
+        if (json.layoutTiles != null && !json.layoutTiles.isEmpty()) {
+            Map<ModuleInstance.ID, ModuleInstance> modulesById = new LinkedHashMap<>();
+            for (ModuleInstance m : state.modules()) {
+                modulesById.put(m.id, m);
+            }
+            Map<StationTileCoord, PlacedTile> layoutSnapshot = new LinkedHashMap<>();
+            for (StationTileJson tj : json.layoutTiles) {
+                if (tj == null || tj.state == null) continue;
+                StationTileCoord coord = StationTileCoord.of(tj.dx, tj.dy);
+                StationTileState tileState = StationTileState.valueOf(tj.state);
+                ModuleInstance module = tj.moduleId == null ? null
+                    : modulesById.get(ModuleInstance.ID.from(tj.moduleId));
+                layoutSnapshot.put(coord, new PlacedTile(module, tileState));
+            }
+            state.layout.loadFromSnapshot(layoutSnapshot);
+        }
+
         return state;
     }
 
@@ -469,6 +505,15 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, LogisticsConfigJson> logisticsConfig;
+        List<StationTileJson> layoutTiles;
+    }
+
+    static final class StationTileJson {
+
+        int dx;
+        int dy;
+        String state;
+        String moduleId;
     }
 
     static final class ModuleJson {
