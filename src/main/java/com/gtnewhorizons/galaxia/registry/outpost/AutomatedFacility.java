@@ -93,7 +93,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void setEnergyStored(long energyStored) {
-        this.energyStored = Math.min(MAX_ENERGY, Math.max(0, energyStored));
+        this.energyStored = Math.clamp(energyStored, 0, MAX_ENERGY);
     }
 
     public void addEnergy(long delta) {
@@ -101,9 +101,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public boolean tryConsumeEnergy(long amount) {
-        if (amount <= 0) return true;
         if (energyStored < amount) return false;
-        energyStored -= amount;
+        setEnergyStored(energyStored - amount);
         return true;
     }
 

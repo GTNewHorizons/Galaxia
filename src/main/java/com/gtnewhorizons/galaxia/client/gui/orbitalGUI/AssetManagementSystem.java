@@ -2222,9 +2222,8 @@ public final class AssetManagementSystem {
 
         private String buildModuleStats(FacilityModuleKind kind) {
             var data = kind.createInstance();
-            String powerLine = kind == FacilityModuleKind.POWER
-                ? "Generates " + (-data.getDisplayedPowerEuPerTick()) + " EU/t"
-                : "Consumes " + data.getDisplayedPowerEuPerTick() + " EU/t";
+            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
+                : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
             String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
             return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
         }
