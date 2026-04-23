@@ -6,7 +6,6 @@ import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.client.KeyBinds;
-import com.gtnewhorizons.galaxia.client.RocketInputHandler;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
@@ -20,6 +19,7 @@ import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
+import com.gtnewhorizons.galaxia.handlers.RocketInputHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;

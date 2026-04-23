@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostRequestSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OutpostSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
@@ -118,6 +119,8 @@ public final class Galaxia {
         GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
                 Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(RocketLaunchPacket.class, RocketLaunchPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class,
+                id++, Side.SERVER);
     }
     // spotless:on
 

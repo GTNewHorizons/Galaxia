@@ -21,11 +21,14 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineMod
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.RocketTeleportHelper;
 
+import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import io.netty.buffer.ByteBuf;
 
-public class EntityRocket extends Entity {
+public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
 
     public enum Phase {
         IDLE, // Sitting in silo yet to launch
@@ -467,7 +470,6 @@ public class EntityRocket extends Entity {
 
         if (worldObj.isRemote) spawnLaunchParticles();
 
-        // Hand off to teleporter system at correct height
         if (!worldObj.isRemote && this.posY >= 500) {
 
             List<UUID> passengerUUIDs = new ArrayList<>();
@@ -489,6 +491,18 @@ public class EntityRocket extends Entity {
                 if (destination == 0 && cachedModules.size() > modules.size()) {
                     reattachCachedModules();
                 }
+
+                RocketTeleportHelper.teleportPlayers(
+                    destination,
+                    posX,
+                    posY,
+                    posZ,
+                    true, // hasRocket
+                    capsuleIndex,
+                    modules,
+                    passengerUUIDs);
+
+                this.setDead();
             }
         }
     }
@@ -760,6 +774,7 @@ public class EntityRocket extends Entity {
         tag.setDouble("motionYSaved", motionY);
         tag.setInteger("touchdownTicks", touchdownTicks);
         tag.setBoolean("isLander", isLander);
+        tag.setInteger("destination", destination);
     }
 
     @Override
@@ -787,5 +802,23 @@ public class EntityRocket extends Entity {
 
         assembly = null;
         syncModules();
+
+        this.destination = tag.getInteger("destination");
+    }
+
+    @Override
+    public void writeSpawnData(ByteBuf buf) {
+        buf.writeDouble(targetX);
+        buf.writeDouble(targetZ);
+        buf.writeInt(groundY);
+        buf.writeDouble(motionY);
+    }
+
+    @Override
+    public void readSpawnData(ByteBuf buf) {
+        this.targetX = buf.readDouble();
+        this.targetZ = buf.readDouble();
+        this.groundY = buf.readInt();
+        this.motionY = buf.readDouble();
     }
 }

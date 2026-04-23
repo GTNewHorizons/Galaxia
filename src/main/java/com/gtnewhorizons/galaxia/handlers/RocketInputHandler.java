@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.client;
+package com.gtnewhorizons.galaxia.handlers;
 
 import net.minecraft.client.Minecraft;
 
