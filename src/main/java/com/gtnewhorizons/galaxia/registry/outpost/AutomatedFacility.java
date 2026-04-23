@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.annotation.Nullable;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -25,7 +27,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public final LogisticsConfiguration logisticsConfig;
 
-    public final StationLayout layout;
+    private final StationLayout layout;
 
     private long energyStored;
 
@@ -44,8 +46,20 @@ public final class AutomatedFacility extends CelestialAsset {
         this.modules = new ArrayList<>();
         this.inventory = new AutomatedFacilityInventory();
         this.logisticsConfig = new LogisticsConfiguration();
-        this.layout = new StationLayout();
+        this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.energyStored = 0;
+    }
+
+    public static boolean ownsStationLayout(Kind kind) {
+        return kind == Kind.AUTOMATED_OUTPOST || kind == Kind.AUTOMATED_STATION;
+    }
+
+    public boolean hasStationLayout() {
+        return layout != null;
+    }
+
+    public @Nullable StationLayout stationLayout() {
+        return layout;
     }
 
     public List<ModuleInstance> modules() {

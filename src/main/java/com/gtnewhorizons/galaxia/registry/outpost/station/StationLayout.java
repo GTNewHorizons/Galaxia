@@ -4,9 +4,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.UnmodifiableView;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public final class StationLayout {
 
@@ -34,11 +33,11 @@ public final class StationLayout {
         tiles.remove(coord);
     }
 
-    public @NotNull @UnmodifiableView Map<StationTileCoord, PlacedTile> snapshot() {
+    public @Nonnull Map<StationTileCoord, PlacedTile> snapshot() {
         return Collections.unmodifiableMap(tiles);
     }
 
-    public void loadFromSnapshot(@NotNull Map<StationTileCoord, PlacedTile> snapshot) {
+    public void loadFromSnapshot(@Nonnull Map<StationTileCoord, PlacedTile> snapshot) {
         tiles.clear();
         tiles.putAll(snapshot);
         tiles.putIfAbsent(StationTileCoord.CORE, PlacedTile.CORE);

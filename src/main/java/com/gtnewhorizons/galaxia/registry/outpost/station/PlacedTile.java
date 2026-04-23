@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
-import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 

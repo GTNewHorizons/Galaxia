@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
@@ -114,9 +115,12 @@ public final class AssetSyncPacket implements IMessage {
                     cfg.isSupplyEnabled()));
         }
 
-        for (Map.Entry<StationTileCoord, PlacedTile> e : state.layout.snapshot()
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
+        StationLayout layout = state.stationLayout();
+        if (layout != null) {
+            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
+                .entrySet()) {
+                pkt.fullSyncDeltas.add(layoutTileUpdated(state.assetId, e.getKey(), e.getValue()));
+            }
         }
 
         return pkt;
@@ -430,7 +434,8 @@ public final class AssetSyncPacket implements IMessage {
             state.clearModules();
             state.inventory.clear();
             state.logisticsConfig.clear();
-            state.layout.loadFromSnapshot(java.util.Collections.emptyMap());
+            StationLayout layout = state.stationLayout();
+            if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
             for (AssetSyncPacket d : packet.fullSyncDeltas) {
                 handleDelta(state, d);
@@ -495,9 +500,13 @@ public final class AssetSyncPacket implements IMessage {
                             }
                         }
                     }
-                    state.layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
+                    StationLayout layout = state.stationLayout();
+                    if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
                 }
-                case LAYOUT_TILE_REMOVED -> state.layout.remove(packet.tileCoord);
+                case LAYOUT_TILE_REMOVED -> {
+                    StationLayout layout = state.stationLayout();
+                    if (layout != null) layout.remove(packet.tileCoord);
+                }
             }
         }
     }

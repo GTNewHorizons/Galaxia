@@ -40,6 +40,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
@@ -113,12 +114,18 @@ public final class FacilityPersistenceManager {
             Galaxia.LOG.error("[Logistics] Failed to read asset registry {}: {}", file, e.getMessage());
             return;
         }
-        if (list == null) return;
+        if (list == null) {
+            Galaxia.LOG.warn("[Logistics] Asset registry {} contained no asset list", file);
+            return;
+        }
 
         for (AssetJson json : list) {
             try {
                 CelestialAsset asset = decodeAsset(json);
-                if (asset == null) continue;
+                if (asset == null) {
+                    Galaxia.LOG.warn("[Logistics] Skipping malformed asset entry in {}", file);
+                    continue;
+                }
                 UUID teamId = UUID.fromString(json.teamId);
                 decodeFacilityState(asset, json.facility);
                 CelestialAssetStore.add(teamId, asset);
@@ -326,20 +333,23 @@ public final class FacilityPersistenceManager {
                 cj);
         }
         out.layoutTiles = new ArrayList<>();
-        for (Map.Entry<StationTileCoord, PlacedTile> e : state.layout.snapshot()
-            .entrySet()) {
-            StationTileJson tj = new StationTileJson();
-            tj.dx = e.getKey()
-                .dx();
-            tj.dy = e.getKey()
-                .dy();
-            tj.state = e.getValue()
-                .state()
-                .name();
-            ModuleInstance module = e.getValue()
-                .module();
-            tj.moduleId = module == null ? null : module.id.toString();
-            out.layoutTiles.add(tj);
+        StationLayout layout = state.stationLayout();
+        if (layout != null) {
+            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
+                .entrySet()) {
+                StationTileJson tj = new StationTileJson();
+                tj.dx = e.getKey()
+                    .dx();
+                tj.dy = e.getKey()
+                    .dy();
+                tj.state = e.getValue()
+                    .state()
+                    .name();
+                ModuleInstance module = e.getValue()
+                    .module();
+                tj.moduleId = module == null ? null : module.id.toString();
+                out.layoutTiles.add(tj);
+            }
         }
         return out;
     }
@@ -455,7 +465,8 @@ public final class FacilityPersistenceManager {
             state.logisticsConfig.loadFromSnapshot(cfgSnapshot);
         }
 
-        if (json.layoutTiles != null && !json.layoutTiles.isEmpty()) {
+        StationLayout layout = state.stationLayout();
+        if (layout != null && json.layoutTiles != null && !json.layoutTiles.isEmpty()) {
             Map<ModuleInstance.ID, ModuleInstance> modulesById = new LinkedHashMap<>();
             for (ModuleInstance m : state.modules()) {
                 modulesById.put(m.id, m);
@@ -480,7 +491,7 @@ public final class FacilityPersistenceManager {
                     : modulesById.get(ModuleInstance.ID.from(tj.moduleId));
                 layoutSnapshot.put(coord, new PlacedTile(module, tileState));
             }
-            state.layout.loadFromSnapshot(layoutSnapshot);
+            layout.loadFromSnapshot(layoutSnapshot);
         }
 
         return state;

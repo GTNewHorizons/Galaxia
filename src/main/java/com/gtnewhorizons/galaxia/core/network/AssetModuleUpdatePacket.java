@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.util.function.Function;
 
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -108,6 +109,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         } else if (type == CONFIG_TYPE) {
             PacketUtil.writeEnum(buf, configAction);
         } else {
+            Galaxia.LOG.warn("[Network] Writing AssetModuleUpdatePacket with unknown type: {}", type);
             buf.writeByte(0);
         }
 
@@ -130,12 +132,23 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         if (type == ACTION_TYPE) {
             action = PacketUtil.fromOrdinalOrNull(rawAction, Action.class);
+            if (action == null) {
+                Galaxia.LOG
+                    .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown action ordinal: {}", rawAction);
+            }
             return;
         }
-        if (type != CONFIG_TYPE) return;
+        if (type != CONFIG_TYPE) {
+            Galaxia.LOG.warn("[Network] Ignoring AssetModuleUpdatePacket with unknown type: {}", type);
+            return;
+        }
 
         configAction = PacketUtil.fromOrdinalOrNull(rawAction, ConfigAction.class);
-        if (configAction == null) return;
+        if (configAction == null) {
+            Galaxia.LOG
+                .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown config action ordinal: {}", rawAction);
+            return;
+        }
 
         switch (configAction) {
             case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
