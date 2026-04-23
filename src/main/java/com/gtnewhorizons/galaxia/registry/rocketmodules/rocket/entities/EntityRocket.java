@@ -1,10 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import net.minecraft.entity.Entity;
@@ -15,9 +14,9 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderModule;
@@ -183,6 +182,10 @@ public class EntityRocket extends Entity {
         return Phase.values()[dataWatcher.getWatchableObjectByte(DW_PHASE)];
     }
 
+    public List<EntityRocketSeat> getPassengerSeats() {
+        return passengerSeats;
+    }
+
     /**
      * Gets a list of module types as integer IDs from the current modules list.
      * Works on both client (via data watcher) and server
@@ -268,17 +271,15 @@ public class EntityRocket extends Entity {
      * LanderModules, and caching the rest of the rocket for relaunch
      */
     public void turnToLanderAndCache() {
-        // Cache current modules
         cachedModules.clear();
-        for (Integer m : modules) {
-            cachedModules.add(m);
-        }
+        cachedModules.addAll(modules);
 
-        // Reduce modules to only Lander Modules
         modules.clear();
         for (Integer m : cachedModules) {
-            if (ModuleRegistry.fromId(m) instanceof LanderModule) modules.add(m);
+            RocketModule module = ModuleRegistry.fromId(m);
+            if (module instanceof LanderModule || module instanceof RiderModule) modules.add(m);
         }
+
         isLander = true;
         // Synced with client for Waila compat
         dataWatcher.updateObject(DW_IS_LANDER, (byte) 1);
@@ -467,18 +468,28 @@ public class EntityRocket extends Entity {
         if (worldObj.isRemote) spawnLaunchParticles();
 
         // Hand off to teleporter system at correct height
-        if (!worldObj.isRemote && this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
-            player.mountEntity(null);
-            // Always send full rocket for overworld
-            if (destination == 0) {
-                // If the "cached" orbiting rocket is larger than current, regain cached modules
-                if (cachedModules.size() > modules.size()) {
+        if (!worldObj.isRemote && this.posY >= 500) {
+
+            List<UUID> passengerUUIDs = new ArrayList<>();
+
+            // Main Pilot
+            if (riddenByEntity instanceof EntityPlayer) {
+                passengerUUIDs.add(riddenByEntity.getUniqueID());
+                riddenByEntity.mountEntity(null);
+            }
+
+            for (EntityRocketSeat seat : passengerSeats) {
+                if (seat.riddenByEntity instanceof EntityPlayer) {
+                    passengerUUIDs.add(seat.riddenByEntity.getUniqueID());
+                    seat.riddenByEntity.mountEntity(null);
+                }
+            }
+
+            if (!passengerUUIDs.isEmpty()) {
+                if (destination == 0 && cachedModules.size() > modules.size()) {
                     reattachCachedModules();
                 }
             }
-            // Teleport player and rocket to target dimension, remount, and set to LANDING
-            GALAXIA_NETWORK.sendToServer(
-                new TeleportRequestPacket(destination, player.posX, player.posY, player.posZ, capsuleIndex, modules));
         }
     }
 
