@@ -3,8 +3,13 @@ package com.gtnewhorizons.galaxia.client.gui.station.layer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.util.ResourceLocation;
+
+import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
+import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
@@ -19,9 +24,11 @@ public final class ModuleLayerRenderer {
 
     public static void drawOccupied(GuiContext ctx, int x, int y, PlacedTile tile) {
         int size = StationMapViewport.TILE_SIZE;
-        int fillColor = categoryColor(categoryOf(tile));
-        Gui.drawRect(x, y, x + size, y + size, fillColor);
-        drawLabel(ctx, x, y, size, labelOf(tile));
+        if (!drawModuleTexture(x, y, size, moduleKindOf(tile))) {
+            int fillColor = categoryColor(categoryOf(tile));
+            Gui.drawRect(x, y, x + size, y + size, fillColor);
+            drawLabel(ctx, x, y, size, labelOf(tile));
+        }
         drawBorder(x, y, size, EnumColors.MAP_COLOR_STATION_TILE_BORDER_DEFAULT.getColor());
 
         switch (tile.state()) {
@@ -45,10 +52,14 @@ public final class ModuleLayerRenderer {
 
     private static StationModuleCategory categoryOf(PlacedTile tile) {
         if (tile == null) return StationModuleCategory.COMMAND;
-        ModuleInstance module = tile.module();
-        if (module == null) return StationModuleCategory.COMMAND;
-        FacilityModuleKind kind = module.kind();
+        FacilityModuleKind kind = moduleKindOf(tile);
         return kind == null ? StationModuleCategory.COMMAND : kind.getCategory();
+    }
+
+    private static FacilityModuleKind moduleKindOf(PlacedTile tile) {
+        if (tile == null) return null;
+        ModuleInstance module = tile.module();
+        return module == null ? null : module.kind();
     }
 
     private static int categoryColor(StationModuleCategory category) {
@@ -80,6 +91,28 @@ public final class ModuleLayerRenderer {
         int textX = x + (size - textWidth) / 2;
         int textY = y + (size - fr.FONT_HEIGHT) / 2 + 1;
         fr.drawStringWithShadow(label, textX, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+    }
+
+    private static boolean drawModuleTexture(int x, int y, int size, FacilityModuleKind kind) {
+        if (kind == null) return false;
+        ResourceLocation texture = StationTextureRegistry.moduleTexture(kind);
+        if (!StationTextureRegistry.hasTexture(texture)) return false;
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(texture);
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+
+        Tessellator tess = Tessellator.instance;
+        tess.startDrawingQuads();
+        tess.addVertexWithUV(x, y + size, 0, 0, 1);
+        tess.addVertexWithUV(x + size, y + size, 0, 1, 1);
+        tess.addVertexWithUV(x + size, y, 0, 1, 0);
+        tess.addVertexWithUV(x, y, 0, 0, 0);
+        tess.draw();
+        return true;
     }
 
     private static void drawBorder(int x, int y, int size, int color) {
