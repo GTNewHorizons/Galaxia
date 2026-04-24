@@ -59,6 +59,7 @@ public final class AssetSyncPacket implements IMessage {
     private List<AssetSyncPacket> fullSyncDeltas;
 
     private int moduleIndex;
+    private ModuleInstance.ID moduleId;
     private ModuleInstance moduleData;
 
     private String resourceKey;
@@ -136,10 +137,16 @@ public final class AssetSyncPacket implements IMessage {
     }
 
     public static AssetSyncPacket moduleRemoved(CelestialAsset.ID assetId, int moduleIndex) {
+        return moduleRemoved(assetId, moduleIndex, null);
+    }
+
+    public static AssetSyncPacket moduleRemoved(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = MODULE_REMOVED;
         pkt.moduleIndex = moduleIndex;
+        pkt.moduleId = moduleId;
         return pkt;
     }
 
@@ -260,7 +267,11 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeInt(moduleIndex);
                 writeModule(buf, moduleData);
             }
-            case MODULE_REMOVED -> buf.writeInt(moduleIndex);
+            case MODULE_REMOVED -> {
+                buf.writeInt(moduleIndex);
+                buf.writeBoolean(moduleId != null);
+                if (moduleId != null) PacketUtil.writeId(buf, moduleId);
+            }
             case INVENTORY_UPDATE -> {
                 PacketUtil.writeString(buf, resourceKey);
                 buf.writeLong(inventoryDelta);
@@ -287,7 +298,10 @@ public final class AssetSyncPacket implements IMessage {
                 moduleIndex = buf.readInt();
                 moduleData = readModule(buf);
             }
-            case MODULE_REMOVED -> moduleIndex = buf.readInt();
+            case MODULE_REMOVED -> {
+                moduleIndex = buf.readInt();
+                moduleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
+            }
             case INVENTORY_UPDATE -> {
                 resourceKey = PacketUtil.readString(buf);
                 inventoryDelta = buf.readLong();
@@ -456,7 +470,9 @@ public final class AssetSyncPacket implements IMessage {
                     }
                 }
                 case MODULE_REMOVED -> {
-                    if (packet.moduleIndex < state.modules()
+                    if (packet.moduleId != null) {
+                        state.removeModule(packet.moduleId);
+                    } else if (packet.moduleIndex >= 0 && packet.moduleIndex < state.modules()
                         .size()) {
                         state.removeModule(packet.moduleIndex);
                     }

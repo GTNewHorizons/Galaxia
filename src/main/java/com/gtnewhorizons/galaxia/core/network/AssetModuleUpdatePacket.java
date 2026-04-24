@@ -27,6 +27,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
+    private ModuleInstance.ID moduleId;
     private int type;
     private Action action;
     private ConfigAction configAction;
@@ -38,20 +39,39 @@ public final class AssetModuleUpdatePacket implements IMessage {
     public AssetModuleUpdatePacket() {}
 
     public static AssetModuleUpdatePacket action(CelestialAsset.ID assetId, int moduleIndex, Action action) {
+        return action(assetId, moduleIndex, null, action);
+    }
+
+    public static AssetModuleUpdatePacket action(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, Action action) {
         AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;
+        pkt.moduleId = moduleId;
         pkt.type = ACTION_TYPE;
         pkt.action = action;
         return pkt;
     }
 
     private static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action) {
+        return config(assetId, moduleIndex, (ModuleInstance.ID) null, action);
+    }
+
+    private static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ConfigAction action) {
         AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;
+        pkt.moduleId = moduleId;
         pkt.type = CONFIG_TYPE;
         pkt.configAction = action;
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance.ID moduleId,
+        ConfigAction action, String payload) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        pkt.stringPayload = payload == null ? "" : payload;
         return pkt;
     }
 
@@ -62,6 +82,13 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance.ID moduleId,
+        ConfigAction action, boolean payload) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        pkt.bytePayload = (byte) (payload ? 1 : 0);
+        return pkt;
+    }
+
     public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
         boolean payload) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
@@ -69,10 +96,24 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance.ID moduleId,
+        ConfigAction action, double payload) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        pkt.doublePayload = payload;
+        return pkt;
+    }
+
     public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
         double payload) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
         pkt.doublePayload = payload;
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance.ID moduleId,
+        ConfigAction action, Enum<?> payload) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        pkt.bytePayload = (byte) payload.ordinal();
         return pkt;
     }
 
@@ -103,6 +144,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         buf.writeInt(moduleIndex);
+        buf.writeBoolean(moduleId != null);
+        if (moduleId != null) PacketUtil.writeId(buf, moduleId);
         buf.writeByte(type);
         if (type == ACTION_TYPE) {
             PacketUtil.writeEnum(buf, action);
@@ -127,6 +170,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         moduleIndex = buf.readInt();
+        moduleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
         type = buf.readUnsignedByte();
         int rawAction = buf.readUnsignedByte();
 
@@ -196,9 +240,13 @@ public final class AssetModuleUpdatePacket implements IMessage {
             if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
 
             var modules = state.modules();
+            if (packet.moduleId != null) {
+                packet.moduleIndex = state.moduleIndex(packet.moduleId);
+            }
             if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
 
             ModuleInstance module = modules.get(packet.moduleIndex);
+            if (packet.moduleId != null && !packet.moduleId.equals(module.id)) return null;
 
             switch (packet.type) {
                 case ACTION_TYPE -> handleAction(packet, state, module);
@@ -209,7 +257,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             }
 
             if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
-                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex);
+                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id);
             }
             return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
         }
@@ -222,7 +270,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     }
                 }
                 case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-                case DESTROY -> state.removeModule(packet.moduleIndex);
+                case DESTROY -> state.removeModule(module.id);
             }
         }
 

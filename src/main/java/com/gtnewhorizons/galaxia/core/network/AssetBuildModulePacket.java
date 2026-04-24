@@ -20,16 +20,15 @@ import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
 /**
- * Client → Server: requests that a new module be queued for construction on an outpost.
+ * Client -> Server: requests that a new facility module be added to an automated facility.
  *
  * <p>
- * The server creates an {@link AutomatedFacilityModule} in {@code IN_CONSTRUCTION} state and
- * adds it to the outpost. Construction then proceeds tick-by-tick as the module consumes
- * resources from the outpost's inventory.
+ * The server creates a {@link ModuleInstance}, validates ownership and per-kind placement rules,
+ * then adds it to the target {@link AutomatedFacility}. Station / outpost map placement is carried
+ * by the optional {@link StationTileCoord}.
  *
  * <p>
- * Returns an {@link OutpostFullSyncPacket} so the requesting client immediately sees the
- * new module in the UI.
+ * Returns an {@link AssetSyncPacket} delta so the requesting client sees the new module in the UI.
  */
 public final class AssetBuildModulePacket implements IMessage {
 

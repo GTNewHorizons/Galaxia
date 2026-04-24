@@ -162,9 +162,9 @@ public final class CelestialClient {
         switch (action) {
             case ENABLE -> module.updateStatus(Buildable.Status.OPERATIONAL);
             case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-            case DESTROY -> state.removeModule(moduleIndex);
+            case DESTROY -> {}
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, action));
+        Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
@@ -179,7 +179,7 @@ public final class CelestialClient {
             case REMOVE_MINER_BLACKLIST -> miner.removeFromBlacklist(payload);
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
@@ -203,7 +203,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
@@ -225,7 +225,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
@@ -253,7 +253,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     /**

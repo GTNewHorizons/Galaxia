@@ -29,6 +29,12 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
     private @Nullable StationTileCoord armedDestroySelection;
+    private @Nullable StationTileCoord cachedDestroySelection;
+    private @Nullable StationLayout cachedDestroyLayout;
+    private long cachedDestroyLayoutVersion = -1L;
+    private int cachedDestroyModuleCount = -1;
+    private @Nullable ModuleInstance.ID cachedDestroyModuleId;
+    private int cachedDestroyModuleIndex = -1;
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map) {
         this.assetId = assetId;
@@ -182,18 +188,54 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private int selectedModuleIndex() {
         AutomatedFacility facility = resolveFacility(assetId);
-        if (facility == null) return -1;
+        if (facility == null) {
+            clearDestroyIndexCache();
+            return -1;
+        }
         StationLayout layout = facility.stationLayout();
         StationTileCoord selected = map.selection();
-        if (layout == null || selected == null) return -1;
+        if (layout == null || selected == null) {
+            clearDestroyIndexCache();
+            return -1;
+        }
         PlacedTile tile = layout.get(selected);
-        if (tile == null || tile.isCore() || tile.module() == null) return -1;
+        if (tile == null || tile.isCore() || tile.module() == null) {
+            clearDestroyIndexCache();
+            return -1;
+        }
+        ModuleInstance module = tile.module();
+        int moduleCount = facility.modules()
+            .size();
+        long layoutVersion = layout.version();
+        if (selected.equals(cachedDestroySelection) && layout == cachedDestroyLayout
+            && layoutVersion == cachedDestroyLayoutVersion && moduleCount == cachedDestroyModuleCount
+            && module.id.equals(cachedDestroyModuleId)) return cachedDestroyModuleIndex;
+
+        int moduleIndex = -1;
         for (int i = 0; i < facility.modules()
             .size(); i++) {
             if (facility.modules()
-                .get(i).id.equals(tile.module().id)) return i;
+                .get(i).id.equals(module.id)) {
+                moduleIndex = i;
+                break;
+            }
         }
-        return -1;
+        cachedDestroySelection = selected;
+        cachedDestroyLayout = layout;
+        cachedDestroyLayoutVersion = layoutVersion;
+        cachedDestroyModuleCount = moduleCount;
+        cachedDestroyModuleId = module.id;
+        cachedDestroyModuleIndex = moduleIndex;
+        return moduleIndex;
+    }
+
+    private void clearDestroyIndexCache() {
+        cachedDestroySelection = null;
+        cachedDestroyLayout = null;
+        cachedDestroyLayoutVersion = -1L;
+        cachedDestroyModuleCount = -1;
+        cachedDestroyModuleId = null;
+        cachedDestroyModuleIndex = -1;
     }
 
     private void destroySelected() {

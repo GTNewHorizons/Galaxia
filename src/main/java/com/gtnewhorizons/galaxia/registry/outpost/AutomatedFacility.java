@@ -76,6 +76,21 @@ public final class AutomatedFacility extends CelestialAsset {
         if (layout != null) layout.removeTileForModule(removed.id);
     }
 
+    public boolean removeModule(ModuleInstance.ID moduleId) {
+        int index = moduleIndex(moduleId);
+        if (index < 0) return false;
+        removeModule(index);
+        return true;
+    }
+
+    public int moduleIndex(ModuleInstance.ID moduleId) {
+        if (moduleId == null) return -1;
+        for (int i = 0; i < modules.size(); i++) {
+            if (moduleId.equals(modules.get(i).id)) return i;
+        }
+        return -1;
+    }
+
     public void clearModules() {
         modules.clear();
     }
