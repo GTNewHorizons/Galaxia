@@ -25,6 +25,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile boolean pendingCreativeBuildMode;
+    private static volatile StationVisionLayer pendingVisionLayer = StationVisionLayer.BASE;
 
     public static void open(CelestialAsset.ID assetId) {
         open(assetId, false);
@@ -46,12 +47,14 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             .fullScreenInvisible();
         CelestialAsset.ID assetId = pendingAssetId;
         boolean creativeBuildMode = pendingCreativeBuildMode;
+        StationVisionLayer visionLayer = pendingVisionLayer;
         StationMapWidget map = new StationMapWidget(
             assetId,
             coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
             LEFT_PANEL_WIDTH + PADDING,
             PADDING,
-            PADDING);
+            PADDING,
+            visionLayer);
 
         panel.child(
             new StationScreenBackground().left(0)

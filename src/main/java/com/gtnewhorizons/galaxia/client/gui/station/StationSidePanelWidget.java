@@ -98,6 +98,12 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             lineY,
             EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         lineY = drawLine(
+            "Layer: " + map.visionLayer()
+                .getDisplayName(),
+            x + CONTENT_PADDING,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY = drawLine(
             "Modules: " + facility.modules()
                 .size(),
             x + CONTENT_PADDING,
