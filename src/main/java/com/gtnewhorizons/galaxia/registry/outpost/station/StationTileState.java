@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+
 public enum StationTileState {
 
     EMPTY,
@@ -15,5 +17,15 @@ public enum StationTileState {
 
     public boolean passesSignal() {
         return this == OCCUPIED_OPERATIONAL || this == OCCUPIED_DISABLED;
+    }
+
+    public static StationTileState fromModuleStatus(Buildable.Status status) {
+        return switch (status) {
+            case OPERATIONAL -> OCCUPIED_OPERATIONAL;
+            case DISABLED -> OCCUPIED_DISABLED;
+            case CONSTRUCTION_SITE, IN_CONSTRUCTION -> UNDER_CONSTRUCTION;
+            case DECONSTRUCTION -> UNDER_DECONSTRUCTION;
+            case DESTROYED -> EMPTY;
+        };
     }
 }
