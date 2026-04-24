@@ -249,7 +249,7 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
             double yOff = assembly.getRiderYOffset(rm);
 
             for (int i = 0; i < cap; i++) {
-                double radius = (rm.getWidth() - 0.5) / 2;
+                double radius = (rm.getWidth() - 1.5) / 2;
                 double angle = (2 * Math.PI / cap) * i;
 
                 double seatOffsetX = Math.cos(angle) * radius;
