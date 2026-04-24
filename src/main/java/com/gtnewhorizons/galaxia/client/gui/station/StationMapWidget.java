@@ -145,7 +145,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
         ConnectionLayerRenderer.draw(
             context,
-            layout,
+            tiles,
             widgetWidth,
             widgetHeight,
             contentLeft,

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station.layer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
@@ -11,25 +13,29 @@ import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class ConnectionLayerRenderer {
 
-    private static final int CONNECTOR_COLOR = 0xFF1E385A;
-    private static final int CONNECTOR_UNDER_CONSTRUCTION = 0x661E385A;
-
     private ConnectionLayerRenderer() {}
 
-    public static void draw(GuiContext ctx, StationLayout layout, int widgetWidth, int widgetHeight, int contentLeft,
+    public static void draw(GuiContext ctx, Map<StationTileCoord, PlacedTile> tiles, int widgetWidth, int widgetHeight,
+        int contentLeft,
         int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
-        if (layout == null) return;
-        Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
+        if (tiles == null) return;
         int connW = StationMapViewport.connectorWidth();
         int connH = StationMapViewport.connectorHeight();
         int tileSize = StationMapViewport.TILE_SIZE;
+        ResourceLocation horizontalTexture = StationTextureRegistry.connectorTexture(ConnectorKind.HORIZONTAL);
+        ResourceLocation verticalTexture = StationTextureRegistry.connectorTexture(ConnectorKind.VERTICAL);
+        boolean hasHorizontalTexture = StationTextureRegistry.hasTexture(horizontalTexture);
+        boolean hasVerticalTexture = StationTextureRegistry.hasTexture(verticalTexture);
+        List<ConnectorQuad> horizontalQuads = new ArrayList<>();
+        List<ConnectorQuad> verticalQuads = new ArrayList<>();
 
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
@@ -41,7 +47,14 @@ public final class ConnectionLayerRenderer {
                 int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
                 int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
                     + (tileSize - connH) / 2;
-                drawConnector(cx, cy, connW, connH, connectorHorizontal(), connectorActive(tile, tiles.get(right)));
+                drawConnector(
+                    cx,
+                    cy,
+                    connW,
+                    connH,
+                    connectorActive(tile, tiles.get(right)),
+                    hasHorizontalTexture,
+                    horizontalQuads);
             }
 
             StationTileCoord down = StationTileCoord.of(coord.dx(), coord.dy() + 1);
@@ -49,39 +62,52 @@ public final class ConnectionLayerRenderer {
                 int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
                     + (tileSize - connW) / 2;
                 int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
-                drawConnector(cx, cy, connW, connH, connectorVertical(), connectorActive(tile, tiles.get(down)));
+                drawConnector(
+                    cx,
+                    cy,
+                    connW,
+                    connH,
+                    connectorActive(tile, tiles.get(down)),
+                    hasVerticalTexture,
+                    verticalQuads);
             }
         }
+
+        drawTextureBatch(horizontalTexture, horizontalQuads);
+        drawTextureBatch(verticalTexture, verticalQuads);
     }
 
-    private static void drawConnector(int x, int y, int w, int h, ResourceLocation texture, boolean active) {
-        if (active && texture != null && StationTextureRegistry.hasTexture(texture)) {
-            Minecraft.getMinecraft()
-                .getTextureManager()
-                .bindTexture(texture);
-            GlStateManager.enableTexture2D();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            Tessellator tess = Tessellator.instance;
-            tess.startDrawingQuads();
-            tess.addVertexWithUV(x, y + h, 0, 0, 1);
-            tess.addVertexWithUV(x + w, y + h, 0, 1, 1);
-            tess.addVertexWithUV(x + w, y, 0, 1, 0);
-            tess.addVertexWithUV(x, y, 0, 0, 0);
-            tess.draw();
-        } else {
-            int color = active ? CONNECTOR_COLOR : CONNECTOR_UNDER_CONSTRUCTION;
-            Gui.drawRect(x, y, x + w, y + h, color);
+    private static void drawConnector(int x, int y, int w, int h, boolean active, boolean hasTexture,
+        List<ConnectorQuad> textureQuads) {
+        if (active && hasTexture) {
+            textureQuads.add(new ConnectorQuad(x, y, w, h));
+            return;
         }
+
+        int color = active ? EnumColors.MAP_COLOR_STATION_CONNECTOR_ACTIVE.getColor()
+            : EnumColors.MAP_COLOR_STATION_CONNECTOR_INACTIVE.getColor();
+        Gui.drawRect(x, y, x + w, y + h, color);
     }
 
-    private static ResourceLocation connectorHorizontal() {
-        return StationTextureRegistry.connectorHorizontal();
-    }
+    private static void drawTextureBatch(ResourceLocation texture, List<ConnectorQuad> quads) {
+        if (texture == null || quads.isEmpty()) return;
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(texture);
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
 
-    private static ResourceLocation connectorVertical() {
-        return StationTextureRegistry.connectorVertical();
+        Tessellator tess = Tessellator.instance;
+        tess.startDrawingQuads();
+        for (ConnectorQuad quad : quads) {
+            tess.addVertexWithUV(quad.x, quad.y + quad.h, 0, 0, 1);
+            tess.addVertexWithUV(quad.x + quad.w, quad.y + quad.h, 0, 1, 1);
+            tess.addVertexWithUV(quad.x + quad.w, quad.y, 0, 1, 0);
+            tess.addVertexWithUV(quad.x, quad.y, 0, 0, 0);
+        }
+        tess.draw();
     }
 
     private static boolean connectorActive(PlacedTile a, PlacedTile b) {
@@ -91,5 +117,20 @@ public final class ConnectionLayerRenderer {
             && b.state() != null
             && b.state()
                 .isConnectorActive();
+    }
+
+    private static final class ConnectorQuad {
+
+        private final int x;
+        private final int y;
+        private final int w;
+        private final int h;
+
+        private ConnectorQuad(int x, int y, int w, int h) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+        }
     }
 }

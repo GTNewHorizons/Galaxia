@@ -12,13 +12,24 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 
 public final class StationTextureRegistry {
 
+    public enum ConnectorKind {
+        HORIZONTAL("horizontal"),
+        VERTICAL("vertical");
+
+        private final String textureName;
+
+        ConnectorKind(String textureName) {
+            this.textureName = textureName;
+        }
+    }
+
     private static final String DOMAIN = "galaxia";
     private static final String MODULE_BASE = "textures/gui/station/modules/";
     private static final String CONNECTOR_BASE = "textures/gui/station/connectors/";
 
     private static final Map<FacilityModuleKind, ResourceLocation> moduleTextures = new EnumMap<>(
         FacilityModuleKind.class);
-    private static final Map<String, ResourceLocation> connectorTextures = new java.util.HashMap<>();
+    private static final Map<ConnectorKind, ResourceLocation> connectorTextures = new EnumMap<>(ConnectorKind.class);
 
     static {
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
@@ -29,8 +40,9 @@ public final class StationTextureRegistry {
                     MODULE_BASE + kind.name()
                         .toLowerCase() + ".png"));
         }
-        connectorTextures.put("horizontal", new ResourceLocation(DOMAIN, CONNECTOR_BASE + "horizontal.png"));
-        connectorTextures.put("vertical", new ResourceLocation(DOMAIN, CONNECTOR_BASE + "vertical.png"));
+        for (ConnectorKind kind : ConnectorKind.values()) {
+            connectorTextures.put(kind, new ResourceLocation(DOMAIN, CONNECTOR_BASE + kind.textureName + ".png"));
+        }
     }
 
     private StationTextureRegistry() {}
@@ -41,13 +53,8 @@ public final class StationTextureRegistry {
     }
 
     @Nullable
-    public static ResourceLocation connectorHorizontal() {
-        return connectorTextures.get("horizontal");
-    }
-
-    @Nullable
-    public static ResourceLocation connectorVertical() {
-        return connectorTextures.get("vertical");
+    public static ResourceLocation connectorTexture(ConnectorKind kind) {
+        return connectorTextures.get(kind);
     }
 
     private static final Map<String, Boolean> textureExistsCache = new java.util.HashMap<>();
