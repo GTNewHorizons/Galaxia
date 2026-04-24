@@ -10,7 +10,7 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
 public class ModuleInstance implements Buildable {
 
@@ -23,16 +23,16 @@ public class ModuleInstance implements Buildable {
     private long energyBuffer = 0L;
     private int ticks = 0;
 
-    public void tick(AutomatedOutpost outpost) {
+    public void tick(AutomatedFacility outpost) {
         if (this.status() == Buildable.Status.OPERATIONAL) {
             tickOperational(outpost);
         }
     }
 
-    private void tickOperational(AutomatedOutpost outpost) {
+    private void tickOperational(AutomatedFacility outpost) {
         long powerDraw = this.powerDrawEuPerTick();
 
-        if (powerDraw > 0 && !outpost.tryConsumeEnergy(powerDraw)) {
+        if (!outpost.tryConsumeEnergy(powerDraw)) {
             ticks = 0;
             return;
         }
@@ -62,7 +62,7 @@ public class ModuleInstance implements Buildable {
         this.component = component;
     }
 
-    public OutpostModuleKind kind() {
+    public FacilityModuleKind kind() {
         return definition.kind();
     }
 

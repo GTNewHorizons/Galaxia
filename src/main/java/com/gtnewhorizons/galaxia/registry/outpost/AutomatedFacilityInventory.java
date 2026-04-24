@@ -4,8 +4,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.UnmodifiableView;
+import javax.annotation.Nonnull;
 
 /**
  * Virtual item inventory for an automated outpost.
@@ -14,7 +13,7 @@ import org.jetbrains.annotations.UnmodifiableView;
  * <p>
  * This class is NOT thread-safe and must only be accessed from the server thread.
  */
-public final class AutomatedOutpostInventory {
+public final class AutomatedFacilityInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
 
@@ -64,12 +63,12 @@ public final class AutomatedOutpostInventory {
     }
 
     /** Returns an unmodifiable snapshot of the full inventory contents. */
-    public @NotNull @UnmodifiableView Map<ItemStackWrapper, Long> snapshot() {
+    public @Nonnull Map<ItemStackWrapper, Long> snapshot() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
 
     /** Replaces the entire inventory contents (used during deserialization and migration). */
-    public void loadFromSnapshot(@NotNull Map<ItemStackWrapper, Long> snapshot) {
+    public void loadFromSnapshot(@Nonnull Map<ItemStackWrapper, Long> snapshot) {
         amounts.clear();
         for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
             if (e.getValue() > 0) amounts.put(e.getKey(), e.getValue());

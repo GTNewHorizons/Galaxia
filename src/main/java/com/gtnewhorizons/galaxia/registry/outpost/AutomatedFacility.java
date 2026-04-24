@@ -5,14 +5,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.annotation.Nullable;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 
-public final class AutomatedOutpost extends CelestialAsset {
+public final class AutomatedFacility extends CelestialAsset {
 
     public final CelestialObjectId systemId;
 
@@ -20,24 +23,43 @@ public final class AutomatedOutpost extends CelestialAsset {
 
     private final List<ModuleInstance> modules;
 
-    public final AutomatedOutpostInventory inventory;
+    public final AutomatedFacilityInventory inventory;
 
     public final LogisticsConfiguration logisticsConfig;
+
+    private final StationLayout layout;
 
     private long energyStored;
 
     public static final long MAX_ENERGY = 1_000_000L;
 
-    public AutomatedOutpost(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Status status) {
-        super(assetId, celestialBodyId, Kind.AUTOMATED_OUTPOST, status, null);
+    public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
+        super(assetId, celestialBodyId, kind, status, null);
+        if (kind != Kind.AUTOMATED_OUTPOST && kind != Kind.AUTOMATED_STATION) {
+            throw new IllegalArgumentException(
+                "AutomatedFacility kind must be AUTOMATED_OUTPOST or AUTOMATED_STATION, got: " + kind);
+        }
         this.systemId = GalaxiaCelestialAPI.findStar(celestialBodyId)
             .id();
         this.planetaryAnchorBodyId = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialBodyId)
             .id();
         this.modules = new ArrayList<>();
-        this.inventory = new AutomatedOutpostInventory();
+        this.inventory = new AutomatedFacilityInventory();
         this.logisticsConfig = new LogisticsConfiguration();
+        this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.energyStored = 0;
+    }
+
+    public static boolean ownsStationLayout(Kind kind) {
+        return kind == Kind.AUTOMATED_OUTPOST || kind == Kind.AUTOMATED_STATION;
+    }
+
+    public boolean hasStationLayout() {
+        return layout != null;
+    }
+
+    public @Nullable StationLayout stationLayout() {
+        return layout;
     }
 
     public List<ModuleInstance> modules() {
@@ -71,7 +93,7 @@ public final class AutomatedOutpost extends CelestialAsset {
     }
 
     public void setEnergyStored(long energyStored) {
-        this.energyStored = Math.min(MAX_ENERGY, Math.max(0, energyStored));
+        this.energyStored = Math.clamp(energyStored, 0, MAX_ENERGY);
     }
 
     public void addEnergy(long delta) {
@@ -79,16 +101,15 @@ public final class AutomatedOutpost extends CelestialAsset {
     }
 
     public boolean tryConsumeEnergy(long amount) {
-        if (amount <= 0) return true;
         if (energyStored < amount) return false;
-        energyStored -= amount;
+        setEnergyStored(energyStored - amount);
         return true;
     }
 
     @Override
     public boolean hasMiningCapability() {
         for (ModuleInstance m : modules) {
-            if (m.kind() == OutpostModuleKind.MINER && m.isOperational()) return true;
+            if (m.kind() == FacilityModuleKind.MINER && m.isOperational()) return true;
         }
         return false;
     }
@@ -96,8 +117,9 @@ public final class AutomatedOutpost extends CelestialAsset {
     @Override
     public boolean hasProductionCapability() {
         for (ModuleInstance m : modules) {
-            OutpostModuleKind k = m.kind();
-            if ((k == OutpostModuleKind.HAMMER || k == OutpostModuleKind.BIG_HAMMER) && m.isOperational()) return true;
+            FacilityModuleKind k = m.kind();
+            if ((k == FacilityModuleKind.HAMMER || k == FacilityModuleKind.BIG_HAMMER) && m.isOperational())
+                return true;
         }
         return false;
     }
@@ -117,6 +139,6 @@ public final class AutomatedOutpost extends CelestialAsset {
             module.tick(this);
         }
 
-        LogisticStore.updateSignalsForOutpost(this);
+        LogisticStore.updateSignalsForFacility(this);
     }
 }

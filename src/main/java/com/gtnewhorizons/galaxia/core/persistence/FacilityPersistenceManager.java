@@ -28,21 +28,25 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
-public final class OutpostPersistenceManager {
+public final class FacilityPersistenceManager {
 
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
@@ -52,7 +56,7 @@ public final class OutpostPersistenceManager {
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
 
-    public OutpostPersistenceManager() {
+    public FacilityPersistenceManager() {
         gson = new GsonBuilder().setPrettyPrinting()
             .create();
     }
@@ -102,20 +106,42 @@ public final class OutpostPersistenceManager {
 
     private void loadAssets(File file) {
         if (!file.exists()) return;
+        List<AssetJson> list;
         try (FileReader reader = new FileReader(file)) {
             Type listType = new TypeToken<List<AssetJson>>() {}.getType();
-            List<AssetJson> list = gson.fromJson(reader, listType);
-            if (list == null) return;
+            list = gson.fromJson(reader, listType);
+        } catch (IOException | JsonParseException e) {
+            Galaxia.LOG.error("[Logistics] Failed to read asset registry {}: {}", file, e.getMessage());
+            return;
+        }
+        if (list == null) {
+            Galaxia.LOG.warn("[Logistics] Asset registry {} contained no asset list", file);
+            return;
+        }
 
-            for (AssetJson json : list) {
+        for (AssetJson json : list) {
+            try {
                 CelestialAsset asset = decodeAsset(json);
-                if (asset == null) continue;
+                if (asset == null) {
+                    Galaxia.LOG.warn("[Logistics] Skipping malformed asset entry in {}", file);
+                    continue;
+                }
                 UUID teamId = UUID.fromString(json.teamId);
-                decodeOutpostState(asset, json.outpost);
+                decodeFacilityState(asset, json.facility);
                 CelestialAssetStore.add(teamId, asset);
+            } catch (RuntimeException e) {
+                Galaxia.LOG.error("[Logistics] Skipping malformed asset entry in {}: {}", file, e.getMessage());
             }
-        } catch (IOException | JsonParseException | IllegalArgumentException e) {
-            Galaxia.LOG.error("[Logistics] Failed to load station registry from {}: {}", file, e.getMessage());
+        }
+    }
+
+    private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
+        if (name == null) return null;
+        try {
+            return Enum.valueOf(cls, name);
+        } catch (IllegalArgumentException e) {
+            Galaxia.LOG.warn("[Logistics] Unknown enum value {} for {}", name, cls.getSimpleName());
+            return null;
         }
     }
 
@@ -123,9 +149,9 @@ public final class OutpostPersistenceManager {
         List<AssetJson> list = new ArrayList<>();
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             AssetJson json = encodeAsset(asset);
-            CelestialAsset outpost = CelestialAssetStore.findAsset(asset.assetId);
-            if (outpost instanceof AutomatedOutpost o) {
-                json.outpost = encodeOutpostState(o);
+            CelestialAsset facility = CelestialAssetStore.findAsset(asset.assetId);
+            if (facility instanceof AutomatedFacility o) {
+                json.facility = encodeFacilityState(o);
             }
             list.add(json);
         }
@@ -236,18 +262,17 @@ public final class OutpostPersistenceManager {
         }
         CelestialObjectId objectId = CelestialObjectId.fromString(json.celestialObjectId);
         if (objectId == null) return null;
-        CelestialAsset asset = CelestialAsset.create(
-            json.assetId,
-            objectId,
-            CelestialAsset.Kind.valueOf(json.kind),
-            Buildable.Status.valueOf(json.status));
+        CelestialAsset.Kind kind = safeValueOf(CelestialAsset.Kind.class, json.kind);
+        Buildable.Status status = safeValueOf(Buildable.Status.class, json.status);
+        if (kind == null || status == null) return null;
+        CelestialAsset asset = CelestialAsset.create(json.assetId, objectId, kind, status);
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         return asset;
     }
 
-    private OutpostStateJson encodeOutpostState(AutomatedOutpost state) {
-        OutpostStateJson out = new OutpostStateJson();
+    private FacilityStateJson encodeFacilityState(AutomatedFacility state) {
+        FacilityStateJson out = new FacilityStateJson();
         out.celestialBodyId = String.valueOf(state.celestialObjectId);
         out.systemId = String.valueOf(state.systemId);
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
@@ -255,6 +280,7 @@ public final class OutpostPersistenceManager {
         out.modules = new ArrayList<>();
         for (ModuleInstance m : state.modules()) {
             ModuleJson mj = new ModuleJson();
+            mj.moduleId = m.id.toString();
             mj.kind = m.kind()
                 .name();
             mj.status = m.status()
@@ -307,19 +333,39 @@ public final class OutpostPersistenceManager {
                     .toKey(),
                 cj);
         }
+        out.layoutTiles = new ArrayList<>();
+        StationLayout layout = state.stationLayout();
+        if (layout != null) {
+            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
+                .entrySet()) {
+                StationTileJson tj = new StationTileJson();
+                tj.dx = e.getKey()
+                    .dx();
+                tj.dy = e.getKey()
+                    .dy();
+                tj.state = e.getValue()
+                    .state()
+                    .name();
+                ModuleInstance module = e.getValue()
+                    .module();
+                tj.moduleId = module == null ? null : module.id.toString();
+                out.layoutTiles.add(tj);
+            }
+        }
         return out;
     }
 
-    private AutomatedOutpost decodeOutpostState(CelestialAsset asset, OutpostStateJson json) {
+    private AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
         if (asset == null || json == null || json.systemId == null) return null;
-        if (!(asset instanceof AutomatedOutpost state)) return null;
+        if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
 
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
-                if (mj.kind == null) continue;
-                OutpostModuleKind kind = OutpostModuleKind.valueOf(mj.kind);
-                ModuleInstance module = kind.createInstance();
+                FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
+                if (kind == null) continue;
+                ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
+                ModuleInstance module = moduleId == null ? kind.createInstance() : kind.createInstance(moduleId);
 
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
 
@@ -371,8 +417,9 @@ public final class OutpostPersistenceManager {
                     case POWER -> {}
                 }
 
-                if (mj.status != null) {
-                    module.updateStatus(Buildable.Status.valueOf(mj.status));
+                Buildable.Status moduleStatus = safeValueOf(Buildable.Status.class, mj.status);
+                if (moduleStatus != null) {
+                    module.updateStatus(moduleStatus);
                 }
                 module.setTicks(mj.cooldownTicks);
                 module.setEnergyBuffer(mj.energyBuffer);
@@ -419,6 +466,35 @@ public final class OutpostPersistenceManager {
             state.logisticsConfig.loadFromSnapshot(cfgSnapshot);
         }
 
+        StationLayout layout = state.stationLayout();
+        if (layout != null && json.layoutTiles != null && !json.layoutTiles.isEmpty()) {
+            Map<ModuleInstance.ID, ModuleInstance> modulesById = new LinkedHashMap<>();
+            for (ModuleInstance m : state.modules()) {
+                modulesById.put(m.id, m);
+            }
+            Map<StationTileCoord, PlacedTile> layoutSnapshot = new LinkedHashMap<>();
+            for (StationTileJson tj : json.layoutTiles) {
+                if (tj == null) continue;
+                StationTileState tileState = safeValueOf(StationTileState.class, tj.state);
+                if (tileState == null) continue;
+                if (tj.dx < StationTileCoord.MIN || tj.dx > StationTileCoord.MAX
+                    || tj.dy < StationTileCoord.MIN
+                    || tj.dy > StationTileCoord.MAX) {
+                    Galaxia.LOG.warn(
+                        "[Logistics] Skipping layout tile out of range: ({}, {}) state={}",
+                        tj.dx,
+                        tj.dy,
+                        tj.state);
+                    continue;
+                }
+                StationTileCoord coord = StationTileCoord.of(tj.dx, tj.dy);
+                ModuleInstance module = tj.moduleId == null ? null
+                    : modulesById.get(ModuleInstance.ID.from(tj.moduleId));
+                layoutSnapshot.put(coord, new PlacedTile(module, tileState));
+            }
+            layout.loadFromSnapshot(layoutSnapshot);
+        }
+
         return state;
     }
 
@@ -457,10 +533,10 @@ public final class OutpostPersistenceManager {
         String status;
         Map<String, Long> requiredResources;
         Map<String, Long> constructionInventory;
-        OutpostStateJson outpost;
+        FacilityStateJson facility;
     }
 
-    static final class OutpostStateJson {
+    static final class FacilityStateJson {
 
         String celestialBodyId;
         String systemId;
@@ -469,10 +545,20 @@ public final class OutpostPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, LogisticsConfigJson> logisticsConfig;
+        List<StationTileJson> layoutTiles;
+    }
+
+    static final class StationTileJson {
+
+        int dx;
+        int dy;
+        String state;
+        String moduleId;
     }
 
     static final class ModuleJson {
 
+        String moduleId;
         String kind;
         String status;
         float constructionProgress;

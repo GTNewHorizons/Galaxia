@@ -2,77 +2,83 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.function.Function;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-public final class OutpostModuleUpdatePacket implements IMessage {
+public final class AssetModuleUpdatePacket implements IMessage {
+
+    private static final int ACTION_TYPE = 0;
+    private static final int CONFIG_TYPE = 1;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
     private int type;
-    private int action;
+    private Action action;
+    private ConfigAction configAction;
 
     private String stringPayload;
     private byte bytePayload;
     private double doublePayload;
 
-    public OutpostModuleUpdatePacket() {}
+    public AssetModuleUpdatePacket() {}
 
-    public static OutpostModuleUpdatePacket action(CelestialAsset.ID assetId, int moduleIndex, Action action) {
-        OutpostModuleUpdatePacket pkt = new OutpostModuleUpdatePacket();
+    public static AssetModuleUpdatePacket action(CelestialAsset.ID assetId, int moduleIndex, Action action) {
+        AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;
-        pkt.type = 0; // ACTION
-        pkt.action = action.ordinal();
+        pkt.type = ACTION_TYPE;
+        pkt.action = action;
         return pkt;
     }
 
-    private static OutpostModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action) {
-        OutpostModuleUpdatePacket pkt = new OutpostModuleUpdatePacket();
+    private static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action) {
+        AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;
-        pkt.type = 1; // CONFIG
-        pkt.action = action.ordinal();
+        pkt.type = CONFIG_TYPE;
+        pkt.configAction = action;
         return pkt;
     }
 
-    public static OutpostModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
         String payload) {
-        OutpostModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
         pkt.stringPayload = payload == null ? "" : payload;
         return pkt;
     }
 
-    public static OutpostModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
         boolean payload) {
-        OutpostModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
         pkt.bytePayload = (byte) (payload ? 1 : 0);
         return pkt;
     }
 
-    public static OutpostModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
         double payload) {
-        OutpostModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
         pkt.doublePayload = payload;
         return pkt;
     }
 
-    public static OutpostModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
+    public static AssetModuleUpdatePacket config(CelestialAsset.ID assetId, int moduleIndex, ConfigAction action,
         Enum<?> payload) {
-        OutpostModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, action);
         pkt.bytePayload = (byte) payload.ordinal();
         return pkt;
     }
@@ -98,10 +104,17 @@ public final class OutpostModuleUpdatePacket implements IMessage {
         PacketUtil.writeId(buf, assetId);
         buf.writeInt(moduleIndex);
         buf.writeByte(type);
-        buf.writeByte(action);
+        if (type == ACTION_TYPE) {
+            PacketUtil.writeEnum(buf, action);
+        } else if (type == CONFIG_TYPE) {
+            PacketUtil.writeEnum(buf, configAction);
+        } else {
+            Galaxia.LOG.warn("[Network] Writing AssetModuleUpdatePacket with unknown type: {}", type);
+            buf.writeByte(0);
+        }
 
-        if (type == 1) { // CONFIG
-            switch (ConfigAction.values()[action]) {
+        if (type == CONFIG_TYPE && configAction != null) {
+            switch (configAction) {
                 case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> PacketUtil.writeString(buf, stringPayload);
                 case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
@@ -115,24 +128,42 @@ public final class OutpostModuleUpdatePacket implements IMessage {
         assetId = PacketUtil.readAssetId(buf);
         moduleIndex = buf.readInt();
         type = buf.readUnsignedByte();
-        action = buf.readUnsignedByte();
+        int rawAction = buf.readUnsignedByte();
 
-        if (type == 1) { // CONFIG
-            switch (ConfigAction.values()[action]) {
-                case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
-                case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> bytePayload = buf.readByte();
-                case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
-                case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
+        if (type == ACTION_TYPE) {
+            action = PacketUtil.fromOrdinalOrNull(rawAction, Action.class);
+            if (action == null) {
+                Galaxia.LOG
+                    .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown action ordinal: {}", rawAction);
             }
+            return;
+        }
+        if (type != CONFIG_TYPE) {
+            Galaxia.LOG.warn("[Network] Ignoring AssetModuleUpdatePacket with unknown type: {}", type);
+            return;
+        }
+
+        configAction = PacketUtil.fromOrdinalOrNull(rawAction, ConfigAction.class);
+        if (configAction == null) {
+            Galaxia.LOG
+                .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown config action ordinal: {}", rawAction);
+            return;
+        }
+
+        switch (configAction) {
+            case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
+            case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> bytePayload = buf.readByte();
+            case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
+            case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
         }
     }
 
     public Action getAction() {
-        return type == 0 ? Action.values()[action] : null;
+        return type == ACTION_TYPE ? action : null;
     }
 
     public ConfigAction getConfigAction() {
-        return type == 1 ? ConfigAction.values()[action] : null;
+        return type == CONFIG_TYPE ? configAction : null;
     }
 
     public String getStringPayload() {
@@ -148,16 +179,21 @@ public final class OutpostModuleUpdatePacket implements IMessage {
     }
 
     public <T extends Enum<T>> T getEnumPayload(Class<T> enumClass) {
-        return enumClass.getEnumConstants()[bytePayload];
+        return PacketUtil.fromOrdinalOrNull(Byte.toUnsignedInt(bytePayload), enumClass);
     }
 
-    public static final class Handler implements IMessageHandler<OutpostModuleUpdatePacket, IMessage> {
+    public static final class Handler implements IMessageHandler<AssetModuleUpdatePacket, IMessage> {
 
         @Override
-        public IMessage onMessage(OutpostModuleUpdatePacket packet, MessageContext ctx) {
-            AutomatedOutpost state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedOutpost o ? o
-                : null;
-            if (state == null) return null;
+        public IMessage onMessage(AssetModuleUpdatePacket packet, MessageContext ctx) {
+            if (ctx.getServerHandler() == null || ctx.getServerHandler().playerEntity == null) return null;
+
+            CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
+            if (!(asset instanceof AutomatedFacility state)) return null;
+            if (!CelestialAssetStore
+                .isOwnedBy(TempTeamCompat.getTeam(ctx.getServerHandler().playerEntity), packet.assetId)) return null;
+            if (packet.type == ACTION_TYPE && packet.action == null) return null;
+            if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
 
             var modules = state.modules();
             if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
@@ -165,17 +201,20 @@ public final class OutpostModuleUpdatePacket implements IMessage {
             ModuleInstance module = modules.get(packet.moduleIndex);
 
             switch (packet.type) {
-                case 0 -> handleAction(packet, state, module);
-                case 1 -> handleConfig(packet, state, module);
+                case ACTION_TYPE -> handleAction(packet, state, module);
+                case CONFIG_TYPE -> handleConfig(packet, state, module);
+                default -> {
+                    return null;
+                }
             }
 
-            if (packet.type == 0 && packet.getAction() == Action.DESTROY) {
-                return OutpostSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex);
+            if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
+                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex);
             }
-            return OutpostSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
+            return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
         }
 
-        private void handleAction(OutpostModuleUpdatePacket packet, AutomatedOutpost state, ModuleInstance module) {
+        private void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
             switch (packet.getAction()) {
                 case ENABLE -> {
                     if (module.status() == Buildable.Status.DISABLED) {
@@ -187,7 +226,7 @@ public final class OutpostModuleUpdatePacket implements IMessage {
             }
         }
 
-        private void handleConfig(OutpostModuleUpdatePacket packet, AutomatedOutpost state, ModuleInstance module) {
+        private void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
             switch (packet.getConfigAction()) {
                 case ADD_MINER_BLACKLIST -> handleMinerBlacklist(
                     module,
@@ -220,7 +259,7 @@ public final class OutpostModuleUpdatePacket implements IMessage {
                             .mode(),
                         packet.getDoublePayload()));
                 case SET_PLANETARY_HANDLING -> {
-                    if (module.kind() == OutpostModuleKind.BIG_HAMMER
+                    if (module.kind() == FacilityModuleKind.BIG_HAMMER
                         && module.component() instanceof ModuleHammer hammer) {
                         hammer.setPlanetaryHandling(packet.getBooleanPayload());
                     }
@@ -229,12 +268,13 @@ public final class OutpostModuleUpdatePacket implements IMessage {
                     if (!(module.component() instanceof ModuleHammer hammer)) return;
                     OrbitalTransferPlanner.RoutePriority priority = packet
                         .getEnumPayload(OrbitalTransferPlanner.RoutePriority.class);
+                    if (priority == null) return;
                     hammer.setRoutePriority(priority);
                 }
             }
         }
 
-        private void handleMinerBlacklist(ModuleInstance module, String payload, boolean add, AutomatedOutpost state,
+        private void handleMinerBlacklist(ModuleInstance module, String payload, boolean add, AutomatedFacility state,
             int moduleIndex) {
             if (!(module.component() instanceof ModuleMiner miner)) return;
             if (add) {
@@ -247,7 +287,7 @@ public final class OutpostModuleUpdatePacket implements IMessage {
             }
         }
 
-        private void handleMinerCopySettings(ModuleInstance module, boolean payload, AutomatedOutpost state,
+        private void handleMinerCopySettings(ModuleInstance module, boolean payload, AutomatedFacility state,
             int moduleIndex) {
             if (!(module.component() instanceof ModuleMiner miner)) return;
             miner.setCopySettingToOtherMiners(payload);
@@ -266,7 +306,7 @@ public final class OutpostModuleUpdatePacket implements IMessage {
         }
     }
 
-    private static void copyMinerSettingsToOtherMiners(AutomatedOutpost state, int sourceModuleIndex,
+    private static void copyMinerSettingsToOtherMiners(AutomatedFacility state, int sourceModuleIndex,
         ModuleMiner sourceMiner) {
         for (int i = 0; i < state.modules()
             .size(); i++) {

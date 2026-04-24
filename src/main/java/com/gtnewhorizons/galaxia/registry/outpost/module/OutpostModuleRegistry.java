@@ -10,20 +10,20 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 
 public class OutpostModuleRegistry {
 
-    public record Definition(OutpostModuleKind kind, long baseEnergyCapacity, long powerDrawEuPerTick,
+    public record Definition(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawEuPerTick,
         int cooldownTicks, Map<ItemStack, Long> constructionCost,
-        BiConsumer<ModuleInstance, AutomatedOutpost> applyBehavior, Supplier<ModuleComponent> defaultFactory) {}
+        BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<ModuleComponent> defaultFactory) {}
 
-    private static final Map<OutpostModuleKind, Definition> DEFINITIONS = new EnumMap<>(OutpostModuleKind.class);
+    private static final Map<FacilityModuleKind, Definition> DEFINITIONS = new EnumMap<>(FacilityModuleKind.class);
 
     public static void init() {
         register(
-            OutpostModuleKind.POWER,
+            FacilityModuleKind.POWER,
             1500L,
             -ModulePower.EU_TICK,
             1,
@@ -31,22 +31,22 @@ public class OutpostModuleRegistry {
             ModulePower::doNothing,
             ModulePower::new);
         register(
-            OutpostModuleKind.MINER,
+            FacilityModuleKind.MINER,
             2000L,
             128L,
             20,
             Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleMiner::generateOre,
-            () -> new ModuleMiner(OutpostModuleKind.MINER, new ArrayList<>(), false));
+            () -> new ModuleMiner(FacilityModuleKind.MINER, new ArrayList<>(), false));
         register(
-            OutpostModuleKind.HAMMER,
+            FacilityModuleKind.HAMMER,
             1000L,
             10L,
             20,
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleHammer::prepareToFire,
             () -> new ModuleHammer(
-                OutpostModuleKind.HAMMER,
+                FacilityModuleKind.HAMMER,
                 AllowShootingConfig.ALWAYS,
                 OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
                 false,
@@ -54,14 +54,14 @@ public class OutpostModuleRegistry {
                 false,
                 64));
         register(
-            OutpostModuleKind.BIG_HAMMER,
+            FacilityModuleKind.BIG_HAMMER,
             5000L,
             25L,
             20,
             Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleHammer::prepareToFire,
             () -> new ModuleHammer(
-                OutpostModuleKind.BIG_HAMMER,
+                FacilityModuleKind.BIG_HAMMER,
                 AllowShootingConfig.ALWAYS,
                 OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
                 false,
@@ -70,9 +70,9 @@ public class OutpostModuleRegistry {
                 128));
     }
 
-    public static void register(OutpostModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
+    public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
         int cooldownTicks, Map<ItemStack, Long> constructionCost,
-        BiConsumer<ModuleInstance, AutomatedOutpost> tickFunction, Supplier<ModuleComponent> defaultFactory) {
+        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<ModuleComponent> defaultFactory) {
         DEFINITIONS.put(
             kind,
             new Definition(
@@ -85,19 +85,19 @@ public class OutpostModuleRegistry {
                 defaultFactory));
     }
 
-    public static Definition get(OutpostModuleKind kind) {
+    public static Definition get(FacilityModuleKind kind) {
         return DEFINITIONS.get(kind);
     }
 
-    public static ModuleInstance createInstance(OutpostModuleKind kind) {
+    public static ModuleInstance createInstance(FacilityModuleKind kind) {
         return createInstance(null, kind, null);
     }
 
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, OutpostModuleKind kind) {
+    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, FacilityModuleKind kind) {
         return createInstance(moduleId, kind, null);
     }
 
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, OutpostModuleKind kind,
+    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, FacilityModuleKind kind,
         ModuleComponent component) {
         Definition def = get(kind);
         if (def == null) {
@@ -118,11 +118,11 @@ public class OutpostModuleRegistry {
         return instance;
     }
 
-    private static ModuleComponent createDefaultComponent(OutpostModuleKind kind) {
+    private static ModuleComponent createDefaultComponent(FacilityModuleKind kind) {
         return get(kind).defaultFactory.get();
     }
 
-    public static boolean isRegistered(OutpostModuleKind kind) {
+    public static boolean isRegistered(FacilityModuleKind kind) {
         return DEFINITIONS.containsKey(kind);
     }
 }

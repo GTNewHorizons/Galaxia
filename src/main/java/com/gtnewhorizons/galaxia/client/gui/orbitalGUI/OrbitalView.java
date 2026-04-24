@@ -489,8 +489,8 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public boolean canCreateAutomatedOutpost(CelestialObject body) {
-                        return OrbitalMapWidget.this.canCreateAutomatedOutpost(body);
+                    public boolean canCreateAutomatedFacility(CelestialObject body) {
+                        return OrbitalMapWidget.this.canCreateAutomatedFacility(body);
                     }
 
                     @Override
@@ -872,8 +872,8 @@ public class OrbitalView {
                     }
 
                     @Override
-                    public boolean canCreateAutomatedOutpost(CelestialObject body) {
-                        return OrbitalMapWidget.this.canCreateAutomatedOutpost(body);
+                    public boolean canCreateAutomatedFacility(CelestialObject body) {
+                        return OrbitalMapWidget.this.canCreateAutomatedFacility(body);
                     }
 
                     @Override
@@ -2272,7 +2272,7 @@ public class OrbitalView {
             return canCreateBaseStation(body) && isGT5AutomationAvailable();
         }
 
-        private boolean canCreateAutomatedOutpost(CelestialObject body) {
+        private boolean canCreateAutomatedFacility(CelestialObject body) {
             return body != null && isGT5AutomationAvailable()
                 && body.properties()
                     .canCreateOutpost();

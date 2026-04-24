@@ -2,13 +2,13 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
  * Client → Server: requests that a new module be queued for construction on an outpost.
  *
  * <p>
- * The server creates an {@link AutomatedOutpostModule} in {@code IN_CONSTRUCTION} state and
+ * The server creates an {@link AutomatedFacilityModule} in {@code IN_CONSTRUCTION} state and
  * adds it to the outpost. Construction then proceeds tick-by-tick as the module consumes
  * resources from the outpost's inventory.
  *
@@ -27,16 +27,16 @@ import io.netty.buffer.ByteBuf;
  * Returns an {@link OutpostFullSyncPacket} so the requesting client immediately sees the
  * new module in the UI.
  */
-public final class OutpostBuildModulePacket implements IMessage {
+public final class AssetBuildModulePacket implements IMessage {
 
     private CelestialAsset.ID assetId;
     private ModuleInstance.ID moduleId;
-    private OutpostModuleKind moduleKind;
+    private FacilityModuleKind moduleKind;
     private boolean instantBuild;
 
-    public OutpostBuildModulePacket() {}
+    public AssetBuildModulePacket() {}
 
-    public OutpostBuildModulePacket(CelestialAsset.ID assetId, OutpostModuleKind kind, ModuleInstance.ID moduleId,
+    public AssetBuildModulePacket(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleInstance.ID moduleId,
         boolean instantBuild) {
         this.assetId = assetId;
         this.moduleKind = kind;
@@ -56,29 +56,16 @@ public final class OutpostBuildModulePacket implements IMessage {
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         moduleId = PacketUtil.readModuleId(buf);
-        moduleKind = PacketUtil.readEnum(buf, OutpostModuleKind.class);
+        moduleKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
         instantBuild = buf.readBoolean();
     }
 
-    public static final class Handler implements IMessageHandler<OutpostBuildModulePacket, IMessage> {
+    public static final class Handler implements IMessageHandler<AssetBuildModulePacket, IMessage> {
 
         @Override
-        public IMessage onMessage(OutpostBuildModulePacket packet, MessageContext ctx) {
+        public IMessage onMessage(AssetBuildModulePacket packet, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
-
-            AutomatedOutpost state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedOutpost o ? o
-                : null;
-            if (state == null) {
-                Galaxia.LOG.warn(
-                    "[Outpost] BuildModule: unknown assetId {} from player {}",
-                    packet.assetId,
-                    player.getGameProfile()
-                        .getName());
-                return null;
-            }
-
-            OutpostModuleKind kind = packet.moduleKind;
 
             CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
             if (asset == null) {
@@ -89,7 +76,25 @@ public final class OutpostBuildModulePacket implements IMessage {
                         .getName());
                 return null;
             }
-            if (kind == OutpostModuleKind.MINER && asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST) {
+            if (!(asset instanceof AutomatedFacility state)) {
+                Galaxia.LOG.warn(
+                    "[Outpost] BuildModule: asset {} is not an automated facility for player {}",
+                    packet.assetId,
+                    player.getGameProfile()
+                        .getName());
+                return null;
+            }
+            if (!CelestialAssetStore.isOwnedBy(TempTeamCompat.getTeam(player), packet.assetId)) {
+                Galaxia.LOG.warn(
+                    "[Outpost] BuildModule: unauthorized access to asset {} by player {}",
+                    packet.assetId,
+                    player.getGameProfile()
+                        .getName());
+                return null;
+            }
+
+            FacilityModuleKind kind = packet.moduleKind;
+            if (kind == FacilityModuleKind.MINER && asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST) {
                 Galaxia.LOG.warn(
                     "[Outpost] BuildModule: rejected MINER on {} ({}) from player {}",
                     packet.assetId,
@@ -114,7 +119,7 @@ public final class OutpostBuildModulePacket implements IMessage {
 
             int moduleIndex = state.modules()
                 .size() - 1;
-            return OutpostSyncPacket.moduleAdded(packet.assetId, moduleIndex, module);
+            return AssetSyncPacket.moduleAdded(packet.assetId, moduleIndex, module);
         }
     }
 }

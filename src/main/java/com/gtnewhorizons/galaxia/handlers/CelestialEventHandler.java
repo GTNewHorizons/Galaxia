@@ -14,21 +14,21 @@ import net.minecraft.server.MinecraftServer;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -50,7 +50,7 @@ public class CelestialEventHandler {
             // TODO: Ticks other assets
             if (asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST) continue;
 
-            AutomatedOutpost outpost = (AutomatedOutpost) asset;
+            AutomatedFacility outpost = (AutomatedFacility) asset;
             outpost.tick();
         }
 
@@ -85,14 +85,14 @@ public class CelestialEventHandler {
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
 
-            List<OutpostSyncPacket> playerOutpostPackets = new ArrayList<>();
+            List<AssetSyncPacket> playerOutpostPackets = new ArrayList<>();
             for (CelestialAsset asset : aggregatedAssets) {
-                if (asset instanceof AutomatedOutpost outpost) {
-                    playerOutpostPackets.add(OutpostSyncPacket.fullSync(outpost));
+                if (asset instanceof AutomatedFacility outpost) {
+                    playerOutpostPackets.add(AssetSyncPacket.fullSync(outpost));
                 }
             }
             // TODO: make aggregate packet for this
-            for (OutpostSyncPacket pkt : playerOutpostPackets) {
+            for (AssetSyncPacket pkt : playerOutpostPackets) {
                 Galaxia.GALAXIA_NETWORK.sendTo(pkt, player);
             }
 
@@ -123,8 +123,9 @@ public class CelestialEventHandler {
                 if (supply.outpostAssetId()
                     .equals(request.outpostAssetId())) continue;
 
-                AutomatedOutpost supplier = (AutomatedOutpost) CelestialAssetStore.findAsset(supply.outpostAssetId());
-                AutomatedOutpost requester = (AutomatedOutpost) CelestialAssetStore.findAsset(request.outpostAssetId());
+                AutomatedFacility supplier = (AutomatedFacility) CelestialAssetStore.findAsset(supply.outpostAssetId());
+                AutomatedFacility requester = (AutomatedFacility) CelestialAssetStore
+                    .findAsset(request.outpostAssetId());
                 if (supplier == null || requester == null) continue;
 
                 final boolean shareAnchor = GalaxiaCelestialAPI
@@ -147,7 +148,7 @@ public class CelestialEventHandler {
                         m -> m.component() instanceof ModuleHammer h && h.canFire()
                             && (!shareAnchor || h.planetaryHandling())
                             && (shareAnchor || h.crossPlanetaryCapability))
-                    .sorted(Comparator.comparingInt(m -> m.kind() == OutpostModuleKind.BIG_HAMMER ? 1 : 0))
+                    .sorted(Comparator.comparingInt(m -> m.kind() == FacilityModuleKind.BIG_HAMMER ? 1 : 0))
                     .map(m -> (ModuleHammer) m.component())
                     .anyMatch(hammer -> {
                         LogisticSignal.Scope deliveryScope = LogisticSignal.Scope.PLANETARY;

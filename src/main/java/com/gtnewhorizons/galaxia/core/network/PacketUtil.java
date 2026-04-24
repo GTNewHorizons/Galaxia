@@ -7,6 +7,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import io.netty.buffer.ByteBuf;
 
@@ -56,6 +57,19 @@ final class PacketUtil {
         return new LogisticsDelivery.ID(readId(buf));
     }
 
+    // ── Station tile helpers ───────────────────────────────────────────────
+
+    static void writeTileCoord(ByteBuf buf, StationTileCoord coord) {
+        buf.writeByte(coord.dx());
+        buf.writeByte(coord.dy());
+    }
+
+    static StationTileCoord readTileCoord(ByteBuf buf) {
+        byte dx = buf.readByte();
+        byte dy = buf.readByte();
+        return new StationTileCoord(dx, dy);
+    }
+
     // ── Enum helpers ───────────────────────────────────────────────────────
 
     static <T extends Enum<T>> void writeEnum(ByteBuf buf, T enumValue) {
@@ -66,7 +80,12 @@ final class PacketUtil {
     static <T extends Enum<T>> T readEnum(ByteBuf buf, Class<T> enumClass) {
         int ordinal = buf.readUnsignedByte();
         T[] values = enumClass.getEnumConstants();
-        return ordinal < values.length ? values[ordinal] : values[0];
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : values[0];
+    }
+
+    static <T extends Enum<T>> T fromOrdinalOrNull(int ordinal, Class<T> enumClass) {
+        T[] values = enumClass.getEnumConstants();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
     }
 
 }

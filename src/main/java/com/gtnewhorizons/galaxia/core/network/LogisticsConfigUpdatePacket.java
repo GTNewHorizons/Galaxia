@@ -5,7 +5,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
@@ -90,7 +90,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
             // for SERVER-bound packets, so direct mutation is safe (same as DestinationSetPacket).
             String playerName = player.getGameProfile()
                 .getName();
-            AutomatedOutpost state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedOutpost o ? o
+            AutomatedFacility state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedFacility o ? o
                 : null;
             if (state == null) {
                 Galaxia.LOG.warn(
@@ -115,7 +115,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
             ItemStackWrapper resource = ItemStackWrapper.fromKey(packet.resourceKey);
             if (packet.removeEntry) {
                 state.logisticsConfig.reset(resource);
-                return OutpostSyncPacket.logisticsConfigRemoved(packet.assetId, packet.resourceKey);
+                return AssetSyncPacket.logisticsConfigRemoved(packet.assetId, packet.resourceKey);
             } else {
                 LogisticsResourceConfig config = new LogisticsResourceConfig(
                     packet.minReserve,
@@ -123,7 +123,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                     packet.isImportEnabled,
                     packet.isSupplyEnabled);
                 state.logisticsConfig.set(resource, config);
-                return OutpostSyncPacket.logisticsConfigUpdated(
+                return AssetSyncPacket.logisticsConfigUpdated(
                     packet.assetId,
                     packet.resourceKey,
                     config.minReserve(),

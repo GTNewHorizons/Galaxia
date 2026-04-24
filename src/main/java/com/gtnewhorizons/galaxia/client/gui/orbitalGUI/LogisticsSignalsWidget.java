@@ -29,7 +29,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -150,7 +150,6 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
     }
 
     private int currentDataRevision(CelestialObject viewRoot) {
-        // TODO Colors
         int r = 0x1A2B3C4D;
         r = r * 31 + CelestialClient.clientSignalRevision();
         r = r * 31 + CelestialClient.clientDeliveryRevision();
@@ -170,6 +169,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                     .toKey())
                 .append(':')
                 .append(row.net() >= 0 ? '+' : '-')
+                .append(row.net())
                 .append('|');
         }
         return sig.toString();
@@ -311,7 +311,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         return ViewScope.PLANETARY;
     }
 
-    private boolean isOutpostInScope(AutomatedOutpost outpost, ViewScope scope, CelestialObject viewRoot) {
+    private boolean isOutpostInScope(AutomatedFacility outpost, ViewScope scope, CelestialObject viewRoot) {
         switch (scope) {
             case GALACTIC:
                 return true;
@@ -460,7 +460,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
             tooltipLines.clear();
             tooltipLines.add(fullName);
-            for (AutomatedOutpost outpost : CelestialClient.allOutposts()) {
+            for (AutomatedFacility outpost : CelestialClient.allOutposts()) {
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
                 CelestialAsset asset = CelestialAssetStore.findAsset(outpost.assetId);
                 if (asset == null) continue;

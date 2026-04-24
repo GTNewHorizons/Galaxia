@@ -38,24 +38,24 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetRequestSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostInventoryUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.OutpostRequestSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedOutpost;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleKind;
 
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
@@ -505,7 +505,7 @@ public final class AssetManagementSystem {
 
             boolean canCreateAutomatedStation(CelestialObject body);
 
-            boolean canCreateAutomatedOutpost(CelestialObject body);
+            boolean canCreateAutomatedFacility(CelestialObject body);
 
             boolean hasStoredConstructionResources(CelestialAsset asset);
 
@@ -676,7 +676,7 @@ public final class AssetManagementSystem {
                 }
                 if (present) {
                     CelestialAsset asset = CelestialClient.getByAssetId(state.pendingAssetManagement.asset().assetId);
-                    if (asset instanceof AutomatedOutpost outpost) {
+                    if (asset instanceof AutomatedFacility outpost) {
                         if (outpost != null && outpost.getSyncRevision() != lastOutpostSyncRevision) {
                             int newRevision = outpost.getSyncRevision();
                             if (hasFocusedModalTextField()) {
@@ -709,8 +709,8 @@ public final class AssetManagementSystem {
             if (ItemPickerScreen.hasPendingPickForOutpost()) {
                 CelestialAsset.ID targetId = ItemPickerScreen.getPendingForOutpostId();
                 ItemStack pickedStack = ItemPickerScreen.pollPendingPickForOutpost();
-                AutomatedOutpost outpost = null;
-                if (targetId != null && CelestialClient.getByAssetId(targetId) instanceof AutomatedOutpost o) {
+                AutomatedFacility outpost = null;
+                if (targetId != null && CelestialClient.getByAssetId(targetId) instanceof AutomatedFacility o) {
                     outpost = o;
                 }
                 if (pickedStack != null && outpost != null) {
@@ -789,16 +789,16 @@ public final class AssetManagementSystem {
             if (state.selectingModuleBuild) {
                 state.buildModuleScrollPosition = scroll;
             } else if (state.configuringModuleIndex >= 0 && state.pendingAssetManagement != null) {
-                AutomatedOutpost outpost = null;
+                AutomatedFacility outpost = null;
                 if (CelestialClient
-                    .getByAssetId(state.pendingAssetManagement.asset().assetId) instanceof AutomatedOutpost o) {
+                    .getByAssetId(state.pendingAssetManagement.asset().assetId) instanceof AutomatedFacility o) {
                     outpost = o;
                 }
                 if (outpost != null && state.configuringModuleIndex < outpost.modules()
                     .size()) {
                     ModuleInstance module = outpost.modules()
                         .get(state.configuringModuleIndex);
-                    if (module.kind() == OutpostModuleKind.MINER) {
+                    if (module.kind() == FacilityModuleKind.MINER) {
                         state.minerConfigScrollPosition = scroll;
                     } else {
                         state.logisticsScrollPosition = scroll;
@@ -816,16 +816,16 @@ public final class AssetManagementSystem {
         private int getCurrentModalScrollPosition() {
             if (state.selectingModuleBuild) return state.buildModuleScrollPosition;
             if (state.configuringModuleIndex >= 0 && state.pendingAssetManagement != null) {
-                AutomatedOutpost outpost = null;
+                AutomatedFacility outpost = null;
                 if (CelestialClient
-                    .getByAssetId(state.pendingAssetManagement.asset().assetId) instanceof AutomatedOutpost o) {
+                    .getByAssetId(state.pendingAssetManagement.asset().assetId) instanceof AutomatedFacility o) {
                     outpost = o;
                 }
                 if (outpost != null && state.configuringModuleIndex < outpost.modules()
                     .size()) {
                     ModuleInstance module = outpost.modules()
                         .get(state.configuringModuleIndex);
-                    return module.kind() == OutpostModuleKind.MINER ? state.minerConfigScrollPosition
+                    return module.kind() == FacilityModuleKind.MINER ? state.minerConfigScrollPosition
                         : state.logisticsScrollPosition;
                 }
             }
@@ -875,7 +875,7 @@ public final class AssetManagementSystem {
                 createAssetKindButton(
                     CelestialAsset.Kind.AUTOMATED_OUTPOST,
                     "Create Automated Outpost",
-                    callbacks.canCreateAutomatedOutpost(body),
+                    callbacks.canCreateAutomatedFacility(body),
                     () -> callbacks.triggerAssetCreation(body, CelestialAsset.Kind.AUTOMATED_OUTPOST, false))
                         .pos(70, 30));
             if (!callbacks.isGT5AutomationAvailable()) {
@@ -1181,8 +1181,8 @@ public final class AssetManagementSystem {
                 return;
             }
 
-            AutomatedOutpost outpost = null;
-            if (asset instanceof AutomatedOutpost o) {
+            AutomatedFacility outpost = null;
+            if (asset instanceof AutomatedFacility o) {
                 outpost = o;
             }
             ModalBounds bounds = createCenteredModalBounds(MODAL_MAX_WIDTH, MODAL_MAX_HEIGHT);
@@ -1190,7 +1190,7 @@ public final class AssetManagementSystem {
             ParentWidget<?> modal = createModalRoot(bounds);
 
             if (outpost == null) {
-                Galaxia.GALAXIA_NETWORK.sendToServer(new OutpostRequestSyncPacket(asset.assetId));
+                Galaxia.GALAXIA_NETWORK.sendToServer(new AssetRequestSyncPacket(asset.assetId));
                 // TODO: Localize
                 modal.child(createTitleText("Manage Outpost").pos(12, 10));
                 modal.child(createBodyText("Loading data...", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 50));
@@ -1201,9 +1201,9 @@ public final class AssetManagementSystem {
                         .get(state.configuringModuleIndex);
                     if (module.component() instanceof ModuleHammer) {
                         buildLogisticsSubMenu(modal, outpost);
-                    } else if (module.kind() == OutpostModuleKind.MINER) {
+                    } else if (module.kind() == FacilityModuleKind.MINER) {
                         buildMinerConfigSubMenu(modal, outpost, module);
-                    } else if (module.kind() == OutpostModuleKind.POWER) {
+                    } else if (module.kind() == FacilityModuleKind.POWER) {
                         buildPowerConfigSubMenu(modal, outpost, module);
                     }
                 } else if (state.assetManagementTab == 0) {
@@ -1219,7 +1219,7 @@ public final class AssetManagementSystem {
             child(modal);
         }
 
-        private void buildModulesTab(ParentWidget<?> modal, AutomatedOutpost outpost) {
+        private void buildModulesTab(ParentWidget<?> modal, AutomatedFacility outpost) {
             int modalWidth = Math.max(520, modalRight - modalLeft);
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 102);
             int destroyWidth = 58;
@@ -1297,9 +1297,9 @@ public final class AssetManagementSystem {
                             .getDisplayName(),
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(8, 6));
 
-                boolean isHammer = m.kind() == OutpostModuleKind.HAMMER || m.kind() == OutpostModuleKind.BIG_HAMMER;
-                boolean isConfigurable = isHammer || m.kind() == OutpostModuleKind.MINER
-                    || m.kind() == OutpostModuleKind.POWER;
+                boolean isHammer = m.kind() == FacilityModuleKind.HAMMER || m.kind() == FacilityModuleKind.BIG_HAMMER;
+                boolean isConfigurable = isHammer || m.kind() == FacilityModuleKind.MINER
+                    || m.kind() == FacilityModuleKind.POWER;
                 boolean operational = m.status() != Buildable.Status.IN_CONSTRUCTION;
                 boolean isDisabled = m.status() == Buildable.Status.DISABLED;
 
@@ -1315,7 +1315,7 @@ public final class AssetManagementSystem {
                         .size(100, 4));
                 } else {
                     String statusLabel = isDisabled ? "Disabled" : "Active";
-                    String powerLabel = m.kind() == OutpostModuleKind.POWER
+                    String powerLabel = m.kind() == FacilityModuleKind.POWER
                         ? "Generating power: " + (isDisabled ? 0 : -m.getDisplayedPowerEuPerTick()) + " EU/t"
                         : "Power: " + Math.max(0L, m.getDisplayedPowerEuPerTick()) + " EU/t";
                     row.child(
@@ -1330,8 +1330,8 @@ public final class AssetManagementSystem {
                         .size(configureWidth, 20));
                 }
                 row.child(createDisableButton(isDisabled ? "Enable" : "Disable", operational, () -> {
-                    OutpostModuleUpdatePacket.Action action = isDisabled ? OutpostModuleUpdatePacket.Action.ENABLE
-                        : OutpostModuleUpdatePacket.Action.DISABLE;
+                    AssetModuleUpdatePacket.Action action = isDisabled ? AssetModuleUpdatePacket.Action.ENABLE
+                        : AssetModuleUpdatePacket.Action.DISABLE;
                     state.armedModuleDestroyIndex = -1;
                     CelestialClient.updateModuleAction(outpost.assetId, index, action);
                 }).pos(disableX, 12)
@@ -1341,7 +1341,7 @@ public final class AssetManagementSystem {
                     if (state.armedModuleDestroyIndex == index) {
                         state.armedModuleDestroyIndex = -1;
                         CelestialClient
-                            .updateModuleAction(outpost.assetId, index, OutpostModuleUpdatePacket.Action.DESTROY);
+                            .updateModuleAction(outpost.assetId, index, AssetModuleUpdatePacket.Action.DESTROY);
                     } else {
                         state.armedModuleDestroyIndex = index;
                         markStructureDirty();
@@ -1372,7 +1372,7 @@ public final class AssetManagementSystem {
             }
         }
 
-        private void buildModuleSelectionOverlay(ParentWidget<?> modal, AutomatedOutpost outpost) {
+        private void buildModuleSelectionOverlay(ParentWidget<?> modal, AutomatedFacility outpost) {
             final int modalWidth = Math.max(520, modalRight - modalLeft);
             final int modalHeight = Math.max(360, modalBottom - modalTop);
             final int pickerLeft = 24;
@@ -1404,7 +1404,7 @@ public final class AssetManagementSystem {
                 .size(78, FOOTER_BUTTON_HEIGHT));
 
             // TODO: Localize
-            boolean isAutomatedOutpost = state.pendingAssetManagement.asset().kind
+            boolean isAutomatedFacility = state.pendingAssetManagement.asset().kind
                 == CelestialAsset.Kind.AUTOMATED_OUTPOST;
             VerticalScrollData scrollData = new VerticalScrollData();
             ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(scrollX, scrollY)
@@ -1424,8 +1424,8 @@ public final class AssetManagementSystem {
             scrollBottom = scrollTop + scrollHeight;
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f);
             int y = 0;
-            for (OutpostModuleKind kind : OutpostModuleKind.values()) {
-                boolean buildEnabled = kind != OutpostModuleKind.MINER || isAutomatedOutpost;
+            for (FacilityModuleKind kind : FacilityModuleKind.values()) {
+                boolean buildEnabled = kind != FacilityModuleKind.MINER || isAutomatedFacility;
                 ParentWidget<?> row = new ParentWidget<>().pos(0, y)
                     .widthRel(1f)
                     .height(92)
@@ -1463,7 +1463,7 @@ public final class AssetManagementSystem {
             modal.child(picker);
         }
 
-        private void buildInventoryTab(ParentWidget<?> modal, AutomatedOutpost outpost) {
+        private void buildInventoryTab(ParentWidget<?> modal, AutomatedFacility outpost) {
             int modalWidth = Math.max(520, modalRight - modalLeft);
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 80);
             modal.child(createTitleText("Manage Outpost").pos(12, 10));
@@ -1536,7 +1536,7 @@ public final class AssetManagementSystem {
                     if (resourceKey.equals(state.armedDumpResourceKey)) {
                         state.armedDumpResourceKey = null;
                         Galaxia.GALAXIA_NETWORK
-                            .sendToServer(OutpostInventoryUpdatePacket.remove(outpost.assetId, entry.getKey()));
+                            .sendToServer(AssetInventoryUpdatePacket.remove(outpost.assetId, entry.getKey()));
                     } else {
                         state.armedDumpResourceKey = resourceKey;
                         markStructureDirty();
@@ -1608,7 +1608,7 @@ public final class AssetManagementSystem {
             }, false).pos(x, y);
         }
 
-        private List<Map.Entry<ItemStackWrapper, Long>> getSortedInventoryEntries(AutomatedOutpost outpost) {
+        private List<Map.Entry<ItemStackWrapper, Long>> getSortedInventoryEntries(AutomatedFacility outpost) {
             List<Map.Entry<ItemStackWrapper, Long>> entries = new ArrayList<>(
                 outpost.inventory.snapshot()
                     .entrySet());
@@ -1738,7 +1738,7 @@ public final class AssetManagementSystem {
          * The reserve value is displayed as a text widget between the decrement/increment
          * buttons, while the buttons themselves send a {@link LogisticsConfigUpdatePacket}.
          */
-        private void buildLogisticsSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost) {
+        private void buildLogisticsSubMenu(ParentWidget<?> modal, AutomatedFacility outpost) {
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 106);
             List<ModuleInstance> modules = outpost.modules();
             ModuleInstance module = (state.configuringModuleIndex >= 0 && state.configuringModuleIndex < modules.size())
@@ -1819,7 +1819,7 @@ public final class AssetManagementSystem {
                     CelestialClient.updateModuleConfig(
                         outpost.assetId,
                         modIdx,
-                        OutpostModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING,
+                        AssetModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING,
                         !planetaryHandling);
                     markStructureDirty();
                 }).pos(296, 52)
@@ -2001,23 +2001,23 @@ public final class AssetManagementSystem {
             modal.child(scroll);
         }
 
-        private void applyShootingModeUpdate(ModuleInstance module, AutomatedOutpost outpost, int modIdx,
+        private void applyShootingModeUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
             boolean isBigHammer, AllowShootingConfig.Mode newMode, double threshold) {
             if (module == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
                 modIdx,
-                OutpostModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE,
+                AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE,
                 newMode);
         }
 
-        private void applyShootingThresholdUpdate(ModuleInstance module, AutomatedOutpost outpost, int modIdx,
+        private void applyShootingThresholdUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
             boolean isBigHammer, AllowShootingConfig.Mode mode, double newThreshold) {
             if (module == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
                 modIdx,
-                OutpostModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD,
+                AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD,
                 newThreshold);
         }
 
@@ -2028,17 +2028,17 @@ public final class AssetManagementSystem {
                 .threshold();
         }
 
-        private void applyRoutePriorityUpdate(ModuleInstance module, AutomatedOutpost outpost, int modIdx,
+        private void applyRoutePriorityUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
             OrbitalTransferPlanner.RoutePriority priority) {
             if (module == null || priority == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
                 modIdx,
-                OutpostModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY,
+                AssetModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY,
                 priority);
         }
 
-        private void buildMinerConfigSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost, ModuleInstance module) {
+        private void buildMinerConfigSubMenu(ParentWidget<?> modal, AutomatedFacility outpost, ModuleInstance module) {
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 88);
             ModuleMiner miner = (ModuleMiner) module.component();
             List<MinerOreOption> options = buildMinerOreOptions(outpost, miner);
@@ -2054,7 +2054,7 @@ public final class AssetManagementSystem {
                     CelestialClient.updateModuleConfig(
                         outpost.assetId,
                         state.configuringModuleIndex,
-                        OutpostModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS,
+                        AssetModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS,
                         !miner.copySettingsToOtherMiners());
                     markStructureDirty();
                 }).pos(82, 32)
@@ -2104,9 +2104,9 @@ public final class AssetManagementSystem {
                         .width(360));
                 row.child(createCheckboxButton(option.blacklisted(), () -> {
                     boolean blacklisted = miner.isBlacklisted(option.key());
-                    OutpostModuleUpdatePacket.ConfigAction action = blacklisted
-                        ? OutpostModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST
-                        : OutpostModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST;
+                    AssetModuleUpdatePacket.ConfigAction action = blacklisted
+                        ? AssetModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST
+                        : AssetModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST;
                     CelestialClient
                         .updateModuleConfig(outpost.assetId, state.configuringModuleIndex, action, option.key());
                     markStructureDirty();
@@ -2130,7 +2130,7 @@ public final class AssetManagementSystem {
             modal.child(scroll);
         }
 
-        private List<MinerOreOption> buildMinerOreOptions(AutomatedOutpost outpost, ModuleMiner minerData) {
+        private List<MinerOreOption> buildMinerOreOptions(AutomatedFacility outpost, ModuleMiner minerData) {
             return GalaxiaCelestialAPI.get(outpost.celestialObjectId)
                 .map(
                     body -> body.properties()
@@ -2173,7 +2173,7 @@ public final class AssetManagementSystem {
             return options;
         }
 
-        private void buildPowerConfigSubMenu(ParentWidget<?> modal, AutomatedOutpost outpost, ModuleInstance module) {
+        private void buildPowerConfigSubMenu(ParentWidget<?> modal, AutomatedFacility outpost, ModuleInstance module) {
             modal.child(createTitleText("Power Configuration").pos(12, 10));
             modal.child(createFooterButton("Back", true, () -> {
                 state.configuringModuleIndex = -1;
@@ -2183,18 +2183,19 @@ public final class AssetManagementSystem {
             modal.child(createBodyText("No settings yet.", EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(12, 70));
             modal.child(
                 createBodyText(
-                    "Generating power: " + OutpostModuleKind.POWER.createInstance()
-                        .getDisplayedPowerEuPerTick() + " EU/t",
+                    "Generating power: " + Math.max(0L, -module.getDisplayedPowerEuPerTick()) + " EU/t",
                     EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(12, 92));
         }
 
         private String formatAmount(long amount) {
             if (amount < 1000) return String.valueOf(amount);
             if (amount < 1000000) return (amount / 1000) + "k";
-            return (amount / 1000000) + "M";
+            if (amount < 1000000000L) return (amount / 1000000) + "M";
+            if (amount < 1000000000000L) return (amount / 1000000000L) + "B";
+            return (amount / 1000000000000L) + "T";
         }
 
-        private String buildPowerSummary(AutomatedOutpost outpost) {
+        private String buildPowerSummary(AutomatedFacility outpost) {
             long generationPerTick = 0L;
             long drawPerTick = 0L;
             for (ModuleInstance module : outpost.modules()) {
@@ -2206,10 +2207,10 @@ public final class AssetManagementSystem {
             long netPerSecond = (generationPerTick - drawPerTick) * 20L;
             String sign = netPerSecond >= 0 ? "+" : "";
             return "Power: " + outpost
-                .getEnergyStored() + "/" + AutomatedOutpost.MAX_ENERGY + " " + sign + netPerSecond + "/s";
+                .getEnergyStored() + "/" + AutomatedFacility.MAX_ENERGY + " " + sign + netPerSecond + "/s";
         }
 
-        private String buildModuleDescription(OutpostModuleKind kind) {
+        private String buildModuleDescription(FacilityModuleKind kind) {
             // TODO: Localize
             return switch (kind) {
                 case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
@@ -2219,16 +2220,15 @@ public final class AssetManagementSystem {
             };
         }
 
-        private String buildModuleStats(OutpostModuleKind kind) {
+        private String buildModuleStats(FacilityModuleKind kind) {
             var data = kind.createInstance();
-            String powerLine = kind == OutpostModuleKind.POWER
-                ? "Generates " + (-data.getDisplayedPowerEuPerTick()) + " EU/t"
-                : "Consumes " + data.getDisplayedPowerEuPerTick() + " EU/t";
-            String restrictionLine = kind == OutpostModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
+            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
+                : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
+            String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
             return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
         }
 
-        private String buildModuleCost(OutpostModuleKind kind) {
+        private String buildModuleCost(FacilityModuleKind kind) {
             var data = kind.createInstance();
             StringBuilder sb = new StringBuilder("Cost: ");
             boolean first = true;
