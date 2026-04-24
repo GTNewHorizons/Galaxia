@@ -30,6 +30,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     private final int contentLeft;
     private final int contentRightPadding;
     private final int contentVerticalPadding;
+    private final StationVisionLayer visionLayer;
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
@@ -59,15 +60,26 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         int contentLeft, int contentRightPadding, int contentVerticalPadding) {
+        this(assetId, expansionSlotClickHandler, contentLeft, contentRightPadding, contentVerticalPadding,
+            StationVisionLayer.BASE);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        int contentLeft, int contentRightPadding, int contentVerticalPadding, StationVisionLayer visionLayer) {
         this.assetId = assetId;
         this.expansionSlotClickHandler = expansionSlotClickHandler;
         this.contentLeft = contentLeft;
         this.contentRightPadding = contentRightPadding;
         this.contentVerticalPadding = contentVerticalPadding;
+        this.visionLayer = visionLayer;
     }
 
     public @Nullable StationTileCoord selection() {
         return selected;
+    }
+
+    public StationVisionLayer visionLayer() {
+        return visionLayer;
     }
 
     @Override
