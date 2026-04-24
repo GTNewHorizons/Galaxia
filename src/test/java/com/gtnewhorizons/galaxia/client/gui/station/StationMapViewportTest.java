@@ -18,12 +18,19 @@ final class StationMapViewportTest {
 
     @Test
     void drawnTileCentersResolveToTheSameTile() {
-        assertTileCenterRoundTrips(StationTileCoord.CORE);
-        assertTileCenterRoundTrips(StationTileCoord.of(1, 0));
-        assertTileCenterRoundTrips(StationTileCoord.of(-1, 0));
-        assertTileCenterRoundTrips(StationTileCoord.of(0, 1));
-        assertTileCenterRoundTrips(StationTileCoord.of(0, -1));
-        assertTileCenterRoundTrips(StationTileCoord.of(3, -2));
+        assertTileCenterRoundTrips(StationTileCoord.CORE, 0, 0);
+        assertTileCenterRoundTrips(StationTileCoord.of(1, 0), 0, 0);
+        assertTileCenterRoundTrips(StationTileCoord.of(-1, 0), 0, 0);
+        assertTileCenterRoundTrips(StationTileCoord.of(0, 1), 0, 0);
+        assertTileCenterRoundTrips(StationTileCoord.of(0, -1), 0, 0);
+        assertTileCenterRoundTrips(StationTileCoord.of(3, -2), 0, 0);
+    }
+
+    @Test
+    void drawnTileCentersResolveToTheSameTileAfterPanning() {
+        assertTileCenterRoundTrips(StationTileCoord.CORE, 87, -43);
+        assertTileCenterRoundTrips(StationTileCoord.of(2, 1), 87, -43);
+        assertTileCenterRoundTrips(StationTileCoord.of(-3, -2), 87, -43);
     }
 
     @Test
@@ -50,9 +57,10 @@ final class StationMapViewportTest {
                 CONTENT_VERTICAL_PADDING));
     }
 
-    private static void assertTileCenterRoundTrips(StationTileCoord coord) {
-        int centerX = StationMapViewport.tileLeftX(coord, WIDTH, TILE, CONTENT_LEFT, CONTENT_RIGHT_PADDING) + TILE / 2;
-        int centerY = StationMapViewport.tileTopY(coord, HEIGHT, TILE, CONTENT_VERTICAL_PADDING) + TILE / 2;
+    private static void assertTileCenterRoundTrips(StationTileCoord coord, int panX, int panY) {
+        int centerX = StationMapViewport.tileLeftX(coord, WIDTH, TILE, CONTENT_LEFT, CONTENT_RIGHT_PADDING, panX)
+            + TILE / 2;
+        int centerY = StationMapViewport.tileTopY(coord, HEIGHT, TILE, CONTENT_VERTICAL_PADDING, panY) + TILE / 2;
 
         assertEquals(
             coord,
@@ -64,6 +72,8 @@ final class StationMapViewportTest {
                 TILE,
                 CONTENT_LEFT,
                 CONTENT_RIGHT_PADDING,
-                CONTENT_VERTICAL_PADDING));
+                CONTENT_VERTICAL_PADDING,
+                panX,
+                panY));
     }
 }

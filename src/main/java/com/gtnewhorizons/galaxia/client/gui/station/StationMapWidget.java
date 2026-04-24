@@ -7,6 +7,8 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import org.lwjgl.input.Mouse;
+
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -29,11 +31,21 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
+    private @Nullable StationTileCoord pressedTile;
     private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
     private @Nullable StationLayout cachedExpansionLayout;
     private long cachedExpansionLayoutVersion = -1L;
+    private int panX;
+    private int panY;
+    private int pressMouseX;
+    private int pressMouseY;
+    private int lastDragMouseX;
+    private int lastDragMouseY;
+    private boolean pressInMapContent;
+    private boolean dragging;
 
     private boolean listenersRegistered;
+    private static final int CLICK_DRAG_THRESHOLD = 3;
 
     public StationMapWidget(CelestialAsset.ID assetId) {
         this(assetId, null);
@@ -65,16 +77,50 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             if (button != 0) return false;
             AutomatedFacility facility = resolveFacility();
             if (facility == null) return false;
-            StationTileCoord hit = hitTest(
-                facility.stationLayout(),
-                toLocalMouseX(getContext().getMouseX()),
-                toLocalMouseY(getContext().getMouseY()));
-            if (hit == null) return false;
+            pressMouseX = toLocalMouseX(getContext().getMouseX());
+            pressMouseY = toLocalMouseY(getContext().getMouseY());
+            pressInMapContent = StationMapViewport.contains(
+                pressMouseX,
+                pressMouseY,
+                getArea().width,
+                getArea().height,
+                contentLeft,
+                contentRightPadding,
+                contentVerticalPadding);
+            if (!pressInMapContent) return false;
+            pressedTile = hitTest(facility.stationLayout(), pressMouseX, pressMouseY);
+            lastDragMouseX = pressMouseX;
+            lastDragMouseY = pressMouseY;
+            dragging = false;
+            return true;
+        });
+        listenGuiAction((IGuiAction.MouseDrag) (mouseButton, time) -> {
+            if (mouseButton != 0 || !pressInMapContent) return false;
+            updateManualDragging();
+            return true;
+        });
+        listenGuiAction((IGuiAction.MouseReleased) mouseButton -> {
+            if (mouseButton != 0 || !pressInMapContent) return false;
+            boolean wasDragging = dragging;
+            pressInMapContent = false;
+            dragging = false;
+            if (wasDragging) {
+                pressedTile = null;
+                return true;
+            }
+            AutomatedFacility facility = resolveFacility();
+            if (facility == null) return false;
             StationLayout layout = facility.stationLayout();
             if (layout == null) return false;
+            StationTileCoord hit = hitTest(
+                layout,
+                toLocalMouseX(getContext().getMouseX()),
+                toLocalMouseY(getContext().getMouseY()));
+            if (hit == null || !hit.equals(pressedTile)) return false;
             boolean occupied = layout.isOccupied(hit);
             selected = hit;
             if (!occupied && expansionSlotClickHandler != null) expansionSlotClickHandler.accept(hit);
+            pressedTile = null;
             return true;
         });
     }
@@ -82,6 +128,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.drawBackground(context, widgetTheme);
+        updateManualDragging();
         AutomatedFacility facility = resolveFacility();
         if (facility == null) return;
         StationLayout layout = facility.stationLayout();
@@ -126,6 +173,27 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         hovered = hitTest(layout, localX, localY);
     }
 
+    private void updateManualDragging() {
+        if (!pressInMapContent || !Mouse.isButtonDown(0)) return;
+        int localX = toLocalMouseX(getContext().getMouseX());
+        int localY = toLocalMouseY(getContext().getMouseY());
+        if (!dragging) {
+            if (Math.abs(localX - pressMouseX) <= CLICK_DRAG_THRESHOLD
+                && Math.abs(localY - pressMouseY) <= CLICK_DRAG_THRESHOLD) return;
+            dragging = true;
+            lastDragMouseX = localX;
+            lastDragMouseY = localY;
+            return;
+        }
+        int dx = localX - lastDragMouseX;
+        int dy = localY - lastDragMouseY;
+        if (dx == 0 && dy == 0) return;
+        panX += dx;
+        panY += dy;
+        lastDragMouseX = localX;
+        lastDragMouseY = localY;
+    }
+
     private void updateExpansionSlots(StationLayout layout) {
         long layoutVersion = layout.version();
         if (layout == cachedExpansionLayout && layoutVersion == cachedExpansionLayoutVersion) return;
@@ -149,7 +217,9 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             StationTileRenderer.LOGICAL_TILE_SIZE,
             contentLeft,
             contentRightPadding,
-            contentVerticalPadding);
+            contentVerticalPadding,
+            panX,
+            panY);
         if (coord == null) return null;
         if (layout.isOccupied(coord)) return coord;
         if (StationPlacementValidator.validate(layout, coord) == StationPlacementValidator.Result.OK) return coord;
@@ -162,7 +232,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             getArea().width,
             StationTileRenderer.LOGICAL_TILE_SIZE,
             contentLeft,
-            contentRightPadding);
+            contentRightPadding,
+            panX);
     }
 
     private int tileLocalY(StationTileCoord coord) {
@@ -170,7 +241,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             coord,
             getArea().height,
             StationTileRenderer.LOGICAL_TILE_SIZE,
-            contentVerticalPadding);
+            contentVerticalPadding,
+            panY);
     }
 
     private int toLocalMouseX(int mouseX) {

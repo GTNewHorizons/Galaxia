@@ -4,7 +4,6 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.GuiScreen;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
@@ -43,13 +42,11 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
     private static volatile boolean pendingInstantBuild;
-    private static volatile @Nullable GuiScreen pendingReturnScreen;
 
     public static void open(CelestialAsset.ID assetId, StationTileCoord coord, boolean instantBuild) {
         pendingAssetId = assetId;
         pendingCoord = coord;
         pendingInstantBuild = instantBuild;
-        pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
         FACTORY.openClient();
     }
 
@@ -124,8 +121,9 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 if (assetId != null && coord != null) {
                     CelestialClient.createModule(assetId, kind, pendingInstantBuild, coord);
                 }
-                Minecraft.getMinecraft()
-                    .displayGuiScreen(pendingReturnScreen);
+                if (assetId != null) StationManagementScreen.open(assetId, pendingInstantBuild);
+                else Minecraft.getMinecraft()
+                    .displayGuiScreen(null);
                 clearPending();
                 return true;
             });
@@ -147,7 +145,6 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingAssetId = null;
         pendingCoord = null;
         pendingInstantBuild = false;
-        pendingReturnScreen = null;
     }
 
     private IDrawable drawable(DrawableCommand cmd) {
