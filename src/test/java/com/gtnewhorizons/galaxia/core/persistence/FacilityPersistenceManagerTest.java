@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.lang.reflect.Method;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -39,21 +38,21 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();
 
-        FacilityPersistenceManager.FacilityStateJson encoded = encode(manager, station);
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectId,
             station.kind,
             station.status());
 
-        decode(manager, decoded, encoded);
+        manager.decodeFacilityState(decoded, encoded);
 
         assertEquals(station.getEnergyStored(), decoded.getEnergyStored());
         assertEquals(station.modules()
             .size(), decoded.modules()
                 .size());
         assertLayoutEquals(station.stationLayout(), decoded.stationLayout());
-        assertEquals(GSON.toJson(encoded), GSON.toJson(encode(manager, decoded)));
+        assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
     }
 
     private static AutomatedFacility createStationWithFullLayout() {
@@ -112,23 +111,4 @@ final class FacilityPersistenceManagerTest {
         }
     }
 
-    private static FacilityPersistenceManager.FacilityStateJson encode(FacilityPersistenceManager manager,
-        AutomatedFacility facility) throws Exception {
-        Method method = FacilityPersistenceManager.class.getDeclaredMethod(
-            "encodeFacilityState",
-            AutomatedFacility.class);
-        method.setAccessible(true);
-        return (FacilityPersistenceManager.FacilityStateJson) method.invoke(manager, facility);
-    }
-
-    private static AutomatedFacility decode(FacilityPersistenceManager manager, CelestialAsset asset,
-        FacilityPersistenceManager.FacilityStateJson json) throws Exception {
-        Method method = FacilityPersistenceManager.class
-            .getDeclaredMethod(
-                "decodeFacilityState",
-                CelestialAsset.class,
-                FacilityPersistenceManager.FacilityStateJson.class);
-        method.setAccessible(true);
-        return (AutomatedFacility) method.invoke(manager, asset, json);
-    }
 }
