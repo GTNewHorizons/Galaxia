@@ -458,8 +458,7 @@ public final class AssetSyncPacket implements IMessage {
                 case MODULE_REMOVED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
-                        state.modulesInternal()
-                            .remove(packet.moduleIndex);
+                        state.removeModule(packet.moduleIndex);
                     }
                 }
                 case MODULE_UPDATED -> {

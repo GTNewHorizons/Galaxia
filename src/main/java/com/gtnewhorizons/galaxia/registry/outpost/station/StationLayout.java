@@ -7,6 +7,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+
 public final class StationLayout {
 
     private final Map<StationTileCoord, PlacedTile> tiles;
@@ -31,6 +33,17 @@ public final class StationLayout {
     public void remove(StationTileCoord coord) {
         if (StationTileCoord.CORE.equals(coord)) return;
         tiles.remove(coord);
+    }
+
+    public void removeTileForModule(ModuleInstance.ID moduleId) {
+        if (moduleId == null) return;
+        tiles.entrySet()
+            .removeIf(
+                e -> !StationTileCoord.CORE.equals(e.getKey()) && e.getValue()
+                    .module() != null
+                    && moduleId.equals(
+                        e.getValue()
+                            .module().id));
     }
 
     public @Nonnull Map<StationTileCoord, PlacedTile> snapshot() {
