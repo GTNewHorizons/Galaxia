@@ -162,7 +162,7 @@ public final class CelestialClient {
         switch (action) {
             case ENABLE -> module.updateStatus(Buildable.Status.OPERATIONAL);
             case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-            case DESTROY -> {}
+            case DESTROY -> state.removeModule(module.id);
         }
         Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
     }

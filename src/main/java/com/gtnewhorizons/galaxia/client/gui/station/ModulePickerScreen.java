@@ -36,8 +36,11 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int PANEL_WIDTH = 220;
     private static final int PANEL_HEIGHT = 150;
     private static final int HEADER_HEIGHT = 24;
+    private static final int PANEL_PADDING = 8;
     private static final int BUTTON_HEIGHT = 22;
     private static final int BUTTON_GAP = 5;
+    private static final int BUTTON_TEXT_PADDING = 7;
+    private static final int TEXT_BASELINE_OFFSET = 1;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
@@ -57,7 +60,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             .size(PANEL_WIDTH, PANEL_HEIGHT)
             .background(drawable((ctx, x, y, w, h) -> {
                 net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-                net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + HEADER_HEIGHT, 0xFF14243A);
+                net.minecraft.client.gui.Gui
+                    .drawRect(x, y, x + w, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
             }));
         panel.child(backgroundLayer);
         panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
@@ -65,23 +69,23 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         panel.child(
             new TextWidget<>(IKey.str("Build module")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(8, 8));
+                .pos(PANEL_PADDING, PANEL_PADDING));
 
         AutomatedFacility facility = resolveFacility();
         if (facility == null || pendingCoord == null) {
             panel.child(
                 new TextWidget<>(IKey.str("No station selected")).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                     .shadow(true)
-                    .pos(8, 38));
+                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14));
             return panel;
         }
 
-        int y = HEADER_HEIGHT + 8;
+        int y = HEADER_HEIGHT + PANEL_PADDING;
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             if (!kind.isAllowedOn(facility.kind)) continue;
             panel.child(
-                createKindButton(kind).pos(8, y)
-                    .size(PANEL_WIDTH - 16, BUTTON_HEIGHT));
+                createKindButton(kind).pos(PANEL_PADDING, y)
+                    .size(PANEL_WIDTH - PANEL_PADDING * 2, BUTTON_HEIGHT));
             y += BUTTON_HEIGHT + BUTTON_GAP;
         }
         return panel;
@@ -132,13 +136,21 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static void drawKindButton(FacilityModuleKind kind, int x, int y, int width, int height) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         String label = kind.getDisplayName();
-        int textY = y + (height - fr.FONT_HEIGHT) / 2 + 1;
-        fr.drawStringWithShadow(label, x + 7, textY, EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+        int textY = y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET;
+        fr.drawStringWithShadow(
+            label,
+            x + BUTTON_TEXT_PADDING,
+            textY,
+            EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
 
         OutpostModuleRegistry.Definition definition = OutpostModuleRegistry.get(kind);
         String stats = (definition == null ? 0L : definition.powerDrawEuPerTick()) + " EU/t";
         int statsWidth = fr.getStringWidth(stats);
-        fr.drawStringWithShadow(stats, x + width - statsWidth - 7, textY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        fr.drawStringWithShadow(
+            stats,
+            x + width - statsWidth - BUTTON_TEXT_PADDING,
+            textY,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
     private static void clearPending() {

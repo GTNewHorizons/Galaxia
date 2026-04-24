@@ -23,8 +23,14 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class StationSidePanelWidget extends ParentWidget<StationSidePanelWidget> {
 
-    private static final int PANEL_BG = 0xD80B1320;
-    private static final int PANEL_BORDER = 0xFF334C68;
+    private static final int CONTENT_PADDING = 10;
+    private static final int TITLE_SECTION_GAP = 6;
+    private static final int SECTION_GAP = 8;
+    private static final int DESTROY_BUTTON_X = 10;
+    private static final int DESTROY_BUTTON_Y = 150;
+    private static final int DESTROY_BUTTON_WIDTH = 92;
+    private static final int DESTROY_BUTTON_HEIGHT = 20;
+    private static final int BUTTON_TEXT_BASELINE_OFFSET = 1;
 
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
@@ -40,8 +46,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         this.assetId = assetId;
         this.map = map;
         child(
-            createDestroyButton().pos(10, 150)
-                .size(92, 20));
+            createDestroyButton().pos(DESTROY_BUTTON_X, DESTROY_BUTTON_Y)
+                .size(DESTROY_BUTTON_WIDTH, DESTROY_BUTTON_HEIGHT));
     }
 
     @Override
@@ -64,56 +70,66 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         int y = 0;
         int width = getArea().width;
         int height = getArea().height;
-        BorderedRect.draw(x, y, width, height, PANEL_BG, PANEL_BORDER);
+        BorderedRect.draw(
+            x,
+            y,
+            width,
+            height,
+            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
+            EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
 
         AutomatedFacility facility = resolveFacility(assetId);
-        int lineY = y + 10;
+        int lineY = y + CONTENT_PADDING;
         lineY = drawLine(
             facility == null ? "Station Management" : facility.displayName(),
-            x + 10,
+            x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-        lineY += 6;
+        lineY += TITLE_SECTION_GAP;
 
         if (facility == null) {
-            drawLine("No station selected", x + 10, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            drawLine("No station selected", x + CONTENT_PADDING, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
 
-        lineY = drawLine(facility.kind.getDisplayName(), x + 10, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lineY = drawLine(
+            facility.kind.getDisplayName(),
+            x + CONTENT_PADDING,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         lineY = drawLine(
             "Modules: " + facility.modules()
                 .size(),
-            x + 10,
+            x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         StationLayout layout = facility.stationLayout();
         lineY = drawLine(
             "Tiles: " + (layout == null ? 0 : layout.size()),
-            x + 10,
+            x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
             "Energy: " + facility.getEnergyStored() + "/" + AutomatedFacility.MAX_ENERGY,
-            x + 10,
+            x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        lineY += 8;
+        lineY += SECTION_GAP;
 
         StationTileCoord selected = map.selection();
         if (selected == null) {
-            drawLine("No tile selected", x + 10, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            drawLine("No tile selected", x + CONTENT_PADDING, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
 
         lineY = drawLine(
             "Selected " + selected.dx() + ", " + selected.dy(),
-            x + 10,
+            x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         PlacedTile tile = layout == null ? null : layout.get(selected);
         if (tile == null) {
-            drawLine("Expansion slot", x + 10, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            drawLine("Expansion slot", x + CONTENT_PADDING, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             return;
         }
 
@@ -121,11 +137,11 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         String moduleName = module == null ? "Station Core"
             : module.kind()
                 .getDisplayName();
-        lineY = drawLine(moduleName, x + 10, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY = drawLine(moduleName, x + CONTENT_PADDING, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         drawLine(
             tile.state()
                 .name(),
-            x + 10,
+            x + CONTENT_PADDING,
             lineY,
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
@@ -167,7 +183,11 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                 int color = canDestroySelected() ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
                     : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor();
                 int textWidth = fr.getStringWidth(label);
-                fr.drawStringWithShadow(label, x + (w - textWidth) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
+                fr.drawStringWithShadow(
+                    label,
+                    x + (w - textWidth) / 2,
+                    y + (h - fr.FONT_HEIGHT) / 2 + BUTTON_TEXT_BASELINE_OFFSET,
+                    color);
             }))
             .onMousePressed(mouseButton -> {
                 if (mouseButton != 0 || !canDestroySelected()) return true;

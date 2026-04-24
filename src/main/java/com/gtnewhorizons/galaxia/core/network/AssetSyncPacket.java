@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
@@ -136,17 +137,13 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static AssetSyncPacket moduleRemoved(CelestialAsset.ID assetId, int moduleIndex) {
-        return moduleRemoved(assetId, moduleIndex, null);
-    }
-
     public static AssetSyncPacket moduleRemoved(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = MODULE_REMOVED;
         pkt.moduleIndex = moduleIndex;
-        pkt.moduleId = moduleId;
+        pkt.moduleId = Objects.requireNonNull(moduleId, "moduleId");
         return pkt;
     }
 
@@ -269,8 +266,7 @@ public final class AssetSyncPacket implements IMessage {
             }
             case MODULE_REMOVED -> {
                 buf.writeInt(moduleIndex);
-                buf.writeBoolean(moduleId != null);
-                if (moduleId != null) PacketUtil.writeId(buf, moduleId);
+                PacketUtil.writeId(buf, moduleId);
             }
             case INVENTORY_UPDATE -> {
                 PacketUtil.writeString(buf, resourceKey);
@@ -300,7 +296,7 @@ public final class AssetSyncPacket implements IMessage {
             }
             case MODULE_REMOVED -> {
                 moduleIndex = buf.readInt();
-                moduleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
+                moduleId = PacketUtil.readModuleId(buf);
             }
             case INVENTORY_UPDATE -> {
                 resourceKey = PacketUtil.readString(buf);
@@ -469,14 +465,7 @@ public final class AssetSyncPacket implements IMessage {
                         state.addModule(packet.moduleData);
                     }
                 }
-                case MODULE_REMOVED -> {
-                    if (packet.moduleId != null) {
-                        state.removeModule(packet.moduleId);
-                    } else if (packet.moduleIndex >= 0 && packet.moduleIndex < state.modules()
-                        .size()) {
-                            state.removeModule(packet.moduleIndex);
-                        }
-                }
+                case MODULE_REMOVED -> state.removeModule(packet.moduleId);
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
