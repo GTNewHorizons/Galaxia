@@ -11,7 +11,6 @@ final class StationMapViewportTest {
 
     private static final int WIDTH = 1280;
     private static final int HEIGHT = 720;
-    private static final int TILE = 24;
     private static final int CONTENT_LEFT = 228;
     private static final int CONTENT_RIGHT_PADDING = 12;
     private static final int CONTENT_VERTICAL_PADDING = 12;
@@ -41,7 +40,6 @@ final class StationMapViewportTest {
                 HEIGHT / 2,
                 WIDTH,
                 HEIGHT,
-                TILE,
                 CONTENT_LEFT,
                 CONTENT_RIGHT_PADDING,
                 CONTENT_VERTICAL_PADDING));
@@ -51,16 +49,29 @@ final class StationMapViewportTest {
                 HEIGHT / 2,
                 WIDTH,
                 HEIGHT,
-                TILE,
                 CONTENT_LEFT,
                 CONTENT_RIGHT_PADDING,
                 CONTENT_VERTICAL_PADDING));
     }
 
+    @Test
+    void pointsInConnectorGapDoNotResolveToTiles() {
+        int tileRightEdge = StationMapViewport
+            .tileLeftX(StationTileCoord.CORE, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING)
+            + StationMapViewport.TILE_SIZE;
+        int gapX = tileRightEdge + StationMapViewport.CONNECTOR_GAP / 2;
+        int centerY = StationMapViewport.tileTopY(StationTileCoord.CORE, HEIGHT, CONTENT_VERTICAL_PADDING)
+            + StationMapViewport.TILE_SIZE / 2;
+        assertNull(
+            StationMapViewport
+                .coordAt(gapX, centerY, WIDTH, HEIGHT, CONTENT_LEFT, CONTENT_RIGHT_PADDING, CONTENT_VERTICAL_PADDING));
+    }
+
     private static void assertTileCenterRoundTrips(StationTileCoord coord, int panX, int panY) {
-        int centerX = StationMapViewport.tileLeftX(coord, WIDTH, TILE, CONTENT_LEFT, CONTENT_RIGHT_PADDING, panX)
-            + TILE / 2;
-        int centerY = StationMapViewport.tileTopY(coord, HEIGHT, TILE, CONTENT_VERTICAL_PADDING, panY) + TILE / 2;
+        int centerX = StationMapViewport.tileLeftX(coord, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING, panX)
+            + StationMapViewport.TILE_SIZE / 2;
+        int centerY = StationMapViewport.tileTopY(coord, HEIGHT, CONTENT_VERTICAL_PADDING, panY)
+            + StationMapViewport.TILE_SIZE / 2;
 
         assertEquals(
             coord,
@@ -69,7 +80,6 @@ final class StationMapViewportTest {
                 centerY,
                 WIDTH,
                 HEIGHT,
-                TILE,
                 CONTENT_LEFT,
                 CONTENT_RIGHT_PADDING,
                 CONTENT_VERTICAL_PADDING,

@@ -19,6 +19,10 @@ public enum StationTileState {
         return this == OCCUPIED_OPERATIONAL || this == OCCUPIED_DISABLED;
     }
 
+    public boolean isConnectorActive() {
+        return this == OCCUPIED_OPERATIONAL || this == OCCUPIED_DISABLED;
+    }
+
     public static StationTileState fromModuleStatus(Buildable.Status status) {
         return switch (status) {
             case OPERATIONAL -> OCCUPIED_OPERATIONAL;

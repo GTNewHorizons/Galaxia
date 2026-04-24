@@ -14,6 +14,8 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -135,35 +137,48 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         if (layout == null) return;
 
         updateHover(layout);
-
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
         updateExpansionSlots(layout);
+
+        int widgetWidth = getArea().width;
+        int widgetHeight = getArea().height;
+
+        ConnectionLayerRenderer.draw(
+            context,
+            layout,
+            widgetWidth,
+            widgetHeight,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
 
         for (StationTileCoord slot : expansionSlots) {
             int sx = tileLocalX(slot);
             int sy = tileLocalY(slot);
-            StationTileRenderer.drawEmptyExpansionSlot(context, sx, sy, StationTileRenderer.LOGICAL_TILE_SIZE);
+            ModuleLayerRenderer.drawExpansionSlot(context, sx, sy);
         }
 
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
             int tx = tileLocalX(coord);
             int ty = tileLocalY(coord);
-            StationTileRenderer.drawOccupied(context, tx, ty, StationTileRenderer.LOGICAL_TILE_SIZE, e.getValue());
+            ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
 
         StationTileCoord hov = hovered;
         if (hov != null && (tiles.containsKey(hov) || expansionSlots.contains(hov))) {
             int hx = tileLocalX(hov);
             int hy = tileLocalY(hov);
-            StationTileRenderer.drawHoverOverlay(hx, hy, StationTileRenderer.LOGICAL_TILE_SIZE);
+            StationTileRenderer.drawHoverOverlay(hx, hy, StationMapViewport.TILE_SIZE);
         }
 
         StationTileCoord sel = selected;
         if (sel != null && (tiles.containsKey(sel) || expansionSlots.contains(sel))) {
             int sx = tileLocalX(sel);
             int sy = tileLocalY(sel);
-            StationTileRenderer.drawSelectionOverlay(sx, sy, StationTileRenderer.LOGICAL_TILE_SIZE);
+            StationTileRenderer.drawSelectionOverlay(sx, sy, StationMapViewport.TILE_SIZE);
         }
     }
 
@@ -214,7 +229,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             localY,
             getArea().width,
             getArea().height,
-            StationTileRenderer.LOGICAL_TILE_SIZE,
             contentLeft,
             contentRightPadding,
             contentVerticalPadding,
@@ -227,18 +241,11 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     }
 
     private int tileLocalX(StationTileCoord coord) {
-        return StationMapViewport.tileLeftX(
-            coord,
-            getArea().width,
-            StationTileRenderer.LOGICAL_TILE_SIZE,
-            contentLeft,
-            contentRightPadding,
-            panX);
+        return StationMapViewport.tileLeftX(coord, getArea().width, contentLeft, contentRightPadding, panX);
     }
 
     private int tileLocalY(StationTileCoord coord) {
-        return StationMapViewport
-            .tileTopY(coord, getArea().height, StationTileRenderer.LOGICAL_TILE_SIZE, contentVerticalPadding, panY);
+        return StationMapViewport.tileTopY(coord, getArea().height, contentVerticalPadding, panY);
     }
 
     private int toLocalMouseX(int mouseX) {
