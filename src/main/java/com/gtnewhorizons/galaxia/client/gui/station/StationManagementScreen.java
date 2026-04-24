@@ -24,9 +24,15 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     private static final int PADDING = 12;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
+    private static volatile boolean pendingCreativeBuildMode;
 
     public static void open(CelestialAsset.ID assetId) {
+        open(assetId, false);
+    }
+
+    public static void open(CelestialAsset.ID assetId, boolean creativeBuildMode) {
         pendingAssetId = assetId;
+        pendingCreativeBuildMode = creativeBuildMode;
         FACTORY.openClient();
     }
 
@@ -39,7 +45,10 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_management")
             .fullScreenInvisible();
         CelestialAsset.ID assetId = pendingAssetId;
-        StationMapWidget map = new StationMapWidget(assetId, coord -> ModulePickerScreen.open(assetId, coord, false));
+        boolean creativeBuildMode = pendingCreativeBuildMode;
+        StationMapWidget map = new StationMapWidget(
+            assetId,
+            coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode));
 
         return panel.child(
             new StationScreenBackground().left(0)
