@@ -48,8 +48,10 @@ final class FacilityPersistenceManagerTest {
         manager.decodeFacilityState(decoded, encoded);
 
         assertEquals(station.getEnergyStored(), decoded.getEnergyStored());
-        assertEquals(station.modules()
-            .size(), decoded.modules()
+        assertEquals(
+            station.modules()
+                .size(),
+            decoded.modules()
                 .size());
         assertLayoutEquals(station.stationLayout(), decoded.stationLayout());
         assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
@@ -77,11 +79,13 @@ final class FacilityPersistenceManagerTest {
         return station;
     }
 
-    private static ModuleInstance addModule(AutomatedFacility station, FacilityModuleKind kind, Buildable.Status status) {
+    private static ModuleInstance addModule(AutomatedFacility station, FacilityModuleKind kind,
+        Buildable.Status status) {
         ModuleInstance module = kind.createInstance();
         module.updateStatus(status);
-        module.setEnergyBuffer(64L + station.modules()
-            .size());
+        module.setEnergyBuffer(
+            64L + station.modules()
+                .size());
         station.addModule(module);
         return module;
     }
@@ -101,11 +105,11 @@ final class FacilityPersistenceManagerTest {
                 assertNull(actualTile.module());
             } else {
                 assertNotNull(actualTile.module());
-                assertEquals(expectedTile.module()
-                    .id, actualTile.module()
-                        .id);
-                assertEquals(expectedTile.module()
-                    .kind(), actualTile.module()
+                assertEquals(expectedTile.module().id, actualTile.module().id);
+                assertEquals(
+                    expectedTile.module()
+                        .kind(),
+                    actualTile.module()
                         .kind());
             }
         }

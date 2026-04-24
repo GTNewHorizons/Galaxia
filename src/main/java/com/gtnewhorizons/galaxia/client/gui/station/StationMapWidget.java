@@ -60,7 +60,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         int contentLeft, int contentRightPadding, int contentVerticalPadding) {
-        this(assetId, expansionSlotClickHandler, contentLeft, contentRightPadding, contentVerticalPadding,
+        this(
+            assetId,
+            expansionSlotClickHandler,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
             StationVisionLayer.BASE);
     }
 

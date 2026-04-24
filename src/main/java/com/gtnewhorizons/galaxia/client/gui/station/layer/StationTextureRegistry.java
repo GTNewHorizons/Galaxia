@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 public final class StationTextureRegistry {
 
     public enum ConnectorKind {
+
         HORIZONTAL("horizontal"),
         VERTICAL("vertical");
 
