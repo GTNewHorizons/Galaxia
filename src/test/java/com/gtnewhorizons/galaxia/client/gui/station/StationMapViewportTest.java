@@ -75,9 +75,7 @@ final class StationMapViewportTest {
         int rightTileX = StationMapViewport.tileLeftX(right, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING);
         int connectorX = StationMapViewport.connectorLeftX(left, WIDTH, CONTENT_LEFT, CONTENT_RIGHT_PADDING, 0);
 
-        assertEquals(
-            leftTileX + StationMapViewport.TILE_SIZE - StationMapViewport.CONNECTOR_OVERLAP,
-            connectorX);
+        assertEquals(leftTileX + StationMapViewport.TILE_SIZE - StationMapViewport.CONNECTOR_OVERLAP, connectorX);
         assertEquals(
             rightTileX + StationMapViewport.CONNECTOR_OVERLAP,
             connectorX + StationMapViewport.connectorWidth());
@@ -88,9 +86,7 @@ final class StationMapViewportTest {
         int lowerTileY = StationMapViewport.tileTopY(lower, HEIGHT, CONTENT_VERTICAL_PADDING);
         int connectorY = StationMapViewport.connectorTopY(upper, HEIGHT, CONTENT_VERTICAL_PADDING, 0);
 
-        assertEquals(
-            upperTileY + StationMapViewport.TILE_SIZE - StationMapViewport.CONNECTOR_OVERLAP,
-            connectorY);
+        assertEquals(upperTileY + StationMapViewport.TILE_SIZE - StationMapViewport.CONNECTOR_OVERLAP, connectorY);
         assertEquals(
             lowerTileY + StationMapViewport.CONNECTOR_OVERLAP,
             connectorY + StationMapViewport.connectorHeight());

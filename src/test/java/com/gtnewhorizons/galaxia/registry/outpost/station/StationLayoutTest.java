@@ -62,8 +62,10 @@ final class StationLayoutTest {
         assertFalse(layout.isOccupied(removedCoord));
         assertTrue(layout.isOccupied(retainedCoord));
         assertTrue(layout.isOccupied(StationTileCoord.CORE));
-        assertEquals(1, station.modules()
-            .size());
+        assertEquals(
+            1,
+            station.modules()
+                .size());
 
         ModuleInstance rebuilt = FacilityModuleKind.HAMMER.createInstance();
         StationTileCoord rebuiltCoord = StationTileCoord.of(-1, 0);
@@ -73,7 +75,9 @@ final class StationLayoutTest {
         assertTrue(layout.isOccupied(rebuiltCoord));
         assertTrue(layout.isOccupied(retainedCoord));
         assertTrue(layout.isOccupied(StationTileCoord.CORE));
-        assertEquals(2, station.modules()
-            .size());
+        assertEquals(
+            2,
+            station.modules()
+                .size());
     }
 }

@@ -24,8 +24,7 @@ public final class ConnectionLayerRenderer {
     private ConnectionLayerRenderer() {}
 
     public static void draw(GuiContext ctx, Map<StationTileCoord, PlacedTile> tiles, int widgetWidth, int widgetHeight,
-        int contentLeft,
-        int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
+        int contentLeft, int contentRightPadding, int contentVerticalPadding, int panX, int panY) {
         if (tiles == null) return;
         int connW = StationMapViewport.connectorWidth();
         int connH = StationMapViewport.connectorHeight();

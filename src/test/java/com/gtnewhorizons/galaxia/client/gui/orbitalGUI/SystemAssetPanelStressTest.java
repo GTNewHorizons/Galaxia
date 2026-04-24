@@ -42,14 +42,15 @@ final class SystemAssetPanelStressTest {
         assertEquals(
             List.of("Beta Station", "Delta Station Build", "Alpha Station", "Epsilon Outpost", "Gamma Outpost"),
             namesOf(assets));
-        assertTrue(assets.get(0)
-            .warningPriority()
-            .priority > assets.get(1)
+        assertTrue(
+            assets.get(0)
+                .warningPriority().priority
+                > assets.get(1)
+                    .warningPriority().priority);
+        assertFalse(
+            assets.get(2)
                 .warningPriority()
-                .priority);
-        assertFalse(assets.get(2)
-            .warningPriority()
-            .isWarning());
+                .isWarning());
     }
 
     private static List<CelestialAsset> stressAssets() {
