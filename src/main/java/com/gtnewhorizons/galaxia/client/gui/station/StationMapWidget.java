@@ -27,6 +27,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
     private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
+    private @Nullable StationLayout cachedExpansionLayout;
+    private long cachedExpansionLayoutVersion = -1L;
 
     private boolean listenersRegistered;
 
@@ -77,7 +79,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         updateHover(layout);
 
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
-        StationPlacementValidator.collectExpansionSlots(layout, expansionSlots);
+        updateExpansionSlots(layout);
 
         int widgetX = getArea().x;
         int widgetY = getArea().y;
@@ -116,6 +118,14 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         int localX = toLocalMouseX(getContext().getMouseX());
         int localY = toLocalMouseY(getContext().getMouseY());
         hovered = hitTest(layout, localX, localY);
+    }
+
+    private void updateExpansionSlots(StationLayout layout) {
+        long layoutVersion = layout.version();
+        if (layout == cachedExpansionLayout && layoutVersion == cachedExpansionLayoutVersion) return;
+        StationPlacementValidator.collectExpansionSlots(layout, expansionSlots);
+        cachedExpansionLayout = layout;
+        cachedExpansionLayoutVersion = layoutVersion;
     }
 
     private @Nullable AutomatedFacility resolveFacility() {

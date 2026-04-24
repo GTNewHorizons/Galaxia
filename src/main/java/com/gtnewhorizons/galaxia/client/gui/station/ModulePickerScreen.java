@@ -23,7 +23,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class ModulePickerScreen implements IGuiHolder<GuiData> {
@@ -131,8 +131,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         int textY = y + (height - fr.FONT_HEIGHT) / 2 + 1;
         fr.drawStringWithShadow(label, x + 7, textY, EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
 
-        ModuleInstance preview = kind.createInstance();
-        String stats = preview.powerDrawEuPerTick() + " EU/t";
+        OutpostModuleRegistry.Definition definition = OutpostModuleRegistry.get(kind);
+        String stats = (definition == null ? 0L : definition.powerDrawEuPerTick()) + " EU/t";
         int statsWidth = fr.getStringWidth(stats);
         fr.drawStringWithShadow(stats, x + width - statsWidth - 7, textY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }

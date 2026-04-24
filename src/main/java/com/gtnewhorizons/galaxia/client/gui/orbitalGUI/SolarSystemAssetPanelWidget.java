@@ -69,6 +69,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private static final int CTRL_BTN_H = CONTROLS_H - 6;
     private static final int LIST_TOP_GAP = 2;
     private static final int EMPTY_TEXT_NUDGE_Y = 4;
+    private static final int ASSET_REFRESH_INTERVAL_TICKS = 20;
 
     private final CelestialObject galaxyRoot;
     private final Supplier<CelestialObject> viewRootSupplier;
@@ -87,6 +88,10 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     private CelestialObject lastViewRoot;
     private SystemAssetFilter lastFilter;
     private SystemAssetSort lastSort;
+    private CelestialObject lastRefreshViewRoot;
+    private SystemAssetFilter lastRefreshFilter;
+    private SystemAssetSort lastRefreshSort;
+    private int assetRefreshTicks;
 
     public SolarSystemAssetPanelWidget(CelestialObject galaxyRoot, Supplier<CelestialObject> viewRootSupplier,
         Supplier<Boolean> openSupplier, Consumer<CelestialObject> onAssetSelect) {
@@ -110,7 +115,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             if (panelRoot.isEnabled()) hidePanel();
             return;
         }
-        refreshRows(viewRoot);
+        refreshRowsIfNeeded(viewRoot);
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
             || currentFilter != lastFilter
@@ -145,9 +150,28 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         lastViewRoot = null;
         lastFilter = null;
         lastSort = null;
+        lastRefreshViewRoot = null;
+        lastRefreshFilter = null;
+        lastRefreshSort = null;
+        assetRefreshTicks = 0;
         size(0, 0);
         panelRoot.scheduleResize();
         scheduleResize();
+    }
+
+    private void refreshRowsIfNeeded(CelestialObject viewRoot) {
+        boolean refreshRequired = assetRefreshTicks <= 0 || viewRoot != lastRefreshViewRoot
+            || currentFilter != lastRefreshFilter
+            || currentSort != lastRefreshSort;
+        if (!refreshRequired) {
+            assetRefreshTicks--;
+            return;
+        }
+        refreshRows(viewRoot);
+        lastRefreshViewRoot = viewRoot;
+        lastRefreshFilter = currentFilter;
+        lastRefreshSort = currentSort;
+        assetRefreshTicks = ASSET_REFRESH_INTERVAL_TICKS - 1;
     }
 
     private void refreshRows(CelestialObject viewRoot) {
