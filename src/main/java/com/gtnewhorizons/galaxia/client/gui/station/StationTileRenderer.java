@@ -82,8 +82,9 @@ public final class StationTileRenderer {
         ModuleInstance module = tile.module();
         if (module == null) return "C";
         FacilityModuleKind kind = module.kind();
-        return kind == null ? "?" : kind.name()
-            .substring(0, 1);
+        return kind == null ? "?"
+            : kind.name()
+                .substring(0, 1);
     }
 
     private static void drawLabel(GuiContext ctx, int x, int y, int size, String label) {

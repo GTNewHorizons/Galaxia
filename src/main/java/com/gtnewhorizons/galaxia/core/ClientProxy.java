@@ -7,6 +7,7 @@ import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.client.KeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
+import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
@@ -52,6 +53,7 @@ public class ClientProxy extends CommonProxy {
     public void init(FMLInitializationEvent event) {
         super.init(event);
         ItemPickerScreen.FACTORY.init();
+        StationManagementScreen.FACTORY.init();
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
         IMCForNEI.IMCSender();
 

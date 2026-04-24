@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class StationMapWidget extends ParentWidget<StationMapWidget> {
@@ -23,6 +24,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
+    private final Set<StationTileCoord> expansionSlots = new LinkedHashSet<>();
 
     private boolean listenersRegistered;
 
@@ -64,7 +66,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         updateHover(layout);
 
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
-        Set<StationTileCoord> expansionSlots = computeExpansionSlots(tiles);
+        StationPlacementValidator.collectExpansionSlots(layout, expansionSlots);
 
         int widgetX = getArea().x;
         int widgetY = getArea().y;
@@ -123,7 +125,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return null;
         StationTileCoord coord = StationTileCoord.of(dx, dy);
         if (layout.isOccupied(coord)) return coord;
-        if (isExpansionSlot(layout.snapshot(), coord)) return coord;
+        if (StationPlacementValidator.validate(layout, coord) == StationPlacementValidator.Result.OK) return coord;
         return null;
     }
 
@@ -133,37 +135,5 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private int toLocalMouseY(int mouseY) {
         return mouseY - getArea().y;
-    }
-
-    private static Set<StationTileCoord> computeExpansionSlots(Map<StationTileCoord, PlacedTile> tiles) {
-        Set<StationTileCoord> slots = new HashSet<>();
-        for (StationTileCoord occupied : tiles.keySet()) {
-            addNeighbourIfExpansion(slots, tiles, occupied.dx() - 1, occupied.dy());
-            addNeighbourIfExpansion(slots, tiles, occupied.dx() + 1, occupied.dy());
-            addNeighbourIfExpansion(slots, tiles, occupied.dx(), occupied.dy() - 1);
-            addNeighbourIfExpansion(slots, tiles, occupied.dx(), occupied.dy() + 1);
-        }
-        return slots;
-    }
-
-    private static void addNeighbourIfExpansion(Set<StationTileCoord> slots, Map<StationTileCoord, PlacedTile> tiles,
-        int dx, int dy) {
-        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return;
-        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return;
-        StationTileCoord coord = StationTileCoord.of(dx, dy);
-        if (!tiles.containsKey(coord)) slots.add(coord);
-    }
-
-    private static boolean isExpansionSlot(Map<StationTileCoord, PlacedTile> tiles, StationTileCoord coord) {
-        return isOccupiedNeighbour(tiles, coord.dx() - 1, coord.dy())
-            || isOccupiedNeighbour(tiles, coord.dx() + 1, coord.dy())
-            || isOccupiedNeighbour(tiles, coord.dx(), coord.dy() - 1)
-            || isOccupiedNeighbour(tiles, coord.dx(), coord.dy() + 1);
-    }
-
-    private static boolean isOccupiedNeighbour(Map<StationTileCoord, PlacedTile> tiles, int dx, int dy) {
-        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
-        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
-        return tiles.containsKey(StationTileCoord.of(dx, dy));
     }
 }
