@@ -10,7 +10,8 @@ final class StationMapViewport {
 
     static boolean contains(int localX, int localY, int width, int height, int contentLeft, int contentRightPadding,
         int contentVerticalPadding) {
-        return localX >= contentLeft && localX < width - contentRightPadding && localY >= contentVerticalPadding
+        return localX >= contentLeft && localX < width - contentRightPadding
+            && localY >= contentVerticalPadding
             && localY < height - contentVerticalPadding;
     }
 

@@ -42,8 +42,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return action(assetId, moduleIndex, null, action);
     }
 
-    public static AssetModuleUpdatePacket action(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, Action action) {
+    public static AssetModuleUpdatePacket action(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance.ID moduleId,
+        Action action) {
         AssetModuleUpdatePacket pkt = new AssetModuleUpdatePacket();
         pkt.assetId = assetId;
         pkt.moduleIndex = moduleIndex;

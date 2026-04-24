@@ -237,12 +237,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     }
 
     private int tileLocalY(StationTileCoord coord) {
-        return StationMapViewport.tileTopY(
-            coord,
-            getArea().height,
-            StationTileRenderer.LOGICAL_TILE_SIZE,
-            contentVerticalPadding,
-            panY);
+        return StationMapViewport
+            .tileTopY(coord, getArea().height, StationTileRenderer.LOGICAL_TILE_SIZE, contentVerticalPadding, panY);
     }
 
     private int toLocalMouseX(int mouseX) {

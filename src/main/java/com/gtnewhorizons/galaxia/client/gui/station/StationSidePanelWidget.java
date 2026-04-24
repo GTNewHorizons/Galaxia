@@ -208,7 +208,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             .size();
         long layoutVersion = layout.version();
         if (selected.equals(cachedDestroySelection) && layout == cachedDestroyLayout
-            && layoutVersion == cachedDestroyLayoutVersion && moduleCount == cachedDestroyModuleCount
+            && layoutVersion == cachedDestroyLayoutVersion
+            && moduleCount == cachedDestroyModuleCount
             && module.id.equals(cachedDestroyModuleId)) return cachedDestroyModuleIndex;
 
         int moduleIndex = -1;

@@ -474,8 +474,8 @@ public final class AssetSyncPacket implements IMessage {
                         state.removeModule(packet.moduleId);
                     } else if (packet.moduleIndex >= 0 && packet.moduleIndex < state.modules()
                         .size()) {
-                        state.removeModule(packet.moduleIndex);
-                    }
+                            state.removeModule(packet.moduleIndex);
+                        }
                 }
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
