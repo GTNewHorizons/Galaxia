@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -21,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private final CelestialAsset.ID assetId;
+    private final @Nullable Consumer<StationTileCoord> expansionSlotClickHandler;
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
@@ -29,7 +31,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     private boolean listenersRegistered;
 
     public StationMapWidget(CelestialAsset.ID assetId) {
+        this(assetId, null);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler) {
         this.assetId = assetId;
+        this.expansionSlotClickHandler = expansionSlotClickHandler;
     }
 
     public @Nullable StationTileCoord selection() {
@@ -50,7 +57,11 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
                 toLocalMouseX(getContext().getMouseX()),
                 toLocalMouseY(getContext().getMouseY()));
             if (hit == null) return false;
+            StationLayout layout = facility.stationLayout();
+            if (layout == null) return false;
+            boolean occupied = layout.isOccupied(hit);
             selected = hit;
+            if (!occupied && expansionSlotClickHandler != null) expansionSlotClickHandler.accept(hit);
             return true;
         });
     }

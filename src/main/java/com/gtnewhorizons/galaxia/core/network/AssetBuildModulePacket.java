@@ -109,9 +109,10 @@ public final class AssetBuildModulePacket implements IMessage {
             }
 
             FacilityModuleKind kind = packet.moduleKind;
-            if (kind == FacilityModuleKind.MINER && asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST) {
+            if (!kind.isAllowedOn(asset.kind)) {
                 Galaxia.LOG.warn(
-                    "[Outpost] BuildModule: rejected MINER on {} ({}) from player {}",
+                    "[Outpost] BuildModule: rejected {} on {} ({}) from player {}",
+                    kind,
                     packet.assetId,
                     asset.kind,
                     player.getGameProfile()

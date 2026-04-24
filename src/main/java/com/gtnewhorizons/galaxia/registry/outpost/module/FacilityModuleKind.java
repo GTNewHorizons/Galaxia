@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import net.minecraft.util.StatCollector;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
 
 public enum FacilityModuleKind {
@@ -23,6 +24,12 @@ public enum FacilityModuleKind {
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER -> StationModuleCategory.POWER;
         };
+    }
+
+    public boolean isAllowedOn(CelestialAsset.Kind assetKind) {
+        if (assetKind != CelestialAsset.Kind.AUTOMATED_OUTPOST && assetKind != CelestialAsset.Kind.AUTOMATED_STATION)
+            return false;
+        return this != MINER || assetKind == CelestialAsset.Kind.AUTOMATED_OUTPOST;
     }
 
     public ModuleInstance createInstance() {

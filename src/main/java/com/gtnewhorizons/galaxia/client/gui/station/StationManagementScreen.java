@@ -51,7 +51,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_management")
             .fullScreenInvisible();
         CelestialAsset.ID assetId = pendingAssetId;
-        StationMapWidget map = new StationMapWidget(assetId);
+        StationMapWidget map = new StationMapWidget(assetId, coord -> ModulePickerScreen.open(assetId, coord, false));
 
         return panel.child(
             new StationScreenBackground().left(0)
