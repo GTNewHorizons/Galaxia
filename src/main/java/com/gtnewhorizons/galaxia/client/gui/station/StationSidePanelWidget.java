@@ -54,8 +54,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-        int x = getArea().x;
-        int y = getArea().y;
+        int x = 0;
+        int y = 0;
         int width = getArea().width;
         int height = getArea().height;
         BorderedRect.draw(x, y, width, height, PANEL_BG, PANEL_BORDER);

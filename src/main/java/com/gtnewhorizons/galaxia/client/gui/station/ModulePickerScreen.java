@@ -14,12 +14,14 @@ import com.cleanroommc.modularui.factory.SimpleGuiFactory;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.WidgetOutline;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -54,10 +56,14 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     @Override
     public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings settings) {
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_module_picker", PANEL_WIDTH, PANEL_HEIGHT);
-        panel.background(drawable((ctx, x, y, w, h) -> {
-            BorderedRect.draw(x, y, w, h, 0xE00B1320, 0xFF334C68);
-            net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + HEADER_HEIGHT, 0xFF14243A);
-        }));
+        ParentWidget<?> backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
+            .size(PANEL_WIDTH, PANEL_HEIGHT)
+            .background(drawable((ctx, x, y, w, h) -> {
+                net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
+                net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + HEADER_HEIGHT, 0xFF14243A);
+            }));
+        panel.child(backgroundLayer);
+        panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
 
         panel.child(
             new TextWidget<>(IKey.str("Build module")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
@@ -146,5 +152,18 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
     private IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
+    }
+
+    private static final class PassiveBackgroundLayer extends ParentWidget<PassiveBackgroundLayer> {
+
+        @Override
+        public boolean canHover() {
+            return false;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
     }
 }

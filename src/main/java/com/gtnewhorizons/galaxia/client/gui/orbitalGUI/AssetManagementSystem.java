@@ -321,7 +321,8 @@ public final class AssetManagementSystem {
 
         void openPendingAssetManagement(OrbitalAssetUiState state, CelestialAsset asset) {
             if (asset == null || !assetSupport.isManageableStationAsset(asset)) return;
-            if (asset.kind == CelestialAsset.Kind.AUTOMATED_STATION) {
+            if (asset.kind == CelestialAsset.Kind.AUTOMATED_STATION
+                || asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST) {
                 StationManagementScreen.open(asset.assetId, callbacks.isCreativeBuildModeEnabled());
                 return;
             }

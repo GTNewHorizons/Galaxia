@@ -48,23 +48,27 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationMapWidget map = new StationMapWidget(
             assetId,
-            coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode));
+            coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
+            LEFT_PANEL_WIDTH + PADDING,
+            PADDING,
+            PADDING);
 
-        return panel.child(
+        panel.child(
             new StationScreenBackground().left(0)
                 .top(0)
                 .widthRel(1f)
-                .heightRel(1f))
-            .child(
-                new StationSidePanelWidget(assetId, map).left(PADDING)
-                    .top(PADDING)
-                    .width(LEFT_PANEL_WIDTH - PADDING)
-                    .heightRelOffset(1f, -PADDING * 2))
-            .child(
-                map.left(LEFT_PANEL_WIDTH + PADDING)
-                    .top(PADDING)
-                    .widthRelOffset(1f, -(LEFT_PANEL_WIDTH + PADDING * 2))
-                    .heightRelOffset(1f, -PADDING * 2));
+                .heightRel(1f));
+        panel.child(
+            map.left(0)
+                .top(0)
+                .widthRel(1f)
+                .heightRel(1f));
+        panel.child(
+            new StationSidePanelWidget(assetId, map).left(PADDING)
+                .top(PADDING)
+                .width(LEFT_PANEL_WIDTH - PADDING)
+                .heightRelOffset(1f, -PADDING * 2));
+        return panel;
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {
@@ -81,7 +85,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            BorderedRect.draw(getArea().x, getArea().y, getArea().width, getArea().height, 0xFF08101B, 0xFF17283C);
+            BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF08101B, 0xFF17283C);
         }
     }
 }

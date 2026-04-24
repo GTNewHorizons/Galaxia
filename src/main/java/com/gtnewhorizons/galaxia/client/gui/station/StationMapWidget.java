@@ -23,6 +23,9 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private final CelestialAsset.ID assetId;
     private final @Nullable Consumer<StationTileCoord> expansionSlotClickHandler;
+    private final int contentLeft;
+    private final int contentRightPadding;
+    private final int contentVerticalPadding;
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
@@ -37,8 +40,16 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     }
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler) {
+        this(assetId, expansionSlotClickHandler, 0, 0, 0);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        int contentLeft, int contentRightPadding, int contentVerticalPadding) {
         this.assetId = assetId;
         this.expansionSlotClickHandler = expansionSlotClickHandler;
+        this.contentLeft = contentLeft;
+        this.contentRightPadding = contentRightPadding;
+        this.contentVerticalPadding = contentVerticalPadding;
     }
 
     public @Nullable StationTileCoord selection() {
@@ -81,35 +92,30 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
         updateExpansionSlots(layout);
 
-        int widgetX = getArea().x;
-        int widgetY = getArea().y;
-        int originX = widgetX + getArea().width / 2 - StationTileRenderer.LOGICAL_TILE_SIZE / 2;
-        int originY = widgetY + getArea().height / 2 - StationTileRenderer.LOGICAL_TILE_SIZE / 2;
-
         for (StationTileCoord slot : expansionSlots) {
-            int sx = originX + slot.dx() * StationTileRenderer.LOGICAL_TILE_SIZE;
-            int sy = originY + slot.dy() * StationTileRenderer.LOGICAL_TILE_SIZE;
+            int sx = tileLocalX(slot);
+            int sy = tileLocalY(slot);
             StationTileRenderer.drawEmptyExpansionSlot(context, sx, sy, StationTileRenderer.LOGICAL_TILE_SIZE);
         }
 
         for (Map.Entry<StationTileCoord, PlacedTile> e : tiles.entrySet()) {
             StationTileCoord coord = e.getKey();
-            int tx = originX + coord.dx() * StationTileRenderer.LOGICAL_TILE_SIZE;
-            int ty = originY + coord.dy() * StationTileRenderer.LOGICAL_TILE_SIZE;
+            int tx = tileLocalX(coord);
+            int ty = tileLocalY(coord);
             StationTileRenderer.drawOccupied(context, tx, ty, StationTileRenderer.LOGICAL_TILE_SIZE, e.getValue());
         }
 
         StationTileCoord hov = hovered;
         if (hov != null && (tiles.containsKey(hov) || expansionSlots.contains(hov))) {
-            int hx = originX + hov.dx() * StationTileRenderer.LOGICAL_TILE_SIZE;
-            int hy = originY + hov.dy() * StationTileRenderer.LOGICAL_TILE_SIZE;
+            int hx = tileLocalX(hov);
+            int hy = tileLocalY(hov);
             StationTileRenderer.drawHoverOverlay(hx, hy, StationTileRenderer.LOGICAL_TILE_SIZE);
         }
 
         StationTileCoord sel = selected;
         if (sel != null && (tiles.containsKey(sel) || expansionSlots.contains(sel))) {
-            int sx = originX + sel.dx() * StationTileRenderer.LOGICAL_TILE_SIZE;
-            int sy = originY + sel.dy() * StationTileRenderer.LOGICAL_TILE_SIZE;
+            int sx = tileLocalX(sel);
+            int sy = tileLocalY(sel);
             StationTileRenderer.drawSelectionOverlay(sx, sy, StationTileRenderer.LOGICAL_TILE_SIZE);
         }
     }
@@ -135,26 +141,43 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private @Nullable StationTileCoord hitTest(@Nullable StationLayout layout, int localX, int localY) {
         if (layout == null) return null;
-        int size = StationTileRenderer.LOGICAL_TILE_SIZE;
-        int originX = getArea().width / 2 - size / 2;
-        int originY = getArea().height / 2 - size / 2;
-        int relX = localX - originX;
-        int relY = localY - originY;
-        int dx = Math.floorDiv(relX, size);
-        int dy = Math.floorDiv(relY, size);
-        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return null;
-        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return null;
-        StationTileCoord coord = StationTileCoord.of(dx, dy);
+        StationTileCoord coord = StationMapViewport.coordAt(
+            localX,
+            localY,
+            getArea().width,
+            getArea().height,
+            StationTileRenderer.LOGICAL_TILE_SIZE,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding);
+        if (coord == null) return null;
         if (layout.isOccupied(coord)) return coord;
         if (StationPlacementValidator.validate(layout, coord) == StationPlacementValidator.Result.OK) return coord;
         return null;
     }
 
+    private int tileLocalX(StationTileCoord coord) {
+        return StationMapViewport.tileLeftX(
+            coord,
+            getArea().width,
+            StationTileRenderer.LOGICAL_TILE_SIZE,
+            contentLeft,
+            contentRightPadding);
+    }
+
+    private int tileLocalY(StationTileCoord coord) {
+        return StationMapViewport.tileTopY(
+            coord,
+            getArea().height,
+            StationTileRenderer.LOGICAL_TILE_SIZE,
+            contentVerticalPadding);
+    }
+
     private int toLocalMouseX(int mouseX) {
-        return mouseX - getArea().x;
+        return mouseX - getArea().rx;
     }
 
     private int toLocalMouseY(int mouseY) {
-        return mouseY - getArea().y;
+        return mouseY - getArea().ry;
     }
 }

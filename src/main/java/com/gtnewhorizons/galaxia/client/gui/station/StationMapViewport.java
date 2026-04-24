@@ -1,0 +1,47 @@
+package com.gtnewhorizons.galaxia.client.gui.station;
+
+import javax.annotation.Nullable;
+
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+
+final class StationMapViewport {
+
+    private StationMapViewport() {}
+
+    static boolean contains(int localX, int localY, int width, int height, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding) {
+        return localX >= contentLeft && localX < width - contentRightPadding && localY >= contentVerticalPadding
+            && localY < height - contentVerticalPadding;
+    }
+
+    static int originLocalX(int width, int tileSize, int contentLeft, int contentRightPadding) {
+        int availableWidth = Math.max(tileSize, width - contentLeft - contentRightPadding);
+        return contentLeft + availableWidth / 2 - tileSize / 2;
+    }
+
+    static int originLocalY(int height, int tileSize, int contentVerticalPadding) {
+        int availableHeight = Math.max(tileSize, height - contentVerticalPadding * 2);
+        return contentVerticalPadding + availableHeight / 2 - tileSize / 2;
+    }
+
+    static int tileLeftX(StationTileCoord coord, int width, int tileSize, int contentLeft, int contentRightPadding) {
+        return originLocalX(width, tileSize, contentLeft, contentRightPadding) + coord.dx() * tileSize;
+    }
+
+    static int tileTopY(StationTileCoord coord, int height, int tileSize, int contentVerticalPadding) {
+        return originLocalY(height, tileSize, contentVerticalPadding) + coord.dy() * tileSize;
+    }
+
+    static @Nullable StationTileCoord coordAt(int localX, int localY, int width, int height, int tileSize,
+        int contentLeft, int contentRightPadding, int contentVerticalPadding) {
+        if (!contains(localX, localY, width, height, contentLeft, contentRightPadding, contentVerticalPadding))
+            return null;
+        int relX = localX - originLocalX(width, tileSize, contentLeft, contentRightPadding);
+        int relY = localY - originLocalY(height, tileSize, contentVerticalPadding);
+        int dx = Math.floorDiv(relX, tileSize);
+        int dy = Math.floorDiv(relY, tileSize);
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return null;
+        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return null;
+        return StationTileCoord.of(dx, dy);
+    }
+}
