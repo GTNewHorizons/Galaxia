@@ -81,16 +81,45 @@ public final class RocketAssembly {
 
             // Non Capsule Linears
             List<RocketModule> linears = modules.stream()
-                .filter(m -> !(m instanceof IStackableModule) && !(m instanceof CapsuleModule))
+                .filter(
+                    m -> !(m instanceof IStackableModule) && !(m instanceof CapsuleModule)
+                        && !(m instanceof RiderModule)
+                        && !(m instanceof LanderModule))
                 .collect(Collectors.toList());
 
             placements.addAll(new LinearPlacementRule().apply(linears, afterClustered));
-            double beforeCommand = placements.stream()
+
+            double beforeLander = placements.stream()
                 .mapToDouble(
                     p -> p.y() + p.type()
                         .getHeight())
                 .max()
                 .orElse(afterClustered);
+            List<RocketModule> landers = modules.stream()
+                .filter(m -> m instanceof LanderModule)
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(landers, beforeLander));
+
+            double beforeRiders = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(beforeLander);
+
+            List<RocketModule> riders = modules.stream()
+                .filter(m -> m instanceof RiderModule)
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(riders, beforeRiders));
+
+            double beforeCommand = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(beforeLander);
 
             // Capsule Module
             List<RocketModule> capsules = modules.stream()
