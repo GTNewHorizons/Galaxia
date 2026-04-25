@@ -38,6 +38,13 @@ public class EntityRocketSeat extends Entity implements IEntityAdditionalSpawnDa
 
     }
 
+    public EntityRocket getRocket() {
+        if (rocket instanceof EntityRocket castRocket) {
+            return castRocket;
+        }
+        return null;
+    }
+
     @Override
     public void onUpdate() {
         super.onUpdate();
