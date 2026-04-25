@@ -6,6 +6,11 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.particle.EntityCloudFX;
+import net.minecraft.client.particle.EntityFX;
+import net.minecraft.client.particle.EntityFlameFX;
+import net.minecraft.client.particle.EntitySmokeFX;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -623,8 +628,8 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
             double mz = rand.nextGaussian() * (0.08 + expansion * 0.18);
             double my = -2.2 * (0.8 + rand.nextFloat() * 0.6);
 
-            worldObj.spawnParticle("flame", px, py, pz, mx, my, mz);
-            worldObj.spawnParticle("largesmoke", px, py, pz, mx * 0.7, my * 0.6, mz * 0.7);
+            spawnParticleBypass("flame", px, py, pz, mx, my, mz);
+            spawnParticleBypass("largesmoke", px, py, pz, mx * 0.7, my * 0.6, mz * 0.7);
         }
     }
 
@@ -641,8 +646,8 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
                 double mx = Math.cos(angle) * (0.15 + rand.nextFloat() * 0.25);
                 double mz = Math.sin(angle) * (0.15 + rand.nextFloat() * 0.25);
                 double my = 0.05 + rand.nextFloat() * 0.18;
-                worldObj.spawnParticle("largesmoke", px, py, pz, mx, my, mz);
-                if (rand.nextFloat() < 0.25f) worldObj.spawnParticle("flame", px, py, pz, mx * 0.3, my * 0.1, mz * 0.3);
+                spawnParticleBypass("largesmoke", px, py, pz, mx, my, mz);
+                if (rand.nextFloat() < 0.25f) spawnParticleBypass("flame", px, py, pz, mx * 0.3, my * 0.1, mz * 0.3);
             }
         }
     }
@@ -653,7 +658,7 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
         Random rand = worldObj.rand;
         if (!retro) {
             for (int i = 0; i < 4; i++) {
-                worldObj.spawnParticle(
+                spawnParticleBypass(
                     "cloud",
                     posX + rand.nextGaussian() * 0.4,
                     posY + height + rand.nextFloat() * 0.5,
@@ -671,15 +676,15 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
                 double mx = rand.nextGaussian() * (0.06 + intensity * 0.15);
                 double mz = rand.nextGaussian() * (0.06 + intensity * 0.15);
                 double my = -(1.5 + rand.nextFloat() * 0.8 + intensity * 1.2);
-                worldObj.spawnParticle("flame", px, posY + 0.2, pz, mx, my, mz);
-                worldObj.spawnParticle("largesmoke", px, posY + 0.2, pz, mx * 0.5, my * 0.4, mz * 0.5);
+                spawnParticleBypass("flame", px, posY + 0.2, pz, mx, my, mz);
+                spawnParticleBypass("largesmoke", px, posY + 0.2, pz, mx * 0.5, my * 0.4, mz * 0.5);
             }
 
             if (posY - getGroundY() < 20) {
                 for (int i = 0; i < 6; i++) {
                     double angle = rand.nextDouble() * Math.PI * 2;
                     double radius = 0.5 + rand.nextDouble() * 1.5;
-                    worldObj.spawnParticle(
+                    spawnParticleBypass(
                         "largesmoke",
                         posX + Math.cos(angle) * radius,
                         posY - 0.5,
@@ -820,5 +825,35 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
         this.targetZ = buf.readDouble();
         this.groundY = buf.readInt();
         this.motionY = buf.readDouble();
+    }
+
+    @SideOnly(Side.CLIENT)
+    private void spawnParticleBypass(String particleName, double px, double py, double pz, double mx, double my,
+        double mz) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.renderViewEntity == null || mc.effectRenderer == null) return;
+
+        // Respect the user's video settings for particles (0 = All, 1 = Decreased, 2 =
+        // Minimal)
+        int setting = mc.gameSettings.particleSetting;
+        if (setting == 2 || (setting == 1 && worldObj.rand.nextInt(3) != 0)) {
+            return;
+        }
+
+        EntityFX fx = null;
+
+        // Instantiate the specific 1.7.10 particles directly
+        switch (particleName) {
+            case "flame" -> fx = new EntityFlameFX(worldObj, px, py, pz, mx, my, mz);
+            // 2.5F => largesmoke
+            case "largesmoke" -> fx = new EntitySmokeFX(worldObj, px, py, pz, mx, my, mz, 2.5F);
+            case "cloud" -> fx = new EntityCloudFX(worldObj, px, py, pz, mx, my, mz);
+        }
+
+        // Add it directly to the effect renderer, bypassing the vanilla distance
+        // checks
+        if (fx != null) {
+            mc.effectRenderer.addEffect(fx);
+        }
     }
 }
