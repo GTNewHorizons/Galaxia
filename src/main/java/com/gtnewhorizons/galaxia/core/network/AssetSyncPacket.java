@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
@@ -59,6 +60,7 @@ public final class AssetSyncPacket implements IMessage {
     private List<AssetSyncPacket> fullSyncDeltas;
 
     private int moduleIndex;
+    private ModuleInstance.ID moduleId;
     private ModuleInstance moduleData;
 
     private String resourceKey;
@@ -135,11 +137,13 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static AssetSyncPacket moduleRemoved(CelestialAsset.ID assetId, int moduleIndex) {
+    public static AssetSyncPacket moduleRemoved(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = MODULE_REMOVED;
         pkt.moduleIndex = moduleIndex;
+        pkt.moduleId = Objects.requireNonNull(moduleId, "moduleId");
         return pkt;
     }
 
@@ -260,7 +264,10 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeInt(moduleIndex);
                 writeModule(buf, moduleData);
             }
-            case MODULE_REMOVED -> buf.writeInt(moduleIndex);
+            case MODULE_REMOVED -> {
+                buf.writeInt(moduleIndex);
+                PacketUtil.writeId(buf, moduleId);
+            }
             case INVENTORY_UPDATE -> {
                 PacketUtil.writeString(buf, resourceKey);
                 buf.writeLong(inventoryDelta);
@@ -287,7 +294,10 @@ public final class AssetSyncPacket implements IMessage {
                 moduleIndex = buf.readInt();
                 moduleData = readModule(buf);
             }
-            case MODULE_REMOVED -> moduleIndex = buf.readInt();
+            case MODULE_REMOVED -> {
+                moduleIndex = buf.readInt();
+                moduleId = PacketUtil.readModuleId(buf);
+            }
             case INVENTORY_UPDATE -> {
                 resourceKey = PacketUtil.readString(buf);
                 inventoryDelta = buf.readLong();
@@ -455,13 +465,7 @@ public final class AssetSyncPacket implements IMessage {
                         state.addModule(packet.moduleData);
                     }
                 }
-                case MODULE_REMOVED -> {
-                    if (packet.moduleIndex < state.modules()
-                        .size()) {
-                        state.modulesInternal()
-                            .remove(packet.moduleIndex);
-                    }
-                }
+                case MODULE_REMOVED -> state.removeModule(packet.moduleId);
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {

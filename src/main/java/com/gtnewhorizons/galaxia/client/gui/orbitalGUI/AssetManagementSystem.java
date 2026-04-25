@@ -36,6 +36,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
+import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
@@ -320,6 +321,11 @@ public final class AssetManagementSystem {
 
         void openPendingAssetManagement(OrbitalAssetUiState state, CelestialAsset asset) {
             if (asset == null || !assetSupport.isManageableStationAsset(asset)) return;
+            if (asset.kind == CelestialAsset.Kind.AUTOMATED_STATION
+                || asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST) {
+                StationManagementScreen.open(asset.assetId, callbacks.isCreativeBuildModeEnabled());
+                return;
+            }
             state.pendingAssetManagement = new PendingAssetManagement(asset);
         }
 

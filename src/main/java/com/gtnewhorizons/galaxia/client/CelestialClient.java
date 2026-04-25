@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
@@ -31,6 +33,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -114,16 +120,28 @@ public final class CelestialClient {
     }
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled) {
+        createModule(assetId, kind, creativeBuildModeEnabled, null);
+    }
+
+    public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
+        @Nullable StationTileCoord tileCoord) {
         AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
+        if (!kind.isAllowedOn(state.kind)) return;
         ModuleInstance module = kind.createInstance();
-        if (creativeBuildModeEnabled && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode) {
+        boolean creativePlayer = Minecraft.getMinecraft().thePlayer != null
+            && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode;
+        if (creativeBuildModeEnabled && creativePlayer) {
             module.completeConstruction();
         }
         state.addModule(module);
+        StationLayout layout = state.stationLayout();
+        if (tileCoord != null && layout != null) {
+            layout.place(tileCoord, new PlacedTile(module, StationTileState.fromModuleStatus(module.status())));
+        }
 
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(new AssetBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled));
+            .sendToServer(new AssetBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled, tileCoord));
     }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
@@ -144,9 +162,9 @@ public final class CelestialClient {
         switch (action) {
             case ENABLE -> module.updateStatus(Buildable.Status.OPERATIONAL);
             case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-            case DESTROY -> state.removeModule(moduleIndex);
+            case DESTROY -> state.removeModule(module.id);
         }
-        Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, action));
+        Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
@@ -161,7 +179,7 @@ public final class CelestialClient {
             case REMOVE_MINER_BLACKLIST -> miner.removeFromBlacklist(payload);
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
@@ -185,7 +203,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
@@ -207,7 +225,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
@@ -235,7 +253,7 @@ public final class CelestialClient {
             default -> {}
         }
         Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, configAction, payload));
+            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     /**

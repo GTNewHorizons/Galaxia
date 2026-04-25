@@ -271,7 +271,7 @@ public final class FacilityPersistenceManager {
         return asset;
     }
 
-    private FacilityStateJson encodeFacilityState(AutomatedFacility state) {
+    FacilityStateJson encodeFacilityState(AutomatedFacility state) {
         FacilityStateJson out = new FacilityStateJson();
         out.celestialBodyId = String.valueOf(state.celestialObjectId);
         out.systemId = String.valueOf(state.systemId);
@@ -355,7 +355,7 @@ public final class FacilityPersistenceManager {
         return out;
     }
 
-    private AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
+    AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
         if (asset == null || json == null || json.systemId == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
