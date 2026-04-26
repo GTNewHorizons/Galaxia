@@ -21,7 +21,6 @@ import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
-import com.gtnewhorizons.galaxia.handlers.RocketCameraHandler;
 import com.gtnewhorizons.galaxia.handlers.RocketInputHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -53,9 +52,6 @@ public class ClientProxy extends CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(new RocketInputHandler());
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new RocketCameraHandler());
     }
 
     @Override
