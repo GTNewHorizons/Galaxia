@@ -10,3 +10,10 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+tasks.register("printRuntimeClasspath") {
+    val runtimeClasspath = configurations.named("runtimeClasspath")
+    doLast {
+        runtimeClasspath.get().files.forEach { println(it.absolutePath) }
+    }
+}

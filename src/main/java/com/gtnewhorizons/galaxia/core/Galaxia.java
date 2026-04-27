@@ -7,14 +7,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
+import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetRequestSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
+import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
-import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -36,7 +42,6 @@ public final class Galaxia {
 
     // spotless:off
     public static final String MODID = "galaxia";
-    public static final String GT5U_MODID = "gregtech";
     public static final String NAME = "Galaxia";
     public static final String UNLOCALIZED_PREFIX = MODID + ".";
     public static final String TEXTURE_PREFIX = MODID + ":";
@@ -96,6 +101,19 @@ public final class Galaxia {
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class,
+                id++, Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetInventoryUpdatePacket.Handler.class, AssetInventoryUpdatePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(AssetRequestSyncPacket.Handler.class, AssetRequestSyncPacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetBuildModulePacket.Handler.class, AssetBuildModulePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetModuleUpdatePacket.Handler.class, AssetModuleUpdatePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
+                Side.CLIENT);
     }
     // spotless:on
 
@@ -107,7 +125,4 @@ public final class Galaxia {
         }
     };
 
-    public static boolean hasGT5U() {
-        return Loader.isModLoaded(GT5U_MODID);
-    }
 }

@@ -8,7 +8,11 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.B
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
+import net.minecraftforge.common.MinecraftForge;
+
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
+import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
+import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
@@ -16,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 
@@ -35,7 +40,6 @@ public class CommonProxy {
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
         SolarSystemRegistry.registerAll();
-        CelestialRegistry.registerDefaults();
 
         FMLCommonHandler.instance()
             .bus()
@@ -45,10 +49,17 @@ public class CommonProxy {
             .bus()
             .register(new ServerTickTaskQueue());
 
+        FacilityPersistenceManager outpostPersistence = new FacilityPersistenceManager();
+        MinecraftForge.EVENT_BUS.register(outpostPersistence);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new CelestialEventHandler());
+
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
+        OutpostModuleRegistry.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
 

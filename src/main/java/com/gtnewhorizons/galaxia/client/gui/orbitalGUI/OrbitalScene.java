@@ -12,12 +12,13 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.utils.GlStateManager;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetKind;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectClass;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalCelestialBody;
-import com.gtnewhorizons.galaxia.registry.orbital.Hierarchy.OrbitalParams;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
 
 public class OrbitalScene {
 
@@ -25,8 +26,8 @@ public class OrbitalScene {
 
     static final class ResolvedBodyDrawState {
 
-        private OrbitalCelestialBody body;
-        private OrbitalCelestialBody parent;
+        private CelestialObject body;
+        private CelestialObject parent;
         private double worldX;
         private double worldY;
         private float screenX;
@@ -38,7 +39,7 @@ public class OrbitalScene {
         private float labelY;
         private int labelColor;
 
-        void set(OrbitalCelestialBody body, OrbitalCelestialBody parent, double worldX, double worldY, float screenX,
+        void set(CelestialObject body, CelestialObject parent, double worldX, double worldY, float screenX,
             float screenY, float renderedRadius, float bodyAlpha, boolean renderBody, boolean drawLabel, float labelY,
             int labelColor) {
             this.body = body;
@@ -55,11 +56,11 @@ public class OrbitalScene {
             this.labelColor = labelColor;
         }
 
-        OrbitalCelestialBody body() {
+        CelestialObject body() {
             return body;
         }
 
-        OrbitalCelestialBody parent() {
+        CelestialObject parent() {
             return parent;
         }
 
@@ -106,14 +107,13 @@ public class OrbitalScene {
 
     static final class ScreenBodyBounds {
 
-        private OrbitalCelestialBody body;
+        private CelestialObject body;
         private float centerX;
         private float centerY;
         private float renderedRadius;
         private float interactionRadius;
 
-        void set(OrbitalCelestialBody body, float centerX, float centerY, float renderedRadius,
-            float interactionRadius) {
+        void set(CelestialObject body, float centerX, float centerY, float renderedRadius, float interactionRadius) {
             this.body = body;
             this.centerX = centerX;
             this.centerY = centerY;
@@ -121,7 +121,7 @@ public class OrbitalScene {
             this.interactionRadius = interactionRadius;
         }
 
-        OrbitalCelestialBody body() {
+        CelestialObject body() {
             return body;
         }
 
@@ -224,7 +224,7 @@ public class OrbitalScene {
     public static final class OrbitalSceneFrame {
 
         final List<ResolvedBodyDrawState> resolvedBodies = new ArrayList<>();
-        final IdentityHashMap<OrbitalCelestialBody, ResolvedBodyDrawState> resolvedBodiesByBody = new IdentityHashMap<>();
+        final IdentityHashMap<CelestialObject, ResolvedBodyDrawState> resolvedBodiesByBody = new IdentityHashMap<>();
         final List<ScreenBodyBounds> screenBodies = new ArrayList<>();
         final List<LabelDrawCall> labelDrawCalls = new ArrayList<>();
         final List<MarkerDrawCall> markerDrawCalls = new ArrayList<>();
@@ -249,7 +249,7 @@ public class OrbitalScene {
             markerPoolIndex = 0;
         }
 
-        ResolvedBodyDrawState addResolvedBody(OrbitalCelestialBody body, OrbitalCelestialBody parent, double worldX,
+        ResolvedBodyDrawState addResolvedBody(CelestialObject body, CelestialObject parent, double worldX,
             double worldY, float screenX, float screenY, float renderedRadius, float bodyAlpha, boolean renderBody,
             boolean drawLabel, float labelY, int labelColor) {
             ResolvedBodyDrawState state = resolvedBodyPoolIndex < resolvedBodyPool.size()
@@ -274,7 +274,7 @@ public class OrbitalScene {
             return state;
         }
 
-        ScreenBodyBounds addScreenBody(OrbitalCelestialBody body, float centerX, float centerY, float renderedRadius,
+        ScreenBodyBounds addScreenBody(CelestialObject body, float centerX, float centerY, float renderedRadius,
             float interactionRadius) {
             ScreenBodyBounds bounds = screenBodyPoolIndex < screenBodyPool.size()
                 ? screenBodyPool.get(screenBodyPoolIndex)
@@ -331,12 +331,12 @@ public class OrbitalScene {
 
         interface Callbacks {
 
-            double[] getViewOrigin(OrbitalCelestialBody viewRoot);
+            double[] getViewOrigin(CelestialObject viewRoot);
 
-            void fillResolvedBodyDrawState(ResolvedBodyDrawState out, OrbitalCelestialBody body,
-                OrbitalCelestialBody parent, double worldX, double worldY, float labelAlpha);
+            void fillResolvedBodyDrawState(ResolvedBodyDrawState out, CelestialObject body, CelestialObject parent,
+                double worldX, double worldY, float labelAlpha);
 
-            boolean shouldTraverseChildren(OrbitalCelestialBody body);
+            boolean shouldTraverseChildren(CelestialObject body);
 
             float getInteractionRadius(float renderedRadius);
 
@@ -350,7 +350,7 @@ public class OrbitalScene {
             this.callbacks = callbacks;
         }
 
-        OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, OrbitalCelestialBody viewRoot, double globalTime,
+        OrbitalSceneFrame buildInto(OrbitalSceneFrame frame, CelestialObject viewRoot, double globalTime,
             float labelAlpha) {
             frame.resetForReuse();
             double[] viewOrigin = callbacks.getViewOrigin(viewRoot);
@@ -359,13 +359,13 @@ public class OrbitalScene {
             return frame;
         }
 
-        private void collectRecursive(OrbitalSceneFrame frame, OrbitalCelestialBody body, OrbitalCelestialBody parent,
+        private void collectRecursive(OrbitalSceneFrame frame, CelestialObject body, CelestialObject parent,
             double worldX, double worldY, double globalTime, float labelAlpha) {
             ResolvedBodyDrawState state = frame
                 .addResolvedBody(body, parent, worldX, worldY, 0f, 0f, 0f, 0f, false, false, 0f, 0);
             callbacks.fillResolvedBodyDrawState(state, body, parent, worldX, worldY, labelAlpha);
             if (state.body()
-                .objectClass() != CelestialObjectClass.GALAXY && state.bodyAlpha() > 0.01f
+                .objectClass() != CelestialObject.Class.GALAXY && state.bodyAlpha() > 0.01f
                 && state.renderBody()) {
                 registerHitboxes(frame, state);
                 registerMarkers(frame, state);
@@ -379,7 +379,7 @@ public class OrbitalScene {
                     state.labelColor());
             }
             if (!callbacks.shouldTraverseChildren(body)) return;
-            for (OrbitalCelestialBody child : body.children()) {
+            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
                 OrbitalMechanics.OrbitalState childWorldState = OrbitalView.OrbitalWorldStateCache
                     .resolveChildWorldState(body, child, worldX, worldY, globalTime);
                 collectRecursive(frame, child, body, childWorldState.x(), childWorldState.y(), globalTime, labelAlpha);
@@ -401,7 +401,7 @@ public class OrbitalScene {
         private void registerMarkers(OrbitalSceneFrame frame, ResolvedBodyDrawState state) {
             CelestialMarkerBase.CelestialMarkerContext context = markerContext.set(
                 state.body(),
-                CelestialAssetStore.getStateIfPresent(
+                CelestialClient.getState(
                     state.body()
                         .id()));
             List<CelestialMarkerBase.CelestialMarker> markers = CelestialMarkerBase.CelestialMarkerRegistry
@@ -429,29 +429,29 @@ public class OrbitalScene {
 
             float worldToScreenY(double wy);
 
-            ResourceLocation getRenderTexture(OrbitalCelestialBody body);
+            ResourceLocation getRenderTexture(CelestialObject body);
 
-            float getDisplaySpriteSize(OrbitalCelestialBody body);
+            float getDisplaySpriteSize(CelestialObject body);
 
             float getSelectionBoxRadius(ScreenBodyBounds bounds);
 
-            ResourceLocation getAssetIconTexture(CelestialAssetKind kind);
+            ResourceLocation getAssetIconTexture(CelestialAsset.Kind kind);
         }
 
         private static final float MAP_LABEL_SCALE = 0.82f;
         private static final int GALAXY_TITLE_TOP = 10;
         private static final int GALAXY_TITLE_HEIGHT = 21;
-        private static final int SOI_FILL_COLOR = 0x3300FF66;
+        private static final int SOI_FILL_COLOR = EnumColors.MAP_COLOR_SPHERE_OF_INFLUENCE_FILL.getColor();
         private final Callbacks callbacks;
 
         OrbitalSceneRenderer(Callbacks callbacks) {
             this.callbacks = callbacks;
         }
 
-        void drawBodies(OrbitalSceneFrame frame, OrbitalCelestialBody viewRoot) {
+        void drawBodies(OrbitalSceneFrame frame, CelestialObject viewRoot) {
             for (ResolvedBodyDrawState state : frame.resolvedBodies) {
                 if (state.body()
-                    .objectClass() == CelestialObjectClass.GALAXY || state.bodyAlpha() <= 0.01f
+                    .objectClass() == CelestialObject.Class.GALAXY || state.bodyAlpha() <= 0.01f
                     || !state.renderBody()) continue;
                 ResourceLocation texture = callbacks.getRenderTexture(state.body());
                 if (texture != null && callbacks.getDisplaySpriteSize(state.body()) > 0.0001f) {
@@ -467,12 +467,16 @@ public class OrbitalScene {
         }
 
         void drawSpheresOfInfluence(OrbitalSceneFrame frame) {
+            // SOI is currently not used by gameplay, routing, hit-testing, or layer logic.
+            // Leave the calculation code in place for future mechanics, but keep the overlay
+            // disabled for now to avoid implying that it has active meaning in-game.
+            if (true) return;
             for (ResolvedBodyDrawState state : frame.resolvedBodies) {
                 if (state.parent() == null || state.bodyAlpha() <= 0.01f || !state.renderBody()) continue;
                 if (state.body()
-                    .objectClass() == CelestialObjectClass.GALAXY
+                    .objectClass() == CelestialObject.Class.GALAXY
                     || state.body()
-                        .objectClass() == CelestialObjectClass.STAR) {
+                        .objectClass() == CelestialObject.Class.STAR) {
                     continue;
                 }
                 double soiRadius = OrbitalMechanics.getSphereOfInfluenceRadius(state.parent(), state.body());
@@ -509,16 +513,20 @@ public class OrbitalScene {
                 drawUiSprite(marker.texture(), marker.x(), marker.y(), marker.size(), marker.alpha());
         }
 
-        void drawSelectionHighlight(OrbitalCelestialBody body, OrbitalSceneFrame frame) {
+        void drawSelectionHighlight(CelestialObject body, OrbitalSceneFrame frame) {
             ScreenBodyBounds bounds = findScreenBodyBounds(frame, body);
             if (bounds == null) return;
             float box = callbacks.getSelectionBoxRadius(bounds);
             int labelY = (int) (bounds.centerY() - box - 22);
             drawSelectionOverlay(bounds.centerX(), bounds.centerY(), box, 1.0f);
-            drawCenteredString(body.displayName(), bounds.centerX(), labelY, 0xFFFFFFFF);
+            drawCenteredString(
+                body.displayName(),
+                bounds.centerX(),
+                labelY,
+                EnumColors.MAP_COLOR_TITLE_BANNER_TEXT.getColor());
         }
 
-        void drawHoverHighlight(OrbitalCelestialBody body, OrbitalSceneFrame frame) {
+        void drawHoverHighlight(CelestialObject body, OrbitalSceneFrame frame) {
             ScreenBodyBounds bounds = findScreenBodyBounds(frame, body);
             if (bounds == null) return;
             drawSelectionOverlay(bounds.centerX(), bounds.centerY(), callbacks.getSelectionBoxRadius(bounds), 0.45f);
@@ -526,15 +534,20 @@ public class OrbitalScene {
 
         void drawDebugOverlay(OrbitalSceneFrame frame, int widgetHeight) {
             Minecraft mc = Minecraft.getMinecraft();
-            Gui.drawRect(8, widgetHeight - 36, 182, widgetHeight - 8, 0x990B111C);
-            mc.fontRenderer.drawStringWithShadow("Debug: body hitzones", 14, widgetHeight - 30, 0xFF7FFFD4);
-            mc.fontRenderer.drawStringWithShadow("Toggle: B", 14, widgetHeight - 18, 0xFFB8C7D9);
+            Gui.drawRect(8, widgetHeight - 36, 182, widgetHeight - 8, EnumColors.MAP_COLOR_DEBUG_PANEL_BG.getColor());
+            mc.fontRenderer.drawStringWithShadow(
+                "Debug: body hitzones",
+                14,
+                widgetHeight - 30,
+                EnumColors.MAP_COLOR_DEBUG_TITLE.getColor());
+            mc.fontRenderer
+                .drawStringWithShadow("Toggle: B", 14, widgetHeight - 18, EnumColors.MAP_COLOR_DEBUG_INFO.getColor());
             for (ScreenBodyBounds bounds : frame.screenBodies) {
                 drawSquareOutline(
                     bounds.centerX(),
                     bounds.centerY(),
                     bounds.interactionRadius(),
-                    0xFF00E5FF,
+                    EnumColors.MAP_COLOR_DEBUG_HITBOX.getColor(),
                     0.95f,
                     1.5f);
                 Gui.drawRect(
@@ -542,14 +555,14 @@ public class OrbitalScene {
                     Math.round(bounds.centerY()) - 1,
                     Math.round(bounds.centerX()) + 1,
                     Math.round(bounds.centerY()) + 1,
-                    0xFF9BFF7A);
+                    EnumColors.MAP_COLOR_DEBUG_CENTER.getColor());
             }
         }
 
-        void drawViewTitleBanner(OrbitalCelestialBody viewRoot, int widgetWidth) {
+        void drawViewTitleBanner(CelestialObject viewRoot, int widgetWidth) {
             if (viewRoot == null) return;
-            String title = viewRoot.objectClass() == CelestialObjectClass.GALAXY ? viewRoot.displayName()
-                : viewRoot.objectClass() == CelestialObjectClass.STAR ? viewRoot.displayName() + " System" : null;
+            String title = viewRoot.objectClass() == CelestialObject.Class.GALAXY ? viewRoot.displayName()
+                : viewRoot.objectClass() == CelestialObject.Class.STAR ? viewRoot.displayName() + " System" : null;
             if (title == null) return;
             Minecraft mc = Minecraft.getMinecraft();
             int textWidth = mc.fontRenderer.getStringWidth(title);
@@ -558,17 +571,30 @@ public class OrbitalScene {
             int bottom = top + GALAXY_TITLE_HEIGHT;
             float bottomHalfWidth = Math.max(74f, textWidth / 2f + 28f);
             float topHalfWidth = bottomHalfWidth + 8f;
-            drawFilledTrapezoid(centerX, top, bottom, topHalfWidth, bottomHalfWidth, 0xEE162133);
-            drawTrapezoidOutline(centerX, top, bottom, topHalfWidth, bottomHalfWidth, 0xFF7FB6FF, 1.4f);
-            drawCenteredBannerString(title, centerX, top + 7, 0xFFFFFFFF);
+            drawFilledTrapezoid(
+                centerX,
+                top,
+                bottom,
+                topHalfWidth,
+                bottomHalfWidth,
+                EnumColors.MAP_COLOR_TITLE_BANNER_BG.getColor());
+            drawTrapezoidOutline(
+                centerX,
+                top,
+                bottom,
+                topHalfWidth,
+                bottomHalfWidth,
+                EnumColors.MAP_COLOR_TITLE_BANNER_BORDER.getColor(),
+                1.4f);
+            drawCenteredBannerString(title, centerX, top + 7, EnumColors.MAP_COLOR_TITLE_BANNER_TEXT.getColor());
         }
 
-        void drawAssetIcon(CelestialAssetKind kind, int x, int y, int size, float alpha) {
+        void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha) {
             ResourceLocation texture = callbacks.getAssetIconTexture(kind);
             if (texture != null) drawUiSprite(texture, x, y, size, alpha);
         }
 
-        private ScreenBodyBounds findScreenBodyBounds(OrbitalSceneFrame frame, OrbitalCelestialBody body) {
+        private ScreenBodyBounds findScreenBodyBounds(OrbitalSceneFrame frame, CelestialObject body) {
             for (int i = frame.screenBodies.size() - 1; i >= 0; i--) {
                 ScreenBodyBounds bounds = frame.screenBodies.get(i);
                 if (bounds.body() == body) return bounds;
@@ -747,7 +773,7 @@ public class OrbitalScene {
         private void drawSelectionOverlay(float centerX, float centerY, float boxSize, float alpha) {
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            int color = withAlpha(0xFF18C8FF, alpha);
+            int color = withAlpha(EnumColors.MAP_COLOR_SELECTION_HIGHLIGHT.getColor(), alpha);
             int thickness = 2;
             int left = Math.round(centerX - boxSize);
             int right = Math.round(centerX + boxSize);
@@ -779,17 +805,17 @@ public class OrbitalScene {
             return (color & 0x00FFFFFF) | (a << 24);
         }
 
-        private int getFallbackBodyColor(CelestialObjectClass objectClass) {
+        private int getFallbackBodyColor(CelestialObject.Class objectClass) {
             return switch (objectClass) {
-                case GALAXY -> 0xFFFFFFFF;
-                case BLACK_HOLE -> 0xFF5A4B7A;
-                case STAR -> 0xFFFFD36B;
-                case GAS_GIANT -> 0xFFD9A066;
-                case PLANET -> 0xFF7FC7A6;
-                case MOON -> 0xFFD8DCE6;
-                case ASTEROID, ASTEROID_BELT -> 0xFF9CA3AF;
-                case STATION -> 0xFF89C2FF;
-                case COMET -> 0xFFAEE7FF;
+                case GALAXY -> EnumColors.MAP_COLOR_BODY_GALAXY.getColor();
+                case BLACK_HOLE -> EnumColors.MAP_COLOR_BODY_BLACK_HOLE.getColor();
+                case STAR -> EnumColors.MAP_COLOR_BODY_STAR.getColor();
+                case GAS_GIANT -> EnumColors.MAP_COLOR_BODY_GAS_GIANT.getColor();
+                case PLANET -> EnumColors.MAP_COLOR_BODY_PLANET.getColor();
+                case MOON -> EnumColors.MAP_COLOR_BODY_MOON.getColor();
+                case ASTEROID, ASTEROID_BELT -> EnumColors.MAP_COLOR_BODY_ASTEROID.getColor();
+                case STATION -> EnumColors.MAP_COLOR_BODY_STATION.getColor();
+                case COMET -> EnumColors.MAP_COLOR_BODY_COMET.getColor();
             };
         }
     }

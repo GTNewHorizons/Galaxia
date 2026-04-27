@@ -32,12 +32,33 @@ public enum EnumTextures {
     HAZARD_OXYGEN("textures/gui/icon_no_oxygen.png"),
     HAZARD_RADIATION("textures/gui/icon_radiation.png"),
 
+    // Space Body Icons for Galactic map
+    ICON_AMBERGRIS("textures/gui/bodyicons/icon_ambergris.png"),
+    ICON_ANAMNESIS("textures/gui/bodyicons/icon_anamnesis.png"),
+    ICON_ATARAXIA("textures/gui/bodyicons/icon_ataraxia.png"),
+    ICON_EDIACARA("textures/gui/bodyicons/icon_ediacara.png"),
+    ICON_EGORA("textures/gui/bodyicons/icon_egora.png"),
+    ICON_HEMATERIA("textures/gui/bodyicons/icon_hemateria.png"),
+    ICON_MYKELIA("textures/gui/bodyicons/icon_mykelia.png"),
+    ICON_PLEURA("textures/gui/bodyicons/icon_pleura.png"),
+    ICON_TENEBRAE("textures/gui/bodyicons/icon_tenebrae.png"),
+    ICON_THEIA("textures/gui/bodyicons/icon_theia.png"),
+    ICON_VIRIDIS("textures/gui/bodyicons/icon_viridis.png"),
+
     // Space Object Icons for Galactic map
-    ICON_EGORA("textures/gui/bodyicons/egora.png"),
     ICON_STATION("textures/gui/bodyicons/station.png"),
     ICON_STATION_AUTOMATED("textures/gui/bodyicons/station_automated.png"),
-    ICON_OUTPOST("textures/gui/bodyicons/outpost.png"),
     ICON_OUTPOST_AUTOMATED("textures/gui/bodyicons/outpost_automated.png"),
+
+    // Asset panel / transfer package icons
+    ICON_CAP_MINING("textures/gui/outpost_mining.png"),
+    ICON_CAP_PRODUCTION("textures/gui/outpost_processing.png"),
+    ICON_CAP_CONSTRUCTION("textures/gui/outpost_building.png"),
+    ICON_CAP_DECONSTRUCTION("textures/gui/outpost_destroying.png"),
+    ICON_WARN_POWERFAIL("textures/gui/outpost_powerfail.png"),
+    ICON_WARN_GENERIC("textures/gui/outpost_warning.png"),
+    ICON_MISSING("textures/gui/asset_panel/missing.png"),
+    ICON_TRANSFER_HAMMER("textures/items/module/item_hammer_package.png"),
 
     // Add more textures here
     ; // leave trailing semicolon

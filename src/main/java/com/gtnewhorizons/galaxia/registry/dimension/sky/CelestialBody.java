@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.registry.dimension.sky;
 
 import net.minecraft.util.ResourceLocation;
 
-import com.github.bsideup.jabel.Desugar;
-
 /**
  * Record class to store a celestial body
  *
@@ -16,6 +14,6 @@ import com.github.bsideup.jabel.Desugar;
  * @param phaseOffsetTicks   offset in ticks from default position
  * @param isMainLightSource  sets if this object is the main light source on a planet
  */
-@Desugar
+
 public record CelestialBody(ResourceLocation texture, float size, double distance, float inclination,
     long orbitalPeriodTicks, boolean hasPhases, int phaseCount, long phaseOffsetTicks, boolean isMainLightSource) {}

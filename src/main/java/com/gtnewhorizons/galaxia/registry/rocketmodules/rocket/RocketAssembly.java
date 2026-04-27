@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.github.bsideup.jabel.Desugar;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsuleModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankModule;
@@ -18,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.rules.PropulsionP
 
 public final class RocketAssembly {
 
-    @Desugar
     public record ModulePlacement(RocketModule type, double x, double y, double z) {}
 
     private final List<RocketModule> modules;
@@ -112,13 +110,24 @@ public final class RocketAssembly {
             .orElse(0.0);
     }
 
-    public double getTotalWidth() {
-        return getPlacements().stream()
-            .mapToDouble(
-                p -> p.x() + p.type()
-                    .getWidth())
+    public int getTier() {
+        return getCoreModules().stream()
+            .mapToInt(
+                e -> e.getTier()
+                    .toInt())
             .max()
-            .orElse(0.0);
+            .orElse(0);
+    }
+
+    public double getTotalWidth() {
+        return Math.round(
+            getPlacements().stream()
+                .mapToDouble(
+                    p -> p.x() + p.type()
+                        .getWidth())
+                .max()
+                .orElse(0.0) * 100.0)
+            / 100.0;
     }
 
     public double getTotalWeight() {
@@ -141,6 +150,12 @@ public final class RocketAssembly {
 
     public List<RocketModule> getModules() {
         return Collections.unmodifiableList(modules);
+    }
+
+    public double getTotalThrust() {
+        return getEngineModules().stream()
+            .mapToDouble(e -> e.getThrust())
+            .sum();
     }
 
     public List<EngineModule> getEngineModules() {
