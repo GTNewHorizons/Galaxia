@@ -16,8 +16,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -30,7 +30,7 @@ final class FacilityPersistenceManagerTest {
     @BeforeAll
     static void initRegistries() {
         CelestialRegistry.freezeAndBake();
-        OutpostModuleRegistry.init();
+        FacilityModuleRegistry.init();
     }
 
     @Test
