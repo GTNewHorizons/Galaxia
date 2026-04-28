@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -341,18 +342,6 @@ public final class AssetSyncPacket implements IMessage {
                         .threshold());
                 PacketUtil.writeEnum(buf, h.routePriority());
             }
-            case BIG_HAMMER -> {
-                ModuleHammer bh = (ModuleHammer) module.component();
-                PacketUtil.writeEnum(
-                    buf,
-                    bh.config()
-                        .mode());
-                buf.writeDouble(
-                    bh.config()
-                        .threshold());
-                buf.writeBoolean(bh.planetaryHandling());
-                PacketUtil.writeEnum(buf, bh.routePriority());
-            }
             case POWER -> {}
         }
     }
@@ -362,7 +351,7 @@ public final class AssetSyncPacket implements IMessage {
         FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
         Buildable.Status status = PacketUtil.readEnum(buf, Buildable.Status.class);
 
-        ModuleInstance module = kind.createInstance(id);
+        ModuleInstance module = FacilityModuleRegistry.create(id, kind);
 
         switch (kind) {
             case MINER -> {
@@ -379,15 +368,6 @@ public final class AssetSyncPacket implements IMessage {
                 OrbitalTransferPlanner.RoutePriority priority = PacketUtil
                     .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
                 module.setComponent(new ModuleHammer(kind, cfg, priority, false, true, false, 64));
-            }
-            case BIG_HAMMER -> {
-                AllowShootingConfig cfg = new AllowShootingConfig(
-                    PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
-                    buf.readDouble());
-                boolean planetary = buf.readBoolean();
-                OrbitalTransferPlanner.RoutePriority priority = PacketUtil
-                    .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
-                module.setComponent(new ModuleHammer(kind, cfg, priority, false, planetary, true, 128));
             }
             case POWER -> {}
         }

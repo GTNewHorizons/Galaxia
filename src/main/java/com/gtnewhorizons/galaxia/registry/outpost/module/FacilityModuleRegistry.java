@@ -53,21 +53,6 @@ public class FacilityModuleRegistry {
                 true,
                 false,
                 64));
-        register(
-            FacilityModuleKind.BIG_HAMMER,
-            5000L,
-            25L,
-            20,
-            Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
-            ModuleHammer::prepareToFire,
-            () -> new ModuleHammer(
-                FacilityModuleKind.BIG_HAMMER,
-                AllowShootingConfig.ALWAYS,
-                OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
-                false,
-                false,
-                true,
-                128));
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
@@ -89,32 +74,23 @@ public class FacilityModuleRegistry {
         return DEFINITIONS.get(kind);
     }
 
-    public static ModuleInstance createInstance(FacilityModuleKind kind) {
-        return createInstance(null, kind, null);
-    }
-
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, FacilityModuleKind kind) {
-        return createInstance(moduleId, kind, null);
-    }
-
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, FacilityModuleKind kind,
-        ModuleComponent component) {
+    public static ModuleInstance create(FacilityModuleKind kind) {
         Definition def = get(kind);
         if (def == null) {
             throw new IllegalArgumentException("Unknown module kind: " + kind);
         }
-        ModuleInstance instance;
-        if (moduleId == null) {
-            instance = new ModuleInstance(def);
-        } else {
-            instance = new ModuleInstance(moduleId, def);
-        }
+        ModuleInstance instance = new ModuleInstance(def);
+        instance.setComponent(createDefaultComponent(kind));
+        return instance;
+    }
 
-        if (component != null) {
-            instance.setComponent(component);
-        } else {
-            instance.setComponent(createDefaultComponent(kind));
+    public static ModuleInstance create(ModuleInstance.ID moduleId, FacilityModuleKind kind) {
+        Definition def = get(kind);
+        if (def == null) {
+            throw new IllegalArgumentException("Unknown module kind: " + kind);
         }
+        ModuleInstance instance = new ModuleInstance(moduleId, def);
+        instance.setComponent(createDefaultComponent(kind));
         return instance;
     }
 

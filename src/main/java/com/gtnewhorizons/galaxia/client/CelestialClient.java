@@ -30,6 +30,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -128,7 +129,7 @@ public final class CelestialClient {
         AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         if (!kind.isAllowedOn(state.kind)) return;
-        ModuleInstance module = kind.createInstance();
+        ModuleInstance module = FacilityModuleRegistry.create(kind);
         boolean creativePlayer = Minecraft.getMinecraft().thePlayer != null
             && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode;
         if (creativeBuildModeEnabled && creativePlayer) {
@@ -195,8 +196,7 @@ public final class CelestialClient {
                 }
             }
             case SET_PLANETARY_HANDLING -> {
-                if (module.kind() == FacilityModuleKind.BIG_HAMMER
-                    && module.component() instanceof ModuleHammer hammer) {
+                if (module.kind() == FacilityModuleKind.HAMMER && module.component() instanceof ModuleHammer hammer) {
                     hammer.setPlanetaryHandling(payload);
                 }
             }

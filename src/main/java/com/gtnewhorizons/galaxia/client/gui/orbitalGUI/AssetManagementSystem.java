@@ -54,6 +54,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -1303,7 +1304,7 @@ public final class AssetManagementSystem {
                             .getDisplayName(),
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(8, 6));
 
-                boolean isHammer = m.kind() == FacilityModuleKind.HAMMER || m.kind() == FacilityModuleKind.BIG_HAMMER;
+                boolean isHammer = m.kind() == FacilityModuleKind.HAMMER;
                 boolean isConfigurable = isHammer || m.kind() == FacilityModuleKind.MINER
                     || m.kind() == FacilityModuleKind.POWER;
                 boolean operational = m.status() != Buildable.Status.IN_CONSTRUCTION;
@@ -1734,7 +1735,7 @@ public final class AssetManagementSystem {
         }
 
         /**
-         * Renders the logistics routing configuration for a HAMMER or BIG_HAMMER module.
+         * Renders the logistics routing configuration for a HAMMER module.
          *
          * <p>
          * Shows all explicitly configured items in a scrollable list. Each row follows
@@ -2220,14 +2221,13 @@ public final class AssetManagementSystem {
             // TODO: Localize
             return switch (kind) {
                 case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
-                case BIG_HAMMER -> "Heavy logistics launcher for larger interstation packages.";
                 case MINER -> "Generates one ore per second from this body's available deposits.";
                 case POWER -> "Adds extra power generation to support modules and logistics.";
             };
         }
 
         private String buildModuleStats(FacilityModuleKind kind) {
-            var data = kind.createInstance();
+            var data = FacilityModuleRegistry.create(kind);
             String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
                 : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
             String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
@@ -2235,7 +2235,7 @@ public final class AssetManagementSystem {
         }
 
         private String buildModuleCost(FacilityModuleKind kind) {
-            var data = kind.createInstance();
+            var data = FacilityModuleRegistry.create(kind);
             StringBuilder sb = new StringBuilder("Cost: ");
             boolean first = true;
             for (Map.Entry<ItemStack, Long> entry : data.getConstructionCost()

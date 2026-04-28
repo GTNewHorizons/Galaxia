@@ -11,7 +11,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -269,8 +268,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                             .mode(),
                         packet.getDoublePayload()));
                 case SET_PLANETARY_HANDLING -> {
-                    if (module.kind() == FacilityModuleKind.BIG_HAMMER
-                        && module.component() instanceof ModuleHammer hammer) {
+                    if (module.component() instanceof ModuleHammer hammer) {
                         hammer.setPlanetaryHandling(packet.getBooleanPayload());
                     }
                 }

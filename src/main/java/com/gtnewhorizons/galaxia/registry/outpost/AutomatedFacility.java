@@ -134,8 +134,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean hasProductionCapability() {
         for (ModuleInstance m : modules) {
             FacilityModuleKind k = m.kind();
-            if ((k == FacilityModuleKind.HAMMER || k == FacilityModuleKind.BIG_HAMMER) && m.isOperational())
-                return true;
+            if (k == FacilityModuleKind.HAMMER && m.isOperational()) return true;
         }
         return false;
     }

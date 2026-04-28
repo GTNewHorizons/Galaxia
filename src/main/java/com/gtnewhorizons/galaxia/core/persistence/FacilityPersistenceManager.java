@@ -36,6 +36,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -364,7 +365,8 @@ public final class FacilityPersistenceManager {
                 FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
                 if (kind == null) continue;
                 ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
-                ModuleInstance module = moduleId == null ? kind.createInstance() : kind.createInstance(moduleId);
+                ModuleInstance module = moduleId == null ? FacilityModuleRegistry.create(kind)
+                    : FacilityModuleRegistry.create(moduleId, kind);
 
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
 
@@ -380,24 +382,6 @@ public final class FacilityPersistenceManager {
                                 .fromJson(data.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
                         }
                         module.setComponent(new ModuleHammer(kind, config, priority, false, true, false, 64));
-                    }
-                    case BIG_HAMMER -> {
-                        AllowShootingConfig config = AllowShootingConfig.ALWAYS;
-                        OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
-                        boolean planetaryHandling = false;
-                        if (data.has("config")) {
-                            config = PURE_GSON.fromJson(data.get("config"), AllowShootingConfig.class);
-                        }
-                        if (data.has("routePriority")) {
-                            priority = PURE_GSON
-                                .fromJson(data.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
-                        }
-                        if (data.has("planetaryHandling")) {
-                            planetaryHandling = data.get("planetaryHandling")
-                                .getAsBoolean();
-                        }
-                        module.setComponent(
-                            new ModuleHammer(kind, config, priority, false, planetaryHandling, true, 128));
                     }
                     case MINER -> {
                         List<String> blacklist = new ArrayList<>();

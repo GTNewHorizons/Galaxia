@@ -8,6 +8,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
@@ -142,7 +143,7 @@ public final class AssetBuildModulePacket implements IMessage {
                 }
             }
 
-            ModuleInstance module = kind.createInstance(packet.moduleId);
+            ModuleInstance module = FacilityModuleRegistry.create(packet.moduleId, kind);
             if (packet.instantBuild && player.capabilities.isCreativeMode) {
                 module.completeConstruction();
             }

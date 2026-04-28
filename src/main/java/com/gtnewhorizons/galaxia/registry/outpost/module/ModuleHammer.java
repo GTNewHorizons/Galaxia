@@ -9,6 +9,8 @@ public final class ModuleHammer implements ModuleComponent {
     public final FacilityModuleKind kind;
     public final boolean crossPlanetaryCapability;
 
+    private byte parallel = 1;
+
     private final int maxBatchSize;
     private OrbitalTransferPlanner.RoutePriority routePriority;
     private boolean canFire;
@@ -71,5 +73,15 @@ public final class ModuleHammer implements ModuleComponent {
 
     public void setPlanetaryHandling(boolean planetaryHandling) {
         this.planetaryHandling = planetaryHandling;
+    }
+
+    @Override
+    public byte getParallel() {
+        return parallel;
+    }
+
+    @Override
+    public void setParallel(byte parallel) {
+        this.parallel = parallel;
     }
 }
