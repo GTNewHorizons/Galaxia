@@ -2,9 +2,10 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule;
 
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
+
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 
 /**
  * Provides primary logic for location rules.

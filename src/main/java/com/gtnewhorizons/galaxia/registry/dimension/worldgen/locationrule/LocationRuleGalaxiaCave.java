@@ -2,9 +2,10 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule;
 
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 
 /**
  * Places a feature on the surface in a cave layer
@@ -16,7 +17,7 @@ public class LocationRuleGalaxiaCave extends LocationRuleGalaxiaSurface {
     private final int maximumHeight;
 
     public LocationRuleGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements,
-                                   Feature feature, boolean centered) {
+        Feature feature, boolean centered) {
         super(1, surfaceRequirements, feature, centered);
         this.frequency = frequency;
         this.minimumHeight = minimumHeight;
@@ -24,7 +25,7 @@ public class LocationRuleGalaxiaCave extends LocationRuleGalaxiaSurface {
     }
 
     public LocationRuleGalaxiaCave(int frequency, int minimumHeight, int maximumHeight, Block[] surfaceRequirements,
-                                   Feature feature) {
+        Feature feature) {
         this(frequency, minimumHeight, maximumHeight, surfaceRequirements, feature, false);
     }
 

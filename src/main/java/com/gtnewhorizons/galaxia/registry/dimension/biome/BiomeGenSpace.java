@@ -2,14 +2,14 @@ package com.gtnewhorizons.galaxia.registry.dimension.biome;
 
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
 /**
  * The class holding all generation fields for Biome generation

@@ -1,12 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
+import java.util.Random;
+
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 
-import java.util.Random;
-
 public class GeodeFeature extends Feature {
+
     private final Block shell;
     private final Block crystal;
 
@@ -18,13 +19,13 @@ public class GeodeFeature extends Feature {
     @Override
     public void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
         int size = 4 + random.nextInt(5);
-        int squaredSize = size*size;
+        int squaredSize = size * size;
         for (int xOffset = -size; xOffset <= size; xOffset++) {
             int combinedX = x + xOffset;
             for (int yOffset = -size; yOffset <= size; yOffset++) {
                 int combinedY = y + yOffset;
                 for (int zOffset = -size; zOffset <= size; zOffset++) {
-                    int squaredRadius = xOffset*xOffset + yOffset*yOffset + zOffset*zOffset + random.nextInt(16);
+                    int squaredRadius = xOffset * xOffset + yOffset * yOffset + zOffset * zOffset + random.nextInt(16);
                     if (squaredRadius > squaredSize) {
                         continue;
                     }

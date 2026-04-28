@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -21,13 +17,18 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
 /**
  * ChunkProvider implementation for Galaxia Planets
  */
 public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
+
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
     private static final int HEIGHT_LIMIT = 256;
@@ -46,7 +47,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     /**
      * Constructor to initialize the world and noise/random generators
      *
-     * @param world The world to bind the chunk generator to
+     * @param world     The world to bind the chunk generator to
      * @param dimension Galaxia dimension for agnostic block placement
      */
     public ChunkProviderGalaxiaPlanet(World world, DimensionEnum dimension) {
@@ -84,7 +85,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
         double[][] biomeContrib = new double[biomeCount][];
         List<BiomeGenBase> biomeList = new ArrayList<>();
-        // Between 0 and 1, smooth range between biome (0 is not smoothed, vertical cliffs, 1 is indistinguishable
+        // Between 0 and 1, smooth range between biome (0 is not smoothed, vertical
+        // cliffs, 1 is indistinguishable
         // between biomes)
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int z = 0; z < CHUNK_WIDTH; z++) {
@@ -99,8 +101,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 for (int i = 0; i < contribSize; i++) {
                     final double originalContrib = blockContrib[i];
                     final double squaredContrib = originalContrib * originalContrib;
-                    blockContrib[i] = squaredContrib * originalContrib * 2 + squaredContrib * 3;
-                    sum += blockContrib[i] = squaredContrib * originalContrib * 2 + squaredContrib * 3;
+                    blockContrib[i] = -1 * (squaredContrib * originalContrib * 2) + squaredContrib * 3;
+                    sum += blockContrib[i];
                 }
                 // Renormalizing
                 for (int i = 0; i < contribSize; i++) {
@@ -131,10 +133,26 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 double[] terrainRelevance = biomeContrib[biomeIndex];
                 TerrainConfiguration terrain = spaceBiome.getTerrain();
                 for (TerrainFeature f : terrain.getMacroFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance, dimension);
+                    TerrainFeatureApplier.applyToHeightmap(
+                        f,
+                        heightMap,
+                        surfaceReplacementMap,
+                        chunkX,
+                        chunkZ,
+                        rand,
+                        terrainRelevance,
+                        dimension);
                 }
                 for (TerrainFeature f : terrain.getMesoFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(f, heightMap, surfaceReplacementMap, chunkX, chunkZ, rand, terrainRelevance, dimension);
+                    TerrainFeatureApplier.applyToHeightmap(
+                        f,
+                        heightMap,
+                        surfaceReplacementMap,
+                        chunkX,
+                        chunkZ,
+                        rand,
+                        terrainRelevance,
+                        dimension);
                 }
             }
         }
@@ -272,7 +290,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         System.out.println("Time for generating oceans: " + (oceanTime));
         System.out.println("Time for generating caves: " + (caveTime));
         System.out.println("Time for placing blocks: " + (placementTime));
-        System.out.println("Total time for all tracked block placement steps: " + (assignmentTime + blockStorageTime + oceanTime + caveTime + placementTime + defaultVariableTime));
+        System.out.println(
+            "Total time for all tracked block placement steps: "
+                + (assignmentTime + blockStorageTime + oceanTime + caveTime + placementTime + defaultVariableTime));
         long blockGenerationTime = System.nanoTime();
         System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
 
@@ -285,15 +305,23 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     }
 
     private void prepareCaveCache(int chunkX, int chunkZ) {
-        double[] horizontalLayer = caveNoise
-            .generateNoiseOctaves(new double[CHUNK_AREA], chunkZ * CHUNK_WIDTH, chunkX * CHUNK_WIDTH, CHUNK_WIDTH, 16, CHUNK_WIDTH, 0.1, 0);
+        double[] horizontalLayer = caveNoise.generateNoiseOctaves(
+            new double[CHUNK_AREA],
+            chunkZ * CHUNK_WIDTH,
+            chunkX * CHUNK_WIDTH,
+            CHUNK_WIDTH,
+            16,
+            CHUNK_WIDTH,
+            0.1,
+            0);
         for (int i = 0; i < horizontalLayer.length; i++) {
             double noise = horizontalLayer[i];
             noise += 8;
             noise /= 16;
             caveCache[i][0] = noise;
         }
-        double[] verticalSlice = caveNoise.generateNoiseOctaves(new double[HEIGHT_LIMIT], chunkZ, chunkX, HEIGHT_LIMIT, 1, 0.1, 0.1, 0);
+        double[] verticalSlice = caveNoise
+            .generateNoiseOctaves(new double[HEIGHT_LIMIT], chunkZ, chunkX, HEIGHT_LIMIT, 1, 0.1, 0.1, 0);
         for (int i = 0; i < verticalSlice.length; i++) {
             double noise = verticalSlice[i];
             noise += 8;
@@ -457,7 +485,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 if (localY > localHeight) {
                     continue;
                 }
-                localY += rand.nextInt(Math.max(1, Math.min(feature.getMaximumHeight() - minimumHeight, localHeight - minimumHeight)));
+                localY += rand.nextInt(
+                    Math.max(1, Math.min(feature.getMaximumHeight() - minimumHeight, localHeight - minimumHeight)));
                 feature.generate(worldObj, rand, localX, localY, localZ);
                 updateCoordinates.addAll(
                     feature.getFeature()
@@ -555,7 +584,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     }
 
     /**
-     * Gets the list of possible spawn creatures at coordinates - Not used in this implementation
+     * Gets the list of possible spawn creatures at coordinates - Not used in this
+     * implementation
      *
      * @param type Not used in this implementation
      * @param x    Not used in this implementation

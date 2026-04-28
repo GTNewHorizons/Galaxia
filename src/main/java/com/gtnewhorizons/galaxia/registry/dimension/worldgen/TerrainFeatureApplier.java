@@ -2,12 +2,12 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.Random;
 
+import net.minecraft.block.Block;
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
 /**
  * Class to deal with actual application of different feature types
@@ -29,7 +29,7 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     public static void applyToHeightmap(TerrainFeature feature, double[] heightMap, Block[] surfaceReplacementMap,
-                                        int chunkX, int chunkZ, Random rand, double[] terrainRelevance, DimensionEnum dimension) {
+        int chunkX, int chunkZ, Random rand, double[] terrainRelevance, DimensionEnum dimension) {
         if (generationNoise == null) {
             generationNoise = new NoiseGeneratorOctaves(rand, 4);
         }
@@ -72,7 +72,16 @@ public final class TerrainFeatureApplier {
                 applyBaseHeight(heightMap, height, terrainRelevance);
                 break;
             case SHIELD_VOLCANOES:
-                applyShieldVolcanoes(heightMap, height, width, chunkX, chunkZ, terrainRelevance, surfaceReplacementMap, dimension, replacementBlock);
+                applyShieldVolcanoes(
+                    heightMap,
+                    height,
+                    width,
+                    chunkX,
+                    chunkZ,
+                    terrainRelevance,
+                    surfaceReplacementMap,
+                    dimension,
+                    replacementBlock);
                 break;
             case MULTI_RING_BASINS:
             case PLATEAUS_AND_ESCARPMENTS:
@@ -271,7 +280,8 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applyShieldVolcanoes(double[] hm, double height, double width, int chunkX, int chunkZ,
-        double[] terrainRelevance, Block[] surfaceReplacementMap, DimensionEnum dimension, PlanetBlockType replacementBlock) {
+        double[] terrainRelevance, Block[] surfaceReplacementMap, DimensionEnum dimension,
+        PlanetBlockType replacementBlock) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {

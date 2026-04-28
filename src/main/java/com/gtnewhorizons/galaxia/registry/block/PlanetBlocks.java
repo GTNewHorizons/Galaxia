@@ -1,17 +1,18 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockMap;
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraftforge.fluids.Fluid;
 
 import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockBuilder;
+import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockMap;
+import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 import com.gtnewhorizons.galaxia.registry.block.planet.fluid.FluidFiniteBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 
 public final class PlanetBlocks {
+
     private static final PlanetBlockMap BLOCK_MAP = new PlanetBlockMap();
 
     // spotless:off

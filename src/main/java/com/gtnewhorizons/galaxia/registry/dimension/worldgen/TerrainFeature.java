@@ -10,7 +10,8 @@ import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
  * Data record holding terrain features
  */
 @Desugar
-public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams, PlanetBlockType replacementBlock) {
+public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams,
+    PlanetBlockType replacementBlock) {
 
     public TerrainFeature {
         customParams = Collections.unmodifiableMap(customParams);

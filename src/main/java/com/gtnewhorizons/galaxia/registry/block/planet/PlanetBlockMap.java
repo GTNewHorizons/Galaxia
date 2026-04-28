@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.block.planet;
 
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-import net.minecraft.block.Block;
-
 import java.util.HashMap;
 
+import net.minecraft.block.Block;
+
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+
 public class PlanetBlockMap {
+
     private final HashMap<DimensionEnum, HashMap<PlanetBlockType, Block>> planetMap = new HashMap<>();
 
     public void addBlock(DimensionEnum dimension, PlanetBlockType planetBlockType, Block block) {

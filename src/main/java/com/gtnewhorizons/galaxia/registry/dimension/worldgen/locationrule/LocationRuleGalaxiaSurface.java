@@ -2,9 +2,10 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule;
 
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 
 /**
  * Places a feature on the planet's surface

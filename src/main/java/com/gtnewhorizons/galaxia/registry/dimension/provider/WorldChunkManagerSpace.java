@@ -153,7 +153,8 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         double xProximity = 1 - xDeviation;
         double zProximity = 1 - zDeviation;
         // Four ways normalized symmetric blending in the corner
-        double[] significanceValues = new double[] { xProximity * zProximity, xDeviation * zProximity, xDeviation * zProximity, xDeviation * zDeviation };
+        double[] significanceValues = new double[] { xProximity * zProximity, xDeviation * zProximity,
+            xDeviation * zProximity, xDeviation * zDeviation };
         // Multiply all values if the total significance is not 1
         double sum = 0;
         for (double significanceValue : significanceValues) {
