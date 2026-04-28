@@ -289,6 +289,8 @@ galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
 galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
 
+### Chat
+# Chat - "Rocket"
 galaxia.chat.rocket.rocket_full=Rocket is currently full! Add more RiderModules!
 
 # Outpost Modules
