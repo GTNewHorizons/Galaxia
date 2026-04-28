@@ -84,7 +84,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
         double[][] biomeContrib = new double[biomeCount][];
         List<BiomeGenBase> biomeList = new ArrayList<>();
-        // between 0 and 1, smooth range between biome (0 is not smoothed, vertical cliffs, 1 is indistinguishable
+        // Between 0 and 1, smooth range between biome (0 is not smoothed, vertical cliffs, 1 is indistinguishable
         // between biomes)
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int z = 0; z < CHUNK_WIDTH; z++) {
@@ -93,7 +93,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     .getLocalBiomes(chunkX * CHUNK_WIDTH + x, chunkZ * CHUNK_WIDTH + z);
                 double[] blockContrib = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager())
                     .getLocalBiomeSignificance(ALLOWED_DIVERGENCE);
-                // smoothing
+                // Smoothing
                 double sum = 0;
                 int contribSize = blockContrib.length;
                 for (int i = 0; i < contribSize; i++) {
@@ -102,10 +102,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     blockContrib[i] = squaredContrib * originalContrib * 2 + squaredContrib * 3;
                     sum += blockContrib[i] = squaredContrib * originalContrib * 2 + squaredContrib * 3;
                 }
-                // renormalizing
+                // Renormalizing
                 for (int i = 0; i < contribSize; i++) {
                     blockContrib[i] /= sum;
                 }
+                // Reorganize block contributions into biome order
                 double maxContrib = 0;
                 for (int i = 0; i < contribSize; i++) {
                     if (!biomeList.contains(blockBiomes[i])) {
@@ -116,7 +117,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         maxContrib = blockContrib[i];
                         chunkBiomes[x + (z << 4)] = blockBiomes[i];
                     }
-                    biomeContrib[biomeList.indexOf(blockBiomes[i])][x + (z << 4)] = blockContrib[i];
+                    biomeContrib[biomeList.indexOf(blockBiomes[i])][x + (z << 4)] += blockContrib[i];
                 }
             }
         }
