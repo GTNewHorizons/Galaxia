@@ -40,6 +40,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -278,6 +281,7 @@ public final class FacilityPersistenceManager {
         out.systemId = String.valueOf(state.systemId);
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
+        out.settingsGroupsNextId = state.settingsGroups.nextGroupId();
         out.modules = new ArrayList<>();
         for (ModuleInstance m : state.modules()) {
             ModuleJson mj = new ModuleJson();
@@ -288,7 +292,19 @@ public final class FacilityPersistenceManager {
                 .name();
             mj.constructionProgress = 0f;
             mj.cooldownTicks = m.cooldownTicks();
+            mj.tier = m.tier()
+                .toByte();
+            mj.priorityOverride = m.priorityOverride()
+                .toByte();
+            mj.enabled = m.enabled();
+            mj.groupId = m.groupId();
+            mj.shape = m.shape()
+                .toByte();
             JsonObject moduleData = new JsonObject();
+            if (m.component() != null) {
+                mj.parallel = m.component()
+                    .getParallel();
+            }
             if (m.component() instanceof ModuleMiner miner) {
                 moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
                 moduleData.addProperty("copySettingsToOtherMiners", miner.copySettingsToOtherMiners());
@@ -359,6 +375,7 @@ public final class FacilityPersistenceManager {
         if (asset == null || json == null || json.systemId == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
+        state.settingsGroups.setNextGroupId(json.settingsGroupsNextId);
 
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
@@ -405,6 +422,15 @@ public final class FacilityPersistenceManager {
                     module.updateStatus(moduleStatus);
                 }
                 module.setTicks(mj.cooldownTicks);
+                module.setTier(ModuleTier.fromByte(mj.tier));
+                module.setPriorityOverride(ModulePriority.fromByte(mj.priorityOverride));
+                module.setEnabled(mj.enabled);
+                module.setGroupId(mj.groupId);
+                module.setShape(ModuleShape.fromByte(mj.shape));
+                if (module.component() != null && mj.parallel >= 1) {
+                    module.component()
+                        .setParallel(mj.parallel);
+                }
                 module.clearConsumedResources();
                 if (mj.consumedResources != null) {
                     for (Map.Entry<String, Long> e : mj.consumedResources.entrySet()) {
@@ -524,6 +550,7 @@ public final class FacilityPersistenceManager {
         String systemId;
         String planetaryAnchorBodyId;
         long energyStored;
+        short settingsGroupsNextId;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, LogisticsConfigJson> logisticsConfig;
@@ -545,6 +572,12 @@ public final class FacilityPersistenceManager {
         String status;
         float constructionProgress;
         int cooldownTicks;
+        byte tier;
+        byte priorityOverride;
+        boolean enabled;
+        short groupId;
+        byte shape;
+        byte parallel;
         JsonElement data;
         Map<String, Long> consumedResources;
     }
