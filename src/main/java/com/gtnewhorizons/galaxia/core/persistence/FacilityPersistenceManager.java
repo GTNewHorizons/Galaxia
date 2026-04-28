@@ -287,7 +287,6 @@ public final class FacilityPersistenceManager {
                 .name();
             mj.constructionProgress = 0f;
             mj.cooldownTicks = m.cooldownTicks();
-            mj.energyBuffer = m.energyBuffer();
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleMiner miner) {
                 moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
@@ -422,7 +421,6 @@ public final class FacilityPersistenceManager {
                     module.updateStatus(moduleStatus);
                 }
                 module.setTicks(mj.cooldownTicks);
-                module.setEnergyBuffer(mj.energyBuffer);
                 module.clearConsumedResources();
                 if (mj.consumedResources != null) {
                     for (Map.Entry<String, Long> e : mj.consumedResources.entrySet()) {
@@ -563,7 +561,6 @@ public final class FacilityPersistenceManager {
         String status;
         float constructionProgress;
         int cooldownTicks;
-        long energyBuffer;
         JsonElement data;
         Map<String, Long> consumedResources;
     }

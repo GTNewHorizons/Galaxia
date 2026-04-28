@@ -83,9 +83,6 @@ final class FacilityPersistenceManagerTest {
         Buildable.Status status) {
         ModuleInstance module = kind.createInstance();
         module.updateStatus(status);
-        module.setEnergyBuffer(
-            64L + station.modules()
-                .size());
         station.addModule(module);
         return module;
     }
