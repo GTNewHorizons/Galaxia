@@ -137,8 +137,16 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      */
     public double[] getLocalBiomeSignificance(double divergence) {
         if (divergence == 0) return new double[] { 1, 0, 0, 0 };
-        double xDivergence = (Math.max(0, cacheNoiseX - cacheBiomeIndexX - 1 + 2 * divergence) - divergence) / divergence;
-        double zDivergence = (Math.max(0, cacheNoiseZ - cacheBiomeIndexZ - 1 + 2 * divergence) - divergence) / divergence;
+        // The first step of calculating divergence is to calculate the deviation from the closest lower integer
+        // This is done to reduce the biome noise to a value between 0 and 1
+        double xDeviation = cacheNoiseX - Math.floor(cacheNoiseX);
+        double zDeviation = cacheNoiseZ - Math.floor(cacheNoiseZ);
+        double xDivergence = (Math.max(0, xDeviation + 2 * divergence) - divergence) / divergence;
+        double zDivergence = (Math.max(0, zDeviation + 2 * divergence) - divergence) / divergence;
+        if (xDivergence < 0 || zDivergence < 0) {
+            // This is used to detect mathematical errors (will be removed once the errors are fixed)
+            System.out.println("NEGATIVE DIVERGENCE DETECTED");
+        }
         // four ways normalized symmetric blending in the corner
         return new double[] { xDivergence * zDivergence, (1 - xDivergence) * zDivergence, xDivergence * (1 - zDivergence), (1 - xDivergence) * (1 - zDivergence) };
     }
