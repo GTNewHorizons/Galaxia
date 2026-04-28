@@ -149,15 +149,11 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         double deviationMultiplier = 1 / divergence;
         xDeviation *= deviationMultiplier;
         zDeviation *= deviationMultiplier;
-        // Now the overhauled code gets fed into the old system
-        double xDivergence = xDeviation;
-        double zDivergence = zDeviation;
-        if (xDivergence < 0 || zDivergence < 0) {
-            // This is used to detect mathematical errors (will be removed once the errors are fixed)
-            System.out.println("NEGATIVE DIVERGENCE DETECTED");
-        }
-        // four ways normalized symmetric blending in the corner
-        return new double[] { xDivergence * zDivergence, (1 - xDivergence) * zDivergence, xDivergence * (1 - zDivergence), (1 - xDivergence) * (1 - zDivergence) };
+        // Calculate proximity values for final calculation steps
+        double xProximity = 1 - xDeviation;
+        double zProximity = 1 - zDeviation;
+        // Four ways normalized symmetric blending in the corner
+        return new double[] { xProximity * zProximity, xDeviation * zProximity, xDeviation * zProximity, xDeviation * zDeviation };
     }
 
     public int getBiomeCount() {
