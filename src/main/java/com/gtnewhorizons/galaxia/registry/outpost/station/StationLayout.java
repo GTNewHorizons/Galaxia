@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.station;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,6 +48,49 @@ public final class StationLayout {
                         e.getValue()
                             .module().id));
         if (removed) version++;
+    }
+
+    public @Nullable ModuleInstance moduleAt(StationTileCoord coord) {
+        PlacedTile tile = tiles.get(coord);
+        return tile != null ? tile.module() : null;
+    }
+
+    public boolean isAnchorAt(StationTileCoord coord) {
+        ModuleInstance module = moduleAt(coord);
+        return module != null && coord.equals(module.anchor());
+    }
+
+    public void forEachAnchor(BiConsumer<StationTileCoord, ModuleInstance> action) {
+        tiles.forEach((coord, tile) -> {
+            ModuleInstance module = tile.module();
+            if (module != null && coord.equals(module.anchor())) {
+                action.accept(coord, module);
+            }
+        });
+    }
+
+    public void forEachTile(BiConsumer<StationTileCoord, PlacedTile> action) {
+        tiles.forEach(action);
+    }
+
+    public boolean deconstruct(StationTileCoord anyTile) {
+        PlacedTile tile = tiles.get(anyTile);
+        if (tile == null || tile.module() == null) return false;
+        ModuleInstance module = tile.module();
+        for (StationTileCoord coord : module.shape()
+            .tiles(module.anchor())) {
+            tiles.remove(coord);
+        }
+        version++;
+        return true;
+    }
+
+    public void place(ModuleInstance module) {
+        for (StationTileCoord coord : module.shape()
+            .tiles(module.anchor())) {
+            tiles.put(coord, new PlacedTile(module, StationTileState.OCCUPIED_OPERATIONAL));
+        }
+        version++;
     }
 
     public @Nonnull Map<StationTileCoord, PlacedTile> snapshot() {

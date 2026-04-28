@@ -1735,7 +1735,7 @@ public final class AssetManagementSystem {
         }
 
         /**
-         * Renders the logistics routing configuration for a HAMMER module.
+         * Renders the logistics routing configuration for a HAMMER or HAMMER module.
          *
          * <p>
          * Shows all explicitly configured items in a scrollable list. Each row follows
@@ -2227,18 +2227,18 @@ public final class AssetManagementSystem {
         }
 
         private String buildModuleStats(FacilityModuleKind kind) {
-            var data = FacilityModuleRegistry.create(kind);
-            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
-                : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
+            FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
+            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-def.powerDrawEuPerTick()) + " EU/t"
+                : "Consumes " + def.powerDrawEuPerTick() + " EU/t";
             String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
-            return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
+            return powerLine + " | Cap " + def.baseEnergyCapacity() + " EU | " + restrictionLine;
         }
 
         private String buildModuleCost(FacilityModuleKind kind) {
-            var data = FacilityModuleRegistry.create(kind);
+            FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
             StringBuilder sb = new StringBuilder("Cost: ");
             boolean first = true;
-            for (Map.Entry<ItemStack, Long> entry : data.getConstructionCost()
+            for (Map.Entry<ItemStack, Long> entry : def.constructionCost()
                 .entrySet()) {
                 ItemStack stack = entry.getKey();
                 if (!first) sb.append(", ");

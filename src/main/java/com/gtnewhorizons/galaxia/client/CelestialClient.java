@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -30,14 +29,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -126,23 +122,14 @@ public final class CelestialClient {
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
         @Nullable StationTileCoord tileCoord) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        if (!kind.isAllowedOn(state.kind)) return;
-        ModuleInstance module = FacilityModuleRegistry.create(kind);
-        boolean creativePlayer = Minecraft.getMinecraft().thePlayer != null
-            && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode;
-        if (creativeBuildModeEnabled && creativePlayer) {
-            module.completeConstruction();
-        }
-        state.addModule(module);
-        StationLayout layout = state.stationLayout();
-        if (tileCoord != null && layout != null) {
-            layout.place(tileCoord, new PlacedTile(module, StationTileState.fromModuleStatus(module.status())));
-        }
-
-        Galaxia.GALAXIA_NETWORK
-            .sendToServer(new AssetBuildModulePacket(assetId, kind, module.id, creativeBuildModeEnabled, tileCoord));
+        Galaxia.GALAXIA_NETWORK.sendToServer(
+            new AssetBuildModulePacket(
+                assetId,
+                kind,
+                ModuleShape.SINGLE,
+                kind.defaultTier(),
+                creativeBuildModeEnabled,
+                tileCoord));
     }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
@@ -196,7 +183,7 @@ public final class CelestialClient {
                 }
             }
             case SET_PLANETARY_HANDLING -> {
-                if (module.kind() == FacilityModuleKind.HAMMER && module.component() instanceof ModuleHammer hammer) {
+                if (module.component() instanceof ModuleHammer hammer) {
                     hammer.setPlanetaryHandling(payload);
                 }
             }

@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -26,8 +24,8 @@ public class ModuleInstance implements Buildable {
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
     private int ticks = 0;
 
-    private @Nullable StationTileCoord anchor;
-    private ModuleShape shape = ModuleShape.SINGLE;
+    private StationTileCoord anchor;
+    private final ModuleShape shape;
     private ModuleTier tier = ModuleTier.NONE;
     private ModulePriority priorityOverride = ModulePriority.NORMAL;
     private boolean enabled = true;
@@ -57,13 +55,13 @@ public class ModuleInstance implements Buildable {
         }
     }
 
-    public ModuleInstance(ID id, FacilityModuleRegistry.Definition definition) {
+    public ModuleInstance(ID id, FacilityModuleRegistry.Definition definition, StationTileCoord anchor,
+        ModuleShape shape, ModuleTier tier) {
         this.id = id;
         this.definition = definition;
-    }
-
-    public ModuleInstance(FacilityModuleRegistry.Definition definition) {
-        this(ID.create(), definition);
+        this.anchor = anchor;
+        this.shape = shape;
+        this.tier = tier;
     }
 
     public ModuleComponent component() {
@@ -110,20 +108,12 @@ public class ModuleInstance implements Buildable {
         this.ticks = ticks;
     }
 
-    public @Nullable StationTileCoord anchor() {
+    public StationTileCoord anchor() {
         return anchor;
-    }
-
-    public void setAnchor(@Nullable StationTileCoord anchor) {
-        this.anchor = anchor;
     }
 
     public ModuleShape shape() {
         return shape;
-    }
-
-    public void setShape(ModuleShape shape) {
-        this.shape = shape;
     }
 
     public ModuleTier tier() {

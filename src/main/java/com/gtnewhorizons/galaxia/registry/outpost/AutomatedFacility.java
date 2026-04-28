@@ -13,6 +13,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
+import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
@@ -30,7 +32,9 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private final StationLayout layout;
 
-    public final SettingsGroupRegistry settingsGroups;
+    private final LayoutCacheBundle layoutCache;
+
+    private final SettingsGroupRegistry settingsGroups;
 
     private long energyStored;
 
@@ -50,6 +54,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.inventory = new AutomatedFacilityInventory();
         this.logisticsConfig = new LogisticsConfiguration();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
+        this.layoutCache = new LayoutCacheBundle();
         this.settingsGroups = new SettingsGroupRegistry();
         this.energyStored = 0;
     }
@@ -66,6 +71,14 @@ public final class AutomatedFacility extends CelestialAsset {
         return layout;
     }
 
+    public SettingsGroupRegistry settingsGroups() {
+        return settingsGroups;
+    }
+
+    public LayoutCacheBundle layoutCache() {
+        return layoutCache;
+    }
+
     public List<ModuleInstance> modules() {
         return Collections.unmodifiableList(modules);
     }
@@ -77,7 +90,10 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
-        if (layout != null) layout.removeTileForModule(removed.id);
+        if (removed != null) {
+            if (layout != null) layout.removeTileForModule(removed.id);
+            layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind());
+        }
     }
 
     public boolean removeModule(ModuleInstance.ID moduleId) {

@@ -5,6 +5,4 @@ public interface ModuleComponent {
     byte getParallel();
 
     void setParallel(byte parallel);
-
-    byte MAX_PARALLEL = 32;
 }

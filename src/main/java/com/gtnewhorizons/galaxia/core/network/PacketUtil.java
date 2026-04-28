@@ -70,14 +70,6 @@ final class PacketUtil {
         return new StationTileCoord(dx, dy);
     }
 
-    static void writeTileCoord(ByteBuf buf, StationTileCoord coord) {
-        writeStationTileCoord(buf, coord);
-    }
-
-    static StationTileCoord readTileCoord(ByteBuf buf) {
-        return readStationTileCoord(buf);
-    }
-
     // ── Enum helpers ───────────────────────────────────────────────────────
 
     static <T extends Enum<T>> void writeEnum(ByteBuf buf, T enumValue) {

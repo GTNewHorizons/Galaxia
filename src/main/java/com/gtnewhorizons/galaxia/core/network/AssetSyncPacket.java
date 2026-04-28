@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,6 +24,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -279,13 +283,13 @@ public final class AssetSyncPacket implements IMessage {
             }
             case LOGISTICS_CONFIG_REMOVED -> PacketUtil.writeString(buf, resourceKey);
             case LAYOUT_TILE_UPDATED -> {
-                PacketUtil.writeTileCoord(buf, tileCoord);
+                PacketUtil.writeStationTileCoord(buf, tileCoord);
                 PacketUtil.writeEnum(buf, tileState);
                 boolean hasModule = tileModuleId != null;
                 buf.writeBoolean(hasModule);
                 if (hasModule) PacketUtil.writeId(buf, tileModuleId);
             }
-            case LAYOUT_TILE_REMOVED -> PacketUtil.writeTileCoord(buf, tileCoord);
+            case LAYOUT_TILE_REMOVED -> PacketUtil.writeStationTileCoord(buf, tileCoord);
         }
     }
 
@@ -309,11 +313,11 @@ public final class AssetSyncPacket implements IMessage {
             }
             case LOGISTICS_CONFIG_REMOVED -> resourceKey = PacketUtil.readString(buf);
             case LAYOUT_TILE_UPDATED -> {
-                tileCoord = PacketUtil.readTileCoord(buf);
+                tileCoord = PacketUtil.readStationTileCoord(buf);
                 tileState = PacketUtil.readEnum(buf, StationTileState.class);
                 tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
             }
-            case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readTileCoord(buf);
+            case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readStationTileCoord(buf);
         }
     }
 
@@ -321,6 +325,14 @@ public final class AssetSyncPacket implements IMessage {
         PacketUtil.writeId(buf, module.id);
         PacketUtil.writeEnum(buf, module.kind());
         PacketUtil.writeEnum(buf, module.status());
+        PacketUtil.writeEnum(buf, module.tier());
+        PacketUtil.writeEnum(buf, module.shape());
+        PacketUtil.writeEnum(buf, module.priorityOverride());
+        buf.writeBoolean(module.enabled());
+        buf.writeShort(module.groupId());
+        buf.writeByte(
+            module.component() != null ? module.component()
+                .getParallel() : 1);
 
         switch (module.kind()) {
             case MINER -> {
@@ -341,6 +353,8 @@ public final class AssetSyncPacket implements IMessage {
                     h.config()
                         .threshold());
                 PacketUtil.writeEnum(buf, h.routePriority());
+                buf.writeBoolean(h.planetaryHandling());
+                buf.writeBoolean(h.crossPlanetaryCapability);
             }
             case POWER -> {}
         }
@@ -350,8 +364,17 @@ public final class AssetSyncPacket implements IMessage {
         ModuleInstance.ID id = PacketUtil.readModuleId(buf);
         FacilityModuleKind kind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
         Buildable.Status status = PacketUtil.readEnum(buf, Buildable.Status.class);
+        ModuleTier tier = PacketUtil.readEnum(buf, ModuleTier.class);
+        ModuleShape shape = PacketUtil.readEnum(buf, ModuleShape.class);
+        ModulePriority modulePriority = PacketUtil.readEnum(buf, ModulePriority.class);
+        boolean enabled = buf.readBoolean();
+        short groupId = buf.readShort();
+        byte parallel = buf.readByte();
 
-        ModuleInstance module = FacilityModuleRegistry.create(id, kind);
+        ModuleInstance module = FacilityModuleRegistry.create(id, kind, null, shape, tier);
+        module.setPriorityOverride(modulePriority);
+        module.setEnabled(enabled);
+        module.setGroupId(groupId);
 
         switch (kind) {
             case MINER -> {
@@ -365,13 +388,20 @@ public final class AssetSyncPacket implements IMessage {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
                     buf.readDouble());
-                OrbitalTransferPlanner.RoutePriority priority = PacketUtil
+                OrbitalTransferPlanner.RoutePriority routePriority = PacketUtil
                     .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
-                module.setComponent(new ModuleHammer(kind, cfg, priority, false, true, false, 64));
+                boolean planetaryHandling = buf.readBoolean();
+                boolean crossPlanetaryCapability = buf.readBoolean();
+                module.setComponent(
+                    new ModuleHammer(kind, cfg, routePriority, false, planetaryHandling, crossPlanetaryCapability, 64));
             }
             case POWER -> {}
         }
 
+        if (module.component() != null && parallel >= 1) {
+            module.component()
+                .setParallel(parallel);
+        }
         module.updateStatus(status);
         return module;
     }
@@ -402,7 +432,11 @@ public final class AssetSyncPacket implements IMessage {
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
                     if (CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility state) {
-                        handleDelta(state, packet);
+                        Map<ModuleInstance.ID, ModuleInstance> byId = new HashMap<>();
+                        for (ModuleInstance m : state.modules()) {
+                            byId.put(m.id, m);
+                        }
+                        handleDelta(state, packet, byId);
                     }
                 }
             }
@@ -427,14 +461,20 @@ public final class AssetSyncPacket implements IMessage {
             StationLayout layout = state.stationLayout();
             if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
+            Map<ModuleInstance.ID, ModuleInstance> moduleById = new HashMap<>();
+            for (ModuleInstance m : state.modules()) {
+                moduleById.put(m.id, m);
+            }
+
             for (AssetSyncPacket d : packet.fullSyncDeltas) {
-                handleDelta(state, d);
+                handleDelta(state, d, moduleById);
             }
 
             state.bumpSyncRevision();
         }
 
-        private void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
+        private void handleDelta(AutomatedFacility state, AssetSyncPacket packet,
+            Map<ModuleInstance.ID, ModuleInstance> moduleById) {
             switch (packet.syncType) {
                 case MODULE_ADDED -> {
                     if (packet.moduleIndex < state.modules()
@@ -450,8 +490,7 @@ public final class AssetSyncPacket implements IMessage {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
                         state.modulesInternal()
-                            .get(packet.moduleIndex)
-                            .updateStatus(packet.moduleData.status());
+                            .set(packet.moduleIndex, packet.moduleData);
                     }
                 }
                 case INVENTORY_UPDATE -> {
@@ -475,15 +514,7 @@ public final class AssetSyncPacket implements IMessage {
                     if (r != null) state.logisticsConfig.reset(r);
                 }
                 case LAYOUT_TILE_UPDATED -> {
-                    ModuleInstance module = null;
-                    if (packet.tileModuleId != null) {
-                        for (ModuleInstance m : state.modules()) {
-                            if (m.id.equals(packet.tileModuleId)) {
-                                module = m;
-                                break;
-                            }
-                        }
-                    }
+                    ModuleInstance module = packet.tileModuleId != null ? moduleById.get(packet.tileModuleId) : null;
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
                 }
