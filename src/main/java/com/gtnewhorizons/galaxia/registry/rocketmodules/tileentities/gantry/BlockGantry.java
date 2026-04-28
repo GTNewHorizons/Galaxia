@@ -1,14 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
@@ -135,8 +138,8 @@ public class BlockGantry extends Block implements ITileEntityProvider {
             int nz = z + (redirect != null ? (int) redirect.zCoord : 0);
 
             // check we have no gantries above or below the diagonal
-            return (!(worldIn.getTileEntity(nx, y - 1, nz) instanceof TileEntityGantry g1))
-                && (!(worldIn.getTileEntity(nx, y + 1, nz) instanceof TileEntityGantry g2));
+            return (!(worldIn.getTileEntity(nx, y - 1, nz) instanceof TileEntityGantry))
+                && (!(worldIn.getTileEntity(nx, y + 1, nz) instanceof TileEntityGantry));
         }
         return true;
     }
@@ -184,4 +187,93 @@ public class BlockGantry extends Block implements ITileEntityProvider {
         // The free end is opposite to the net neighbor direction
         return Vec3.createVectorHelper(-Math.signum(sumX), 0, -Math.signum(sumZ));
     }
+
+    @Override
+    public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, List<AxisAlignedBB> list,
+        Entity entity) {
+        DiagonalType slope = checkDiagonalType(world, x, y, z);
+
+        if (slope == DiagonalType.SLOPE_X_ASCENDING) {
+            this.setBlockBounds(0f, 0f, 0f, 0.33f, 0.33f, 1.0f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0.33f, 0.33f, 0f, 0.66f, 0.66f, 1.0f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0.66F, 0.66F, 0.0F, 1.0F, 1.0F, 1.0F);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+        } else if (slope == DiagonalType.SLOPE_X_DESCENDING) {
+            this.setBlockBounds(0.66F, 0.0F, 0.0F, 1.0F, 0.33F, 1.0F);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0.33F, 0.0F, 0.0F, 0.66F, 0.66F, 1.0F);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0.0F, 0.33F, 0.0F, 0.33F, 1.0F, 1.0F);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+        } else if (slope == DiagonalType.SLOPE_Z_ASCENDING) {
+            this.setBlockBounds(0f, 0f, 0f, 1.0f, 0.33f, 0.33f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0f, 0.33f, 0f, 0.66f, 0.66f, 0.66f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0f, 0.66f, 0.33f, 1.0f, 1f, 1f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+        } else if (slope == DiagonalType.SLOPE_Z_DESCENDING) {
+            this.setBlockBounds(0f, 0f, 0.5f, 1f, 0.33f, 1f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0f, 0f, 0.5f, 1f, 0.66f, 0.66f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+
+            this.setBlockBounds(0f, 0f, 0.0f, 1f, 1f, 0.33f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+        } else {
+            this.setBlockBounds(0f, 0f, 0f, 1f, 1f, 1f);
+            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+        }
+        this.setBlockBounds(0f, 0f, 0f, 1f, 1f, 1f);
+    }
+
+    public enum DiagonalType {
+        NONE,
+        SLOPE_X_ASCENDING,
+        SLOPE_X_DESCENDING,
+        SLOPE_Z_ASCENDING,
+        SLOPE_Z_DESCENDING
+    }
+
+    protected DiagonalType checkDiagonalType(IBlockAccess world, int x, int y, int z) {
+        Block thisBlock = world.getBlock(x, y, z);
+
+        boolean posX_posY = world.getBlock(x + 1, y + 1, z) == thisBlock; // Up-East
+        boolean negX_negY = world.getBlock(x - 1, y - 1, z) == thisBlock; // Down-West
+        if (posX_posY || negX_negY) {
+            return DiagonalType.SLOPE_X_ASCENDING;
+        }
+
+        boolean negX_posY = world.getBlock(x - 1, y + 1, z) == thisBlock; // Up-West
+        boolean posX_negY = world.getBlock(x + 1, y - 1, z) == thisBlock; // Down-East
+        if (negX_posY || posX_negY) {
+            return DiagonalType.SLOPE_X_DESCENDING;
+        }
+        // 2. Check Z-Y Plane (South / North slopes)
+        boolean posZ_posY = world.getBlock(x, y + 1, z + 1) == thisBlock; // Up-South
+        boolean negZ_negY = world.getBlock(x, y - 1, z - 1) == thisBlock; // Down-North
+        if (posZ_posY || negZ_negY) {
+            return DiagonalType.SLOPE_Z_ASCENDING;
+        }
+
+        boolean negZ_posY = world.getBlock(x, y + 1, z - 1) == thisBlock; // Up-North
+        boolean posZ_negY = world.getBlock(x, y - 1, z + 1) == thisBlock; // Down-South
+        if (negZ_posY || posZ_negY) {
+            return DiagonalType.SLOPE_Z_DESCENDING;
+        }
+
+        // Default: Not a diagonal
+        return DiagonalType.NONE;
+    }
+
 }
