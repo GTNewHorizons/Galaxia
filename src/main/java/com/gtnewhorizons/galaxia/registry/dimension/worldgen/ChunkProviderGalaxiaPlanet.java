@@ -97,10 +97,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 double sum = 0;
                 int contribSize = blockContrib.length;
                 for (int i = 0; i < contribSize; i++) {
-                    final double t = blockContrib[i];
-                    final double t2 = t * t;
-                    blockContrib[i] = t2 * t * 2 + t2 * 3;
-                    sum += blockContrib[i] = t2 * t * 2 + t2 * 3;
+                    final double originalContrib = blockContrib[i];
+                    final double squaredContrib = originalContrib * originalContrib;
+                    blockContrib[i] = squaredContrib * originalContrib * 2 + squaredContrib * 3;
+                    sum += blockContrib[i] = squaredContrib * originalContrib * 2 + squaredContrib * 3;
                 }
                 // renormalizing
                 for (int i = 0; i < contribSize; i++) {
