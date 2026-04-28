@@ -16,7 +16,7 @@ public class ModuleInstance implements Buildable {
 
     public final ID id;
     private final Map<ItemStack, Long> consumedResources = new HashMap<>();
-    private final OutpostModuleRegistry.Definition definition;
+    private final FacilityModuleRegistry.Definition definition;
     private ModuleComponent component;
 
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
@@ -45,12 +45,12 @@ public class ModuleInstance implements Buildable {
         }
     }
 
-    public ModuleInstance(ID id, OutpostModuleRegistry.Definition definition) {
+    public ModuleInstance(ID id, FacilityModuleRegistry.Definition definition) {
         this.id = id;
         this.definition = definition;
     }
 
-    public ModuleInstance(OutpostModuleRegistry.Definition definition) {
+    public ModuleInstance(FacilityModuleRegistry.Definition definition) {
         this(ID.create(), definition);
     }
 

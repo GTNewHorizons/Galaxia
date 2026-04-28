@@ -33,14 +33,14 @@ public enum FacilityModuleKind {
     }
 
     public ModuleInstance createInstance() {
-        return OutpostModuleRegistry.createInstance(this);
+        return FacilityModuleRegistry.createInstance(this);
     }
 
     public ModuleInstance createInstance(ModuleInstance.ID id) {
-        return OutpostModuleRegistry.createInstance(id, this);
+        return FacilityModuleRegistry.createInstance(id, this);
     }
 
     public ModuleInstance createInstance(ModuleComponent component) {
-        return OutpostModuleRegistry.createInstance(null, this, component);
+        return FacilityModuleRegistry.createInstance(null, this, component);
     }
 }

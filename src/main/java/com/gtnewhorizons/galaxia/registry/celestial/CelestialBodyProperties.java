@@ -15,7 +15,7 @@ import com.gtnewhorizons.galaxia.compat.GTUtility;
 
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
-    List<ItemStack> ores, List<String> gtOreVeinOres, double radiation, double temperature,
+    List<ItemStack> ores, List<String> gtOreVeinOres, List<String> gtOreVeinIds, double radiation, double temperature,
     Map<String, String> metadata) {
 
     public CelestialBodyProperties {
@@ -26,6 +26,8 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         else ores = copyOres(ores);
         if (gtOreVeinOres == null) gtOreVeinOres = List.of();
         else gtOreVeinOres = Collections.unmodifiableList(new ArrayList<>(gtOreVeinOres));
+        if (gtOreVeinIds == null) gtOreVeinIds = List.of();
+        else gtOreVeinIds = Collections.unmodifiableList(new ArrayList<>(gtOreVeinIds));
     }
 
     private static List<ItemStack> copyOres(List<ItemStack> ores) {
@@ -42,6 +44,11 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
 
     public boolean hasGtOreVeinOres() {
         return !gtOreVeinOres.isEmpty();
+    }
+
+    public List<ItemStack> getResolvedGtVeinOreStacks() {
+        if (gtOreVeinIds.isEmpty()) return List.of();
+        return GTUtility.getRawOres(gtOreVeinIds.toArray(new String[0]));
     }
 
     public Builder toBuilder() {
@@ -63,6 +70,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         private String oreProfile = "";
         private final List<ItemStack> resolvedOres = new ArrayList<>();
         private final List<String> resolvedGtOreVeinOres = new ArrayList<>();
+        private final List<String> resolvedGtOreVeinIds = new ArrayList<>();
         private double radiation;
         private double temperature;
         private final Map<String, String> metadata = new LinkedHashMap<>();
@@ -80,6 +88,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
             this.oreProfile = source.oreProfile;
             this.resolvedOres.addAll(source.ores);
             this.resolvedGtOreVeinOres.addAll(source.gtOreVeinOres);
+            this.resolvedGtOreVeinIds.addAll(source.gtOreVeinIds);
             this.radiation = source.radiation;
             this.temperature = source.temperature;
             this.metadata.putAll(source.metadata);
@@ -139,9 +148,9 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
         }
 
         public Builder gtOreVeinIds(@Nonnull String... veinIds) {
-            ores(
-                GTUtility.getRawOres(veinIds)
-                    .toArray(new ItemStack[0]));
+            for (String veinId : veinIds) {
+                if (veinId != null) resolvedGtOreVeinIds.add(veinId);
+            }
             return this;
         }
 
@@ -181,6 +190,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
                 oreProfile,
                 resolvedOres,
                 resolvedGtOreVeinOres,
+                resolvedGtOreVeinIds,
                 radiation,
                 temperature,
                 metadata);
