@@ -289,11 +289,11 @@ public final class GalaxiaAPI {
                 continue;
             }
 
-            found = true;
-
             if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
                 GALAXIA_NETWORK
                     .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
+
+                found = true;
                 break;
             }
         }

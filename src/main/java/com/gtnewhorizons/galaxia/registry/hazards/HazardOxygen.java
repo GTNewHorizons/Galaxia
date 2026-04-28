@@ -26,16 +26,13 @@ public class HazardOxygen extends EnvironmentalHazard {
      */
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
-        int oxygenPercent = def.getOxygenPercent(player);
+        final int oxygenPercent = def.getOxygenPercent(player);
 
-        boolean hasOxygenToDrain = false;
-        boolean hasMask = hasOxygenmask(player);
-        if (hasMask) {
-            hasOxygenToDrain = checkOxygenAndDrain(player, oxygenPercent);
-        }
+        final boolean hasMask = hasOxygenmask(player);
+        final boolean hasOxygenToDrain = hasMask && checkOxygenAndDrain(player, oxygenPercent);
 
-        float oxygenLevel = getPlayerOxygenLevel(player);
-        if (oxygenLevel > 0.1 && hasMask) {
+        final float oxygenLevel = getPlayerOxygenLevel(player);
+        if (def.oxygenPercent() >= 100 || (oxygenLevel > 0.1 && hasOxygenToDrain)) {
             lowOxygenDuration = 0;
             return HazardWarnings.FINE;
         } else lowOxygenDuration++;
