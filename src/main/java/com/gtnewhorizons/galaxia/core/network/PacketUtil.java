@@ -59,15 +59,23 @@ final class PacketUtil {
 
     // ── Station tile helpers ───────────────────────────────────────────────
 
-    static void writeTileCoord(ByteBuf buf, StationTileCoord coord) {
+    static void writeStationTileCoord(ByteBuf buf, StationTileCoord coord) {
         buf.writeByte(coord.dx());
         buf.writeByte(coord.dy());
     }
 
-    static StationTileCoord readTileCoord(ByteBuf buf) {
+    static StationTileCoord readStationTileCoord(ByteBuf buf) {
         byte dx = buf.readByte();
         byte dy = buf.readByte();
         return new StationTileCoord(dx, dy);
+    }
+
+    static void writeTileCoord(ByteBuf buf, StationTileCoord coord) {
+        writeStationTileCoord(buf, coord);
+    }
+
+    static StationTileCoord readTileCoord(ByteBuf buf) {
+        return readStationTileCoord(buf);
     }
 
     // ── Enum helpers ───────────────────────────────────────────────────────
