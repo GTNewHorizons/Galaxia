@@ -153,7 +153,22 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
         double xProximity = 1 - xDeviation;
         double zProximity = 1 - zDeviation;
         // Four ways normalized symmetric blending in the corner
-        return new double[] { xProximity * zProximity, xDeviation * zProximity, xDeviation * zProximity, xDeviation * zDeviation };
+        double[] significanceValues = new double[] { xProximity * zProximity, xDeviation * zProximity, xDeviation * zProximity, xDeviation * zDeviation };
+        // Multiply all values if the total significance is not 1
+        double sum = 0;
+        for (double significanceValue : significanceValues) {
+            sum += significanceValue;
+        }
+        double correctionFactor = 1;
+        if (sum == 0) {
+            System.out.println("CRITICAL MATH ERROR: TOTAL BIOME SIGNIFICANCE IS 0");
+        } else {
+            correctionFactor /= sum;
+        }
+        for (int i = 0; i < significanceValues.length; i++) {
+            significanceValues[i] *= correctionFactor;
+        }
+        return significanceValues;
     }
 
     public int getBiomeCount() {
