@@ -10,9 +10,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleFootprint;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ShapeValidation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
@@ -143,6 +145,21 @@ public final class AssetBuildModulePacket implements IMessage {
                         player.getGameProfile()
                             .getName());
                     return null;
+                }
+                if (packet.shape != ModuleShape.SINGLE) {
+                    ShapeValidation footprintResult = ModuleFootprint
+                        .validate(state.stationLayout(), anchor, packet.shape);
+                    if (footprintResult != ShapeValidation.OK) {
+                        Galaxia.LOG.warn(
+                            "[Outpost] BuildModule: rejected multi-tile footprint at {} shape {} on {} ({}) from player {}",
+                            anchor,
+                            packet.shape,
+                            packet.assetId,
+                            footprintResult,
+                            player.getGameProfile()
+                                .getName());
+                        return null;
+                    }
                 }
             }
 

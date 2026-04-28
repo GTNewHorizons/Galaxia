@@ -535,6 +535,13 @@ public final class FacilityPersistenceManager {
                 layoutSnapshot.put(coord, new PlacedTile(module, tileState));
             }
             layout.loadFromSnapshot(layoutSnapshot);
+            for (Map.Entry<StationTileCoord, PlacedTile> e : layoutSnapshot.entrySet()) {
+                ModuleInstance m = e.getValue()
+                    .module();
+                if (m != null && m.anchor() == null) {
+                    m.initAnchor(e.getKey());
+                }
+            }
         }
 
         return state;

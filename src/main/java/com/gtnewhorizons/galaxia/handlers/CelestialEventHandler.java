@@ -47,7 +47,8 @@ public class CelestialEventHandler {
 
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             // TODO: Ticks other assets
-            if (asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST) continue;
+            if (asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST
+                && asset.kind != CelestialAsset.Kind.AUTOMATED_STATION) continue;
 
             AutomatedFacility outpost = (AutomatedFacility) asset;
             outpost.tick();
@@ -122,21 +123,23 @@ public class CelestialEventHandler {
                 if (supply.outpostAssetId()
                     .equals(request.outpostAssetId())) continue;
 
-                AutomatedFacility supplier = (AutomatedFacility) CelestialAssetStore.findAsset(supply.outpostAssetId());
-                AutomatedFacility requester = (AutomatedFacility) CelestialAssetStore
-                    .findAsset(request.outpostAssetId());
-                if (supplier == null || requester == null) continue;
+                if (!(CelestialAssetStore.findAsset(supply.outpostAssetId()) instanceof AutomatedFacility supplier))
+                    continue;
+                if (!(CelestialAssetStore.findAsset(request.outpostAssetId()) instanceof AutomatedFacility requester))
+                    continue;
 
                 final boolean shareAnchor = GalaxiaCelestialAPI
                     .sharesPlanetaryAnchor(root, supplier.celestialObjectId, requester.celestialObjectId);
 
                 final ItemStackWrapper resource = request.resourceId();
                 final LogisticsResourceConfig supplierCfg = supplier.logisticsConfig.get(resource);
+                if (supplierCfg == null) continue;
                 final long supplierStock = supplier.inventory.getAmount(resource);
                 final long availableSurplus = supplierStock - supplierCfg.minReserve();
                 if (availableSurplus <= 0) continue;
 
                 LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
+                if (requesterCfg == null) continue;
                 final long requesterStock = requester.inventory.getAmount(resource);
                 final long inboundInTransit = getInboundInTransitAmount(requester.assetId, resource);
                 final long requestedAmount = Math

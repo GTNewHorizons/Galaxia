@@ -112,6 +112,11 @@ public class ModuleInstance implements Buildable {
         return anchor;
     }
 
+    public void initAnchor(StationTileCoord anchor) {
+        if (this.anchor != null) return;
+        this.anchor = anchor;
+    }
+
     public ModuleShape shape() {
         return shape;
     }

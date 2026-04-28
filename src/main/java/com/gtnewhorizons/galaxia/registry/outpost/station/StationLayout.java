@@ -14,6 +14,8 @@ public final class StationLayout {
 
     private final Map<StationTileCoord, PlacedTile> tiles;
     private long version;
+    private Map<StationTileCoord, PlacedTile> cachedSnapshot;
+    private long snapshotVersion = -1;
 
     public StationLayout() {
         this.tiles = new LinkedHashMap<>();
@@ -95,7 +97,11 @@ public final class StationLayout {
     }
 
     public @Nonnull Map<StationTileCoord, PlacedTile> snapshot() {
-        return Collections.unmodifiableMap(tiles);
+        if (cachedSnapshot == null || snapshotVersion != version) {
+            cachedSnapshot = Collections.unmodifiableMap(tiles);
+            snapshotVersion = version;
+        }
+        return cachedSnapshot;
     }
 
     public void loadFromSnapshot(@Nonnull Map<StationTileCoord, PlacedTile> snapshot) {
