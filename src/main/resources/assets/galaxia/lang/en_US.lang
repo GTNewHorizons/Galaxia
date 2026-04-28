@@ -140,10 +140,6 @@ tile.gantry_block.name=Gantry Shaft
 tile.gantry_terminal.name=Gantry Terminal
 tile.rocket_trophy.name=Rocket Trophy
 
-### Chat
-# Chat - "Rocket"
-chat.galaxia.rocket.rocket_full=Rocket is currently full! Add more RiderModules!
-
 #### Items
 item.galaxia.galaxia_logo.name=Galaxia
 # Items - "Tools"
@@ -292,6 +288,8 @@ galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
 galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
+
+galaxia.chat.rocket.rocket_full=Rocket is currently full! Add more RiderModules!
 
 # Outpost Modules
 galaxia.outpost.module.hammer=HAMMER
