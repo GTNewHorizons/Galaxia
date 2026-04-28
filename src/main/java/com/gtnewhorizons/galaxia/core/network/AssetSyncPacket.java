@@ -484,14 +484,19 @@ public final class AssetSyncPacket implements IMessage {
                     } else {
                         state.addModule(packet.moduleData);
                     }
+                    moduleById.put(packet.moduleData.id, packet.moduleData);
                 }
-                case MODULE_REMOVED -> state.removeModule(packet.moduleId);
+                case MODULE_REMOVED -> {
+                    state.removeModule(packet.moduleId);
+                    moduleById.remove(packet.moduleId);
+                }
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
                         state.modulesInternal()
                             .set(packet.moduleIndex, packet.moduleData);
                     }
+                    moduleById.put(packet.moduleData.id, packet.moduleData);
                 }
                 case INVENTORY_UPDATE -> {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);

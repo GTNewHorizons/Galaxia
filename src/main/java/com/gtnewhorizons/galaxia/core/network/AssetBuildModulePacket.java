@@ -12,8 +12,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -154,8 +156,12 @@ public final class AssetBuildModulePacket implements IMessage {
                 .applyMutation(MutationKind.PLACE, kind);
 
             if (anchor != null && state.hasStationLayout()) {
-                state.stationLayout()
-                    .place(module);
+                StationTileState initialState = StationTileState.fromModuleStatus(module.status());
+                for (StationTileCoord coord : module.shape()
+                    .tiles(module.anchor())) {
+                    state.stationLayout()
+                        .place(coord, new PlacedTile(module, initialState));
+                }
             }
 
             Galaxia.LOG.debug(

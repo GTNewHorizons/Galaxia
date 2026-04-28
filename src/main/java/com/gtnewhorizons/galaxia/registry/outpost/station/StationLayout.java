@@ -86,9 +86,10 @@ public final class StationLayout {
     }
 
     public void place(ModuleInstance module) {
+        StationTileState state = StationTileState.fromModuleStatus(module.status());
         for (StationTileCoord coord : module.shape()
             .tiles(module.anchor())) {
-            tiles.put(coord, new PlacedTile(module, StationTileState.OCCUPIED_OPERATIONAL));
+            tiles.put(coord, new PlacedTile(module, state));
         }
         version++;
     }
