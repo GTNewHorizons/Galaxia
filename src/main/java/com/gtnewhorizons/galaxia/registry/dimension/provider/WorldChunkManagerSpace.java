@@ -137,12 +137,21 @@ public class WorldChunkManagerSpace extends WorldChunkManager {
      */
     public double[] getLocalBiomeSignificance(double divergence) {
         if (divergence == 0) return new double[] { 1, 0, 0, 0 };
-        // The first step of calculating divergence is to calculate the deviation from the closest lower integer
+        // The first step of calculating divergence is to calculate the deviation from the main biome
         // This is done to reduce the biome noise to a value between 0 and 1
         double xDeviation = cacheNoiseX - Math.floor(cacheNoiseX);
         double zDeviation = cacheNoiseZ - Math.floor(cacheNoiseZ);
-        double xDivergence = (Math.max(0, xDeviation + 2 * divergence) - divergence) / divergence;
-        double zDivergence = (Math.max(0, zDeviation + 2 * divergence) - divergence) / divergence;
+        // The deviation range can then be shortened and capped to be within the divergence range
+        double divergenceInverse = 1 - divergence;
+        xDeviation = Math.max(0, xDeviation - divergenceInverse);
+        zDeviation = Math.max(0, zDeviation - divergenceInverse);
+        // The remaining deviation is then multiplied to counteract lowering of the values caused by prior shifting
+        double deviationMultiplier = 1 / divergence;
+        xDeviation *= deviationMultiplier;
+        zDeviation *= deviationMultiplier;
+        // Now the overhauled code gets fed into the old system
+        double xDivergence = xDeviation;
+        double zDivergence = zDeviation;
         if (xDivergence < 0 || zDivergence < 0) {
             // This is used to detect mathematical errors (will be removed once the errors are fixed)
             System.out.println("NEGATIVE DIVERGENCE DETECTED");
