@@ -29,10 +29,13 @@ public final class ModuleMiner implements ModuleComponent {
         ModuleMiner miner = (ModuleMiner) instance.component();
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
-                var ores = registration.properties()
-                    .ores();
-                if (ores.isEmpty()) return;
-                ItemStack chosen = ores.get(RANDOM.nextInt(ores.size()));
+                var properties = registration.properties();
+                List<ItemStack> ores = properties.ores();
+                List<ItemStack> veinOres = properties.getResolvedGtVeinOreStacks();
+                int totalSize = ores.size() + veinOres.size();
+                if (totalSize == 0) return;
+                int idx = RANDOM.nextInt(totalSize);
+                ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
                 if (miner.isBlacklisted(
                     ItemStackWrapper.of(chosen)
                         .toKey()))

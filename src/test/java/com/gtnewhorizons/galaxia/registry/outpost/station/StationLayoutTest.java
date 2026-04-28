@@ -14,15 +14,15 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.OutpostModuleRegistry;
 
 final class StationLayoutTest {
 
     @BeforeAll
     static void initModules() {
         CelestialRegistry.freezeAndBake();
-        OutpostModuleRegistry.init();
+        FacilityModuleRegistry.init();
     }
 
     @Test

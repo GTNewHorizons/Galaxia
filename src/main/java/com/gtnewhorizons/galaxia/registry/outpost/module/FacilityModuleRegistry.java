@@ -13,7 +13,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 
-public class OutpostModuleRegistry {
+public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawEuPerTick,
         int cooldownTicks, Map<ItemStack, Long> constructionCost,
