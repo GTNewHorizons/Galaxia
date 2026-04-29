@@ -33,6 +33,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
     private static final int CHUNK_WIDTH = 16;
     private static final int HEIGHT_LIMIT = 256;
     private static final double ALLOWED_DIVERGENCE = 0.25;
+    private static final double HORIZONTAL_CAVE_STRETCH = 0.1;
+    private static final double VERTICAL_CAVE_STRETCH = 0.1;
 
     private final DimensionEnum dimension;
     private final World worldObj;
@@ -311,8 +313,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             chunkX * CHUNK_WIDTH,
             CHUNK_WIDTH,
             CHUNK_WIDTH,
-            CHUNK_WIDTH,
-            0.1,
+            HORIZONTAL_CAVE_STRETCH,
+            HORIZONTAL_CAVE_STRETCH,
             0);
         for (int i = 0; i < horizontalLayer.length; i++) {
             double noise = horizontalLayer[i];
@@ -321,7 +323,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             caveCache[i][0] = noise;
         }
         double[] verticalSlice = caveNoise
-            .generateNoiseOctaves(new double[HEIGHT_LIMIT], chunkZ, chunkX, HEIGHT_LIMIT, 1, 0.1, 0.1, 0);
+            .generateNoiseOctaves(new double[HEIGHT_LIMIT], chunkZ, chunkX, HEIGHT_LIMIT, 1, VERTICAL_CAVE_STRETCH, VERTICAL_CAVE_STRETCH, 0);
         for (int i = 0; i < verticalSlice.length; i++) {
             double noise = verticalSlice[i];
             noise += 8;
