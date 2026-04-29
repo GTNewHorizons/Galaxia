@@ -34,7 +34,8 @@ public final class TerrainFeatureApplier {
         TerrainPreset preset = feature.preset();
         double height = feature.height();
         double width = feature.width();
-        Block replacementBlock = feature.preset().getReplacementBlock(dimension);
+        Block replacementBlock = feature.preset()
+            .getReplacementBlock(dimension);
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
         Random localRand = new Random(seed);
 

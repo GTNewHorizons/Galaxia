@@ -7,7 +7,6 @@ import net.minecraft.world.biome.BiomeGenBase;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
@@ -94,7 +93,8 @@ public class Theia extends BasePlanet {
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .width(2)
-                .height(16).endFeature()
+                .height(16)
+                .endFeature()
                 .build());
         BiomeGenBase bigVolcanoes = createOceanBiome(
             "Theia Big Volcanoes",

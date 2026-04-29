@@ -404,6 +404,5 @@ public final class PlanetBlocks {
 
     //spotless:on
 
-    public static void init() {
-    }
+    public static void init() {}
 }

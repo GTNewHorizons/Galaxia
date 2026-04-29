@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.Map;
 
 import com.github.bsideup.jabel.Desugar;
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 
 /**
  * Data record holding terrain features

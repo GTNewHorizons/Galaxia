@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import java.util.HashMap;
+
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 
-import java.util.HashMap;
+import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 /**
  * ENUM to hold all terrain presets
@@ -14,7 +15,8 @@ public enum TerrainPreset {
 
     // ====================== MACRO ======================
     MOUNTAIN_RANGES(Scale.MACRO),
-    SHIELD_VOLCANOES(Scale.MACRO, new DimensionEnum[]{DimensionEnum.THEIA}, new Block[]{PlanetBlocks.THEIA_MAGMA}),
+    SHIELD_VOLCANOES(Scale.MACRO, new DimensionEnum[] { DimensionEnum.THEIA },
+        new Block[] { PlanetBlocks.THEIA_MAGMA }),
     LAVA_PLATEAUS(Scale.MACRO),
     PLATEAUS_AND_ESCARPMENTS(Scale.MACRO),
     TECTONIC_RIFTS(Scale.MACRO),

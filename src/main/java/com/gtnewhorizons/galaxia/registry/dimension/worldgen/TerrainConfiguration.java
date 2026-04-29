@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
-
 /**
  * Class to hold config info on terrain features
  */
