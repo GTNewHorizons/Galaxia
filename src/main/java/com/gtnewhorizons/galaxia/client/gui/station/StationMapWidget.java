@@ -14,6 +14,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.CapacityConnectorLayer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -165,6 +166,17 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         int widgetHeight = getArea().height;
 
         ConnectionLayerRenderer.draw(
+            context,
+            tiles,
+            widgetWidth,
+            widgetHeight,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
+
+        CapacityConnectorLayer.draw(
             context,
             tiles,
             widgetWidth,
