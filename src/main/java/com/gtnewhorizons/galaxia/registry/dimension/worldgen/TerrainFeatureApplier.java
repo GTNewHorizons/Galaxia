@@ -5,8 +5,6 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
-import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
-import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 /**
@@ -36,7 +34,7 @@ public final class TerrainFeatureApplier {
         TerrainPreset preset = feature.preset();
         double height = feature.height();
         double width = feature.width();
-        PlanetBlockType replacementBlock = feature.replacementBlock();
+        Block replacementBlock = feature.preset().getReplacementBlock(dimension);
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
         Random localRand = new Random(seed);
 
@@ -80,7 +78,6 @@ public final class TerrainFeatureApplier {
                     chunkZ,
                     terrainRelevance,
                     surfaceReplacementMap,
-                    dimension,
                     replacementBlock);
                 break;
             case MULTI_RING_BASINS:
@@ -280,8 +277,7 @@ public final class TerrainFeatureApplier {
      * @param terrainRelevance Matrix holding the terrain precedence
      */
     private static void applyShieldVolcanoes(double[] hm, double height, double width, int chunkX, int chunkZ,
-        double[] terrainRelevance, Block[] surfaceReplacementMap, DimensionEnum dimension,
-        PlanetBlockType replacementBlock) {
+        double[] terrainRelevance, Block[] surfaceReplacementMap, Block replacementBlock) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
         final double craterThreshold = 0.75;
         final double lavaThreshold = 0.85;
@@ -294,7 +290,7 @@ public final class TerrainFeatureApplier {
                 double localNoise = noise[x + z * 16];
                 if (localNoise > craterThreshold) {
                     if (localNoise > lavaThreshold) {
-                        surfaceReplacementMap[x + z * 16] = PlanetBlocks.getPlanetBlock(dimension, replacementBlock);
+                        surfaceReplacementMap[x + z * 16] = replacementBlock;
                     }
                     localNoise = (craterThreshold - localNoise) * 16;
                 }

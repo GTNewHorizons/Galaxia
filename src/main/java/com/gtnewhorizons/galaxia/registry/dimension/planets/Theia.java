@@ -94,9 +94,7 @@ public class Theia extends BasePlanet {
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .width(2)
-                .height(16)
-                .replacementBlock(PlanetBlockType.MAGMA)
-                .endFeature()
+                .height(16).endFeature()
                 .build());
         BiomeGenBase bigVolcanoes = createOceanBiome(
             "Theia Big Volcanoes",
@@ -107,7 +105,6 @@ public class Theia extends BasePlanet {
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .width(4)
                 .height(64)
-                .replacementBlock(PlanetBlockType.MAGMA)
                 .endFeature()
                 .build());
         BiomeGenBase hills = createLandBiome(

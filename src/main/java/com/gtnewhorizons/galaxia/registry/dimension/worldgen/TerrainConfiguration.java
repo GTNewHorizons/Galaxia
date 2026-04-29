@@ -128,7 +128,6 @@ public final class TerrainConfiguration {
 
         private final Builder parent;
         private final TerrainPreset preset;
-        private PlanetBlockType replacementBlock;
 
         private double height = -1;
         private double width = -1;
@@ -191,11 +190,6 @@ public final class TerrainConfiguration {
             return this;
         }
 
-        public FeatureConfigurator replacementBlock(PlanetBlockType replacementBlock) {
-            this.replacementBlock = replacementBlock;
-            return this;
-        }
-
         /**
          * The final stage building of the feature itself based on all parameters previously given
          *
@@ -205,7 +199,7 @@ public final class TerrainConfiguration {
             double finalHeight = (height > 0 ? height : 1) * scaleMultiplier;
             double finalWidth = (width > 0 ? width : 1) * scaleMultiplier;
 
-            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom, replacementBlock);
+            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom);
 
             parent.features.add(feature);
             return parent;
