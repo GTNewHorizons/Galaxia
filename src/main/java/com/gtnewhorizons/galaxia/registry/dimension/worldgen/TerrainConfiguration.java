@@ -1,13 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 
 /**
  * Class to hold config info on terrain features
