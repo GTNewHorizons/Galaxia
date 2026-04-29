@@ -3,7 +3,9 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -14,6 +16,8 @@ import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
 public final class PacketUtil {
+
+    private static final Logger LOG = LogManager.getLogger(PacketUtil.class);
 
     private PacketUtil() {}
 
@@ -82,7 +86,7 @@ public final class PacketUtil {
         int ordinal = buf.readUnsignedByte();
         T[] values = enumClass.getEnumConstants();
         if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
-        Galaxia.LOG.warn(
+        LOG.warn(
             "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
             ordinal,
             enumClass.getSimpleName(),
@@ -98,7 +102,7 @@ public final class PacketUtil {
         int ordinal = Byte.toUnsignedInt((byte) b);
         T[] values = enumClass.getEnumConstants();
         if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
-        Galaxia.LOG.warn(
+        LOG.warn(
             "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
             ordinal,
             enumClass.getSimpleName(),
