@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -433,7 +432,7 @@ public final class AssetSyncPacket implements IMessage {
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
                     if (CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility state) {
-                        handleDelta(state, packet, Collections.emptyMap());
+                        handleDelta(state, packet);
                     }
                 }
             }
@@ -461,14 +460,13 @@ public final class AssetSyncPacket implements IMessage {
             Map<ModuleInstance.ID, ModuleInstance> moduleById = new HashMap<>();
 
             for (AssetSyncPacket d : packet.fullSyncDeltas) {
-                handleDelta(state, d, moduleById);
+                handleDelta(state, d);
             }
 
             state.bumpSyncRevision();
         }
 
-        private void handleDelta(AutomatedFacility state, AssetSyncPacket packet,
-            Map<ModuleInstance.ID, ModuleInstance> moduleById) {
+        private void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
             switch (packet.syncType) {
                 case MODULE_ADDED -> {
                     if (packet.moduleIndex < state.modules()
@@ -478,19 +476,14 @@ public final class AssetSyncPacket implements IMessage {
                     } else {
                         state.addModule(packet.moduleData);
                     }
-                    moduleById.put(packet.moduleData.id, packet.moduleData);
                 }
-                case MODULE_REMOVED -> {
-                    state.removeModule(packet.moduleId);
-                    moduleById.remove(packet.moduleId);
-                }
+                case MODULE_REMOVED -> state.removeModule(packet.moduleId);
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
                         state.modulesInternal()
                             .set(packet.moduleIndex, packet.moduleData);
                     }
-                    moduleById.put(packet.moduleData.id, packet.moduleData);
                 }
                 case INVENTORY_UPDATE -> {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
@@ -513,7 +506,7 @@ public final class AssetSyncPacket implements IMessage {
                     if (r != null) state.logisticsConfig.reset(r);
                 }
                 case LAYOUT_TILE_UPDATED -> {
-                    ModuleInstance module = packet.tileModuleId != null ? moduleById.get(packet.tileModuleId) : null;
+                    ModuleInstance module = findModuleById(state, packet.tileModuleId);
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
                 }
@@ -522,6 +515,14 @@ public final class AssetSyncPacket implements IMessage {
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
             }
+        }
+
+        private ModuleInstance findModuleById(AutomatedFacility state, ModuleInstance.ID id) {
+            if (id == null) return null;
+            for (ModuleInstance m : state.modules()) {
+                if (m.id.equals(id)) return m;
+            }
+            return null;
         }
     }
 }
