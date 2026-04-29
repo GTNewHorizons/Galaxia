@@ -3,6 +3,9 @@ package com.gtnewhorizons.galaxia.api;
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.GALAXIA_DIMENSIONS;
 
+import java.util.Collections;
+import java.util.List;
+
 import javax.annotation.Nonnull;
 
 import net.minecraft.entity.Entity;
@@ -16,6 +19,8 @@ import net.minecraft.util.StatCollector;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
@@ -26,6 +31,9 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 
 import baubles.api.BaublesApi;
 
@@ -298,6 +306,23 @@ public final class GalaxiaAPI {
             }
         }
         return found;
+    }
+
+    /**
+     * Returns the capacity clusters for the given facility and capacity module kind.
+     *
+     * @param facilityId the facility asset ID
+     * @param kind       the capacity module kind (STORAGE, TANK, BATTERY)
+     * @return list of capacity clusters; empty if the facility is not found, has no layout,
+     *         or the kind is not a capacity module
+     */
+    public static List<CapacityCluster> getCapacityClusters(CelestialAsset.ID facilityId, FacilityModuleKind kind) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(facilityId);
+        if (!(asset instanceof AutomatedFacility facility) || !facility.hasStationLayout()) {
+            return Collections.emptyList();
+        }
+        return facility.layoutCache()
+            .getCapacityClusters(kind);
     }
 
     public static boolean isInGalaxiaDimension(Entity e) {

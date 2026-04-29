@@ -54,7 +54,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.inventory = new AutomatedFacilityInventory();
         this.logisticsConfig = new LogisticsConfiguration();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
-        this.layoutCache = new LayoutCacheBundle();
+        this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
         this.energyStored = 0;
     }
