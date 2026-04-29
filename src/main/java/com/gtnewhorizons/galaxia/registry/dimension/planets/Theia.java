@@ -52,6 +52,7 @@ public class Theia extends BasePlanet {
      */
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {
+        TerrainPreset.SHIELD_VOLCANOES.addReplacementBlock(DimensionEnum.THEIA, PlanetBlocks.THEIA_MAGMA);
         return builder.gravity(0.25)
             .airResistance(0.01)
             .mass(0.012)

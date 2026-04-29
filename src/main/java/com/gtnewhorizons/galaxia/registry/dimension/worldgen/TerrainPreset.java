@@ -5,7 +5,6 @@ import java.util.HashMap;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 
-import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 /**
@@ -15,8 +14,7 @@ public enum TerrainPreset {
 
     // ====================== MACRO ======================
     MOUNTAIN_RANGES(Scale.MACRO),
-    SHIELD_VOLCANOES(Scale.MACRO, new DimensionEnum[] { DimensionEnum.THEIA },
-        new Block[] { PlanetBlocks.THEIA_MAGMA }),
+    SHIELD_VOLCANOES(Scale.MACRO),
     LAVA_PLATEAUS(Scale.MACRO),
     PLATEAUS_AND_ESCARPMENTS(Scale.MACRO),
     TECTONIC_RIFTS(Scale.MACRO),
@@ -49,22 +47,19 @@ public enum TerrainPreset {
     public final Scale scale;
     private final HashMap<DimensionEnum, Block> replacementMap = new HashMap<>();
 
+    TerrainPreset(Scale scale) {
+        this.scale = scale;
+    }
+
+    public void addReplacementBlock(DimensionEnum dimension, Block replacementBlock) {
+        replacementMap.put(dimension, replacementBlock);
+    }
+
     public Block getReplacementBlock(DimensionEnum dimension) {
         Block replacementBlock = replacementMap.get(dimension);
         if (replacementBlock == null) {
             return Blocks.stone;
         }
         return replacementBlock;
-    }
-
-    TerrainPreset(Scale scale) {
-        this.scale = scale;
-    }
-
-    TerrainPreset(Scale scale, DimensionEnum[] replacementDimensions, Block[] replacementBlocks) {
-        this(scale);
-        for (int i = 0; i < replacementDimensions.length; i++) {
-            replacementMap.put(replacementDimensions[i], replacementBlocks[i]);
-        }
     }
 }
