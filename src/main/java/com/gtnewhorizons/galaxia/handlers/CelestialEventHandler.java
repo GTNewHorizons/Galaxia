@@ -150,7 +150,6 @@ public class CelestialEventHandler {
                         m -> m.component() instanceof ModuleHammer h && h.canFire()
                             && (!shareAnchor || h.planetaryHandling())
                             && (shareAnchor || h.crossPlanetaryCapability))
-                    .sorted(Comparator.comparingInt(m -> 0))
                     .map(m -> (ModuleHammer) m.component())
                     .anyMatch(hammer -> {
                         LogisticSignal.Scope deliveryScope = LogisticSignal.Scope.PLANETARY;
