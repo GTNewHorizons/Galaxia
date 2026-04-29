@@ -244,7 +244,7 @@ public final class GalaxiaCelestialAPI {
     /**
      * Returns {@code true} if both bodies share the same planetary anchor
      * (i.e. same planet/gas-giant or both on the same planet's moon system).
-     * Used to gate BIG_HAMMER on the {@code planetaryTransferHandling} toggle.
+     * Used to gate HAMMER planetary transfer handling.
      */
     public static boolean sharesPlanetaryAnchor(CelestialObject root, CelestialObjectId bodyIdA,
         CelestialObjectId bodyIdB) {

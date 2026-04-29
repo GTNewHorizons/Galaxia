@@ -16,6 +16,7 @@ public final class ModuleMiner implements ModuleComponent {
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
     private final List<String> blacklistedItemKeys;
     private boolean copySettingsToOtherMiners;
+    private byte parallel = 1;
 
     private static final Random RANDOM = new java.util.Random();
 
@@ -75,5 +76,15 @@ public final class ModuleMiner implements ModuleComponent {
 
     public void setCopySettingToOtherMiners(boolean newValue) {
         this.copySettingsToOtherMiners = newValue;
+    }
+
+    @Override
+    public byte getParallel() {
+        return parallel;
+    }
+
+    @Override
+    public void setParallel(byte parallel) {
+        this.parallel = parallel;
     }
 }
