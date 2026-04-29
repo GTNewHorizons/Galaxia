@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
@@ -28,6 +29,13 @@ import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
  */
 @Mixin(RenderGlobal.class)
 public abstract class RenderGlobalSkyMixin {
+
+    private static final int FACE_TOP = 0;
+    private static final int FACE_BOTTOM = 1;
+    private static final int FACE_SOUTH = 2;
+    private static final int FACE_NORTH = 3;
+    private static final int FACE_EAST = 4;
+    private static final int FACE_WEST = 5;
 
     @Shadow
     private Minecraft mc;
@@ -123,7 +131,11 @@ public abstract class RenderGlobalSkyMixin {
 
         GL11.glPopMatrix();
         GL11.glPushMatrix();
+        if (def != null && def.skyboxTexture() != null) {
+            drawCubemapSkybox(t, def.skyboxTexture());
+        }
         GL11.glRotatef(-90F, 0F, 1F, 0F);
+        OpenGlHelper.glBlendFunc(775, 1, 1, 0);
 
         for (int idx : indices) {
             CelestialBody body = bodies.get(idx);
@@ -188,6 +200,74 @@ public abstract class RenderGlobalSkyMixin {
         }
 
         GL11.glPopMatrix();
+    }
+
+    /**
+     * Draws a static cubemap skybox using a single repeating texture.
+     * Called before celestial bodies, so bodies render on top.
+     */
+    private void drawCubemapSkybox(Tessellator t, ResourceLocation[] faces) {
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDepthMask(false);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ZERO);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+
+        float S = 100f;
+
+        // spotless:off
+        drawFace(t, faces[FACE_TOP],
+            -S,  S,  S,
+            S,  S,  S,
+            S,  S, -S,
+            -S,  S, -S);
+
+        drawFace(t, faces[FACE_BOTTOM],
+            -S, -S, -S,
+            S, -S, -S,
+            S, -S,  S,
+            -S, -S,  S);
+
+        drawFace(t, faces[FACE_SOUTH],
+            S,  S,  S,
+            -S,  S,  S,
+            -S, -S,  S,
+            S, -S,  S);
+
+        drawFace(t, faces[FACE_NORTH],
+            -S,  S, -S,
+            S,  S, -S,
+            S, -S, -S,
+            -S, -S, -S);
+
+        drawFace(t, faces[FACE_EAST],
+            S,  S, -S,
+            S,  S,  S,
+            S, -S,  S,
+            S, -S, -S);
+
+        drawFace(t, faces[FACE_WEST],
+            -S,  S,  S,
+            -S,  S, -S,
+            -S, -S, -S,
+            -S, -S,  S);
+        // spotless:on
+
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    private void drawFace(Tessellator t, ResourceLocation texture, float x0, float y0, float z0, float x1, float y1,
+        float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
+
+        mc.getTextureManager()
+            .bindTexture(texture);
+        t.startDrawingQuads();
+        t.addVertexWithUV(x0, y0, z0, 0, 0);
+        t.addVertexWithUV(x1, y1, z1, 1, 0);
+        t.addVertexWithUV(x2, y2, z2, 1, 1);
+        t.addVertexWithUV(x3, y3, z3, 0, 1);
+        t.draw();
     }
 
     /**
