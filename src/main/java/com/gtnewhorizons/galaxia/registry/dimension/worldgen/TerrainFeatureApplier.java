@@ -283,6 +283,8 @@ public final class TerrainFeatureApplier {
         double[] terrainRelevance, Block[] surfaceReplacementMap, DimensionEnum dimension,
         PlanetBlockType replacementBlock) {
         double[] noise = generatePerlinNoise(chunkX, chunkZ, 1 / (width * 4));
+        final double craterThreshold = 0.75;
+        final double lavaThreshold = 0.85;
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 double localRelevance = terrainRelevance[x + z * 16];
@@ -290,9 +292,11 @@ public final class TerrainFeatureApplier {
                     continue;
                 }
                 double localNoise = noise[x + z * 16];
-                if (localNoise > 0.75) {
-                    localNoise = (0.75 - localNoise) * 16;
-                    surfaceReplacementMap[x + z * 16] = PlanetBlocks.getPlanetBlock(dimension, replacementBlock);
+                if (localNoise > craterThreshold) {
+                    if (localNoise > lavaThreshold) {
+                        surfaceReplacementMap[x + z * 16] = PlanetBlocks.getPlanetBlock(dimension, replacementBlock);
+                    }
+                    localNoise = (craterThreshold - localNoise) * 16;
                 }
                 hm[x + z * 16] += ((localNoise * height) * localRelevance);
             }
