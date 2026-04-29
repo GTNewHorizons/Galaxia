@@ -310,7 +310,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             chunkZ * CHUNK_WIDTH,
             chunkX * CHUNK_WIDTH,
             CHUNK_WIDTH,
-            16,
+            CHUNK_WIDTH,
             CHUNK_WIDTH,
             0.1,
             0);
@@ -355,10 +355,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return localNoise < upperBound && localNoise > lowerBound;
     }
 
-    private Block getSurfaceBlock(List<Block> blockMetas, int x, int z) {
-        int surfaceBlockCount = blockMetas.size();
+    private Block getSurfaceBlock(List<Block> blocks, int x, int z) {
+        int surfaceBlockCount = blocks.size();
         if (surfaceBlockCount == 1) {
-            return blockMetas.getFirst();
+            return blocks.getFirst();
         }
         Block surfaceBlock;
         double noise = baseNoise.generateNoiseOctaves(new double[1], z, x, 1, 1, 0.2, 0.2, 0)[0];
@@ -371,7 +371,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         } else if (pickedSurface < 0) {
             pickedSurface = 0;
         }
-        surfaceBlock = blockMetas.get(pickedSurface);
+        surfaceBlock = blocks.get(pickedSurface);
         return surfaceBlock;
     }
 
