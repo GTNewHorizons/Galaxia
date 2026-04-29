@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -68,24 +69,20 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance hammer = addModule(station, FacilityModuleKind.HAMMER, Buildable.Status.OPERATIONAL);
         ModuleInstance miner = addModule(station, FacilityModuleKind.MINER, Buildable.Status.DISABLED);
         ModuleInstance power = addModule(station, FacilityModuleKind.POWER, Buildable.Status.IN_CONSTRUCTION);
-        ModuleInstance bigHammer = addModule(station, FacilityModuleKind.BIG_HAMMER, Buildable.Status.DECONSTRUCTION);
 
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
         layout.place(StationTileCoord.of(1, 0), new PlacedTile(hammer, StationTileState.OCCUPIED_OPERATIONAL));
         layout.place(StationTileCoord.of(2, 0), new PlacedTile(miner, StationTileState.OCCUPIED_DISABLED));
         layout.place(StationTileCoord.of(2, 1), new PlacedTile(power, StationTileState.UNDER_CONSTRUCTION));
-        layout.place(StationTileCoord.of(1, 1), new PlacedTile(bigHammer, StationTileState.UNDER_DECONSTRUCTION));
         return station;
     }
 
     private static ModuleInstance addModule(AutomatedFacility station, FacilityModuleKind kind,
         Buildable.Status status) {
-        ModuleInstance module = kind.createInstance();
+        ModuleInstance module = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, kind.defaultTier());
         module.updateStatus(status);
-        module.setEnergyBuffer(
-            64L + station.modules()
-                .size());
         station.addModule(module);
         return module;
     }

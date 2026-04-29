@@ -11,9 +11,9 @@ import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
 /**
  * The builder for biome generation
@@ -36,9 +36,9 @@ public class BiomeGenBuilder {
     Block oceanSurface = stone;
     Block seabed = stone;
     Block snowBlock = stone;
-    List<WorldGenGalaxiaSurface> surfaceFeatures = new ArrayList<>();
-    List<WorldGenGalaxiaCave> caveFeatures = new ArrayList<>();
-    List<WorldGenGalaxiaWall> wallFeatures = new ArrayList<>();
+    List<LocationRuleGalaxiaSurface> surfaceFeatures = new ArrayList<>();
+    List<LocationRuleGalaxiaCave> caveFeatures = new ArrayList<>();
+    List<LocationRuleGalaxiaWall> wallFeatures = new ArrayList<>();
     List<Block> topBlockMetas = new ArrayList<>();
     boolean generateCaves = false;
     int surfaceThickness = 1;
@@ -175,17 +175,17 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder surfaceFeature(WorldGenGalaxiaSurface feature) {
+    public BiomeGenBuilder surfaceFeature(LocationRuleGalaxiaSurface feature) {
         surfaceFeatures.add(feature);
         return this;
     }
 
-    public BiomeGenBuilder caveFeature(WorldGenGalaxiaCave feature) {
+    public BiomeGenBuilder caveFeature(LocationRuleGalaxiaCave feature) {
         caveFeatures.add(feature);
         return this;
     }
 
-    public BiomeGenBuilder wallFeature(WorldGenGalaxiaWall feature) {
+    public BiomeGenBuilder wallFeature(LocationRuleGalaxiaWall feature) {
         wallFeatures.add(feature);
         return this;
     }

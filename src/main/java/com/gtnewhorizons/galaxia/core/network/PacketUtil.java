@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -12,7 +13,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
-final class PacketUtil {
+public final class PacketUtil {
 
     private PacketUtil() {}
 
@@ -59,12 +60,12 @@ final class PacketUtil {
 
     // ── Station tile helpers ───────────────────────────────────────────────
 
-    static void writeTileCoord(ByteBuf buf, StationTileCoord coord) {
+    static void writeStationTileCoord(ByteBuf buf, StationTileCoord coord) {
         buf.writeByte(coord.dx());
         buf.writeByte(coord.dy());
     }
 
-    static StationTileCoord readTileCoord(ByteBuf buf) {
+    static StationTileCoord readStationTileCoord(ByteBuf buf) {
         byte dx = buf.readByte();
         byte dy = buf.readByte();
         return new StationTileCoord(dx, dy);
@@ -80,12 +81,29 @@ final class PacketUtil {
     static <T extends Enum<T>> T readEnum(ByteBuf buf, Class<T> enumClass) {
         int ordinal = buf.readUnsignedByte();
         T[] values = enumClass.getEnumConstants();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : values[0];
+        if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
+        Galaxia.LOG.warn(
+            "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
+            ordinal,
+            enumClass.getSimpleName(),
+            values[0]);
+        return values[0];
     }
 
-    static <T extends Enum<T>> T fromOrdinalOrNull(int ordinal, Class<T> enumClass) {
+    public static <T extends Enum<T>> byte enumOrdinal(T value) {
+        return (byte) value.ordinal();
+    }
+
+    public static <T extends Enum<T>> T enumFromByte(int b, Class<T> enumClass) {
+        int ordinal = Byte.toUnsignedInt((byte) b);
         T[] values = enumClass.getEnumConstants();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
+        if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
+        Galaxia.LOG.warn(
+            "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
+            ordinal,
+            enumClass.getSimpleName(),
+            values[0]);
+        return values[0];
     }
 
 }
