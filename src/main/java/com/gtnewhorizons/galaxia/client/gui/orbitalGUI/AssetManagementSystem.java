@@ -2223,6 +2223,9 @@ public final class AssetManagementSystem {
                 case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
                 case MINER -> "Generates one ore per second from this body's available deposits.";
                 case POWER -> "Adds extra power generation to support modules and logistics.";
+                case STORAGE -> "Increases station item storage capacity. Adjacent modules boost each other.";
+                case TANK -> "Increases station fluid storage capacity. Adjacent modules boost each other.";
+                case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
             };
         }
 

@@ -450,6 +450,7 @@ public final class FacilityPersistenceManager {
                         module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
                     }
                     case POWER -> {}
+                    case STORAGE, TANK, BATTERY -> {}
                 }
 
                 Buildable.Status moduleStatus = safeValueOf(Buildable.Status.class, mj.status);

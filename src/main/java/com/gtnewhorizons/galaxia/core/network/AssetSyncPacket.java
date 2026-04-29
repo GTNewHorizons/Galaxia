@@ -356,6 +356,7 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeBoolean(h.crossPlanetaryCapability);
             }
             case POWER -> {}
+            case STORAGE, TANK, BATTERY -> {}
         }
     }
 
@@ -395,6 +396,7 @@ public final class AssetSyncPacket implements IMessage {
                     new ModuleHammer(kind, cfg, routePriority, false, planetaryHandling, crossPlanetaryCapability, 64));
             }
             case POWER -> {}
+            case STORAGE, TANK, BATTERY -> {}
         }
 
         if (module.component() != null && parallel >= 1) {

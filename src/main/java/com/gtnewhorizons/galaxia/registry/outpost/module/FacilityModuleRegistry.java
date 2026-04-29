@@ -55,6 +55,30 @@ public class FacilityModuleRegistry {
                 true,
                 false,
                 64));
+        register(
+            FacilityModuleKind.STORAGE,
+            500L,
+            0L,
+            1,
+            Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L),
+            (instance, outpost) -> {},
+            ModuleStorage::new);
+        register(
+            FacilityModuleKind.TANK,
+            500L,
+            0L,
+            1,
+            Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L),
+            (instance, outpost) -> {},
+            ModuleTank::new);
+        register(
+            FacilityModuleKind.BATTERY,
+            500L,
+            0L,
+            1,
+            Map.of(new ItemStack(Items.redstone), 16L, new ItemStack(Items.gold_ingot), 32L),
+            (instance, outpost) -> {},
+            ModuleBattery::new);
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,

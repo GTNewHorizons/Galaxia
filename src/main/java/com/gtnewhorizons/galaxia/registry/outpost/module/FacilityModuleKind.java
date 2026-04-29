@@ -13,9 +13,18 @@ public enum FacilityModuleKind {
 
     HAMMER,
     MINER,
-    POWER;
+    POWER,
+    STORAGE,
+    TANK,
+    BATTERY;
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
+
+    static {
+        CAPACITY_KINDS.add(STORAGE);
+        CAPACITY_KINDS.add(TANK);
+        CAPACITY_KINDS.add(BATTERY);
+    }
 
     public String getDisplayName() {
         return StatCollector.translateToLocal(
@@ -28,6 +37,7 @@ public enum FacilityModuleKind {
             case HAMMER -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER -> StationModuleCategory.POWER;
+            case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
         };
     }
 
@@ -51,6 +61,7 @@ public enum FacilityModuleKind {
         return switch (this) {
             case HAMMER, MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
             case POWER -> EnumSet.of(ModuleTier.NONE);
+            case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
         };
     }
 
@@ -58,14 +69,15 @@ public enum FacilityModuleKind {
         return switch (this) {
             case HAMMER, MINER -> ModuleTier.EV;
             case POWER -> ModuleTier.NONE;
+            case STORAGE, TANK, BATTERY -> ModuleTier.HV;
         };
     }
 
     public ModulePriority defaultPriority() {
         return switch (this) {
-            case HAMMER -> ModulePriority.NORMAL;
-            case MINER -> ModulePriority.NORMAL;
+            case HAMMER, MINER -> ModulePriority.NORMAL;
             case POWER -> ModulePriority.HIGH;
+            case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
         };
     }
 
