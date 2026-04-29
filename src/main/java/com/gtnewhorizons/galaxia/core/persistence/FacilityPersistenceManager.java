@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -293,14 +294,11 @@ public final class FacilityPersistenceManager {
                 .name();
             mj.constructionProgress = 0f;
             mj.cooldownTicks = m.cooldownTicks();
-            mj.tier = m.tier()
-                .toByte();
-            mj.priorityOverride = m.priorityOverride()
-                .toByte();
+            mj.tier = PacketUtil.enumOrdinal(m.tier());
+            mj.priorityOverride = PacketUtil.enumOrdinal(m.priorityOverride());
             mj.enabled = m.enabled();
             mj.groupId = m.groupId();
-            mj.shape = m.shape()
-                .toByte();
+            mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() != null ? m.component()
                 .getParallel() : 1;
             JsonObject moduleData = new JsonObject();
@@ -383,8 +381,8 @@ public final class FacilityPersistenceManager {
                 FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
                 if (kind == null) continue;
                 ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
-                ModuleShape shape = ModuleShape.fromByte(mj.shape);
-                ModuleTier tier = ModuleTier.fromByte(mj.tier);
+                ModuleShape shape = PacketUtil.enumFromByte(mj.shape, ModuleShape.class);
+                ModuleTier tier = PacketUtil.enumFromByte(mj.tier, ModuleTier.class);
                 if (!kind.allowedTiers()
                     .contains(tier)) {
                     ModuleTier downgraded = kind.defaultTier();
@@ -458,7 +456,7 @@ public final class FacilityPersistenceManager {
                 if (moduleId == null) {
                     module.setTier(tier);
                 }
-                module.setPriorityOverride(ModulePriority.fromByte(mj.priorityOverride));
+                module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
                 module.setGroupId(mj.groupId);
                 if (mj.parallel >= 1 && module.component() != null) {

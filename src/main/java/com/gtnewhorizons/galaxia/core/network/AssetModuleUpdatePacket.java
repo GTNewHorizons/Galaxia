@@ -287,8 +287,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     hammer.setRoutePriority(priority);
                 }
                 case SET_TIER -> {
-                    ModuleTier tier = ModuleTier.fromByte(packet.bytePayload);
-                    if (!module.kind()
+                    ModuleTier tier = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModuleTier.class);
+                    if (tier == null || !module.kind()
                         .allowedTiers()
                         .contains(tier)) {
                         Galaxia.LOG.warn(
@@ -301,8 +301,9 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     module.setTier(tier);
                 }
                 case SET_PRIORITY -> {
-                    ModulePriority priority = ModulePriority.fromByte(packet.bytePayload);
-                    module.setPriorityOverride(priority);
+                    ModulePriority priority = PacketUtil
+                        .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModulePriority.class);
+                    if (priority != null) module.setPriorityOverride(priority);
                 }
                 case SET_ENABLED -> module.setEnabled(packet.getBooleanPayload());
             }

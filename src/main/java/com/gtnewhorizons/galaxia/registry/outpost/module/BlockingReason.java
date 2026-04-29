@@ -12,15 +12,4 @@ public enum BlockingReason {
     OUTPUT_LIMIT,
     STORAGE_CAPACITY,
     SCHEDULER_IDLE;
-
-    private static final BlockingReason[] VALUES = values();
-
-    public byte toByte() {
-        return (byte) ordinal();
-    }
-
-    public static BlockingReason fromByte(byte ordinal) {
-        if (ordinal < 0 || ordinal >= VALUES.length) return NONE;
-        return VALUES[ordinal];
-    }
 }

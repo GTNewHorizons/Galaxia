@@ -13,7 +13,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
-final class PacketUtil {
+public final class PacketUtil {
 
     private PacketUtil() {}
 
@@ -93,6 +93,15 @@ final class PacketUtil {
     static <T extends Enum<T>> T fromOrdinalOrNull(int ordinal, Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
         return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
+    }
+
+    public static <T extends Enum<T>> byte enumOrdinal(T value) {
+        return (byte) value.ordinal();
+    }
+
+    public static <T extends Enum<T>> T enumFromByte(int b, Class<T> enumClass) {
+        int ordinal = Byte.toUnsignedInt((byte) b);
+        return fromOrdinalOrNull(ordinal, enumClass);
     }
 
 }

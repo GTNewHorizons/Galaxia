@@ -7,21 +7,10 @@ public enum ModuleShape {
     BLOCK_3x3(new byte[][] { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 0, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 },
         { 1, 1 } });
 
-    private static final ModuleShape[] VALUES = values();
-
     private final byte[][] offsets;
 
     ModuleShape(byte[][] offsets) {
         this.offsets = offsets;
-    }
-
-    public byte toByte() {
-        return (byte) ordinal();
-    }
-
-    public static ModuleShape fromByte(byte ordinal) {
-        if (ordinal < 0 || ordinal >= VALUES.length) return SINGLE;
-        return VALUES[ordinal];
     }
 
     public int tileCount() {
