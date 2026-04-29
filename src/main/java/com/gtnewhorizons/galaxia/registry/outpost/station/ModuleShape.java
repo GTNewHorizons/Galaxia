@@ -1,15 +1,19 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public enum ModuleShape {
 
-    SINGLE,
-    QUAD_2x2,
-    BLOCK_3x3;
+    SINGLE(new byte[][] { { 0, 0 } }),
+    QUAD_2x2(new byte[][] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } }),
+    BLOCK_3x3(new byte[][] { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 0, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 },
+        { 1, 1 } });
 
     private static final ModuleShape[] VALUES = values();
+
+    private final byte[][] offsets;
+
+    ModuleShape(byte[][] offsets) {
+        this.offsets = offsets;
+    }
 
     public byte toByte() {
         return (byte) ordinal();
@@ -21,15 +25,15 @@ public enum ModuleShape {
     }
 
     public int tileCount() {
-        return switch (this) {
-            case SINGLE -> 1;
-            case QUAD_2x2 -> 4;
-            case BLOCK_3x3 -> 9;
-        };
+        return offsets.length;
     }
 
-    public boolean coversAnchor() {
-        return true;
+    public StationTileCoord[] tiles(StationTileCoord anchor) {
+        StationTileCoord[] result = new StationTileCoord[offsets.length];
+        for (int i = 0; i < offsets.length; i++) {
+            result[i] = StationTileCoord.of(anchor.dx() + offsets[i][0], anchor.dy() + offsets[i][1]);
+        }
+        return result;
     }
 
     public boolean fitsAt(StationTileCoord anchor) {
@@ -39,26 +43,6 @@ public enum ModuleShape {
             case BLOCK_3x3 -> anchor.dx() - 1 >= StationTileCoord.MIN && anchor.dx() + 1 <= StationTileCoord.MAX
                 && anchor.dy() - 1 >= StationTileCoord.MIN
                 && anchor.dy() + 1 <= StationTileCoord.MAX;
-        };
-    }
-
-    public Iterable<StationTileCoord> tiles(StationTileCoord anchor) {
-        return switch (this) {
-            case SINGLE -> List.of(anchor);
-            case QUAD_2x2 -> List.of(
-                anchor,
-                StationTileCoord.of(anchor.dx() + 1, anchor.dy()),
-                StationTileCoord.of(anchor.dx(), anchor.dy() + 1),
-                StationTileCoord.of(anchor.dx() + 1, anchor.dy() + 1));
-            case BLOCK_3x3 -> {
-                List<StationTileCoord> tiles = new ArrayList<>(9);
-                for (int dy = -1; dy <= 1; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        tiles.add(StationTileCoord.of(anchor.dx() + dx, anchor.dy() + dy));
-                    }
-                }
-                yield tiles;
-            }
         };
     }
 }

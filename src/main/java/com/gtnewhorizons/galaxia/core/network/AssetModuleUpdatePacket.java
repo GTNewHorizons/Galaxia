@@ -14,6 +14,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -101,7 +103,10 @@ public final class AssetModuleUpdatePacket implements IMessage {
         SET_ALLOW_SHOOTING_MODE,
         SET_ALLOW_SHOOTING_THRESHOLD,
         SET_PLANETARY_HANDLING,
-        SET_ROUTE_PRIORITY
+        SET_ROUTE_PRIORITY,
+        SET_TIER,
+        SET_PRIORITY,
+        SET_ENABLED
     }
 
     @Override
@@ -125,6 +130,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
+                case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
             }
         }
     }
@@ -162,6 +168,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case SET_MINER_COPY_SETTINGS, SET_PLANETARY_HANDLING -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
+            case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
         }
     }
 
@@ -279,6 +286,25 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     if (priority == null) return;
                     hammer.setRoutePriority(priority);
                 }
+                case SET_TIER -> {
+                    ModuleTier tier = ModuleTier.fromByte(packet.bytePayload);
+                    if (!module.kind()
+                        .allowedTiers()
+                        .contains(tier)) {
+                        Galaxia.LOG.warn(
+                            "[Outpost] ModuleUpdate: rejected tier {} for {} on {}",
+                            tier,
+                            module.kind(),
+                            packet.assetId);
+                        return;
+                    }
+                    module.setTier(tier);
+                }
+                case SET_PRIORITY -> {
+                    ModulePriority priority = ModulePriority.fromByte(packet.bytePayload);
+                    module.setPriorityOverride(priority);
+                }
+                case SET_ENABLED -> module.setEnabled(packet.getBooleanPayload());
             }
         }
 

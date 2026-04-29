@@ -63,10 +63,6 @@ public final class ModuleHammer implements ModuleComponent {
         return maxBatchSize;
     }
 
-    public OrbitalTransferPlanner.RoutePriority getRoutePriority() {
-        return routePriority;
-    }
-
     public void setRoutePriority(OrbitalTransferPlanner.RoutePriority routePriority) {
         this.routePriority = routePriority;
     }

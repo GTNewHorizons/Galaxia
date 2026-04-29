@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -79,7 +80,8 @@ final class FacilityPersistenceManagerTest {
 
     private static ModuleInstance addModule(AutomatedFacility station, FacilityModuleKind kind,
         Buildable.Status status) {
-        ModuleInstance module = FacilityModuleRegistry.create(kind);
+        ModuleInstance module = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, kind.defaultTier());
         module.updateStatus(status);
         station.addModule(module);
         return module;

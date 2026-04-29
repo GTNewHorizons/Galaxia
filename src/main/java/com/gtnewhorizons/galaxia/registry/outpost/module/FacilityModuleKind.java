@@ -1,8 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Set;
 
 import net.minecraft.util.StatCollector;
 
@@ -17,8 +15,7 @@ public enum FacilityModuleKind {
     MINER,
     POWER;
 
-    private static final Set<FacilityModuleKind> CAPACITY_KINDS = Collections
-        .unmodifiableSet(EnumSet.noneOf(FacilityModuleKind.class));
+    private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
     public String getDisplayName() {
         return StatCollector.translateToLocal(
@@ -41,10 +38,12 @@ public enum FacilityModuleKind {
     }
 
     public ModuleInstance create(StationTileCoord anchor, ModuleShape shape, ModuleTier tier) {
-        ModuleInstance instance = FacilityModuleRegistry.create(this);
-        instance.setAnchor(anchor);
-        instance.setShape(shape);
-        instance.setTier(tier);
+        FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(this);
+        if (def == null) {
+            throw new IllegalArgumentException("Unknown module kind: " + this);
+        }
+        ModuleInstance instance = new ModuleInstance(ModuleInstance.ID.create(), def, anchor, shape, tier);
+        instance.setComponent(FacilityModuleRegistry.createComponent(this));
         return instance;
     }
 
@@ -71,10 +70,6 @@ public enum FacilityModuleKind {
     }
 
     public boolean isCapacityModule() {
-        return false;
-    }
-
-    public static Set<FacilityModuleKind> capacityKinds() {
-        return CAPACITY_KINDS;
+        return CAPACITY_KINDS.contains(this);
     }
 }
