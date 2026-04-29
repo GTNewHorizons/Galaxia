@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsuleMo
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketCoreModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.rules.ClusteredPlacementRule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.rules.LinearPlacementRule;
@@ -80,16 +81,45 @@ public final class RocketAssembly {
 
             // Non Capsule Linears
             List<RocketModule> linears = modules.stream()
-                .filter(m -> !(m instanceof IStackableModule) && !(m instanceof CapsuleModule))
+                .filter(
+                    m -> !(m instanceof IStackableModule) && !(m instanceof CapsuleModule)
+                        && !(m instanceof RiderModule)
+                        && !(m instanceof LanderModule))
                 .collect(Collectors.toList());
 
             placements.addAll(new LinearPlacementRule().apply(linears, afterClustered));
-            double beforeCommand = placements.stream()
+
+            double beforeLander = placements.stream()
                 .mapToDouble(
                     p -> p.y() + p.type()
                         .getHeight())
                 .max()
                 .orElse(afterClustered);
+            List<RocketModule> landers = modules.stream()
+                .filter(m -> m instanceof LanderModule)
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(landers, beforeLander));
+
+            double beforeRiders = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(beforeLander);
+
+            List<RocketModule> riders = modules.stream()
+                .filter(m -> m instanceof RiderModule)
+                .collect(Collectors.toList());
+
+            placements.addAll(new LinearPlacementRule().apply(riders, beforeRiders));
+
+            double beforeCommand = placements.stream()
+                .mapToDouble(
+                    p -> p.y() + p.type()
+                        .getHeight())
+                .max()
+                .orElse(beforeLander);
 
             // Capsule Module
             List<RocketModule> capsules = modules.stream()
@@ -148,6 +178,15 @@ public final class RocketAssembly {
         return getTotalHeight();
     }
 
+    public double getRiderYOffset(RiderModule riderModule) {
+        return getPlacements().stream()
+            .filter(p -> p.type() == riderModule)
+            .mapToDouble(p -> p.y())
+            .max()
+            .orElse(0) + riderModule.getHeight() + riderModule.getYOffset();
+
+    }
+
     public List<RocketModule> getModules() {
         return Collections.unmodifiableList(modules);
     }
@@ -162,6 +201,13 @@ public final class RocketAssembly {
         return getModules().stream()
             .filter(EngineModule.class::isInstance)
             .map(EngineModule.class::cast)
+            .collect(Collectors.toList());
+    }
+
+    public List<RiderModule> getRiderModules() {
+        return getModules().stream()
+            .filter(RiderModule.class::isInstance)
+            .map(RiderModule.class::cast)
             .collect(Collectors.toList());
     }
 
