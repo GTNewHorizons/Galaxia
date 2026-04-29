@@ -2226,6 +2226,7 @@ public final class AssetManagementSystem {
                 case STORAGE -> "Increases station item storage capacity. Adjacent modules boost each other.";
                 case TANK -> "Increases station fluid storage capacity. Adjacent modules boost each other.";
                 case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
+                case MAINTENANCE_BAY -> "Passively maintains station systems. Reduces wear over time.";
             };
         }
 

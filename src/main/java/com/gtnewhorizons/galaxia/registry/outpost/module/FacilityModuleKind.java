@@ -16,7 +16,8 @@ public enum FacilityModuleKind {
     POWER,
     STORAGE,
     TANK,
-    BATTERY;
+    BATTERY,
+    MAINTENANCE_BAY;
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
@@ -38,6 +39,7 @@ public enum FacilityModuleKind {
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER -> StationModuleCategory.POWER;
             case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
+            case MAINTENANCE_BAY -> StationModuleCategory.SUPPORT;
         };
     }
 
@@ -62,6 +64,7 @@ public enum FacilityModuleKind {
             case HAMMER, MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
             case POWER -> EnumSet.of(ModuleTier.NONE);
             case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
+            case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
         };
     }
 
@@ -70,6 +73,7 @@ public enum FacilityModuleKind {
             case HAMMER, MINER -> ModuleTier.EV;
             case POWER -> ModuleTier.NONE;
             case STORAGE, TANK, BATTERY -> ModuleTier.HV;
+            case MAINTENANCE_BAY -> ModuleTier.NONE;
         };
     }
 
@@ -78,6 +82,7 @@ public enum FacilityModuleKind {
             case HAMMER, MINER -> ModulePriority.NORMAL;
             case POWER -> ModulePriority.HIGH;
             case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
+            case MAINTENANCE_BAY -> ModulePriority.NORMAL;
         };
     }
 

@@ -79,6 +79,14 @@ public class FacilityModuleRegistry {
             Map.of(new ItemStack(Items.redstone), 16L, new ItemStack(Items.gold_ingot), 32L),
             (instance, outpost) -> {},
             ModuleBattery::new);
+        register(
+            FacilityModuleKind.MAINTENANCE_BAY,
+            500L,
+            0L,
+            100,
+            Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L),
+            (instance, outpost) -> {},
+            ModuleMaintenanceBay::new);
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,

@@ -303,6 +303,7 @@ galaxia.outpost.module.kind.automated_station=AUTOMATED STATION
 galaxia.outpost.module.kind.automated_outpost=AUTOMATED OUTPOST
 galaxia.outpost.module.location.orbit=ORBIT
 galaxia.outpost.module.location.surface=SURFACE
+galaxia.outpost.module.maintenance_bay=MAINTENANCE BAY
 
 # Elements - "Other"
 # Elements - Other - "Effect"
