@@ -15,7 +15,6 @@ public final class LayoutCacheBundle {
         switch (mutation) {
             case PLACE -> result.add(CacheKind.DUPLICATE_COUNTS);
             case DECONSTRUCT -> result.add(CacheKind.DUPLICATE_COUNTS);
-            case SET_TIER, SET_PARALLEL, SET_ENABLED -> {}
         }
         return result;
     }

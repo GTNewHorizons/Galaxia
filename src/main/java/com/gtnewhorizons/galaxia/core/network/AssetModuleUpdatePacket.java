@@ -144,7 +144,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         int rawAction = buf.readUnsignedByte();
 
         if (type == ACTION_TYPE) {
-            action = PacketUtil.fromOrdinalOrNull(rawAction, Action.class);
+            action = PacketUtil.enumFromByte(rawAction, Action.class);
             if (action == null) {
                 Galaxia.LOG
                     .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown action ordinal: {}", rawAction);
@@ -156,7 +156,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             return;
         }
 
-        configAction = PacketUtil.fromOrdinalOrNull(rawAction, ConfigAction.class);
+        configAction = PacketUtil.enumFromByte(rawAction, ConfigAction.class);
         if (configAction == null) {
             Galaxia.LOG
                 .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown config action ordinal: {}", rawAction);
@@ -193,7 +193,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     }
 
     public <T extends Enum<T>> T getEnumPayload(Class<T> enumClass) {
-        return PacketUtil.fromOrdinalOrNull(Byte.toUnsignedInt(bytePayload), enumClass);
+        return PacketUtil.enumFromByte(Byte.toUnsignedInt(bytePayload), enumClass);
     }
 
     public static final class Handler implements IMessageHandler<AssetModuleUpdatePacket, IMessage> {

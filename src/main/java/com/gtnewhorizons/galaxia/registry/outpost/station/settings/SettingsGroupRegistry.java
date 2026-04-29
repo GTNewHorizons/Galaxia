@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
-import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class SettingsGroupRegistry {
@@ -59,13 +57,12 @@ public final class SettingsGroupRegistry {
         return true;
     }
 
-    public void updateSettings(short groupId, ModuleSettings newSettings, LayoutCacheBundle cache) {
+    /**
+     * Skeleton — Phase 8 (T8.2) wires the diff-into-atomic-MutationKinds batch path.
+     */
+    public void updateSettings(short groupId, ModuleSettings newSettings) {
         SettingsGroup group = groups.get(groupId);
         if (group == null) return;
-        ModuleSettings oldSettings = group.settings();
         group.setSettings(newSettings);
-        if (!newSettings.equals(oldSettings)) {
-            cache.applyMutation(MutationKind.SET_TIER, group.kind());
-        }
     }
 }

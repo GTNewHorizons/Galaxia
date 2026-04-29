@@ -90,18 +90,14 @@ public final class PacketUtil {
         return values[0];
     }
 
-    static <T extends Enum<T>> T fromOrdinalOrNull(int ordinal, Class<T> enumClass) {
-        T[] values = enumClass.getEnumConstants();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
-    }
-
     public static <T extends Enum<T>> byte enumOrdinal(T value) {
         return (byte) value.ordinal();
     }
 
     public static <T extends Enum<T>> T enumFromByte(int b, Class<T> enumClass) {
         int ordinal = Byte.toUnsignedInt((byte) b);
-        return fromOrdinalOrNull(ordinal, enumClass);
+        T[] values = enumClass.getEnumConstants();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
     }
 
 }
