@@ -1,12 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import net.minecraft.block.Block;
+
 import java.util.Collections;
 import java.util.Map;
 
 /**
  * Data record holding terrain features
  */
-public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams) {
+public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams, Block replacementBlock) {
 
     public TerrainFeature {
         customParams = Collections.unmodifiableMap(customParams);

@@ -1,12 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.HashMap;
-
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
-
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-
 /**
  * ENUM to hold all terrain presets
  */
@@ -45,21 +38,8 @@ public enum TerrainPreset {
     }
 
     public final Scale scale;
-    private final HashMap<DimensionEnum, Block> replacementMap = new HashMap<>();
 
     TerrainPreset(Scale scale) {
         this.scale = scale;
-    }
-
-    public void addReplacementBlock(DimensionEnum dimension, Block replacementBlock) {
-        replacementMap.put(dimension, replacementBlock);
-    }
-
-    public Block getReplacementBlock(DimensionEnum dimension) {
-        Block replacementBlock = replacementMap.get(dimension);
-        if (replacementBlock == null) {
-            return Blocks.stone;
-        }
-        return replacementBlock;
     }
 }
