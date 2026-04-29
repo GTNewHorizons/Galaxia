@@ -354,21 +354,21 @@ public final class FacilityPersistenceManager {
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         if (layout != null) {
-            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
+            for (Map.Entry<StationTileCoord, PlacedTile> entry : layout.snapshot()
                 .entrySet()) {
-                StationTileCoord coord = e.getKey();
+                StationTileCoord coord = entry.getKey();
                 // Save only anchor tiles — children are reconstructed on load
                 if (!layout.isAnchorAt(coord)) continue;
-                StationTileJson tj = new StationTileJson();
-                tj.dx = coord.dx();
-                tj.dy = coord.dy();
-                tj.state = e.getValue()
+                StationTileJson tileJson = new StationTileJson();
+                tileJson.dx = coord.dx();
+                tileJson.dy = coord.dy();
+                tileJson.state = entry.getValue()
                     .state()
                     .name();
-                ModuleInstance module = e.getValue()
+                ModuleInstance module = entry.getValue()
                     .module();
-                tj.moduleId = module == null ? null : module.id.toString();
-                out.layoutTiles.add(tj);
+                tileJson.moduleId = module == null ? null : module.id.toString();
+                out.layoutTiles.add(tileJson);
             }
         }
         return out;
