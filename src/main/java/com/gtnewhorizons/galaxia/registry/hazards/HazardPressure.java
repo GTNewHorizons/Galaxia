@@ -31,11 +31,13 @@ public class HazardPressure extends EnvironmentalHazard {
         acceptableMin -= getPressureProtection(player, false);
 
         if (pressure <= acceptableMax && pressure >= acceptableMin) return HazardWarnings.FINE;
-        if (player.isPotionActive(Potion.moveSlowdown)) return HazardWarnings.LOW_PRESSURE;
-        if (player.isPotionActive(Potion.digSlowdown)) return HazardWarnings.LOW_PRESSURE;
+        HazardWarnings warning = pressure >= acceptableMax ? HazardWarnings.HIGH_PRESSURE : HazardWarnings.LOW_PRESSURE;
+
+        if (player.isPotionActive(Potion.moveSlowdown)) return warning;
+        if (player.isPotionActive(Potion.digSlowdown)) return warning;
 
         player.addPotionEffect(new PotionEffect(Potion.digSlowdown.id, BASE_EFFECT_DURATION * 2, 1));
         player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, BASE_EFFECT_DURATION * 2, 1));
-        return HazardWarnings.LOW_PRESSURE;
+        return warning;
     }
 }

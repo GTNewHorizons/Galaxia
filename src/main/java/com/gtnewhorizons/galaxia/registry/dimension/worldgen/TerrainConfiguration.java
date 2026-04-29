@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+
 /**
  * Class to hold config info on terrain features
  */
@@ -131,6 +134,7 @@ public final class TerrainConfiguration {
         private double width = -1;
         private double scaleMultiplier = 1.0;
         private final Map<String, Object> custom = new HashMap<>();
+        private Block replacementBlock = Blocks.stone;
 
         /**
          * Constructs with a parent builder and a preset
@@ -188,6 +192,11 @@ public final class TerrainConfiguration {
             return this;
         }
 
+        public FeatureConfigurator replacementBlock(Block replacementBlock) {
+            this.replacementBlock = replacementBlock;
+            return this;
+        }
+
         /**
          * The final stage building of the feature itself based on all parameters previously given
          *
@@ -197,7 +206,7 @@ public final class TerrainConfiguration {
             double finalHeight = (height > 0 ? height : 1) * scaleMultiplier;
             double finalWidth = (width > 0 ? width : 1) * scaleMultiplier;
 
-            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom);
+            TerrainFeature feature = new TerrainFeature(preset, finalHeight, finalWidth, custom, replacementBlock);
 
             parent.features.add(feature);
             return parent;

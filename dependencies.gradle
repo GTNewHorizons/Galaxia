@@ -34,28 +34,32 @@
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
 dependencies {
-    api("com.github.GTNewHorizons:StructureLib:1.4.28:dev")
-    api("com.github.GTNewHorizons:NotEnoughItems:2.8.71-GTNH:dev")
-    api("com.github.GTNewHorizons:GTNHLib:0.9.31:dev")
-    api("com.github.GTNewHorizons:NotEnoughIds:2.1.10:dev")
-    api("com.github.GTNewHorizons:ModularUI2:2.3.45-1.7.10:dev")
-    api("com.github.GTNewHorizons:waila:1.19.22:dev")
+    api("com.github.GTNewHorizons:StructureLib:1.4.34:dev")
+    api("com.github.GTNewHorizons:NotEnoughItems:2.8.93-GTNH:dev")
+    api("com.github.GTNewHorizons:GTNHLib:0.9.54:dev")
+    api("com.github.GTNewHorizons:NotEnoughIds:2.1.11:dev")
+    api("com.github.GTNewHorizons:ModularUI2:2.3.58-1.7.10:dev")
+    api("com.github.GTNewHorizons:waila:1.19.23:dev")
 
-    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.115:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.129:dev")
 
-    compileOnly('com.github.GTNewHorizons:SC2:2.3.12:dev') {transitive=false}
+    compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
-    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.370:dev")
-    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.17:dev') { transitive = false }
+    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.466:dev")
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.19:dev') { transitive = false }
 
 
-    devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.5:dev'){transitive=false}
+    devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.13:dev'){transitive=false}
 
     // Uncomment for profiling
     // implementation(rfg.deobf("curse.maven:spark-361579:4271867"))
+
+    // For convenience
+    //devOnlyNonPublishable('com.github.GTNewHorizons:worldedit-gtnh:v0.0.9')
+
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:DuraDisplay:1.4.2:dev")
-    api("com.github.GTNewHorizons:Baubles-Expanded:2.2.6-GTNH:dev")
+    api("com.github.GTNewHorizons:Baubles-Expanded:2.2.13-GTNH:dev")
 
     // Speeds up mod identification and loading in dev
-    runtimeOnlyNonPublishable(rfg.deobf("com.github.GTNewHorizons:CoreTweaks:0.3.4.0-GTNH"))
+    runtimeOnlyNonPublishable(rfg.deobf("com.github.GTNewHorizons:CoreTweaks:0.3.4.2-GTNH"))
 }
