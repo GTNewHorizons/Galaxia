@@ -289,6 +289,10 @@ galaxia.tooltip.protection_shield_radiation.high=High Pressure Shielding: +%s
 galaxia.tooltip.rocket_silo.builder.return_modules=Disassemble Rocket
 galaxia.tooltip.rocket_silo.builder.modules_none=Add some modules first
 
+### Chat
+# Chat - "Rocket"
+galaxia.chat.rocket.rocket_full=Rocket is currently full! Add more RiderModules!
+
 # Outpost Modules
 galaxia.outpost.module.hammer=HAMMER
 galaxia.outpost.module.big_hammer=BIG HAMMER
@@ -311,6 +315,7 @@ galaxia.hazard.fine=No warnings
 galaxia.hazard.freezing=Freezing
 galaxia.hazard.burning=Burning
 galaxia.hazard.low_pressure=Low Pressure
+galaxia.hazard.high_pressure=High Pressure
 galaxia.hazard.high_radiation=High Radiation
 galaxia.hazard.spores=Spores Detected
 galaxia.hazard.wither=Withering
@@ -336,6 +341,7 @@ galaxia.item.schematic.label.thrust=Thrust: %dN
 # Entities - "Rocket"
 entity.galaxia.EntityRocket.lander=Lander
 entity.galaxia.EntityRocket.name=Rocket
+
 
 #### Config
 

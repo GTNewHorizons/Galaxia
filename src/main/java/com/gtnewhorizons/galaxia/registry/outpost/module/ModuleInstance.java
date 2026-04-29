@@ -11,6 +11,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public class ModuleInstance implements Buildable {
 
@@ -20,8 +22,16 @@ public class ModuleInstance implements Buildable {
     private ModuleComponent component;
 
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
-    private long energyBuffer = 0L;
     private int ticks = 0;
+
+    private StationTileCoord anchor;
+    private final ModuleShape shape;
+    private ModuleTier tier = ModuleTier.NONE;
+    private ModulePriority priorityOverride = ModulePriority.NORMAL;
+    private boolean enabled = true;
+    private short groupId = 0;
+    private ModuleState state = ModuleState.IDLE;
+    private BlockingReason blocking = BlockingReason.NONE;
 
     public void tick(AutomatedFacility outpost) {
         if (this.status() == Buildable.Status.OPERATIONAL) {
@@ -45,13 +55,13 @@ public class ModuleInstance implements Buildable {
         }
     }
 
-    public ModuleInstance(ID id, FacilityModuleRegistry.Definition definition) {
+    public ModuleInstance(ID id, FacilityModuleRegistry.Definition definition, StationTileCoord anchor,
+        ModuleShape shape, ModuleTier tier) {
         this.id = id;
         this.definition = definition;
-    }
-
-    public ModuleInstance(FacilityModuleRegistry.Definition definition) {
-        this(ID.create(), definition);
+        this.anchor = anchor;
+        this.shape = shape;
+        this.tier = tier;
     }
 
     public ModuleComponent component() {
@@ -90,20 +100,73 @@ public class ModuleInstance implements Buildable {
         this.status = status;
     }
 
-    public long energyBuffer() {
-        return energyBuffer;
-    }
-
-    public void setEnergyBuffer(long energyBuffer) {
-        this.energyBuffer = energyBuffer;
-    }
-
     public int ticks() {
         return ticks;
     }
 
     public void setTicks(int ticks) {
         this.ticks = ticks;
+    }
+
+    public StationTileCoord anchor() {
+        return anchor;
+    }
+
+    public void initAnchor(StationTileCoord anchor) {
+        if (this.anchor != null) return;
+        this.anchor = anchor;
+    }
+
+    public ModuleShape shape() {
+        return shape;
+    }
+
+    public ModuleTier tier() {
+        return tier;
+    }
+
+    public void setTier(ModuleTier tier) {
+        this.tier = tier;
+    }
+
+    public ModulePriority priorityOverride() {
+        return priorityOverride;
+    }
+
+    public void setPriorityOverride(ModulePriority priorityOverride) {
+        this.priorityOverride = priorityOverride;
+    }
+
+    public boolean enabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public short groupId() {
+        return groupId;
+    }
+
+    public void setGroupId(short groupId) {
+        this.groupId = groupId;
+    }
+
+    public ModuleState state() {
+        return state;
+    }
+
+    public void setState(ModuleState state) {
+        this.state = state;
+    }
+
+    public BlockingReason blocking() {
+        return blocking;
+    }
+
+    public void setBlocking(BlockingReason blocking) {
+        this.blocking = blocking;
     }
 
     public boolean isOperational() {
@@ -113,7 +176,6 @@ public class ModuleInstance implements Buildable {
     public void completeConstruction() {
         this.status = Buildable.Status.OPERATIONAL;
         consumedResources.clear();
-        energyBuffer = definition.baseEnergyCapacity();
     }
 
     public long getDisplayedPowerEuPerTick() {

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
 import java.util.Random;
 

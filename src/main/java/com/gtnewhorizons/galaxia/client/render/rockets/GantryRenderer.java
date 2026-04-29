@@ -17,6 +17,7 @@ import org.lwjgl.opengl.GL11;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -136,6 +137,10 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         if (dirs.size() == 1) {
             Vec3 dir = dirs.get(0);
+            if (gantry instanceof TileEntityGantryTerminal) {
+                renderFullBeam(gantry, x, y, z, dir);
+                return;
+            }
             if (dir.yCoord != 0) {
                 renderDiagonalBeam(gantry, x, y, z, dir);
             } else {

@@ -9,7 +9,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleFootprint;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ShapeValidation;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
@@ -19,37 +24,23 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-/**
- * Client -> Server: requests that a new facility module be added to an automated facility.
- *
- * <p>
- * The server creates a {@link ModuleInstance}, validates ownership and per-kind placement rules,
- * then adds it to the target {@link AutomatedFacility}. Station / outpost map placement is carried
- * by the optional {@link StationTileCoord}.
- *
- * <p>
- * Returns an {@link AssetSyncPacket} delta so the requesting client sees the new module in the UI.
- */
 public final class AssetBuildModulePacket implements IMessage {
 
     private CelestialAsset.ID assetId;
-    private ModuleInstance.ID moduleId;
     private FacilityModuleKind moduleKind;
+    private ModuleShape shape;
+    private ModuleTier tier;
     private boolean instantBuild;
     private StationTileCoord tileCoord;
 
     public AssetBuildModulePacket() {}
 
-    public AssetBuildModulePacket(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleInstance.ID moduleId,
-        boolean instantBuild) {
-        this(assetId, kind, moduleId, instantBuild, null);
-    }
-
-    public AssetBuildModulePacket(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleInstance.ID moduleId,
-        boolean instantBuild, StationTileCoord tileCoord) {
+    public AssetBuildModulePacket(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, boolean instantBuild, StationTileCoord tileCoord) {
         this.assetId = assetId;
         this.moduleKind = kind;
-        this.moduleId = moduleId;
+        this.shape = shape;
+        this.tier = tier;
         this.instantBuild = instantBuild;
         this.tileCoord = tileCoord;
     }
@@ -57,21 +48,23 @@ public final class AssetBuildModulePacket implements IMessage {
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
-        PacketUtil.writeId(buf, moduleId);
         PacketUtil.writeEnum(buf, moduleKind);
+        PacketUtil.writeEnum(buf, shape);
+        PacketUtil.writeEnum(buf, tier);
         buf.writeBoolean(instantBuild);
         boolean hasTile = tileCoord != null;
         buf.writeBoolean(hasTile);
-        if (hasTile) PacketUtil.writeTileCoord(buf, tileCoord);
+        if (hasTile) PacketUtil.writeStationTileCoord(buf, tileCoord);
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
-        moduleId = PacketUtil.readModuleId(buf);
         moduleKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
+        shape = PacketUtil.readEnum(buf, ModuleShape.class);
+        tier = PacketUtil.readEnum(buf, ModuleTier.class);
         instantBuild = buf.readBoolean();
-        tileCoord = buf.readBoolean() ? PacketUtil.readTileCoord(buf) : null;
+        tileCoord = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
     }
 
     public static final class Handler implements IMessageHandler<AssetBuildModulePacket, IMessage> {
@@ -119,7 +112,20 @@ public final class AssetBuildModulePacket implements IMessage {
                 return null;
             }
 
-            if (packet.tileCoord != null) {
+            if (!kind.allowedTiers()
+                .contains(packet.tier)) {
+                Galaxia.LOG.warn(
+                    "[Outpost] BuildModule: rejected tier {} for {} on {} from player {}",
+                    packet.tier,
+                    kind,
+                    packet.assetId,
+                    player.getGameProfile()
+                        .getName());
+                return null;
+            }
+
+            StationTileCoord anchor = packet.tileCoord;
+            if (anchor != null) {
                 if (!state.hasStationLayout()) {
                     Galaxia.LOG.warn(
                         "[Outpost] BuildModule: tile placement requested on facility without layout {} from player {}",
@@ -129,29 +135,50 @@ public final class AssetBuildModulePacket implements IMessage {
                     return null;
                 }
                 StationPlacementValidator.Result placementResult = StationPlacementValidator
-                    .validate(state.stationLayout(), packet.tileCoord);
+                    .validate(state.stationLayout(), anchor);
                 if (placementResult != StationPlacementValidator.Result.OK) {
                     Galaxia.LOG.warn(
                         "[Outpost] BuildModule: rejected placement at {} on {} ({}) from player {}",
-                        packet.tileCoord,
+                        anchor,
                         packet.assetId,
                         placementResult,
                         player.getGameProfile()
                             .getName());
                     return null;
                 }
+                if (packet.shape != ModuleShape.SINGLE) {
+                    ShapeValidation footprintResult = ModuleFootprint
+                        .validate(state.stationLayout(), anchor, packet.shape);
+                    if (footprintResult != ShapeValidation.OK) {
+                        Galaxia.LOG.warn(
+                            "[Outpost] BuildModule: rejected multi-tile footprint at {} shape {} on {} ({}) from player {}",
+                            anchor,
+                            packet.shape,
+                            packet.assetId,
+                            footprintResult,
+                            player.getGameProfile()
+                                .getName());
+                        return null;
+                    }
+                }
             }
 
-            ModuleInstance module = kind.createInstance(packet.moduleId);
+            ModuleInstance module = kind
+                .create(anchor != null ? anchor : StationTileCoord.CORE, packet.shape, packet.tier);
             if (packet.instantBuild && player.capabilities.isCreativeMode) {
                 module.completeConstruction();
             }
             state.addModule(module);
+            state.layoutCache()
+                .applyMutation(MutationKind.PLACE, kind);
 
-            if (packet.tileCoord != null && state.hasStationLayout()) {
+            if (anchor != null && state.hasStationLayout()) {
                 StationTileState initialState = StationTileState.fromModuleStatus(module.status());
-                state.stationLayout()
-                    .place(packet.tileCoord, new PlacedTile(module, initialState));
+                for (StationTileCoord coord : module.shape()
+                    .tiles(module.anchor())) {
+                    state.stationLayout()
+                        .place(coord, new PlacedTile(module, initialState));
+                }
             }
 
             Galaxia.LOG.debug(

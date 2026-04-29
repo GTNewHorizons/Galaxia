@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -11,6 +11,10 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
+/**
+ * Generates a feature with a defined shape within a chunk.
+ * Placed by a location rule.
+ */
 public abstract class Feature {
 
     private final Set<Chunk> touchedChunks = new HashSet<>();

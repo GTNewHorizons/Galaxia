@@ -1,16 +1,21 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.EnumSet;
+
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public enum FacilityModuleKind {
 
     HAMMER,
-    BIG_HAMMER,
     MINER,
     POWER;
+
+    private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
     public String getDisplayName() {
         return StatCollector.translateToLocal(
@@ -20,7 +25,7 @@ public enum FacilityModuleKind {
 
     public StationModuleCategory getCategory() {
         return switch (this) {
-            case HAMMER, BIG_HAMMER -> StationModuleCategory.LOGISTICS;
+            case HAMMER -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER -> StationModuleCategory.POWER;
         };
@@ -32,15 +37,39 @@ public enum FacilityModuleKind {
         return this != MINER || assetKind == CelestialAsset.Kind.AUTOMATED_OUTPOST;
     }
 
-    public ModuleInstance createInstance() {
-        return FacilityModuleRegistry.createInstance(this);
+    public ModuleInstance create(StationTileCoord anchor, ModuleShape shape, ModuleTier tier) {
+        FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(this);
+        if (def == null) {
+            throw new IllegalArgumentException("Unknown module kind: " + this);
+        }
+        ModuleInstance instance = new ModuleInstance(ModuleInstance.ID.create(), def, anchor, shape, tier);
+        instance.setComponent(FacilityModuleRegistry.createComponent(this));
+        return instance;
     }
 
-    public ModuleInstance createInstance(ModuleInstance.ID id) {
-        return FacilityModuleRegistry.createInstance(id, this);
+    public EnumSet<ModuleTier> allowedTiers() {
+        return switch (this) {
+            case HAMMER, MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
+            case POWER -> EnumSet.of(ModuleTier.NONE);
+        };
     }
 
-    public ModuleInstance createInstance(ModuleComponent component) {
-        return FacilityModuleRegistry.createInstance(null, this, component);
+    public ModuleTier defaultTier() {
+        return switch (this) {
+            case HAMMER, MINER -> ModuleTier.EV;
+            case POWER -> ModuleTier.NONE;
+        };
+    }
+
+    public ModulePriority defaultPriority() {
+        return switch (this) {
+            case HAMMER -> ModulePriority.NORMAL;
+            case MINER -> ModulePriority.NORMAL;
+            case POWER -> ModulePriority.HIGH;
+        };
+    }
+
+    public boolean isCapacityModule() {
+        return CAPACITY_KINDS.contains(this);
     }
 }

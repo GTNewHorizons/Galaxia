@@ -130,6 +130,7 @@ public class WorldProviderBuilder {
      */
     public WorldProviderBuilder name(DimensionEnum planet) {
         provider.name = planet.getName();
+        provider.dimension = planet;
         return this;
     }
 
