@@ -97,7 +97,13 @@ public final class PacketUtil {
     public static <T extends Enum<T>> T enumFromByte(int b, Class<T> enumClass) {
         int ordinal = Byte.toUnsignedInt((byte) b);
         T[] values = enumClass.getEnumConstants();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
+        if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
+        Galaxia.LOG.warn(
+            "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
+            ordinal,
+            enumClass.getSimpleName(),
+            values[0]);
+        return values[0];
     }
 
 }
