@@ -12,8 +12,10 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
-public class OutpostModuleRegistry {
+public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawEuPerTick,
         int cooldownTicks, Map<ItemStack, Long> constructionCost,
@@ -53,21 +55,6 @@ public class OutpostModuleRegistry {
                 true,
                 false,
                 64));
-        register(
-            FacilityModuleKind.BIG_HAMMER,
-            5000L,
-            25L,
-            20,
-            Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
-            ModuleHammer::prepareToFire,
-            () -> new ModuleHammer(
-                FacilityModuleKind.BIG_HAMMER,
-                AllowShootingConfig.ALWAYS,
-                OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
-                false,
-                false,
-                true,
-                128));
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
@@ -89,36 +76,18 @@ public class OutpostModuleRegistry {
         return DEFINITIONS.get(kind);
     }
 
-    public static ModuleInstance createInstance(FacilityModuleKind kind) {
-        return createInstance(null, kind, null);
-    }
-
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, FacilityModuleKind kind) {
-        return createInstance(moduleId, kind, null);
-    }
-
-    public static ModuleInstance createInstance(ModuleInstance.ID moduleId, FacilityModuleKind kind,
-        ModuleComponent component) {
+    public static ModuleInstance create(ModuleInstance.ID moduleId, FacilityModuleKind kind, StationTileCoord anchor,
+        ModuleShape shape, ModuleTier tier) {
         Definition def = get(kind);
         if (def == null) {
             throw new IllegalArgumentException("Unknown module kind: " + kind);
         }
-        ModuleInstance instance;
-        if (moduleId == null) {
-            instance = new ModuleInstance(def);
-        } else {
-            instance = new ModuleInstance(moduleId, def);
-        }
-
-        if (component != null) {
-            instance.setComponent(component);
-        } else {
-            instance.setComponent(createDefaultComponent(kind));
-        }
+        ModuleInstance instance = new ModuleInstance(moduleId, def, anchor, shape, tier);
+        instance.setComponent(createComponent(kind));
         return instance;
     }
 
-    private static ModuleComponent createDefaultComponent(FacilityModuleKind kind) {
+    static ModuleComponent createComponent(FacilityModuleKind kind) {
         return get(kind).defaultFactory.get();
     }
 

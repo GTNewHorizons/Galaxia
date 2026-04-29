@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -36,9 +37,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -277,6 +282,8 @@ public final class FacilityPersistenceManager {
         out.systemId = String.valueOf(state.systemId);
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
+        out.settingsGroupsNextId = state.settingsGroups()
+            .nextGroupId();
         out.modules = new ArrayList<>();
         for (ModuleInstance m : state.modules()) {
             ModuleJson mj = new ModuleJson();
@@ -287,7 +294,13 @@ public final class FacilityPersistenceManager {
                 .name();
             mj.constructionProgress = 0f;
             mj.cooldownTicks = m.cooldownTicks();
-            mj.energyBuffer = m.energyBuffer();
+            mj.tier = PacketUtil.enumOrdinal(m.tier());
+            mj.priorityOverride = PacketUtil.enumOrdinal(m.priorityOverride());
+            mj.enabled = m.enabled();
+            mj.groupId = m.groupId();
+            mj.shape = PacketUtil.enumOrdinal(m.shape());
+            mj.parallel = m.component() != null ? m.component()
+                .getParallel() : 1;
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleMiner miner) {
                 moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
@@ -296,6 +309,7 @@ public final class FacilityPersistenceManager {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
                 moduleData.add("routePriority", PURE_GSON.toJsonTree(hammer.routePriority()));
                 moduleData.addProperty("planetaryHandling", hammer.planetaryHandling());
+                moduleData.addProperty("crossPlanetaryCapability", hammer.crossPlanetaryCapability);
             }
             mj.data = moduleData;
             mj.consumedResources = new LinkedHashMap<>();
@@ -359,46 +373,63 @@ public final class FacilityPersistenceManager {
         if (asset == null || json == null || json.systemId == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
+        state.settingsGroups()
+            .setNextGroupId(json.settingsGroupsNextId);
 
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
                 FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
                 if (kind == null) continue;
                 ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
-                ModuleInstance module = moduleId == null ? kind.createInstance() : kind.createInstance(moduleId);
+                ModuleShape shape = PacketUtil.enumFromByte(mj.shape, ModuleShape.class);
+                ModuleTier tier = PacketUtil.enumFromByte(mj.tier, ModuleTier.class);
+                if (!kind.allowedTiers()
+                    .contains(tier)) {
+                    ModuleTier downgraded = kind.defaultTier();
+                    Galaxia.LOG.warn(
+                        "Module {} at {} had unsupported tier {}; downgraded to {}",
+                        kind,
+                        moduleId,
+                        tier,
+                        downgraded);
+                    tier = downgraded;
+                }
+                ModuleInstance module = moduleId == null
+                    ? FacilityModuleRegistry.create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, tier)
+                    : FacilityModuleRegistry.create(moduleId, kind, null, shape, tier);
 
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
 
                 switch (kind) {
                     case HAMMER -> {
                         AllowShootingConfig config = AllowShootingConfig.ALWAYS;
-                        OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
+                        OrbitalTransferPlanner.RoutePriority routePriority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
+                        boolean planetaryHandling = true;
+                        boolean crossPlanetaryCapability = false;
                         if (data.has("config")) {
                             config = PURE_GSON.fromJson(data.get("config"), AllowShootingConfig.class);
                         }
                         if (data.has("routePriority")) {
-                            priority = PURE_GSON
-                                .fromJson(data.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
-                        }
-                        module.setComponent(new ModuleHammer(kind, config, priority, false, true, false, 64));
-                    }
-                    case BIG_HAMMER -> {
-                        AllowShootingConfig config = AllowShootingConfig.ALWAYS;
-                        OrbitalTransferPlanner.RoutePriority priority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
-                        boolean planetaryHandling = false;
-                        if (data.has("config")) {
-                            config = PURE_GSON.fromJson(data.get("config"), AllowShootingConfig.class);
-                        }
-                        if (data.has("routePriority")) {
-                            priority = PURE_GSON
+                            routePriority = PURE_GSON
                                 .fromJson(data.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
                         }
                         if (data.has("planetaryHandling")) {
                             planetaryHandling = data.get("planetaryHandling")
                                 .getAsBoolean();
                         }
+                        if (data.has("crossPlanetaryCapability")) {
+                            crossPlanetaryCapability = data.get("crossPlanetaryCapability")
+                                .getAsBoolean();
+                        }
                         module.setComponent(
-                            new ModuleHammer(kind, config, priority, false, planetaryHandling, true, 128));
+                            new ModuleHammer(
+                                kind,
+                                config,
+                                routePriority,
+                                false,
+                                planetaryHandling,
+                                crossPlanetaryCapability,
+                                64));
                     }
                     case MINER -> {
                         List<String> blacklist = new ArrayList<>();
@@ -422,7 +453,16 @@ public final class FacilityPersistenceManager {
                     module.updateStatus(moduleStatus);
                 }
                 module.setTicks(mj.cooldownTicks);
-                module.setEnergyBuffer(mj.energyBuffer);
+                if (moduleId == null) {
+                    module.setTier(tier);
+                }
+                module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
+                module.setEnabled(mj.enabled);
+                module.setGroupId(mj.groupId);
+                if (mj.parallel >= 1 && module.component() != null) {
+                    module.component()
+                        .setParallel(mj.parallel);
+                }
                 module.clearConsumedResources();
                 if (mj.consumedResources != null) {
                     for (Map.Entry<String, Long> e : mj.consumedResources.entrySet()) {
@@ -493,6 +533,13 @@ public final class FacilityPersistenceManager {
                 layoutSnapshot.put(coord, new PlacedTile(module, tileState));
             }
             layout.loadFromSnapshot(layoutSnapshot);
+            for (Map.Entry<StationTileCoord, PlacedTile> e : layoutSnapshot.entrySet()) {
+                ModuleInstance m = e.getValue()
+                    .module();
+                if (m != null && m.anchor() == null) {
+                    m.initAnchor(e.getKey());
+                }
+            }
         }
 
         return state;
@@ -542,6 +589,7 @@ public final class FacilityPersistenceManager {
         String systemId;
         String planetaryAnchorBodyId;
         long energyStored;
+        short settingsGroupsNextId;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, LogisticsConfigJson> logisticsConfig;
@@ -563,7 +611,12 @@ public final class FacilityPersistenceManager {
         String status;
         float constructionProgress;
         int cooldownTicks;
-        long energyBuffer;
+        byte tier;
+        byte priorityOverride;
+        boolean enabled;
+        short groupId;
+        byte shape;
+        byte parallel;
         JsonElement data;
         Map<String, Long> consumedResources;
     }

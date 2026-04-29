@@ -16,6 +16,7 @@ public final class ModuleMiner implements ModuleComponent {
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
     private final List<String> blacklistedItemKeys;
     private boolean copySettingsToOtherMiners;
+    private byte parallel = 1;
 
     private static final Random RANDOM = new java.util.Random();
 
@@ -29,10 +30,13 @@ public final class ModuleMiner implements ModuleComponent {
         ModuleMiner miner = (ModuleMiner) instance.component();
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
-                var ores = registration.properties()
-                    .ores();
-                if (ores.isEmpty()) return;
-                ItemStack chosen = ores.get(RANDOM.nextInt(ores.size()));
+                var properties = registration.properties();
+                List<ItemStack> ores = properties.ores();
+                List<ItemStack> veinOres = properties.getResolvedGtVeinOreStacks();
+                int totalSize = ores.size() + veinOres.size();
+                if (totalSize == 0) return;
+                int idx = RANDOM.nextInt(totalSize);
+                ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
                 if (miner.isBlacklisted(
                     ItemStackWrapper.of(chosen)
                         .toKey()))
@@ -72,5 +76,15 @@ public final class ModuleMiner implements ModuleComponent {
 
     public void setCopySettingToOtherMiners(boolean newValue) {
         this.copySettingsToOtherMiners = newValue;
+    }
+
+    @Override
+    public byte getParallel() {
+        return parallel;
+    }
+
+    @Override
+    public void setParallel(byte parallel) {
+        this.parallel = parallel;
     }
 }
