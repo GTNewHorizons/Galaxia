@@ -7,5 +7,6 @@ public enum EnumModuleCategory {
     PAYLOAD,
     STRUCTURAL,
     FUNCTIONAL,
-    LANDER
+    LANDER,
+    RIDER
 }
