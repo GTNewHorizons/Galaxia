@@ -7,9 +7,9 @@ import net.minecraft.world.biome.BiomeGenBase;
 
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaCave;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaSurface;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenGalaxiaWall;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
 /**
  * The class holding all generation fields for Biome generation
@@ -25,9 +25,9 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final Block oceanFiller;
     private final Block oceanSurface;
     private final Block seabed;
-    private final List<WorldGenGalaxiaSurface> surfaceFeatures;
-    private final List<WorldGenGalaxiaCave> caveFeatures;
-    private final List<WorldGenGalaxiaWall> wallFeatures;
+    private final List<LocationRuleGalaxiaSurface> surfaceFeatures;
+    private final List<LocationRuleGalaxiaCave> caveFeatures;
+    private final List<LocationRuleGalaxiaWall> wallFeatures;
     private final boolean generateCaves;
     private final int surfaceThickness;
     private final Block oceanCrackBlock;
@@ -169,15 +169,15 @@ public class BiomeGenSpace extends BiomeGenBase {
         return surfaceThickness;
     }
 
-    public List<WorldGenGalaxiaSurface> getSurfaceFeatures() {
+    public List<LocationRuleGalaxiaSurface> getSurfaceFeatures() {
         return surfaceFeatures;
     }
 
-    public List<WorldGenGalaxiaCave> getCaveFeatures() {
+    public List<LocationRuleGalaxiaCave> getCaveFeatures() {
         return caveFeatures;
     }
 
-    public List<WorldGenGalaxiaWall> getWallFeatures() {
+    public List<LocationRuleGalaxiaWall> getWallFeatures() {
         return wallFeatures;
     }
 

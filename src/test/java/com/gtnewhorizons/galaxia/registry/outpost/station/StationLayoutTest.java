@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class StationLayoutTest {
 
@@ -28,7 +29,8 @@ final class StationLayoutTest {
     @Test
     void removeTileForModuleRemovesOnlyMatchingModuleTile() {
         StationLayout layout = new StationLayout();
-        ModuleInstance module = FacilityModuleKind.POWER.createInstance();
+        ModuleInstance module = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.POWER, null, ModuleShape.SINGLE, ModuleTier.NONE);
         StationTileCoord coord = StationTileCoord.of(1, 0);
         layout.place(coord, new PlacedTile(module, StationTileState.UNDER_CONSTRUCTION));
 
@@ -48,8 +50,10 @@ final class StationLayoutTest {
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
 
-        ModuleInstance removed = FacilityModuleKind.POWER.createInstance();
-        ModuleInstance retained = FacilityModuleKind.MINER.createInstance();
+        ModuleInstance removed = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.POWER, null, ModuleShape.SINGLE, ModuleTier.NONE);
+        ModuleInstance retained = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, null, ModuleShape.SINGLE, ModuleTier.NONE);
         station.addModule(removed);
         station.addModule(retained);
         StationTileCoord removedCoord = StationTileCoord.of(1, 0);
@@ -67,7 +71,8 @@ final class StationLayoutTest {
             station.modules()
                 .size());
 
-        ModuleInstance rebuilt = FacilityModuleKind.HAMMER.createInstance();
+        ModuleInstance rebuilt = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.SINGLE, ModuleTier.NONE);
         StationTileCoord rebuiltCoord = StationTileCoord.of(-1, 0);
         station.addModule(rebuilt);
         layout.place(rebuiltCoord, new PlacedTile(rebuilt, StationTileState.UNDER_CONSTRUCTION));

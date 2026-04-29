@@ -311,6 +311,7 @@ galaxia.hazard.fine=No warnings
 galaxia.hazard.freezing=Freezing
 galaxia.hazard.burning=Burning
 galaxia.hazard.low_pressure=Low Pressure
+galaxia.hazard.high_pressure=High Pressure
 galaxia.hazard.high_radiation=High Radiation
 galaxia.hazard.spores=Spores Detected
 galaxia.hazard.wither=Withering

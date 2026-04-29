@@ -863,7 +863,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (!worldObj.isRemote) {
             // TODO: Create a check of sorts to prevent the RocketEntity from uncoupling
             // upon rejoin/server reload
-            if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid) {
+
+            // Don't create entity until modules present to avoid shadows from null entity
+            if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid && !modules.isEmpty()) {
                 spawnRocket();
             }
 
@@ -887,6 +889,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void invalidate() {
         super.invalidate();
         if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
+        // If modules exist, they shouldn't be cleared on breaking the silo structure,
+        // but if none exist then clear the rocket entirely
+        if (modules.isEmpty()) entityRocket = null;
     }
 
     @Override
