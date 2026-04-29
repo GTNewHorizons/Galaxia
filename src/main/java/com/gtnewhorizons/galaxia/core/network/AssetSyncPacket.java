@@ -459,9 +459,6 @@ public final class AssetSyncPacket implements IMessage {
             if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
             Map<ModuleInstance.ID, ModuleInstance> moduleById = new HashMap<>();
-            for (ModuleInstance m : state.modules()) {
-                moduleById.put(m.id, m);
-            }
 
             for (AssetSyncPacket d : packet.fullSyncDeltas) {
                 handleDelta(state, d, moduleById);
