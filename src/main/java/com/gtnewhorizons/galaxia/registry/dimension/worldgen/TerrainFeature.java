@@ -8,7 +8,6 @@ import com.github.bsideup.jabel.Desugar;
 /**
  * Data record holding terrain features
  */
-@Desugar
 public record TerrainFeature(TerrainPreset preset, double height, double width, Map<String, Object> customParams) {
 
     public TerrainFeature {
