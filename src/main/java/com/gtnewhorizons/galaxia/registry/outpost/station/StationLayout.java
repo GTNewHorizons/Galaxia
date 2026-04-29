@@ -8,6 +8,7 @@ import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class StationLayout {
@@ -119,5 +120,30 @@ public final class StationLayout {
 
     public long version() {
         return version;
+    }
+
+    static final int[] DX = { 0, 1, 0, -1 };
+    static final int[] DY = { -1, 0, 1, 0 };
+
+    /**
+     * Counts orthogonal same-kind neighbors of a module at the given coordinate.
+     */
+    public static int countOrthogonalNeighbors(StationLayout layout, StationTileCoord coord, FacilityModuleKind kind) {
+        int count = 0;
+        for (int i = 0; i < DX.length; i++) {
+            int ndx = coord.dx() + DX[i];
+            int ndy = coord.dy() + DY[i];
+            if (ndx < StationTileCoord.MIN || ndx > StationTileCoord.MAX
+                || ndy < StationTileCoord.MIN
+                || ndy > StationTileCoord.MAX) {
+                continue;
+            }
+            StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
+            ModuleInstance neighborModule = layout.moduleAt(ncoord);
+            if (neighborModule != null && neighborModule.kind() == kind) {
+                count++;
+            }
+        }
+        return count;
     }
 }

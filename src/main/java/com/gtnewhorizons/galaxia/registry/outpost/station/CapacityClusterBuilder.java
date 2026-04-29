@@ -15,9 +15,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class CapacityClusterBuilder {
 
-    private static final int[] DX = { 0, 1, 0, -1 };
-    private static final int[] DY = { -1, 0, 1, 0 };
-
     private CapacityClusterBuilder() {}
 
     /**
@@ -48,9 +45,9 @@ public final class CapacityClusterBuilder {
 
             while (!queue.isEmpty()) {
                 StationTileCoord current = queue.removeFirst();
-                for (int i = 0; i < DX.length; i++) {
-                    int ndx = current.dx() + DX[i];
-                    int ndy = current.dy() + DY[i];
+                for (int i = 0; i < StationLayout.DX.length; i++) {
+                    int ndx = current.dx() + StationLayout.DX[i];
+                    int ndy = current.dy() + StationLayout.DY[i];
                     if (ndx < StationTileCoord.MIN || ndx > StationTileCoord.MAX
                         || ndy < StationTileCoord.MIN
                         || ndy > StationTileCoord.MAX) {
@@ -77,7 +74,7 @@ public final class CapacityClusterBuilder {
                 if (comp instanceof ICapacityModule icm) {
                     baseCap = icm.baseCapacityForTier(mi.tier());
                 }
-                int neighborCount = countOrthogonalNeighbors(layout, memberCoord, kind);
+                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, memberCoord, kind);
                 totalEffective += Math.round(baseCap * (1.0 + 0.5 * neighborCount));
             }
 
@@ -87,22 +84,4 @@ public final class CapacityClusterBuilder {
         return Collections.unmodifiableList(clusters);
     }
 
-    private static int countOrthogonalNeighbors(StationLayout layout, StationTileCoord coord, FacilityModuleKind kind) {
-        int count = 0;
-        for (int i = 0; i < DX.length; i++) {
-            int ndx = coord.dx() + DX[i];
-            int ndy = coord.dy() + DY[i];
-            if (ndx < StationTileCoord.MIN || ndx > StationTileCoord.MAX
-                || ndy < StationTileCoord.MIN
-                || ndy > StationTileCoord.MAX) {
-                continue;
-            }
-            StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
-            ModuleInstance neighborModule = layout.moduleAt(ncoord);
-            if (neighborModule != null && neighborModule.kind() == kind) {
-                count++;
-            }
-        }
-        return count;
-    }
 }

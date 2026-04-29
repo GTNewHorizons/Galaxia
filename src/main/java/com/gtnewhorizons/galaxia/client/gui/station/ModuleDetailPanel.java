@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.List;
+import java.util.Set;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
@@ -8,12 +11,15 @@ import net.minecraft.client.gui.FontRenderer;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -21,8 +27,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
     private static final int CONTENT_PADDING = 10;
+    private static final int SECTION_GAP = 4;
 
     private final StationMapWidget map;
+    private StationTileCoord lastCoveredAnchor;
+    private boolean lastCoveredResult;
 
     public ModuleDetailPanel(StationMapWidget map) {
         this.map = map;
@@ -34,6 +43,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         StationTileCoord selected = map.selection();
         if (selected == null) return;
@@ -50,6 +60,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         ModuleInstance module = tile.module();
         if (module == null) return;
 
+        CelestialAsset.ID facilityId = map.assetId();
+
         int x = 0;
         int y = 0;
         int width = getArea().width;
@@ -63,14 +75,86 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
             EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
 
-        String text = "Module: " + module.kind()
-            .name();
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        fr.drawStringWithShadow(
-            text,
+        int lineY = y + CONTENT_PADDING;
+
+        lineY = drawLine(
+            "Module: " + module.kind()
+                .name(),
             x + CONTENT_PADDING,
-            y + CONTENT_PADDING,
+            lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+
+        // T3.8: Capacity summary for capacity modules (Storage/Tank/Battery)
+        if (module.kind()
+            .isCapacityModule()) {
+            if (module.component() instanceof ICapacityModule icm) {
+                long baseCapacity = icm.baseCapacityForTier(module.tier());
+                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, module.anchor(), module.kind());
+                long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
+
+                // Find the cluster containing this module's anchor
+                long clusterTotal = 0;
+                if (facilityId != null) {
+                    List<CapacityCluster> clusters = GalaxiaAPI.getCapacityClusters(facilityId, module.kind());
+                    for (CapacityCluster cluster : clusters) {
+                        if (cluster.members()
+                            .contains(module.anchor())) {
+                            clusterTotal = cluster.effectiveCapacity();
+                            break;
+                        }
+                    }
+                }
+
+                lineY += SECTION_GAP;
+                lineY = drawLine(
+                    "Base capacity: " + baseCapacity,
+                    x + CONTENT_PADDING,
+                    lineY,
+                    EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+                lineY = drawLine(
+                    "Neighbors: " + neighborCount,
+                    x + CONTENT_PADDING,
+                    lineY,
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+                lineY = drawLine(
+                    "Capacity: " + effectiveCapacity + " / " + clusterTotal + " (" + neighborCount + " neighbors)",
+                    x + CONTENT_PADDING,
+                    lineY,
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            }
+        }
+
+        // T3.9: Maintenance indicator (cached per selection)
+        if (facilityId != null) {
+            if (!module.anchor()
+                .equals(lastCoveredAnchor)) {
+                lastCoveredAnchor = module.anchor();
+                lastCoveredResult = false;
+                Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
+                for (StationTileCoord tileCoord : module.shape()
+                    .tiles(module.anchor())) {
+                    if (coverage.contains(tileCoord)) {
+                        lastCoveredResult = true;
+                        break;
+                    }
+                }
+            }
+            if (lastCoveredResult) {
+                lineY += SECTION_GAP;
+                drawLine(
+                    "Maintenance Bay: -20% upkeep",
+                    x + CONTENT_PADDING,
+                    lineY,
+                    EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            }
+        }
+    }
+
+    private static int drawLine(String text, int x, int y, int color) {
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        fr.drawStringWithShadow(text, x, y, color);
+        return y + fr.FONT_HEIGHT + 3;
     }
 
     private @Nullable AutomatedFacility resolveFacility() {
