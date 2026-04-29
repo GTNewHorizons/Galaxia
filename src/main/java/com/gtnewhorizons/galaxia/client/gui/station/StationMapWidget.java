@@ -79,6 +79,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         this.visionLayer = visionLayer;
     }
 
+    public @Nullable CelestialAsset.ID assetId() {
+        return assetId;
+    }
+
     public @Nullable StationTileCoord selection() {
         return selected;
     }

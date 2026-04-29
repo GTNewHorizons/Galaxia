@@ -70,7 +70,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             new StationSidePanelWidget(assetId, map).left(PADDING)
                 .top(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
-                .heightRelOffset(1f, -PADDING * 2));
+                .heightRelOffset(0.55f, -PADDING * 2));
+        panel.child(
+            new ModuleDetailPanel(map).left(PADDING)
+                .width(LEFT_PANEL_WIDTH - PADDING)
+                .heightRelOffset(0.45f, -PADDING)
+                .bottom(PADDING));
         return panel;
     }
 
