@@ -20,6 +20,10 @@ public record StationTileCoord(byte dx, byte dy) implements Comparable<StationTi
         return new StationTileCoord((byte) dx, (byte) dy);
     }
 
+    public StationTileCoord offset(int dx, int dy) {
+        return StationTileCoord.of(this.dx + dx, this.dy + dy);
+    }
+
     public boolean isOrthogonallyAdjacent(StationTileCoord other) {
         int adx = Math.abs(this.dx - other.dx);
         int ady = Math.abs(this.dy - other.dy);
