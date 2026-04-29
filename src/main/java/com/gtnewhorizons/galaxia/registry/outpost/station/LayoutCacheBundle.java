@@ -3,8 +3,10 @@ package com.gtnewhorizons.galaxia.registry.outpost.station;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -20,6 +22,9 @@ public final class LayoutCacheBundle {
         FacilityModuleKind.class);
     private boolean capacityClustersDirty = true;
 
+    private Set<StationTileCoord> maintenanceCoverage;
+    private boolean maintenanceCoverageDirty = true;
+
     public LayoutCacheBundle(@Nullable StationLayout layout) {
         this.layout = layout;
     }
@@ -32,6 +37,9 @@ public final class LayoutCacheBundle {
                 if (kind.isCapacityModule()) {
                     result.add(CacheKind.CAPACITY_CLUSTERS);
                 }
+                if (kind == FacilityModuleKind.MAINTENANCE_BAY) {
+                    result.add(CacheKind.MAINTENANCE_COVERAGE);
+                }
             }
             // T3.4: SET_TIER invalidates CAPACITY_CLUSTERS for capacity modules
             case SET_TIER -> {
@@ -39,10 +47,14 @@ public final class LayoutCacheBundle {
                     result.add(CacheKind.CAPACITY_CLUSTERS);
                 }
             }
+            // T3.6: SET_ENABLED invalidates MAINTENANCE_COVERAGE for Maintenance Bay
+            case SET_ENABLED -> {
+                if (kind == FacilityModuleKind.MAINTENANCE_BAY) {
+                    result.add(CacheKind.MAINTENANCE_COVERAGE);
+                }
+            }
             // TODO: To be implemented in T7.4
             case SET_PARALLEL -> {}
-            // TODO: To be implemented in T7.4
-            case SET_ENABLED -> {}
         }
         return result;
     }
@@ -83,6 +95,48 @@ public final class LayoutCacheBundle {
         capacityClustersDirty = false;
     }
 
+    /**
+     * Returns a read-only view of the cached maintenance coverage coordinates.
+     * Coverage is rebuilt from the layout when dirty.
+     */
+    public Set<StationTileCoord> getMaintenanceCoverage() {
+        if (maintenanceCoverageDirty) {
+            rebuildMaintenanceCoverage();
+        }
+        return Collections.unmodifiableSet(maintenanceCoverage);
+    }
+
+    private void rebuildMaintenanceCoverage() {
+        maintenanceCoverage = new HashSet<>();
+        if (layout == null) {
+            maintenanceCoverageDirty = false;
+            return;
+        }
+        layout.forEachAnchor((coord, module) -> {
+            if (module.kind() == FacilityModuleKind.MAINTENANCE_BAY && module.enabled()) {
+                addIfInBounds(coord, 0, -1); // N
+                addIfInBounds(coord, 1, -1); // NE
+                addIfInBounds(coord, 1, 0); // E
+                addIfInBounds(coord, 1, 1); // SE
+                addIfInBounds(coord, 0, 1); // S
+                addIfInBounds(coord, -1, 1); // SW
+                addIfInBounds(coord, -1, 0); // W
+                addIfInBounds(coord, -1, -1); // NW
+            }
+        });
+        maintenanceCoverageDirty = false;
+    }
+
+    private void addIfInBounds(StationTileCoord coord, int dx, int dy) {
+        int nx = coord.dx() + dx;
+        int ny = coord.dy() + dy;
+        if (nx >= StationTileCoord.MIN && nx <= StationTileCoord.MAX
+            && ny >= StationTileCoord.MIN
+            && ny <= StationTileCoord.MAX) {
+            maintenanceCoverage.add(StationTileCoord.of(nx, ny));
+        }
+    }
+
     private void invalidate(EnumSet<CacheKind> caches, MutationKind mutation, FacilityModuleKind kind) {
         if (caches.contains(CacheKind.DUPLICATE_COUNTS)) {
             switch (mutation) {
@@ -90,14 +144,17 @@ public final class LayoutCacheBundle {
                 case DECONSTRUCT -> duplicateCounts.computeIfPresent(kind, (k, v) -> Math.max(0, v - 1));
                 // T3.4: SET_TIER does not affect DUPLICATE_COUNTS
                 case SET_TIER -> {}
+                // T3.6: SET_ENABLED does not affect DUPLICATE_COUNTS
+                case SET_ENABLED -> {}
                 // TODO: To be implemented in T7.4
                 case SET_PARALLEL -> {}
-                // TODO: To be implemented in T7.4
-                case SET_ENABLED -> {}
             }
         }
         if (caches.contains(CacheKind.CAPACITY_CLUSTERS)) {
             capacityClustersDirty = true;
+        }
+        if (caches.contains(CacheKind.MAINTENANCE_COVERAGE)) {
+            maintenanceCoverageDirty = true;
         }
     }
 }

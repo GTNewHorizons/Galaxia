@@ -30,8 +30,23 @@ final class LayoutCacheBundleTest {
                                     + kind);
                         } else {
                             assertTrue(
-                                kind.isCapacityModule() || !result.contains(CacheKind.CAPACITY_CLUSTERS),
+                                !result.contains(CacheKind.CAPACITY_CLUSTERS),
                                 () -> "PLACE/DECONSTRUCT should NOT contain CAPACITY_CLUSTERS for non-capacity kind "
+                                    + mutation
+                                    + " x "
+                                    + kind);
+                        }
+                        if (kind == FacilityModuleKind.MAINTENANCE_BAY) {
+                            assertTrue(
+                                result.contains(CacheKind.MAINTENANCE_COVERAGE),
+                                () -> "PLACE/DECONSTRUCT should contain MAINTENANCE_COVERAGE for MAINTENANCE_BAY "
+                                    + mutation
+                                    + " x "
+                                    + kind);
+                        } else {
+                            assertTrue(
+                                !result.contains(CacheKind.MAINTENANCE_COVERAGE),
+                                () -> "PLACE/DECONSTRUCT should NOT contain MAINTENANCE_COVERAGE for non-MAINTENANCE_BAY "
                                     + mutation
                                     + " x "
                                     + kind);
@@ -50,7 +65,18 @@ final class LayoutCacheBundleTest {
                                     + result);
                         }
                     }
-                    case SET_PARALLEL, SET_ENABLED -> assertTrue(
+                    case SET_ENABLED -> {
+                        if (kind == FacilityModuleKind.MAINTENANCE_BAY) {
+                            assertTrue(
+                                result.contains(CacheKind.MAINTENANCE_COVERAGE),
+                                () -> "SET_ENABLED should contain MAINTENANCE_COVERAGE for MAINTENANCE_BAY " + kind);
+                        } else {
+                            assertTrue(
+                                result.isEmpty(),
+                                () -> "SET_ENABLED should return empty set for " + kind + " but got " + result);
+                        }
+                    }
+                    case SET_PARALLEL -> assertTrue(
                         result.isEmpty(),
                         () -> mutation + " should return empty set for " + kind + " but got " + result);
                 }
