@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
+import com.gtnewhorizons.galaxia.registry.block.planet.PlanetBlockType;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -78,66 +79,66 @@ public class Theia extends BasePlanet {
             "Theia Ocean Edge",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(40)
+                .height(50)
                 .endFeature()
-                // .feature(TerrainPreset.MOUNTAIN_RANGES)
-                // .width(4)
-                // .height(64)
-                // .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(4)
+                .height(32)
+                .endFeature()
                 .build());
         BiomeGenBase smallVolcanoes = createOceanBiome(
             "Theia Small Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(80)
+                .height(32)
                 .endFeature()
-                // .feature(TerrainPreset.SHIELD_VOLCANOES)
-                // .width(2)
-                // .height(16)
-                // .replacementBlock(PlanetBlockType.MAGMA)
-                // .endFeature()
+                .feature(TerrainPreset.SHIELD_VOLCANOES)
+                .width(2)
+                .height(16)
+                .replacementBlock(PlanetBlockType.MAGMA)
+                .endFeature()
                 .build());
         BiomeGenBase bigVolcanoes = createOceanBiome(
             "Theia Big Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(60)
+                .height(32)
                 .endFeature()
-                // .feature(TerrainPreset.SHIELD_VOLCANOES)
-                // .width(4)
-                // .height(64)
-                // .replacementBlock(PlanetBlockType.MAGMA)
-                // .endFeature()
+                .feature(TerrainPreset.SHIELD_VOLCANOES)
+                .width(4)
+                .height(64)
+                .replacementBlock(PlanetBlockType.MAGMA)
+                .endFeature()
                 .build());
         BiomeGenBase hills = createLandBiome(
             "Theia Hills",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(100)
+                .height(64)
                 .endFeature()
-                // .feature(TerrainPreset.MOUNTAIN_RANGES)
-                // .width(32)
-                // .height(32)
-                // .endFeature()
-                // .feature(TerrainPreset.CANYONS)
-                // .width(4)
-                // .height(32)
-                // .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(32)
+                .height(32)
+                .endFeature()
+                .feature(TerrainPreset.CANYONS)
+                .width(4)
+                .height(32)
+                .endFeature()
                 .build());
         BiomeGenBase mountains = createLandBiome(
             "Theia Mountains",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
-                .height(150)
+                .height(64)
                 .endFeature()
-                // .feature(TerrainPreset.MOUNTAIN_RANGES)
-                // .width(3)
-                // .height(16)
-                // .endFeature()
-                // .feature(TerrainPreset.MOUNTAIN_RANGES)
-                // .width(8)
-                // .height(128)
-                // .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(3)
+                .height(16)
+                .endFeature()
+                .feature(TerrainPreset.MOUNTAIN_RANGES)
+                .width(8)
+                .height(128)
+                .endFeature()
                 .build());
         builder.sky(true)
             .fog(0, 0, 0)
@@ -308,8 +309,8 @@ public class Theia extends BasePlanet {
                     new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
                     new CraterFeature(PlanetBlocks.THEIA_TEKTITE)))
             .terrain(terrainConfiguration)
-            // .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 56, PlanetBlocks.THEIA_OBSIDIAN, 1)
-            // .oceanCracks(0.3F, PlanetBlocks.THEIA_MAGMA, 4)
+            .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 56, PlanetBlocks.THEIA_OBSIDIAN, 1)
+            .oceanCracks(0.3F, PlanetBlocks.THEIA_MAGMA, 4)
             .surfaceThickness(4)
             .build();
     }
