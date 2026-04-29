@@ -3,8 +3,6 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 import java.util.Collections;
 import java.util.Map;
 
-import com.github.bsideup.jabel.Desugar;
-
 /**
  * Data record holding terrain features
  */
