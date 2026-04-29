@@ -102,12 +102,7 @@ public final class PacketUtil {
         int ordinal = Byte.toUnsignedInt((byte) b);
         T[] values = enumClass.getEnumConstants();
         if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
-        LOG.warn(
-            "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
-            ordinal,
-            enumClass.getSimpleName(),
-            values[0]);
-        return values[0];
+        return null;
     }
 
 }

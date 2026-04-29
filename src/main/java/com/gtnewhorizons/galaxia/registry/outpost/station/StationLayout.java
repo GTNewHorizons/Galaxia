@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 
 import javax.annotation.Nonnull;
@@ -18,7 +18,7 @@ public final class StationLayout {
     private long snapshotVersion = -1;
 
     public StationLayout() {
-        this.tiles = new LinkedHashMap<>();
+        this.tiles = new TreeMap<>();
         this.tiles.put(StationTileCoord.CORE, PlacedTile.CORE);
     }
 
@@ -62,6 +62,7 @@ public final class StationLayout {
         return module != null && coord.equals(module.anchor());
     }
 
+    // TODO: To be implemented in T3.1
     public void forEachAnchor(BiConsumer<StationTileCoord, ModuleInstance> action) {
         tiles.forEach((coord, tile) -> {
             ModuleInstance module = tile.module();
@@ -71,6 +72,7 @@ public final class StationLayout {
         });
     }
 
+    // TODO: To be implemented in T3.1
     public void forEachTile(BiConsumer<StationTileCoord, PlacedTile> action) {
         tiles.forEach(action);
     }

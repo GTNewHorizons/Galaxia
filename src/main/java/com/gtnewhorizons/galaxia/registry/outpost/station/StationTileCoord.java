@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
-public record StationTileCoord(byte dx, byte dy) {
+public record StationTileCoord(byte dx, byte dy) implements Comparable<StationTileCoord> {
 
     public static final StationTileCoord CORE = new StationTileCoord((byte) 0, (byte) 0);
 
@@ -24,5 +24,12 @@ public record StationTileCoord(byte dx, byte dy) {
         int adx = Math.abs(this.dx - other.dx);
         int ady = Math.abs(this.dy - other.dy);
         return (adx == 1 && ady == 0) || (adx == 0 && ady == 1);
+    }
+
+    @Override
+    public int compareTo(StationTileCoord other) {
+        int cmp = Byte.compare(this.dx, other.dx);
+        if (cmp != 0) return cmp;
+        return Byte.compare(this.dy, other.dy);
     }
 }
