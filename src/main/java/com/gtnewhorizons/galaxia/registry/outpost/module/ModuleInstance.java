@@ -109,6 +109,14 @@ public class ModuleInstance implements Buildable {
     }
 
     public StationTileCoord anchor() {
+        if (anchor == null) {
+            throw new IllegalStateException(
+                "Module " + kind() + " (id=" + id + "): anchor is null — module was not placed on layout");
+        }
+        return anchor;
+    }
+
+    public StationTileCoord anchorOrNull() {
         return anchor;
     }
 

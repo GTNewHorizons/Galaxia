@@ -222,25 +222,27 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             PlacedTile selTile = tiles.get(sel);
             ModuleInstance selModule = selTile != null ? selTile.module() : null;
             if (selModule != null && selModule.kind() == FacilityModuleKind.MAINTENANCE_BAY) {
-                StationTileCoord anchor = selModule.anchor();
-                for (int dy = -1; dy <= 1; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        if (dx == 0 && dy == 0) continue;
-                        int nx = anchor.dx() + dx;
-                        int ny = anchor.dy() + dy;
-                        if (nx < StationTileCoord.MIN || nx > StationTileCoord.MAX
-                            || ny < StationTileCoord.MIN
-                            || ny > StationTileCoord.MAX) continue;
-                        StationTileCoord ncoord = StationTileCoord.of(nx, ny);
-                        int hx = tileLocalX(ncoord);
-                        int hy = tileLocalY(ncoord);
-                        BorderedRect.draw(
-                            hx,
-                            hy,
-                            StationMapViewport.TILE_SIZE,
-                            StationMapViewport.TILE_SIZE,
-                            0x4400FF00, // semi-transparent green fill
-                            0xFF00FF00); // solid green border
+                StationTileCoord anchor = selModule.anchorOrNull();
+                if (anchor != null) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dx = -1; dx <= 1; dx++) {
+                            if (dx == 0 && dy == 0) continue;
+                            int nx = anchor.dx() + dx;
+                            int ny = anchor.dy() + dy;
+                            if (nx < StationTileCoord.MIN || nx > StationTileCoord.MAX
+                                || ny < StationTileCoord.MIN
+                                || ny > StationTileCoord.MAX) continue;
+                            StationTileCoord ncoord = StationTileCoord.of(nx, ny);
+                            int hx = tileLocalX(ncoord);
+                            int hy = tileLocalY(ncoord);
+                            BorderedRect.draw(
+                                hx,
+                                hy,
+                                StationMapViewport.TILE_SIZE,
+                                StationMapViewport.TILE_SIZE,
+                                0x4400FF00, // semi-transparent green fill
+                                0xFF00FF00); // solid green border
+                        }
                     }
                 }
             }

@@ -136,7 +136,7 @@ public final class CelestialClient {
         }
         state.addModule(module);
         StationLayout layout = state.stationLayout();
-        if (tileCoord != null && layout != null) {
+        if (layout != null && module.anchor() != null) {
             layout.place(module);
         }
         Galaxia.GALAXIA_NETWORK.sendToServer(

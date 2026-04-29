@@ -7,6 +7,9 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -19,6 +22,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
 public final class AutomatedFacility extends CelestialAsset {
+
+    private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     public final CelestialObjectId systemId;
 
@@ -84,8 +89,26 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void addModule(ModuleInstance module) {
-        if (modules.contains(module)) return;
+        if (modules.contains(module)) {
+            LOG.warn(
+                "[PERSIST] addModule: duplicate module {} kind={} id={} (already present)",
+                module.kind(),
+                module.id,
+                System.identityHashCode(module));
+            return;
+        }
         modules.add(module);
+        LOG.info(
+            "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
+            module.kind(),
+            module.id,
+            (module.anchorOrNull() != null ? (int) module.anchorOrNull()
+                .dx() : -999),
+            (module.anchorOrNull() != null ? (int) module.anchorOrNull()
+                .dy() : -999),
+            module.shape(),
+            module.status(),
+            modules.size());
     }
 
     public void removeModule(int index) {

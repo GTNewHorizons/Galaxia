@@ -112,7 +112,15 @@ public class FacilityModuleRegistry {
         ModuleShape shape, ModuleTier tier) {
         Definition def = get(kind);
         if (def == null) {
-            throw new IllegalArgumentException("Unknown module kind: " + kind);
+            throw new IllegalStateException(
+                "FacilityModuleRegistry: no definition registered for kind " + kind
+                    + " — FacilityModuleRegistry.init() must be called before module creation");
+        }
+        if (shape == null) {
+            throw new IllegalArgumentException("FacilityModuleRegistry: shape must not be null for kind " + kind);
+        }
+        if (tier == null) {
+            throw new IllegalArgumentException("FacilityModuleRegistry: tier must not be null for kind " + kind);
         }
         ModuleInstance instance = new ModuleInstance(moduleId, def, anchor, shape, tier);
         instance.setComponent(createComponent(kind));
@@ -120,7 +128,15 @@ public class FacilityModuleRegistry {
     }
 
     static ModuleComponent createComponent(FacilityModuleKind kind) {
-        return get(kind).defaultFactory.get();
+        Definition def = get(kind);
+        if (def == null) {
+            throw new IllegalStateException("FacilityModuleRegistry: no definition registered for kind " + kind);
+        }
+        ModuleComponent component = def.defaultFactory.get();
+        if (component == null) {
+            throw new IllegalStateException("FacilityModuleRegistry: defaultFactory returned null for kind " + kind);
+        }
+        return component;
     }
 
     public static boolean isRegistered(FacilityModuleKind kind) {

@@ -13,6 +13,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.StationTextureRegistry.ConnectorKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -21,11 +22,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class CapacityConnectorLayer {
-
-    // Placeholder connector colors: orange for Storage, blue for Tank, yellow for Battery
-    private static final int COLOR_STORAGE = 0xFFFF8C00;
-    private static final int COLOR_TANK = 0xFF4444FF;
-    private static final int COLOR_BATTERY = 0xFFFFFF00;
 
     private static final int COLOR_ALPHA_ACTIVE = 0xFF;
     private static final int COLOR_ALPHA_INACTIVE = 0x66;
@@ -129,10 +125,10 @@ public final class CapacityConnectorLayer {
 
     private static int connectorColor(FacilityModuleKind kind) {
         return switch (kind) {
-            case STORAGE -> COLOR_STORAGE;
-            case TANK -> COLOR_TANK;
-            case BATTERY -> COLOR_BATTERY;
-            default -> 0xFFFFFFFF;
+            case STORAGE -> EnumColors.MAP_COLOR_CONNECTOR_STORAGE.getColor();
+            case TANK -> EnumColors.MAP_COLOR_CONNECTOR_TANK.getColor();
+            case BATTERY -> EnumColors.MAP_COLOR_CONNECTOR_BATTERY.getColor();
+            default -> EnumColors.MAP_COLOR_CONNECTOR_DEFAULT.getColor();
         };
     }
 

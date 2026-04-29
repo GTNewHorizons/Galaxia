@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -86,11 +87,12 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
         // T3.8: Capacity summary for capacity modules (Storage/Tank/Battery)
-        if (module.kind()
+        StationTileCoord modAnchor = module.anchorOrNull();
+        if (modAnchor != null && module.kind()
             .isCapacityModule()) {
             if (module.component() instanceof ICapacityModule icm) {
                 long baseCapacity = icm.baseCapacityForTier(module.tier());
-                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, module.anchor(), module.kind());
+                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, modAnchor, module.kind());
                 long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
 
                 // Find the cluster containing this module's anchor
@@ -99,7 +101,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                     List<CapacityCluster> clusters = GalaxiaAPI.getCapacityClusters(facilityId, module.kind());
                     for (CapacityCluster cluster : clusters) {
                         if (cluster.members()
-                            .contains(module.anchor())) {
+                            .contains(modAnchor)) {
                             clusterTotal = cluster.effectiveCapacity();
                             break;
                         }
@@ -127,16 +129,19 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
         // T3.9: Maintenance indicator (cached per selection)
         if (facilityId != null) {
-            if (!module.anchor()
-                .equals(lastCoveredAnchor)) {
-                lastCoveredAnchor = module.anchor();
+            StationTileCoord curAnchor = module.anchorOrNull();
+            if (curAnchor == null) return;
+            if (!Objects.equals(curAnchor, lastCoveredAnchor)) {
+                lastCoveredAnchor = curAnchor;
                 lastCoveredResult = false;
-                Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
-                for (StationTileCoord tileCoord : module.shape()
-                    .tiles(module.anchor())) {
-                    if (coverage.contains(tileCoord)) {
-                        lastCoveredResult = true;
-                        break;
+                if (curAnchor != null) {
+                    Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
+                    for (StationTileCoord tileCoord : module.shape()
+                        .tiles(curAnchor)) {
+                        if (coverage.contains(tileCoord)) {
+                            lastCoveredResult = true;
+                            break;
+                        }
                     }
                 }
             }

@@ -8,10 +8,15 @@ import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class StationLayout {
+
+    private static final Logger LOG = LogManager.getLogger(StationLayout.class);
 
     private final Map<StationTileCoord, PlacedTile> tiles;
     private long version;
@@ -32,8 +37,25 @@ public final class StationLayout {
     }
 
     public void place(StationTileCoord coord, PlacedTile tile) {
+        PlacedTile existing = tiles.get(coord);
+        if (existing != null && existing != PlacedTile.CORE && tile != PlacedTile.CORE) {
+            throw new IllegalStateException(
+                "StationLayout.place: coordinate (" + coord.dx()
+                    + ","
+                    + coord.dy()
+                    + ") already occupied by "
+                    + (existing.module() != null ? existing.module()
+                        .kind() : "CORE")
+                    + " — cannot place "
+                    + (tile.module() != null ? tile.module()
+                        .kind() : "CORE"));
+        }
         tiles.put(coord, tile);
         version++;
+        if (tile.module() != null) {
+            tile.module()
+                .initAnchor(coord);
+        }
     }
 
     public void remove(StationTileCoord coord) {
@@ -108,10 +130,28 @@ public final class StationLayout {
     }
 
     public void loadFromSnapshot(@Nonnull Map<StationTileCoord, PlacedTile> snapshot) {
+        int beforeSize = tiles.size();
         tiles.clear();
-        tiles.putAll(snapshot);
+        for (Map.Entry<StationTileCoord, PlacedTile> entry : snapshot.entrySet()) {
+            PlacedTile tile = entry.getValue();
+            StationTileCoord coord = entry.getKey();
+            if (!StationTileCoord.CORE.equals(coord) && (tile == null || tile.module() == null)) {
+                throw new IllegalStateException(
+                    "StationLayout.loadFromSnapshot: non-CORE tile at (" + coord.dx()
+                        + ","
+                        + coord.dy()
+                        + ") has null module — zombie tile detected. "
+                        + "A module was not properly decoded during persistence load.");
+            }
+            tiles.put(coord, tile);
+        }
         tiles.putIfAbsent(StationTileCoord.CORE, PlacedTile.CORE);
         version++;
+        LOG.info(
+            "[PERSIST] LAYOUT: loadFromSnapshot({} entries) restored snapshot with {} tiles (was {})",
+            snapshot.size(),
+            tiles.size(),
+            beforeSize);
     }
 
     public int size() {

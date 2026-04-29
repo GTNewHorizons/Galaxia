@@ -36,4 +36,11 @@ public record StationTileCoord(byte dx, byte dy) implements Comparable<StationTi
         if (cmp != 0) return cmp;
         return Byte.compare(this.dy, other.dy);
     }
+
+    @Override
+    public String toString() {
+        // Manual toString avoids bytecode downgrader issue with record's default toString()
+        // calling StringBuilder.append(byte) which does not exist on Java 8 (Minecraft target).
+        return "StationTileCoord[dx=" + (int) dx + ", dy=" + (int) dy + "]";
+    }
 }
