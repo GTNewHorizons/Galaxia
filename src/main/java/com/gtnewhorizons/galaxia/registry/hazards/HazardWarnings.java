@@ -8,6 +8,7 @@ public enum HazardWarnings {
     FREEZING(StatCollector.translateToLocal("galaxia.hazard.freezing")),
     BURNING(StatCollector.translateToLocal("galaxia.hazard.burning")),
     LOW_PRESSURE(StatCollector.translateToLocal("galaxia.hazard.low_pressure")),
+    HIGH_PRESSURE(StatCollector.translateToLocal("galaxia.hazard.high_pressure")),
     HIGH_RADIATION(StatCollector.translateToLocal("galaxia.hazard.high_radiation")),
     SPORES(StatCollector.translateToLocal("galaxia.hazard.spores")),
     WITHER(StatCollector.translateToLocal("galaxia.hazard.wither")),

@@ -23,7 +23,7 @@ final class PacketUtilTest {
     }
 
     @Test
-    void fromOrdinalOrNullReturnsNullForUnknownOrdinal() {
-        assertNull(PacketUtil.fromOrdinalOrNull(99, TestEnum.class));
+    void enumFromByteReturnsNullForUnknownOrdinal() {
+        assertNull(PacketUtil.enumFromByte(99, TestEnum.class));
     }
 }
