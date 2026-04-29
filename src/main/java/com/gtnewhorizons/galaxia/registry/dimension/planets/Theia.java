@@ -94,7 +94,7 @@ public class Theia extends BasePlanet {
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
                 .replacementBlock(PlanetBlocks.THEIA_MAGMA)
                 .width(2)
-                .height(16)
+                .height(32)
                 .endFeature()
                 .build());
         BiomeGenBase bigVolcanoes = createOceanBiome(
