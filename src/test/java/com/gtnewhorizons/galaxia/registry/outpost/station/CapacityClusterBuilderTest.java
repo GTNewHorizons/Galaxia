@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
@@ -181,5 +183,44 @@ final class CapacityClusterBuilderTest {
         // a: 1024 * 1.5 = 1536, b: 1024 * 2.0 = 2048, c: 1024 * 1.5 = 1536
         // total = 5120
         assertEquals(5120L, cluster.effectiveCapacity());
+    }
+
+    @Test
+    void nullComponentInCapacityModuleThrows() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance module = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        // Sabotage: clear the component to simulate a corrupted module
+        module.setComponent(null);
+        layout.place(module);
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> CapacityClusterBuilder.build(layout, FacilityModuleKind.STORAGE),
+            "CapacityClusterBuilder must throw when a capacity module has null component");
+    }
+
+    @Test
+    void nonCapacityComponentInCapacityModuleThrows() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance module = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        // Sabotage: replace component with a non-ICapacityModule implementation
+        module.setComponent(new ModuleComponent() {
+
+            @Override
+            public byte getParallel() {
+                return 1;
+            }
+
+            @Override
+            public void setParallel(byte parallel) {}
+        });
+        layout.place(module);
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> CapacityClusterBuilder.build(layout, FacilityModuleKind.STORAGE),
+            "CapacityClusterBuilder must throw when a capacity module's component does not implement ICapacityModule");
     }
 }

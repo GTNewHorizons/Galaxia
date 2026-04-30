@@ -87,8 +87,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
         // T3.8: Capacity summary for capacity modules (Storage/Tank/Battery)
-        StationTileCoord modAnchor = module.anchorOrNull();
-        if (modAnchor != null && module.kind()
+        StationTileCoord modAnchor = module.anchor();
+        if (module.kind()
             .isCapacityModule()) {
             if (module.component() instanceof ICapacityModule icm) {
                 long baseCapacity = icm.baseCapacityForTier(module.tier());
@@ -129,19 +129,16 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
         // T3.9: Maintenance indicator (cached per selection)
         if (facilityId != null) {
-            StationTileCoord curAnchor = module.anchorOrNull();
-            if (curAnchor == null) return;
+            StationTileCoord curAnchor = module.anchor();
             if (!Objects.equals(curAnchor, lastCoveredAnchor)) {
                 lastCoveredAnchor = curAnchor;
                 lastCoveredResult = false;
-                if (curAnchor != null) {
-                    Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
-                    for (StationTileCoord tileCoord : module.shape()
-                        .tiles(curAnchor)) {
-                        if (coverage.contains(tileCoord)) {
-                            lastCoveredResult = true;
-                            break;
-                        }
+                Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
+                for (StationTileCoord tileCoord : module.shape()
+                    .tiles(curAnchor)) {
+                    if (coverage.contains(tileCoord)) {
+                        lastCoveredResult = true;
+                        break;
                     }
                 }
             }

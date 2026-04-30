@@ -85,7 +85,6 @@ public final class StationLayout {
         return module != null && coord.equals(module.anchor());
     }
 
-    // TODO: To be implemented in T3.1
     public void forEachAnchor(BiConsumer<StationTileCoord, ModuleInstance> action) {
         tiles.forEach((coord, tile) -> {
             ModuleInstance module = tile.module();
@@ -95,7 +94,6 @@ public final class StationLayout {
         });
     }
 
-    // TODO: To be implemented in T3.1
     public void forEachTile(BiConsumer<StationTileCoord, PlacedTile> action) {
         tiles.forEach(action);
     }
@@ -114,9 +112,33 @@ public final class StationLayout {
 
     public void place(ModuleInstance module) {
         StationTileState state = StationTileState.fromModuleStatus(module.status());
-        for (StationTileCoord coord : module.shape()
-            .tiles(module.anchor())) {
+        StationTileCoord[] footprint = module.shape()
+            .tiles(module.anchor());
+        // Validate no overlap with a different module (silent overwrite is data corruption)
+        for (StationTileCoord coord : footprint) {
+            PlacedTile existing = tiles.get(coord);
+            if (existing != null && existing != PlacedTile.CORE && existing.module() != module) {
+                throw new IllegalStateException(
+                    "StationLayout.place(ModuleInstance): coordinate (" + coord.dx()
+                        + ","
+                        + coord.dy()
+                        + ") already occupied by "
+                        + (existing.module() != null ? existing.module()
+                            .kind() : "CORE")
+                        + " (id="
+                        + (existing.module() != null ? existing.module().id : "none")
+                        + ") — cannot place "
+                        + module.kind()
+                        + " (id="
+                        + module.id
+                        + "). "
+                        + "Two different modules overlap. A module was probably placed without prior validation or "
+                        + "a persistence load produced overlapping footprints.");
+            }
+        }
+        for (StationTileCoord coord : footprint) {
             tiles.put(coord, new PlacedTile(module, state));
+            module.initAnchor(coord);
         }
         version++;
     }

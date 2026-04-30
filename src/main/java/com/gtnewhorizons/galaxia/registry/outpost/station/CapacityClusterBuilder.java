@@ -68,12 +68,34 @@ public final class CapacityClusterBuilder {
             long totalEffective = 0;
             for (StationTileCoord memberCoord : members) {
                 ModuleInstance mi = layout.moduleAt(memberCoord);
-                if (mi == null) continue;
-                ModuleComponent comp = mi.component();
-                long baseCap = 0L;
-                if (comp instanceof ICapacityModule icm) {
-                    baseCap = icm.baseCapacityForTier(mi.tier());
+                if (mi == null) {
+                    throw new IllegalStateException(
+                        "CapacityClusterBuilder: null module at cluster member " + memberCoord
+                            + " for kind "
+                            + kind
+                            + " — layout invariant violated: forEachAnchor yielded a coord with no module");
                 }
+                ModuleComponent comp = mi.component();
+                if (comp == null) {
+                    throw new IllegalStateException(
+                        "CapacityClusterBuilder: null component for module " + mi.kind()
+                            + " (id="
+                            + mi.id
+                            + ") at "
+                            + memberCoord
+                            + " — capacity module was created without a component");
+                }
+                if (!(comp instanceof ICapacityModule)) {
+                    throw new IllegalStateException(
+                        "CapacityClusterBuilder: component of " + mi.kind()
+                            + " (id="
+                            + mi.id
+                            + ") at "
+                            + memberCoord
+                            + " does not implement ICapacityModule despite kind.isCapacityModule()==true");
+                }
+                ICapacityModule icm = (ICapacityModule) comp;
+                long baseCap = icm.baseCapacityForTier(mi.tier());
                 int neighborCount = StationLayout.countOrthogonalNeighbors(layout, memberCoord, kind);
                 totalEffective += Math.round(baseCap * (1.0 + 0.5 * neighborCount));
             }

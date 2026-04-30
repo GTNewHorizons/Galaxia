@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -82,5 +83,60 @@ final class LayoutCacheBundleTest {
                 }
             }
         }
+    }
+
+    @Test
+    void duplicateCountNeverGoesBelowZero() {
+        LayoutCacheBundle bundle = new LayoutCacheBundle(null);
+
+        // PLACE increments
+        bundle.applyMutation(MutationKind.PLACE, FacilityModuleKind.STORAGE);
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+
+        bundle.applyMutation(MutationKind.PLACE, FacilityModuleKind.STORAGE);
+        assertEquals(2, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+
+        // DECONSTRUCT decrements
+        bundle.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+
+        bundle.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
+        assertEquals(0, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+
+        // Extra DECONSTRUCT must not go below zero
+        bundle.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
+        assertEquals(0, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+
+        bundle.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
+        assertEquals(0, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+    }
+
+    @Test
+    void duplicateCountsAreIndependentPerKind() {
+        LayoutCacheBundle bundle = new LayoutCacheBundle(null);
+
+        bundle.applyMutation(MutationKind.PLACE, FacilityModuleKind.STORAGE);
+        bundle.applyMutation(MutationKind.PLACE, FacilityModuleKind.STORAGE);
+        bundle.applyMutation(MutationKind.PLACE, FacilityModuleKind.TANK);
+
+        assertEquals(2, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.TANK));
+        assertEquals(0, bundle.duplicateCount(FacilityModuleKind.BATTERY));
+
+        bundle.applyMutation(MutationKind.DECONSTRUCT, FacilityModuleKind.STORAGE);
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.TANK));
+    }
+
+    @Test
+    void setTierDoesNotAffectDuplicateCounts() {
+        LayoutCacheBundle bundle = new LayoutCacheBundle(null);
+
+        bundle.applyMutation(MutationKind.PLACE, FacilityModuleKind.STORAGE);
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.STORAGE));
+
+        // SET_TIER should not change duplicate counts
+        bundle.applyMutation(MutationKind.SET_TIER, FacilityModuleKind.STORAGE);
+        assertEquals(1, bundle.duplicateCount(FacilityModuleKind.STORAGE));
     }
 }
