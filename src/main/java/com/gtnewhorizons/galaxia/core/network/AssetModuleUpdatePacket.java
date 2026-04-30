@@ -304,7 +304,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     }
                     module.setTier(tier);
                     state.layoutCache()
-                        .applyMutation(MutationKind.SET_TIER, module.kind());
+                        .applyMutation(MutationKind.SET_TIER, module.kind(), module);
                 }
                 case SET_PRIORITY -> {
                     ModulePriority priority = PacketUtil
@@ -314,7 +314,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 case SET_ENABLED -> {
                     module.setEnabled(packet.getBooleanPayload());
                     state.layoutCache()
-                        .applyMutation(MutationKind.SET_ENABLED, module.kind());
+                        .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
                 }
             }
         }

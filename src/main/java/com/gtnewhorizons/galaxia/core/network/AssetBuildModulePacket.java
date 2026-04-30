@@ -172,7 +172,7 @@ public final class AssetBuildModulePacket implements IMessage {
             }
             state.addModule(module);
             state.layoutCache()
-                .applyMutation(MutationKind.PLACE, kind);
+                .applyMutation(MutationKind.PLACE, kind, module);
 
             if (state.hasStationLayout() && module.anchor() != null) {
                 StationTileState initialState = StationTileState.fromModuleStatus(module.status());

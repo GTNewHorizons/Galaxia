@@ -127,7 +127,7 @@ public final class AutomatedFacility extends CelestialAsset {
             dirtyModuleIds.remove(removed.id);
             bumpSyncRevision();
             if (layout != null) layout.removeTileForModule(removed.id);
-            layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind());
+            layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
         }
     }
 
