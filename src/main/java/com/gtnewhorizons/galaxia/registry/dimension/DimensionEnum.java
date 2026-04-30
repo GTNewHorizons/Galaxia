@@ -8,7 +8,7 @@ public enum DimensionEnum {
     // Format: ENUMNAME(int ID, String name)
     VITRIS_SPACE(-19, "Vitris_Space_Stations", "galaxia.dimension.vitris_space"),
     MOON(20, "Moon", "galaxia.dimension.moon"),
-    HEMATERIA(21, "Hemateria", "galaxia.dimension.hemateria"),
+    MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
     PANSPIRA(23, "Panspira", "galaxia.dimension.panspira"),
     TENEBRAE(24, "Tenebrae", "galaxia.dimension.tenebrae");

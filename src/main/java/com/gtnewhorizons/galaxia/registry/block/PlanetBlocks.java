@@ -70,9 +70,9 @@ public final class PlanetBlocks {
             .build();
 
     /*
-     * HEMATERIA blocks
+     * MARS blocks
      */
-    public static final Block HEMATERIA_REGOLITH = PlanetBlockBuilder.create("hemateria/hemateria_regolith")
+    public static final Block MARS_REGOLITH = PlanetBlockBuilder.create("mars/mars_regolith")
             .falling()
             .dropSelf()
             .hardness(0.5F)
@@ -80,19 +80,19 @@ public final class PlanetBlocks {
             .harvest(0)
             .build();
 
-    public static final Block HEMATERIA_ANDESITE = PlanetBlockBuilder.create("hemateria/hemateria_andesite")
+    public static final Block MARS_ANDESITE = PlanetBlockBuilder.create("mars/mars_andesite")
             .dropSelf()
             .hardness(1.5F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_BASALT = PlanetBlockBuilder.create("hemateria/hemateria_basalt")
+    public static final Block MARS_BASALT = PlanetBlockBuilder.create("mars/mars_basalt")
             .dropSelf()
             .hardness(1.5F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_SNOW = PlanetBlockBuilder.create("hemateria/hemateria_snow")
+    public static final Block MARS_SNOW = PlanetBlockBuilder.create("mars/mars_snow")
             .falling()
             .dropSelf()
             .hardness(0.1F)
@@ -100,41 +100,41 @@ public final class PlanetBlocks {
             .harvest(0)
             .build();
 
-    public static final Block HEMATERIA_ANORTHOSITE = PlanetBlockBuilder.create("hemateria/hemateria_anorthosite")
-            .drop(GalaxiaItemList.DUST_HEMATERIA)
+    public static final Block MARS_ANORTHOSITE = PlanetBlockBuilder.create("mars/mars_anorthosite")
+            .drop(GalaxiaItemList.DUST_MARS)
             .hardness(1.5F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_TEKTITE = PlanetBlockBuilder.create("hemateria/hemateria_tektite")
-            .drop(GalaxiaItemList.HEMATERIA_TEKTITE_SHARD)
+    public static final Block MARS_TEKTITE = PlanetBlockBuilder.create("mars/mars_tektite")
+            .drop(GalaxiaItemList.MARS_TEKTITE_SHARD)
             .hardness(2.0F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_ICE = PlanetBlockBuilder.create("hemateria/hemateria_ice")
+    public static final Block MARS_ICE = PlanetBlockBuilder.create("mars/mars_ice")
             .transparent()
-            .drop(GalaxiaItemList.HEMATERIA_ICE_CUBES)
+            .drop(GalaxiaItemList.MARS_ICE_CUBES)
             .dropAmount(2, 4)
             .hardness(0.5F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_DENSE_ICE = PlanetBlockBuilder.create("hemateria/hemateria_dense_ice")
+    public static final Block MARS_DENSE_ICE = PlanetBlockBuilder.create("mars/mars_dense_ice")
             .transparent()
-            .drop(GalaxiaItemList.HEMATERIA_ICE_CUBES)
+            .drop(GalaxiaItemList.MARS_ICE_CUBES)
             .dropAmount(4, 7)
             .hardness(0.5F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_MAGMA = PlanetBlockBuilder.create("hemateria/hemateria_magma")
+    public static final Block MARS_MAGMA = PlanetBlockBuilder.create("mars/mars_magma")
             .dropSelf()
             .hardness(0.5F)
             .harvest(0)
             .build();
 
-    public static final Block HEMATERIA_SAND = PlanetBlockBuilder.create("hemateria/hemateria_sand")
+    public static final Block MARS_SAND = PlanetBlockBuilder.create("mars/mars_sand")
             .falling()
             .dropSelf()
             .hardness(0.5F)
@@ -142,25 +142,25 @@ public final class PlanetBlocks {
             .harvest(0)
             .build();
 
-    public static final Block HEMATERIA_SANDSTONE = PlanetBlockBuilder.create("hemateria/hemateria_sandstone")
+    public static final Block MARS_SANDSTONE = PlanetBlockBuilder.create("mars/mars_sandstone")
             .dropSelf()
             .hardness(0.8F)
             .harvest(0)
             .build();
 
-    public static final Block HEMATERIA_TUFF = PlanetBlockBuilder.create("hemateria/hemateria_tuff")
+    public static final Block MARS_TUFF = PlanetBlockBuilder.create("mars/mars_tuff")
             .dropSelf()
             .hardness(1.5F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_PERIDOTITE = PlanetBlockBuilder.create("hemateria/hemateria_peridotite")
+    public static final Block MARS_PERIDOTITE = PlanetBlockBuilder.create("mars/mars_peridotite")
             .dropSelf()
             .hardness(2.7F)
             .harvest(1)
             .build();
 
-    public static final Block HEMATERIA_RHYOLITE = PlanetBlockBuilder.create("hemateria/hemateria_rhyolite")
+    public static final Block MARS_RHYOLITE = PlanetBlockBuilder.create("mars/mars_rhyolite")
             .falling()
             .dropSelf()
             .hardness(0.7F)

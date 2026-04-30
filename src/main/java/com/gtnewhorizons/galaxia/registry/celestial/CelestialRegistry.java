@@ -174,11 +174,11 @@ public final class CelestialRegistry {
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore)));
 
         register(
-            DimensionEnum.HEMATERIA,
+            DimensionEnum.MARS,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("hemateria"))
-                .texture(EnumTextures.ICON_HEMATERIA.get())
+                .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("mars"))
+                .texture(EnumTextures.ICON_MARS.get())
                 .spriteSize(0.825)
                 .properties(
                     b -> b.withGravity(5.5e8, 9500.0)
@@ -198,7 +198,7 @@ public final class CelestialRegistry {
 
         register(
             DimensionEnum.MOON,
-            builder -> builder.parent(CelestialObjectId.HEMATERIA)
+            builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.MOON)
                 .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("moon"))
                 .texture(EnumTextures.ICON_MOON.get())
@@ -252,7 +252,7 @@ public final class CelestialRegistry {
 
         register(
             DimensionEnum.VITRIS_SPACE,
-            builder -> builder.parent(CelestialObjectId.HEMATERIA)
+            builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.STATION)
                 .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("vitris_space"))
                 .texture(EnumTextures.ICON_EGORA.get())

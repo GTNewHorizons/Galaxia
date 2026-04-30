@@ -9,7 +9,7 @@ import net.minecraftforge.common.DimensionManager;
 
 import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Hemateria;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Mars;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
 
@@ -36,7 +36,7 @@ public final class SolarSystemRegistry {
 
         registerDimensions(new SpaceStation());
         registerDimensions(new Moon());
-        registerDimensions(new Hemateria());
+        registerDimensions(new Mars());
         registerDimensions(new FrozenBelt());
         registerDimensions(new Panspira());
 

@@ -17,7 +17,7 @@ slot.reaction_control_system=Reaction Control System
 
 #### Dimensions
 galaxia.dimension.frozen_belt=Frozen Belt
-galaxia.dimension.hemateria=Hemateria
+galaxia.dimension.mars=Mars
 galaxia.dimension.panspira=Panspira
 galaxia.dimension.tenebrae=Tenebrae
 galaxia.dimension.moon=Moon
@@ -32,7 +32,7 @@ galaxia.celestial.romulus=Romulus
 galaxia.celestial.remus=Remus
 galaxia.celestial.egora=Egora
 galaxia.celestial.panspira=Panspira
-galaxia.celestial.hemateria=Hemateria
+galaxia.celestial.mars=Mars
 galaxia.celestial.moon=Moon
 galaxia.celestial.frozen_belt=Frozen Belt
 galaxia.celestial.ambergris_fragment=Ambergris Fragment
@@ -50,21 +50,21 @@ tile.moon_obsidian.name=Moon Obsidian
 tile.moon_regolith.name=Moon Regolith
 tile.moon_tektite.name=Moon Tektite
 
-# Blocks - "Hemateria"
-tile.hemateria_andesite.name=Hemateria Andesite
-tile.hemateria_anorthosite.name=Hemateria Anorthosite
-tile.hemateria_basalt.name=Hemateria Basalt
-tile.hemateria_dense_ice.name=Hemateria Dense Ice
-tile.hemateria_ice.name=Hemateria Ice
-tile.hemateria_magma.name=Hemateria Magma
-tile.hemateria_peridotite.name=Hemateria Peridotite
-tile.hemateria_regolith.name=Hemateria Regolith
-tile.hemateria_rhyolite.name=Hemateria Rhyolite
-tile.hemateria_sand.name=Hemateria Sand
-tile.hemateria_sandstone.name=Hemateria Sandstone
-tile.hemateria_snow.name=Hemateria Snow
-tile.hemateria_tektite.name=Hemateria Tektite
-tile.hemateria_tuff.name=Hemateria Tuff
+# Blocks - "Mars"
+tile.mars_andesite.name=Mars Andesite
+tile.mars_anorthosite.name=Mars Anorthosite
+tile.mars_basalt.name=Mars Basalt
+tile.mars_dense_ice.name=Mars Dense Ice
+tile.mars_ice.name=Mars Ice
+tile.mars_magma.name=Mars Magma
+tile.mars_peridotite.name=Mars Peridotite
+tile.mars_regolith.name=Mars Regolith
+tile.mars_rhyolite.name=Mars Rhyolite
+tile.mars_sand.name=Mars Sand
+tile.mars_sandstone.name=Mars Sandstone
+tile.mars_snow.name=Mars Snow
+tile.mars_tektite.name=Mars Tektite
+tile.mars_tuff.name=Mars Tuff
 
 # Blocks - "Frozen Belt"
 tile.frozen_belt_andesite.name=Frozen Belt Andesite
@@ -167,9 +167,9 @@ item.galaxia.rocket_schematic.width=Width: %.1fm
 item.galaxia.amber_shard.name=Amber Shard
 item.galaxia.cinnabar_scale.name=Cinnabar Scale
 item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
-item.galaxia.hemateria_dust.name=Hemateria Dust
-item.galaxia.hemateria_ice_cubes.name=Hemateria Ice Cubes
-item.galaxia.hemateria_tektite_shard.name=Hemateria Tektite Shard
+item.galaxia.mars_dust.name=Mars Dust
+item.galaxia.mars_ice_cubes.name=Mars Ice Cubes
+item.galaxia.mars_tektite_shard.name=Mars Tektite Shard
 item.galaxia.hematite_dust.name=Hematite Dust
 item.galaxia.hematite_ingot.name=Hematite Ingot
 item.galaxia.meteoric_iron_ingot.name=Meteoric Iron Ingot
