@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -299,13 +300,19 @@ public final class AssetModuleUpdatePacket implements IMessage {
                         return;
                     }
                     module.setTier(tier);
+                    state.layoutCache()
+                        .applyMutation(MutationKind.SET_TIER, module.kind());
                 }
                 case SET_PRIORITY -> {
                     ModulePriority priority = PacketUtil
                         .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModulePriority.class);
                     if (priority != null) module.setPriorityOverride(priority);
                 }
-                case SET_ENABLED -> module.setEnabled(packet.getBooleanPayload());
+                case SET_ENABLED -> {
+                    module.setEnabled(packet.getBooleanPayload());
+                    state.layoutCache()
+                        .applyMutation(MutationKind.SET_ENABLED, module.kind());
+                }
             }
         }
 

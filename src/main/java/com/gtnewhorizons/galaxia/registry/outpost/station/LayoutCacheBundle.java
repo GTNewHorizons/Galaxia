@@ -15,6 +15,12 @@ public final class LayoutCacheBundle {
         switch (mutation) {
             case PLACE -> result.add(CacheKind.DUPLICATE_COUNTS);
             case DECONSTRUCT -> result.add(CacheKind.DUPLICATE_COUNTS);
+            // TODO: To be implemented in T3.4
+            case SET_TIER -> {}
+            // TODO: To be implemented in T7.4
+            case SET_PARALLEL -> {}
+            // TODO: To be implemented in T7.4
+            case SET_ENABLED -> {}
         }
         return result;
     }
@@ -29,10 +35,15 @@ public final class LayoutCacheBundle {
 
     private void invalidate(EnumSet<CacheKind> caches, MutationKind mutation, FacilityModuleKind kind) {
         if (caches.contains(CacheKind.DUPLICATE_COUNTS)) {
-            if (mutation == MutationKind.PLACE) {
-                duplicateCounts.merge(kind, 1, Integer::sum);
-            } else if (mutation == MutationKind.DECONSTRUCT) {
-                duplicateCounts.computeIfPresent(kind, (k, v) -> Math.max(0, v - 1));
+            switch (mutation) {
+                case PLACE -> duplicateCounts.merge(kind, 1, Integer::sum);
+                case DECONSTRUCT -> duplicateCounts.computeIfPresent(kind, (k, v) -> Math.max(0, v - 1));
+                // TODO: To be implemented in T3.4
+                case SET_TIER -> {}
+                // TODO: To be implemented in T7.4
+                case SET_PARALLEL -> {}
+                // TODO: To be implemented in T7.4
+                case SET_ENABLED -> {}
             }
         }
     }
