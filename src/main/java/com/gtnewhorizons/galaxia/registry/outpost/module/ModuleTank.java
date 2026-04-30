@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 
-public class ModuleTank implements ModuleComponent, ICapacityModule {
+public class ModuleTank implements ModuleComponent, ICapacityModule, IParallelModule {
 
     private byte parallel = 1;
 

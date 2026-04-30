@@ -4,7 +4,7 @@ import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 
-public final class ModuleHammer implements ModuleComponent {
+public final class ModuleHammer implements ModuleComponent, IParallelModule {
 
     public final FacilityModuleKind kind;
     public final boolean crossPlanetaryCapability;

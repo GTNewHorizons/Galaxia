@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -207,16 +209,7 @@ final class CapacityClusterBuilderTest {
         ModuleInstance module = FacilityModuleKind.STORAGE
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         // Sabotage: replace component with a non-ICapacityModule implementation
-        module.setComponent(new ModuleComponent() {
-
-            @Override
-            public byte getParallel() {
-                return 1;
-            }
-
-            @Override
-            public void setParallel(byte parallel) {}
-        });
+        module.setComponent(new ModuleComponent() {});
         layout.place(module);
 
         assertThrows(
@@ -249,17 +242,22 @@ final class CapacityClusterBuilderTest {
     }
 
     @Test
-    void maintenanceBayParallelIsFrozenAtOne() {
+    void maintenanceBayDoesNotImplementIParallelModule() {
         ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
         ModuleComponent comp = bay.component();
-        assertEquals(1, comp.getParallel());
+        assertFalse(
+            comp instanceof IParallelModule,
+            "MaintenanceBay must not implement IParallelModule — it has no parallel mechanic");
+    }
 
-        comp.setParallel((byte) 5); // should be silently ignored
-        assertEquals(1, comp.getParallel(), "MaintenanceBay parallel must remain 1");
-
-        comp.setParallel((byte) 0); // should be silently ignored
-        assertEquals(1, comp.getParallel(), "MaintenanceBay parallel must remain 1 even when set to 0");
+    @Test
+    void allOtherModulesImplementIParallelModule() {
+        for (FacilityModuleKind kind : FacilityModuleKind.values()) {
+            if (kind == FacilityModuleKind.MAINTENANCE_BAY) continue;
+            ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, kind.defaultTier());
+            assertTrue(module.component() instanceof IParallelModule, kind + " must implement IParallelModule");
+        }
     }
 
     @Test

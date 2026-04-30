@@ -27,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -89,24 +88,7 @@ public class CelestialEventHandler {
             List<AssetSyncPacket> playerOutpostPackets = new ArrayList<>();
             for (CelestialAsset asset : aggregatedAssets) {
                 if (asset instanceof AutomatedFacility outpost) {
-                    if (outpost.needsFullSyncFor(playerId)) {
-                        playerOutpostPackets.add(AssetSyncPacket.fullSync(outpost));
-                        outpost.markSyncedFor(playerId);
-                        outpost.drainDirtyModules();
-                        outpost.drainRemovedIds();
-                    } else if (outpost.isDirty()) {
-                        for (ModuleInstance.ID id : outpost.drainRemovedIds()) {
-                            playerOutpostPackets.add(
-                                AssetSyncPacket.moduleRemoved(outpost.assetId, outpost.moduleIndex(id), id)
-                                    .withSyncRevision(outpost.getSyncRevision()));
-                        }
-                        for (ModuleInstance m : outpost.drainDirtyModules()) {
-                            int idx = outpost.moduleIndex(m.id);
-                            playerOutpostPackets.add(
-                                AssetSyncPacket.moduleAdded(outpost.assetId, idx, m)
-                                    .withSyncRevision(outpost.getSyncRevision()));
-                        }
-                    }
+                    playerOutpostPackets.addAll(AssetSyncPacket.figureOutWhatToSend(outpost, playerId));
                 }
             }
             // TODO: make aggregate packet for this

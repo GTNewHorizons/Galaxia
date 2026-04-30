@@ -9,7 +9,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-public final class ModuleMiner implements ModuleComponent {
+public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     public final FacilityModuleKind kind;
 

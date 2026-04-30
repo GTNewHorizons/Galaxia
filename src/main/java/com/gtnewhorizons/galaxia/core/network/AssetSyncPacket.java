@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -83,6 +84,7 @@ public final class AssetSyncPacket implements IMessage {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = state.assetId;
         pkt.syncType = FULL_SYNC;
+        pkt.syncRevision = state.getSyncRevision();
         pkt.syncRevision = state.getSyncRevision();
 
         pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
@@ -209,10 +211,39 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    /**
+     * Decides what to sync for the given facility and player. Returns a list of packets
+     * (full sync or individual deltas) and updates the facility's dirty/sync state.
+     */
+    public static List<AssetSyncPacket> figureOutWhatToSend(AutomatedFacility facility, UUID playerId) {
+        List<AssetSyncPacket> packets = new ArrayList<>();
+        if (facility.needsFullSyncFor(playerId)) {
+            packets.add(fullSync(facility));
+            facility.markSyncedFor(playerId);
+            facility.drainDirtyModules();
+            facility.drainRemovedIds();
+            return packets;
+        }
+        if (!facility.isDirty()) {
+            return packets;
+        }
+        for (ModuleInstance.ID id : facility.drainRemovedIds()) {
+            packets.add(
+                moduleRemoved(facility.assetId, facility.moduleIndex(id), id)
+                    .withSyncRevision(facility.getSyncRevision()));
+        }
+        for (ModuleInstance m : facility.drainDirtyModules()) {
+            int idx = facility.moduleIndex(m.id);
+            packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
+        }
+        return packets;
+    }
+
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         buf.writeByte(syncType);
+        buf.writeInt(syncRevision);
         buf.writeInt(syncRevision);
 
         switch (syncType) {
@@ -240,6 +271,7 @@ public final class AssetSyncPacket implements IMessage {
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         syncType = buf.readByte();
+        syncRevision = buf.readInt();
         syncRevision = buf.readInt();
 
         switch (syncType) {
@@ -334,9 +366,7 @@ public final class AssetSyncPacket implements IMessage {
         PacketUtil.writeEnum(buf, module.priorityOverride());
         buf.writeBoolean(module.enabled());
         buf.writeShort(module.groupId());
-        buf.writeByte(
-            module.component() != null ? module.component()
-                .getParallel() : 1);
+        buf.writeByte(module.component() instanceof IParallelModule pm ? pm.getParallel() : 1);
 
         switch (module.kind()) {
             case MINER -> {
@@ -404,9 +434,8 @@ public final class AssetSyncPacket implements IMessage {
             case STORAGE, TANK, BATTERY -> {}
         }
 
-        if (module.component() != null && parallel >= 1) {
-            module.component()
-                .setParallel(parallel);
+        if (module.component() instanceof IParallelModule pm && parallel >= 1) {
+            pm.setParallel(parallel);
         }
         module.updateStatus(status);
         return module;

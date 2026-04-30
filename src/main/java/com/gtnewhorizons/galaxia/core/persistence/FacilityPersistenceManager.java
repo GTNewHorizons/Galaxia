@@ -40,6 +40,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -359,8 +360,7 @@ public final class FacilityPersistenceManager {
             mj.enabled = m.enabled();
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
-            mj.parallel = m.component() != null ? m.component()
-                .getParallel() : 1;
+            mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleMiner miner) {
                 moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
@@ -514,9 +514,9 @@ public final class FacilityPersistenceManager {
                     tier,
                     mj.status,
                     (module.anchorOrNull() != null ? (int) module.anchorOrNull()
-                        .dx() : -999),
+                        .dx() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
                     (module.anchorOrNull() != null ? (int) module.anchorOrNull()
-                        .dy() : -999));
+                        .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE));
                 if (originalTier != tier) {
                     pendingDowngrades.add(new PendingTierDowngrade(module, kind, originalTier, tier));
                 }
@@ -580,9 +580,8 @@ public final class FacilityPersistenceManager {
                 module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
                 module.setGroupId(mj.groupId);
-                if (mj.parallel >= 1 && module.component() != null) {
-                    module.component()
-                        .setParallel(mj.parallel);
+                if (mj.parallel >= 1 && module.component() instanceof IParallelModule pm) {
+                    pm.setParallel(mj.parallel);
                 }
                 module.clearConsumedResources();
                 if (mj.consumedResources != null) {

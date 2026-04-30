@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
-public class ModulePower implements ModuleComponent {
+public class ModulePower implements ModuleComponent, IParallelModule {
 
     public static int EU_TICK = 2048;
 

@@ -112,9 +112,9 @@ public final class AutomatedFacility extends CelestialAsset {
             module.kind(),
             module.id,
             (module.anchorOrNull() != null ? (int) module.anchorOrNull()
-                .dx() : -999),
+                .dx() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
             (module.anchorOrNull() != null ? (int) module.anchorOrNull()
-                .dy() : -999),
+                .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
             module.shape(),
             module.status(),
             modules.size());

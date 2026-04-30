@@ -108,6 +108,9 @@ public class ModuleInstance implements Buildable {
         this.ticks = ticks;
     }
 
+    /** Sentinel value used in log messages when {@link #anchor()} is null. */
+    public static final int NULL_ANCHOR_LOG_VALUE = -999;
+
     public StationTileCoord anchor() {
         if (anchor == null) {
             throw new IllegalStateException(

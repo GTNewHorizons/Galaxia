@@ -153,25 +153,7 @@ public final class AssetBuildModulePacket implements IMessage {
                     StationPlacementValidator.Result placementResult = StationPlacementValidator
                         .validate(state.stationLayout(), anchor);
                     if (placementResult != StationPlacementValidator.Result.OK) {
-                        // If the tile already has a module of the same kind, this is likely a duplicate
-                        // packet (client prediction race or MUI2 event double-fire). Silently accept.
-                        if (placementResult == StationPlacementValidator.Result.REJECTED_OCCUPIED) {
-                            PlacedTile existing = state.stationLayout()
-                                .get(anchor);
-                            if (existing != null && existing.module() != null
-                                && existing.module()
-                                    .kind() == packet.moduleKind) {
-                                Galaxia.LOG.debug(
-                                    "[Outpost] BuildModule: duplicate build packet for {} at {} on {} — already placed",
-                                    kind,
-                                    anchor,
-                                    packet.assetId);
-                                int existingIndex = state.moduleIndex(existing.module().id);
-                                return AssetSyncPacket.moduleAdded(packet.assetId, existingIndex, existing.module())
-                                    .withSyncRevision(state.getSyncRevision());
-                            }
-                        }
-                        Galaxia.LOG.debug(
+                        Galaxia.LOG.warn(
                             "[Outpost] BuildModule: rejected placement at {} on {} ({}) from player {}",
                             anchor,
                             packet.assetId,
