@@ -124,7 +124,7 @@ public final class CelestialClient {
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
         @Nullable StationTileCoord tileCoord) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         if (!kind.isAllowedOn(state.kind)) return;
         StationTileCoord anchor = tileCoord != null ? tileCoord : StationTileCoord.CORE;
