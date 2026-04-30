@@ -42,7 +42,7 @@ public enum EnumTextures {
     ICON_MYKELIA("textures/gui/bodyicons/icon_mykelia.png"),
     ICON_PLEURA("textures/gui/bodyicons/icon_pleura.png"),
     ICON_TENEBRAE("textures/gui/bodyicons/icon_tenebrae.png"),
-    ICON_THEIA("textures/gui/bodyicons/icon_theia.png"),
+    ICON_MOON("textures/gui/bodyicons/icon_moon.png"),
     ICON_VIRIDIS("textures/gui/bodyicons/icon_viridis.png"),
 
     // Space Object Icons for Galactic map

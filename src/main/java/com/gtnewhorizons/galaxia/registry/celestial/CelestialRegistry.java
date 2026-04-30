@@ -197,11 +197,11 @@ public final class CelestialRegistry {
                             Blocks.diamond_ore)));
 
         register(
-            DimensionEnum.THEIA,
+            DimensionEnum.MOON,
             builder -> builder.parent(CelestialObjectId.HEMATERIA)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("theia"))
-                .texture(EnumTextures.ICON_THEIA.get())
+                .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("moon"))
+                .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
                     b -> b.withGravity(1.8e6, 480.0)

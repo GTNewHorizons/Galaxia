@@ -10,8 +10,8 @@ import net.minecraftforge.common.DimensionManager;
 import com.gtnewhorizons.galaxia.registry.dimension.asteroidbelts.FrozenBelt;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Hemateria;
+import com.gtnewhorizons.galaxia.registry.dimension.planets.Moon;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.Panspira;
-import com.gtnewhorizons.galaxia.registry.dimension.planets.Theia;
 
 import cpw.mods.fml.common.FMLLog;
 
@@ -35,7 +35,7 @@ public final class SolarSystemRegistry {
         registered = true;
 
         registerDimensions(new SpaceStation());
-        registerDimensions(new Theia());
+        registerDimensions(new Moon());
         registerDimensions(new Hemateria());
         registerDimensions(new FrozenBelt());
         registerDimensions(new Panspira());
