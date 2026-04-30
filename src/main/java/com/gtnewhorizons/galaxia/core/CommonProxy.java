@@ -23,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 
 import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -70,6 +71,7 @@ public class CommonProxy {
     // Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
+        EntityRegistry.registerModEntity(EntityRocketSeat.class, "RocketSeat", 1, Galaxia.instance, 64, 1, false);
     }
 
     // postInit "Handle interaction with other mods, complete your setup based on

@@ -1,19 +1,34 @@
-package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
+package com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule;
 
 import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
-public class WorldGenGalaxiaWall extends WorldGenGalaxiaBase {
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
+
+/**
+ * Places a feature inside a solid wall
+ */
+public class LocationRuleGalaxiaWall extends LocationRuleGalaxiaBase {
 
     private final int rarity;
     private final Block[] wallRequirements;
+    private final int minimumHeight;
+    private final int maximumHeight;
 
-    public WorldGenGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature) {
-        super(feature);
+    public LocationRuleGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature, int minimumHeight,
+        int maximumHeight, boolean centered) {
+        super(feature, centered);
         this.rarity = rarity;
         this.wallRequirements = wallRequirements;
+        this.minimumHeight = minimumHeight;
+        this.maximumHeight = maximumHeight;
+    }
+
+    public LocationRuleGalaxiaWall(int rarity, Block[] wallRequirements, Feature feature, int minimumHeight,
+        int maximumHeight) {
+        this(rarity, wallRequirements, feature, minimumHeight, maximumHeight, false);
     }
 
     @Override
@@ -38,5 +53,13 @@ public class WorldGenGalaxiaWall extends WorldGenGalaxiaBase {
         feature.generateFeature(world, random, x, y, z, wallRequirements);
         feature.finishGeneration();
         return true;
+    }
+
+    public int getMinimumHeight() {
+        return minimumHeight;
+    }
+
+    public int getMaximumHeight() {
+        return maximumHeight;
     }
 }

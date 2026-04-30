@@ -1,30 +1,39 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 
-import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.particle.EntityCloudFX;
+import net.minecraft.client.particle.EntityFX;
+import net.minecraft.client.particle.EntityFlameFX;
+import net.minecraft.client.particle.EntitySmokeFX;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EngineModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.RocketTeleportHelper;
 
+import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import io.netty.buffer.ByteBuf;
 
-public class EntityRocket extends Entity {
+public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
 
     public enum Phase {
         IDLE, // Sitting in silo yet to launch
@@ -68,6 +77,8 @@ public class EntityRocket extends Entity {
     private double targetZ;
     private int groundY = -1;
     private EntityPlayerMP lastRider = null;
+
+    private final List<EntityRocketSeat> passengerSeats = new ArrayList<>();
 
     private String lastKnownModules = "";
 
@@ -179,6 +190,10 @@ public class EntityRocket extends Entity {
         return Phase.values()[dataWatcher.getWatchableObjectByte(DW_PHASE)];
     }
 
+    public List<EntityRocketSeat> getPassengerSeats() {
+        return passengerSeats;
+    }
+
     /**
      * Gets a list of module types as integer IDs from the current modules list.
      * Works on both client (via data watcher) and server
@@ -209,6 +224,10 @@ public class EntityRocket extends Entity {
      * @return Boolean : True => should be rendered as an entity
      */
     public boolean shouldRender() {
+        if (worldObj.isRemote) {
+            String syncedModules = dataWatcher.getWatchableObjectString(DW_MODULES);
+            return getPhase() != Phase.IDLE || (syncedModules != null && !syncedModules.isEmpty());
+        }
         return getPhase() != Phase.IDLE;
     }
 
@@ -224,27 +243,72 @@ public class EntityRocket extends Entity {
         syncModules();
     }
 
+    public void initializeSeats() {
+        if (worldObj.isRemote || !passengerSeats.isEmpty() || getAssembly() == null) return;
+
+        int seatIndex = 0;
+        List<RiderModule> riderModules = getAssembly().getRiderModules();
+
+        for (RiderModule rm : riderModules) {
+            int cap = rm.getCapacity();
+            double yOff = assembly.getRiderYOffset(rm);
+
+            for (int i = 0; i < cap; i++) {
+                double radius = (rm.getWidth() - 1.5) / 2;
+                double angle = (2 * Math.PI / cap) * i;
+
+                double seatOffsetX = Math.cos(angle) * radius;
+                double seatOffsetZ = Math.sin(angle) * radius;
+
+                EntityRocketSeat seat = new EntityRocketSeat(
+                    worldObj,
+                    this,
+                    seatIndex++,
+                    seatOffsetX,
+                    yOff,
+                    seatOffsetZ);
+                seat.setPosition(this.posX + seatOffsetX, this.posY + yOff, this.posZ + seatOffsetZ);
+                worldObj.spawnEntityInWorld(seat);
+                passengerSeats.add(seat);
+            }
+        }
+    }
+
     /**
      * Updates the rocket to act as a "lander", stripping it down to the
      * LanderModules, and caching the rest of the rocket for relaunch
      */
     public void turnToLanderAndCache() {
-        // Cache current modules
         cachedModules.clear();
-        for (Integer m : modules) {
-            cachedModules.add(m);
-        }
+        cachedModules.addAll(modules);
 
-        // Reduce modules to only Lander Modules
         modules.clear();
         for (Integer m : cachedModules) {
-            if (ModuleRegistry.fromId(m) instanceof LanderModule) modules.add(m);
+            RocketModule module = ModuleRegistry.fromId(m);
+            if (module instanceof LanderModule || module instanceof RiderModule) modules.add(m);
         }
+
         isLander = true;
         // Synced with client for Waila compat
         dataWatcher.updateObject(DW_IS_LANDER, (byte) 1);
         destination = 0;
         syncModules();
+    }
+
+    @Override
+    public void setDead() {
+        super.setDead();
+        if (!worldObj.isRemote) {
+            for (EntityRocketSeat seat : passengerSeats) {
+                if (seat != null && !seat.isDead) {
+                    if (seat.riddenByEntity != null) {
+                        seat.riddenByEntity.mountEntity(null);
+                    }
+                    seat.setDead();
+                }
+            }
+            passengerSeats.clear();
+        }
     }
 
     /**
@@ -286,8 +350,6 @@ public class EntityRocket extends Entity {
             syncModules();
             silo.launch();
         }
-
-        setPhase(Phase.LAUNCHING);
     }
 
     /**
@@ -302,12 +364,27 @@ public class EntityRocket extends Entity {
     public boolean interactFirst(EntityPlayer player) {
         if (worldObj.isRemote) return true;
         if (!(player instanceof EntityPlayerMP)) return false;
-        if (getPhase() != Phase.TOUCHDOWN) return false;
-        if (!isLander) return false;
 
-        player.mountEntity(this);
-        launch();
-        return true;
+        if (getAssembly() == null) return false;
+        initializeSeats();
+
+        if (riddenByEntity == null) {
+            player.mountEntity(this);
+            return true;
+        }
+
+        if (riddenByEntity == player) {
+            return true;
+        }
+
+        for (EntityRocketSeat seat : passengerSeats) {
+            if (seat != null && !seat.isDead && seat.riddenByEntity == null) {
+                player.mountEntity(seat);
+                return true;
+            }
+        }
+        player.addChatMessage(new ChatComponentTranslation("chat.galaxia.rocket.rocket_full"));
+        return false;
     }
 
     // ---------------------------------------------------------------------------------
@@ -398,19 +475,40 @@ public class EntityRocket extends Entity {
 
         if (worldObj.isRemote) spawnLaunchParticles();
 
-        // Hand off to teleporter system at correct height
-        if (!worldObj.isRemote && this.posY >= 500 && riddenByEntity instanceof EntityPlayer player) {
-            player.mountEntity(null);
-            // Always send full rocket for overworld
-            if (destination == 0) {
-                // If the "cached" orbiting rocket is larger than current, regain cached modules
-                if (cachedModules.size() > modules.size()) {
-                    reattachCachedModules();
+        if (!worldObj.isRemote && this.posY >= 500) {
+
+            List<UUID> passengerUUIDs = new ArrayList<>();
+
+            // Main Pilot
+            if (riddenByEntity instanceof EntityPlayer) {
+                passengerUUIDs.add(riddenByEntity.getUniqueID());
+                riddenByEntity.mountEntity(null);
+            }
+
+            for (EntityRocketSeat seat : passengerSeats) {
+                if (seat.riddenByEntity instanceof EntityPlayer) {
+                    passengerUUIDs.add(seat.riddenByEntity.getUniqueID());
+                    seat.riddenByEntity.mountEntity(null);
                 }
             }
-            // Teleport player and rocket to target dimension, remount, and set to LANDING
-            GALAXIA_NETWORK.sendToServer(
-                new TeleportRequestPacket(destination, player.posX, player.posY, player.posZ, capsuleIndex, modules));
+
+            if (!passengerUUIDs.isEmpty()) {
+                if (destination == 0 && cachedModules.size() > modules.size()) {
+                    reattachCachedModules();
+                }
+
+                RocketTeleportHelper.teleportPlayers(
+                    destination,
+                    posX,
+                    posY,
+                    posZ,
+                    true, // hasRocket
+                    capsuleIndex,
+                    modules,
+                    passengerUUIDs);
+
+                this.setDead();
+            }
         }
     }
 
@@ -530,8 +628,8 @@ public class EntityRocket extends Entity {
             double mz = rand.nextGaussian() * (0.08 + expansion * 0.18);
             double my = -2.2 * (0.8 + rand.nextFloat() * 0.6);
 
-            worldObj.spawnParticle("flame", px, py, pz, mx, my, mz);
-            worldObj.spawnParticle("largesmoke", px, py, pz, mx * 0.7, my * 0.6, mz * 0.7);
+            spawnParticleBypass("flame", px, py, pz, mx, my, mz);
+            spawnParticleBypass("largesmoke", px, py, pz, mx * 0.7, my * 0.6, mz * 0.7);
         }
     }
 
@@ -548,8 +646,8 @@ public class EntityRocket extends Entity {
                 double mx = Math.cos(angle) * (0.15 + rand.nextFloat() * 0.25);
                 double mz = Math.sin(angle) * (0.15 + rand.nextFloat() * 0.25);
                 double my = 0.05 + rand.nextFloat() * 0.18;
-                worldObj.spawnParticle("largesmoke", px, py, pz, mx, my, mz);
-                if (rand.nextFloat() < 0.25f) worldObj.spawnParticle("flame", px, py, pz, mx * 0.3, my * 0.1, mz * 0.3);
+                spawnParticleBypass("largesmoke", px, py, pz, mx, my, mz);
+                if (rand.nextFloat() < 0.25f) spawnParticleBypass("flame", px, py, pz, mx * 0.3, my * 0.1, mz * 0.3);
             }
         }
     }
@@ -560,7 +658,7 @@ public class EntityRocket extends Entity {
         Random rand = worldObj.rand;
         if (!retro) {
             for (int i = 0; i < 4; i++) {
-                worldObj.spawnParticle(
+                spawnParticleBypass(
                     "cloud",
                     posX + rand.nextGaussian() * 0.4,
                     posY + height + rand.nextFloat() * 0.5,
@@ -578,15 +676,15 @@ public class EntityRocket extends Entity {
                 double mx = rand.nextGaussian() * (0.06 + intensity * 0.15);
                 double mz = rand.nextGaussian() * (0.06 + intensity * 0.15);
                 double my = -(1.5 + rand.nextFloat() * 0.8 + intensity * 1.2);
-                worldObj.spawnParticle("flame", px, posY + 0.2, pz, mx, my, mz);
-                worldObj.spawnParticle("largesmoke", px, posY + 0.2, pz, mx * 0.5, my * 0.4, mz * 0.5);
+                spawnParticleBypass("flame", px, posY + 0.2, pz, mx, my, mz);
+                spawnParticleBypass("largesmoke", px, posY + 0.2, pz, mx * 0.5, my * 0.4, mz * 0.5);
             }
 
             if (posY - getGroundY() < 20) {
                 for (int i = 0; i < 6; i++) {
                     double angle = rand.nextDouble() * Math.PI * 2;
                     double radius = 0.5 + rand.nextDouble() * 1.5;
-                    worldObj.spawnParticle(
+                    spawnParticleBypass(
                         "largesmoke",
                         posX + Math.cos(angle) * radius,
                         posY - 0.5,
@@ -603,7 +701,7 @@ public class EntityRocket extends Entity {
     // Phase updates
     // ---------------------------------------------------------------------------------
 
-    private void setPhase(Phase p) {
+    public void setPhase(Phase p) {
         dataWatcher.updateObject(DW_PHASE, (byte) p.ordinal());
     }
 
@@ -681,6 +779,7 @@ public class EntityRocket extends Entity {
         tag.setDouble("motionYSaved", motionY);
         tag.setInteger("touchdownTicks", touchdownTicks);
         tag.setBoolean("isLander", isLander);
+        tag.setInteger("destination", destination);
     }
 
     @Override
@@ -708,5 +807,53 @@ public class EntityRocket extends Entity {
 
         assembly = null;
         syncModules();
+
+        this.destination = tag.getInteger("destination");
+    }
+
+    @Override
+    public void writeSpawnData(ByteBuf buf) {
+        buf.writeDouble(targetX);
+        buf.writeDouble(targetZ);
+        buf.writeInt(groundY);
+        buf.writeDouble(motionY);
+    }
+
+    @Override
+    public void readSpawnData(ByteBuf buf) {
+        this.targetX = buf.readDouble();
+        this.targetZ = buf.readDouble();
+        this.groundY = buf.readInt();
+        this.motionY = buf.readDouble();
+    }
+
+    @SideOnly(Side.CLIENT)
+    private void spawnParticleBypass(String particleName, double px, double py, double pz, double mx, double my,
+        double mz) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.renderViewEntity == null || mc.effectRenderer == null) return;
+
+        // Respect the user's video settings for particles (0 = All, 1 = Decreased, 2 =
+        // Minimal)
+        int setting = mc.gameSettings.particleSetting;
+        if (setting == 2 || (setting == 1 && worldObj.rand.nextInt(3) != 0)) {
+            return;
+        }
+
+        EntityFX fx = null;
+
+        // Instantiate the specific 1.7.10 particles directly
+        switch (particleName) {
+            case "flame" -> fx = new EntityFlameFX(worldObj, px, py, pz, mx, my, mz);
+            // 2.5F => largesmoke
+            case "largesmoke" -> fx = new EntitySmokeFX(worldObj, px, py, pz, mx, my, mz, 2.5F);
+            case "cloud" -> fx = new EntityCloudFX(worldObj, px, py, pz, mx, my, mz);
+        }
+
+        // Add it directly to the effect renderer, bypassing the vanilla distance
+        // checks
+        if (fx != null) {
+            mc.effectRenderer.addEffect(fx);
+        }
     }
 }
