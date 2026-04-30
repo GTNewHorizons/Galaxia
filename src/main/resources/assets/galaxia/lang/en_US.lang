@@ -244,7 +244,7 @@ galaxia.gui.rocket_silo.builder.return_modules=Return Modules
 galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
 galaxia.gui.rocket_silo.builder.schematic_save=Save build to schematic
 galaxia.gui.rocket_silo.builder.schematic_text=Schematic Name:
-galaxia.gui.rocket_silo.button.viridis=Viridis
+galaxia.gui.rocket_silo.button.overworld=Overworld
 galaxia.gui.rocket_silo.not_formed=Rocket Silo not properly formed!
 
 # Elements - GUI - "Rocket Silo Validator"

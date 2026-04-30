@@ -25,7 +25,7 @@ public enum EnumTextures {
     PERIHELIA("textures/environment/perihelia.png"),
     PLEURA("textures/environment/pleura.png"),
     TENEBRAE("textures/environment/tenebrae.png"),
-    VIRIDIS("textures/environment/viridis.png"),
+    OVERWORLD("textures/environment/overworld.png"),
 
     SELECTION_FRAME("textures/gui/selection_frame.png"),
     HAZARD_COLD("textures/gui/icon_cold.png"),
@@ -43,7 +43,7 @@ public enum EnumTextures {
     ICON_PLEURA("textures/gui/bodyicons/icon_pleura.png"),
     ICON_TENEBRAE("textures/gui/bodyicons/icon_tenebrae.png"),
     ICON_MOON("textures/gui/bodyicons/icon_moon.png"),
-    ICON_VIRIDIS("textures/gui/bodyicons/icon_viridis.png"),
+    ICON_OVERWORLD("textures/gui/bodyicons/icon_overworld.png"),
 
     // Space Object Icons for Galactic map
     ICON_STATION("textures/gui/bodyicons/station.png"),
