@@ -16,13 +16,15 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraftforge.event.world.WorldEvent;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -52,6 +54,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public final class FacilityPersistenceManager {
+
+    private static final Logger LOG = LogManager.getLogger(FacilityPersistenceManager.class);
 
     private static final String DATA_DIR = "galaxiadata";
     private static final String ASSETS_FILE = "_assets.json";
@@ -116,11 +120,11 @@ public final class FacilityPersistenceManager {
             Type listType = new TypeToken<List<AssetJson>>() {}.getType();
             list = gson.fromJson(reader, listType);
         } catch (IOException | JsonParseException e) {
-            Galaxia.LOG.error("[Logistics] Failed to read asset registry {}: {}", file, e.getMessage());
+            LOG.error("[Logistics] Failed to read asset registry {}: {}", file, e.getMessage());
             return;
         }
         if (list == null) {
-            Galaxia.LOG.warn("[Logistics] Asset registry {} contained no asset list", file);
+            LOG.warn("[Logistics] Asset registry {} contained no asset list", file);
             return;
         }
 
@@ -128,14 +132,14 @@ public final class FacilityPersistenceManager {
             try {
                 CelestialAsset asset = decodeAsset(json);
                 if (asset == null) {
-                    Galaxia.LOG.warn("[Logistics] Skipping malformed asset entry in {}", file);
+                    LOG.warn("[Logistics] Skipping malformed asset entry in {}", file);
                     continue;
                 }
                 UUID teamId = UUID.fromString(json.teamId);
                 decodeFacilityState(asset, json.facility);
                 CelestialAssetStore.add(teamId, asset);
             } catch (RuntimeException e) {
-                Galaxia.LOG.error("[Logistics] Skipping malformed asset entry in {}: {}", file, e.getMessage());
+                LOG.error("[Logistics] Skipping malformed asset entry in {}: {}", file, e.getMessage());
             }
         }
     }
@@ -145,7 +149,7 @@ public final class FacilityPersistenceManager {
         try {
             return Enum.valueOf(cls, name);
         } catch (IllegalArgumentException e) {
-            Galaxia.LOG.warn("[Logistics] Unknown enum value {} for {}", name, cls.getSimpleName());
+            LOG.warn("[Logistics] Unknown enum value {} for {}", name, cls.getSimpleName());
             return null;
         }
     }
@@ -189,7 +193,7 @@ public final class FacilityPersistenceManager {
                 }
             }
         } catch (IOException | JsonParseException e) {
-            Galaxia.LOG.error("[Logistics] Failed to load tasks from {}: {}", file, e.getMessage());
+            LOG.error("[Logistics] Failed to load tasks from {}: {}", file, e.getMessage());
         }
     }
 
@@ -219,7 +223,7 @@ public final class FacilityPersistenceManager {
         try (FileWriter writer = new FileWriter(tmp)) {
             gson.toJson(value, writer);
         } catch (IOException e) {
-            Galaxia.LOG.error("[Logistics] Failed to write {}: {}", file, e.getMessage());
+            LOG.error("[Logistics] Failed to write {}: {}", file, e.getMessage());
             tmp.delete();
             return;
         }
@@ -234,10 +238,10 @@ public final class FacilityPersistenceManager {
                 java.nio.file.Files
                     .move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e2) {
-                Galaxia.LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e2.getMessage());
+                LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e2.getMessage());
             }
         } catch (IOException e) {
-            Galaxia.LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e.getMessage());
+            LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e.getMessage());
         }
     }
 
@@ -350,20 +354,21 @@ public final class FacilityPersistenceManager {
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         if (layout != null) {
-            for (Map.Entry<StationTileCoord, PlacedTile> e : layout.snapshot()
+            for (Map.Entry<StationTileCoord, PlacedTile> entry : layout.snapshot()
                 .entrySet()) {
-                StationTileJson tj = new StationTileJson();
-                tj.dx = e.getKey()
-                    .dx();
-                tj.dy = e.getKey()
-                    .dy();
-                tj.state = e.getValue()
+                StationTileCoord coord = entry.getKey();
+                // Save only anchor tiles — children are reconstructed on load
+                if (!layout.isAnchorAt(coord)) continue;
+                StationTileJson tileJson = new StationTileJson();
+                tileJson.dx = coord.dx();
+                tileJson.dy = coord.dy();
+                tileJson.state = entry.getValue()
                     .state()
                     .name();
-                ModuleInstance module = e.getValue()
+                ModuleInstance module = entry.getValue()
                     .module();
-                tj.moduleId = module == null ? null : module.id.toString();
-                out.layoutTiles.add(tj);
+                tileJson.moduleId = module == null ? null : module.id.toString();
+                out.layoutTiles.add(tileJson);
             }
         }
         return out;
@@ -376,6 +381,8 @@ public final class FacilityPersistenceManager {
         state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
 
+        List<PendingTierDowngrade> pendingDowngrades = new ArrayList<>();
+
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
                 FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
@@ -383,20 +390,17 @@ public final class FacilityPersistenceManager {
                 ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
                 ModuleShape shape = PacketUtil.enumFromByte(mj.shape, ModuleShape.class);
                 ModuleTier tier = PacketUtil.enumFromByte(mj.tier, ModuleTier.class);
+                ModuleTier originalTier = tier;
                 if (!kind.allowedTiers()
                     .contains(tier)) {
-                    ModuleTier downgraded = kind.defaultTier();
-                    Galaxia.LOG.warn(
-                        "Module {} at {} had unsupported tier {}; downgraded to {}",
-                        kind,
-                        moduleId,
-                        tier,
-                        downgraded);
-                    tier = downgraded;
+                    tier = kind.defaultTier();
                 }
                 ModuleInstance module = moduleId == null
                     ? FacilityModuleRegistry.create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, tier)
                     : FacilityModuleRegistry.create(moduleId, kind, null, shape, tier);
+                if (originalTier != tier) {
+                    pendingDowngrades.add(new PendingTierDowngrade(module, kind, originalTier, tier));
+                }
 
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
 
@@ -520,7 +524,7 @@ public final class FacilityPersistenceManager {
                 if (tj.dx < StationTileCoord.MIN || tj.dx > StationTileCoord.MAX
                     || tj.dy < StationTileCoord.MIN
                     || tj.dy > StationTileCoord.MAX) {
-                    Galaxia.LOG.warn(
+                    LOG.warn(
                         "[Logistics] Skipping layout tile out of range: ({}, {}) state={}",
                         tj.dx,
                         tj.dy,
@@ -530,16 +534,29 @@ public final class FacilityPersistenceManager {
                 StationTileCoord coord = StationTileCoord.of(tj.dx, tj.dy);
                 ModuleInstance module = tj.moduleId == null ? null
                     : modulesById.get(ModuleInstance.ID.from(tj.moduleId));
+                if (module != null) {
+                    module.initAnchor(coord);
+                }
                 layoutSnapshot.put(coord, new PlacedTile(module, tileState));
             }
             layout.loadFromSnapshot(layoutSnapshot);
-            for (Map.Entry<StationTileCoord, PlacedTile> e : layoutSnapshot.entrySet()) {
-                ModuleInstance m = e.getValue()
-                    .module();
-                if (m != null && m.anchor() == null) {
-                    m.initAnchor(e.getKey());
+            // Expand each module's full footprint — place() populates child tiles
+            for (ModuleInstance m : state.modules()) {
+                if (m.anchor() != null) {
+                    layout.place(m);
                 }
             }
+        }
+
+        // Emit deferred tier-downgrade WARN logs — anchors now available if layout was loaded
+        for (PendingTierDowngrade p : pendingDowngrades) {
+            StationTileCoord anchor = p.module.anchor();
+            LOG.warn(
+                "Module {} at {} had unsupported tier {}; downgraded to {}",
+                p.kind,
+                anchor != null ? anchor : p.module.id,
+                p.oldTier,
+                p.newTier);
         }
 
         return state;
@@ -628,6 +645,9 @@ public final class FacilityPersistenceManager {
         boolean isImportEnabled;
         boolean isSupplyEnabled;
     }
+
+    private record PendingTierDowngrade(ModuleInstance module, FacilityModuleKind kind, ModuleTier oldTier,
+        ModuleTier newTier) {}
 
     static final class TaskJson {
 

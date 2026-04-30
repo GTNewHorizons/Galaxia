@@ -3,7 +3,9 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -14,6 +16,8 @@ import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
 public final class PacketUtil {
+
+    private static final Logger LOG = LogManager.getLogger(PacketUtil.class);
 
     private PacketUtil() {}
 
@@ -73,37 +77,45 @@ public final class PacketUtil {
 
     // ── Enum helpers ───────────────────────────────────────────────────────
 
-    static <T extends Enum<T>> void writeEnum(ByteBuf buf, T enumValue) {
-        buf.writeByte(enumValue.ordinal());
-    }
-
-    @SuppressWarnings("unchecked")
-    static <T extends Enum<T>> T readEnum(ByteBuf buf, Class<T> enumClass) {
-        int ordinal = buf.readUnsignedByte();
-        T[] values = enumClass.getEnumConstants();
-        if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
-        Galaxia.LOG.warn(
-            "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
-            ordinal,
-            enumClass.getSimpleName(),
-            values[0]);
-        return values[0];
-    }
-
+    /** Convert an enum value to its unsigned byte ordinal. */
     public static <T extends Enum<T>> byte enumOrdinal(T value) {
         return (byte) value.ordinal();
     }
 
+    /**
+     * Convert an unsigned byte ordinal to its enum value, or {@code null} if the ordinal
+     * is out of range. Delegates to {@link #enumFromOrdinal(int, Class)}.
+     */
     public static <T extends Enum<T>> T enumFromByte(int b, Class<T> enumClass) {
-        int ordinal = Byte.toUnsignedInt((byte) b);
+        return enumFromOrdinal(Byte.toUnsignedInt((byte) b), enumClass);
+    }
+
+    /** Shared ordinal → enum lookup. Returns {@code null} when ordinal is out of range. */
+    @SuppressWarnings("unchecked")
+    private static <T extends Enum<T>> T enumFromOrdinal(int ordinal, Class<T> enumClass) {
         T[] values = enumClass.getEnumConstants();
         if (ordinal >= 0 && ordinal < values.length) return values[ordinal];
-        Galaxia.LOG.warn(
+        return null;
+    }
+
+    static <T extends Enum<T>> void writeEnum(ByteBuf buf, T enumValue) {
+        buf.writeByte(enumValue.ordinal());
+    }
+
+    /**
+     * Read an enum value from a {@link ByteBuf}. Never returns {@code null}: if the
+     * ordinal is out of range the method warns and falls back to the first constant.
+     */
+    static <T extends Enum<T>> T readEnum(ByteBuf buf, Class<T> enumClass) {
+        int ordinal = buf.readUnsignedByte();
+        T value = enumFromOrdinal(ordinal, enumClass);
+        if (value != null) return value;
+        LOG.warn(
             "[PacketUtil] Unknown enum ordinal {} for {}, falling back to {}",
             ordinal,
             enumClass.getSimpleName(),
-            values[0]);
-        return values[0];
+            enumClass.getEnumConstants()[0]);
+        return enumClass.getEnumConstants()[0];
     }
 
 }
