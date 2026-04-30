@@ -15,6 +15,7 @@ import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -30,11 +31,17 @@ import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 @Mixin(RenderGlobal.class)
 public abstract class RenderGlobalSkyMixin {
 
+    @Unique
     private static final int FACE_TOP = 0;
+    @Unique
     private static final int FACE_BOTTOM = 1;
+    @Unique
     private static final int FACE_SOUTH = 2;
+    @Unique
     private static final int FACE_NORTH = 3;
+    @Unique
     private static final int FACE_EAST = 4;
+    @Unique
     private static final int FACE_WEST = 5;
 
     @Shadow
@@ -156,6 +163,7 @@ public abstract class RenderGlobalSkyMixin {
      * @param angle           The angle in the sky
      * @param primarySunAngle The angle of the primary light source (sun usually) in the sky
      */
+    @Unique
     private void drawCelestialBody(Tessellator t, CelestialBody body, float angle, float primarySunAngle) {
         GL11.glPushMatrix();
 
@@ -206,6 +214,7 @@ public abstract class RenderGlobalSkyMixin {
      * Draws a static cubemap skybox using a single repeating texture.
      * Called before celestial bodies, so bodies render on top.
      */
+    @Unique
     private void drawCubemapSkybox(Tessellator t, ResourceLocation[] faces) {
         GL11.glDisable(GL11.GL_CULL_FACE);
         GL11.glDepthMask(false);
@@ -257,6 +266,7 @@ public abstract class RenderGlobalSkyMixin {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
     }
 
+    @Unique
     private void drawFace(Tessellator t, ResourceLocation texture, float x0, float y0, float z0, float x1, float y1,
         float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
 
@@ -273,6 +283,7 @@ public abstract class RenderGlobalSkyMixin {
     /**
      * Restores the GLState to regular levels
      */
+    @Unique
     private void restoreGLState() {
         GL11.glColor4f(1F, 1F, 1F, 1F);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
