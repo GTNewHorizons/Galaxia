@@ -480,11 +480,11 @@ public final class AssetSyncPacket implements IMessage {
         }
 
         private void handleFull(AssetSyncPacket packet) {
-            AutomatedFacility state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedFacility o ? o
+            AutomatedFacility state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o
                 : null;
             if (state == null) {
                 CelestialAsset newAsset = CelestialAsset
-                    .create(packet.celestialBodyId, packet.assetKind, packet.assetStatus);
+                    .create(packet.assetId, packet.celestialBodyId, packet.assetKind, packet.assetStatus);
                 if (!(newAsset instanceof AutomatedFacility newState)) return;
                 state = newState;
                 CelestialClient.add(newState);

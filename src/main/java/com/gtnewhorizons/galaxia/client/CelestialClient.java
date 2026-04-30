@@ -18,7 +18,6 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
-import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -41,48 +40,44 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-/*
- * This class abstracts CelestialAssetStore, LogisticSignalStore and stores all client state. Its purpose is to be used
- * as an API by the client so that it will never call the underlying stores to avoid server side logic
+/**
+ * Client-side mirror of server state. Owns its own asset storage — never touches
+ * {@link CelestialAssetStore} directly except for server-side factory methods.
  */
 @SideOnly(Side.CLIENT)
 public final class CelestialClient {
 
-    /// This is just used in the UI, I mark it as deprecated since it's just duplicate copied stuff, but I can't be
-    /// bothered to fix the UI
     @Deprecated
-
     public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
 
-    /**
-     * Client-side snapshot of in-flight logistics tasks. Updated by
-     * {@link LogisticsSyncPacket}.
-     * Always empty on the server; never null.
-     */
-    private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
-    private static int deliveryRevision = 0;
-    private static int signalRevision = 0;
+    // ── Client-side asset mirror ──
 
-    /**
-     * Client-side snapshot of aggregated logistics signals, indexed by system id.
-     * Updated by {@link LogisticsSyncPacket}.
-     * Always empty on the server; never null.
-     * <p>
-     * Inner map: resourceKey → net signed amount (positive = surplus, negative = deficit).
-     */
-    private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
+    private static final Map<CelestialAsset.ID, CelestialAsset> clientAssets = new LinkedHashMap<>();
 
-    /**
-     * Client-side snapshot of aggregated logistics signals, indexed by planetary anchor body id.
-     * Updated alongside {@link #systemSignals}.
-     */
-    private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+    public static CelestialAsset getByAssetId(CelestialAsset.ID assetId) {
+        return clientAssets.get(assetId);
+    }
 
-    private CelestialClient() {}
+    public static void add(AutomatedFacility state) {
+        clientAssets.put(state.assetId, state);
+    }
 
     public static List<CelestialAsset> getState(CelestialObjectId celestialObjectId) {
-        return CelestialAssetStore.getState(TempTeamCompat.getTeam(), celestialObjectId);
+        return clientAssets.values()
+            .stream()
+            .filter(a -> a.celestialObjectId == celestialObjectId)
+            .collect(Collectors.toList());
     }
+
+    public static List<AutomatedFacility> allOutposts() {
+        return clientAssets.values()
+            .stream()
+            .filter(a -> a instanceof AutomatedFacility)
+            .map(a -> (AutomatedFacility) a)
+            .collect(Collectors.toList());
+    }
+
+    // ── Server-side asset creation (delegates to the shared store) ──
 
     public static CelestialAsset createAssetInConstruction(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
@@ -96,23 +91,19 @@ public final class CelestialClient {
             .createOperationalAsset(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
     }
 
-    public static CelestialAsset getByAssetId(CelestialAsset.ID assetId) {
-        return CelestialAssetStore.findAsset(assetId);
-    }
+    // ── Logistics mirror ──
 
-    public static void add(AutomatedFacility state) {
-        CelestialAssetStore.add(TempTeamCompat.getTeam(), state);
-    }
+    private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
+    private static int deliveryRevision = 0;
+    private static int signalRevision = 0;
 
-    public static List<AutomatedFacility> allOutposts() {
-        return CelestialAssetStore.allAssets()
-            .stream()
-            .filter(a -> a instanceof AutomatedFacility)
-            .map(a -> (AutomatedFacility) a)
-            .collect(Collectors.toList());
-    }
+    private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
+    private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
+
+    private CelestialClient() {}
 
     public static void clear() {
+        clientAssets.clear();
         deliveries.clear();
         deliveryRevision = 0;
         signalRevision = 0;
@@ -159,7 +150,7 @@ public final class CelestialClient {
     }
 
     public static void updateModuleAction(ID assetId, int moduleIndex, AssetModuleUpdatePacket.Action action) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -173,7 +164,7 @@ public final class CelestialClient {
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -188,7 +179,7 @@ public final class CelestialClient {
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -211,7 +202,7 @@ public final class CelestialClient {
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -234,7 +225,7 @@ public final class CelestialClient {
 
     public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
         T payload) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
@@ -260,10 +251,8 @@ public final class CelestialClient {
             .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
-    /**
-     * Replaces the client signal maps and bumps the signal revision counter.
-     * Client-side only.
-     */
+    // ── Signal mirror ──
+
     public static void updateClientSignals(Map<CelestialObjectId, Map<String, Long>> bySystem,
         Map<CelestialObjectId, Map<String, Long>> byPlanet) {
         systemSignals.clear();
@@ -273,34 +262,22 @@ public final class CelestialClient {
         signalRevision++;
     }
 
-    /**
-     * Returns the aggregated net amounts (resourceKey → netAmount) for the given
-     * star system, or an empty map if none are available.
-     */
     public static Map<String, Long> clientSignalsForSystem(CelestialObjectId systemId) {
         Map<String, Long> result = systemSignals.get(systemId);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
-    /**
-     * Returns the aggregated net amounts (resourceKey → netAmount) for the given
-     * planetary anchor body, or an empty map if none are available.
-     */
     public static Map<String, Long> clientSignalsForPlanet(CelestialObjectId anchorBodyId) {
         Map<String, Long> result = planetSignals.get(anchorBodyId);
         return result != null ? Collections.unmodifiableMap(result) : Collections.emptyMap();
     }
 
-    /** Monotonically incrementing counter; bumped each time signal data is replaced. */
     public static int clientSignalRevision() {
         return signalRevision;
     }
 
-    // -------------------------------------------------------------------------
-    // Client-side task snapshot (populated by LogisticsTasksSyncPacket)
-    // -------------------------------------------------------------------------
+    // ── Delivery mirror ──
 
-    /** Replaces the client delivery list and bumps the revision counter. Client-side only. */
     public static void updateClientDeliveries(List<LogisticsDelivery> newDeliveries) {
         deliveries.clear();
         newDeliveries.stream()
@@ -309,15 +286,15 @@ public final class CelestialClient {
         deliveryRevision++;
     }
 
-    /** Returns an unmodifiable view of the latest client delivery snapshot. */
     public static List<LogisticsDelivery> clientDeliveries() {
         return Collections.unmodifiableList(deliveries);
     }
 
-    /** Monotonically incrementing counter; bumped each time deliveries are replaced. */
     public static int clientDeliveryRevision() {
         return deliveryRevision;
     }
+
+    // ── Helpers ──
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {
         List<CelestialAsset> state = getState(current.id());
