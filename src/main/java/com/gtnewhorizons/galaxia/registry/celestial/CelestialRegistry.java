@@ -251,10 +251,10 @@ public final class CelestialRegistry {
                         .metadata("sizeClass", "minor")));
 
         register(
-            DimensionEnum.VITRIS_SPACE,
+            DimensionEnum.OVERWORLD_ORBIT,
             builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.STATION)
-                .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("vitris_space"))
+                .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("overworld_orbit"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(

@@ -21,7 +21,7 @@ galaxia.dimension.mars=Mars
 galaxia.dimension.panspira=Panspira
 galaxia.dimension.tenebrae=Tenebrae
 galaxia.dimension.moon=Moon
-galaxia.dimension.vitris_space=Vitris Space Stations
+galaxia.dimension.overworld_orbit=Overworld Orbit Stations
 
 #### Celestial Bodies
 galaxia.celestial.novum_caelum=Novum Caelum
@@ -36,7 +36,7 @@ galaxia.celestial.mars=Mars
 galaxia.celestial.moon=Moon
 galaxia.celestial.frozen_belt=Frozen Belt
 galaxia.celestial.ambergris_fragment=Ambergris Fragment
-galaxia.celestial.vitris_space=Vitris Space
+galaxia.celestial.overworld_orbit=Overworld Orbit
 
 #### Blocks
 # Blocks - "Moon"

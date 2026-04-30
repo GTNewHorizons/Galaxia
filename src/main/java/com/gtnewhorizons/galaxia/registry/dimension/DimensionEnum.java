@@ -6,7 +6,7 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 public enum DimensionEnum {
 
     // Format: ENUMNAME(int ID, String name)
-    VITRIS_SPACE(-19, "Vitris_Space_Stations", "galaxia.dimension.vitris_space"),
+    OVERWORLD_ORBIT(-19, "Overworld_Orbit_Stations", "galaxia.dimension.overworld_orbit"),
     MOON(20, "Moon", "galaxia.dimension.moon"),
     MARS(21, "Mars", "galaxia.dimension.mars"),
     FROZEN_BELT(22, "Frozen_Belt", "galaxia.dimension.frozen_belt"),
