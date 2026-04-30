@@ -226,9 +226,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
             }
 
             if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
-                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id);
+                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id)
+                    .withSyncRevision(state.getSyncRevision());
             }
-            return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
+            state.markModuleDirty(module.id);
+            return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module)
+                .withSyncRevision(state.getSyncRevision());
         }
 
         private void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {

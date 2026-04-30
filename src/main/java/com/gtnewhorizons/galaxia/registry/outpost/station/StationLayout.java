@@ -169,7 +169,7 @@ public final class StationLayout {
         }
         tiles.putIfAbsent(StationTileCoord.CORE, PlacedTile.CORE);
         version++;
-        LOG.info(
+        LOG.debug(
             "[PERSIST] LAYOUT: loadFromSnapshot({} entries) restored snapshot with {} tiles (was {})",
             snapshot.size(),
             tiles.size(),

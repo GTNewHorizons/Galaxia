@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -21,11 +22,15 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.WidgetOutline;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 public final class ModulePickerScreen implements IGuiHolder<GuiData> {
 
@@ -51,6 +56,12 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingCoord = coord;
         pendingInstantBuild = instantBuild;
         FACTORY.openClient();
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public ModularScreen createScreen(GuiData data, ModularPanel mainPanel) {
+        return new ModularScreen(Galaxia.MODID, mainPanel);
     }
 
     @Override
@@ -118,7 +129,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
                         EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
             .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
-            .onMousePressed(mouseButton -> {
+            .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 CelestialAsset.ID assetId = pendingAssetId;
                 StationTileCoord coord = pendingCoord;

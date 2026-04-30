@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -222,5 +223,125 @@ final class CapacityClusterBuilderTest {
             IllegalStateException.class,
             () -> CapacityClusterBuilder.build(layout, FacilityModuleKind.STORAGE),
             "CapacityClusterBuilder must throw when a capacity module's component does not implement ICapacityModule");
+    }
+
+    @Test
+    void baseCapacityForTier_returnsZeroForNONE() {
+        // All capacity modules return 0 for NONE tier — sentinel behavior
+        assertEquals(
+            0L,
+            FacilityModuleKind.STORAGE.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV)
+                .component() instanceof com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule icm
+                    ? icm.baseCapacityForTier(ModuleTier.NONE)
+                    : -1L);
+        assertEquals(
+            0L,
+            FacilityModuleKind.TANK.create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.HV)
+                .component() instanceof com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule icm
+                    ? icm.baseCapacityForTier(ModuleTier.NONE)
+                    : -1L);
+        assertEquals(
+            0L,
+            FacilityModuleKind.BATTERY.create(StationTileCoord.of(3, 0), ModuleShape.SINGLE, ModuleTier.HV)
+                .component() instanceof com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule icm
+                    ? icm.baseCapacityForTier(ModuleTier.NONE)
+                    : -1L);
+    }
+
+    @Test
+    void maintenanceBayParallelIsFrozenAtOne() {
+        ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
+        ModuleComponent comp = bay.component();
+        assertEquals(1, comp.getParallel());
+
+        comp.setParallel((byte) 5); // should be silently ignored
+        assertEquals(1, comp.getParallel(), "MaintenanceBay parallel must remain 1");
+
+        comp.setParallel((byte) 0); // should be silently ignored
+        assertEquals(1, comp.getParallel(), "MaintenanceBay parallel must remain 1 even when set to 0");
+    }
+
+    @Test
+    void layoutCacheBundle_capacityClustersForNonCapacityKindReturnsEmpty() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance hammer = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        layout.place(hammer);
+
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        assertTrue(
+            cache.getCapacityClusters(FacilityModuleKind.HAMMER)
+                .isEmpty(),
+            "Non-capacity kind should return empty clusters");
+    }
+
+    @Test
+    void layoutCacheBundle_maintenanceCoverageReflectsEnabledState() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
+            .create(StationTileCoord.of(5, 5), ModuleShape.SINGLE, ModuleTier.NONE);
+        layout.place(bay);
+
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        Set<StationTileCoord> coverage = cache.getMaintenanceCoverage();
+        assertEquals(8, coverage.size(), "Enabled bay should cover 8 surrounding tiles");
+        assertTrue(coverage.contains(StationTileCoord.of(6, 5))); // E
+        assertTrue(coverage.contains(StationTileCoord.of(5, 6))); // S
+
+        // Disable bay, coverage should shrink
+        bay.setEnabled(false);
+        cache.applyMutation(MutationKind.SET_ENABLED, FacilityModuleKind.MAINTENANCE_BAY);
+        assertTrue(
+            cache.getMaintenanceCoverage()
+                .isEmpty(),
+            "Disabled bay should have no coverage");
+    }
+
+    @Test
+    void layoutCacheBundle_capacityClustersRespectMultipleClusters() {
+        StationLayout layout = new StationLayout();
+        // Cluster 1: two adjacent storage at (1,0) and (2,0)
+        ModuleInstance s1 = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        ModuleInstance s2 = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        // Cluster 2: single tank at (5,5)
+        ModuleInstance t1 = FacilityModuleKind.TANK
+            .create(StationTileCoord.of(5, 5), ModuleShape.SINGLE, ModuleTier.HV);
+        layout.place(s1);
+        layout.place(s2);
+        layout.place(t1);
+
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        List<CapacityCluster> storageClusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
+        List<CapacityCluster> tankClusters = cache.getCapacityClusters(FacilityModuleKind.TANK);
+
+        assertEquals(1, storageClusters.size());
+        assertEquals(1, tankClusters.size());
+        assertEquals(
+            2,
+            storageClusters.get(0)
+                .members()
+                .size());
+        assertEquals(
+            1,
+            tankClusters.get(0)
+                .members()
+                .size());
+    }
+
+    @Test
+    void layoutCacheBundle_dirtyFlagPreventsRebuildOnRepeatedReads() {
+        StationLayout layout = new StationLayout();
+        ModuleInstance storage = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        layout.place(storage);
+
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        List<CapacityCluster> first = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
+        List<CapacityCluster> second = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
+        // Same reference — cache was not rebuilt
+        assertTrue(first == second, "Repeated reads should return the same cached list");
     }
 }

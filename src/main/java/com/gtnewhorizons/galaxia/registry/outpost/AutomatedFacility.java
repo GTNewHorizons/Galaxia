@@ -2,7 +2,10 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -42,6 +45,10 @@ public final class AutomatedFacility extends CelestialAsset {
     private final SettingsGroupRegistry settingsGroups;
 
     private long energyStored;
+
+    private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
+    private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
+    private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
     public static final long MAX_ENERGY = 1_000_000L;
 
@@ -98,7 +105,9 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
-        LOG.info(
+        dirtyModuleIds.add(module.id);
+        bumpSyncRevision();
+        LOG.debug(
             "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
             module.kind(),
             module.id,
@@ -114,6 +123,9 @@ public final class AutomatedFacility extends CelestialAsset {
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
+            dirtyRemovedIds.add(removed.id);
+            dirtyModuleIds.remove(removed.id);
+            bumpSyncRevision();
             if (layout != null) layout.removeTileForModule(removed.id);
             layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind());
         }
@@ -145,6 +157,39 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public List<ModuleInstance> modulesInternal() {
         return modules;
+    }
+
+    public void markModuleDirty(ModuleInstance.ID id) {
+        dirtyModuleIds.add(id);
+        bumpSyncRevision();
+    }
+
+    public boolean isDirty() {
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
+    }
+
+    public boolean needsFullSyncFor(UUID playerId) {
+        return !syncedPlayerIds.contains(playerId);
+    }
+
+    public void markSyncedFor(UUID playerId) {
+        syncedPlayerIds.add(playerId);
+    }
+
+    public List<ModuleInstance> drainDirtyModules() {
+        List<ModuleInstance> result = new ArrayList<>(dirtyModuleIds.size());
+        for (ModuleInstance.ID id : dirtyModuleIds) {
+            int idx = moduleIndex(id);
+            if (idx >= 0) result.add(modules.get(idx));
+        }
+        dirtyModuleIds.clear();
+        return result;
+    }
+
+    public List<ModuleInstance.ID> drainRemovedIds() {
+        List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
+        dirtyRemovedIds.clear();
+        return result;
     }
 
     public long getEnergyStored() {

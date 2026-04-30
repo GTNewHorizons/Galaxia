@@ -54,6 +54,12 @@ public enum FacilityModuleKind {
         if (def == null) {
             throw new IllegalArgumentException("Unknown module kind: " + this);
         }
+        if (shape == null) {
+            throw new IllegalArgumentException("FacilityModuleKind.create: shape must not be null for kind " + this);
+        }
+        if (tier == null) {
+            throw new IllegalArgumentException("FacilityModuleKind.create: tier must not be null for kind " + this);
+        }
         ModuleInstance instance = new ModuleInstance(ModuleInstance.ID.create(), def, anchor, shape, tier);
         instance.setComponent(FacilityModuleRegistry.createComponent(this));
         return instance;

@@ -53,6 +53,8 @@ public final class AssetSyncPacket implements IMessage {
     private CelestialAsset.ID assetId;
     private byte syncType;
 
+    private int syncRevision;
+
     private UUID teamId;
     private CelestialObjectId celestialBodyId;
     private CelestialObjectId systemId;
@@ -81,6 +83,7 @@ public final class AssetSyncPacket implements IMessage {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = state.assetId;
         pkt.syncType = FULL_SYNC;
+        pkt.syncRevision = state.getSyncRevision();
 
         pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
         pkt.celestialBodyId = state.celestialObjectId;
@@ -210,6 +213,7 @@ public final class AssetSyncPacket implements IMessage {
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         buf.writeByte(syncType);
+        buf.writeInt(syncRevision);
 
         switch (syncType) {
             case FULL_SYNC -> {
@@ -236,6 +240,7 @@ public final class AssetSyncPacket implements IMessage {
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         syncType = buf.readByte();
+        syncRevision = buf.readInt();
 
         switch (syncType) {
             case FULL_SYNC -> {
@@ -418,6 +423,11 @@ public final class AssetSyncPacket implements IMessage {
         return new LogisticsResourceConfig(buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
     }
 
+    public AssetSyncPacket withSyncRevision(int rev) {
+        this.syncRevision = rev;
+        return this;
+    }
+
     public static final class Handler implements IMessageHandler<AssetSyncPacket, IMessage> {
 
         @Override
@@ -434,6 +444,7 @@ public final class AssetSyncPacket implements IMessage {
                 default -> {
                     if (CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility state) {
                         handleDelta(state, packet);
+                        state.setSyncRevision(Math.max(state.getSyncRevision(), packet.syncRevision));
                     }
                 }
             }
@@ -462,7 +473,7 @@ public final class AssetSyncPacket implements IMessage {
                 handleDelta(state, d);
             }
 
-            state.bumpSyncRevision();
+            state.setSyncRevision(packet.syncRevision);
         }
 
         private void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
