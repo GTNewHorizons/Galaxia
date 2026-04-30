@@ -105,10 +105,10 @@ public abstract class BasePlanet {
             .rainfall(0.99F)
             .topBlock(block)
             .fillerBlocks(new StratificationPreset(Blocks.brick_block).addStrataLayer(Blocks.bedrock, 0, 0))
-            .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
+            .snowBlock(PlanetBlocks.MARS_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)
-            .ocean(Blocks.glass, PlanetBlocks.HEMATERIA_REGOLITH, 64, Blocks.obsidian, 32)
+            .ocean(Blocks.glass, PlanetBlocks.MARS_REGOLITH, 64, Blocks.obsidian, 32)
             .build();
     }
 }

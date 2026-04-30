@@ -5,7 +5,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 
-import com.gtnewhorizons.galaxia.client.KeyBinds;
+import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
@@ -21,7 +21,6 @@ import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
-import com.gtnewhorizons.galaxia.handlers.RocketInputHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
@@ -49,9 +48,6 @@ public class ClientProxy extends CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(new KeyHandler());
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new RocketInputHandler());
     }
 
     @Override
@@ -73,7 +69,7 @@ public class ClientProxy extends CommonProxy {
         MinecraftForgeClient
             .registerItemRenderer(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem(), new RocketSchematicItemRenderer());
 
-        KeyBinds.registerAll();
+        GalaxiaKeyBinds.init();
     }
 
     @Override

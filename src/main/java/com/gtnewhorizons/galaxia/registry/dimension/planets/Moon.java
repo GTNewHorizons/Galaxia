@@ -28,11 +28,11 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.Locati
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 
 /**
- * The class holding all data related to the dimension Theia
+ * The class holding all data related to the dimension Moon
  */
-public class Theia extends BasePlanet {
+public class Moon extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.THEIA;
+    public static final DimensionEnum ENUM = DimensionEnum.MOON;
 
     /**
      * Getter for dimension Enum
@@ -75,7 +75,7 @@ public class Theia extends BasePlanet {
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
         BiomeGenBase border = createOceanBiome(
-            "Theia Ocean Edge",
+            "Moon Ocean Edge",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(50)
@@ -86,31 +86,31 @@ public class Theia extends BasePlanet {
                 .endFeature()
                 .build());
         BiomeGenBase smallVolcanoes = createOceanBiome(
-            "Theia Small Volcanoes",
+            "Moon Small Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(32)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
-                .replacementBlock(PlanetBlocks.THEIA_MAGMA)
+                .replacementBlock(PlanetBlocks.MOON_MAGMA)
                 .width(2)
                 .height(32)
                 .endFeature()
                 .build());
         BiomeGenBase bigVolcanoes = createOceanBiome(
-            "Theia Big Volcanoes",
+            "Moon Big Volcanoes",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(32)
                 .endFeature()
                 .feature(TerrainPreset.SHIELD_VOLCANOES)
-                .replacementBlock(PlanetBlocks.THEIA_MAGMA)
+                .replacementBlock(PlanetBlocks.MOON_MAGMA)
                 .width(4)
                 .height(64)
                 .endFeature()
                 .build());
         BiomeGenBase hills = createLandBiome(
-            "Theia Hills",
+            "Moon Hills",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(64)
@@ -125,7 +125,7 @@ public class Theia extends BasePlanet {
                 .endFeature()
                 .build());
         BiomeGenBase mountains = createLandBiome(
-            "Theia Mountains",
+            "Moon Mountains",
             TerrainConfiguration.builder()
                 .feature(TerrainPreset.BASE_HEIGHT)
                 .height(64)
@@ -205,25 +205,25 @@ public class Theia extends BasePlanet {
                     .period(23151L)
                     .hasPhases())
             .addBody(
-                m -> m.texture(EnumTextures.HEMATERIA.get())
+                m -> m.texture(EnumTextures.MARS.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(10.0f)
                     .period(3000L))
             .addBody(
-                m -> m.texture(EnumTextures.HEMATERIA.get())
+                m -> m.texture(EnumTextures.MARS.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(20.0f)
                     .period(1200L))
             .addBody(
-                m -> m.texture(EnumTextures.HEMATERIA.get())
+                m -> m.texture(EnumTextures.MARS.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(40.0f)
                     .period(12000L))
             .addBody(
-                m -> m.texture(EnumTextures.HEMATERIA.get())
+                m -> m.texture(EnumTextures.MARS.get())
                     .size(6f)
                     .distance(90.0)
                     .inclination(30.0f)
@@ -240,54 +240,54 @@ public class Theia extends BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(PlanetBlocks.THEIA_REGOLITH)
+            .topBlock(PlanetBlocks.MOON_REGOLITH)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.THEIA_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.THEIA_ANORTHOSITE, 1, 32))
+                new StratificationPreset(PlanetBlocks.MOON_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.MOON_ANORTHOSITE, 1, 32))
             .generateCaves(true)
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
                     8,
-                    new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
-                    new CraterFeature(PlanetBlocks.THEIA_TEKTITE),
+                    new Block[] { PlanetBlocks.MOON_REGOLITH, PlanetBlocks.MOON_BASALT },
+                    new CraterFeature(PlanetBlocks.MOON_TEKTITE),
                     true))
             .caveFeature(
                 new LocationRuleGalaxiaCave(
                     64,
                     4,
                     32,
-                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE },
-                    new StalactiteFeature(PlanetBlocks.THEIA_ANORTHOSITE)))
+                    new Block[] { PlanetBlocks.MOON_ANORTHOSITE },
+                    new StalactiteFeature(PlanetBlocks.MOON_ANORTHOSITE)))
             .caveFeature(
                 new LocationRuleGalaxiaCave(
                     64,
                     32,
                     64,
-                    new Block[] { PlanetBlocks.THEIA_ANDESITE },
-                    new StalactiteFeature(PlanetBlocks.THEIA_ANDESITE)))
+                    new Block[] { PlanetBlocks.MOON_ANDESITE },
+                    new StalactiteFeature(PlanetBlocks.MOON_ANDESITE)))
             .caveFeature(
                 new LocationRuleGalaxiaCave(
                     32,
                     4,
                     32,
-                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE },
+                    new Block[] { PlanetBlocks.MOON_ANORTHOSITE },
                     new CrystalClusterFeature(GalaxiaBlocksEnum.BLOCK_OF_CINNABAR.get())))
             .wallFeature(
                 new LocationRuleGalaxiaWall(
                     2,
-                    new Block[] { PlanetBlocks.THEIA_ANDESITE, PlanetBlocks.THEIA_ANORTHOSITE },
+                    new Block[] { PlanetBlocks.MOON_ANDESITE, PlanetBlocks.MOON_ANORTHOSITE },
                     new FluidSpringFeature(PlanetBlocks.LIQUID_MERCURY.getBlock()),
                     8,
                     256))
             .wallFeature(
                 new LocationRuleGalaxiaWall(
                     4,
-                    new Block[] { PlanetBlocks.THEIA_ANORTHOSITE, PlanetBlocks.THEIA_ANDESITE },
+                    new Block[] { PlanetBlocks.MOON_ANORTHOSITE, PlanetBlocks.MOON_ANDESITE },
                     new GeodeFeature(Blocks.glass, Blocks.stained_glass),
                     24,
                     96))
             .terrain(terrainConfiguration)
-            .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 1, PlanetBlocks.THEIA_OBSIDIAN, 1)
+            .ocean(PlanetBlocks.MOON_OBSIDIAN, PlanetBlocks.MOON_BASALT, 1, PlanetBlocks.MOON_OBSIDIAN, 1)
             .surfaceThickness(4)
             .build();
     }
@@ -297,19 +297,19 @@ public class Theia extends BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(PlanetBlocks.THEIA_BASALT)
+            .topBlock(PlanetBlocks.MOON_BASALT)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.THEIA_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.THEIA_GABBRO, 1, 32))
+                new StratificationPreset(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
             .generateCaves(false)
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
                     32,
-                    new Block[] { PlanetBlocks.THEIA_REGOLITH, PlanetBlocks.THEIA_BASALT },
-                    new CraterFeature(PlanetBlocks.THEIA_TEKTITE)))
+                    new Block[] { PlanetBlocks.MOON_REGOLITH, PlanetBlocks.MOON_BASALT },
+                    new CraterFeature(PlanetBlocks.MOON_TEKTITE)))
             .terrain(terrainConfiguration)
-            .ocean(PlanetBlocks.THEIA_OBSIDIAN, PlanetBlocks.THEIA_BASALT, 56, PlanetBlocks.THEIA_OBSIDIAN, 1)
-            .oceanCracks(0.3F, PlanetBlocks.THEIA_MAGMA, 4)
+            .ocean(PlanetBlocks.MOON_OBSIDIAN, PlanetBlocks.MOON_BASALT, 56, PlanetBlocks.MOON_OBSIDIAN, 1)
+            .oceanCracks(0.3F, PlanetBlocks.MOON_MAGMA, 4)
             .surfaceThickness(4)
             .build();
     }

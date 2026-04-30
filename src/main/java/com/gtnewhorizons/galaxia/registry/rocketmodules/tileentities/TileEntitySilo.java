@@ -458,7 +458,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (worldObj.provider.dimensionId != 0) {
             destRow.child(
                 new ToggleButton().size(48, 20)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.viridis")))
+                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.overworld")))
                     .valueWrapped(selectedDim, 0));
         }
 
