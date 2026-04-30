@@ -13,7 +13,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 
 public class SpaceStation extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.VITRIS_SPACE;
+    public static final DimensionEnum ENUM = DimensionEnum.OVERWORLD_ORBIT;
 
     @Override
     protected DimensionBuilder customizeDimension(DimensionBuilder builder) {

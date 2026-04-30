@@ -17,6 +17,10 @@ public class ConfigPlayer {
         @Config.DefaultBoolean(false)
         public boolean applyDebuffsInCreative;
 
+        @Config.LangKey("galaxia.config.player.zero_g_movement")
+        @Config.DefaultBoolean(true)
+        public boolean applyZeroGravityMovement;
+
         @Config.LangKey("galaxia.config.player.max_zerog_speed")
         @Config.DefaultDouble(Double.MAX_VALUE)
         public double max_zerog_speed;

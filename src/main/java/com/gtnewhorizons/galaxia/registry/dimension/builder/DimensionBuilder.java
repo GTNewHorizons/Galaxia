@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldProvider;
 import net.minecraftforge.common.DimensionManager;
 
@@ -55,6 +56,7 @@ public class DimensionBuilder {
     private List<CelestialBody> celestialBodies = List.of();
     private EffectBuilder effects;
     private EnumTiers tier = EnumTiers.TIER_1;
+    private ResourceLocation[] skyboxTexture = null;
 
     /**
      * Sets the name and ID based on the ENUM provided
@@ -198,6 +200,37 @@ public class DimensionBuilder {
     }
 
     /**
+     * Sets a static cubemap skybox from 6 individual face textures.
+     * Order: +Y (top), -Y (bottom), +Z (south), -Z (north), +X (east), -X (west)
+     *
+     * @param top    +Y face
+     * @param bottom -Y face
+     * @param south  +Z face
+     * @param north  -Z face
+     * @param east   +X face
+     * @param west   -X face
+     */
+    public DimensionBuilder skybox(ResourceLocation top, ResourceLocation bottom, ResourceLocation south,
+        ResourceLocation north, ResourceLocation east, ResourceLocation west) {
+        skybox(new ResourceLocation[] { top, bottom, south, north, east, west });
+        return this;
+    }
+
+    /**
+     * Sets a static cubemap skybox from 6 individual face textures from a list of resource locations.
+     * Order: +Y (top), -Y (bottom), +Z (south), -Z (north), +X (east), -X (west)
+     */
+    public DimensionBuilder skybox(ResourceLocation[] skyboxTexture) {
+        this.skyboxTexture = skyboxTexture;
+        return this;
+    }
+
+    // overload for all 6
+    public DimensionBuilder skybox(ResourceLocation all) {
+        return skybox(all, all, all, all, all, all);
+    }
+
+    /**
      * Sets the effect builder for the dimension
      *
      * @param effects The effect builder required for the planet
@@ -235,7 +268,8 @@ public class DimensionBuilder {
             mass,
             orbitalRadius,
             radius,
-            tier);
+            tier,
+            skyboxTexture);
 
         // Add dimension to hashmaps
         BY_NAME.put(name.toLowerCase(), def);

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
@@ -14,6 +15,7 @@ import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -123,7 +125,11 @@ public abstract class RenderGlobalSkyMixin {
 
         GL11.glPopMatrix();
         GL11.glPushMatrix();
+        if (def != null && def.skyboxTexture() != null) {
+            drawCubemapSkybox(t, def.skyboxTexture());
+        }
         GL11.glRotatef(-90F, 0F, 1F, 0F);
+        OpenGlHelper.glBlendFunc(775, 1, 1, 0);
 
         for (int idx : indices) {
             CelestialBody body = bodies.get(idx);
@@ -144,6 +150,7 @@ public abstract class RenderGlobalSkyMixin {
      * @param angle           The angle in the sky
      * @param primarySunAngle The angle of the primary light source (sun usually) in the sky
      */
+    @Unique
     private void drawCelestialBody(Tessellator t, CelestialBody body, float angle, float primarySunAngle) {
         GL11.glPushMatrix();
 
@@ -191,8 +198,79 @@ public abstract class RenderGlobalSkyMixin {
     }
 
     /**
+     * Draws a static cubemap skybox using a single repeating texture.
+     * Called before celestial bodies, so bodies render on top.
+     */
+    @Unique
+    private void drawCubemapSkybox(Tessellator t, ResourceLocation[] faces) {
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDepthMask(false);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ZERO);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+
+        float S = 100f;
+
+        // spotless:off
+        drawFace(t, faces[0],
+            -S,  S,  S,
+            S,  S,  S,
+            S,  S, -S,
+            -S,  S, -S);
+
+        drawFace(t, faces[1],
+            -S, -S, -S,
+            S, -S, -S,
+            S, -S,  S,
+            -S, -S,  S);
+
+        drawFace(t, faces[2],
+            S,  S,  S,
+            -S,  S,  S,
+            -S, -S,  S,
+            S, -S,  S);
+
+        drawFace(t, faces[3],
+            -S,  S, -S,
+            S,  S, -S,
+            S, -S, -S,
+            -S, -S, -S);
+
+        drawFace(t, faces[4],
+            S,  S, -S,
+            S,  S,  S,
+            S, -S,  S,
+            S, -S, -S);
+
+        drawFace(t, faces[5],
+            -S,  S,  S,
+            -S,  S, -S,
+            -S, -S, -S,
+            -S, -S,  S);
+        // spotless:on
+
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    @Unique
+    private void drawFace(Tessellator t, ResourceLocation texture, float x0, float y0, float z0, float x1, float y1,
+        float z1, float x2, float y2, float z2, float x3, float y3, float z3) {
+
+        mc.getTextureManager()
+            .bindTexture(texture);
+        t.startDrawingQuads();
+        t.addVertexWithUV(x0, y0, z0, 0, 0);
+        t.addVertexWithUV(x1, y1, z1, 1, 0);
+        t.addVertexWithUV(x2, y2, z2, 1, 1);
+        t.addVertexWithUV(x3, y3, z3, 0, 1);
+        t.draw();
+    }
+
+    /**
      * Restores the GLState to regular levels
      */
+    @Unique
     private void restoreGLState() {
         GL11.glColor4f(1F, 1F, 1F, 1F);
         GL11.glEnable(GL11.GL_TEXTURE_2D);

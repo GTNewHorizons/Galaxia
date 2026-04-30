@@ -17,11 +17,11 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
 
 /**
- * The class holding all data related to the dimension Hemateria
+ * The class holding all data related to the dimension Mars
  */
-public class Hemateria extends BasePlanet {
+public class Mars extends BasePlanet {
 
-    public static final DimensionEnum ENUM = DimensionEnum.HEMATERIA;
+    public static final DimensionEnum ENUM = DimensionEnum.MARS;
 
     /**
      * Getter for dimension Enum
@@ -66,7 +66,7 @@ public class Hemateria extends BasePlanet {
             .fog(0.15f, 0.1f, 0.3f)
             .biome(
                 createBiome(
-                    "Hemateria Dunes",
+                    "Mars Dunes",
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
@@ -77,12 +77,12 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     true,
-                    PlanetBlocks.HEMATERIA_REGOLITH),
+                    PlanetBlocks.MARS_REGOLITH),
                 0,
                 0)
             .biome(
                 createBiome(
-                    "Hemateria Mountains",
+                    "Mars Mountains",
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
@@ -93,12 +93,12 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     false,
-                    PlanetBlocks.HEMATERIA_REGOLITH),
+                    PlanetBlocks.MARS_REGOLITH),
                 0,
                 1)
             .biome(
                 createBiome(
-                    "Hemateria Flatlands",
+                    "Mars Flatlands",
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(64)
@@ -113,12 +113,12 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     true,
-                    PlanetBlocks.HEMATERIA_REGOLITH),
+                    PlanetBlocks.MARS_REGOLITH),
                 1,
                 0)
             .biome(
                 createBiome(
-                    "Hemateria Basins",
+                    "Mars Basins",
                     TerrainConfiguration.builder()
                         .feature(TerrainPreset.BASE_HEIGHT)
                         .height(16)
@@ -129,7 +129,7 @@ public class Hemateria extends BasePlanet {
                         .endFeature()
                         .build(),
                     false,
-                    PlanetBlocks.HEMATERIA_RHYOLITE),
+                    PlanetBlocks.MARS_RHYOLITE),
                 1,
                 1)
             .name(ENUM)
@@ -143,9 +143,9 @@ public class Hemateria extends BasePlanet {
             .rainfall(0.99F)
             .topBlock(surfaceBlock)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.HEMATERIA_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.HEMATERIA_ANORTHOSITE, 1, 32))
-            .snowBlock(PlanetBlocks.HEMATERIA_SNOW, 144)
+                new StratificationPreset(PlanetBlocks.MARS_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.MARS_ANORTHOSITE, 1, 32))
+            .snowBlock(PlanetBlocks.MARS_SNOW, 144)
             .terrain(terrain)
             .generateCaves(generateCaves)
             .build();

@@ -18,6 +18,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -243,6 +244,7 @@ public final class GalaxiaAPI {
     }
 
     public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
+        if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) return true;
         var baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return false;
 
