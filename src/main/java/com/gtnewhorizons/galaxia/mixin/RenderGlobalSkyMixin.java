@@ -31,19 +31,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 @Mixin(RenderGlobal.class)
 public abstract class RenderGlobalSkyMixin {
 
-    @Unique
-    private static final int FACE_TOP = 0;
-    @Unique
-    private static final int FACE_BOTTOM = 1;
-    @Unique
-    private static final int FACE_SOUTH = 2;
-    @Unique
-    private static final int FACE_NORTH = 3;
-    @Unique
-    private static final int FACE_EAST = 4;
-    @Unique
-    private static final int FACE_WEST = 5;
-
     @Shadow
     private Minecraft mc;
 
@@ -226,37 +213,37 @@ public abstract class RenderGlobalSkyMixin {
         float S = 100f;
 
         // spotless:off
-        drawFace(t, faces[FACE_TOP],
+        drawFace(t, faces[0],
             -S,  S,  S,
             S,  S,  S,
             S,  S, -S,
             -S,  S, -S);
 
-        drawFace(t, faces[FACE_BOTTOM],
+        drawFace(t, faces[1],
             -S, -S, -S,
             S, -S, -S,
             S, -S,  S,
             -S, -S,  S);
 
-        drawFace(t, faces[FACE_SOUTH],
+        drawFace(t, faces[2],
             S,  S,  S,
             -S,  S,  S,
             -S, -S,  S,
             S, -S,  S);
 
-        drawFace(t, faces[FACE_NORTH],
+        drawFace(t, faces[3],
             -S,  S, -S,
             S,  S, -S,
             S, -S, -S,
             -S, -S, -S);
 
-        drawFace(t, faces[FACE_EAST],
+        drawFace(t, faces[4],
             S,  S, -S,
             S,  S,  S,
             S, -S,  S,
             S, -S, -S);
 
-        drawFace(t, faces[FACE_WEST],
+        drawFace(t, faces[5],
             -S,  S,  S,
             -S,  S, -S,
             -S, -S, -S,
