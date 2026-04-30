@@ -51,6 +51,9 @@ dependencies {
 
     devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.13:dev'){transitive=false}
 
+    // will only work if you have this installed, but i use it for recording 
+    // devOnlyNonPublishable(files("libs/freecam-1.0.7-dev.jar"))
+
     // Uncomment for profiling
     // implementation(rfg.deobf("curse.maven:spark-361579:4271867"))
 

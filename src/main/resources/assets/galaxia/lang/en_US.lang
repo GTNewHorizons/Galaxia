@@ -351,6 +351,7 @@ galaxia.config.category.player.tooltip=Settings for the player
 galaxia.config.category.player_global=Global
 galaxia.config.category.player_global.tooltip=Global settings for the player
 galaxia.config.player.debuff_creative=Debuffs to creative mode players
+galaxia.config.player.zero_g_movement=Ignore Zero Gravity movement in creative mode
 galaxia.config.player.debuff_creative.tooltip=Apply environmental debuffs when in creative mode
 galaxia.config.player.max_zerog_speed=Max speed in zero gravity
 galaxia.config.player.max_zerog_speed.tooltip=Maximum speed reachable in any direction for zero gravity movement
