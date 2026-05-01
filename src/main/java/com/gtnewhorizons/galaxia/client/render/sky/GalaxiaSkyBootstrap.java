@@ -15,8 +15,6 @@ public final class GalaxiaSkyBootstrap {
             .billboardLayer(new BillboardLayer(LocationGalaxia("textures/sky/quasar_01.png"), 5, 1.8f, 0.45f, 1.00f, 0.35f))
             .domeLayer(new DomeLayer(LocationGalaxia("textures/sky/milky_way.png"), 1.0f, 0.55f, 0.20f));
 
-        EnhancedSkyRender.registerPreset(
-                0,
-            milkyWayPreset);
+        EnhancedSkyRender.registerPreset(milkyWayPreset, 0, 20, 21, 22);
     }
 }

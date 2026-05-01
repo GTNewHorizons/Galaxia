@@ -48,14 +48,6 @@ public final class EnhancedSkyRender {
     }
 
     /**
-     * Convenience bootstrap for the default dimension setup.
-     * Call this once during client init.
-     */
-    public static void bootstrapDefaults() {
-        registerPreset(0, DEFAULT_PRESET);
-    }
-
-    /**
      * Registers a preset for a specific dimension id.
      * Call this during init.
      */
@@ -63,23 +55,21 @@ public final class EnhancedSkyRender {
         PRESETS_BY_DIMENSION.put(dimensionId, preset);
     }
 
+    public static void registerPreset(SkyPreset preset, int... dimensionIds) {
+        for (int dimId : dimensionIds) {
+            registerPreset(dimId, preset);
+        }
+    }
+
     /**
      * Returns the active preset for the dimension, or the default preset.
      */
     public static SkyPreset getPreset(World world) {
         if (world == null || world.provider == null) {
-            return DEFAULT_PRESET;
+            return null;
         }
         SkyPreset preset = PRESETS_BY_DIMENSION.get(world.provider.dimensionId);
         return preset != null ? preset : DEFAULT_PRESET;
-    }
-
-    /**
-     * Entry point for per-frame draw hooks if you decide to render layers outside of the star list.
-     * For now this is the place to render any future animated or stateful layers.
-     */
-    public static void renderExtraSkyLayers(World world, float partialTicks) {
-        renderPrebakedGlobalLayers(world, false);
     }
 
     /**
@@ -97,18 +87,18 @@ public final class EnhancedSkyRender {
      */
     private static void renderPrebakedGlobalLayers(World world, boolean bakedIntoDisplayList) {
         SkyPreset preset = getPreset(world);
+        if (preset == null) {
+            return;
+        }
 
-        // Bright stars: just larger and a bit rarer than the regular star field.
         if (preset.brightStarCount > 0) {
             renderBrightStars(world, preset, bakedIntoDisplayList);
         }
 
-        // Billboard objects: nebulae, distant galaxies, quasars, etc.
         for (BillboardLayer layer : preset.billboardLayers) {
             renderBillboardLayer(world, preset, layer, bakedIntoDisplayList);
         }
 
-        // Dome layers: full-sky textured overlays like the Milky Way.
         for (DomeLayer layer : preset.domeLayers) {
             renderDomeLayer(world, preset, layer, bakedIntoDisplayList);
         }

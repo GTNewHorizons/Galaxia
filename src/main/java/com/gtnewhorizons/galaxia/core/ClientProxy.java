@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core;
 
 import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
+import com.gtnewhorizons.galaxia.client.render.sky.StarUpdater;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
@@ -45,6 +46,7 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
+        GalaxiaSkyBootstrap.clientInit();
 
         FMLCommonHandler.instance()
             .bus()
@@ -54,10 +56,10 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void init(FMLInitializationEvent event) {
         super.init(event);
-        GalaxiaSkyBootstrap.clientInit();
         ItemPickerScreen.FACTORY.init();
         ModulePickerScreen.FACTORY.init();
         StationManagementScreen.FACTORY.init();
+        MinecraftForge.EVENT_BUS.register(new StarUpdater());
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
         IMCForNEI.IMCSender();
 
