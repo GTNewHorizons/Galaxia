@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.mixin;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,6 +18,9 @@ public abstract class RenderStarsMixin {
 
     @Inject(method = "renderStars", at = @At("TAIL"), remap = false)
     private static void galaxia$appendSkyLayers(CallbackInfo ci) {
-        EnhancedSkyRender.renderBakedSkyLayers(net.minecraft.client.Minecraft.getMinecraft().theWorld);
+        World world = Minecraft.getMinecraft().theWorld;
+        if (world != null && EnhancedSkyRender.getPreset(world) != null) {
+            EnhancedSkyRender.renderBakedSkyLayers(world);
+        }
     }
 }

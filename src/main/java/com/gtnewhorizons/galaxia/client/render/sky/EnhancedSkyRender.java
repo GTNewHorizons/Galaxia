@@ -15,7 +15,6 @@ import net.minecraft.world.World;
 
 import org.lwjgl.opengl.GL11;
 
-import jss.notfine.core.Settings;
 import jss.util.RandomXoshiro256StarStar;
 
 public final class EnhancedSkyRender {
@@ -23,38 +22,14 @@ public final class EnhancedSkyRender {
     private EnhancedSkyRender() {}
 
     /**
-     * One global preset used for now. Later this can become dimension-specific.
-     */
-    public static final SkyPreset DEFAULT_PRESET = new SkyPreset("default");
-
-    /**
      * Optional per-dimension/per-planet presets.
      */
-    private static final Map<Integer, SkyPreset> PRESETS_BY_DIMENSION = new LinkedHashMap<Integer, SkyPreset>();
+    private static final Map<Integer, SkyPreset> PRESETS_BY_DIMENSION = new LinkedHashMap<>();
 
     /**
      * Fallback seed so generated sky content stays stable.
      */
     private static final long BASE_SEED = 10842L;
-
-    static {
-        // Default baseline: no fancy assumptions about art direction.
-        // Designers can replace textures later.
-        DEFAULT_PRESET.brightStars(64, 0.25f, 0.85f, true)
-            .billboardLayer(
-                new BillboardLayer(LocationGalaxia("textures/sky/nebula_01.png"), 22.0f, 6.0f, 0.20f, 0.95f, 0.15f))
-            .billboardLayer(
-                new BillboardLayer(LocationGalaxia("textures/sky/quasar_01.png"), 5.0f, 1.8f, 0.45f, 1.00f, 0.35f))
-            .domeLayer(new DomeLayer(LocationGalaxia("textures/sky/milky_way.png"), 1.0f, 0.55f, 0.20f));
-    }
-
-    /**
-     * Convenience bootstrap for the default dimension setup.
-     * Call this once during client init.
-     */
-    public static void bootstrapDefaults() {
-        registerPreset(0, DEFAULT_PRESET);
-    }
 
     /**
      * Registers a preset for a specific dimension id.
@@ -64,15 +39,15 @@ public final class EnhancedSkyRender {
         PRESETS_BY_DIMENSION.put(dimensionId, preset);
     }
 
-    /**
-     * Returns the active preset for the dimension, or the default preset.
-     */
     public static SkyPreset getPreset(World world) {
-        if (world == null || world.provider == null) {
-            return DEFAULT_PRESET;
+        if (world == null || world.provider == null) return null;
+        return PRESETS_BY_DIMENSION.get(world.provider.dimensionId);
+    }
+
+    public static void registerPresets(Iterable<Integer> dimensionIds, SkyPreset preset) {
+        for (int dimId : dimensionIds) {
+            registerPreset(dimId, preset);
         }
-        SkyPreset preset = PRESETS_BY_DIMENSION.get(world.provider.dimensionId);
-        return preset != null ? preset : DEFAULT_PRESET;
     }
 
     /**
@@ -113,64 +88,6 @@ public final class EnhancedSkyRender {
         for (DomeLayer layer : preset.domeLayers) {
             renderDomeLayer(world, preset, layer, bakedIntoDisplayList);
         }
-    }
-
-    /**
-     * Vanilla-compatible star generation, kept deliberately close to 1.7.10 / Angelica behavior.
-     *
-     * The current star count is taken from the Angelica/NotFine setting when present.
-     */
-    public static void renderVanillaCompatibleStars() {
-        final int totalStars = Math.max(0, (int) Settings.TOTAL_STARS.option.getStore());
-        if (totalStars == 0) return;
-
-        final RandomXoshiro256StarStar random = new RandomXoshiro256StarStar(BASE_SEED);
-        final Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-
-        for (int i = 0; i < totalStars; ++i) {
-            float x = random.nextFloat() * 2.0F - 1.0F;
-            float y = random.nextFloat() * 2.0F - 1.0F;
-            float z = random.nextFloat() * 2.0F - 1.0F;
-            double lenSq = x * x + y * y + z * z;
-
-            if (lenSq < 1.0D && lenSq > 0.01D) {
-                lenSq = 1.0D / Math.sqrt(lenSq);
-                x *= lenSq;
-                y *= lenSq;
-                z *= lenSq;
-
-                final double starX = x * 100.0D;
-                final double starY = y * 100.0D;
-                final double starZ = z * 100.0D;
-
-                final double thetaXZ = Math.atan2(x, z);
-                final double sinTheta = Math.sin(thetaXZ);
-                final double cosTheta = Math.cos(thetaXZ);
-                final double azimuth = Math.atan2(Math.sqrt(x * x + z * z), y);
-                final double sinAzimuth = Math.sin(azimuth);
-                final double cosAzimuth = Math.cos(azimuth);
-
-                final float starSize = 0.15F + random.nextFloat() * 0.1F;
-                final double rotation = random.nextDouble() * Math.PI * 2.0D;
-                final double sinRot = Math.sin(rotation);
-                final double cosRot = Math.cos(rotation);
-
-                for (int corner = 0; corner < 4; ++corner) {
-                    final double offU = (double) ((corner & 2) - 1) * starSize;
-                    final double offV = (double) ((corner + 1 & 2) - 1) * starSize;
-                    final double rotU = offU * cosRot - offV * sinRot;
-                    final double rotV = offV * cosRot + offU * sinRot;
-                    final double cornerY = rotU * sinAzimuth;
-                    final double azimuthOffset = -rotU * cosAzimuth;
-                    final double cornerX = azimuthOffset * sinTheta - rotV * cosTheta;
-                    final double cornerZ = rotV * sinTheta + azimuthOffset * cosTheta;
-                    tessellator.addVertex(starX + cornerX, starY + cornerY, starZ + cornerZ);
-                }
-            }
-        }
-
-        tessellator.draw();
     }
 
     /**
@@ -249,13 +166,11 @@ public final class EnhancedSkyRender {
      *
      * The object is placed on the celestial sphere and optionally made visible even in daylight.
      */
-    private static void renderBillboardLayer(World world, SkyPreset preset, BillboardLayer layer,
-        boolean bakedIntoDisplayList) {
+    private static void renderBillboardLayer(World world, SkyPreset preset, BillboardLayer layer, boolean bakedIntoDisplayList) {
         if (layer == null || layer.texture == null || layer.count <= 0) {
             return;
         }
 
-        // Day visibility fades in/out around the day cycle.
         float dayFactor = computeNightFactor(world, layer.dayVisibilityMin, layer.dayVisibilityMax);
         if (dayFactor <= 0.001f) {
             return;
@@ -268,7 +183,7 @@ public final class EnhancedSkyRender {
 
         GL11.glPushMatrix();
         applySkyFacingTransform(world);
-        setupAdditiveSkyBlend(layer);
+        setupTexturedSkyBlend(true);
 
         Tessellator t = Tessellator.instance;
         t.startDrawingQuads();
@@ -285,7 +200,6 @@ public final class EnhancedSkyRender {
             double cy = dir.y * depth;
             double cz = dir.z * depth;
 
-            // Billboard quad orthogonal basis derived from the sky direction.
             OrthoBasis basis = OrthoBasis.fromDirection(dir);
             float alpha = layer.alpha * dayFactor;
 
@@ -294,12 +208,11 @@ public final class EnhancedSkyRender {
                 basis = basis.rotatedAroundForward(rot);
             }
 
-            // Each object uses one texture, one quad.
             addTexturedBillboardQuad(t, cx, cy, cz, basis, size, size, 0.0f, 0.0f, 1.0f, 1.0f, alpha);
         }
 
         t.draw();
-        restoreSkyBlend();
+        restoreSkyState();
         GL11.glPopMatrix();
     }
 
@@ -315,7 +228,7 @@ public final class EnhancedSkyRender {
         }
 
         float dayFactor = computeNightFactor(world, 0.0f, 1.0f);
-        if (dayFactor <= 0.001f && layer.allowDayVisible == false) {
+        if (dayFactor <= 0.001f && !layer.allowDayVisible) {
             return;
         }
 
@@ -325,13 +238,12 @@ public final class EnhancedSkyRender {
 
         GL11.glPushMatrix();
         applySkyFacingTransform(world);
-        setupAdditiveSkyBlend(null);
+        setupTexturedSkyBlend(false);
         GL11.glColor4f(1f, 1f, 1f, layer.opacity * lerp(layer.minVisibility, layer.maxVisibility, dayFactor));
 
-        // A coarse dome is enough for static art layers.
         drawTexturedDome(layer.radius, layer.segmentsLon, layer.segmentsLat, layer.textureVOffset);
 
-        restoreSkyBlend();
+        restoreSkyState();
         GL11.glPopMatrix();
     }
 
@@ -507,8 +419,8 @@ public final class EnhancedSkyRender {
         private float brightStarMaxSize = 0.85f;
         private float brightStarAlpha = 1.0f;
         private boolean colorfulBrightStars = true;
-        private final List<BillboardLayer> billboardLayers = new ArrayList<BillboardLayer>();
-        private final List<DomeLayer> domeLayers = new ArrayList<DomeLayer>();
+        private final List<BillboardLayer> billboardLayers = new ArrayList<>();
+        private final List<DomeLayer> domeLayers = new ArrayList<>();
 
         public SkyPreset(String name) {
             this.name = name;
@@ -549,7 +461,7 @@ public final class EnhancedSkyRender {
         return new SkyPreset(name);
     }
 
-    public static BillboardLayer billboard(ResourceLocation texture, float count, float minSize, float maxSize,
+    public static BillboardLayer billboard(ResourceLocation texture, int count, float minSize, float maxSize,
         float alpha, float dayMin, float dayMax) {
         return new BillboardLayer(texture, count, minSize, maxSize, alpha, dayMin, dayMax);
     }
@@ -572,15 +484,38 @@ public final class EnhancedSkyRender {
             allowDayVisible);
     }
 
+    private static void setupTexturedSkyBlend(boolean additive) {
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_BLEND);
+
+        if (additive) {
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        } else {
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        }
+
+        GL11.glDepthMask(false);
+    }
+
+    private static void restoreSkyState() {
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDepthMask(true);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+    }
+
     /**
-     * 
-     * /**
      * A texture-based object placed on the sky sphere as a billboard quad.
      */
     public static final class BillboardLayer {
 
         private final ResourceLocation texture;
-        private final float count;
+        private final int count;
         private final float minSize;
         private final float maxSize;
         private final float alpha;
@@ -589,17 +524,17 @@ public final class EnhancedSkyRender {
         private final boolean jitterRotation;
         private final long seedSalt;
 
-        public BillboardLayer(ResourceLocation texture, float count, float minSize, float maxSize,
+        public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize,
             float dayVisibilityMin, float dayVisibilityMax) {
             this(texture, count, minSize, maxSize, 1.0f, dayVisibilityMin, dayVisibilityMax, true, 0x515A7E11L);
         }
 
-        public BillboardLayer(ResourceLocation texture, float count, float minSize, float maxSize, float alpha,
+        public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float alpha,
             float dayVisibilityMin, float dayVisibilityMax) {
             this(texture, count, minSize, maxSize, alpha, dayVisibilityMin, dayVisibilityMax, true, 0x515A7E11L);
         }
 
-        public BillboardLayer(ResourceLocation texture, float count, float minSize, float maxSize, float alpha,
+        public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float alpha,
             float dayVisibilityMin, float dayVisibilityMax, boolean jitterRotation, long seedSalt) {
             this.texture = texture;
             this.count = count;
@@ -649,17 +584,7 @@ public final class EnhancedSkyRender {
     /**
      * Minimal vector class for sky basis construction.
      */
-    private static final class Vector3 {
-
-        final float x;
-        final float y;
-        final float z;
-
-        Vector3(float x, float y, float z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
+    private record Vector3(float x, float y, float z) {
 
         Vector3 normalize() {
             float len = (float) Math.sqrt(x * x + y * y + z * z);

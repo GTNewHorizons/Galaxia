@@ -1,41 +1,28 @@
 package com.gtnewhorizons.galaxia.client.render.sky;
 
-import net.minecraft.util.ResourceLocation;
+import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender.BillboardLayer;
+import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender.SkyPreset;
+import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender.DomeLayer;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
-/**
- * Minimal registration example.
- * Keep the art-direction data here and leave the renderer generic.
- */
+import java.util.List;
+
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
+
 public final class GalaxiaSkyBootstrap {
 
-    private GalaxiaSkyBootstrap() {}
-
     public static void clientInit() {
-        EnhancedSkyRender.bootstrapDefaults();
+        SkyPreset milkyWayPreset = EnhancedSkyRender.preset("milky_way")
+            .brightStars(64, 0.25f, 0.85f, true)
+            .billboardLayer(new BillboardLayer(LocationGalaxia("textures/sky/nebula_01.png"), 22, 6.0f, 0.20f, 0.95f, 0.15f))
+            .billboardLayer(new BillboardLayer(LocationGalaxia("textures/sky/quasar_01.png"), 5, 1.8f, 0.45f, 1.00f, 0.35f))
+            .domeLayer(new DomeLayer(LocationGalaxia("textures/sky/milky_way.png"), 1.0f, 0.55f, 0.20f));
 
-        EnhancedSkyRender.registerPreset(
-            42,
-            EnhancedSkyRender.preset("planet_42")
-                .brightStars(96, 0.25f, 1.10f, true)
-                .billboardLayer(
-                    EnhancedSkyRender.billboard(
-                        new ResourceLocation("galaxia:textures/sky/planet42_nebula.png"),
-                        14.0f,
-                        7.0f,
-                        18.0f,
-                        0.95f,
-                        0.15f,
-                        1.0f))
-                .domeLayer(
-                    EnhancedSkyRender.dome(
-                        new ResourceLocation("galaxia:textures/sky/planet42_milkyway.png"),
-                        1.0f,
-                        0.15f,
-                        0.95f,
-                        140.0f,
-                        64,
-                        32,
-                        0.0f,
-                        false)));
+        EnhancedSkyRender.registerPresets(
+            List.of(
+                0,
+                DimensionEnum.MOON.getId()
+            ),
+            milkyWayPreset);
     }
 }
