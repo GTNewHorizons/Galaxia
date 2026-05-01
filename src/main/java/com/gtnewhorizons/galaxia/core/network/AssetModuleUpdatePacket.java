@@ -226,12 +226,9 @@ public final class AssetModuleUpdatePacket implements IMessage {
             }
 
             if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
-                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id)
-                    .withSyncRevision(state.getSyncRevision());
+                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id);
             }
-            state.markModuleDirty(module.id);
-            return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module)
-                .withSyncRevision(state.getSyncRevision());
+            return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module);
         }
 
         private void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
@@ -304,7 +301,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     }
                     module.setTier(tier);
                     state.layoutCache()
-                        .applyMutation(MutationKind.SET_TIER, module.kind(), module);
+                        .applyMutation(MutationKind.SET_TIER, module.kind());
                 }
                 case SET_PRIORITY -> {
                     ModulePriority priority = PacketUtil
@@ -314,7 +311,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 case SET_ENABLED -> {
                     module.setEnabled(packet.getBooleanPayload());
                     state.layoutCache()
-                        .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
+                        .applyMutation(MutationKind.SET_ENABLED, module.kind());
                 }
             }
         }

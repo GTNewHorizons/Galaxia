@@ -30,6 +30,7 @@ import com.gtnewhorizons.galaxia.client.gui.mui.SafePhantomItemSlot;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -547,7 +548,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
      */
     private CelestialAsset resolveSupplyDebugAsset() {
         if (supplyDebugTargetAssetId != null) {
-            CelestialAsset pinned = CelestialClient.getByAssetId(supplyDebugTargetAssetId);
+            CelestialAsset pinned = CelestialAssetStore.findAsset(supplyDebugTargetAssetId);
             if (pinned != null && pinned.status() == CelestialAsset.Status.OPERATIONAL
                 && (pinned.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST
                     || pinned.kind == CelestialAsset.Kind.AUTOMATED_STATION)) {
@@ -558,7 +559,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         CelestialAsset.ID currentAssetId = resolveSupplyDebugAssetId();
         if (currentAssetId != null) {
             supplyDebugTargetAssetId = currentAssetId;
-            return CelestialClient.getByAssetId(currentAssetId);
+            return CelestialAssetStore.findAsset(currentAssetId);
         }
         return null;
     }

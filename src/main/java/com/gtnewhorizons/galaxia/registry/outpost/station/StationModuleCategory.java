@@ -10,9 +10,7 @@ public enum StationModuleCategory {
     STORAGE,
     POWER,
     PROCESSING,
-    HABITATION,
-    INFRASTRUCTURE,
-    SUPPORT;
+    HABITATION;
 
     public String getDisplayName() {
         return StatCollector.translateToLocal(

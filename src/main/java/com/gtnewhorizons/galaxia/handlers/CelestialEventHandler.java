@@ -77,7 +77,6 @@ public class CelestialEventHandler {
             if (player == null) continue;
 
             UUID playerTeam = TempTeamCompat.getTeam(player);
-            UUID playerId = player.getUniqueID();
             Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
             Set<CelestialAsset> aggregatedAssets = teamAssets.values()
@@ -88,7 +87,7 @@ public class CelestialEventHandler {
             List<AssetSyncPacket> playerOutpostPackets = new ArrayList<>();
             for (CelestialAsset asset : aggregatedAssets) {
                 if (asset instanceof AutomatedFacility outpost) {
-                    playerOutpostPackets.addAll(AssetSyncPacket.figureOutWhatToSend(outpost, playerId));
+                    playerOutpostPackets.add(AssetSyncPacket.fullSync(outpost));
                 }
             }
             // TODO: make aggregate packet for this
