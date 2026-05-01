@@ -38,11 +38,11 @@ public enum GalaxiaItemList {
     ITEM_ROCKET_SCHEMATIC("tool/schematic", ItemRocketSchematic::new, 1),
 
     // Worldgen dust & ores
-    DUST_THEIA("ore/theia_dust"),
-    THEIA_TEKTITE_SHARD("ore/theia_tektite_shard"),
-    DUST_HEMATERIA("ore/hemateria_dust"),
-    HEMATERIA_TEKTITE_SHARD("ore/hemateria_tektite_shard"),
-    HEMATERIA_ICE_CUBES("ore/hemateria_ice_cubes"),
+    DUST_MOON("ore/moon_dust"),
+    MOON_TEKTITE_SHARD("ore/moon_tektite_shard"),
+    DUST_MARS("ore/mars_dust"),
+    MARS_TEKTITE_SHARD("ore/mars_tektite_shard"),
+    MARS_ICE_CUBES("ore/mars_ice_cubes"),
 
     CINNABAR_SCALE("ore/cinnabar_scale"),
     ENCHANTED_CINNABAR_SCALE("ore/enchanted_cinnabar_scale"),

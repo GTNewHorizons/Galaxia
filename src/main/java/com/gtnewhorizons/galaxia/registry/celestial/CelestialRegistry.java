@@ -174,11 +174,11 @@ public final class CelestialRegistry {
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore)));
 
         register(
-            DimensionEnum.HEMATERIA,
+            DimensionEnum.MARS,
             builder -> builder.parent(CelestialObjectId.VAEL)
                 .objectClass(CelestialObject.Class.PLANET)
-                .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("hemateria"))
-                .texture(EnumTextures.ICON_HEMATERIA.get())
+                .circularOrbit(1.52 * earthRadiusToAU, 0.00011, seededPhase("mars"))
+                .texture(EnumTextures.ICON_MARS.get())
                 .spriteSize(0.825)
                 .properties(
                     b -> b.withGravity(5.5e8, 9500.0)
@@ -197,11 +197,11 @@ public final class CelestialRegistry {
                             Blocks.diamond_ore)));
 
         register(
-            DimensionEnum.THEIA,
-            builder -> builder.parent(CelestialObjectId.HEMATERIA)
+            DimensionEnum.MOON,
+            builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.MOON)
-                .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("theia"))
-                .texture(EnumTextures.ICON_THEIA.get())
+                .circularOrbit(0.27 * earthRadiusToAU, 0.00145, seededPhase("moon"))
+                .texture(EnumTextures.ICON_MOON.get())
                 .spriteSize(0.06)
                 .properties(
                     b -> b.withGravity(1.8e6, 480.0)
@@ -251,10 +251,10 @@ public final class CelestialRegistry {
                         .metadata("sizeClass", "minor")));
 
         register(
-            DimensionEnum.VITRIS_SPACE,
-            builder -> builder.parent(CelestialObjectId.HEMATERIA)
+            DimensionEnum.OVERWORLD_ORBIT,
+            builder -> builder.parent(CelestialObjectId.MARS)
                 .objectClass(CelestialObject.Class.STATION)
-                .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("vitris_space"))
+                .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("overworld_orbit"))
                 .texture(EnumTextures.ICON_EGORA.get())
                 .spriteSize(0.08)
                 .properties(

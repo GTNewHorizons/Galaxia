@@ -17,11 +17,11 @@ slot.reaction_control_system=Reaction Control System
 
 #### Dimensions
 galaxia.dimension.frozen_belt=Frozen Belt
-galaxia.dimension.hemateria=Hemateria
+galaxia.dimension.mars=Mars
 galaxia.dimension.panspira=Panspira
 galaxia.dimension.tenebrae=Tenebrae
-galaxia.dimension.theia=Theia
-galaxia.dimension.vitris_space=Vitris Space Stations
+galaxia.dimension.moon=Moon
+galaxia.dimension.overworld_orbit=Overworld Orbit Stations
 
 #### Celestial Bodies
 galaxia.celestial.novum_caelum=Novum Caelum
@@ -32,39 +32,39 @@ galaxia.celestial.romulus=Romulus
 galaxia.celestial.remus=Remus
 galaxia.celestial.egora=Egora
 galaxia.celestial.panspira=Panspira
-galaxia.celestial.hemateria=Hemateria
-galaxia.celestial.theia=Theia
+galaxia.celestial.mars=Mars
+galaxia.celestial.moon=Moon
 galaxia.celestial.frozen_belt=Frozen Belt
 galaxia.celestial.ambergris_fragment=Ambergris Fragment
-galaxia.celestial.vitris_space=Vitris Space
+galaxia.celestial.overworld_orbit=Overworld Orbit
 
 #### Blocks
-# Blocks - "Theia"
-tile.theia_andesite.name=Theia Andesite
-tile.theia_anorthosite.name=Theia Anorthosite
-tile.theia_basalt.name=Theia Basalt
-tile.theia_breccia.name=Theia Breccia
-tile.theia_gabbro.name=Theia Gabbro
-tile.theia_magma.name=Theia Magma
-tile.theia_obsidian.name=Theia Obsidian
-tile.theia_regolith.name=Theia Regolith
-tile.theia_tektite.name=Theia Tektite
+# Blocks - "Moon"
+tile.moon_andesite.name=Moon Andesite
+tile.moon_anorthosite.name=Moon Anorthosite
+tile.moon_basalt.name=Moon Basalt
+tile.moon_breccia.name=Moon Breccia
+tile.moon_gabbro.name=Moon Gabbro
+tile.moon_magma.name=Moon Magma
+tile.moon_obsidian.name=Moon Obsidian
+tile.moon_regolith.name=Moon Regolith
+tile.moon_tektite.name=Moon Tektite
 
-# Blocks - "Hemateria"
-tile.hemateria_andesite.name=Hemateria Andesite
-tile.hemateria_anorthosite.name=Hemateria Anorthosite
-tile.hemateria_basalt.name=Hemateria Basalt
-tile.hemateria_dense_ice.name=Hemateria Dense Ice
-tile.hemateria_ice.name=Hemateria Ice
-tile.hemateria_magma.name=Hemateria Magma
-tile.hemateria_peridotite.name=Hemateria Peridotite
-tile.hemateria_regolith.name=Hemateria Regolith
-tile.hemateria_rhyolite.name=Hemateria Rhyolite
-tile.hemateria_sand.name=Hemateria Sand
-tile.hemateria_sandstone.name=Hemateria Sandstone
-tile.hemateria_snow.name=Hemateria Snow
-tile.hemateria_tektite.name=Hemateria Tektite
-tile.hemateria_tuff.name=Hemateria Tuff
+# Blocks - "Mars"
+tile.mars_andesite.name=Mars Andesite
+tile.mars_anorthosite.name=Mars Anorthosite
+tile.mars_basalt.name=Mars Basalt
+tile.mars_dense_ice.name=Mars Dense Ice
+tile.mars_ice.name=Mars Ice
+tile.mars_magma.name=Mars Magma
+tile.mars_peridotite.name=Mars Peridotite
+tile.mars_regolith.name=Mars Regolith
+tile.mars_rhyolite.name=Mars Rhyolite
+tile.mars_sand.name=Mars Sand
+tile.mars_sandstone.name=Mars Sandstone
+tile.mars_snow.name=Mars Snow
+tile.mars_tektite.name=Mars Tektite
+tile.mars_tuff.name=Mars Tuff
 
 # Blocks - "Frozen Belt"
 tile.frozen_belt_andesite.name=Frozen Belt Andesite
@@ -167,9 +167,9 @@ item.galaxia.rocket_schematic.width=Width: %.1fm
 item.galaxia.amber_shard.name=Amber Shard
 item.galaxia.cinnabar_scale.name=Cinnabar Scale
 item.galaxia.enchanted_cinnabar_scale.name=Enchanted Cinnabar Scale
-item.galaxia.hemateria_dust.name=Hemateria Dust
-item.galaxia.hemateria_ice_cubes.name=Hemateria Ice Cubes
-item.galaxia.hemateria_tektite_shard.name=Hemateria Tektite Shard
+item.galaxia.mars_dust.name=Mars Dust
+item.galaxia.mars_ice_cubes.name=Mars Ice Cubes
+item.galaxia.mars_tektite_shard.name=Mars Tektite Shard
 item.galaxia.hematite_dust.name=Hematite Dust
 item.galaxia.hematite_ingot.name=Hematite Ingot
 item.galaxia.meteoric_iron_ingot.name=Meteoric Iron Ingot
@@ -177,8 +177,8 @@ item.galaxia.meteoric_iron_shard.name=Meteoric Iron Shard
 item.galaxia.psychedelic_amber_shard.name=Enchanted Amber Shard
 item.galaxia.pyrite_cubes.name=Pyrite Cubes
 item.galaxia.raw_meteoric_iron.name=Raw Meteoric Iron
-item.galaxia.theia_dust.name=Theia Dust
-item.galaxia.theia_tektite_shard.name=Theia Tektite Shard
+item.galaxia.moon_dust.name=Moon Dust
+item.galaxia.moon_tektite_shard.name=Moon Tektite Shard
 
 # Items - "Armor"
 item.galaxia.spacesuit_helmet.name=Space Suit Helmet
@@ -244,7 +244,7 @@ galaxia.gui.rocket_silo.builder.return_modules=Return Modules
 galaxia.gui.rocket_silo.builder.enter_rocket=Enter Rocket
 galaxia.gui.rocket_silo.builder.schematic_save=Save build to schematic
 galaxia.gui.rocket_silo.builder.schematic_text=Schematic Name:
-galaxia.gui.rocket_silo.button.viridis=Viridis
+galaxia.gui.rocket_silo.button.overworld=Overworld
 galaxia.gui.rocket_silo.not_formed=Rocket Silo not properly formed!
 
 # Elements - GUI - "Rocket Silo Validator"
