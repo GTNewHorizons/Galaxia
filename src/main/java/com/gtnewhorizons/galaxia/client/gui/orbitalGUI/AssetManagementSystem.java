@@ -2229,6 +2229,11 @@ public final class AssetManagementSystem {
                 case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
                 case MAINTENANCE_BAY -> "Passively maintains station systems. Reduces wear over time.";
                 case MACERATOR -> "Processes materials through a macerator.";
+                case CENTRIFUGE -> "Separates materials by density in a centrifuge.";
+                case ELECTROLYZER -> "Breaks down materials using electrical current.";
+                case CHEMICAL_REACTOR -> "Combines materials in a chemical reaction.";
+                case ASSEMBLER -> "Assembles components into complex items.";
+                case DISTILLERY -> "Distills fluids into purer forms.";
             };
         }
 

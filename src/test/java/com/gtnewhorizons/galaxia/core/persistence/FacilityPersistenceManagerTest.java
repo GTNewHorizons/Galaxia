@@ -412,6 +412,41 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.HV,
             StationTileCoord.of(2, 2));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.CENTRIFUGE,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(3, 2));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.ELECTROLYZER,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(1, 3));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.CHEMICAL_REACTOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 3));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.ASSEMBLER,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(3, 3));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.DISTILLERY,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(1, 4));
 
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
@@ -428,8 +463,8 @@ final class FacilityPersistenceManagerTest {
         System.out.println("Layout tile count: " + encoded.layoutTiles.size());
 
         // Verify module entries
-        assertEquals(8, encoded.modules.size());
-        assertEquals(8, encoded.layoutTiles.size());
+        assertEquals(13, encoded.modules.size());
+        assertEquals(13, encoded.layoutTiles.size());
 
         // Verify each kind appears in encoded modules
         assertTrue(
@@ -456,6 +491,21 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "MACERATOR".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "CENTRIFUGE".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "ELECTROLYZER".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "CHEMICAL_REACTOR".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "ASSEMBLER".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "DISTILLERY".equals(mj.kind)));
 
         // Verify shape bytes — SINGLE has ordinal 0
         for (FacilityPersistenceManager.ModuleJson mj : encoded.modules) {
@@ -475,10 +525,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                8,
+                13,
                 decoded.modules()
                     .size(),
-                "Expected 8 modules, got " + decoded.modules()
+                "Expected 13 modules, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -500,6 +550,11 @@ final class FacilityPersistenceManagerTest {
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 1), "BATTERY anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 2), "MAINTENANCE_BAY anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 2), "MACERATOR anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 2), "CENTRIFUGE anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 3), "ELECTROLYZER anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 3), "CHEMICAL_REACTOR anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 3), "ASSEMBLER anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 4), "DISTILLERY anchor"),
             () -> assertLayoutEquals(layout, decoded.stationLayout()),
             // JSON identity — byte-perfect round-trip
             () -> assertEquals(
@@ -927,16 +982,23 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
-        // Create ALL 7 module kinds with both single-tile and multi-tile placements
-        int x = 3;
+        // Create ALL module kinds with both single-tile and multi-tile placements,
+        // arranged in rows to stay within StationTileCoord range [-31, 31].
+        int rowY = 5;
+        int colX = -30;
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             ModuleShape shape = (kind.ordinal() % 3 == 0) ? ModuleShape.SINGLE
                 : (kind.ordinal() % 3 == 1) ? ModuleShape.QUAD_2x2 : ModuleShape.BLOCK_3x3;
-            StationTileCoord coord = StationTileCoord.of(x, 5);
+            int step = shape == ModuleShape.BLOCK_3x3 ? 6 : (shape == ModuleShape.QUAD_2x2 ? 4 : 3);
+            if (colX + step > 31) {
+                rowY += 3;
+                colX = -30;
+            }
+            StationTileCoord coord = StationTileCoord.of(colX, rowY);
             ModuleTier tier = kind.defaultTier();
             ModuleInstance m = createAndPlaceModule(before, kind, Buildable.Status.OPERATIONAL, shape, tier, coord);
             assertNotNull(m.anchorOrNull(), "Module " + kind + " must have non-null anchor after placement");
-            x += (shape == ModuleShape.BLOCK_3x3 ? 5 : (shape == ModuleShape.QUAD_2x2 ? 3 : 2));
+            colX += step;
         }
 
         StationLayout layoutBefore = before.stationLayout();

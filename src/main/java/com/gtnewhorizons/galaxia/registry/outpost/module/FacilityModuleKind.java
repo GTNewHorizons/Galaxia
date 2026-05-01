@@ -18,7 +18,12 @@ public enum FacilityModuleKind {
     TANK,
     BATTERY,
     MAINTENANCE_BAY,
-    MACERATOR;
+    MACERATOR,
+    CENTRIFUGE,
+    ELECTROLYZER,
+    CHEMICAL_REACTOR,
+    ASSEMBLER,
+    DISTILLERY;
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
@@ -41,7 +46,7 @@ public enum FacilityModuleKind {
             case POWER -> StationModuleCategory.POWER;
             case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
             case MAINTENANCE_BAY -> StationModuleCategory.SUPPORT;
-            case MACERATOR -> StationModuleCategory.PROCESSING;
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> StationModuleCategory.PROCESSING;
         };
     }
 
@@ -73,7 +78,8 @@ public enum FacilityModuleKind {
             case POWER -> EnumSet.of(ModuleTier.NONE);
             case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
             case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
-            case MACERATOR -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> EnumSet
+                .of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
         };
     }
 
@@ -83,7 +89,7 @@ public enum FacilityModuleKind {
             case POWER -> ModuleTier.NONE;
             case STORAGE, TANK, BATTERY -> ModuleTier.HV;
             case MAINTENANCE_BAY -> ModuleTier.NONE;
-            case MACERATOR -> ModuleTier.HV;
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModuleTier.HV;
         };
     }
 
@@ -92,8 +98,7 @@ public enum FacilityModuleKind {
             case HAMMER, MINER -> ModulePriority.NORMAL;
             case POWER -> ModulePriority.HIGH;
             case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
-            case MAINTENANCE_BAY -> ModulePriority.NORMAL;
-            case MACERATOR -> ModulePriority.NORMAL;
+            case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModulePriority.NORMAL;
         };
     }
 

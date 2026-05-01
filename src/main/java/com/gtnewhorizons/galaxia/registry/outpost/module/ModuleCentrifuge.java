@@ -11,7 +11,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.util.GTRecipe;
 
-public class ModuleMacerator implements ModuleComponent, IParallelModule, IRecipeModule {
+public class ModuleCentrifuge implements ModuleComponent, IParallelModule, IRecipeModule {
 
     private byte parallel = 1;
     private RecipeConfig recipeConfig;
@@ -31,7 +31,7 @@ public class ModuleMacerator implements ModuleComponent, IParallelModule, IRecip
 
     @Override
     public gregtech.api.recipe.RecipeMap<?> getRecipeMap() {
-        return RecipeMaps.maceratorRecipes;
+        return RecipeMaps.centrifugeRecipes;
     }
 
     @Override
@@ -45,7 +45,7 @@ public class ModuleMacerator implements ModuleComponent, IParallelModule, IRecip
     }
 
     public static void processRecipe(ModuleInstance instance, AutomatedFacility outpost) {
-        ModuleMacerator m = (ModuleMacerator) instance.component();
+        ModuleCentrifuge m = (ModuleCentrifuge) instance.component();
         ProductionModuleHelper.execute(instance, outpost, m, m.random, m.inputWrapperCache, m.outputWrapperCache);
     }
 }
