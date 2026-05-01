@@ -58,70 +58,54 @@ public class RecipeSlotListWidget extends ParentWidget<RecipeSlotListWidget> {
             y += fr.FONT_HEIGHT + LINE_GAP;
             fr.drawStringWithShadow("Use recipe picker to add", x, y, MUTED_COLOR);
             y += fr.FONT_HEIGHT + LINE_GAP;
-            return y;
-        }
-
-        fr.drawStringWithShadow(
-            "Mode: " + config.mode()
-                .name(),
-            x,
-            y,
-            TEXT_COLOR);
-        y += fr.FONT_HEIGHT + LINE_GAP;
-
-        List<RecipeSlot> slots = config.slots()
-            .toList();
-        if (slots.isEmpty()) {
-            fr.drawStringWithShadow("No recipe slots configured", x, y, MUTED_COLOR);
-            y += fr.FONT_HEIGHT + LINE_GAP;
         } else {
-            fr.drawStringWithShadow("Configured recipes:", x, y, TEXT_COLOR);
+            fr.drawStringWithShadow(
+                "Mode: " + config.mode()
+                    .name(),
+                x,
+                y,
+                TEXT_COLOR);
             y += fr.FONT_HEIGHT + LINE_GAP;
 
-            int slotIdx = 0;
-            for (RecipeSlot slot : slots) {
-                String indexStr = "#" + slotIdx;
-                String enabledChar = slot.enabled() ? "\u2714" : "\u2718";
-                int enabledColor = slot.enabled() ? ENABLED_COLOR : DISABLED_COLOR;
-
-                String line = indexStr + "  "
-                    + enabledChar
-                    + "  in:"
-                    + slot.inputGuard()
-                    + "  out:"
-                    + slot.outputGuard()
-                    + "  pri:"
-                    + (slot.priority() & 0xFF)
-                    + "  size:"
-                    + (slot.orderSize() & 0xFF);
-
-                int maxWidth = width - 4;
-
-                fr.drawStringWithShadow(indexStr + "  ", x, y, TEXT_COLOR);
-                int cx = x + fr.getStringWidth(indexStr + "  ");
-                fr.drawStringWithShadow(enabledChar, cx, y, enabledColor);
-                cx += fr.getStringWidth(enabledChar) + 2;
-                String rest = "  in:" + slot.inputGuard()
-                    + "  out:"
-                    + slot.outputGuard()
-                    + "  pri:"
-                    + (slot.priority() & 0xFF)
-                    + "  size:"
-                    + (slot.orderSize() & 0xFF);
-                String trimmedRest = fr.trimStringToWidth(rest, maxWidth - (cx - x));
-                fr.drawStringWithShadow(trimmedRest, cx, y, TEXT_COLOR);
-
-                // Remove placeholder
-                String removeLabel = "  [Remove]";
-                int removeX = x + width - fr.getStringWidth(removeLabel) - 2;
-                fr.drawStringWithShadow(removeLabel, removeX, y, MUTED_COLOR);
-
+            List<RecipeSlot> slots = config.slots()
+                .toList();
+            if (slots.isEmpty()) {
+                fr.drawStringWithShadow("No recipe slots configured", x, y, MUTED_COLOR);
                 y += fr.FONT_HEIGHT + LINE_GAP;
-                slotIdx++;
+            } else {
+                fr.drawStringWithShadow("Configured recipes:", x, y, TEXT_COLOR);
+                y += fr.FONT_HEIGHT + LINE_GAP;
+
+                int slotIdx = 0;
+                for (RecipeSlot slot : slots) {
+                    int maxWidth = width - 4;
+                    fr.drawStringWithShadow("#" + slotIdx + "  ", x, y, TEXT_COLOR);
+                    int cx = x + fr.getStringWidth("#" + slotIdx + "  ");
+                    String enabledChar = slot.enabled() ? "\u2714" : "\u2718";
+                    int enabledColor = slot.enabled() ? ENABLED_COLOR : DISABLED_COLOR;
+                    fr.drawStringWithShadow(enabledChar, cx, y, enabledColor);
+                    cx += fr.getStringWidth(enabledChar) + 2;
+                    String rest = "  in:" + slot.inputGuard()
+                        + "  out:"
+                        + slot.outputGuard()
+                        + "  pri:"
+                        + (slot.priority() & 0xFF)
+                        + "  size:"
+                        + (slot.orderSize() & 0xFF);
+                    String trimmedRest = fr.trimStringToWidth(rest, maxWidth - (cx - x));
+                    fr.drawStringWithShadow(trimmedRest, cx, y, TEXT_COLOR);
+
+                    String removeLabel = "  [Remove]";
+                    int removeX = x + width - fr.getStringWidth(removeLabel) - 2;
+                    fr.drawStringWithShadow(removeLabel, removeX, y, MUTED_COLOR);
+
+                    y += fr.FONT_HEIGHT + LINE_GAP;
+                    slotIdx++;
+                }
             }
         }
 
-        // Add Recipe placeholder
+        // Add Recipe placeholder — always visible
         y += LINE_GAP;
         fr.drawStringWithShadow("[Add Recipe]", x, y, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
 
