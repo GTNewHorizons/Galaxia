@@ -41,11 +41,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -370,6 +377,47 @@ public final class FacilityPersistenceManager {
                 moduleData.add("routePriority", PURE_GSON.toJsonTree(hammer.routePriority()));
                 moduleData.addProperty("planetaryHandling", hammer.planetaryHandling());
                 moduleData.addProperty("crossPlanetaryCapability", hammer.crossPlanetaryCapability);
+            } else if (m.component() instanceof IRecipeModule recipeModule) {
+                RecipeConfig rc = recipeModule.getRecipeConfig();
+                if (rc != null) {
+                    moduleData.addProperty(
+                        "recipeMode",
+                        rc.mode()
+                            .name());
+                    moduleData.addProperty(
+                        "recipeNotDoablePolicy",
+                        rc.notDoablePolicy()
+                            .name());
+                    moduleData.addProperty("recipeOrderCursor", rc.orderCursor() & 0xFF);
+                    moduleData.addProperty("recipeOrderRemaining", rc.orderRemaining() & 0xFF);
+                    com.google.gson.JsonArray slotsArray = new com.google.gson.JsonArray();
+                    for (int i = 0; i < RecipeSlotList.MAX_RECIPE_SLOTS; i++) {
+                        RecipeSlot slot = rc.slots()
+                            .getOrNull(i);
+                        if (slot == null) continue;
+                        com.google.gson.JsonObject slotObj = new com.google.gson.JsonObject();
+                        slotObj.addProperty(
+                            "recipeMapOrdinal",
+                            slot.recipeRef()
+                                .recipeMapOrdinal() & 0xFF);
+                        slotObj.addProperty(
+                            "recipeIndex",
+                            slot.recipeRef()
+                                .recipeIndex());
+                        slotObj.addProperty(
+                            "contentHash",
+                            slot.recipeRef()
+                                .contentHash());
+                        slotObj.addProperty("enabled", slot.enabled());
+                        slotObj.addProperty("inputGuard", slot.inputGuard());
+                        slotObj.addProperty("outputGuard", slot.outputGuard());
+                        slotObj.addProperty("priority", slot.priority() & 0xFF);
+                        slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
+                        slotObj.addProperty("slotIndex", i);
+                        slotsArray.add(slotObj);
+                    }
+                    moduleData.add("recipeSlots", slotsArray);
+                }
             }
             mj.data = moduleData;
             mj.consumedResources = new LinkedHashMap<>();
@@ -570,6 +618,14 @@ public final class FacilityPersistenceManager {
                     }
                     case POWER -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
+                    case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
+                        if (data.has("recipeMode")) {
+                            RecipeConfig rc = decodeRecipeConfig(data);
+                            if (rc != null && module.component() instanceof IRecipeModule rm) {
+                                rm.setRecipeConfig(rc);
+                            }
+                        }
+                    }
                 }
 
                 Buildable.Status moduleStatus = safeValueOf(Buildable.Status.class, mj.status);
@@ -844,5 +900,55 @@ public final class FacilityPersistenceManager {
         String toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
+    }
+
+    private static RecipeConfig decodeRecipeConfig(JsonObject data) {
+        try {
+            RecipeSchedulerMode mode = RecipeSchedulerMode.valueOf(
+                data.get("recipeMode")
+                    .getAsString());
+            NotDoablePolicy policy = NotDoablePolicy.valueOf(
+                data.get("recipeNotDoablePolicy")
+                    .getAsString());
+            byte orderCursor = data.get("recipeOrderCursor")
+                .getAsByte();
+            byte orderRemaining = data.get("recipeOrderRemaining")
+                .getAsByte();
+            RecipeSlotList slots = new RecipeSlotList();
+
+            if (data.has("recipeSlots")) {
+                com.google.gson.JsonArray slotsArray = data.getAsJsonArray("recipeSlots");
+                for (int i = 0; i < slotsArray.size(); i++) {
+                    JsonObject slotObj = slotsArray.get(i)
+                        .getAsJsonObject();
+                    byte recipeMapOrdinal = slotObj.get("recipeMapOrdinal")
+                        .getAsByte();
+                    int recipeIndex = slotObj.get("recipeIndex")
+                        .getAsInt();
+                    long contentHash = slotObj.get("contentHash")
+                        .getAsLong();
+                    boolean enabled = slotObj.get("enabled")
+                        .getAsBoolean();
+                    int inputGuard = slotObj.get("inputGuard")
+                        .getAsInt();
+                    int outputGuard = slotObj.get("outputGuard")
+                        .getAsInt();
+                    byte priority = slotObj.get("priority")
+                        .getAsByte();
+                    byte orderSize = slotObj.get("orderSize")
+                        .getAsByte();
+                    GT5RecipeRef ref = new GT5RecipeRef(recipeMapOrdinal, recipeIndex, contentHash);
+                    RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
+                    int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
+                        .getAsInt() : i;
+                    slots.set(slotIndex, slot);
+                }
+            }
+
+            return new RecipeConfig(slots, mode, policy, orderCursor, orderRemaining);
+        } catch (Exception e) {
+            LOG.warn("[PERSIST] Failed to decode RecipeConfig: {}", e.getMessage());
+            return null;
+        }
     }
 }
