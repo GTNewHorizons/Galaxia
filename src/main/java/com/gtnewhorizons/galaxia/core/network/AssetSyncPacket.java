@@ -433,7 +433,7 @@ public final class AssetSyncPacket implements IMessage {
             case STORAGE, TANK, BATTERY -> {}
         }
 
-        if (module.component() instanceof IParallelModule pm && parallel >= 1) {
+        if (module.component() instanceof IParallelModule pm) {
             pm.setParallel(parallel);
         }
         module.updateStatus(status);
