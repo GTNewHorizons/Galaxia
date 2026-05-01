@@ -81,8 +81,8 @@ public class RecipeSlotList {
         }
     }
 
-    // Package-private: null-safe access for RecipeScheduler
-    RecipeSlot getOrNull(int index) {
+    /** Null-safe access: returns the slot at {@code index}, or {@code null} if out of bounds or empty. */
+    public RecipeSlot getOrNull(int index) {
         if (index < 0 || index >= MAX_RECIPE_SLOTS) return null;
         return slots[index];
     }

@@ -11,11 +11,16 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -38,6 +43,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     private String stringPayload;
     private byte bytePayload;
     private double doublePayload;
+    private byte[] rawPayload;
 
     public AssetModuleUpdatePacket() {}
 
@@ -91,6 +97,34 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, RecipeSlot slot) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
+            pkt.rawPayload = new byte[] { slotIndex };
+        } else if (slot != null) {
+            io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer(25);
+            payloadBuf.writeByte(slotIndex);
+            payloadBuf.writeByte(
+                slot.recipeRef()
+                    .recipeMapOrdinal());
+            payloadBuf.writeInt(
+                slot.recipeRef()
+                    .recipeIndex());
+            payloadBuf.writeLong(
+                slot.recipeRef()
+                    .contentHash());
+            payloadBuf.writeBoolean(slot.enabled());
+            payloadBuf.writeInt(slot.inputGuard());
+            payloadBuf.writeInt(slot.outputGuard());
+            payloadBuf.writeByte(slot.priority());
+            payloadBuf.writeByte(slot.orderSize());
+            pkt.rawPayload = new byte[payloadBuf.writerIndex()];
+            payloadBuf.readBytes(pkt.rawPayload);
+        }
+        return pkt;
+    }
+
     public enum Action {
         ENABLE,
         DISABLE,
@@ -107,7 +141,10 @@ public final class AssetModuleUpdatePacket implements IMessage {
         SET_ROUTE_PRIORITY,
         SET_TIER,
         SET_PRIORITY,
-        SET_ENABLED
+        SET_ENABLED,
+        ADD_RECIPE_SLOT,
+        UPDATE_RECIPE_SLOT,
+        REMOVE_RECIPE_SLOT
     }
 
     @Override
@@ -132,6 +169,14 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
+                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
+                    if (rawPayload != null) {
+                        buf.writeInt(rawPayload.length);
+                        buf.writeBytes(rawPayload);
+                    } else {
+                        buf.writeInt(0);
+                    }
+                }
             }
         }
     }
@@ -170,6 +215,13 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case SET_ALLOW_SHOOTING_MODE, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
+            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
+                int len = buf.readInt();
+                if (len > 0) {
+                    rawPayload = new byte[len];
+                    buf.readBytes(rawPayload);
+                }
+            }
         }
     }
 
@@ -195,6 +247,10 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     public <T extends Enum<T>> T getEnumPayload(Class<T> enumClass) {
         return PacketUtil.enumFromByte(Byte.toUnsignedInt(bytePayload), enumClass);
+    }
+
+    public byte[] getRawPayload() {
+        return rawPayload;
     }
 
     public static final class Handler implements IMessageHandler<AssetModuleUpdatePacket, IMessage> {
@@ -316,7 +372,53 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     state.layoutCache()
                         .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
                 }
+                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
             }
+        }
+
+        private void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
+            if (!(module.component() instanceof IRecipeModule recipeModule)) return;
+            if (packet.rawPayload == null) return;
+
+            io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
+            int slotIndex = Byte.toUnsignedInt(payloadBuf.readByte());
+            if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) return;
+
+            RecipeConfig config = recipeModule.getRecipeConfig();
+            ConfigAction action = packet.getConfigAction();
+
+            if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
+                if (config == null) return;
+                if (config.slots()
+                    .getOrNull(slotIndex) == null) return;
+                config.slots()
+                    .remove(slotIndex);
+                state.markModuleDirty(module.id);
+                return;
+            }
+
+            // ADD or UPDATE: decode RecipeSlot from payload
+            if (packet.rawPayload.length < 25) return;
+            byte recipeMapOrdinal = payloadBuf.readByte();
+            int recipeIndex = payloadBuf.readInt();
+            long contentHash = payloadBuf.readLong();
+            boolean enabled = payloadBuf.readBoolean();
+            int inputGuard = payloadBuf.readInt();
+            int outputGuard = payloadBuf.readInt();
+            byte priority = payloadBuf.readByte();
+            byte orderSize = payloadBuf.readByte();
+
+            GT5RecipeRef ref = new GT5RecipeRef(recipeMapOrdinal, recipeIndex, contentHash);
+            RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
+
+            if (config == null) {
+                config = RecipeConfig.empty();
+                recipeModule.setRecipeConfig(config);
+            }
+
+            config.slots()
+                .set(slotIndex, slot);
+            state.markModuleDirty(module.id);
         }
 
         private void handleMinerBlacklist(ModuleInstance module, String payload, boolean add, AutomatedFacility state,
