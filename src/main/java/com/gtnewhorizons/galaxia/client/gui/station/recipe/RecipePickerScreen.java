@@ -208,7 +208,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
             .overlay(drawable((ctx, x, y, w, h) -> drawRecipeRow(entry, x, y, w, h)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
-                pendingSelection = GT5RecipeRef.of(mapId, entry.index, entry.recipe);
+                pendingSelection = GT5RecipeRef.of(mapId.ordinal(), entry.index, entry.recipe);
                 Minecraft.getMinecraft()
                     .displayGuiScreen(null);
                 return true;

@@ -1,27 +1,30 @@
 package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import gregtech.api.util.GTRecipe;
-
+/**
+ * Stable reference to a GT5 recipe, identified by recipe-map ordinal,
+ * recipe index, and content hash. No direct GT5 imports — resolution
+ * happens through {@code GT5RecipeBridge} which is loaded conditionally.
+ */
 public record GT5RecipeRef(byte recipeMapOrdinal, int recipeIndex, long contentHash) {
 
-    public static GT5RecipeRef of(GTRecipeMapId mapId, int recipeIndex, GTRecipe recipe) {
-        long hash = computeContentHash(recipe);
-        return new GT5RecipeRef((byte) mapId.ordinal(), recipeIndex, hash);
+    public static GT5RecipeRef of(int mapIdOrdinal, int recipeIndex, Object gtRecipe) {
+        long hash = GT5RecipeBridge.computeContentHash(gtRecipe);
+        return new GT5RecipeRef((byte) mapIdOrdinal, recipeIndex, hash);
     }
 
-    public static long computeContentHash(GTRecipe recipe) {
-        return computeContentHash(
-            recipe.mInputs,
-            recipe.mOutputs,
-            recipe.mFluidInputs,
-            recipe.mFluidOutputs,
-            recipe.mDuration,
-            recipe.mEUt);
+    /** Returns the resolved GTRecipe Object, or null if GT5 is absent. */
+    @Nullable
+    public Object resolve() {
+        return GT5RecipeBridge.resolve(this);
     }
+
+    // ── Content hash helpers (no GT5 deps) ──
 
     static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, FluidStack[] fluidInputs,
         FluidStack[] fluidOutputs, int duration, int eut) {
@@ -54,32 +57,5 @@ public record GT5RecipeRef(byte recipeMapOrdinal, int recipeIndex, long contentH
             hash = hash * 31 + fluid.amount;
         }
         return hash;
-    }
-
-    @javax.annotation.Nullable
-    public GTRecipe resolve() {
-        GTRecipeMapId[] values = GTRecipeMapId.values();
-        if (recipeMapOrdinal < 0 || recipeMapOrdinal >= values.length) return null;
-        GTRecipeMapId mapId = values[recipeMapOrdinal];
-        if (mapId == GTRecipeMapId.INVALID) return null;
-
-        GTRecipe[] recipes = GTRecipeMapId.getRecipes(mapId);
-        if (recipes == null) return null;
-
-        if (recipeIndex >= 0 && recipeIndex < recipes.length) {
-            GTRecipe candidate = recipes[recipeIndex];
-            if (computeContentHash(candidate) == this.contentHash) {
-                return candidate;
-            }
-        }
-
-        // Hash mismatch or index out of range: scan entire map for matching hash
-        for (GTRecipe r : recipes) {
-            if (computeContentHash(r) == this.contentHash) {
-                return r;
-            }
-        }
-
-        return null;
     }
 }

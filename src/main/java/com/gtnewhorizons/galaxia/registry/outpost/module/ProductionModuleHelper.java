@@ -34,7 +34,7 @@ final class ProductionModuleHelper {
         RecipeSlot slot = config.slots()
             .get(slotIdx);
 
-        GTRecipe recipe = slot.recipeRef()
+        GTRecipe recipe = (GTRecipe) slot.recipeRef()
             .resolve();
         if (recipe == null) {
             advanceScheduler(config, recipeModule);
