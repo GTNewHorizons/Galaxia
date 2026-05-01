@@ -35,9 +35,16 @@ public final class RecipeScheduler {
     public static int nextSlotOrder(RecipeConfig config) {
         byte cursor = config.orderCursor();
         byte remaining = config.orderRemaining();
-        if (remaining > 0) return cursor;
+        if (remaining > 0) {
+            // Verify the cursor's slot still exists (player may have removed it)
+            if (config.slots()
+                .getOrNull(cursor) != null) {
+                return cursor;
+            }
+            // Slot was removed; fall through to advance-logic
+        }
 
-        // remaining == 0: find next enabled slot after cursor
+        // remaining == 0 or cursor slot removed: find next enabled slot after cursor
         RecipeSlotList slots = config.slots();
         for (int i = 1; i <= RecipeSlotList.MAX_RECIPE_SLOTS; i++) {
             int idx = (cursor + i) % RecipeSlotList.MAX_RECIPE_SLOTS;
@@ -72,10 +79,21 @@ public final class RecipeScheduler {
     }
 
     public static RecipeConfig advanceOrder(RecipeConfig config) {
-        RecipeSlotList slots = config.slots();
-        int cursor = config.orderCursor() & 0xFF;
+        byte remaining = config.orderRemaining();
+        byte cursor = config.orderCursor();
 
-        // Find next enabled slot after cursor, wrapping around
+        if (remaining > 1) {
+            // Decrement remaining, stay on same cursor
+            return new RecipeConfig(
+                config.slots(),
+                config.mode(),
+                config.notDoablePolicy(),
+                cursor,
+                (byte) (remaining - 1));
+        }
+
+        // remaining <= 1: advance to next enabled slot
+        RecipeSlotList slots = config.slots();
         for (int i = 1; i <= RecipeSlotList.MAX_RECIPE_SLOTS; i++) {
             int idx = (cursor + i) % RecipeSlotList.MAX_RECIPE_SLOTS;
             RecipeSlot slot = slots.getOrNull(idx);

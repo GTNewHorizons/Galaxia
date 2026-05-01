@@ -5,6 +5,7 @@ import java.util.Random;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -18,6 +19,7 @@ import gregtech.api.util.GTRecipe;
 final class ProductionModuleHelper {
 
     private static final ItemStackWrapper[] EMPTY_WRAPPERS = new ItemStackWrapper[0];
+    private static boolean warnedFluid = false;
 
     private ProductionModuleHelper() {}
 
@@ -36,6 +38,17 @@ final class ProductionModuleHelper {
             .resolve();
         if (recipe == null) {
             advanceScheduler(config, recipeModule);
+            return;
+        }
+
+        // V1: Fluid recipes not yet supported — skip with one-time WARN
+        if ((recipe.mFluidInputs != null && recipe.mFluidInputs.length > 0)
+            || (recipe.mFluidOutputs != null && recipe.mFluidOutputs.length > 0)) {
+            if (!warnedFluid) {
+                Galaxia.LOG.warn(
+                    "[Galaxia] Production module: fluid recipe processing not yet implemented; recipe will be skipped. (Fluid support deferred to Phase 8)");
+                warnedFluid = true;
+            }
             return;
         }
 

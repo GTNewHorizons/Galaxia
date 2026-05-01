@@ -289,4 +289,31 @@ final class RecipeSchedulerTest {
         assertEquals((byte) 0, advanced.orderCursor(), "cursor should stay on the only enabled slot");
         assertEquals((byte) 5, advanced.orderRemaining());
     }
+
+    @Test
+    void advanceOrder_decrementsRemaining_runsOrderSizeTimes() {
+        RecipeSlotList slots = new RecipeSlotList();
+        slots.add(slot(true, (byte) 0, (byte) 3)); // orderSize=3
+        RecipeConfig config = new RecipeConfig(
+            slots,
+            RecipeSchedulerMode.ORDER,
+            NotDoablePolicy.SKIP,
+            (byte) 0,
+            (byte) 3);
+
+        // First call: remaining 3 → decrement to 2, same cursor
+        RecipeConfig c1 = RecipeScheduler.advanceOrder(config);
+        assertEquals((byte) 0, c1.orderCursor(), "cursor should not advance yet");
+        assertEquals((byte) 2, c1.orderRemaining(), "remaining should decrement to 2");
+
+        // Second call: remaining 2 → decrement to 1, same cursor
+        RecipeConfig c2 = RecipeScheduler.advanceOrder(c1);
+        assertEquals((byte) 0, c2.orderCursor(), "cursor should not advance yet");
+        assertEquals((byte) 1, c2.orderRemaining(), "remaining should decrement to 1");
+
+        // Third call: remaining 1 → advance to next enabled slot
+        RecipeConfig c3 = RecipeScheduler.advanceOrder(c2);
+        assertEquals((byte) 0, c3.orderCursor(), "cursor should wrap to first enabled slot (only one)");
+        assertEquals((byte) 3, c3.orderRemaining(), "remaining should reset to slot's orderSize");
+    }
 }
