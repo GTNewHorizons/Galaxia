@@ -16,9 +16,11 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeSlotListWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -150,6 +152,13 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
             }
+        }
+
+        // T4.10: Recipe slots for IRecipeModule
+        if (module.component() instanceof IRecipeModule) {
+            lineY += SECTION_GAP;
+            RecipeSlotListWidget widget = new RecipeSlotListWidget(module);
+            lineY = widget.draw(x + CONTENT_PADDING, lineY, width - CONTENT_PADDING * 2);
         }
     }
 
