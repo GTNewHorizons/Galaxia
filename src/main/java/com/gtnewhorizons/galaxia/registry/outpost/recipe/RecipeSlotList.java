@@ -81,6 +81,12 @@ public class RecipeSlotList {
         }
     }
 
+    // Package-private: null-safe access for RecipeScheduler
+    RecipeSlot getOrNull(int index) {
+        if (index < 0 || index >= MAX_RECIPE_SLOTS) return null;
+        return slots[index];
+    }
+
     public List<RecipeSlot> toList() {
         List<RecipeSlot> result = new ArrayList<>(size());
         for (RecipeSlot slot : slots) {
