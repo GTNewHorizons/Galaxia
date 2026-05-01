@@ -13,6 +13,8 @@ public class CaveShapeCracks implements CaveShape {
     private final double[][] caveCache = new double[CHUNK_AREA][HEIGHT_LIMIT];
 
     private boolean preparedCaveCache = false;
+    private int cacheX;
+    private int cacheZ;
 
     @Override
     public void prepareCaveCache(World world, int chunkX, int chunkZ) {
@@ -54,11 +56,13 @@ public class CaveShapeCracks implements CaveShape {
             }
         }
         preparedCaveCache = true;
+        cacheX = chunkX;
+        cacheZ = chunkZ;
     }
 
     @Override
-    public boolean preparedCaveCache() {
-        return preparedCaveCache;
+    public boolean preparedCaveCache(int chunkX, int chunkZ) {
+        return preparedCaveCache && chunkX == cacheX && chunkZ == cacheZ;
     }
 
     @Override

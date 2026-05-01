@@ -5,7 +5,7 @@ import net.minecraft.world.World;
 public interface CaveShape {
     void prepareCaveCache(World world, int chunkX, int chunkZ);
 
-    boolean preparedCaveCache();
+    boolean preparedCaveCache(int chunkX, int chunkZ);
 
     boolean generateCave(int localX, int localY, int localZ, int height);
 }

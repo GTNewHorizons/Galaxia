@@ -211,7 +211,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 assignmentTime += (assignmentTimeFinish - assignmentTimeStart);
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
                 Block replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
-                if (caveShape != null && !caveShape.preparedCaveCache()) {
+                if (caveShape != null && !caveShape.preparedCaveCache(chunkX, chunkZ)) {
                     caveShape.prepareCaveCache(worldObj, chunkX, chunkZ);
                 }
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
