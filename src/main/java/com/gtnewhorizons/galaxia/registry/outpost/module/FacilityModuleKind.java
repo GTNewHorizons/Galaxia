@@ -50,10 +50,26 @@ public enum FacilityModuleKind {
         };
     }
 
+    private static boolean gt5Available = true; // default for tests; overridden during mod init
+
+    /** Called once during mod initialization. */
+    public static void setGt5Available(boolean available) {
+        gt5Available = available;
+    }
+
     public boolean isAllowedOn(CelestialAsset.Kind assetKind) {
         if (assetKind != CelestialAsset.Kind.AUTOMATED_OUTPOST && assetKind != CelestialAsset.Kind.AUTOMATED_STATION)
             return false;
+        if (!isAvailable()) return false;
         return this != MINER || assetKind == CelestialAsset.Kind.AUTOMATED_OUTPOST;
+    }
+
+    /** Production modules require GT5. Returns false for those kinds when GT5 is absent. */
+    public boolean isAvailable() {
+        return switch (this) {
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> gt5Available;
+            default -> true;
+        };
     }
 
     public ModuleInstance create(StationTileCoord anchor, ModuleShape shape, ModuleTier tier) {
@@ -104,5 +120,16 @@ public enum FacilityModuleKind {
 
     public boolean isCapacityModule() {
         return CAPACITY_KINDS.contains(this);
+    }
+
+    public boolean isProductionModule() {
+        return switch (this) {
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> true;
+            default -> false;
+        };
+    }
+
+    public boolean isDirectlyConfigurable() {
+        return this == HAMMER || this == MINER || this == POWER || isProductionModule();
     }
 }

@@ -54,12 +54,14 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
     private static final int PANEL_WIDTH = 300;
     private static final int PANEL_HEIGHT = 250;
     private static final int HEADER_HEIGHT = 24;
+    private static final int CONTENT_TOP = HEADER_HEIGHT + 14;
     private static final int PANEL_PADDING = 8;
     private static final int ROW_HEIGHT = 24;
     private static final int ROW_GAP = 2;
     private static final int MAX_VISIBLE_ROWS = 7;
     private static final int ICON_SIZE = 16;
     private static final int TEXT_BASELINE_OFFSET = 1;
+    private static final int OUT_ICON_OFFSET = 12;
 
     static volatile @Nullable CelestialAsset.ID pendingAssetId;
     static volatile @Nullable StationTileCoord pendingCoord;
@@ -116,7 +118,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
             panel.child(
                 new TextWidget<>(IKey.str("No station selected")).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                     .shadow(true)
-                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14));
+                    .pos(PANEL_PADDING, CONTENT_TOP));
             return panel;
         }
 
@@ -127,7 +129,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
                 new TextWidget<>(IKey.str("No recipe module selected"))
                     .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                     .shadow(true)
-                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14));
+                    .pos(PANEL_PADDING, CONTENT_TOP));
             return panel;
         }
 
@@ -148,7 +150,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
             panel.child(
                 new TextWidget<>(IKey.str("No available recipes")).color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                     .shadow(true)
-                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14));
+                    .pos(PANEL_PADDING, CONTENT_TOP));
             return panel;
         }
 
@@ -157,7 +159,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
             panel.child(
                 new TextWidget<>(IKey.str("Unknown recipe map")).color(EnumColors.MAP_COLOR_TEXT_DANGER.getColor())
                     .shadow(true)
-                    .pos(PANEL_PADDING, HEADER_HEIGHT + 14));
+                    .pos(PANEL_PADDING, CONTENT_TOP));
             return panel;
         }
 
@@ -237,7 +239,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
             y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
-        int outIconX = arrowX + 12;
+        int outIconX = arrowX + OUT_ICON_OFFSET;
         if (recipe.mOutputs != null) {
             int shown = 0;
             for (ItemStack stack : recipe.mOutputs) {

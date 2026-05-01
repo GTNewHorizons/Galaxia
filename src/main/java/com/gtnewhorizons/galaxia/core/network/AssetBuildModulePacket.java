@@ -26,37 +26,12 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetBuildModulePacket implements IMessage {
 
-    private CelestialAsset.ID assetId;
-    private FacilityModuleKind moduleKind;
-    private ModuleShape shape;
-    private ModuleTier tier;
-    private boolean instantBuild;
-    private StationTileCoord tileCoord;
-
-    // ── Package-private accessors for tests ──
-    CelestialAsset.ID assetId() {
-        return assetId;
-    }
-
-    FacilityModuleKind moduleKind() {
-        return moduleKind;
-    }
-
-    ModuleShape shape() {
-        return shape;
-    }
-
-    ModuleTier tier() {
-        return tier;
-    }
-
-    boolean instantBuild() {
-        return instantBuild;
-    }
-
-    StationTileCoord tileCoord() {
-        return tileCoord;
-    }
+    CelestialAsset.ID assetId;
+    FacilityModuleKind moduleKind;
+    ModuleShape shape;
+    ModuleTier tier;
+    boolean instantBuild;
+    StationTileCoord tileCoord;
 
     public AssetBuildModulePacket() {}
 

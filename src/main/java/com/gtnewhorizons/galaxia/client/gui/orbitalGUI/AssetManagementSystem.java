@@ -1306,15 +1306,10 @@ public final class AssetManagementSystem {
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(8, 6));
 
                 boolean isHammer = m.kind() == FacilityModuleKind.HAMMER;
-                boolean isProduction = m.kind() == FacilityModuleKind.MACERATOR
-                    || m.kind() == FacilityModuleKind.CENTRIFUGE
-                    || m.kind() == FacilityModuleKind.ELECTROLYZER
-                    || m.kind() == FacilityModuleKind.CHEMICAL_REACTOR
-                    || m.kind() == FacilityModuleKind.ASSEMBLER
-                    || m.kind() == FacilityModuleKind.DISTILLERY;
-                boolean isConfigurable = isHammer || m.kind() == FacilityModuleKind.MINER
-                    || m.kind() == FacilityModuleKind.POWER
-                    || isProduction;
+                boolean isProduction = m.kind()
+                    .isProductionModule();
+                boolean isConfigurable = m.kind()
+                    .isDirectlyConfigurable();
                 boolean operational = m.status() != Buildable.Status.IN_CONSTRUCTION;
                 boolean isDisabled = m.status() == Buildable.Status.DISABLED;
 

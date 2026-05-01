@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
@@ -60,6 +61,7 @@ public class CommonProxy {
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
+        FacilityModuleKind.setGt5Available(Loader.isModLoaded("gregtech"));
         FacilityModuleRegistry.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();

@@ -72,15 +72,12 @@ final class StationPacketRoundTripTest {
         AssetBuildModulePacket decoded = new AssetBuildModulePacket();
         decoded.fromBytes(buf);
 
-        assertEquals(
-            assetId.toString(),
-            decoded.assetId()
-                .toString());
-        assertEquals(kind, decoded.moduleKind());
-        assertEquals(shape, decoded.shape());
-        assertEquals(tier, decoded.tier());
-        assertEquals(instantBuild, decoded.instantBuild());
-        assertEquals(coord, decoded.tileCoord());
+        assertEquals(assetId.toString(), decoded.assetId.toString());
+        assertEquals(kind, decoded.moduleKind);
+        assertEquals(shape, decoded.shape);
+        assertEquals(tier, decoded.tier);
+        assertEquals(instantBuild, decoded.instantBuild);
+        assertEquals(coord, decoded.tileCoord);
     }
 
     @Test

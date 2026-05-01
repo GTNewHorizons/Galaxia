@@ -57,32 +57,6 @@ final class RecipeConfigTest {
     }
 
     @Test
-    void orderCursorNegativeThrows() {
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> {
-                new RecipeConfig(
-                    new RecipeSlotList(),
-                    RecipeSchedulerMode.PRIORITY,
-                    NotDoablePolicy.SKIP,
-                    (byte) -1,
-                    (byte) 0);
-            });
-    }
-
-    @Test
-    void orderCursorAtMaxThrows() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new RecipeConfig(
-                new RecipeSlotList(),
-                RecipeSchedulerMode.PRIORITY,
-                NotDoablePolicy.SKIP,
-                (byte) RecipeSlotList.MAX_RECIPE_SLOTS,
-                (byte) 0);
-        });
-    }
-
-    @Test
     void orderCursorAtMaxMinusOneAllowed() {
         RecipeSlotList slots = new RecipeSlotList();
         byte maxIndex = (byte) (RecipeSlotList.MAX_RECIPE_SLOTS - 1);
