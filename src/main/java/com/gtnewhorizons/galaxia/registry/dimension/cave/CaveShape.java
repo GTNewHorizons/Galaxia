@@ -1,9 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import net.minecraft.world.World;
+import java.util.Random;
 
 public interface CaveShape {
-    void prepareCaveCache(World world, int chunkX, int chunkZ);
+    void prepareCaveShape(Random random);
+
+    boolean preparedCaveShape();
+
+    void prepareCaveCache(int chunkX, int chunkZ);
 
     boolean preparedCaveCache(int chunkX, int chunkZ);
 

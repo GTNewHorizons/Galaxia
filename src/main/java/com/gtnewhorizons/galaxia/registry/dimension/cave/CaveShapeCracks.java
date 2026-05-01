@@ -1,7 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import net.minecraft.world.World;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
+import java.util.Random;
 
 public class CaveShapeCracks implements CaveShape {
     private static final int CHUNK_WIDTH = 16;
@@ -12,13 +13,24 @@ public class CaveShapeCracks implements CaveShape {
 
     private final double[][] caveCache = new double[CHUNK_AREA][HEIGHT_LIMIT];
 
+    private static NoiseGeneratorOctaves caveNoise;
+
     private boolean preparedCaveCache = false;
     private int cacheX;
     private int cacheZ;
 
     @Override
-    public void prepareCaveCache(World world, int chunkX, int chunkZ) {
-        NoiseGeneratorOctaves caveNoise = new NoiseGeneratorOctaves(world.rand, 4);
+    public void prepareCaveShape(Random random) {
+        caveNoise = new NoiseGeneratorOctaves(random, 4);
+    }
+
+    @Override
+    public boolean preparedCaveShape() {
+        return caveNoise != null;
+    }
+
+    @Override
+    public void prepareCaveCache(int chunkX, int chunkZ) {
         double[] horizontalLayer = caveNoise.generateNoiseOctaves(
             new double[CHUNK_AREA],
             chunkZ * CHUNK_WIDTH,
