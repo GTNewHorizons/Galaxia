@@ -38,7 +38,7 @@ public final class StationLayout {
 
     public void place(StationTileCoord coord, PlacedTile tile) {
         PlacedTile existing = tiles.get(coord);
-        if (existing != null && existing != PlacedTile.CORE && tile != PlacedTile.CORE) {
+        if (existing != null && existing != PlacedTile.CORE && tile != PlacedTile.CORE && !sameModule(existing, tile)) {
             throw new IllegalStateException(
                 "StationLayout.place: coordinate (" + coord.dx()
                     + ","
@@ -117,7 +117,7 @@ public final class StationLayout {
         // Validate no overlap with a different module (silent overwrite is data corruption)
         for (StationTileCoord coord : footprint) {
             PlacedTile existing = tiles.get(coord);
-            if (existing != null && existing != PlacedTile.CORE && existing.module() != module) {
+            if (existing != null && existing != PlacedTile.CORE && !sameModule(existing, module)) {
                 throw new IllegalStateException(
                     "StationLayout.place(ModuleInstance): coordinate (" + coord.dx()
                         + ","
@@ -186,6 +186,17 @@ public final class StationLayout {
 
     static final int[] DX = { 0, 1, 0, -1 };
     static final int[] DY = { -1, 0, 1, 0 };
+
+    private static boolean sameModule(PlacedTile existing, ModuleInstance candidate) {
+        ModuleInstance existingModule = existing.module();
+        if (existingModule == null && candidate == null) return true;
+        if (existingModule == null || candidate == null) return false;
+        return existingModule.id.equals(candidate.id);
+    }
+
+    private static boolean sameModule(PlacedTile a, PlacedTile b) {
+        return sameModule(a, b.module());
+    }
 
     /**
      * Counts orthogonal same-kind neighbors of a module at the given coordinate.

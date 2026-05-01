@@ -33,6 +33,31 @@ public final class AssetBuildModulePacket implements IMessage {
     private boolean instantBuild;
     private StationTileCoord tileCoord;
 
+    // ── Package-private accessors for tests ──
+    CelestialAsset.ID assetId() {
+        return assetId;
+    }
+
+    FacilityModuleKind moduleKind() {
+        return moduleKind;
+    }
+
+    ModuleShape shape() {
+        return shape;
+    }
+
+    ModuleTier tier() {
+        return tier;
+    }
+
+    boolean instantBuild() {
+        return instantBuild;
+    }
+
+    StationTileCoord tileCoord() {
+        return tileCoord;
+    }
+
     public AssetBuildModulePacket() {}
 
     public AssetBuildModulePacket(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,

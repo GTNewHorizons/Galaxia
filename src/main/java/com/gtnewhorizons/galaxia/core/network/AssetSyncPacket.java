@@ -367,6 +367,10 @@ public final class AssetSyncPacket implements IMessage {
         buf.writeShort(module.groupId());
         buf.writeByte(module.component() instanceof IParallelModule pm ? pm.getParallel() : 1);
 
+        StationTileCoord anchor = module.anchorOrNull();
+        buf.writeBoolean(anchor != null);
+        if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
+
         switch (module.kind()) {
             case MINER -> {
                 ModuleMiner m = (ModuleMiner) module.component();
@@ -404,8 +408,9 @@ public final class AssetSyncPacket implements IMessage {
         boolean enabled = buf.readBoolean();
         short groupId = buf.readShort();
         byte parallel = buf.readByte();
+        StationTileCoord anchor = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
 
-        ModuleInstance module = FacilityModuleRegistry.create(id, kind, null, shape, tier);
+        ModuleInstance module = FacilityModuleRegistry.create(id, kind, anchor, shape, tier);
         module.setPriorityOverride(modulePriority);
         module.setEnabled(enabled);
         module.setGroupId(groupId);
@@ -454,6 +459,108 @@ public final class AssetSyncPacket implements IMessage {
     public AssetSyncPacket withSyncRevision(int rev) {
         this.syncRevision = rev;
         return this;
+    }
+
+    // ── Test-support: package-private accessors ──
+
+    byte syncType() {
+        return syncType;
+    }
+
+    int moduleIndex() {
+        return moduleIndex;
+    }
+
+    ModuleInstance.ID moduleId() {
+        return moduleId;
+    }
+
+    ModuleInstance moduleData() {
+        return moduleData;
+    }
+
+    StationTileCoord tileCoord() {
+        return tileCoord;
+    }
+
+    StationTileState tileState() {
+        return tileState;
+    }
+
+    ModuleInstance.ID tileModuleId() {
+        return tileModuleId;
+    }
+
+    List<AssetSyncPacket> fullSyncDeltas() {
+        return fullSyncDeltas;
+    }
+
+    int syncRevision() {
+        return syncRevision;
+    }
+
+    /**
+     * Package-private test helper: applies a decoded delta packet to a facility.
+     * Mirrors the logic in {@link Handler#handleDelta}.
+     */
+    static void applyDeltaToFacility(AutomatedFacility state, AssetSyncPacket packet) {
+        switch (packet.syncType) {
+            case MODULE_ADDED -> {
+                if (packet.moduleIndex < state.modules()
+                    .size()) {
+                    state.modulesInternal()
+                        .set(packet.moduleIndex, packet.moduleData);
+                } else {
+                    state.addModule(packet.moduleData);
+                }
+                // Place layout tiles for the module
+                StationLayout layout = state.stationLayout();
+                ModuleInstance module = packet.moduleData;
+                if (layout != null && module.anchorOrNull() != null) {
+                    layout.place(module);
+                }
+            }
+            case MODULE_REMOVED -> {
+                state.removeModule(packet.moduleId);
+                StationLayout layout = state.stationLayout();
+                if (layout != null) layout.removeTileForModule(packet.moduleId);
+            }
+            case MODULE_UPDATED -> {
+                if (packet.moduleIndex < state.modules()
+                    .size()) {
+                    state.modulesInternal()
+                        .set(packet.moduleIndex, packet.moduleData);
+                }
+            }
+            case INVENTORY_UPDATE -> {
+                ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
+                if (r != null) {
+                    if (packet.inventoryDelta > 0) {
+                        state.inventory.setAmount(r, state.inventory.getAmount(r) + packet.inventoryDelta);
+                    } else {
+                        state.inventory
+                            .setAmount(r, Math.max(0, state.inventory.getAmount(r) - Math.abs(packet.inventoryDelta)));
+                    }
+                }
+            }
+            case LOGISTICS_CONFIG_UPDATED -> {
+                ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
+                if (r != null) state.logisticsConfig.set(r, packet.logConfig);
+            }
+            case LOGISTICS_CONFIG_REMOVED -> {
+                ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
+                if (r != null) state.logisticsConfig.reset(r);
+            }
+            case LAYOUT_TILE_UPDATED -> {
+                ModuleInstance module = Handler.findModuleById(state, packet.tileModuleId);
+                StationLayout layout = state.stationLayout();
+                if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
+            }
+            case LAYOUT_TILE_REMOVED -> {
+                StationLayout layout = state.stationLayout();
+                if (layout != null) layout.remove(packet.tileCoord);
+            }
+        }
     }
 
     public static final class Handler implements IMessageHandler<AssetSyncPacket, IMessage> {
@@ -515,8 +622,18 @@ public final class AssetSyncPacket implements IMessage {
                     } else {
                         state.addModule(packet.moduleData);
                     }
+                    // Place layout tiles for the module on the client mirror
+                    StationLayout layout = state.stationLayout();
+                    ModuleInstance module = packet.moduleData;
+                    if (layout != null && module.anchorOrNull() != null) {
+                        layout.place(module);
+                    }
                 }
-                case MODULE_REMOVED -> state.removeModule(packet.moduleId);
+                case MODULE_REMOVED -> {
+                    state.removeModule(packet.moduleId);
+                    StationLayout layout = state.stationLayout();
+                    if (layout != null) layout.removeTileForModule(packet.moduleId);
+                }
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
@@ -556,7 +673,7 @@ public final class AssetSyncPacket implements IMessage {
             }
         }
 
-        private ModuleInstance findModuleById(AutomatedFacility state, ModuleInstance.ID id) {
+        static ModuleInstance findModuleById(AutomatedFacility state, ModuleInstance.ID id) {
             if (id == null) return null;
             for (ModuleInstance m : state.modules()) {
                 if (m.id.equals(id)) return m;
