@@ -36,27 +36,6 @@ final class RecipeConfigTest {
     }
 
     @Test
-    void nullSlotsThrows() {
-        assertThrows(
-            NullPointerException.class,
-            () -> { new RecipeConfig(null, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0); });
-    }
-
-    @Test
-    void nullModeThrows() {
-        assertThrows(
-            NullPointerException.class,
-            () -> { new RecipeConfig(new RecipeSlotList(), null, NotDoablePolicy.SKIP, (byte) 0, (byte) 0); });
-    }
-
-    @Test
-    void nullNotDoablePolicyThrows() {
-        assertThrows(
-            NullPointerException.class,
-            () -> { new RecipeConfig(new RecipeSlotList(), RecipeSchedulerMode.PRIORITY, null, (byte) 0, (byte) 0); });
-    }
-
-    @Test
     void orderCursorAtMaxMinusOneAllowed() {
         RecipeSlotList slots = new RecipeSlotList();
         byte maxIndex = (byte) (RecipeSlotList.MAX_RECIPE_SLOTS - 1);

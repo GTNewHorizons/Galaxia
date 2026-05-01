@@ -55,23 +55,15 @@ public final class RecipeScheduler {
 
     static int nextSlotRandom(RecipeSlotList slots, Random random) {
         int size = slots.size();
-        int enabledCount = 0;
-        for (int i = 0; i < size; i++) {
-            if (slots.get(i)
-                .enabled()) enabledCount++;
-        }
-        if (enabledCount == 0) return -1;
-
-        int pick = random.nextInt(enabledCount);
+        // Build the list of enabled indices in one pass
+        int[] enabled = new int[size];
         int count = 0;
         for (int i = 0; i < size; i++) {
             if (slots.get(i)
-                .enabled()) {
-                if (count == pick) return i;
-                count++;
-            }
+                .enabled()) enabled[count++] = i;
         }
-        return -1;
+        if (count == 0) return -1;
+        return enabled[random.nextInt(count)];
     }
 
     public static RecipeConfig advanceOrder(RecipeConfig config) {
