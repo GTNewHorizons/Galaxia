@@ -87,6 +87,14 @@ public class FacilityModuleRegistry {
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L),
             (instance, outpost) -> {},
             ModuleMaintenanceBay::new);
+        register(
+            FacilityModuleKind.MACERATOR,
+            2000L,
+            32L,
+            20,
+            Map.of(new ItemStack(Items.iron_ingot), 8L),
+            ModuleMacerator::processRecipe,
+            ModuleMacerator::new);
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,

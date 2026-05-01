@@ -354,7 +354,7 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
-        // Create ALL 7 module kinds with various statuses
+        // Create ALL module kinds with various statuses
         // Layout coordinates starting at (1,0) and spreading right/down — no overlaps
         ModuleInstance hammer = createAndPlaceModule(
             station,
@@ -405,6 +405,13 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.NONE,
             StationTileCoord.of(1, 2));
+        ModuleInstance macerator = createAndPlaceModule(
+            station,
+            FacilityModuleKind.MACERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 2));
 
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
@@ -414,15 +421,15 @@ final class FacilityPersistenceManagerTest {
 
         // Dump JSON for inspection
         String encodedJson = FacilityPersistenceManagerTest.GSON.toJson(encoded);
-        System.out.println("=== Encoded FacilityStateJson (all 7 kinds) ===");
+        System.out.println("=== Encoded FacilityStateJson (all kinds) ===");
         System.out.println(encodedJson);
         System.out.println("=== End encoded JSON ===");
         System.out.println("Module count: " + encoded.modules.size());
         System.out.println("Layout tile count: " + encoded.layoutTiles.size());
 
         // Verify module entries
-        assertEquals(7, encoded.modules.size());
-        assertEquals(7, encoded.layoutTiles.size());
+        assertEquals(8, encoded.modules.size());
+        assertEquals(8, encoded.layoutTiles.size());
 
         // Verify each kind appears in encoded modules
         assertTrue(
@@ -446,6 +453,9 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "MAINTENANCE_BAY".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "MACERATOR".equals(mj.kind)));
 
         // Verify shape bytes — SINGLE has ordinal 0
         for (FacilityPersistenceManager.ModuleJson mj : encoded.modules) {
@@ -465,10 +475,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                7,
+                8,
                 decoded.modules()
                     .size(),
-                "Expected 7 modules, got " + decoded.modules()
+                "Expected 8 modules, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -489,6 +499,7 @@ final class FacilityPersistenceManagerTest {
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 1), "TANK anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 1), "BATTERY anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 2), "MAINTENANCE_BAY anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 2), "MACERATOR anchor"),
             () -> assertLayoutEquals(layout, decoded.stationLayout()),
             // JSON identity — byte-perfect round-trip
             () -> assertEquals(
