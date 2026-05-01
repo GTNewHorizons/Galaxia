@@ -11,8 +11,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
 
+import net.minecraft.world.World;
 import org.lwjgl.opengl.GL11;
 
 import jss.util.RandomXoshiro256StarStar;
@@ -20,6 +20,20 @@ import jss.util.RandomXoshiro256StarStar;
 public final class EnhancedSkyRender {
 
     private EnhancedSkyRender() {}
+
+    private static World currentWorld;
+
+    public static void setCurrentWorld(World world) {
+        currentWorld = world;
+    }
+
+    public static World getCurrentWorld() {
+        return currentWorld;
+    }
+
+    public static void clearCurrentWorld() {
+        currentWorld = null;
+    }
 
     /**
      * One global preset used for now. Later this can become dimension-specific.

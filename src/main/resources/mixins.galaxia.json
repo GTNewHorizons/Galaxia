@@ -12,12 +12,13 @@
     "MixinThrowRecoil",
     "ParticleGravityMixin",
     "RelativeMovementMixin",
-    "RenderGlobalSkyMixin",
-    "RenderStarsMixin",
     "UnifiedGravityMixin"
   ],
   "client": [
-    "MixinEntityRenderer"
+    "MixinEntityRenderer",
+    "MinecraftWorldMixin",
+    "RenderGlobalSkyMixin",
+    "RenderStarsMixin"
   ],
   "server": [
   ]
