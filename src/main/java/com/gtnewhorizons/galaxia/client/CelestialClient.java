@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -23,17 +22,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -41,8 +34,9 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * Client-side mirror of server state. Owns its own asset storage — never touches
- * {@link CelestialAssetStore} directly except for server-side factory methods.
+ * Client-side API. Asset storage delegates to {@link CelestialAssetStore#CLIENT},
+ * keeping client and server state isolated in single-player.
+ * Client-side prediction is deferred — see Architecture §15.
  */
 @SideOnly(Side.CLIENT)
 public final class CelestialClient {
@@ -50,45 +44,44 @@ public final class CelestialClient {
     @Deprecated
     public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
 
-    // ── Client-side asset mirror ──
-
-    private static final Map<CelestialAsset.ID, CelestialAsset> clientAssets = new LinkedHashMap<>();
+    // ── Client-side asset mirror (via CLIENT store) ──
 
     public static CelestialAsset getByAssetId(CelestialAsset.ID assetId) {
-        return clientAssets.get(assetId);
-    }
-
-    public static void add(AutomatedFacility state) {
-        clientAssets.put(state.assetId, state);
+        return CelestialAssetStore.CLIENT.findAssetInternal(assetId);
     }
 
     public static List<CelestialAsset> getState(CelestialObjectId celestialObjectId) {
-        return clientAssets.values()
-            .stream()
-            .filter(a -> a.celestialObjectId == celestialObjectId)
-            .collect(Collectors.toList());
+        List<CelestialAsset> result = new ArrayList<>();
+        for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {
+            if (asset.celestialObjectId == celestialObjectId) {
+                result.add(asset);
+            }
+        }
+        return result;
     }
 
     public static List<AutomatedFacility> allOutposts() {
-        return clientAssets.values()
-            .stream()
-            .filter(a -> a instanceof AutomatedFacility)
-            .map(a -> (AutomatedFacility) a)
-            .collect(Collectors.toList());
+        List<AutomatedFacility> result = new ArrayList<>();
+        for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {
+            if (asset instanceof AutomatedFacility af) {
+                result.add(af);
+            }
+        }
+        return result;
     }
 
-    // ── Server-side asset creation (delegates to the shared store) ──
+    // ── Client-side asset creation (delegates to CLIENT store) ──
 
     public static CelestialAsset createAssetInConstruction(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
-        return CelestialAssetStore
-            .createAssetInConstruction(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
+        return CelestialAssetStore.CLIENT
+            .createAssetInConstructionInternal(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
     }
 
     public static CelestialAsset createOperationalAsset(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
-        return CelestialAssetStore
-            .createOperationalAsset(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
+        return CelestialAssetStore.CLIENT
+            .createOperationalAssetInternal(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
     }
 
     // ── Logistics mirror ──
@@ -103,7 +96,7 @@ public final class CelestialClient {
     private CelestialClient() {}
 
     public static void clear() {
-        clientAssets.clear();
+        CelestialAssetStore.CLIENT.clearInternal();
         deliveries.clear();
         deliveryRevision = 0;
         signalRevision = 0;
@@ -124,11 +117,6 @@ public final class CelestialClient {
             && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode;
         if (creativeBuildModeEnabled && creativePlayer) {
             module.completeConstruction();
-        }
-        state.addModule(module);
-        StationLayout layout = state.stationLayout();
-        if (layout != null && module.anchor() != null) {
-            layout.place(module);
         }
         Galaxia.GALAXIA_NETWORK.sendToServer(
             new AssetBuildModulePacket(
@@ -155,11 +143,6 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
-        switch (action) {
-            case ENABLE -> module.updateStatus(Buildable.Status.OPERATIONAL);
-            case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-            case DESTROY -> state.removeModule(module.id);
-        }
         Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
     }
 
@@ -169,11 +152,6 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
-        if (!(module.component() instanceof ModuleMiner miner)) return;
-        switch (configAction) {
-            case ADD_MINER_BLACKLIST -> miner.addToBlacklist(payload);
-            case REMOVE_MINER_BLACKLIST -> miner.removeFromBlacklist(payload);
-        }
         Galaxia.GALAXIA_NETWORK
             .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
@@ -184,19 +162,6 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
-        switch (configAction) {
-            case SET_MINER_COPY_SETTINGS -> {
-                if (module.component() instanceof ModuleMiner miner) {
-                    miner.setCopySettingToOtherMiners(payload);
-                }
-            }
-            case SET_PLANETARY_HANDLING -> {
-                if (module.component() instanceof ModuleHammer hammer) {
-                    hammer.setPlanetaryHandling(payload);
-                }
-            }
-            default -> {}
-        }
         Galaxia.GALAXIA_NETWORK
             .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
@@ -207,18 +172,6 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
-        switch (configAction) {
-            case SET_ALLOW_SHOOTING_THRESHOLD -> {
-                if (module.component() instanceof ModuleHammer hammer) {
-                    hammer.setConfig(
-                        new AllowShootingConfig(
-                            hammer.config()
-                                .mode(),
-                            payload));
-                }
-            }
-            default -> {}
-        }
         Galaxia.GALAXIA_NETWORK
             .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
@@ -230,23 +183,6 @@ public final class CelestialClient {
         var modules = state.modules();
         if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
         ModuleInstance module = modules.get(moduleIndex);
-        if (!(module.component() instanceof ModuleHammer hammer)) return;
-
-        switch (configAction) {
-            case SET_ALLOW_SHOOTING_MODE -> {
-                AllowShootingConfig.Mode mode = (AllowShootingConfig.Mode) payload;
-                hammer.setConfig(
-                    new AllowShootingConfig(
-                        mode,
-                        hammer.config()
-                            .threshold()));
-            }
-            case SET_ROUTE_PRIORITY -> {
-                OrbitalTransferPlanner.RoutePriority priority = (OrbitalTransferPlanner.RoutePriority) payload;
-                hammer.setRoutePriority(priority);
-            }
-            default -> {}
-        }
         Galaxia.GALAXIA_NETWORK
             .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }

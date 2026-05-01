@@ -314,7 +314,7 @@ public final class AssetManagementSystem {
                     true);
                 return;
             }
-            CelestialAssetStore.destroyAsset(state.pendingAssetDestruction.asset().assetId);
+            CelestialAssetStore.CLIENT.destroyAssetInternal(state.pendingAssetDestruction.asset().assetId);
             // TODO: Localize
             callbacks.showActionStatus("Asset destroyed");
             state.pendingAssetDestruction = null;
@@ -345,7 +345,8 @@ public final class AssetManagementSystem {
 
         void confirmPendingConstructionCancellation(OrbitalAssetUiState state) {
             if (state.pendingConstructionCancellation == null) return;
-            CelestialAssetStore.startDeconstruction(state.pendingConstructionCancellation.asset().assetId);
+            CelestialAssetStore.CLIENT
+                .startDeconstructionInternal(state.pendingConstructionCancellation.asset().assetId);
             // TODO: Localize
             callbacks.showActionStatus("Construction site converted to deconstruction");
             state.pendingConstructionCancellation = null;
@@ -385,7 +386,7 @@ public final class AssetManagementSystem {
                 closePendingAssetRename(state);
                 return;
             }
-            if (CelestialAssetStore.renameAsset(state.pendingAssetRename.asset().assetId, renamed)) {
+            if (CelestialAssetStore.CLIENT.renameAssetInternal(state.pendingAssetRename.asset().assetId, renamed)) {
                 // TODO: Localize
                 callbacks.showActionStatus("Asset renamed");
                 closePendingAssetRename(state);
@@ -2802,7 +2803,7 @@ public final class AssetManagementSystem {
                 return;
             }
             if (callbacks.isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.cancelConstruction(asset.assetId);
+                CelestialAssetStore.CLIENT.cancelConstructionInternal(asset.assetId);
                 callbacks.showActionStatus("Construction canceled");
                 return;
             }
@@ -2810,7 +2811,7 @@ public final class AssetManagementSystem {
                 callbacks.openPendingConstructionCancellation(asset);
                 return;
             }
-            CelestialAssetStore.cancelConstruction(asset.assetId);
+            CelestialAssetStore.CLIENT.cancelConstructionInternal(asset.assetId);
             callbacks.showActionStatus("Construction canceled");
         }
 

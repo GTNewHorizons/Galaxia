@@ -580,7 +580,7 @@ public final class FacilityPersistenceManager {
                 module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
                 module.setGroupId(mj.groupId);
-                if (mj.parallel >= 1 && module.component() instanceof IParallelModule pm) {
+                if (module.component() instanceof IParallelModule pm) {
                     pm.setParallel(mj.parallel);
                 }
                 module.clearConsumedResources();

@@ -8,7 +8,6 @@ import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -471,7 +470,8 @@ public final class AssetSyncPacket implements IMessage {
             switch (packet.syncType) {
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
-                    if (CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility state) {
+                    if (CelestialAssetStore.CLIENT
+                        .findAssetInternal(packet.assetId) instanceof AutomatedFacility state) {
                         handleDelta(state, packet);
                         state.setSyncRevision(Math.max(state.getSyncRevision(), packet.syncRevision));
                     }
@@ -480,14 +480,14 @@ public final class AssetSyncPacket implements IMessage {
         }
 
         private void handleFull(AssetSyncPacket packet) {
-            AutomatedFacility state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o
-                : null;
+            AutomatedFacility state = CelestialAssetStore.CLIENT
+                .findAssetInternal(packet.assetId) instanceof AutomatedFacility o ? o : null;
             if (state == null) {
                 CelestialAsset newAsset = CelestialAsset
                     .create(packet.assetId, packet.celestialBodyId, packet.assetKind, packet.assetStatus);
                 if (!(newAsset instanceof AutomatedFacility newState)) return;
                 state = newState;
-                CelestialClient.add(newState);
+                CelestialAssetStore.CLIENT.addInternal(packet.teamId, newState);
             }
 
             state.setEnergyStored(packet.energyStored);
