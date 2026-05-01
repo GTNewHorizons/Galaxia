@@ -22,6 +22,11 @@ public final class EnhancedSkyRender {
     private EnhancedSkyRender() {}
 
     /**
+     * One global preset used for now. Later this can become dimension-specific.
+     */
+    public static final SkyPreset DEFAULT_PRESET = new SkyPreset("default");
+
+    /**
      * Optional per-dimension/per-planet presets.
      */
     private static final Map<Integer, SkyPreset> PRESETS_BY_DIMENSION = new LinkedHashMap<>();
@@ -31,6 +36,25 @@ public final class EnhancedSkyRender {
      */
     private static final long BASE_SEED = 10842L;
 
+    static {
+        // Default baseline: no fancy assumptions about art direction.
+        // Designers can replace textures later.
+        DEFAULT_PRESET.brightStars(64, 0.25f, 0.85f, true)
+            .billboardLayer(
+                new BillboardLayer(LocationGalaxia("textures/sky/nebula_01.png"), 22, 6.0f, 0.20f, 0.95f, 0.15f))
+            .billboardLayer(
+                new BillboardLayer(LocationGalaxia("textures/sky/quasar_01.png"), 5, 1.8f, 0.45f, 1.00f, 0.35f))
+            .domeLayer(new DomeLayer(LocationGalaxia("textures/sky/milky_way.png"), 1.0f, 0.55f, 0.20f));
+    }
+
+    /**
+     * Convenience bootstrap for the default dimension setup.
+     * Call this once during client init.
+     */
+    public static void bootstrapDefaults() {
+        registerPreset(0, DEFAULT_PRESET);
+    }
+
     /**
      * Registers a preset for a specific dimension id.
      * Call this during init.
@@ -39,15 +63,15 @@ public final class EnhancedSkyRender {
         PRESETS_BY_DIMENSION.put(dimensionId, preset);
     }
 
+    /**
+     * Returns the active preset for the dimension, or the default preset.
+     */
     public static SkyPreset getPreset(World world) {
-        if (world == null || world.provider == null) return null;
-        return PRESETS_BY_DIMENSION.get(world.provider.dimensionId);
-    }
-
-    public static void registerPresets(Iterable<Integer> dimensionIds, SkyPreset preset) {
-        for (int dimId : dimensionIds) {
-            registerPreset(dimId, preset);
+        if (world == null || world.provider == null) {
+            return DEFAULT_PRESET;
         }
+        SkyPreset preset = PRESETS_BY_DIMENSION.get(world.provider.dimensionId);
+        return preset != null ? preset : DEFAULT_PRESET;
     }
 
     /**
@@ -284,7 +308,7 @@ public final class EnhancedSkyRender {
      * Draws one billboard quad using a basis aligned to the object direction.
      */
     private static void addTexturedBillboardQuad(Tessellator t, double cx, double cy, double cz, OrthoBasis basis,
-        float width, float height, float u0, float v0, float u1, float v1, float alpha) {
+                                                 float width, float height, float u0, float v0, float u1, float v1, float alpha) {
         double hx = basis.right.x * width;
         double hy = basis.right.y * width;
         double hz = basis.right.z * width;
@@ -462,7 +486,7 @@ public final class EnhancedSkyRender {
     }
 
     public static BillboardLayer billboard(ResourceLocation texture, int count, float minSize, float maxSize,
-        float alpha, float dayMin, float dayMax) {
+                                           float alpha, float dayMin, float dayMax) {
         return new BillboardLayer(texture, count, minSize, maxSize, alpha, dayMin, dayMax);
     }
 
@@ -471,7 +495,7 @@ public final class EnhancedSkyRender {
     }
 
     public static DomeLayer dome(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility,
-        float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
+                                 float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
         return new DomeLayer(
             texture,
             opacity,
@@ -525,17 +549,17 @@ public final class EnhancedSkyRender {
         private final long seedSalt;
 
         public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize,
-            float dayVisibilityMin, float dayVisibilityMax) {
+                              float dayVisibilityMin, float dayVisibilityMax) {
             this(texture, count, minSize, maxSize, 1.0f, dayVisibilityMin, dayVisibilityMax, true, 0x515A7E11L);
         }
 
         public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float alpha,
-            float dayVisibilityMin, float dayVisibilityMax) {
+                              float dayVisibilityMin, float dayVisibilityMax) {
             this(texture, count, minSize, maxSize, alpha, dayVisibilityMin, dayVisibilityMax, true, 0x515A7E11L);
         }
 
         public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float alpha,
-            float dayVisibilityMin, float dayVisibilityMax, boolean jitterRotation, long seedSalt) {
+                              float dayVisibilityMin, float dayVisibilityMax, boolean jitterRotation, long seedSalt) {
             this.texture = texture;
             this.count = count;
             this.minSize = minSize;
@@ -568,7 +592,7 @@ public final class EnhancedSkyRender {
         }
 
         public DomeLayer(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility,
-            float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
+                         float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
             this.texture = texture;
             this.opacity = opacity;
             this.minVisibility = minVisibility;

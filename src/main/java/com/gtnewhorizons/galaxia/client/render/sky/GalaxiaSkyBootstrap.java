@@ -3,9 +3,6 @@ package com.gtnewhorizons.galaxia.client.render.sky;
 import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender.BillboardLayer;
 import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender.SkyPreset;
 import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender.DomeLayer;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
-
-import java.util.List;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
@@ -18,11 +15,8 @@ public final class GalaxiaSkyBootstrap {
             .billboardLayer(new BillboardLayer(LocationGalaxia("textures/sky/quasar_01.png"), 5, 1.8f, 0.45f, 1.00f, 0.35f))
             .domeLayer(new DomeLayer(LocationGalaxia("textures/sky/milky_way.png"), 1.0f, 0.55f, 0.20f));
 
-        EnhancedSkyRender.registerPresets(
-            List.of(
+        EnhancedSkyRender.registerPreset(
                 0,
-                DimensionEnum.MOON.getId()
-            ),
             milkyWayPreset);
     }
 }
