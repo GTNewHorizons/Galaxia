@@ -39,7 +39,11 @@ final class GTRecipeMapLayoutTest {
         assertEquals(List.of(new GTRecipeMapLayout.Slot(0, 106, 24)), layout.itemOutputs());
         assertEquals(List.of(new GTRecipeMapLayout.Slot(0, 16, 62)), layout.fluidInputs());
         assertEquals(new GTRecipeMapLayout.Slot(1, 124, 62), layout.fluidOutputs().get(1));
-        assertEquals(new GTRecipeMapLayout.Progress(78, 24, 20, 18, true), layout.progress());
+        assertEquals(78, layout.progress().x());
+        assertEquals(24, layout.progress().y());
+        assertEquals(20, layout.progress().width());
+        assertEquals(18, layout.progress().height());
+        assertEquals(true, layout.progress().enabled());
     }
 
     private static BasicUIProperties properties(int maxItemInputs, int maxItemOutputs, int maxFluidInputs,

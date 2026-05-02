@@ -10,15 +10,21 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.integration.nei.INEIRecipeTransfer;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
+import com.cleanroommc.modularui.screen.ModularContainer;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -29,6 +35,7 @@ import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ProgressWidget;
 import com.cleanroommc.modularui.widgets.slot.FluidSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
@@ -47,15 +54,26 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeIntentMatcher;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
+import codechicken.nei.PositionedStack;
+import codechicken.nei.recipe.GuiCraftingRecipe;
+import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import gregtech.api.modularui2.GTGuiThemes;
+import gregtech.api.modularui2.GTGuiTextures;
+import gregtech.api.util.GTUtility;
 import gregtech.api.util.GTRecipe;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 
 public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
     static final SimpleGuiFactory FACTORY = new SimpleGuiFactory("galaxia_recipe_input", RecipeInputScreen::new);
-    private static final int TITLE_H = 12;
-    private static final int FOOTER_H = 34;
+    private static final int TITLE_TAB_PADDING = 3;
+    private static final int TITLE_TEXT_PADDING = 2;
+    private static final int BODY_Y = 14;
+    private static final int RECIPE_Y = BODY_Y;
+    private static final int FOOTER_H = 52;
     private static final int SLOT = 18;
 
     static volatile @Nullable CelestialAsset.ID pendingAssetId;
@@ -72,6 +90,9 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     private final FluidTank[] ghostFluidInputs;
     private final FluidTank[] ghostFluidOutputs;
     private final GTRecipeMapLayout layout;
+    private final String title;
+    private final @Nullable gregtech.api.recipe.RecipeMap<?> recipeMap;
+    private final @Nullable String neiTransferRectId;
     private GTRecipe[] allRecipes = new GTRecipe[0];
     private GTRecipeMapId mapId = GTRecipeMapId.INVALID;
     private RecipeIntentMatcher.Result match = new RecipeIntentMatcher.Result(
@@ -81,6 +102,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         null,
         null);
     private String statusText = "Put items to find a recipe";
+    private @Nullable String statusDetailText;
     private int statusColor = c(EnumColors.MAP_COLOR_TEXT_MUTED);
 
     public static void open(CelestialAsset.ID assetId, int moduleIndex, ModuleInstance module) {
@@ -95,7 +117,11 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         gregtech.api.recipe.RecipeMap<?> map = pendingModule != null && pendingModule.component() instanceof IRecipeModule rm
             ? rm.getRecipeMap()
             : null;
+        this.recipeMap = map;
         this.layout = GTRecipeMapLayout.fromRecipeMap(map);
+        this.title = titleFor(map, pendingModule);
+        this.neiTransferRectId = map != null ? map.getFrontend()
+            .getUIProperties().neiTransferRectId : null;
         if (map != null) {
             @SuppressWarnings("unchecked")
             List<GTRecipe> recipes = new ArrayList<>((Collection<GTRecipe>) (Collection<?>) map.getAllRecipes());
@@ -125,36 +151,47 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     public ModularPanel buildUI(GuiData gd, PanelSyncManager sm, UISettings s) {
         s.getRecipeViewerSettings()
             .enable();
+        s.customContainer(() -> new RecipeInputNeiContainer(this));
         int width = Math.max(GTRecipeMapLayout.DEFAULT_WIDTH, layout.width());
-        int height = TITLE_H + layout.height() + FOOTER_H;
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia_recipe_input", width, height);
+        int height = BODY_Y + layout.height() + FOOTER_H;
+        ModularPanel panel = ModularPanel.defaultPanel("galaxia_recipe_input", width, height)
+            .themeOverride(GTGuiThemes.STANDARD.getId())
+            .disableThemeBackground(true)
+            .disableHoverThemeBackground(true);
         ModuleInstance module = pendingModule;
         if (module == null || !(module.component() instanceof IRecipeModule)) {
-            panel.child(new FrameWidget("No recipe module", this).pos(0, 0)
-                .size(width, height));
+            addFrame(panel, "No recipe module", width, height);
             return panel;
         }
 
-        panel.child(
-            new FrameWidget(
-                module.kind()
-                    .getDisplayName(),
-                this).pos(0, 0)
-                    .size(width, height));
+        addFrame(panel, title, width, height);
 
+        addProgress(panel);
         addItemSlots(panel, layout.itemInputs(), itemInputs, ghostItemInputs);
         addItemSlots(panel, layout.itemOutputs(), itemOutputs, ghostItemOutputs);
         addFluidSlots(panel, layout.fluidInputs(), fluidInputs, ghostFluidInputs);
         addFluidSlots(panel, layout.fluidOutputs(), fluidOutputs, ghostFluidOutputs);
 
-        int btnY = TITLE_H + layout.height() + 8;
+        int btnY = height - 26;
         panel.child(
             btn("Cancel", this::cancel).pos(6, btnY)
-                .size(70, 20));
+                .size(58, 20));
         panel.child(
-            btn("Confirm", this::confirm).pos(width - 86, btnY)
-                .size(80, 20));
+            btn("NEI", this::openNeiRecipeMap).pos(68, btnY)
+                .size(40, 20));
+        panel.child(
+            btn("Confirm", this::confirm).pos(width - 64, btnY)
+                .size(58, 20));
         return panel;
+    }
+
+    private void addFrame(ModularPanel panel, String title, int width, int height) {
+        panel.child(new BodyBackgroundWidget(this).pos(0, BODY_Y)
+            .size(width, height - BODY_Y));
+        panel.child(new TitleTabWidget(title).pos(0, 0)
+            .size(titleTabWidth(title, width), BODY_Y));
+        panel.child(new StatusTextWidget(this).pos(0, height - 52)
+            .size(width, 24));
     }
 
     private void addItemSlots(ModularPanel panel, List<GTRecipeMapLayout.Slot> slots, ItemStackHandler[] hard,
@@ -171,13 +208,13 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
                         }
                         onInputChanged();
                     }))
-                    .pos(slot.x(), TITLE_H + slot.y())
+                    .background(GTGuiTextures.SLOT_ITEM_STANDARD, slot.overlay())
+                    .pos(slot.x(), RECIPE_Y + slot.y())
                     .size(SLOT, SLOT));
-            PhantomItemSlot ghostSlot = new PhantomItemSlot();
-            ghostSlot.slot(new ModularSlot(ghost[index], 0));
-            ghostSlot.pos(slot.x(), TITLE_H + slot.y())
+            GhostItemWidget ghostSlot = new GhostItemWidget(ghost[index]);
+            ghostSlot
+                .pos(slot.x(), RECIPE_Y + slot.y())
                 .size(SLOT, SLOT);
-            ghostSlot.setEnabled(false);
             panel.child(ghostSlot);
         }
     }
@@ -188,16 +225,29 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
             int index = slot.index();
             panel.child(
                 new FluidSlot().syncHandler(new IntentFluidSlotSyncHandler(hard[index]))
-                    .pos(slot.x(), TITLE_H + slot.y())
+                    .background(GTGuiTextures.SLOT_FLUID_STANDARD, slot.overlay())
+                    .pos(slot.x(), RECIPE_Y + slot.y())
                     .size(SLOT, SLOT));
             FluidSlot ghostSlot = new FluidSlot()
                 .syncHandler(new FluidSlotSyncHandler(ghost[index]).canFillSlot(false)
                     .canDrainSlot(false))
-                .pos(slot.x(), TITLE_H + slot.y())
+                .background(IDrawable.NONE)
+                .pos(slot.x(), RECIPE_Y + slot.y())
                 .size(SLOT, SLOT);
             ghostSlot.setEnabled(false);
             panel.child(ghostSlot);
         }
+    }
+
+    private void addProgress(ModularPanel panel) {
+        GTRecipeMapLayout.Progress progress = layout.progress();
+        if (!progress.enabled() || progress.texture() == null) return;
+        panel.child(
+            new ProgressWidget().texture(progress.texture(), progress.imageSize())
+                .direction(progress.direction())
+                .progress(() -> (Minecraft.getSystemTime() % 1000L) / 1000.0)
+                .pos(progress.x(), RECIPE_Y + progress.y())
+                .size(progress.width(), progress.height()));
     }
 
     private void onInputChanged() {
@@ -212,19 +262,23 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         switch (match.status()) {
             case NO_INPUT -> {
                 statusText = "Put items to find a recipe";
+                statusDetailText = null;
                 statusColor = c(EnumColors.MAP_COLOR_TEXT_MUTED);
             }
             case NO_MATCH -> {
                 statusText = "No recipe found";
+                statusDetailText = null;
                 statusColor = c(EnumColors.MAP_COLOR_TEXT_DANGER);
             }
             case MULTIPLE_MATCHES -> {
                 statusText = match.matchCount() + " matches - need more items";
+                statusDetailText = null;
                 statusColor = c(EnumColors.MAP_COLOR_TEXT_WARNING);
             }
             case SINGLE_MATCH -> {
                 RecipeSnapshot snapshot = match.snapshot();
-                statusText = snapshot.duration() + "t " + snapshot.eut() + " EU/t";
+                statusText = neiUsage(snapshot.eut());
+                statusDetailText = neiDuration(snapshot.duration());
                 statusColor = c(EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED);
                 applyItemGhosts(snapshot.inputs(), itemInputs, ghostItemInputs);
                 applyItemGhosts(snapshot.outputs(), itemOutputs, ghostItemOutputs);
@@ -387,13 +441,9 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private static ButtonWidget<?> btn(String label, Runnable action) {
-        int bc = c(EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT), hc = c(EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED),
-            brc = c(EnumColors.MAP_COLOR_BTN_BORDER_ENABLED), tc = c(EnumColors.MAP_COLOR_TEXT_BODY);
-        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> BorderedRect.draw(x, y, w, h, bc, brc)))
-            .hoverBackground(drawable((ctx, x, y, w, h) -> BorderedRect.draw(x, y, w, h, hc, brc)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
+        return new ButtonWidget<>().overlay(drawable((ctx, x, y, w, h) -> {
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-                fr.drawStringWithShadow(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2, tc);
+                fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF1E2530);
             }))
             .onMouseTapped(b -> {
                 if (b == 0) action.run();
@@ -407,6 +457,81 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
     private static int c(EnumColors color) {
         return color.getColor();
+    }
+
+    private static String neiUsage(int eut) {
+        long voltage = Math.abs((long) eut);
+        return StatCollector.translateToLocalFormatted(
+            "GT5U.nei.display.usage",
+            Long.toString(voltage),
+            GTUtility.getTierNameWithParentheses(voltage));
+    }
+
+    private static String neiDuration(int duration) {
+        return StatCollector.translateToLocalFormatted("GT5U.nei.display.duration.ticks", Integer.toString(duration));
+    }
+
+    private static int titleTabWidth(String title, int maxWidth) {
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        return Math.min(maxWidth, fr.getStringWidth(title) + TITLE_TAB_PADDING * 2 + TITLE_TEXT_PADDING * 2);
+    }
+
+    private static String titleFor(@Nullable gregtech.api.recipe.RecipeMap<?> map, @Nullable ModuleInstance module) {
+        if (map != null) {
+            String localized = StatCollector.translateToLocal(map.unlocalizedName);
+            if (!localized.equals(map.unlocalizedName)) return localized;
+        }
+        return module != null ? module.kind()
+            .getDisplayName() : "Recipe";
+    }
+
+    private void openNeiRecipeMap() {
+        if (neiTransferRectId != null) {
+            GuiCraftingRecipe.openRecipeGui(neiTransferRectId);
+        }
+    }
+
+    private void applyNeiRecipe(IRecipeHandler recipe, int recipeIndex) {
+        for (ItemStackHandler handler : itemInputs) handler.setStackInSlot(0, null);
+        for (ItemStackHandler handler : itemOutputs) handler.setStackInSlot(0, null);
+        fillByPosition(recipe.getIngredientStacks(recipeIndex), layout.itemInputs(), itemInputs);
+        fillByPosition(recipe.getOtherStacks(recipeIndex), layout.itemOutputs(), itemOutputs);
+        onInputChanged();
+    }
+
+    private static void fillByPosition(List<PositionedStack> stacks, List<GTRecipeMapLayout.Slot> slots,
+        ItemStackHandler[] handlers) {
+        if (stacks == null || slots.isEmpty() || handlers.length == 0) return;
+        boolean[] used = new boolean[Math.min(slots.size(), handlers.length)];
+        for (PositionedStack positioned : stacks) {
+            ItemStack stack = firstItem(positioned);
+            if (stack == null) continue;
+            int slotIndex = findSlotFor(positioned, slots, used);
+            if (slotIndex < 0 || slotIndex >= handlers.length) continue;
+            used[slotIndex] = true;
+            stack.stackSize = 1;
+            handlers[slotIndex].setStackInSlot(0, stack);
+        }
+    }
+
+    private static int findSlotFor(PositionedStack positioned, List<GTRecipeMapLayout.Slot> slots, boolean[] used) {
+        int x = positioned.relx - 1;
+        int y = positioned.rely - 1;
+        for (int i = 0; i < slots.size() && i < used.length; i++) {
+            if (used[i]) continue;
+            GTRecipeMapLayout.Slot slot = slots.get(i);
+            if (Math.abs(slot.x() - x) <= 2 && Math.abs(slot.y() - y) <= 2) return i;
+            if (Math.abs(slot.x() - x) <= 2 && Math.abs(RECIPE_Y + slot.y() - y) <= 2) return i;
+        }
+        return -1;
+    }
+
+    private static @Nullable ItemStack firstItem(PositionedStack positioned) {
+        if (positioned == null || positioned.items == null) return null;
+        for (ItemStack stack : positioned.items) {
+            if (stack != null && stack.getItem() != null) return stack.copy();
+        }
+        return null;
     }
 
     private final class IntentFluidSlotSyncHandler extends FluidSlotSyncHandler {
@@ -430,13 +555,76 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private static final class FrameWidget extends ParentWidget<FrameWidget> {
+    private static final class GhostItemWidget extends ParentWidget<GhostItemWidget> {
 
-        private final String title;
+        private final ItemStackHandler handler;
+
+        GhostItemWidget(ItemStackHandler handler) {
+            this.handler = handler;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+
+        @Override
+        public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+            ItemStack stack = handler.getStackInSlot(0);
+            if (stack == null) return;
+            Minecraft mc = Minecraft.getMinecraft();
+            if (mc == null || mc.fontRenderer == null || mc.getTextureManager() == null) return;
+            com.cleanroommc.modularui.utils.GlStateManager.pushMatrix();
+            com.cleanroommc.modularui.utils.GlStateManager.translate(1, 1, 200f);
+            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glEnable(GL11.GL_ALPHA_TEST);
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+            RenderHelper.enableGUIStandardItemLighting();
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            RenderItem renderItem = RenderItem.getInstance();
+            float previousZ = renderItem.zLevel;
+            renderItem.zLevel = 200f;
+            renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
+            renderItem.zLevel = previousZ;
+            RenderHelper.disableStandardItemLighting();
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+            com.cleanroommc.modularui.utils.GlStateManager.popMatrix();
+            com.cleanroommc.modularui.drawable.GuiDraw.drawRect(1, 1, 16, 16, 0x66D8D8D8);
+        }
+    }
+
+    private static final class RecipeInputNeiContainer extends ModularContainer implements INEIRecipeTransfer<GuiContainer> {
+
         private final RecipeInputScreen screen;
 
-        FrameWidget(String title, RecipeInputScreen screen) {
-            this.title = title;
+        RecipeInputNeiContainer(RecipeInputScreen screen) {
+            this.screen = screen;
+        }
+
+        @Override
+        public String[] getIdents() {
+            return screen.neiTransferRectId != null ? new String[] { screen.neiTransferRectId } : new String[0];
+        }
+
+        @Override
+        public int transferRecipe(GuiContainer gui, IRecipeHandler recipe, int recipeIndex, int multiplier) {
+            screen.applyNeiRecipe(recipe, recipeIndex);
+            return 0;
+        }
+
+        @Override
+        public ArrayList<PositionedStack> positionStacks(GuiContainer gui, ArrayList<PositionedStack> stacks) {
+            return stacks;
+        }
+    }
+
+    private static final class BodyBackgroundWidget extends ParentWidget<BodyBackgroundWidget> {
+
+        private final RecipeInputScreen screen;
+
+        BodyBackgroundWidget(RecipeInputScreen screen) {
             this.screen = screen;
         }
 
@@ -449,18 +637,62 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         public void drawBackground(ModularGuiContext ctx, WidgetThemeEntry<?> theme) {
             int w = getArea().width;
             int h = getArea().height;
-            BorderedRect.draw(0, 0, w, h, 0xFFB7C0D3, 0xFF2F3646);
-            BorderedRect.draw(0, 0, w, TITLE_H, 0xFF9FAAC2, 0xFF2F3646);
             FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-            fr.drawString(title, 6, 3, 0xFF303642);
+            GTGuiTextures.BACKGROUND_STANDARD.draw(ctx, 0, 0, w, h, theme.getTheme());
             if (screen.layout.progress().enabled()) {
                 GTRecipeMapLayout.Progress progress = screen.layout.progress();
-                int x = progress.x();
-                int y = TITLE_H + progress.y();
-                BorderedRect.draw(x, y, progress.width(), progress.height(), 0xFF788398, 0xFFECF0FF);
-                fr.drawString(">", x + progress.width() / 2 - 2, y + 5, 0xFFE6EAF6);
+                if (progress.texture() == null) {
+                    int x = progress.x();
+                    int y = progress.y();
+                    BorderedRect.draw(x, y, progress.width(), progress.height(), 0xFF788398, 0xFFECF0FF);
+                    fr.drawString(">", x + progress.width() / 2 - 2, y + 5, 0xFFE6EAF6);
+                }
             }
-            fr.drawStringWithShadow(screen.statusText, 6, TITLE_H + screen.layout.height() - 10, screen.statusColor);
+        }
+    }
+
+    private static final class TitleTabWidget extends ParentWidget<TitleTabWidget> {
+
+        private final String title;
+
+        TitleTabWidget(String title) {
+            this.title = title;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+
+        @Override
+        public void drawBackground(ModularGuiContext ctx, WidgetThemeEntry<?> theme) {
+            FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+            GTGuiTextures.BACKGROUND_TITLE_STANDARD.draw(ctx, 0, 0, getArea().width, getArea().height, theme.getTheme());
+            fr.drawString(title, TITLE_TAB_PADDING + TITLE_TEXT_PADDING, BODY_Y - fr.FONT_HEIGHT, 0xFF303642);
+        }
+    }
+
+    private static final class StatusTextWidget extends ParentWidget<StatusTextWidget> {
+
+        private final RecipeInputScreen screen;
+
+        StatusTextWidget(RecipeInputScreen screen) {
+            this.screen = screen;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+
+        @Override
+        public void drawBackground(ModularGuiContext ctx, WidgetThemeEntry<?> theme) {
+            FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+            int statusY = screen.statusDetailText != null ? 0 : 12;
+            fr.drawStringWithShadow(screen.statusText, 6, statusY, screen.statusColor);
+            if (screen.statusDetailText != null) {
+                fr.drawStringWithShadow(screen.statusDetailText, 6, statusY + 10, screen.statusColor);
+            }
         }
     }
 }
