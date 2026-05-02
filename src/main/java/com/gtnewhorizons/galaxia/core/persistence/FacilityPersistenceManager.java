@@ -40,6 +40,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -101,7 +102,11 @@ public final class FacilityPersistenceManager {
 
     private void loadAll() {
         File galaxiaRoot = new File(worldSaveDir, DATA_DIR);
-        if (!galaxiaRoot.exists()) return;
+        if (!galaxiaRoot.exists()) {
+            LOG.info("[PERSIST] LOAD START: no galaxiadata dir, skipping load");
+            return;
+        }
+        LOG.info("[PERSIST] LOAD START: reading from {}", galaxiaRoot);
         loadAssets(new File(galaxiaRoot, ASSETS_FILE));
         loadTasks(new File(galaxiaRoot, TASKS_FILE));
     }
@@ -109,39 +114,63 @@ public final class FacilityPersistenceManager {
     private void saveAll() {
         File galaxiaRoot = new File(worldSaveDir, DATA_DIR);
         galaxiaRoot.mkdirs();
+        LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
         saveTasks(new File(galaxiaRoot, TASKS_FILE));
     }
 
     private void loadAssets(File file) {
-        if (!file.exists()) return;
+        if (!file.exists()) {
+            LOG.info("[PERSIST] LOAD: no file at {}, skipping", file);
+            return;
+        }
         List<AssetJson> list;
         try (FileReader reader = new FileReader(file)) {
             Type listType = new TypeToken<List<AssetJson>>() {}.getType();
             list = gson.fromJson(reader, listType);
         } catch (IOException | JsonParseException e) {
-            LOG.error("[Logistics] Failed to read asset registry {}: {}", file, e.getMessage());
+            LOG.error("[PERSIST] LOAD FAILED: read error {}: {}", file, e.getMessage());
             return;
         }
         if (list == null) {
-            LOG.warn("[Logistics] Asset registry {} contained no asset list", file);
+            LOG.warn("[PERSIST] LOAD: asset registry {} contained no asset list", file);
             return;
         }
 
+        LOG.info("[PERSIST] LOAD: found {} asset(s) in JSON", list.size());
+        int loadedCount = 0;
+        int skippedCount = 0;
         for (AssetJson json : list) {
             try {
                 CelestialAsset asset = decodeAsset(json);
                 if (asset == null) {
-                    LOG.warn("[Logistics] Skipping malformed asset entry in {}", file);
+                    skippedCount++;
+                    LOG.warn("[PERSIST] LOAD: skipping malformed asset entry in {}", file);
                     continue;
                 }
                 UUID teamId = UUID.fromString(json.teamId);
+                int moduleCount = (json.facility != null && json.facility.modules != null)
+                    ? json.facility.modules.size()
+                    : 0;
+                int tileCount = (json.facility != null && json.facility.layoutTiles != null)
+                    ? json.facility.layoutTiles.size()
+                    : 0;
+                LOG.info(
+                    "[PERSIST] LOAD: decoding asset {} kind={} status={} with {} module(s), {} layout tile(s)",
+                    json.assetId,
+                    json.kind,
+                    json.status,
+                    moduleCount,
+                    tileCount);
                 decodeFacilityState(asset, json.facility);
                 CelestialAssetStore.add(teamId, asset);
+                loadedCount++;
             } catch (RuntimeException e) {
-                LOG.error("[Logistics] Skipping malformed asset entry in {}: {}", file, e.getMessage());
+                skippedCount++;
+                LOG.error("[PERSIST] LOAD FAILED: skipping asset entry {}: {}", json.assetId, e.getMessage());
             }
         }
+        LOG.info("[PERSIST] LOAD END: {} asset(s) loaded, {} skipped", loadedCount, skippedCount);
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
@@ -156,14 +185,40 @@ public final class FacilityPersistenceManager {
 
     private void saveAssets(File file) {
         List<AssetJson> list = new ArrayList<>();
+        int totalAssets = 0;
+        int totalModules = 0;
+        int totalAnchors = 0;
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
+            totalAssets++;
             AssetJson json = encodeAsset(asset);
             CelestialAsset facility = CelestialAssetStore.findAsset(asset.assetId);
             if (facility instanceof AutomatedFacility o) {
                 json.facility = encodeFacilityState(o);
+                int mCount = json.facility.modules != null ? json.facility.modules.size() : 0;
+                int tCount = json.facility.layoutTiles != null ? json.facility.layoutTiles.size() : 0;
+                totalModules += mCount;
+                totalAnchors += tCount;
+                LOG.info(
+                    "[PERSIST] SAVE: asset {} kind={} status={} -> {} module(s), {} anchor tile(s)",
+                    asset.assetId,
+                    asset.kind,
+                    asset.status(),
+                    mCount,
+                    tCount);
+            } else {
+                LOG.info(
+                    "[PERSIST] SAVE: asset {} kind={} status={} (non-facility, no modules)",
+                    asset.assetId,
+                    asset.kind,
+                    asset.status());
             }
             list.add(json);
         }
+        LOG.info(
+            "[PERSIST] SAVE: {} asset(s) total, {} modules, {} anchor tiles across all assets",
+            totalAssets,
+            totalModules,
+            totalAnchors);
         writeJson(file, list);
     }
 
@@ -289,7 +344,9 @@ public final class FacilityPersistenceManager {
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
         out.modules = new ArrayList<>();
+        int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
+            moduleCount++;
             ModuleJson mj = new ModuleJson();
             mj.moduleId = m.id.toString();
             mj.kind = m.kind()
@@ -303,8 +360,7 @@ public final class FacilityPersistenceManager {
             mj.enabled = m.enabled();
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
-            mj.parallel = m.component() != null ? m.component()
-                .getParallel() : 1;
+            mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleMiner miner) {
                 moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
@@ -326,6 +382,8 @@ public final class FacilityPersistenceManager {
             }
             out.modules.add(mj);
         }
+        LOG.info("[PERSIST] SAVE ENCODE: facility {} has {} module(s) in state", state.assetId, moduleCount);
+
         out.buffer = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.snapshot()
             .entrySet()) {
@@ -353,12 +411,14 @@ public final class FacilityPersistenceManager {
         }
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
+        int anchorCount = 0;
         if (layout != null) {
             for (Map.Entry<StationTileCoord, PlacedTile> entry : layout.snapshot()
                 .entrySet()) {
                 StationTileCoord coord = entry.getKey();
                 // Save only anchor tiles — children are reconstructed on load
                 if (!layout.isAnchorAt(coord)) continue;
+                anchorCount++;
                 StationTileJson tileJson = new StationTileJson();
                 tileJson.dx = coord.dx();
                 tileJson.dy = coord.dy();
@@ -370,6 +430,13 @@ public final class FacilityPersistenceManager {
                 tileJson.moduleId = module == null ? null : module.id.toString();
                 out.layoutTiles.add(tileJson);
             }
+            LOG.info(
+                "[PERSIST] SAVE ENCODE: facility {} layout has {} anchor tile(s) out of {} total tiles",
+                state.assetId,
+                anchorCount,
+                layout.size());
+        } else {
+            LOG.info("[PERSIST] SAVE ENCODE: facility {} has no layout", state.assetId);
         }
         return out;
     }
@@ -383,21 +450,73 @@ public final class FacilityPersistenceManager {
 
         List<PendingTierDowngrade> pendingDowngrades = new ArrayList<>();
 
+        int moduleDecodedCount = 0;
+        int moduleSkippedCount = 0;
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
-                FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, mj.kind);
-                if (kind == null) continue;
+                String rawKind = mj.kind;
+                FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, rawKind);
+                if (kind == null) {
+                    if ("BIG_HAMMER".equals(rawKind)) {
+                        kind = FacilityModuleKind.HAMMER;
+                        LOG.info("[PERSIST] LOAD DECODE: migrated BIG_HAMMER module {} -> HAMMER", mj.moduleId);
+                    } else {
+                        moduleSkippedCount++;
+                        LOG.warn(
+                            "[PERSIST] LOAD DECODE: skipping module {} with unknown kind '{}'",
+                            mj.moduleId,
+                            rawKind);
+                        continue;
+                    }
+                }
                 ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
+                if (moduleId == null && mj.moduleId != null) {
+                    throw new IllegalStateException(
+                        "[PERSIST] Module from JSON has malformed ID: '" + mj.moduleId + "' of kind " + rawKind);
+                }
+                if (moduleId == null) {
+                    LOG.error(
+                        "[PERSIST] Module of kind {} has null/missing moduleId in JSON — generating new ID",
+                        rawKind);
+                    moduleId = ModuleInstance.ID.create();
+                }
                 ModuleShape shape = PacketUtil.enumFromByte(mj.shape, ModuleShape.class);
+                if (shape == null) {
+                    throw new IllegalStateException(
+                        "[PERSIST] Module " + moduleId + " has invalid shape ordinal: " + mj.shape);
+                }
                 ModuleTier tier = PacketUtil.enumFromByte(mj.tier, ModuleTier.class);
+                if (tier == null) {
+                    throw new IllegalStateException(
+                        "[PERSIST] Module " + moduleId + " has invalid tier ordinal: " + mj.tier);
+                }
                 ModuleTier originalTier = tier;
                 if (!kind.allowedTiers()
                     .contains(tier)) {
+                    LOG.info(
+                        "[PERSIST] LOAD DECODE: module {} kind={} tier {} not allowed, downgrading to {}",
+                        mj.moduleId,
+                        kind,
+                        tier,
+                        kind.defaultTier());
                     tier = kind.defaultTier();
                 }
-                ModuleInstance module = moduleId == null
-                    ? FacilityModuleRegistry.create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, tier)
-                    : FacilityModuleRegistry.create(moduleId, kind, null, shape, tier);
+                ModuleInstance module = FacilityModuleRegistry.create(moduleId, kind, null, shape, tier);
+                if (module == null || module.component() == null) {
+                    throw new IllegalStateException(
+                        "[PERSIST] Failed to create module " + kind + " (id=" + moduleId + "): component is null");
+                }
+                LOG.info(
+                    "[PERSIST] LOAD DECODE: module {} kind={} shape={} tier={} status={} anchor=({},{})",
+                    module.id,
+                    kind,
+                    shape,
+                    tier,
+                    mj.status,
+                    (module.anchorOrNull() != null ? (int) module.anchorOrNull()
+                        .dx() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
+                    (module.anchorOrNull() != null ? (int) module.anchorOrNull()
+                        .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE));
                 if (originalTier != tier) {
                     pendingDowngrades.add(new PendingTierDowngrade(module, kind, originalTier, tier));
                 }
@@ -450,6 +569,7 @@ public final class FacilityPersistenceManager {
                         module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
                     }
                     case POWER -> {}
+                    case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
                 }
 
                 Buildable.Status moduleStatus = safeValueOf(Buildable.Status.class, mj.status);
@@ -457,15 +577,11 @@ public final class FacilityPersistenceManager {
                     module.updateStatus(moduleStatus);
                 }
                 module.setTicks(mj.cooldownTicks);
-                if (moduleId == null) {
-                    module.setTier(tier);
-                }
                 module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
                 module.setGroupId(mj.groupId);
-                if (mj.parallel >= 1 && module.component() != null) {
-                    module.component()
-                        .setParallel(mj.parallel);
+                if (module.component() instanceof IParallelModule pm) {
+                    pm.setParallel(mj.parallel);
                 }
                 module.clearConsumedResources();
                 if (mj.consumedResources != null) {
@@ -478,8 +594,13 @@ public final class FacilityPersistenceManager {
                     }
                 }
                 state.addModule(module);
+                moduleDecodedCount++;
             }
         }
+        LOG.info(
+            "[PERSIST] LOAD DECODE: finished decoding modules: {} decoded, {} skipped",
+            moduleDecodedCount,
+            moduleSkippedCount);
 
         if (json.buffer != null) {
             Map<ItemStackWrapper, Long> bufferSnapshot = new LinkedHashMap<>();
@@ -511,6 +632,8 @@ public final class FacilityPersistenceManager {
         }
 
         StationLayout layout = state.stationLayout();
+        int tilesLoaded = 0;
+        int tilesSkipped = 0;
         if (layout != null && json.layoutTiles != null && !json.layoutTiles.isEmpty()) {
             Map<ModuleInstance.ID, ModuleInstance> modulesById = new LinkedHashMap<>();
             for (ModuleInstance m : state.modules()) {
@@ -525,40 +648,99 @@ public final class FacilityPersistenceManager {
                     || tj.dy < StationTileCoord.MIN
                     || tj.dy > StationTileCoord.MAX) {
                     LOG.warn(
-                        "[Logistics] Skipping layout tile out of range: ({}, {}) state={}",
+                        "[PERSIST] LOAD LAYOUT: skipping tile out of range: ({}, {}) state={}",
                         tj.dx,
                         tj.dy,
                         tj.state);
+                    tilesSkipped++;
                     continue;
                 }
                 StationTileCoord coord = StationTileCoord.of(tj.dx, tj.dy);
                 ModuleInstance module = tj.moduleId == null ? null
                     : modulesById.get(ModuleInstance.ID.from(tj.moduleId));
+                if (tj.moduleId != null && module == null) {
+                    LOG.info(
+                        "[PERSIST] LOAD LAYOUT: skipping orphan tile ({},{}) for missing module {}",
+                        (int) tj.dx,
+                        (int) tj.dy,
+                        tj.moduleId);
+                    tilesSkipped++;
+                    continue;
+                }
                 if (module != null) {
                     module.initAnchor(coord);
                 }
                 layoutSnapshot.put(coord, new PlacedTile(module, tileState));
+                tilesLoaded++;
             }
+            LOG.info(
+                "[PERSIST] LOAD LAYOUT: {} tiles loaded, {} skipped (orphans/out-of-range)",
+                tilesLoaded,
+                tilesSkipped);
             layout.loadFromSnapshot(layoutSnapshot);
-            // Expand each module's full footprint — place() populates child tiles
+            // Fallback: find anchors for modules whose initAnchor wasn't called during tile loading.
+            // Modules may have null anchors if the layout tile's moduleId lookup failed
+            // (e.g. UUID format mismatch between JSON and deserialized module).
+            int fallbackAnchors = 0;
             for (ModuleInstance m : state.modules()) {
-                if (m.anchor() != null) {
-                    layout.place(m);
+                if (m.anchorOrNull() != null) continue;
+                for (Map.Entry<StationTileCoord, PlacedTile> entry : layout.snapshot()
+                    .entrySet()) {
+                    PlacedTile tile = entry.getValue();
+                    if (tile.module() != null && tile.module().id.equals(m.id)) {
+                        StationTileCoord coord = entry.getKey();
+                        m.initAnchor(coord);
+                        LOG.info(
+                            "[PERSIST] LOAD LAYOUT: fallback initAnchor for {} id={} at ({},{})",
+                            m.kind(),
+                            m.id,
+                            (int) coord.dx(),
+                            (int) coord.dy());
+                        fallbackAnchors++;
+                        break;
+                    }
                 }
             }
+            if (fallbackAnchors > 0) {
+                LOG.warn(
+                    "[PERSIST] LOAD LAYOUT: {} module(s) required fallback anchor initialization",
+                    fallbackAnchors);
+            }
+            // Expand each module's full footprint — place() populates child tiles
+            int expandedCount = 0;
+            for (ModuleInstance m : state.modules()) {
+                if (m.anchorOrNull() != null) {
+                    layout.place(m);
+                    expandedCount++;
+                }
+            }
+            LOG.info(
+                "[PERSIST] LOAD LAYOUT: expanded {} module(s) with anchor, layout now has {} tile(s)",
+                expandedCount,
+                layout.size());
+        } else {
+            LOG.info(
+                "[PERSIST] LOAD LAYOUT: no layout tiles in JSON or no layout (tiles={})",
+                json.layoutTiles != null ? json.layoutTiles.size() : 0);
         }
 
-        // Emit deferred tier-downgrade WARN logs — anchors now available if layout was loaded
+        // Emit deferred tier-downgrade WARN logs
         for (PendingTierDowngrade p : pendingDowngrades) {
-            StationTileCoord anchor = p.module.anchor();
+            StationTileCoord anchor = p.module.anchorOrNull();
             LOG.warn(
-                "Module {} at {} had unsupported tier {}; downgraded to {}",
+                "[PERSIST] Module {} at {} had unsupported tier {}; downgraded to {}",
                 p.kind,
                 anchor != null ? anchor : p.module.id,
                 p.oldTier,
                 p.newTier);
         }
 
+        LOG.info(
+            "[PERSIST] LOAD DECODE END: facility {} has {} module(s), layout has {} tile(s)",
+            state.assetId,
+            state.modules()
+                .size(),
+            layout != null ? layout.size() : 0);
         return state;
     }
 

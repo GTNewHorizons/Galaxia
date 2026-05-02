@@ -134,19 +134,8 @@ public final class AssetBuildModulePacket implements IMessage {
                             .getName());
                     return null;
                 }
-                StationPlacementValidator.Result placementResult = StationPlacementValidator
-                    .validate(state.stationLayout(), anchor);
-                if (placementResult != StationPlacementValidator.Result.OK) {
-                    Galaxia.LOG.warn(
-                        "[Outpost] BuildModule: rejected placement at {} on {} ({}) from player {}",
-                        anchor,
-                        packet.assetId,
-                        placementResult,
-                        player.getGameProfile()
-                            .getName());
-                    return null;
-                }
                 if (packet.shape != ModuleShape.SINGLE) {
+                    // Multi-tile: validate the full footprint as a group; child tiles are part of this placement.
                     ShapeValidation footprintResult = ModuleFootprint
                         .validate(state.stationLayout(), anchor, packet.shape);
                     if (footprintResult != ShapeValidation.OK) {
@@ -156,6 +145,19 @@ public final class AssetBuildModulePacket implements IMessage {
                             packet.shape,
                             packet.assetId,
                             footprintResult,
+                            player.getGameProfile()
+                                .getName());
+                        return null;
+                    }
+                } else {
+                    StationPlacementValidator.Result placementResult = StationPlacementValidator
+                        .validate(state.stationLayout(), anchor);
+                    if (placementResult != StationPlacementValidator.Result.OK) {
+                        Galaxia.LOG.warn(
+                            "[Outpost] BuildModule: rejected placement at {} on {} ({}) from player {}",
+                            anchor,
+                            packet.assetId,
+                            placementResult,
                             player.getGameProfile()
                                 .getName());
                         return null;
@@ -170,9 +172,9 @@ public final class AssetBuildModulePacket implements IMessage {
             }
             state.addModule(module);
             state.layoutCache()
-                .applyMutation(MutationKind.PLACE, kind);
+                .applyMutation(MutationKind.PLACE, kind, module);
 
-            if (anchor != null && state.hasStationLayout()) {
+            if (state.hasStationLayout() && module.anchor() != null) {
                 StationTileState initialState = StationTileState.fromModuleStatus(module.status());
                 for (StationTileCoord coord : module.shape()
                     .tiles(module.anchor())) {
@@ -190,7 +192,8 @@ public final class AssetBuildModulePacket implements IMessage {
 
             int moduleIndex = state.modules()
                 .size() - 1;
-            return AssetSyncPacket.moduleAdded(packet.assetId, moduleIndex, module);
+            return AssetSyncPacket.moduleAdded(packet.assetId, moduleIndex, module)
+                .withSyncRevision(state.getSyncRevision());
         }
     }
 }

@@ -26,7 +26,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -462,7 +461,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
             tooltipLines.add(fullName);
             for (AutomatedFacility outpost : CelestialClient.allOutposts()) {
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
-                CelestialAsset asset = CelestialAssetStore.findAsset(outpost.assetId);
+                CelestialAsset asset = outpost;
                 if (asset == null) continue;
                 long stock = outpost.inventory.getAmount(item);
                 LogisticsResourceConfig cfg = outpost.logisticsConfig.get(item);

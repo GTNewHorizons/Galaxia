@@ -6,13 +6,18 @@ import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
@@ -39,6 +44,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     public static @Nullable CelestialAsset.ID pendingAssetId() {
         return pendingAssetId;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public ModularScreen createScreen(GuiData data, ModularPanel mainPanel) {
+        return new ModularScreen(Galaxia.MODID, mainPanel);
     }
 
     @Override
@@ -70,7 +81,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             new StationSidePanelWidget(assetId, map).left(PADDING)
                 .top(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
-                .heightRelOffset(1f, -PADDING * 2));
+                .heightRelOffset(0.55f, -PADDING * 2));
+        panel.child(
+            new ModuleDetailPanel(map).left(PADDING)
+                .width(LEFT_PANEL_WIDTH - PADDING)
+                .heightRelOffset(0.45f, -PADDING)
+                .bottom(PADDING));
         return panel;
     }
 

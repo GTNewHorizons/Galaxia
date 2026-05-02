@@ -2,10 +2,16 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -19,6 +25,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
 public final class AutomatedFacility extends CelestialAsset {
+
+    private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     public final CelestialObjectId systemId;
 
@@ -38,6 +46,10 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private long energyStored;
 
+    private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
+    private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
+    private final Set<UUID> syncedPlayerIds = new HashSet<>();
+
     public static final long MAX_ENERGY = 1_000_000L;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
@@ -54,7 +66,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.inventory = new AutomatedFacilityInventory();
         this.logisticsConfig = new LogisticsConfiguration();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
-        this.layoutCache = new LayoutCacheBundle();
+        this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
         this.energyStored = 0;
     }
@@ -84,15 +96,38 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void addModule(ModuleInstance module) {
-        if (modules.contains(module)) return;
+        if (modules.contains(module)) {
+            LOG.warn(
+                "[PERSIST] addModule: duplicate module {} kind={} id={} (already present)",
+                module.kind(),
+                module.id,
+                System.identityHashCode(module));
+            return;
+        }
         modules.add(module);
+        dirtyModuleIds.add(module.id);
+        bumpSyncRevision();
+        LOG.debug(
+            "[PERSIST] addModule: added {} id={} anchor=({},{}) shape={} status={} (total={})",
+            module.kind(),
+            module.id,
+            (module.anchorOrNull() != null ? (int) module.anchorOrNull()
+                .dx() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
+            (module.anchorOrNull() != null ? (int) module.anchorOrNull()
+                .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
+            module.shape(),
+            module.status(),
+            modules.size());
     }
 
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
+            dirtyRemovedIds.add(removed.id);
+            dirtyModuleIds.remove(removed.id);
+            bumpSyncRevision();
             if (layout != null) layout.removeTileForModule(removed.id);
-            layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind());
+            layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
         }
     }
 
@@ -122,6 +157,39 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public List<ModuleInstance> modulesInternal() {
         return modules;
+    }
+
+    public void markModuleDirty(ModuleInstance.ID id) {
+        dirtyModuleIds.add(id);
+        bumpSyncRevision();
+    }
+
+    public boolean isDirty() {
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
+    }
+
+    public boolean needsFullSyncFor(UUID playerId) {
+        return !syncedPlayerIds.contains(playerId);
+    }
+
+    public void markSyncedFor(UUID playerId) {
+        syncedPlayerIds.add(playerId);
+    }
+
+    public List<ModuleInstance> drainDirtyModules() {
+        List<ModuleInstance> result = new ArrayList<>(dirtyModuleIds.size());
+        for (ModuleInstance.ID id : dirtyModuleIds) {
+            int idx = moduleIndex(id);
+            if (idx >= 0) result.add(modules.get(idx));
+        }
+        dirtyModuleIds.clear();
+        return result;
+    }
+
+    public List<ModuleInstance.ID> drainRemovedIds() {
+        List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
+        dirtyRemovedIds.clear();
+        return result;
     }
 
     public long getEnergyStored() {

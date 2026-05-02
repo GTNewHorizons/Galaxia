@@ -14,10 +14,14 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.CapacityConnectorLayer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
@@ -77,6 +81,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         this.contentRightPadding = contentRightPadding;
         this.contentVerticalPadding = contentVerticalPadding;
         this.visionLayer = visionLayer;
+    }
+
+    public @Nullable CelestialAsset.ID assetId() {
+        return assetId;
     }
 
     public @Nullable StationTileCoord selection() {
@@ -171,6 +179,17 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             panX,
             panY);
 
+        CapacityConnectorLayer.draw(
+            context,
+            tiles,
+            widgetWidth,
+            widgetHeight,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
+
         for (StationTileCoord slot : expansionSlots) {
             int sx = tileLocalX(slot);
             int sy = tileLocalY(slot);
@@ -196,6 +215,35 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             int sx = tileLocalX(sel);
             int sy = tileLocalY(sel);
             StationTileRenderer.drawSelectionOverlay(sx, sy, StationMapViewport.TILE_SIZE);
+        }
+
+        // T3.9: Maintenance Bay coverage overlay — highlight 8 affected tiles when a bay is selected
+        if (sel != null && tiles.containsKey(sel)) {
+            PlacedTile selTile = tiles.get(sel);
+            ModuleInstance selModule = selTile != null ? selTile.module() : null;
+            if (selModule != null && selModule.kind() == FacilityModuleKind.MAINTENANCE_BAY) {
+                StationTileCoord anchor = selModule.anchor();
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dx = -1; dx <= 1; dx++) {
+                        if (dx == 0 && dy == 0) continue;
+                        int nx = anchor.dx() + dx;
+                        int ny = anchor.dy() + dy;
+                        if (nx < StationTileCoord.MIN || nx > StationTileCoord.MAX
+                            || ny < StationTileCoord.MIN
+                            || ny > StationTileCoord.MAX) continue;
+                        StationTileCoord ncoord = StationTileCoord.of(nx, ny);
+                        int hx = tileLocalX(ncoord);
+                        int hy = tileLocalY(ncoord);
+                        BorderedRect.draw(
+                            hx,
+                            hy,
+                            StationMapViewport.TILE_SIZE,
+                            StationMapViewport.TILE_SIZE,
+                            0x4400FF00, // semi-transparent green fill
+                            0xFF00FF00); // solid green border
+                    }
+                }
+            }
         }
     }
 

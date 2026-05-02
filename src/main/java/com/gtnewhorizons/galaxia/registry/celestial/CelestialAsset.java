@@ -166,6 +166,10 @@ public abstract class CelestialAsset implements Buildable {
         return syncRevision;
     }
 
+    public void setSyncRevision(int rev) {
+        this.syncRevision = Math.max(this.syncRevision, rev);
+    }
+
     public void bumpSyncRevision() {
         syncRevision++;
     }

@@ -71,6 +71,8 @@ public final class ModuleLayerRenderer {
             case POWER -> EnumColors.MAP_COLOR_STATION_CATEGORY_POWER.getColor();
             case PROCESSING -> EnumColors.MAP_COLOR_STATION_CATEGORY_PROCESSING.getColor();
             case HABITATION -> EnumColors.MAP_COLOR_STATION_CATEGORY_HABITATION.getColor();
+            case INFRASTRUCTURE -> EnumColors.MAP_COLOR_STATION_CATEGORY_INFRASTRUCTURE.getColor();
+            case SUPPORT -> EnumColors.MAP_COLOR_STATION_CATEGORY_SUPPORT.getColor();
         };
     }
 

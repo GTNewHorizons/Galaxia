@@ -13,9 +13,19 @@ public enum FacilityModuleKind {
 
     HAMMER,
     MINER,
-    POWER;
+    POWER,
+    STORAGE,
+    TANK,
+    BATTERY,
+    MAINTENANCE_BAY;
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
+
+    static {
+        CAPACITY_KINDS.add(STORAGE);
+        CAPACITY_KINDS.add(TANK);
+        CAPACITY_KINDS.add(BATTERY);
+    }
 
     public String getDisplayName() {
         return StatCollector.translateToLocal(
@@ -28,6 +38,8 @@ public enum FacilityModuleKind {
             case HAMMER -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER -> StationModuleCategory.POWER;
+            case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
+            case MAINTENANCE_BAY -> StationModuleCategory.SUPPORT;
         };
     }
 
@@ -42,6 +54,12 @@ public enum FacilityModuleKind {
         if (def == null) {
             throw new IllegalArgumentException("Unknown module kind: " + this);
         }
+        if (shape == null) {
+            throw new IllegalArgumentException("FacilityModuleKind.create: shape must not be null for kind " + this);
+        }
+        if (tier == null) {
+            throw new IllegalArgumentException("FacilityModuleKind.create: tier must not be null for kind " + this);
+        }
         ModuleInstance instance = new ModuleInstance(ModuleInstance.ID.create(), def, anchor, shape, tier);
         instance.setComponent(FacilityModuleRegistry.createComponent(this));
         return instance;
@@ -51,6 +69,8 @@ public enum FacilityModuleKind {
         return switch (this) {
             case HAMMER, MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
             case POWER -> EnumSet.of(ModuleTier.NONE);
+            case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
+            case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
         };
     }
 
@@ -58,14 +78,17 @@ public enum FacilityModuleKind {
         return switch (this) {
             case HAMMER, MINER -> ModuleTier.EV;
             case POWER -> ModuleTier.NONE;
+            case STORAGE, TANK, BATTERY -> ModuleTier.HV;
+            case MAINTENANCE_BAY -> ModuleTier.NONE;
         };
     }
 
     public ModulePriority defaultPriority() {
         return switch (this) {
-            case HAMMER -> ModulePriority.NORMAL;
-            case MINER -> ModulePriority.NORMAL;
+            case HAMMER, MINER -> ModulePriority.NORMAL;
             case POWER -> ModulePriority.HIGH;
+            case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
+            case MAINTENANCE_BAY -> ModulePriority.NORMAL;
         };
     }
 
