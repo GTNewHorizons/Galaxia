@@ -59,7 +59,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                     if (t != null && t.module() != null
                         && t.module()
                             .component() instanceof IRecipeModule) {
-                        RecipeInputScreen.open(t.module());
+                        RecipeInputScreen.open(map.assetId(), f.modules()
+                            .indexOf(t.module()), t.module());
                     }
                 }
                 return true;

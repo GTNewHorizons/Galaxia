@@ -2,7 +2,10 @@ package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
+
+import gregtech.api.util.GTRecipe;
 
 /**
  * Self-contained recipe data snapshot. Created by the picker GUI when
@@ -14,16 +17,40 @@ import net.minecraftforge.fluids.FluidStack;
  * if the hash changed, the recipe was modified by a mod update.
  */
 public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, ItemStack[] inputs,
-    ItemStack[] outputs, int duration, int eut) {
+    ItemStack[] outputs, FluidStack[] fluidInputs, FluidStack[] fluidOutputs, int duration, int eut) {
 
     public RecipeSnapshot {
         if (duration < 0) duration = 0;
         if (eut < 0) eut = 0;
     }
 
+    public RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long contentHash, ItemStack[] inputs,
+        ItemStack[] outputs, int duration, int eut) {
+        this(recipeMapOrdinal, recipeIndex, contentHash, inputs, outputs, null, null, duration, eut);
+    }
+
     /** Backward-compat: creates a snapshot without resolved inputs/outputs (loaded from old persistence). */
     public static RecipeSnapshot unresolved(byte recipeMapOrdinal, int recipeIndex, long contentHash) {
-        return new RecipeSnapshot(recipeMapOrdinal, recipeIndex, contentHash, null, null, 0, 0);
+        return new RecipeSnapshot(recipeMapOrdinal, recipeIndex, contentHash, null, null, null, null, 0, 0);
+    }
+
+    public static RecipeSnapshot resolved(byte recipeMapOrdinal, int recipeIndex, GTRecipe recipe) {
+        return new RecipeSnapshot(
+            recipeMapOrdinal,
+            recipeIndex,
+            computeContentHash(
+                recipe.mInputs,
+                recipe.mOutputs,
+                recipe.mFluidInputs,
+                recipe.mFluidOutputs,
+                recipe.mDuration,
+                recipe.mEUt),
+            recipe.mInputs,
+            recipe.mOutputs,
+            recipe.mFluidInputs,
+            recipe.mFluidOutputs,
+            recipe.mDuration,
+            recipe.mEUt);
     }
 
     public static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, FluidStack[] fluidInputs,
@@ -57,9 +84,26 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
         if (fluids == null) return hash;
         for (FluidStack fluid : fluids) {
             if (fluid == null) continue;
-            hash = hash * 31 + fluid.getFluidID();
+            Fluid fluidType = fluidType(fluid);
+            hash = hash * 31 + (fluidType != null ? fluidType
+                .getName()
+                .hashCode() : fluid.getFluidID());
             hash = hash * 31 + fluid.amount;
         }
         return hash;
+    }
+
+    private static Fluid fluidType(FluidStack stack) {
+        try {
+            return stack.getFluid();
+        } catch (RuntimeException ignored) {
+            try {
+                var field = FluidStack.class.getDeclaredField("fluid");
+                field.setAccessible(true);
+                return (Fluid) field.get(stack);
+            } catch (ReflectiveOperationException e) {
+                return null;
+            }
+        }
     }
 }

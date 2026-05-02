@@ -9,11 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -27,13 +31,22 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+
+import sun.misc.Unsafe;
 
 final class FacilityPersistenceManagerTest {
 
@@ -342,6 +355,28 @@ final class FacilityPersistenceManagerTest {
             decodedLayout.moduleAt(StationTileCoord.of(-1, 4)));
 
         // Re-encode and verify JSON identity (byte-perfect round-trip)
+        assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+    }
+
+    @Test
+    void fluidBufferRoundTripsThroughFacilityPersistence() throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        station.inventory.addFluid("galaxia.persistence.buffer", 4096);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(4096, decoded.inventory.getFluidAmount("galaxia.persistence.buffer"));
         assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
     }
 
@@ -731,6 +766,73 @@ final class FacilityPersistenceManagerTest {
         assertEquals(encodedJson, GSON.toJson(manager.encodeFacilityState(decoded)));
     }
 
+    @Test
+    void recipeSlotSnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+
+        ModuleInstance macerator = createAndPlaceModule(
+            station,
+            FacilityModuleKind.MACERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 2));
+        IRecipeModule recipeModule = (IRecipeModule) macerator.component();
+        FluidStack[] fluidInputs = { fluidStack("galaxia.persistence.input", 144) };
+        FluidStack[] fluidOutputs = { fluidStack("galaxia.persistence.output", 72) };
+        long contentHash = RecipeSnapshot
+            .computeContentHash(null, null, fluidInputs, fluidOutputs, 320, 480);
+        RecipeSnapshot snapshot = new RecipeSnapshot(
+            (byte) 1,
+            7,
+            contentHash,
+            null,
+            null,
+            fluidInputs,
+            fluidOutputs,
+            320,
+            480);
+        RecipeSlotList slots = new RecipeSlotList();
+        slots.add(new RecipeSlot(snapshot, true, 11, 22, (byte) 3, (byte) 4));
+        recipeModule.setRecipeConfig(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleInstance decodedMacerator = decoded.modules()
+            .stream()
+            .filter(m -> m.kind() == FacilityModuleKind.MACERATOR)
+            .findFirst()
+            .orElseThrow();
+        RecipeConfig decodedConfig = ((IRecipeModule) decodedMacerator.component()).getRecipeConfig();
+        assertNotNull(decodedConfig);
+        RecipeSlot decodedSlot = decodedConfig.slots()
+            .get(0);
+        RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
+        assertEquals(320, decodedSnapshot.duration());
+        assertEquals(480, decodedSnapshot.eut());
+        assertEquals(contentHash, decodedSnapshot.contentHash());
+        assertEquals("galaxia.persistence.input", fluidName(decodedSnapshot.fluidInputs()[0]));
+        assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
+        assertEquals("galaxia.persistence.output", fluidName(decodedSnapshot.fluidOutputs()[0]));
+        assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
+        assertEquals(11, decodedSlot.inputGuard());
+        assertEquals(22, decodedSlot.outputGuard());
+        assertEquals(3, decodedSlot.priority());
+        assertEquals(4, decodedSlot.orderSize());
+    }
+
     // ── Helpers ──
 
     private static ModuleInstance createAndPlaceModule(AutomatedFacility station, FacilityModuleKind kind,
@@ -817,6 +919,31 @@ final class FacilityPersistenceManagerTest {
             .findFirst()
             .map(mj -> mj.shape)
             .orElse(null);
+    }
+
+    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
+        Fluid fluid = new Fluid(fluidName);
+        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        Unsafe unsafe = (Unsafe) unsafeField.get(null);
+        FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
+        Field fluidField = FluidStack.class.getDeclaredField("fluid");
+        fluidField.setAccessible(true);
+        fluidField.set(stack, fluid);
+        stack.amount = amount;
+        return stack;
+    }
+
+    private static String fluidName(FluidStack stack) throws Exception {
+        try {
+            return stack.getFluid()
+                .getName();
+        } catch (RuntimeException e) {
+            Field fluidField = FluidStack.class.getDeclaredField("fluid");
+            fluidField.setAccessible(true);
+            Fluid fluid = (Fluid) fluidField.get(stack);
+            return fluid != null ? fluid.getName() : null;
+        }
     }
 
     @Test

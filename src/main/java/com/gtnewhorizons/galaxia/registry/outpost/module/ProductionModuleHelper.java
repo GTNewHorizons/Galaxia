@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.Random;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
@@ -17,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 final class ProductionModuleHelper {
 
     private static final ItemStackWrapper[] EMPTY_WRAPPERS = new ItemStackWrapper[0];
-    private static boolean warnedFluid = false;
 
     private ProductionModuleHelper() {}
 
@@ -34,15 +35,11 @@ final class ProductionModuleHelper {
             .get(slotIdx);
         RecipeSnapshot recipe = slot.recipe();
 
-        // V1: Fluid recipes not yet supported — skip with one-time WARN
-        // (when fluids are added to RecipeSnapshot, this check will use those fields)
-        if (!warnedFluid) {
-            warnedFluid = true; // no fluid field on snapshot yet — assume item-only
-        }
-
         AutomatedFacilityInventory inv = outpost.inventory;
         ItemStack[] inputs = recipe.inputs();
         ItemStack[] outputs = recipe.outputs();
+        FluidStack[] fluidInputs = recipe.fluidInputs();
+        FluidStack[] fluidOutputs = recipe.fluidOutputs();
 
         ItemStackWrapper[] inputWrappers = cachedWrappers(inputWrapperCache, recipe, inputs);
 
@@ -65,16 +62,48 @@ final class ProductionModuleHelper {
             }
         }
 
+        for (FluidStack fluid : fluidInputs == null ? new FluidStack[0] : fluidInputs) {
+            String fluidName = fluidName(fluid);
+            if (fluidName == null) continue;
+            if (inv.getFluidAmount(fluidName) < fluid.amount) {
+                advanceScheduler(config, recipeModule);
+                return;
+            }
+        }
+
+        for (FluidStack fluid : fluidOutputs == null ? new FluidStack[0] : fluidOutputs) {
+            String fluidName = fluidName(fluid);
+            if (fluidName == null) continue;
+            if (inv.getFluidAmount(fluidName) + fluid.amount > slot.outputGuard()) {
+                advanceScheduler(config, recipeModule);
+                return;
+            }
+        }
+
         // Consume inputs
         for (int i = 0; i < inputWrappers.length; i++) {
             if (inputWrappers[i] == null || inputs[i] == null) continue;
             inv.add(inputWrappers[i], -inputs[i].stackSize);
         }
 
+        if (fluidInputs != null) {
+            for (FluidStack fluid : fluidInputs) {
+                String fluidName = fluidName(fluid);
+                if (fluidName != null) inv.addFluid(fluidName, -fluid.amount);
+            }
+        }
+
         // Produce outputs
         for (int i = 0; i < outputWrappers.length; i++) {
             if (outputWrappers[i] == null || outputs[i] == null) continue;
             inv.add(outputWrappers[i], outputs[i].stackSize);
+        }
+
+        if (fluidOutputs != null) {
+            for (FluidStack fluid : fluidOutputs) {
+                String fluidName = fluidName(fluid);
+                if (fluidName != null) inv.addFluid(fluidName, fluid.amount);
+            }
         }
 
         if (config.mode() == RecipeSchedulerMode.ORDER) {
@@ -101,6 +130,26 @@ final class ProductionModuleHelper {
     private static void advanceScheduler(RecipeConfig config, IRecipeModule recipeModule) {
         if (config.mode() == RecipeSchedulerMode.ORDER) {
             recipeModule.setRecipeConfig(RecipeScheduler.advanceOrder(config));
+        }
+    }
+
+    private static String fluidName(FluidStack stack) {
+        if (stack == null) return null;
+        Fluid fluid = fluidType(stack);
+        return fluid != null ? fluid.getName() : null;
+    }
+
+    private static Fluid fluidType(FluidStack stack) {
+        try {
+            return stack.getFluid();
+        } catch (RuntimeException ignored) {
+            try {
+                var field = FluidStack.class.getDeclaredField("fluid");
+                field.setAccessible(true);
+                return (Fluid) field.get(stack);
+            } catch (ReflectiveOperationException e) {
+                return null;
+            }
         }
     }
 }

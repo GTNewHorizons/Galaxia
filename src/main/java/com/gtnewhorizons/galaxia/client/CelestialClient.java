@@ -26,6 +26,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -185,6 +186,17 @@ public final class CelestialClient {
         ModuleInstance module = modules.get(moduleIndex);
         Galaxia.GALAXIA_NETWORK
             .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
+    }
+
+    public static void updateModuleRecipeSlot(ID assetId, int moduleIndex, ConfigAction configAction, byte slotIndex,
+        RecipeSlot slot) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
+        ModuleInstance module = modules.get(moduleIndex);
+        Galaxia.GALAXIA_NETWORK.sendToServer(
+            AssetModuleUpdatePacket.recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
     }
 
     // ── Signal mirror ──

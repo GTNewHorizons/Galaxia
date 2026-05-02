@@ -3,6 +3,12 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.util.Objects;
 import java.util.function.Function;
 
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
+
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -103,7 +109,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
             pkt.rawPayload = new byte[] { slotIndex };
         } else if (slot != null) {
-            io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer(25);
+            io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer();
             payloadBuf.writeByte(slotIndex);
             payloadBuf.writeByte(
                 slot.recipe()
@@ -114,6 +120,20 @@ public final class AssetModuleUpdatePacket implements IMessage {
             payloadBuf.writeLong(
                 slot.recipe()
                     .contentHash());
+            payloadBuf.writeInt(
+                slot.recipe()
+                    .duration());
+            payloadBuf.writeInt(
+                slot.recipe()
+                    .eut());
+            writeItemStacks(payloadBuf, slot.recipe()
+                .inputs());
+            writeItemStacks(payloadBuf, slot.recipe()
+                .outputs());
+            writeFluidStacks(payloadBuf, slot.recipe()
+                .fluidInputs());
+            writeFluidStacks(payloadBuf, slot.recipe()
+                .fluidOutputs());
             payloadBuf.writeBoolean(slot.enabled());
             payloadBuf.writeInt(slot.inputGuard());
             payloadBuf.writeInt(slot.outputGuard());
@@ -402,14 +422,45 @@ public final class AssetModuleUpdatePacket implements IMessage {
             byte recipeMapOrdinal = payloadBuf.readByte();
             int recipeIndex = payloadBuf.readInt();
             long contentHash = payloadBuf.readLong();
-            boolean enabled = payloadBuf.readBoolean();
-            int inputGuard = payloadBuf.readInt();
-            int outputGuard = payloadBuf.readInt();
-            byte priority = payloadBuf.readByte();
-            byte orderSize = payloadBuf.readByte();
-
-            RecipeSnapshot ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
-            RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
+            RecipeSnapshot ref;
+            boolean enabled;
+            int inputGuard;
+            int outputGuard;
+            byte priority;
+            byte orderSize;
+            if (packet.rawPayload.length == 25) {
+                enabled = payloadBuf.readBoolean();
+                inputGuard = payloadBuf.readInt();
+                outputGuard = payloadBuf.readInt();
+                priority = payloadBuf.readByte();
+                orderSize = payloadBuf.readByte();
+                ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
+            } else {
+                int duration = payloadBuf.readInt();
+                int eut = payloadBuf.readInt();
+                ItemStack[] inputs = readItemStacks(payloadBuf);
+                ItemStack[] outputs = readItemStacks(payloadBuf);
+                FluidStack[] fluidInputs = readFluidStacks(payloadBuf);
+                FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
+                enabled = payloadBuf.readBoolean();
+                inputGuard = payloadBuf.readInt();
+                outputGuard = payloadBuf.readInt();
+                priority = payloadBuf.readByte();
+                orderSize = payloadBuf.readByte();
+                ref = new RecipeSnapshot(
+                    recipeMapOrdinal,
+                    recipeIndex,
+                    contentHash,
+                    inputs,
+                    outputs,
+                    fluidInputs,
+                    fluidOutputs,
+                    duration,
+                    eut);
+            }
+            RecipeSnapshot validated = RecipeSlotPayloadValidator.validate(recipeModule, ref);
+            if (validated == null) return;
+            RecipeSlot slot = new RecipeSlot(validated, enabled, inputGuard, outputGuard, priority, orderSize);
 
             if (config == null) {
                 config = RecipeConfig.empty();
@@ -449,6 +500,84 @@ public final class AssetModuleUpdatePacket implements IMessage {
             AllowShootingConfig newConfig = configUpdater.apply(hammer);
             if (newConfig != null) {
                 hammer.setConfig(newConfig);
+            }
+        }
+    }
+
+    private static void writeItemStacks(ByteBuf buf, ItemStack[] stacks) {
+        if (stacks == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(stacks.length);
+        for (ItemStack stack : stacks) {
+            buf.writeBoolean(stack != null);
+            if (stack == null) continue;
+            buf.writeInt(Item.getIdFromItem(stack.getItem()));
+            buf.writeInt(stack.getItemDamage());
+            buf.writeInt(stack.stackSize);
+        }
+    }
+
+    private static ItemStack[] readItemStacks(ByteBuf buf) {
+        int len = buf.readInt();
+        if (len < 0) return null;
+        ItemStack[] stacks = new ItemStack[len];
+        for (int i = 0; i < len; i++) {
+            if (!buf.readBoolean()) continue;
+            Item item = Item.getItemById(buf.readInt());
+            int damage = buf.readInt();
+            int size = buf.readInt();
+            stacks[i] = item != null ? new ItemStack(item, size, damage) : null;
+        }
+        return stacks;
+    }
+
+    private static void writeFluidStacks(ByteBuf buf, FluidStack[] stacks) {
+        if (stacks == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(stacks.length);
+        for (FluidStack stack : stacks) {
+            buf.writeBoolean(stack != null);
+            if (stack == null) continue;
+            PacketUtil.writeString(buf, fluidName(stack));
+            buf.writeInt(stack.amount);
+        }
+    }
+
+    private static FluidStack[] readFluidStacks(ByteBuf buf) {
+        int len = buf.readInt();
+        if (len < 0) return null;
+        FluidStack[] stacks = new FluidStack[len];
+        for (int i = 0; i < len; i++) {
+            if (!buf.readBoolean()) continue;
+            String fluidName = PacketUtil.readString(buf);
+            int amount = buf.readInt();
+            Fluid fluid = FluidRegistry.getFluid(fluidName);
+            if (fluid != null) {
+                stacks[i] = new FluidStack(fluid, amount);
+            }
+        }
+        return stacks;
+    }
+
+    private static String fluidName(FluidStack stack) {
+        Fluid fluid = fluidType(stack);
+        return fluid != null ? fluid.getName() : "";
+    }
+
+    private static Fluid fluidType(FluidStack stack) {
+        try {
+            return stack.getFluid();
+        } catch (RuntimeException ignored) {
+            try {
+                var field = FluidStack.class.getDeclaredField("fluid");
+                field.setAccessible(true);
+                return (Fluid) field.get(stack);
+            } catch (ReflectiveOperationException e) {
+                return null;
             }
         }
     }
