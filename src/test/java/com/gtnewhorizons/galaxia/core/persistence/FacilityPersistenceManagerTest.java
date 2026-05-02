@@ -785,8 +785,7 @@ final class FacilityPersistenceManagerTest {
         IRecipeModule recipeModule = (IRecipeModule) macerator.component();
         FluidStack[] fluidInputs = { fluidStack("galaxia.persistence.input", 144) };
         FluidStack[] fluidOutputs = { fluidStack("galaxia.persistence.output", 72) };
-        long contentHash = RecipeSnapshot
-            .computeContentHash(null, null, fluidInputs, fluidOutputs, 320, 480);
+        long contentHash = RecipeSnapshot.computeContentHash(null, null, fluidInputs, fluidOutputs, 320, 480);
         RecipeSnapshot snapshot = new RecipeSnapshot(
             (byte) 1,
             7,

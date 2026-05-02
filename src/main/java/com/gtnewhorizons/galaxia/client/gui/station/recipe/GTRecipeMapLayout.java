@@ -69,7 +69,8 @@ public record GTRecipeMapLayout(int width, int height, List<Slot> itemInputs, Li
         return slots(positions, null, false, false);
     }
 
-    private static List<Slot> slots(List<Pos2d> positions, @Nullable BasicUIProperties ui, boolean fluid, boolean output) {
+    private static List<Slot> slots(List<Pos2d> positions, @Nullable BasicUIProperties ui, boolean fluid,
+        boolean output) {
         if (positions == null || positions.isEmpty()) return Collections.emptyList();
         List<Slot> slots = new ArrayList<>(positions.size());
         for (int i = 0; i < positions.size(); i++) {

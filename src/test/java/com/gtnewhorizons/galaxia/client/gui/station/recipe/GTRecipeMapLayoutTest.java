@@ -23,10 +23,14 @@ final class GTRecipeMapLayoutTest {
             1,
             1,
             2,
-            count -> List.of(new Pos2d(5, 6), new Pos2d(23, 6)).subList(0, count),
-            count -> List.of(new Pos2d(106, 24)).subList(0, count),
-            count -> List.of(new Pos2d(16, 62)).subList(0, count),
-            count -> List.of(new Pos2d(106, 62), new Pos2d(124, 62)).subList(0, count),
+            count -> List.of(new Pos2d(5, 6), new Pos2d(23, 6))
+                .subList(0, count),
+            count -> List.of(new Pos2d(106, 24))
+                .subList(0, count),
+            count -> List.of(new Pos2d(16, 62))
+                .subList(0, count),
+            count -> List.of(new Pos2d(106, 62), new Pos2d(124, 62))
+                .subList(0, count),
             new Pos2d(78, 24),
             new Size(20, 18));
 
@@ -34,16 +38,40 @@ final class GTRecipeMapLayoutTest {
 
         assertEquals(176, layout.width());
         assertEquals(86, layout.height());
-        assertEquals(List.of(new GTRecipeMapLayout.Slot(0, 5, 6)), layout.itemInputs().subList(0, 1));
-        assertEquals(new GTRecipeMapLayout.Slot(1, 23, 6), layout.itemInputs().get(1));
+        assertEquals(
+            List.of(new GTRecipeMapLayout.Slot(0, 5, 6)),
+            layout.itemInputs()
+                .subList(0, 1));
+        assertEquals(
+            new GTRecipeMapLayout.Slot(1, 23, 6),
+            layout.itemInputs()
+                .get(1));
         assertEquals(List.of(new GTRecipeMapLayout.Slot(0, 106, 24)), layout.itemOutputs());
         assertEquals(List.of(new GTRecipeMapLayout.Slot(0, 16, 62)), layout.fluidInputs());
-        assertEquals(new GTRecipeMapLayout.Slot(1, 124, 62), layout.fluidOutputs().get(1));
-        assertEquals(78, layout.progress().x());
-        assertEquals(24, layout.progress().y());
-        assertEquals(20, layout.progress().width());
-        assertEquals(18, layout.progress().height());
-        assertEquals(true, layout.progress().enabled());
+        assertEquals(
+            new GTRecipeMapLayout.Slot(1, 124, 62),
+            layout.fluidOutputs()
+                .get(1));
+        assertEquals(
+            78,
+            layout.progress()
+                .x());
+        assertEquals(
+            24,
+            layout.progress()
+                .y());
+        assertEquals(
+            20,
+            layout.progress()
+                .width());
+        assertEquals(
+            18,
+            layout.progress()
+                .height());
+        assertEquals(
+            true,
+            layout.progress()
+                .enabled());
     }
 
     private static BasicUIProperties properties(int maxItemInputs, int maxItemOutputs, int maxFluidInputs,

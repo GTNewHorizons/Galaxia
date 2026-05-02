@@ -126,14 +126,22 @@ public final class AssetModuleUpdatePacket implements IMessage {
             payloadBuf.writeInt(
                 slot.recipe()
                     .eut());
-            writeItemStacks(payloadBuf, slot.recipe()
-                .inputs());
-            writeItemStacks(payloadBuf, slot.recipe()
-                .outputs());
-            writeFluidStacks(payloadBuf, slot.recipe()
-                .fluidInputs());
-            writeFluidStacks(payloadBuf, slot.recipe()
-                .fluidOutputs());
+            writeItemStacks(
+                payloadBuf,
+                slot.recipe()
+                    .inputs());
+            writeItemStacks(
+                payloadBuf,
+                slot.recipe()
+                    .outputs());
+            writeFluidStacks(
+                payloadBuf,
+                slot.recipe()
+                    .fluidInputs());
+            writeFluidStacks(
+                payloadBuf,
+                slot.recipe()
+                    .fluidOutputs());
             payloadBuf.writeBoolean(slot.enabled());
             payloadBuf.writeInt(slot.inputGuard());
             payloadBuf.writeInt(slot.outputGuard());

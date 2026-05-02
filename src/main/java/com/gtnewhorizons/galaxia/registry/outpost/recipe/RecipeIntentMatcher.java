@@ -68,7 +68,9 @@ public final class RecipeIntentMatcher {
 
     private static boolean hasAnyHardSlot(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,
         FluidStack[] fluidOutputs) {
-        return hasAnyItem(itemInputs) || hasAnyItem(itemOutputs) || hasAnyFluid(fluidInputs) || hasAnyFluid(fluidOutputs);
+        return hasAnyItem(itemInputs) || hasAnyItem(itemOutputs)
+            || hasAnyFluid(fluidInputs)
+            || hasAnyFluid(fluidOutputs);
     }
 
     private static boolean hasAnyItem(ItemStack[] stacks) {

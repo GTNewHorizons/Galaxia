@@ -19,11 +19,14 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
 
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.integration.nei.INEIRecipeTransfer;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
+import com.cleanroommc.modularui.integration.nei.INEIRecipeTransfer;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
@@ -59,12 +62,10 @@ import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import gregtech.api.modularui2.GTGuiThemes;
 import gregtech.api.modularui2.GTGuiTextures;
-import gregtech.api.util.GTUtility;
+import gregtech.api.modularui2.GTGuiThemes;
 import gregtech.api.util.GTRecipe;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
+import gregtech.api.util.GTUtility;
 
 public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
@@ -114,9 +115,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     public RecipeInputScreen() {
-        gregtech.api.recipe.RecipeMap<?> map = pendingModule != null && pendingModule.component() instanceof IRecipeModule rm
-            ? rm.getRecipeMap()
-            : null;
+        gregtech.api.recipe.RecipeMap<?> map = pendingModule != null
+            && pendingModule.component() instanceof IRecipeModule rm ? rm.getRecipeMap() : null;
         this.recipeMap = map;
         this.layout = GTRecipeMapLayout.fromRecipeMap(map);
         this.title = titleFor(map, pendingModule);
@@ -131,14 +131,30 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
             this.mapId = id != null ? id : GTRecipeMapId.INVALID;
         }
 
-        this.itemInputs = itemHandlers(layout.itemInputs().size());
-        this.itemOutputs = itemHandlers(layout.itemOutputs().size());
-        this.ghostItemInputs = itemHandlers(layout.itemInputs().size());
-        this.ghostItemOutputs = itemHandlers(layout.itemOutputs().size());
-        this.fluidInputs = fluidTanks(layout.fluidInputs().size());
-        this.fluidOutputs = fluidTanks(layout.fluidOutputs().size());
-        this.ghostFluidInputs = fluidTanks(layout.fluidInputs().size());
-        this.ghostFluidOutputs = fluidTanks(layout.fluidOutputs().size());
+        this.itemInputs = itemHandlers(
+            layout.itemInputs()
+                .size());
+        this.itemOutputs = itemHandlers(
+            layout.itemOutputs()
+                .size());
+        this.ghostItemInputs = itemHandlers(
+            layout.itemInputs()
+                .size());
+        this.ghostItemOutputs = itemHandlers(
+            layout.itemOutputs()
+                .size());
+        this.fluidInputs = fluidTanks(
+            layout.fluidInputs()
+                .size());
+        this.fluidOutputs = fluidTanks(
+            layout.fluidOutputs()
+                .size());
+        this.ghostFluidInputs = fluidTanks(
+            layout.fluidInputs()
+                .size());
+        this.ghostFluidOutputs = fluidTanks(
+            layout.fluidOutputs()
+                .size());
     }
 
     @Override
@@ -186,12 +202,15 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private void addFrame(ModularPanel panel, String title, int width, int height) {
-        panel.child(new BodyBackgroundWidget(this).pos(0, BODY_Y)
-            .size(width, height - BODY_Y));
-        panel.child(new TitleTabWidget(title).pos(0, 0)
-            .size(titleTabWidth(title, width), BODY_Y));
-        panel.child(new StatusTextWidget(this).pos(0, height - 52)
-            .size(width, 24));
+        panel.child(
+            new BodyBackgroundWidget(this).pos(0, BODY_Y)
+                .size(width, height - BODY_Y));
+        panel.child(
+            new TitleTabWidget(title).pos(0, 0)
+                .size(titleTabWidth(title, width), BODY_Y));
+        panel.child(
+            new StatusTextWidget(this).pos(0, height - 52)
+                .size(width, 24));
     }
 
     private void addItemSlots(ModularPanel panel, List<GTRecipeMapLayout.Slot> slots, ItemStackHandler[] hard,
@@ -199,8 +218,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         for (GTRecipeMapLayout.Slot slot : slots) {
             int index = slot.index();
             panel.child(
-                new PhantomItemSlot().slot(new ModularSlot(hard[index], 0).changeListener((stack, amount, client,
-                    init) -> {
+                new PhantomItemSlot()
+                    .slot(new ModularSlot(hard[index], 0).changeListener((stack, amount, client, init) -> {
                         if (init) return;
                         if (stack != null && stack.stackSize > 1) {
                             stack.stackSize = 1;
@@ -212,8 +231,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
                     .pos(slot.x(), RECIPE_Y + slot.y())
                     .size(SLOT, SLOT));
             GhostItemWidget ghostSlot = new GhostItemWidget(ghost[index]);
-            ghostSlot
-                .pos(slot.x(), RECIPE_Y + slot.y())
+            ghostSlot.pos(slot.x(), RECIPE_Y + slot.y())
                 .size(SLOT, SLOT);
             panel.child(ghostSlot);
         }
@@ -228,8 +246,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
                     .background(GTGuiTextures.SLOT_FLUID_STANDARD, slot.overlay())
                     .pos(slot.x(), RECIPE_Y + slot.y())
                     .size(SLOT, SLOT));
-            FluidSlot ghostSlot = new FluidSlot()
-                .syncHandler(new FluidSlotSyncHandler(ghost[index]).canFillSlot(false)
+            FluidSlot ghostSlot = new FluidSlot().syncHandler(
+                new FluidSlotSyncHandler(ghost[index]).canFillSlot(false)
                     .canDrainSlot(false))
                 .background(IDrawable.NONE)
                 .pos(slot.x(), RECIPE_Y + slot.y())
@@ -303,8 +321,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         RecipeConfig cfg = rm.getRecipeConfig();
         if (cfg != null) slotIndex = cfg.slots()
             .size();
-        if (slotIndex < 0 || slotIndex >= com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList.MAX_RECIPE_SLOTS)
-            return;
+        if (slotIndex < 0
+            || slotIndex >= com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList.MAX_RECIPE_SLOTS) return;
         RecipeSlot slot = new RecipeSlot(snapshot, true, 0, Integer.MAX_VALUE, (byte) 1, (byte) 1);
         CelestialClient.updateModuleRecipeSlot(
             assetId,
@@ -401,7 +419,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private static boolean itemMatches(ItemStack hard, ItemStack recipeStack) {
-        return hard != null && recipeStack != null && hard.getItem() == recipeStack.getItem()
+        return hard != null && recipeStack != null
+            && hard.getItem() == recipeStack.getItem()
             && hard.getItemDamage() == recipeStack.getItemDamage();
     }
 
@@ -442,9 +461,9 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
     private static ButtonWidget<?> btn(String label, Runnable action) {
         return new ButtonWidget<>().overlay(drawable((ctx, x, y, w, h) -> {
-                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-                fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF1E2530);
-            }))
+            FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+            fr.drawString(label, x + (w - fr.getStringWidth(label)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, 0xFF1E2530);
+        }))
             .onMouseTapped(b -> {
                 if (b == 0) action.run();
                 return true;
@@ -595,7 +614,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         }
     }
 
-    private static final class RecipeInputNeiContainer extends ModularContainer implements INEIRecipeTransfer<GuiContainer> {
+    private static final class RecipeInputNeiContainer extends ModularContainer
+        implements INEIRecipeTransfer<GuiContainer> {
 
         private final RecipeInputScreen screen;
 
@@ -639,7 +659,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
             int h = getArea().height;
             FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
             GTGuiTextures.BACKGROUND_STANDARD.draw(ctx, 0, 0, w, h, theme.getTheme());
-            if (screen.layout.progress().enabled()) {
+            if (screen.layout.progress()
+                .enabled()) {
                 GTRecipeMapLayout.Progress progress = screen.layout.progress();
                 if (progress.texture() == null) {
                     int x = progress.x();
@@ -667,7 +688,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         @Override
         public void drawBackground(ModularGuiContext ctx, WidgetThemeEntry<?> theme) {
             FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-            GTGuiTextures.BACKGROUND_TITLE_STANDARD.draw(ctx, 0, 0, getArea().width, getArea().height, theme.getTheme());
+            GTGuiTextures.BACKGROUND_TITLE_STANDARD
+                .draw(ctx, 0, 0, getArea().width, getArea().height, theme.getTheme());
             fr.drawString(title, TITLE_TAB_PADDING + TITLE_TEXT_PADDING, BODY_Y - fr.FONT_HEIGHT, 0xFF303642);
         }
     }

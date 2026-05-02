@@ -924,8 +924,11 @@ public final class FacilityPersistenceManager {
 
     private static RecipeSnapshot readRecipeSnapshot(JsonObject slotObj, byte recipeMapOrdinal, int recipeIndex,
         long contentHash) {
-        if (!slotObj.has("duration") && !slotObj.has("eut") && !slotObj.has("inputs") && !slotObj.has("outputs")
-            && !slotObj.has("fluidInputs") && !slotObj.has("fluidOutputs")) {
+        if (!slotObj.has("duration") && !slotObj.has("eut")
+            && !slotObj.has("inputs")
+            && !slotObj.has("outputs")
+            && !slotObj.has("fluidInputs")
+            && !slotObj.has("fluidOutputs")) {
             return RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
         }
         int duration = slotObj.has("duration") ? slotObj.get("duration")

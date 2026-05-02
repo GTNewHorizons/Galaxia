@@ -85,8 +85,7 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
         for (FluidStack fluid : fluids) {
             if (fluid == null) continue;
             Fluid fluidType = fluidType(fluid);
-            hash = hash * 31 + (fluidType != null ? fluidType
-                .getName()
+            hash = hash * 31 + (fluidType != null ? fluidType.getName()
                 .hashCode() : fluid.getFluidID());
             hash = hash * 31 + fluid.amount;
         }

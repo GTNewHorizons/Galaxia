@@ -60,8 +60,7 @@ final class ProductionModuleHelperTest {
         StubRecipeModule module = new StubRecipeModule(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
-        ProductionModuleHelper
-            .execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
+        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
         assertEquals(856, station.inventory.getFluidAmount("galaxia.production.input"));
         assertEquals(72, station.inventory.getFluidAmount("galaxia.production.output"));
