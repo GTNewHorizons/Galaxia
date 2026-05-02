@@ -19,22 +19,6 @@ import jss.util.RandomXoshiro256StarStar;
 
 public final class EnhancedSkyRender {
 
-    private EnhancedSkyRender() {}
-
-    private static World currentWorld;
-
-    public static void setCurrentWorld(World world) {
-        currentWorld = world;
-    }
-
-    public static World getCurrentWorld() {
-        return currentWorld;
-    }
-
-    public static void clearCurrentWorld() {
-        currentWorld = null;
-    }
-
     /**
      * One global preset used for now. Later this can become dimension-specific.
      */
@@ -380,15 +364,13 @@ public final class EnhancedSkyRender {
                 double z4 = cosB * cosPhiA * radius;
 
                 // Simple equirectangular mapping.
-                float uu0 = uA;
-                float uu1 = uB;
                 float vv0 = 1.0f - vA + textureVOffset;
                 float vv1 = 1.0f - vB + textureVOffset;
 
-                t.addVertexWithUV(x1, y1, z1, uu0, vv0);
-                t.addVertexWithUV(x2, y2, z2, uu1, vv0);
-                t.addVertexWithUV(x3, y3, z3, uu1, vv1);
-                t.addVertexWithUV(x4, y4, z4, uu0, vv1);
+                t.addVertexWithUV(x1, y1, z1, uA, vv0);
+                t.addVertexWithUV(x2, y2, z2, uB, vv0);
+                t.addVertexWithUV(x3, y3, z3, uB, vv1);
+                t.addVertexWithUV(x4, y4, z4, uA, vv1);
             }
         }
 
