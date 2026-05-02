@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -302,6 +303,7 @@ public class Moon extends BasePlanet {
             .fillerBlocks(
                 new StratificationPreset(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
+            .caveShape(new CaveShapeTubes())
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
                     32,

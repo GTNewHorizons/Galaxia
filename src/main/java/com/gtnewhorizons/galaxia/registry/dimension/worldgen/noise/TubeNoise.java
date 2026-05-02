@@ -6,6 +6,7 @@ public class TubeNoise {
     private final Random xRandom = new Random();
     private final Random zRandom = new Random();
 
+    private boolean notCached = true;
     private long seed;
     private int xQuadrant;
     private int zQuadrant;
@@ -15,6 +16,10 @@ public class TubeNoise {
     private int zEndPoint;
     private int cacheChunkX;
     private int cacheChunkZ;
+
+    public boolean isCached() {
+        return notCached;
+    }
 
     public void setSeed(Random random) {
         seed = random.nextLong();
@@ -41,14 +46,12 @@ public class TubeNoise {
         return chunkX != cacheChunkX || chunkZ != cacheChunkZ;
     }
 
-    public void updateQuadrants(int chunkX, int chunkZ) {
+    public void updateCache(int chunkX, int chunkZ) {
         xQuadrant = chunkX >> 4;
         zQuadrant = chunkZ >> 4;
         cacheChunkX = chunkX;
         cacheChunkZ = chunkZ;
-    }
-
-    private void calculatePoints() {
+        notCached = false;
         xRandom.setSeed(seed + xQuadrant);
         zRandom.setSeed(seed + zQuadrant);
         xEndPoint = xRandom.nextInt(64) + 1;
