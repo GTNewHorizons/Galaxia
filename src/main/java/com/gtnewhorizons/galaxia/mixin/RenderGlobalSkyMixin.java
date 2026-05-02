@@ -35,9 +35,6 @@ public abstract class RenderGlobalSkyMixin {
     private Minecraft mc;
 
     @Shadow
-    private int starGLCallList;
-
-    @Shadow
     @Final
     private static ResourceLocation locationSunPng;
 
@@ -138,16 +135,6 @@ public abstract class RenderGlobalSkyMixin {
             CelestialBody body = bodies.get(idx);
             float angle = angles.get(idx);
             drawCelestialBody(t, body, angle, primarySunAngle);
-        }
-
-        float rainStrength = world.getRainStrength(partialTicks);
-        float starBrightness = world.getStarBrightness(partialTicks) * (1.0F - rainStrength);
-
-        if (starBrightness > 0.0F) {
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glColor4f(starBrightness, starBrightness, starBrightness, starBrightness);
-            GL11.glCallList(this.starGLCallList);
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
         }
 
         GL11.glPopMatrix();

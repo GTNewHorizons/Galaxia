@@ -1,23 +1,27 @@
 package com.gtnewhorizons.galaxia.mixin;
 
-import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.world.World;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender;
+
 /**
  * Angelica-compatible hook: injects after the star display list is rebuilt
  * This calls the shared baked-layer renderer so the display list contains your extra sky content
  */
-@Mixin(value = jss.notfine.render.RenderStars.class, remap = false)
+@Mixin(RenderGlobal.class)
 public abstract class RenderStarsMixin {
 
-    @Inject(method = "renderStars", at = @At("TAIL"), remap = false)
-    private static void galaxia$appendSkyLayers(CallbackInfo ci) {
-        World world = Minecraft.getMinecraft().theWorld;
+    @Inject(method = "renderSky(F)V", at = @At("RETURN"))
+    private void galaxia$afterSky(float partialTicks, CallbackInfo ci) {
+        Minecraft mc = Minecraft.getMinecraft();
+        World world = mc.theWorld;
 
         if (world == null) {
             System.out.println("Galaxia: world NULL");
@@ -29,6 +33,6 @@ public abstract class RenderStarsMixin {
 
         System.out.println("Galaxia: sky dim=" + dim + ", preset=" + (preset == null ? "null" : preset.name()));
 
-        if (preset != null) EnhancedSkyRender.renderBakedSkyLayers(world);
+        EnhancedSkyRender.renderBakedSkyLayers(world);
     }
 }

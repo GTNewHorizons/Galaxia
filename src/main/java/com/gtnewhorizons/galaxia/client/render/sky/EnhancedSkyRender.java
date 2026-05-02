@@ -11,8 +11,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
-
 import net.minecraft.world.World;
+
 import org.lwjgl.opengl.GL11;
 
 import jss.util.RandomXoshiro256StarStar;
@@ -194,7 +194,8 @@ public final class EnhancedSkyRender {
      *
      * The object is placed on the celestial sphere and optionally made visible even in daylight.
      */
-    private static void renderBillboardLayer(World world, SkyPreset preset, BillboardLayer layer, boolean bakedIntoDisplayList) {
+    private static void renderBillboardLayer(World world, SkyPreset preset, BillboardLayer layer,
+        boolean bakedIntoDisplayList) {
         if (layer == null || layer.texture == null || layer.count <= 0) {
             return;
         }
@@ -312,7 +313,7 @@ public final class EnhancedSkyRender {
      * Draws one billboard quad using a basis aligned to the object direction.
      */
     private static void addTexturedBillboardQuad(Tessellator t, double cx, double cy, double cz, OrthoBasis basis,
-                                                 float width, float height, float u0, float v0, float u1, float v1, float alpha) {
+        float width, float height, float u0, float v0, float u1, float v1, float alpha) {
         double hx = basis.right.x * width;
         double hy = basis.right.y * width;
         double hz = basis.right.z * width;
@@ -490,7 +491,7 @@ public final class EnhancedSkyRender {
     }
 
     public static BillboardLayer billboard(ResourceLocation texture, int count, float minSize, float maxSize,
-                                           float alpha, float dayMin, float dayMax) {
+        float alpha, float dayMin, float dayMax) {
         return new BillboardLayer(texture, count, minSize, maxSize, alpha, dayMin, dayMax);
     }
 
@@ -499,7 +500,7 @@ public final class EnhancedSkyRender {
     }
 
     public static DomeLayer dome(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility,
-                                 float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
+        float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
         return new DomeLayer(
             texture,
             opacity,
@@ -552,18 +553,18 @@ public final class EnhancedSkyRender {
         private final boolean jitterRotation;
         private final long seedSalt;
 
-        public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize,
-                              float dayVisibilityMin, float dayVisibilityMax) {
+        public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float dayVisibilityMin,
+            float dayVisibilityMax) {
             this(texture, count, minSize, maxSize, 1.0f, dayVisibilityMin, dayVisibilityMax, true, 0x515A7E11L);
         }
 
         public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float alpha,
-                              float dayVisibilityMin, float dayVisibilityMax) {
+            float dayVisibilityMin, float dayVisibilityMax) {
             this(texture, count, minSize, maxSize, alpha, dayVisibilityMin, dayVisibilityMax, true, 0x515A7E11L);
         }
 
         public BillboardLayer(ResourceLocation texture, int count, float minSize, float maxSize, float alpha,
-                              float dayVisibilityMin, float dayVisibilityMax, boolean jitterRotation, long seedSalt) {
+            float dayVisibilityMin, float dayVisibilityMax, boolean jitterRotation, long seedSalt) {
             this.texture = texture;
             this.count = count;
             this.minSize = minSize;
@@ -596,7 +597,7 @@ public final class EnhancedSkyRender {
         }
 
         public DomeLayer(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility,
-                         float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
+            float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
             this.texture = texture;
             this.opacity = opacity;
             this.minVisibility = minVisibility;
