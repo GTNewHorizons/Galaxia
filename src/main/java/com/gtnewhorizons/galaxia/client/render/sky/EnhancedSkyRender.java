@@ -186,7 +186,7 @@ public final class EnhancedSkyRender {
     private static void renderBillboardLayer(World world, SkyPreset preset, BillboardLayer layer, float partialTicks) {
         if (layer == null || layer.texture == null || layer.count <= 0) return;
 
-        float dayFactor = computeNightFactor(world, layer.dayVisibilityMin, layer.dayVisibilityMax);
+        float dayFactor = computeNightFactor(world, layer.dayVisibilityMin, layer.dayVisibilityMax, partialTicks);
         if (dayFactor <= 0.001f) return;
 
         RandomXoshiro256StarStar random = new RandomXoshiro256StarStar(BASE_SEED ^ layer.seedSalt);
@@ -233,7 +233,7 @@ public final class EnhancedSkyRender {
     private static void renderDomeLayer(World world, SkyPreset preset, DomeLayer layer, float partialTicks) {
         if (layer == null || layer.texture == null || layer.opacity <= 0.001f) return;
 
-        float dayFactor = computeNightFactor(world, 0.0f, 1.0f);
+        float dayFactor = computeNightFactor(world, 0.0f, 1.0f, partialTicks);
         if (dayFactor <= 0.001f && !layer.allowDayVisible) return;
 
         Minecraft.getMinecraft()
@@ -241,7 +241,7 @@ public final class EnhancedSkyRender {
             .bindTexture(layer.texture);
 
         GL11.glPushMatrix();
-        applySkyFacingTransform(world, partialTicks); // FIX: was missing partialTicks / celestial angle
+        applySkyFacingTransform(world, partialTicks);
         setupTexturedSkyBlend(false);
         GL11.glColor4f(1f, 1f, 1f, layer.opacity * lerp(layer.minVisibility, layer.maxVisibility, dayFactor));
 
@@ -330,9 +330,9 @@ public final class EnhancedSkyRender {
      * Night factor: 0 = broad daylight, 1 = full night.
      * minVisible / maxVisible control how much of the layer survives in daylight.
      */
-    private static float computeNightFactor(World world, float minVisible, float maxVisible) {
+    private static float computeNightFactor(World world, float minVisible, float maxVisible, float partialTicks) {
         if (world == null) return 1.0f;
-        float celestial = world.getCelestialAngle(1.0F);
+        float celestial = world.getCelestialAngle(partialTicks);
         float dayNight = 1.0f - (MathHelper.cos(celestial * (float) Math.PI * 2.0F) * 2.0F + 0.2F);
         dayNight = MathHelper.clamp_float(dayNight, 0.0F, 1.0F);
         dayNight = 1.0f - dayNight;
