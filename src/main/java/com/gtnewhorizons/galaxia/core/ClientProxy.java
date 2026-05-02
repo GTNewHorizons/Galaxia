@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core;
 
 import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
+import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
@@ -59,6 +60,7 @@ public class ClientProxy extends CommonProxy {
         ModulePickerScreen.FACTORY.init();
         StationManagementScreen.FACTORY.init();
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
+        MinecraftForge.EVENT_BUS.register(new SkyUpdateHandler());
         IMCForNEI.IMCSender();
 
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());

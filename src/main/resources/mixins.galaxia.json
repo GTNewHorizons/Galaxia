@@ -16,7 +16,6 @@
   ],
   "client": [
     "MixinEntityRenderer",
-    "MinecraftWorldMixin",
     "RenderGlobalSkyMixin",
     "RenderStarsMixin"
   ],
