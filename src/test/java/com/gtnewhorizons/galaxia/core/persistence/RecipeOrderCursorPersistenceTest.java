@@ -14,11 +14,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -126,9 +126,21 @@ final class RecipeOrderCursorPersistenceTest {
         config = new RecipeConfig(config.slots(), RecipeSchedulerMode.ORDER, NotDoablePolicy.SKIP, (byte) 1, (byte) 3);
 
         // Add 3 recipe slots
-        RecipeSlot slot1 = new RecipeSlot(new GT5RecipeRef((byte) 1, 0, 42L), true, 10, 100, (byte) 5, (byte) 2);
-        RecipeSlot slot2 = new RecipeSlot(new GT5RecipeRef((byte) 1, 1, 43L), true, 5, 50, (byte) 3, (byte) 4);
-        RecipeSlot slot3 = new RecipeSlot(new GT5RecipeRef((byte) 1, 2, 44L), false, 0, 200, (byte) 1, (byte) 1);
+        RecipeSlot slot1 = new RecipeSlot(
+            RecipeSnapshot.unresolved((byte) 1, 0, 42L),
+            true,
+            10,
+            100,
+            (byte) 5,
+            (byte) 2);
+        RecipeSlot slot2 = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 1, 43L), true, 5, 50, (byte) 3, (byte) 4);
+        RecipeSlot slot3 = new RecipeSlot(
+            RecipeSnapshot.unresolved((byte) 1, 2, 44L),
+            false,
+            0,
+            200,
+            (byte) 1,
+            (byte) 1);
         config.slots()
             .add(slot1);
         config.slots()

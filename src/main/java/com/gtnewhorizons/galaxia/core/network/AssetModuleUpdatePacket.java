@@ -17,10 +17,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -106,13 +106,13 @@ public final class AssetModuleUpdatePacket implements IMessage {
             io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer(25);
             payloadBuf.writeByte(slotIndex);
             payloadBuf.writeByte(
-                slot.recipeRef()
+                slot.recipe()
                     .recipeMapOrdinal());
             payloadBuf.writeInt(
-                slot.recipeRef()
+                slot.recipe()
                     .recipeIndex());
             payloadBuf.writeLong(
-                slot.recipeRef()
+                slot.recipe()
                     .contentHash());
             payloadBuf.writeBoolean(slot.enabled());
             payloadBuf.writeInt(slot.inputGuard());
@@ -408,7 +408,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             byte priority = payloadBuf.readByte();
             byte orderSize = payloadBuf.readByte();
 
-            GT5RecipeRef ref = new GT5RecipeRef(recipeMapOrdinal, recipeIndex, contentHash);
+            RecipeSnapshot ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
             RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
 
             if (config == null) {

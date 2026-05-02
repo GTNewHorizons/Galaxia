@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 final class RecipeSchedulerTest {
 
     private static RecipeSlot slot(boolean enabled, byte priority, byte orderSize) {
-        return new RecipeSlot(new GT5RecipeRef((byte) 1, 0, 42L), enabled, 0, 0, priority, orderSize);
+        return new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 42L), enabled, 0, 0, priority, orderSize);
     }
 
     // ---------- PRIORITY mode ----------

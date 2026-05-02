@@ -47,12 +47,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -398,15 +398,15 @@ public final class FacilityPersistenceManager {
                         com.google.gson.JsonObject slotObj = new com.google.gson.JsonObject();
                         slotObj.addProperty(
                             "recipeMapOrdinal",
-                            slot.recipeRef()
+                            slot.recipe()
                                 .recipeMapOrdinal() & 0xFF);
                         slotObj.addProperty(
                             "recipeIndex",
-                            slot.recipeRef()
+                            slot.recipe()
                                 .recipeIndex());
                         slotObj.addProperty(
                             "contentHash",
-                            slot.recipeRef()
+                            slot.recipe()
                                 .contentHash());
                         slotObj.addProperty("enabled", slot.enabled());
                         slotObj.addProperty("inputGuard", slot.inputGuard());
@@ -937,7 +937,7 @@ public final class FacilityPersistenceManager {
                         .getAsByte();
                     byte orderSize = slotObj.get("orderSize")
                         .getAsByte();
-                    GT5RecipeRef ref = new GT5RecipeRef(recipeMapOrdinal, recipeIndex, contentHash);
+                    RecipeSnapshot ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
                     RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
                     int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
                         .getAsInt() : i;

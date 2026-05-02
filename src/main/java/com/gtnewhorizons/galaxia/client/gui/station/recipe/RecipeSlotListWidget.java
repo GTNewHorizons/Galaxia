@@ -24,6 +24,7 @@ public class RecipeSlotListWidget extends ParentWidget<RecipeSlotListWidget> {
     private static final int LINE_GAP = 3;
 
     private final ModuleInstance module;
+    public int addRecipeX, addRecipeY, addRecipeW;
 
     public RecipeSlotListWidget(@Nullable ModuleInstance module) {
         this.module = module;
@@ -107,6 +108,9 @@ public class RecipeSlotListWidget extends ParentWidget<RecipeSlotListWidget> {
 
         // Add Recipe placeholder — always visible
         y += LINE_GAP;
+        addRecipeX = x;
+        addRecipeY = y;
+        addRecipeW = fr.getStringWidth("[Add Recipe]");
         fr.drawStringWithShadow("[Add Recipe]", x, y, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
 
         return y + fr.FONT_HEIGHT + LINE_GAP;

@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 
+import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -16,6 +17,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
+import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeSlotListWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
@@ -35,14 +37,40 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private final StationMapWidget map;
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
+    private int recipeBtnX = -1, recipeBtnY, recipeBtnW;
 
     public ModuleDetailPanel(StationMapWidget map) {
         this.map = map;
+        listenGuiAction((IGuiAction.MousePressed) button -> {
+            if (button != 0 || recipeBtnX < 0) return false;
+            StationTileCoord sel = map.selection();
+            if (sel == null) return false;
+            int mx = getContext().getAbsMouseX();
+            int my = getContext().getAbsMouseY();
+            int rx = mx - getArea().rx;
+            int ry = my - getArea().ry;
+            if (rx >= recipeBtnX && rx <= recipeBtnX + recipeBtnW
+                && ry >= recipeBtnY
+                && ry <= recipeBtnY + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) {
+                AutomatedFacility f = resolveFacility();
+                if (f != null) {
+                    PlacedTile t = f.stationLayout()
+                        .get(sel);
+                    if (t != null && t.module() != null
+                        && t.module()
+                            .component() instanceof IRecipeModule) {
+                        RecipeInputScreen.open(t.module());
+                    }
+                }
+                return true;
+            }
+            return false;
+        });
     }
 
     @Override
     public boolean canHoverThrough() {
-        return true;
+        return recipeBtnX < 0;
     }
 
     @Override
@@ -88,7 +116,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
-        // T3.8: Capacity summary for capacity modules (Storage/Tank/Battery)
         StationTileCoord modAnchor = module.anchor();
         if (module.kind()
             .isCapacityModule()) {
@@ -96,8 +123,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 long baseCapacity = icm.baseCapacityForTier(module.tier());
                 int neighborCount = StationLayout.countOrthogonalNeighbors(layout, modAnchor, module.kind());
                 long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
-
-                // Find the cluster containing this module's anchor
                 long clusterTotal = 0;
                 if (facilityId != null) {
                     List<CapacityCluster> clusters = GalaxiaAPI.getCapacityClusters(facilityId, module.kind());
@@ -109,7 +134,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                         }
                     }
                 }
-
                 lineY += SECTION_GAP;
                 lineY = drawLine(
                     "Base capacity: " + baseCapacity,
@@ -122,23 +146,22 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor());
                 lineY = drawLine(
-                    "Capacity: " + effectiveCapacity + " / " + clusterTotal + " (" + neighborCount + " neighbors)",
+                    "Capacity: " + effectiveCapacity + " / " + clusterTotal,
                     x + CONTENT_PADDING,
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             }
         }
 
-        // T3.9: Maintenance indicator (cached per selection)
         if (facilityId != null) {
             StationTileCoord curAnchor = module.anchor();
             if (!Objects.equals(curAnchor, lastCoveredAnchor)) {
                 lastCoveredAnchor = curAnchor;
                 lastCoveredResult = false;
                 Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
-                for (StationTileCoord tileCoord : module.shape()
+                for (StationTileCoord tc : module.shape()
                     .tiles(curAnchor)) {
-                    if (coverage.contains(tileCoord)) {
+                    if (coverage.contains(tc)) {
                         lastCoveredResult = true;
                         break;
                     }
@@ -154,11 +177,15 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             }
         }
 
-        // T4.10: Recipe slots for IRecipeModule
         if (module.component() instanceof IRecipeModule) {
             lineY += SECTION_GAP;
             RecipeSlotListWidget widget = new RecipeSlotListWidget(module);
             lineY = widget.draw(x + CONTENT_PADDING, lineY, width - CONTENT_PADDING * 2);
+            recipeBtnX = widget.addRecipeX;
+            recipeBtnY = widget.addRecipeY;
+            recipeBtnW = widget.addRecipeW;
+        } else {
+            recipeBtnX = -1;
         }
     }
 
@@ -169,8 +196,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     }
 
     private @Nullable AutomatedFacility resolveFacility() {
-        CelestialAsset.ID assetId = map.assetId();
-        if (assetId == null) return null;
-        return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
+        CelestialAsset.ID id = map.assetId();
+        return id != null && CelestialClient.getByAssetId(id) instanceof AutomatedFacility f ? f : null;
     }
 }

@@ -7,17 +7,17 @@ import java.util.WeakHashMap;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import gregtech.api.recipe.RecipeMaps;
-import gregtech.api.util.GTRecipe;
 
 public class ModuleMacerator implements ModuleComponent, IParallelModule, IRecipeModule {
 
     private byte parallel = 1;
     private RecipeConfig recipeConfig;
     final Random random = new Random();
-    final Map<GTRecipe, ItemStackWrapper[]> inputWrapperCache = new WeakHashMap<>();
-    final Map<GTRecipe, ItemStackWrapper[]> outputWrapperCache = new WeakHashMap<>();
+    final Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache = new WeakHashMap<>();
+    final Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache = new WeakHashMap<>();
 
     @Override
     public byte getParallel() {

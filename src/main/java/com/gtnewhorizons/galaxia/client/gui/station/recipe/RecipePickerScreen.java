@@ -37,8 +37,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.GTRecipeMapId;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.relauncher.Side;
@@ -65,7 +65,7 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
 
     static volatile @Nullable CelestialAsset.ID pendingAssetId;
     static volatile @Nullable StationTileCoord pendingCoord;
-    static volatile @Nullable GT5RecipeRef pendingSelection;
+    static volatile @Nullable RecipeSnapshot pendingSelection;
 
     public static void open(CelestialAsset.ID assetId, StationTileCoord coord) {
         pendingAssetId = assetId;
@@ -208,7 +208,19 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
             .overlay(drawable((ctx, x, y, w, h) -> drawRecipeRow(entry, x, y, w, h)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
-                pendingSelection = GT5RecipeRef.of(mapId.ordinal(), entry.index, entry.recipe);
+                RecipeSnapshot snapshot = new RecipeSnapshot(
+                    (byte) mapId.ordinal(),
+                    entry.index,
+                    RecipeSnapshot.computeContentHash(
+                        entry.recipe.mInputs,
+                        entry.recipe.mOutputs,
+                        entry.recipe.mDuration,
+                        entry.recipe.mEUt),
+                    entry.recipe.mInputs,
+                    entry.recipe.mOutputs,
+                    entry.recipe.mDuration,
+                    entry.recipe.mEUt);
+                pendingSelection = snapshot;
                 Minecraft.getMinecraft()
                     .displayGuiScreen(null);
                 return true;

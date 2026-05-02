@@ -91,7 +91,7 @@ final class IRecipeModuleTest {
         RecipeConfig config = module.getRecipeConfig();
         // Add a slot to the config's slot list
         com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot slot = new com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot(
-            new com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef((byte) 1, 0, 42L),
+            com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.unresolved((byte) 1, 0, 42L),
             true,
             0,
             0,

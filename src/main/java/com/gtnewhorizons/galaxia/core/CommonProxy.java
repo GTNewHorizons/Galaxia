@@ -63,7 +63,6 @@ public class CommonProxy {
         GalaxiaEffects.init();
         boolean gt5 = Loader.isModLoaded("gregtech");
         FacilityModuleKind.setGt5Available(gt5);
-        com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeBridge.setAvailable(gt5);
         FacilityModuleRegistry.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();

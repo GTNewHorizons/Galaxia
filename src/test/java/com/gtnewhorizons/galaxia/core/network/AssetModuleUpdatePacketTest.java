@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GT5RecipeRef;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -49,7 +49,13 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotAdd_encodeDecode_roundTrip() {
-        RecipeSlot slot = new RecipeSlot(new GT5RecipeRef((byte) 1, 42, 12345L), true, 10, 100, (byte) 5, (byte) 8);
+        RecipeSlot slot = new RecipeSlot(
+            RecipeSnapshot.unresolved((byte) 1, 42, 12345L),
+            true,
+            10,
+            100,
+            (byte) 5,
+            (byte) 8);
         AssetModuleUpdatePacket original = AssetModuleUpdatePacket.recipeSlotPayload(
             ASSET_ID,
             0,
@@ -109,7 +115,13 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotUpdate_encodeDecode_roundTrip() {
-        RecipeSlot slot = new RecipeSlot(new GT5RecipeRef((byte) 2, 7, 999L), false, 5, 50, (byte) 1, (byte) 3);
+        RecipeSlot slot = new RecipeSlot(
+            RecipeSnapshot.unresolved((byte) 2, 7, 999L),
+            false,
+            5,
+            50,
+            (byte) 1,
+            (byte) 3);
         AssetModuleUpdatePacket original = AssetModuleUpdatePacket.recipeSlotPayload(
             ASSET_ID,
             0,

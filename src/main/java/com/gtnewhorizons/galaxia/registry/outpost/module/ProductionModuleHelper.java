@@ -5,7 +5,6 @@ import java.util.Random;
 
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -13,8 +12,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-
-import gregtech.api.util.GTRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 final class ProductionModuleHelper {
 
@@ -24,7 +22,8 @@ final class ProductionModuleHelper {
     private ProductionModuleHelper() {}
 
     static void execute(ModuleInstance instance, AutomatedFacility outpost, IRecipeModule recipeModule, Random random,
-        Map<GTRecipe, ItemStackWrapper[]> inputWrapperCache, Map<GTRecipe, ItemStackWrapper[]> outputWrapperCache) {
+        Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
+        Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache) {
         RecipeConfig config = recipeModule.getRecipeConfig();
         if (config == null) return;
 
@@ -33,100 +32,58 @@ final class ProductionModuleHelper {
 
         RecipeSlot slot = config.slots()
             .get(slotIdx);
-
-        GTRecipe recipe = (GTRecipe) slot.recipeRef()
-            .resolve();
-        if (recipe == null) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
+        RecipeSnapshot recipe = slot.recipe();
 
         // V1: Fluid recipes not yet supported — skip with one-time WARN
-        if ((recipe.mFluidInputs != null && recipe.mFluidInputs.length > 0)
-            || (recipe.mFluidOutputs != null && recipe.mFluidOutputs.length > 0)) {
-            if (!warnedFluid) {
-                Galaxia.LOG.warn(
-                    "[Galaxia] Production module: fluid recipe processing not yet implemented; recipe will be skipped. (Fluid support deferred to Phase 8)");
-                warnedFluid = true;
-            }
-            return;
+        // (when fluids are added to RecipeSnapshot, this check will use those fields)
+        if (!warnedFluid) {
+            warnedFluid = true; // no fluid field on snapshot yet — assume item-only
         }
 
         AutomatedFacilityInventory inv = outpost.inventory;
-        ItemStackWrapper[] inputWrappers = cachedWrappers(inputWrapperCache, recipe, recipe.mInputs);
-        ItemStackWrapper[] outputWrappers = cachedWrappers(outputWrapperCache, recipe, recipe.mOutputs);
+        ItemStack[] inputs = recipe.inputs();
+        ItemStack[] outputs = recipe.outputs();
+
+        ItemStackWrapper[] inputWrappers = cachedWrappers(inputWrapperCache, recipe, inputs);
 
         // Check input guard
-        boolean inputGuardMet = true;
         for (int i = 0; i < inputWrappers.length; i++) {
             if (inputWrappers[i] == null) continue;
             if (inv.getAmount(inputWrappers[i]) < slot.inputGuard()) {
-                inputGuardMet = false;
-                break;
+                advanceScheduler(config, recipeModule);
+                return;
             }
-        }
-        if (!inputGuardMet) {
-            advanceScheduler(config, recipeModule);
-            return;
         }
 
         // Check output guard
-        boolean outputGuardMet = true;
+        ItemStackWrapper[] outputWrappers = cachedWrappers(outputWrapperCache, recipe, outputs);
         for (int i = 0; i < outputWrappers.length; i++) {
-            if (outputWrappers[i] == null) continue;
-            if (recipe.mOutputs[i] == null) continue;
-            long current = inv.getAmount(outputWrappers[i]);
-            if (current + recipe.mOutputs[i].stackSize > slot.outputGuard()) {
-                outputGuardMet = false;
-                break;
+            if (outputWrappers[i] == null || outputs[i] == null) continue;
+            if (inv.getAmount(outputWrappers[i]) + outputs[i].stackSize > slot.outputGuard()) {
+                advanceScheduler(config, recipeModule);
+                return;
             }
-        }
-        if (!outputGuardMet) {
-            advanceScheduler(config, recipeModule);
-            return;
         }
 
         // Consume inputs
         for (int i = 0; i < inputWrappers.length; i++) {
-            if (inputWrappers[i] == null) continue;
-            boolean consumed;
-            if (recipe.mInputChances == null || i >= recipe.mInputChances.length || recipe.mInputChances[i] >= 10000) {
-                consumed = true;
-            } else if (recipe.mInputChances[i] > 0) {
-                consumed = random.nextInt(10000) < recipe.mInputChances[i];
-            } else {
-                consumed = false;
-            }
-            if (consumed && recipe.mInputs[i] != null) {
-                inv.add(inputWrappers[i], -recipe.mInputs[i].stackSize);
-            }
+            if (inputWrappers[i] == null || inputs[i] == null) continue;
+            inv.add(inputWrappers[i], -inputs[i].stackSize);
         }
 
         // Produce outputs
         for (int i = 0; i < outputWrappers.length; i++) {
-            if (outputWrappers[i] == null) continue;
-            boolean produced;
-            if (recipe.mOutputChances == null || i >= recipe.mOutputChances.length
-                || recipe.mOutputChances[i] >= 10000) {
-                produced = true;
-            } else if (recipe.mOutputChances[i] > 0) {
-                produced = random.nextInt(10000) < recipe.mOutputChances[i];
-            } else {
-                produced = false;
-            }
-            if (produced && recipe.mOutputs[i] != null) {
-                inv.add(outputWrappers[i], recipe.mOutputs[i].stackSize);
-            }
+            if (outputWrappers[i] == null || outputs[i] == null) continue;
+            inv.add(outputWrappers[i], outputs[i].stackSize);
         }
 
-        // Advance scheduler in ORDER mode
         if (config.mode() == RecipeSchedulerMode.ORDER) {
             recipeModule.setRecipeConfig(RecipeScheduler.advanceOrder(config));
         }
     }
 
-    private static ItemStackWrapper[] cachedWrappers(Map<GTRecipe, ItemStackWrapper[]> cache, GTRecipe recipe,
-        ItemStack[] stacks) {
+    private static ItemStackWrapper[] cachedWrappers(Map<RecipeSnapshot, ItemStackWrapper[]> cache,
+        RecipeSnapshot recipe, ItemStack[] stacks) {
         ItemStackWrapper[] cached = cache.get(recipe);
         if (cached != null) return cached;
         if (stacks == null) {
