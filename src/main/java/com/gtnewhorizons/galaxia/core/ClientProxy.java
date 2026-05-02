@@ -46,7 +46,6 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
-        GalaxiaSkyBootstrap.clientInit();
 
         FMLCommonHandler.instance()
             .bus()
@@ -56,6 +55,7 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void init(FMLInitializationEvent event) {
         super.init(event);
+        GalaxiaSkyBootstrap.clientInit();
         ItemPickerScreen.FACTORY.init();
         ModulePickerScreen.FACTORY.init();
         StationManagementScreen.FACTORY.init();

@@ -20,6 +20,6 @@ public abstract class RenderStarsMixin {
     @Inject(method = "renderSky(F)V", at = @At("RETURN"))
     private void galaxia$afterSky(float partialTicks, CallbackInfo ci) {
         World world = Minecraft.getMinecraft().theWorld;
-        EnhancedSkyRender.renderBakedSkyLayers(world);
+        EnhancedSkyRender.renderBakedSkyLayers(world, partialTicks);
     }
 }
