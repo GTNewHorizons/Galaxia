@@ -16,11 +16,13 @@ import com.gtnewhorizons.galaxia.client.render.rockets.RocketRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketSchematicItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketTrophyRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
+import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
 import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
+import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
@@ -53,10 +55,14 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void init(FMLInitializationEvent event) {
         super.init(event);
+        GalaxiaSkyBootstrap.clientInit();
         ItemPickerScreen.FACTORY.init();
         ModulePickerScreen.FACTORY.init();
         StationManagementScreen.FACTORY.init();
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new SkyUpdateHandler());
         IMCForNEI.IMCSender();
 
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
