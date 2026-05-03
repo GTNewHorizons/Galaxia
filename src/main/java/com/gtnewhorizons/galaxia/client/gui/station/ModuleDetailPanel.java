@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -18,13 +19,15 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeListScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeSlotListWidget;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -40,6 +43,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private boolean lastCoveredResult;
     private int recipeBtnX = -1, recipeBtnY, recipeBtnW;
     private int viewRecipeBtnX = -1, viewRecipeBtnY, viewRecipeBtnW;
+    private boolean showRecipeList;
+    private final List<Integer> recipeRemoveRows = new ArrayList<>();
+    private int recipeListY, recipeListH;
+    private int recipeListX;
 
     public ModuleDetailPanel(StationMapWidget map) {
         this.map = map;
@@ -74,26 +81,42 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 return true;
             }
 
-            // [View Recipes] button
+            // [View Recipes] button — toggle inline recipe list
             if (viewRecipeBtnX >= 0 && rx >= viewRecipeBtnX
                 && rx <= viewRecipeBtnX + viewRecipeBtnW
                 && ry >= viewRecipeBtnY
                 && ry <= viewRecipeBtnY + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) {
-                AutomatedFacility f = resolveFacility();
-                if (f != null) {
-                    PlacedTile t = f.stationLayout()
-                        .get(sel);
-                    if (t != null && t.module() != null
-                        && t.module()
-                            .component() instanceof IRecipeModule) {
-                        RecipeListScreen.open(
-                            map.assetId(),
-                            f.modules()
-                                .indexOf(t.module()),
-                            t.module());
+                showRecipeList = !showRecipeList;
+                return true;
+            }
+
+            // [Remove] in recipe list
+            if (showRecipeList) {
+                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+                for (int i = 0; i < recipeRemoveRows.size(); i++) {
+                    int rowY = recipeRemoveRows.get(i);
+                    if (ry >= rowY && ry < rowY + fr.FONT_HEIGHT + 3) {
+                        String removeLabel = "[Remove]";
+                        int removeX = getArea().width - CONTENT_PADDING - fr.getStringWidth(removeLabel);
+                        if (rx >= removeX && rx <= removeX + fr.getStringWidth(removeLabel)) {
+                            AutomatedFacility f = resolveFacility();
+                            if (f != null) {
+                                PlacedTile t = f.stationLayout()
+                                    .get(sel);
+                                if (t != null && t.module() != null) {
+                                    CelestialClient.updateModuleRecipeSlot(
+                                        map.assetId(),
+                                        f.modules()
+                                            .indexOf(t.module()),
+                                        AssetModuleUpdatePacket.ConfigAction.REMOVE_RECIPE_SLOT,
+                                        (byte) i,
+                                        null);
+                                }
+                            }
+                            return true;
+                        }
                     }
                 }
-                return true;
             }
 
             return false;
@@ -217,9 +240,9 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             recipeBtnY = widget.addRecipeY;
             recipeBtnW = widget.addRecipeW;
 
-            // [View Recipes] button — right-aligned next to [Add Recipe]
+            // [View Recipes] / [Hide Recipes] toggle button — right-aligned
             FontRenderer fr2 = Minecraft.getMinecraft().fontRenderer;
-            String viewLabel = "[View Recipes]";
+            String viewLabel = showRecipeList ? "[Hide Recipes]" : "[View Recipes]";
             viewRecipeBtnX = x + width - CONTENT_PADDING - fr2.getStringWidth(viewLabel);
             viewRecipeBtnY = widget.addRecipeY;
             viewRecipeBtnW = fr2.getStringWidth(viewLabel);
@@ -228,9 +251,50 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 viewRecipeBtnX,
                 viewRecipeBtnY,
                 EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+
+            // Inline recipe list when toggled on
+            if (showRecipeList) {
+                recipeRemoveRows.clear();
+                lineY += SECTION_GAP + 4;
+
+                RecipeConfig cfg = ((IRecipeModule) module.component()).getRecipeConfig();
+                List<RecipeSlot> slots = cfg != null ? cfg.slots()
+                    .toList() : List.of();
+
+                int listWidth = width - CONTENT_PADDING * 2;
+                recipeListX = x + CONTENT_PADDING;
+                recipeListY = lineY;
+
+                if (slots.isEmpty()) {
+                    drawLine("No recipes configured", recipeListX, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+                    lineY += Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT + 3;
+                } else {
+                    for (int i = 0; i < slots.size(); i++) {
+                        RecipeSlot slot = slots.get(i);
+                        String label = "#" + i
+                            + " "
+                            + (slot.enabled() ? "[ON] " : "[OFF] ")
+                            + "in:"
+                            + slot.inputGuard()
+                            + " out:"
+                            + slot.outputGuard();
+                        int enabledColor = slot.enabled() ? EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor()
+                            : EnumColors.MAP_COLOR_TEXT_DANGER.getColor();
+                        FontRenderer fr3 = Minecraft.getMinecraft().fontRenderer;
+                        fr3.drawStringWithShadow(label, recipeListX, lineY, enabledColor);
+                        String rmLabel = "[Remove]";
+                        int rmX = x + width - CONTENT_PADDING - fr3.getStringWidth(rmLabel);
+                        fr3.drawStringWithShadow(rmLabel, rmX, lineY, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+                        recipeRemoveRows.add(lineY);
+                        lineY += fr3.FONT_HEIGHT + 3;
+                    }
+                }
+                recipeListH = lineY - recipeListY;
+            }
         } else {
             recipeBtnX = -1;
             viewRecipeBtnX = -1;
+            showRecipeList = false;
         }
     }
 

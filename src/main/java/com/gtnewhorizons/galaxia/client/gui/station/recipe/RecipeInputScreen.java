@@ -129,7 +129,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         this.recipeMap = map;
         this.layout = GTRecipeMapLayout.fromRecipeMap(map);
         this.title = titleFor(map, pendingModule);
-        this.neiTransferIds = neiTransferIds(map);
+        this.neiTransferIds = neiTransferIds(map, pendingModule);
         if (map != null) {
             @SuppressWarnings("unchecked")
             List<GTRecipe> recipes = new ArrayList<>((Collection<GTRecipe>) (Collection<?>) map.getAllRecipes());
@@ -511,10 +511,21 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         return Math.min(maxWidth, fr.getStringWidth(title) + TITLE_TAB_PADDING * 2 + TITLE_TEXT_PADDING * 2);
     }
 
-    private static String[] neiTransferIds(@Nullable gregtech.api.recipe.RecipeMap<?> map) {
+    private static String[] neiTransferIds(@Nullable gregtech.api.recipe.RecipeMap<?> map,
+        @Nullable ModuleInstance module) {
         if (map == null) return new String[0];
         String name = map.unlocalizedName;
         if (name == null || name.isEmpty()) return new String[0];
+
+        if (module != null && module.component() instanceof IRecipeModule recipeModule) {
+            List<String> extra = recipeModule.getAdditionalNeiTransferIdents();
+            if (!extra.isEmpty()) {
+                String[] all = new String[1 + extra.size()];
+                all[0] = name;
+                for (int i = 0; i < extra.size(); i++) all[i + 1] = extra.get(i);
+                return all;
+            }
+        }
         return new String[] { name };
     }
 
@@ -536,6 +547,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     private void applyNeiRecipe(IRecipeHandler recipe, int recipeIndex) {
         for (ItemStackHandler handler : itemInputs) handler.setStackInSlot(0, null);
         for (ItemStackHandler handler : itemOutputs) handler.setStackInSlot(0, null);
+        for (FluidTank tank : fluidInputs) tank.drain(Integer.MAX_VALUE, true);
+        for (FluidTank tank : fluidOutputs) tank.drain(Integer.MAX_VALUE, true);
 
         List<PositionedStack> inputs = recipe.getIngredientStacks(recipeIndex);
         List<PositionedStack> outputs = recipe.getOtherStacks(recipeIndex);
@@ -549,11 +562,59 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         boolean outputFilled = fillByPosition(outputs, layout.itemOutputs(), itemOutputs);
 
         if (!inputFilled && !outputFilled) {
-            Galaxia.LOG.warn("[RecipeInput] NEI transfer: no slots matched by position, trying sequential");
+            Galaxia.LOG.warn("[RecipeInput] NEI transfer: no item slots matched by position, trying sequential");
             fillSequential(inputs, itemInputs);
             fillSequential(outputs, itemOutputs);
         }
+
+        fillFluidsByPosition(inputs, layout.fluidInputs(), fluidInputs);
+        fillFluidsByPosition(outputs, layout.fluidOutputs(), fluidOutputs);
+
         onInputChanged();
+    }
+
+    private static void fillFluidsByPosition(@Nullable List<PositionedStack> stacks, List<GTRecipeMapLayout.Slot> slots,
+        FluidTank[] tanks) {
+        if (stacks == null || stacks.isEmpty() || slots.isEmpty() || tanks.length == 0) return;
+        boolean[] used = new boolean[Math.min(slots.size(), tanks.length)];
+        for (PositionedStack positioned : stacks) {
+            ItemStack stack = firstItem(positioned);
+            if (stack == null) {
+                Galaxia.LOG.debug(
+                    "[RecipeInput] fillFluids: firstItem returned null for positioned at ({},{})",
+                    positioned.relx,
+                    positioned.rely);
+                continue;
+            }
+            FluidStack fluid = FluidInteractions.getFluidForItem(stack);
+            if (fluid == null) {
+                Galaxia.LOG.debug(
+                    "[RecipeInput] fillFluids: getFluidForItem returned null for item={}",
+                    stack.getDisplayName());
+                continue;
+            }
+            int slotIndex = findSlotFor(positioned, slots, used);
+            if (slotIndex < 0 || slotIndex >= tanks.length) {
+                Galaxia.LOG.debug(
+                    "[RecipeInput] fillFluids: findSlotFor returned {} for fluid {} at ({},{}) (slots={}, tanks={})",
+                    slotIndex,
+                    fluid.getFluid()
+                        .getName(),
+                    positioned.relx,
+                    positioned.rely,
+                    slots.size(),
+                    tanks.length);
+                continue;
+            }
+            used[slotIndex] = true;
+            int filled = tanks[slotIndex].fill(fluid.copy(), true);
+            Galaxia.LOG.info(
+                "[RecipeInput] fillFluids: filled {} mB of {} into tank {}",
+                filled,
+                fluid.getFluid()
+                    .getName(),
+                slotIndex);
+        }
     }
 
     /** Returns true if at least one slot was filled by position matching. */
@@ -596,17 +657,55 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         for (int i = 0; i < slots.size() && i < used.length; i++) {
             if (used[i]) continue;
             GTRecipeMapLayout.Slot slot = slots.get(i);
-            if (Math.abs(slot.x() - x) <= 2 && Math.abs(slot.y() - y) <= 2) return i;
-            if (Math.abs(slot.x() - x) <= 2 && Math.abs(RECIPE_Y + slot.y() - y) <= 2) return i;
+            if (Math.abs(slot.x() - x) <= 5 && Math.abs(slot.y() - y) <= 5) return i;
+            if (Math.abs(slot.x() - x) <= 5 && Math.abs(RECIPE_Y + slot.y() - y) <= 5) return i;
         }
+        Galaxia.LOG.debug(
+            "[RecipeInput] findSlotFor: no match for ({},{}) — slots: {}",
+            x,
+            y,
+            slots.stream()
+                .map(s -> "(" + s.x() + "," + s.y() + ")")
+                .reduce((a, b) -> a + " " + b)
+                .orElse("none"));
         return -1;
     }
 
     private static @Nullable ItemStack firstItem(PositionedStack positioned) {
-        if (positioned == null || positioned.items == null) return null;
-        for (ItemStack stack : positioned.items) {
-            if (stack != null && stack.getItem() != null) return stack.copy();
+        if (positioned == null) {
+            Galaxia.LOG.debug("[RecipeInput] firstItem: positioned is null");
+            return null;
         }
+        if (positioned.items == null) {
+            Galaxia.LOG.debug(
+                "[RecipeInput] firstItem: positioned.items is null for pos ({},{})",
+                positioned.relx,
+                positioned.rely);
+            return null;
+        }
+        if (positioned.items.length == 0) {
+            Galaxia.LOG.debug(
+                "[RecipeInput] firstItem: positioned.items is empty for pos ({},{})",
+                positioned.relx,
+                positioned.rely);
+            return null;
+        }
+        for (ItemStack stack : positioned.items) {
+            if (stack == null) {
+                Galaxia.LOG.debug("[RecipeInput] firstItem: stack is null in items array");
+                continue;
+            }
+            if (stack.getItem() == null) {
+                Galaxia.LOG.debug("[RecipeInput] firstItem: stack.getItem() is null for stack={}", stack);
+                continue;
+            }
+            return stack.copy();
+        }
+        Galaxia.LOG.debug(
+            "[RecipeInput] firstItem: no valid stack in {} items for pos ({},{})",
+            positioned.items.length,
+            positioned.relx,
+            positioned.rely);
         return null;
     }
 

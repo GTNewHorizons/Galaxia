@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.WeakHashMap;
@@ -32,6 +34,11 @@ public class ModuleMacerator implements ModuleComponent, IParallelModule, IRecip
     @Override
     public gregtech.api.recipe.RecipeMap<?> getRecipeMap() {
         return RecipeMaps.maceratorRecipes;
+    }
+
+    @Override
+    public List<String> getAdditionalNeiTransferIdents() {
+        return Collections.singletonList("gt.recipe.category.macerator_recycling");
     }
 
     @Override
