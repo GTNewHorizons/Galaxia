@@ -299,12 +299,12 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             long blockGenerationTime = System.nanoTime();
             System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
 
-            chunk.generateSkylightMap();
             long lightGenerationTime = System.nanoTime();
             System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
 
             System.out.println("-------- END CHUNK GENERATION --------");
         }
+        chunk.generateSkylightMap();
         return chunk;
     }
 
