@@ -20,11 +20,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -395,6 +402,10 @@ public final class AssetSyncPacket implements IMessage {
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> writeRecipeConfig(
+                buf,
+                module);
+            default -> {}
         }
     }
 
@@ -436,6 +447,10 @@ public final class AssetSyncPacket implements IMessage {
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> readRecipeConfig(
+                buf,
+                module);
+            default -> {}
         }
 
         if (module.component() instanceof IParallelModule pm) {
@@ -454,6 +469,83 @@ public final class AssetSyncPacket implements IMessage {
 
     private static LogisticsResourceConfig readLogisticsConfig(ByteBuf buf) {
         return new LogisticsResourceConfig(buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
+    }
+
+    private static void writeRecipeConfig(ByteBuf buf, ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            buf.writeBoolean(false);
+            return;
+        }
+        RecipeConfig config = recipeModule.getRecipeConfig();
+        if (config == null) {
+            buf.writeBoolean(false);
+            return;
+        }
+        buf.writeBoolean(true);
+        buf.writeByte(
+            config.mode()
+                .ordinal());
+        buf.writeByte(
+            config.notDoablePolicy()
+                .ordinal());
+        buf.writeByte(config.orderCursor());
+        buf.writeByte(config.orderRemaining());
+
+        List<RecipeSlot> slots = config.slots()
+            .toList();
+        buf.writeByte(slots.size());
+        for (RecipeSlot slot : slots) {
+            RecipeSnapshot snap = slot.recipe();
+            buf.writeByte(snap.recipeMapOrdinal());
+            buf.writeInt(snap.recipeIndex());
+            buf.writeLong(snap.contentHash());
+            buf.writeBoolean(slot.enabled());
+            buf.writeInt(slot.inputGuard());
+            buf.writeInt(slot.outputGuard());
+            buf.writeByte(slot.priority());
+            buf.writeByte(slot.orderSize());
+        }
+    }
+
+    private static void readRecipeConfig(ByteBuf buf, ModuleInstance module) {
+        if (!buf.readBoolean()) return;
+        int modeOrd = Byte.toUnsignedInt(buf.readByte());
+        int policyOrd = Byte.toUnsignedInt(buf.readByte());
+        byte orderCursor = buf.readByte();
+        byte orderRemaining = buf.readByte();
+
+        RecipeSchedulerMode[] modes = RecipeSchedulerMode.values();
+        if (modeOrd >= modes.length) return;
+        RecipeSchedulerMode mode = modes[modeOrd];
+
+        NotDoablePolicy[] policies = NotDoablePolicy.values();
+        if (policyOrd >= policies.length) return;
+        NotDoablePolicy policy = policies[policyOrd];
+
+        int slotCount = Byte.toUnsignedInt(buf.readByte());
+        if (slotCount < 0 || slotCount > RecipeSlotList.MAX_RECIPE_SLOTS) return;
+
+        RecipeConfig config = new RecipeConfig(new RecipeSlotList(), mode, policy, orderCursor, orderRemaining);
+
+        for (int i = 0; i < slotCount; i++) {
+            byte mapOrdinal = buf.readByte();
+            int recipeIndex = buf.readInt();
+            long contentHash = buf.readLong();
+            boolean enabled = buf.readBoolean();
+            int inputGuard = buf.readInt();
+            int outputGuard = buf.readInt();
+            byte priority = buf.readByte();
+            byte orderSize = buf.readByte();
+
+            RecipeSnapshot ref = RecipeSnapshot.unresolved(mapOrdinal, recipeIndex, contentHash);
+            RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
+            config.slots()
+                .add(slot);
+        }
+
+        if (module.component() instanceof IRecipeModule recipeModule) {
+            recipeModule.setRecipeConfig(config);
+        }
     }
 
     public AssetSyncPacket withSyncRevision(int rev) {

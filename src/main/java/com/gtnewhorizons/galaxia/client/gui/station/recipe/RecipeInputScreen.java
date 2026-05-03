@@ -59,6 +59,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
+import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -535,15 +536,32 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     private void applyNeiRecipe(IRecipeHandler recipe, int recipeIndex) {
         for (ItemStackHandler handler : itemInputs) handler.setStackInSlot(0, null);
         for (ItemStackHandler handler : itemOutputs) handler.setStackInSlot(0, null);
-        fillByPosition(recipe.getIngredientStacks(recipeIndex), layout.itemInputs(), itemInputs);
-        fillByPosition(recipe.getOtherStacks(recipeIndex), layout.itemOutputs(), itemOutputs);
+
+        List<PositionedStack> inputs = recipe.getIngredientStacks(recipeIndex);
+        List<PositionedStack> outputs = recipe.getOtherStacks(recipeIndex);
+        Galaxia.LOG.info(
+            "[RecipeInput] NEI transfer: recipeIndex={} inputs={} outputs={}",
+            recipeIndex,
+            inputs != null ? inputs.size() : 0,
+            outputs != null ? outputs.size() : 0);
+
+        boolean inputFilled = fillByPosition(inputs, layout.itemInputs(), itemInputs);
+        boolean outputFilled = fillByPosition(outputs, layout.itemOutputs(), itemOutputs);
+
+        if (!inputFilled && !outputFilled) {
+            Galaxia.LOG.warn("[RecipeInput] NEI transfer: no slots matched by position, trying sequential");
+            fillSequential(inputs, itemInputs);
+            fillSequential(outputs, itemOutputs);
+        }
         onInputChanged();
     }
 
-    private static void fillByPosition(List<PositionedStack> stacks, List<GTRecipeMapLayout.Slot> slots,
+    /** Returns true if at least one slot was filled by position matching. */
+    private static boolean fillByPosition(@Nullable List<PositionedStack> stacks, List<GTRecipeMapLayout.Slot> slots,
         ItemStackHandler[] handlers) {
-        if (stacks == null || slots.isEmpty() || handlers.length == 0) return;
+        if (stacks == null || stacks.isEmpty() || slots.isEmpty() || handlers.length == 0) return false;
         boolean[] used = new boolean[Math.min(slots.size(), handlers.length)];
+        boolean anyFilled = false;
         for (PositionedStack positioned : stacks) {
             ItemStack stack = firstItem(positioned);
             if (stack == null || isFluidContainer(stack)) continue;
@@ -552,6 +570,23 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
             used[slotIndex] = true;
             stack.stackSize = 1;
             handlers[slotIndex].setStackInSlot(0, stack);
+            anyFilled = true;
+        }
+        return anyFilled;
+    }
+
+    /** Fills handlers sequentially, skipping already-filled slots. */
+    private static void fillSequential(@Nullable List<PositionedStack> stacks, ItemStackHandler[] handlers) {
+        if (stacks == null || handlers.length == 0) return;
+        int h = 0;
+        for (PositionedStack positioned : stacks) {
+            ItemStack stack = firstItem(positioned);
+            if (stack == null || isFluidContainer(stack)) continue;
+            while (h < handlers.length && handlers[h].getStackInSlot(0) != null) h++;
+            if (h >= handlers.length) break;
+            stack.stackSize = 1;
+            handlers[h].setStackInSlot(0, stack);
+            h++;
         }
     }
 
@@ -696,6 +731,21 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         public int transferRecipe(GuiContainer gui, IRecipeHandler recipe, int recipeIndex, int multiplier) {
             screen.applyNeiRecipe(recipe, recipeIndex);
             return 0;
+        }
+
+        @Override
+        public List<GuiOverlayButton.ItemOverlayState> presenceOverlay(GuiContainer gui, IRecipeHandler recipe,
+            int recipeIndex) {
+            List<PositionedStack> ingredients = recipe.getIngredientStacks(recipeIndex);
+            if (ingredients == null) {
+                throw new IllegalArgumentException(
+                    "RecipeInputNeiContainer: ingredients list is null for recipe index " + recipeIndex);
+            }
+            List<GuiOverlayButton.ItemOverlayState> result = new ArrayList<>(ingredients.size());
+            for (PositionedStack stack : ingredients) {
+                result.add(new GuiOverlayButton.ItemOverlayState(stack, true));
+            }
+            return result;
         }
 
         @Override

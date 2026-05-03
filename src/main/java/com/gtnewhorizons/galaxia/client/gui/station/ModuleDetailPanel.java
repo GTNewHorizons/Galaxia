@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
+import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeListScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeSlotListWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
@@ -38,18 +39,22 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
     private int recipeBtnX = -1, recipeBtnY, recipeBtnW;
+    private int viewRecipeBtnX = -1, viewRecipeBtnY, viewRecipeBtnW;
 
     public ModuleDetailPanel(StationMapWidget map) {
         this.map = map;
         listenGuiAction((IGuiAction.MousePressed) button -> {
-            if (button != 0 || recipeBtnX < 0) return false;
+            if (button != 0) return false;
             StationTileCoord sel = map.selection();
             if (sel == null) return false;
             int mx = getContext().getAbsMouseX();
             int my = getContext().getAbsMouseY();
             int rx = mx - getArea().rx;
             int ry = my - getArea().ry;
-            if (rx >= recipeBtnX && rx <= recipeBtnX + recipeBtnW
+
+            // [Add Recipe] button
+            if (recipeBtnX >= 0 && rx >= recipeBtnX
+                && rx <= recipeBtnX + recipeBtnW
                 && ry >= recipeBtnY
                 && ry <= recipeBtnY + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) {
                 AutomatedFacility f = resolveFacility();
@@ -68,13 +73,36 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 }
                 return true;
             }
+
+            // [View Recipes] button
+            if (viewRecipeBtnX >= 0 && rx >= viewRecipeBtnX
+                && rx <= viewRecipeBtnX + viewRecipeBtnW
+                && ry >= viewRecipeBtnY
+                && ry <= viewRecipeBtnY + Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) {
+                AutomatedFacility f = resolveFacility();
+                if (f != null) {
+                    PlacedTile t = f.stationLayout()
+                        .get(sel);
+                    if (t != null && t.module() != null
+                        && t.module()
+                            .component() instanceof IRecipeModule) {
+                        RecipeListScreen.open(
+                            map.assetId(),
+                            f.modules()
+                                .indexOf(t.module()),
+                            t.module());
+                    }
+                }
+                return true;
+            }
+
             return false;
         });
     }
 
     @Override
     public boolean canHoverThrough() {
-        return recipeBtnX < 0;
+        return recipeBtnX < 0 && viewRecipeBtnX < 0;
     }
 
     @Override
@@ -188,8 +216,21 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             recipeBtnX = widget.addRecipeX;
             recipeBtnY = widget.addRecipeY;
             recipeBtnW = widget.addRecipeW;
+
+            // [View Recipes] button — right-aligned next to [Add Recipe]
+            FontRenderer fr2 = Minecraft.getMinecraft().fontRenderer;
+            String viewLabel = "[View Recipes]";
+            viewRecipeBtnX = x + width - CONTENT_PADDING - fr2.getStringWidth(viewLabel);
+            viewRecipeBtnY = widget.addRecipeY;
+            viewRecipeBtnW = fr2.getStringWidth(viewLabel);
+            fr2.drawStringWithShadow(
+                viewLabel,
+                viewRecipeBtnX,
+                viewRecipeBtnY,
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
         } else {
             recipeBtnX = -1;
+            viewRecipeBtnX = -1;
         }
     }
 
