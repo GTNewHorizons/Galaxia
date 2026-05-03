@@ -20,7 +20,6 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
 
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
@@ -33,6 +32,7 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.fluid.FluidInteractions;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
@@ -63,7 +63,6 @@ import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import gregtech.api.modularui2.GTGuiTextures;
-import gregtech.api.modularui2.GTGuiThemes;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTUtility;
 
@@ -93,7 +92,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     private final GTRecipeMapLayout layout;
     private final String title;
     private final @Nullable gregtech.api.recipe.RecipeMap<?> recipeMap;
-    private final @Nullable String neiTransferRectId;
+    private final String[] neiTransferIds;
     private GTRecipe[] allRecipes = new GTRecipe[0];
     private GTRecipeMapId mapId = GTRecipeMapId.INVALID;
     private RecipeIntentMatcher.Result match = new RecipeIntentMatcher.Result(
@@ -111,7 +110,16 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         pendingModuleIndex = moduleIndex;
         pendingModule = module;
         pendingReturnScreen = Minecraft.getMinecraft().currentScreen;
+        resetFactoryHolder();
         FACTORY.openClient();
+    }
+
+    private static void resetFactoryHolder() {
+        try {
+            Field field = SimpleGuiFactory.class.getDeclaredField("guiHolder");
+            field.setAccessible(true);
+            field.set(FACTORY, null);
+        } catch (ReflectiveOperationException ignored) {}
     }
 
     public RecipeInputScreen() {
@@ -120,8 +128,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         this.recipeMap = map;
         this.layout = GTRecipeMapLayout.fromRecipeMap(map);
         this.title = titleFor(map, pendingModule);
-        this.neiTransferRectId = map != null ? map.getFrontend()
-            .getUIProperties().neiTransferRectId : null;
+        this.neiTransferIds = neiTransferIds(map);
         if (map != null) {
             @SuppressWarnings("unchecked")
             List<GTRecipe> recipes = new ArrayList<>((Collection<GTRecipe>) (Collection<?>) map.getAllRecipes());
@@ -171,7 +178,6 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         int width = Math.max(GTRecipeMapLayout.DEFAULT_WIDTH, layout.width());
         int height = BODY_Y + layout.height() + FOOTER_H;
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_recipe_input", width, height)
-            .themeOverride(GTGuiThemes.STANDARD.getId())
             .disableThemeBackground(true)
             .disableHoverThemeBackground(true);
         ModuleInstance module = pendingModule;
@@ -221,6 +227,11 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
                 new PhantomItemSlot()
                     .slot(new ModularSlot(hard[index], 0).changeListener((stack, amount, client, init) -> {
                         if (init) return;
+                        if (isFluidContainer(stack)) {
+                            hard[index].setStackInSlot(0, null);
+                            onInputChanged();
+                            return;
+                        }
                         if (stack != null && stack.stackSize > 1) {
                             stack.stackSize = 1;
                             hard[index].setStackInSlot(0, stack);
@@ -246,13 +257,9 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
                     .background(GTGuiTextures.SLOT_FLUID_STANDARD, slot.overlay())
                     .pos(slot.x(), RECIPE_Y + slot.y())
                     .size(SLOT, SLOT));
-            FluidSlot ghostSlot = new FluidSlot().syncHandler(
-                new FluidSlotSyncHandler(ghost[index]).canFillSlot(false)
-                    .canDrainSlot(false))
-                .background(IDrawable.NONE)
-                .pos(slot.x(), RECIPE_Y + slot.y())
+            GhostFluidWidget ghostSlot = new GhostFluidWidget(ghost[index]);
+            ghostSlot.pos(slot.x(), RECIPE_Y + slot.y())
                 .size(SLOT, SLOT);
-            ghostSlot.setEnabled(false);
             panel.child(ghostSlot);
         }
     }
@@ -336,8 +343,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     private void clearGhosts() {
         for (ItemStackHandler handler : ghostItemInputs) handler.setStackInSlot(0, null);
         for (ItemStackHandler handler : ghostItemOutputs) handler.setStackInSlot(0, null);
-        for (FluidTank tank : ghostFluidInputs) tank.setFluid(null);
-        for (FluidTank tank : ghostFluidOutputs) tank.setFluid(null);
+        for (FluidTank tank : ghostFluidInputs) tank.drain(Integer.MAX_VALUE, true);
+        for (FluidTank tank : ghostFluidOutputs) tank.drain(Integer.MAX_VALUE, true);
     }
 
     private static void applyItemGhosts(ItemStack[] recipeStacks, ItemStackHandler[] hard, ItemStackHandler[] ghost) {
@@ -368,13 +375,13 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         return consumed;
     }
 
-    private static void applyFluidGhosts(FluidStack[] recipeStacks, FluidTank[] hard, FluidTank[] ghost) {
+    private void applyFluidGhosts(FluidStack[] recipeStacks, FluidTank[] hard, FluidTank[] ghost) {
         boolean[] consumed = consumeHardFluids(recipeStacks, hard);
         for (int i = 0; i < ghost.length; i++) {
             FluidStack recipe = recipeStacks != null && i < recipeStacks.length ? recipeStacks[i] : null;
             boolean alreadyProvided = i < consumed.length && consumed[i];
             if (recipe != null && hard[i].getFluid() == null && !alreadyProvided) {
-                ghost[i].setFluid(copyFluid(recipe));
+                ghost[i].fill(copyFluid(recipe), true);
             }
         }
     }
@@ -416,6 +423,14 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         FluidTank[] tanks = new FluidTank[count];
         for (int i = 0; i < count; i++) tanks[i] = new FluidTank(Integer.MAX_VALUE);
         return tanks;
+    }
+
+    private static boolean isFluidContainer(@Nullable ItemStack stack) {
+        if (stack == null) return false;
+        ItemStack one = stack.copy();
+        one.stackSize = 1;
+        FluidStack fluid = FluidInteractions.getFluidForItem(one);
+        return fluid != null && fluid.amount > 0;
     }
 
     private static boolean itemMatches(ItemStack hard, ItemStack recipeStack) {
@@ -495,6 +510,13 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         return Math.min(maxWidth, fr.getStringWidth(title) + TITLE_TAB_PADDING * 2 + TITLE_TEXT_PADDING * 2);
     }
 
+    private static String[] neiTransferIds(@Nullable gregtech.api.recipe.RecipeMap<?> map) {
+        if (map == null) return new String[0];
+        String name = map.unlocalizedName;
+        if (name == null || name.isEmpty()) return new String[0];
+        return new String[] { name };
+    }
+
     private static String titleFor(@Nullable gregtech.api.recipe.RecipeMap<?> map, @Nullable ModuleInstance module) {
         if (map != null) {
             String localized = StatCollector.translateToLocal(map.unlocalizedName);
@@ -505,8 +527,8 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
     }
 
     private void openNeiRecipeMap() {
-        if (neiTransferRectId != null) {
-            GuiCraftingRecipe.openRecipeGui(neiTransferRectId);
+        if (neiTransferIds.length > 0) {
+            GuiCraftingRecipe.openRecipeGui(neiTransferIds[0]);
         }
     }
 
@@ -524,7 +546,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         boolean[] used = new boolean[Math.min(slots.size(), handlers.length)];
         for (PositionedStack positioned : stacks) {
             ItemStack stack = firstItem(positioned);
-            if (stack == null) continue;
+            if (stack == null || isFluidContainer(stack)) continue;
             int slotIndex = findSlotFor(positioned, slots, used);
             if (slotIndex < 0 || slotIndex >= handlers.length) continue;
             used[slotIndex] = true;
@@ -580,11 +602,12 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
         GhostItemWidget(ItemStackHandler handler) {
             this.handler = handler;
+            disableHoverThemeBackground(true);
         }
 
         @Override
         public boolean canHoverThrough() {
-            return true;
+            return handler.getStackInSlot(0) == null;
         }
 
         @Override
@@ -593,24 +616,65 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
             if (stack == null) return;
             Minecraft mc = Minecraft.getMinecraft();
             if (mc == null || mc.fontRenderer == null || mc.getTextureManager() == null) return;
-            com.cleanroommc.modularui.utils.GlStateManager.pushMatrix();
-            com.cleanroommc.modularui.utils.GlStateManager.translate(1, 1, 200f);
-            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL11.glEnable(GL11.GL_ALPHA_TEST);
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            RenderHelper.enableGUIStandardItemLighting();
-            GL11.glEnable(GL11.GL_DEPTH_TEST);
             RenderItem renderItem = RenderItem.getInstance();
-            float previousZ = renderItem.zLevel;
+            float prevZ = renderItem.zLevel;
             renderItem.zLevel = 200f;
-            renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-            renderItem.zLevel = previousZ;
-            RenderHelper.disableStandardItemLighting();
-            GL11.glDisable(GL11.GL_DEPTH_TEST);
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            com.cleanroommc.modularui.utils.GlStateManager.popMatrix();
-            com.cleanroommc.modularui.drawable.GuiDraw.drawRect(1, 1, 16, 16, 0x66D8D8D8);
+            GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glColor4f(1f, 1f, 1f, 0.55f);
+            try {
+                RenderHelper.enableGUIStandardItemLighting();
+                renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 1, 1);
+                RenderHelper.disableStandardItemLighting();
+            } finally {
+                GL11.glPopAttrib();
+                GL11.glColor4f(1f, 1f, 1f, 1f);
+                renderItem.zLevel = prevZ;
+            }
+        }
+    }
+
+    private static final class GhostFluidWidget extends ParentWidget<GhostFluidWidget> {
+
+        private final FluidTank tank;
+
+        GhostFluidWidget(FluidTank tank) {
+            this.tank = tank;
+            background(IDrawable.NONE);
+            disableHoverThemeBackground(true);
+        }
+
+        @Override
+        public boolean canHover() {
+            return false;
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return true;
+        }
+
+        @Override
+        public boolean canClickThrough() {
+            return true;
+        }
+
+        @Override
+        public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+            FluidStack fluid = tank.getFluid();
+            if (fluid == null) return;
+            GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glColor4f(1f, 1f, 1f, 0.55f);
+            try {
+                com.cleanroommc.modularui.drawable.GuiDraw
+                    .drawFluidTexture(fluid, 1, 1, 16, 16, context.getCurrentDrawingZ());
+            } finally {
+                GL11.glPopAttrib();
+                GL11.glColor4f(1f, 1f, 1f, 1f);
+            }
         }
     }
 
@@ -625,7 +689,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
         @Override
         public String[] getIdents() {
-            return screen.neiTransferRectId != null ? new String[] { screen.neiTransferRectId } : new String[0];
+            return screen.neiTransferIds;
         }
 
         @Override
