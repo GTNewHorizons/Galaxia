@@ -1923,11 +1923,8 @@ public class OrbitalView {
                 transferState.updateHoveredTransfer(null, localMouseX, localMouseY);
                 clientSimulatedTransferState.updateHoveredTransfer(null, localMouseX, localMouseY);
             } else {
-                InterplanetaryTransferJob hoveredSimulatedTransfer = transferRenderer.findHoveredTransfer(
-                    clientSimulatedTransferState,
-                    globalTime,
-                    localMouseX,
-                    localMouseY);
+                InterplanetaryTransferJob hoveredSimulatedTransfer = transferRenderer
+                    .findHoveredTransfer(clientSimulatedTransferState, globalTime, localMouseX, localMouseY);
                 clientSimulatedTransferState.updateHoveredTransfer(hoveredSimulatedTransfer, localMouseX, localMouseY);
                 transferState.updateHoveredTransfer(
                     hoveredSimulatedTransfer == null
@@ -2001,7 +1998,8 @@ public class OrbitalView {
                 || transferSimulatorState.isWaitingForPick()) return null;
             InterplanetaryTransferJob simulatedTransfer = transferRenderer
                 .findHoveredTransfer(clientSimulatedTransferState, globalTime, mouseX, mouseY);
-            return simulatedTransfer == null ? transferRenderer.findHoveredTransfer(transferState, globalTime, mouseX, mouseY)
+            return simulatedTransfer == null
+                ? transferRenderer.findHoveredTransfer(transferState, globalTime, mouseX, mouseY)
                 : simulatedTransfer;
         }
 

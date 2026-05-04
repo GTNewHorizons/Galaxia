@@ -19,13 +19,17 @@ final class OrbitalTransferClientStateTest {
 
         state.pruneFinishedTransfers(19.9, 0.0);
 
-        assertEquals(1, state.transfers()
-            .size());
+        assertEquals(
+            1,
+            state.transfers()
+                .size());
 
         state.pruneFinishedTransfers(20.0, 0.0);
 
-        assertEquals(0, state.transfers()
-            .size());
+        assertEquals(
+            0,
+            state.transfers()
+                .size());
     }
 
     private static InterplanetaryTransferJob transfer(String id, double departureTime, double arrivalTime) {
