@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station.recipe;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,9 @@ final class RecipePickerScreenTest {
 
     @Test
     void pendingFields_initializedNull() {
-        if (!canTest) return;
+        assumeTrue(canTest, "RecipePickerScreen cannot be loaded in this test environment");
+        RecipePickerScreen.clearPending();
+
         assertNull(RecipePickerScreen.pendingSelection);
         assertNull(RecipePickerScreen.pendingCoord);
         assertNull(RecipePickerScreen.pendingAssetId);
@@ -35,7 +38,8 @@ final class RecipePickerScreenTest {
 
     @Test
     void open_setsPendingFields() {
-        if (!canTest) return;
+        assumeTrue(canTest, "RecipePickerScreen cannot be loaded in this test environment");
+        RecipePickerScreen.clearPending();
         var assetId = com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID.create();
         var coord = com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord.of((byte) 3, (byte) 5);
         RecipePickerScreen.open(assetId, coord);
@@ -46,7 +50,7 @@ final class RecipePickerScreenTest {
 
     @Test
     void clearPending_resetsFields() {
-        if (!canTest) return;
+        assumeTrue(canTest, "RecipePickerScreen cannot be loaded in this test environment");
         RecipePickerScreen.open(
             com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID.create(),
             com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord.of((byte) 1, (byte) 2));

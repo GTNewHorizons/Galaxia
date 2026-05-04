@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +8,19 @@ final class OrbitalTransferClientStateTest {
 
     @Test
     void simulatedTransferStateIsSharedAcrossGuiInstances() {
-        assertSame(OrbitalView.clientSimulatedTransferState(), OrbitalView.clientSimulatedTransferState());
+        InterplanetaryTransferSystem.OrbitalTransferState firstReference = OrbitalView.clientSimulatedTransferState();
+        InterplanetaryTransferSystem.OrbitalTransferState secondReference = OrbitalView.clientSimulatedTransferState();
+        firstReference.transfers()
+            .clear();
+
+        firstReference.addTransfer(transfer("sim:shared", 10.0, 20.0));
+
+        assertEquals(
+            1,
+            secondReference.transfers()
+                .size());
+        firstReference.transfers()
+            .clear();
     }
 
     @Test

@@ -1,18 +1,20 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import gregtech.api.recipe.RecipeMap;
 
 final class IRecipeModuleTest {
 
-    // Stub implementation for testing
     static final class StubRecipeModule implements IRecipeModule {
 
         private final RecipeMap<?> recipeMap;
@@ -39,67 +41,41 @@ final class IRecipeModuleTest {
     }
 
     @Test
-    void getRecipeMap_returnsSetValue() {
-        // RecipeMap is a GT5 type; we can't construct one in test environment.
-        // Verify the contract: getRecipeMap returns what was passed to constructor.
+    void defaultAdditionalNeiTransferIdentsIsEmpty() {
         StubRecipeModule module = new StubRecipeModule(null);
-        assertNull(module.getRecipeMap());
+
+        assertEquals(List.of(), module.getAdditionalNeiTransferIdents());
     }
 
     @Test
-    void getRecipeConfig_returnsNull_byDefault() {
+    void getNextSlotReturnsNegativeOneWhenConfigNull() {
         StubRecipeModule module = new StubRecipeModule(null);
-        assertNull(module.getRecipeConfig());
+
+        assertEquals(-1, module.getNextSlot(new Random(0)));
     }
 
     @Test
-    void setRecipeConfig_roundTrip() {
-        StubRecipeModule module = new StubRecipeModule(null);
-        RecipeConfig config = RecipeConfig.empty();
-        module.setRecipeConfig(config);
-        assertSame(config, module.getRecipeConfig());
-    }
-
-    @Test
-    void setRecipeConfig_overwritesPrevious() {
+    void getNextSlotReturnsNegativeOneWhenConfigHasNoSlots() {
         StubRecipeModule module = new StubRecipeModule(null);
         module.setRecipeConfig(RecipeConfig.empty());
-        RecipeConfig second = RecipeConfig.empty();
-        module.setRecipeConfig(second);
-        assertSame(second, module.getRecipeConfig());
-    }
 
-    @Test
-    void getNextSlot_returnsNegativeOne_whenConfigNull() {
-        StubRecipeModule module = new StubRecipeModule(null);
         assertEquals(-1, module.getNextSlot(new Random(0)));
     }
 
     @Test
-    void getNextSlot_delegatesToRecipeScheduler() {
-        StubRecipeModule module = new StubRecipeModule(null);
-        RecipeConfig config = RecipeConfig.empty();
-        module.setRecipeConfig(config);
-        // Empty config → no slots → should return -1
-        assertEquals(-1, module.getNextSlot(new Random(0)));
-    }
-
-    @Test
-    void getNextSlot_returnsSlotIndex_whenSlotsPresent() {
+    void getNextSlotDelegatesToRecipeSchedulerPrioritySelection() {
         StubRecipeModule module = new StubRecipeModule(null);
         module.setRecipeConfig(RecipeConfig.empty());
         RecipeConfig config = module.getRecipeConfig();
-        // Add a slot to the config's slot list
-        com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot slot = new com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot(
-            com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.unresolved((byte) 1, 0, 42L),
-            true,
-            0,
-            0,
-            (byte) 5,
-            (byte) 1);
         config.slots()
-            .add(slot);
-        // PRIORITY mode with one enabled slot → should return its index (0)
-        assertEquals(0, module.getNextSlot(new Random(0)));
+            .add(slot((byte) 1));
+        config.slots()
+            .add(slot((byte) 5));
+
+        assertEquals(1, module.getNextSlot(new Random(0)));
+    }
+
+    private static RecipeSlot slot(byte priority) {
+        return new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 42L), true, 0, 0, priority, (byte) 1);
     }
 }

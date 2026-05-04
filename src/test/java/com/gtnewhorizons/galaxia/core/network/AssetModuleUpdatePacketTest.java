@@ -249,6 +249,7 @@ final class AssetModuleUpdatePacketTest {
         AssetModuleUpdatePacket decoded = new AssetModuleUpdatePacket();
         decoded.fromBytes(buf);
         assertEquals(AssetModuleUpdatePacket.ConfigAction.SET_TIER, decoded.getConfigAction());
+        assertNull(decoded.getRawPayload());
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) {

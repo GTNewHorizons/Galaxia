@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
@@ -148,14 +149,15 @@ final class StationPacketRoundTripTest {
             client.modules()
                 .size(),
             "client should have no modules after remove");
-        // This assertion will FAIL with the old code because handleDelta(MODULE_REMOVED)
-        // didn't remove layout tiles. We just fixed it above.
-        assertTrue(
+        assertFalse(
             client.stationLayout()
-                .isOccupied(anchor) == false
-                || client.stationLayout()
-                    .size() == 1, // just CORE remains
-            "client layout must be cleaned up after MODULE_REMOVED");
+                .isOccupied(anchor),
+            "client layout must free the removed module anchor");
+        assertEquals(
+            1,
+            client.stationLayout()
+                .size(),
+            "client layout should keep only CORE after MODULE_REMOVED");
     }
 
     // ── Helpers ──
