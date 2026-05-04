@@ -12,9 +12,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -75,14 +76,16 @@ public final class CelestialClient {
 
     public static CelestialAsset createAssetInConstruction(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
-        return CelestialAssetStore.CLIENT
-            .createAssetInConstructionInternal(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
+        Galaxia.GALAXIA_NETWORK.sendToServer(
+            new AssetCreatePacket(celestialObjectId, displayName, kind, Buildable.Status.CONSTRUCTION_SITE));
+        return null;
     }
 
     public static CelestialAsset createOperationalAsset(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
-        return CelestialAssetStore.CLIENT
-            .createOperationalAssetInternal(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
+        Galaxia.GALAXIA_NETWORK
+            .sendToServer(new AssetCreatePacket(celestialObjectId, displayName, kind, Buildable.Status.OPERATIONAL));
+        return null;
     }
 
     // ── Logistics mirror ──

@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetRequestSyncPacket;
@@ -111,6 +112,7 @@ public final class Galaxia {
         GALAXIA_NETWORK.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++, Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(AssetRequestSyncPacket.Handler.class, AssetRequestSyncPacket.class, id++,
                 Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetCreatePacket.Handler.class, AssetCreatePacket.class, id++, Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetBuildModulePacket.Handler.class, AssetBuildModulePacket.class, id++,
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetModuleUpdatePacket.Handler.class, AssetModuleUpdatePacket.class, id++,
