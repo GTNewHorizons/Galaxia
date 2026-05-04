@@ -2,7 +2,9 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -12,87 +14,77 @@ import gregtech.api.util.GTRecipe;
 
 final class RecipeSlotPayloadValidator {
 
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
+
     private RecipeSlotPayloadValidator() {}
 
     static @Nullable RecipeSnapshot validate(@Nullable IRecipeModule module, @Nullable RecipeSnapshot snapshot) {
         if (snapshot == null) {
-            Galaxia.LOG.warn("[RecipeValidator] REJECTED: snapshot is null");
-            throw new IllegalArgumentException("RecipeSlotPayloadValidator: snapshot is null");
+            LOG.warn("[RecipeValidator] REJECTED: snapshot is null");
+            return null;
         }
 
         int mapOrdinal = Byte.toUnsignedInt(snapshot.recipeMapOrdinal());
         GTRecipeMapId[] ids = GTRecipeMapId.values();
         if (mapOrdinal <= GTRecipeMapId.INVALID.ordinal() || mapOrdinal >= ids.length) {
-            Galaxia.LOG.warn(
+            LOG.warn(
                 "[RecipeValidator] REJECTED: invalid recipeMapOrdinal {} (valid range 1..{})",
                 mapOrdinal,
                 ids.length - 1);
-            throw new IllegalArgumentException("RecipeSlotPayloadValidator: invalid recipeMapOrdinal " + mapOrdinal);
+            return null;
         }
 
         if (module == null) {
-            Galaxia.LOG.error("[RecipeValidator] REJECTED: module is null — server-side invariant broken");
-            throw new IllegalStateException("RecipeSlotPayloadValidator: module is null");
+            LOG.error("[RecipeValidator] REJECTED: module is null; server-side invariant broken");
+            return null;
         }
 
         GTRecipeMapId mapId = ids[mapOrdinal];
         RecipeMap<?> expectedMap = GTRecipeMapId.findRecipeMap(mapId);
         RecipeMap<?> moduleMap = module.getRecipeMap();
         if (expectedMap == null) {
-            Galaxia.LOG.error(
-                "[RecipeValidator] REJECTED: GTRecipeMapId.findRecipeMap({}) returned null — RecipeMap not registered",
+            LOG.error(
+                "[RecipeValidator] REJECTED: GTRecipeMapId.findRecipeMap({}) returned null; RecipeMap not registered",
                 mapId);
-            throw new IllegalStateException("RecipeSlotPayloadValidator: expectedMap is null for " + mapId);
+            return null;
         }
         if (moduleMap == null) {
-            Galaxia.LOG.error(
-                "[RecipeValidator] REJECTED: module.getRecipeMap() returned null — server-side invariant broken");
-            throw new IllegalStateException("RecipeSlotPayloadValidator: moduleMap is null");
+            LOG.error("[RecipeValidator] REJECTED: module.getRecipeMap() returned null; server-side invariant broken");
+            return null;
         }
         if (!expectedMap.unlocalizedName.equals(moduleMap.unlocalizedName)) {
-            Galaxia.LOG.warn(
-                "[RecipeValidator] REJECTED: recipe map name mismatch — expected='{}' actual='{}'",
+            LOG.warn(
+                "[RecipeValidator] REJECTED: recipe map name mismatch; expected='{}' actual='{}'",
                 expectedMap.unlocalizedName,
                 moduleMap.unlocalizedName);
-            throw new IllegalArgumentException(
-                "RecipeSlotPayloadValidator: recipe map name mismatch — expected='" + expectedMap.unlocalizedName
-                    + "' actual='"
-                    + moduleMap.unlocalizedName
-                    + "'");
+            return null;
         }
 
         GTRecipe[] recipes = GTRecipeMapId.getRecipes(mapId);
         int recipeIndex = snapshot.recipeIndex();
         if (recipes == null) {
-            Galaxia.LOG.error(
-                "[RecipeValidator] REJECTED: GTRecipeMapId.getRecipes({}) returned null — RecipeMap has no recipes",
+            LOG.error(
+                "[RecipeValidator] REJECTED: GTRecipeMapId.getRecipes({}) returned null; RecipeMap has no recipes",
                 mapId);
-            throw new IllegalStateException("RecipeSlotPayloadValidator: recipes array is null for " + mapId);
+            return null;
         }
         if (recipeIndex < 0 || recipeIndex >= recipes.length) {
-            Galaxia.LOG
-                .warn("[RecipeValidator] REJECTED: recipeIndex {} out of range [0, {})", recipeIndex, recipes.length);
-            throw new IllegalArgumentException(
-                "RecipeSlotPayloadValidator: recipeIndex " + recipeIndex + " out of range [0, " + recipes.length + ")");
+            LOG.warn("[RecipeValidator] REJECTED: recipeIndex {} out of range [0, {})", recipeIndex, recipes.length);
+            return null;
         }
 
         GTRecipe recipe = recipes[recipeIndex];
         if (recipe == null) {
-            Galaxia.LOG.error(
-                "[RecipeValidator] REJECTED: recipe at index {} is null — RecipeMap data corruption",
-                recipeIndex);
-            throw new IllegalStateException("RecipeSlotPayloadValidator: recipe at index " + recipeIndex + " is null");
+            LOG.error("[RecipeValidator] REJECTED: recipe at index {} is null; RecipeMap data corruption", recipeIndex);
+            return null;
         }
         if (recipe.mHidden) {
-            Galaxia.LOG
-                .warn("[RecipeValidator] REJECTED: recipe at index {} ({}) is hidden", recipeIndex, recipe.mHidden);
-            throw new IllegalArgumentException(
-                "RecipeSlotPayloadValidator: recipe at index " + recipeIndex + " is hidden");
+            LOG.warn("[RecipeValidator] REJECTED: recipe at index {} ({}) is hidden", recipeIndex, recipe.mHidden);
+            return null;
         }
         if (recipe.mFakeRecipe) {
-            Galaxia.LOG.warn("[RecipeValidator] REJECTED: recipe at index {} is a fake recipe", recipeIndex);
-            throw new IllegalArgumentException(
-                "RecipeSlotPayloadValidator: recipe at index " + recipeIndex + " is a fake recipe");
+            LOG.warn("[RecipeValidator] REJECTED: recipe at index {} is a fake recipe", recipeIndex);
+            return null;
         }
 
         long expectedHash = RecipeSnapshot.computeContentHash(
@@ -104,20 +96,13 @@ final class RecipeSlotPayloadValidator {
             recipe.mEUt);
         long clientHash = snapshot.contentHash();
         if (expectedHash != clientHash) {
-            Galaxia.LOG.warn(
-                "[RecipeValidator] REJECTED: contentHash mismatch — client={} server={} (map={} index={})",
+            LOG.warn(
+                "[RecipeValidator] REJECTED: contentHash mismatch; client={} server={} (map={} index={})",
                 clientHash,
                 expectedHash,
                 mapId,
                 recipeIndex);
-            throw new IllegalArgumentException(
-                "RecipeSlotPayloadValidator: contentHash mismatch — client=" + clientHash
-                    + " server="
-                    + expectedHash
-                    + " map="
-                    + mapId
-                    + " index="
-                    + recipeIndex);
+            return null;
         }
 
         return RecipeSnapshot.resolved(snapshot.recipeMapOrdinal(), recipeIndex, recipe);

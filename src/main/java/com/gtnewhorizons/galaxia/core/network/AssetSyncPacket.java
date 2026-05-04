@@ -56,6 +56,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LOGISTICS_CONFIG_REMOVED = 7;
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte LAYOUT_TILE_REMOVED = 9;
+    public static final byte ASSET_REMOVED = 10;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -150,6 +151,13 @@ public final class AssetSyncPacket implements IMessage {
         pkt.energyStored = 0L;
 
         pkt.fullSyncDeltas = new ArrayList<>();
+        return pkt;
+    }
+
+    public static AssetSyncPacket assetRemoved(CelestialAsset.ID assetId) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = ASSET_REMOVED;
         return pkt;
     }
 
@@ -680,6 +688,7 @@ public final class AssetSyncPacket implements IMessage {
         @SideOnly(Side.CLIENT)
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
+                case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
                     if (CelestialAssetStore.CLIENT

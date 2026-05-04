@@ -78,7 +78,7 @@ final class StationBuildWorkflowTest {
         StationTileCoord anchor = StationTileCoord.of(1, 0);
         assertSame(StationPlacementValidator.Result.OK, StationPlacementValidator.validate(layout, anchor));
 
-        // Simulate what AssetBuildModulePacket.Handler does on server
+        // Simulate what StarmapServerActions does on server
         ModuleInstance module = buildModuleOnServer(facility, FacilityModuleKind.STORAGE, anchor);
 
         assertNotNull(module, "module must be created");
@@ -194,7 +194,7 @@ final class StationBuildWorkflowTest {
             Buildable.Status.OPERATIONAL);
     }
 
-    /** Simulates what AssetBuildModulePacket.Handler does server-side. */
+    /** Simulates what StarmapServerActions does server-side. */
     private static ModuleInstance buildModuleOnServer(AutomatedFacility facility, FacilityModuleKind kind,
         StationTileCoord anchor) {
         return buildModuleOnServer(facility, kind, anchor, ModuleShape.SINGLE);

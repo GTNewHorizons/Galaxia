@@ -1,22 +1,24 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import net.minecraft.entity.player.EntityPlayerMP;
+import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.client.CelestialClient;
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-import cpw.mods.fml.common.network.simpleimpl.IMessage;
-import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
-import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-public final class AssetInventoryUpdatePacket implements IMessage {
+public final class AssetInventoryUpdatePacket {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private CelestialAsset.ID assetId;
     private String resourceKey;
+    private ItemStackWrapper resource;
     private long delta;
     private boolean creativeOnly;
 
@@ -26,6 +28,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
         pkt.assetId = assetId;
         pkt.resourceKey = resource.toKey();
+        pkt.resource = resource;
         pkt.delta = amount;
         pkt.creativeOnly = true;
         return pkt;
@@ -35,6 +38,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
         pkt.assetId = assetId;
         pkt.resourceKey = resource.toKey();
+        pkt.resource = resource;
         pkt.delta = Long.MIN_VALUE;
         pkt.creativeOnly = false;
         return pkt;
@@ -45,12 +49,12 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
         pkt.assetId = assetId;
         pkt.resourceKey = resource.toKey();
+        pkt.resource = resource;
         pkt.delta = -amount;
         pkt.creativeOnly = false;
         return pkt;
     }
 
-    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeString(buf, resourceKey);
@@ -58,7 +62,6 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         buf.writeBoolean(creativeOnly);
     }
 
-    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         resourceKey = PacketUtil.readString(buf);
@@ -66,69 +69,44 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         creativeOnly = buf.readBoolean();
     }
 
-    public static final class Handler implements IMessageHandler<AssetInventoryUpdatePacket, IMessage> {
-
-        @Override
-        public IMessage onMessage(AssetInventoryUpdatePacket packet, MessageContext ctx) {
-            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (player == null) return null;
-
-            String playerName = player.getGameProfile()
-                .getName();
-
-            // TODO: Figure out if this path will be only used in creative. If not remove this check and maybe make
-            // a factory method that checks for creative mode
-            if (packet.creativeOnly && !player.capabilities.isCreativeMode) {
-                Galaxia.LOG.warn("[Logistics] InventoryDelta rejected: player {} is not in creative mode.", playerName);
-                return null;
-            }
-
-            if (packet.creativeOnly && packet.delta <= 0) {
-                Galaxia.LOG.warn(
-                    "[Logistics] InventoryDelta rejected: invalid amount {} from player {}",
-                    packet.delta,
-                    playerName);
-                return null;
-            }
-
-            AutomatedFacility state = CelestialClient.getByAssetId(packet.assetId) instanceof AutomatedFacility o ? o
-                : null;
-            if (state == null) {
-                Galaxia.LOG
-                    .warn("[Logistics] InventoryDelta: unknown assetId {} from player {}", packet.assetId, playerName);
-                return null;
-            }
-
-            ItemStackWrapper resource = ItemStackWrapper.fromKey(packet.resourceKey);
-            if (resource == null) return null;
-
-            if (packet.delta == Long.MIN_VALUE) {
-                long amount = state.inventory.getAmount(resource);
-                if (amount > 0) {
-                    state.inventory.add(resource, -amount);
-                    Galaxia.LOG.info(
-                        "[Logistics] Removed {} x {} from outpost {} (by {})",
-                        amount,
-                        resource,
-                        packet.assetId,
-                        playerName);
-                    return AssetSyncPacket.inventoryUpdate(packet.assetId, packet.resourceKey, -amount);
-                }
-            } else {
-                long effectiveDelta = packet.delta;
-                if (packet.creativeOnly) {
-                    effectiveDelta = Math.min(packet.delta, Integer.MAX_VALUE);
-                }
-                state.inventory.add(resource, effectiveDelta);
-                Galaxia.LOG.info(
-                    "[Logistics] Inventory update: {} x {} on outpost {} (by {})",
-                    effectiveDelta,
-                    resource,
-                    packet.assetId,
-                    playerName);
-                return AssetSyncPacket.inventoryUpdate(packet.assetId, packet.resourceKey, effectiveDelta);
-            }
+    public static AssetSyncPacket apply(UUID teamId, boolean creativePlayer, AssetInventoryUpdatePacket packet) {
+        if (packet.creativeOnly && !creativePlayer) {
+            LOG.warn("[Logistics] InventoryDelta rejected: player is not in creative mode.");
             return null;
         }
+
+        if (packet.creativeOnly && packet.delta <= 0) {
+            LOG.warn("[Logistics] InventoryDelta rejected: invalid amount {}", packet.delta);
+            return null;
+        }
+
+        AutomatedFacility state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedFacility o ? o
+            : null;
+        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, packet.assetId)) {
+            LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", packet.assetId);
+            return null;
+        }
+
+        ItemStackWrapper resource = packet.resource != null ? packet.resource
+            : ItemStackWrapper.fromKey(packet.resourceKey);
+        if (resource == null) return null;
+
+        if (packet.delta == Long.MIN_VALUE) {
+            long amount = state.inventory.getAmount(resource);
+            if (amount > 0) {
+                state.inventory.add(resource, -amount);
+                LOG.info("[Logistics] Removed {} x {} from outpost {}", amount, resource, packet.assetId);
+                return AssetSyncPacket.inventoryUpdate(packet.assetId, packet.resourceKey, -amount);
+            }
+        } else {
+            long effectiveDelta = packet.delta;
+            if (packet.creativeOnly) {
+                effectiveDelta = Math.min(packet.delta, Integer.MAX_VALUE);
+            }
+            state.inventory.add(resource, effectiveDelta);
+            LOG.info("[Logistics] Inventory update: {} x {} on outpost {}", effectiveDelta, resource, packet.assetId);
+            return AssetSyncPacket.inventoryUpdate(packet.assetId, packet.resourceKey, effectiveDelta);
+        }
+        return null;
     }
 }

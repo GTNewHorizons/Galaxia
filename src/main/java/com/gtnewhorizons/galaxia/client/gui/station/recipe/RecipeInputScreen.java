@@ -48,6 +48,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
+import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -173,6 +174,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
     @Override
     public ModularPanel buildUI(GuiData gd, PanelSyncManager sm, UISettings s) {
+        sm.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         s.getRecipeViewerSettings()
             .enable();
         s.customContainer(() -> new RecipeInputNeiContainer(this));

@@ -27,7 +27,12 @@ public final class StarmapServerActions {
         }
         return switch (payload.action()) {
             case CREATE_ASSET -> createAsset(teamId, payload);
+            case DESTROY_ASSET -> destroyAsset(teamId, payload);
+            case RENAME_ASSET -> renameAsset(teamId, payload);
+            case CANCEL_CONSTRUCTION -> cancelConstruction(teamId, payload);
+            case START_DECONSTRUCTION -> startDeconstruction(teamId, payload);
             case BUILD_MODULE -> buildModule(teamId, payload);
+            case REQUEST_FULL_SYNC -> requestFullSync(teamId, payload);
             default -> StarmapActionResult.rejected("unsupported_action");
         };
     }
@@ -38,6 +43,46 @@ public final class StarmapServerActions {
                 .createOperationalAsset(teamId, payload.bodyId(), payload.displayName(), payload.assetKind())
             : CelestialAssetStore
                 .createAssetInConstruction(teamId, payload.bodyId(), payload.displayName(), payload.assetKind());
+        return StarmapActionResult.applied(AssetSyncPacket.fullSync(asset));
+    }
+
+    private static StarmapActionResult destroyAsset(UUID teamId, StarmapActionPayload payload) {
+        CelestialAsset asset = findOwnedAsset(teamId, payload.assetId());
+        if (asset == null) return StarmapActionResult.rejected("missing_or_unauthorized");
+        return CelestialAssetStore.destroyAsset(payload.assetId())
+            ? StarmapActionResult.applied(AssetSyncPacket.assetRemoved(payload.assetId()))
+            : StarmapActionResult.rejected("destroy_failed");
+    }
+
+    private static StarmapActionResult renameAsset(UUID teamId, StarmapActionPayload payload) {
+        CelestialAsset asset = findOwnedAsset(teamId, payload.assetId());
+        if (asset == null) return StarmapActionResult.rejected("missing_or_unauthorized");
+        if (!CelestialAssetStore.renameAsset(payload.assetId(), payload.displayName())) {
+            return StarmapActionResult.rejected("rename_failed");
+        }
+        return StarmapActionResult.applied(AssetSyncPacket.fullSync(asset));
+    }
+
+    private static StarmapActionResult cancelConstruction(UUID teamId, StarmapActionPayload payload) {
+        CelestialAsset asset = findOwnedAsset(teamId, payload.assetId());
+        if (asset == null) return StarmapActionResult.rejected("missing_or_unauthorized");
+        return CelestialAssetStore.cancelConstruction(payload.assetId())
+            ? StarmapActionResult.applied(AssetSyncPacket.assetRemoved(payload.assetId()))
+            : StarmapActionResult.rejected("cancel_failed");
+    }
+
+    private static StarmapActionResult startDeconstruction(UUID teamId, StarmapActionPayload payload) {
+        CelestialAsset asset = findOwnedAsset(teamId, payload.assetId());
+        if (asset == null) return StarmapActionResult.rejected("missing_or_unauthorized");
+        if (!CelestialAssetStore.startDeconstruction(payload.assetId())) {
+            return StarmapActionResult.rejected("deconstruction_failed");
+        }
+        return StarmapActionResult.applied(AssetSyncPacket.fullSync(asset));
+    }
+
+    private static StarmapActionResult requestFullSync(UUID teamId, StarmapActionPayload payload) {
+        CelestialAsset asset = findOwnedAsset(teamId, payload.assetId());
+        if (asset == null) return StarmapActionResult.rejected("missing_or_unauthorized");
         return StarmapActionResult.applied(AssetSyncPacket.fullSync(asset));
     }
 
@@ -93,5 +138,11 @@ public final class StarmapServerActions {
         }
 
         return StarmapActionResult.applied(AssetSyncPacket.fullSync(facility));
+    }
+
+    private static CelestialAsset findOwnedAsset(UUID teamId, CelestialAsset.ID assetId) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
+        if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) return null;
+        return asset;
     }
 }

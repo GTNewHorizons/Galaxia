@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -51,33 +50,6 @@ final class StationPacketRoundTripTest {
     void cleanStoresAfter() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
-    }
-
-    // ── Packet round-trip ──
-
-    @Test
-    void assetBuildModulePacketRoundTrip() {
-        CelestialAsset.ID assetId = CelestialAsset.ID.create();
-        FacilityModuleKind kind = FacilityModuleKind.STORAGE;
-        ModuleShape shape = ModuleShape.SINGLE;
-        ModuleTier tier = ModuleTier.HV;
-        boolean instantBuild = false;
-        StationTileCoord coord = StationTileCoord.of(5, 5);
-
-        AssetBuildModulePacket pkt = new AssetBuildModulePacket(assetId, kind, shape, tier, instantBuild, coord);
-
-        var buf = Unpooled.buffer();
-        pkt.toBytes(buf);
-
-        AssetBuildModulePacket decoded = new AssetBuildModulePacket();
-        decoded.fromBytes(buf);
-
-        assertEquals(assetId.toString(), decoded.assetId.toString());
-        assertEquals(kind, decoded.moduleKind);
-        assertEquals(shape, decoded.shape);
-        assertEquals(tier, decoded.tier);
-        assertEquals(instantBuild, decoded.instantBuild);
-        assertEquals(coord, decoded.tileCoord);
     }
 
     @Test

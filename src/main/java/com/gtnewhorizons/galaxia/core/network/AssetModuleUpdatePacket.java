@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Function;
 
 import net.minecraft.item.Item;
@@ -9,8 +10,9 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -29,12 +31,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 
-import cpw.mods.fml.common.network.simpleimpl.IMessage;
-import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
-import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-public final class AssetModuleUpdatePacket implements IMessage {
+public final class AssetModuleUpdatePacket {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private static final int ACTION_TYPE = 0;
     private static final int CONFIG_TYPE = 1;
@@ -175,7 +176,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         REMOVE_RECIPE_SLOT
     }
 
-    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         buf.writeInt(moduleIndex);
@@ -186,7 +186,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         } else if (type == CONFIG_TYPE) {
             PacketUtil.writeEnum(buf, configAction);
         } else {
-            Galaxia.LOG.warn("[Network] Writing AssetModuleUpdatePacket with unknown type: {}", type);
+            LOG.warn("[Network] Writing AssetModuleUpdatePacket with unknown type: {}", type);
             buf.writeByte(0);
         }
 
@@ -209,7 +209,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
         }
     }
 
-    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         moduleIndex = buf.readInt();
@@ -220,20 +219,18 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (type == ACTION_TYPE) {
             action = PacketUtil.enumFromByte(rawAction, Action.class);
             if (action == null) {
-                Galaxia.LOG
-                    .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown action ordinal: {}", rawAction);
+                LOG.warn("[Network] Ignoring AssetModuleUpdatePacket with unknown action ordinal: {}", rawAction);
             }
             return;
         }
         if (type != CONFIG_TYPE) {
-            Galaxia.LOG.warn("[Network] Ignoring AssetModuleUpdatePacket with unknown type: {}", type);
+            LOG.warn("[Network] Ignoring AssetModuleUpdatePacket with unknown type: {}", type);
             return;
         }
 
         configAction = PacketUtil.enumFromByte(rawAction, ConfigAction.class);
         if (configAction == null) {
-            Galaxia.LOG
-                .warn("[Network] Ignoring AssetModuleUpdatePacket with unknown config action ordinal: {}", rawAction);
+            LOG.warn("[Network] Ignoring AssetModuleUpdatePacket with unknown config action ordinal: {}", rawAction);
             return;
         }
 
@@ -281,234 +278,228 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return rawPayload;
     }
 
-    public static final class Handler implements IMessageHandler<AssetModuleUpdatePacket, IMessage> {
+    public static AssetSyncPacket apply(UUID teamId, AssetModuleUpdatePacket packet) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
+        if (!(asset instanceof AutomatedFacility state)) return null;
+        if (!CelestialAssetStore.isOwnedBy(teamId, packet.assetId)) return null;
+        if (packet.type == ACTION_TYPE && packet.action == null) return null;
+        if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
 
-        @Override
-        public IMessage onMessage(AssetModuleUpdatePacket packet, MessageContext ctx) {
-            if (ctx.getServerHandler() == null || ctx.getServerHandler().playerEntity == null) return null;
+        var modules = state.modules();
+        packet.moduleIndex = state.moduleIndex(packet.moduleId);
+        if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
 
-            CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
-            if (!(asset instanceof AutomatedFacility state)) return null;
-            if (!CelestialAssetStore
-                .isOwnedBy(TempTeamCompat.getTeam(ctx.getServerHandler().playerEntity), packet.assetId)) return null;
-            if (packet.type == ACTION_TYPE && packet.action == null) return null;
-            if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
+        ModuleInstance module = modules.get(packet.moduleIndex);
+        if (!packet.moduleId.equals(module.id)) return null;
 
-            var modules = state.modules();
-            packet.moduleIndex = state.moduleIndex(packet.moduleId);
-            if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
-
-            ModuleInstance module = modules.get(packet.moduleIndex);
-            if (!packet.moduleId.equals(module.id)) return null;
-
-            switch (packet.type) {
-                case ACTION_TYPE -> handleAction(packet, state, module);
-                case CONFIG_TYPE -> handleConfig(packet, state, module);
-                default -> {
-                    return null;
-                }
+        switch (packet.type) {
+            case ACTION_TYPE -> handleAction(packet, state, module);
+            case CONFIG_TYPE -> handleConfig(packet, state, module);
+            default -> {
+                return null;
             }
+        }
 
-            if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
-                return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id)
-                    .withSyncRevision(state.getSyncRevision());
-            }
-            state.markModuleDirty(module.id);
-            return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module)
+        if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
+            return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id)
                 .withSyncRevision(state.getSyncRevision());
         }
+        state.markModuleDirty(module.id);
+        return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module)
+            .withSyncRevision(state.getSyncRevision());
+    }
 
-        private void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
-            switch (packet.getAction()) {
-                case ENABLE -> {
-                    if (module.status() == Buildable.Status.DISABLED) {
-                        module.updateStatus(Buildable.Status.OPERATIONAL);
-                    }
+    private static void handleAction(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
+        switch (packet.getAction()) {
+            case ENABLE -> {
+                if (module.status() == Buildable.Status.DISABLED) {
+                    module.updateStatus(Buildable.Status.OPERATIONAL);
                 }
-                case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
-                case DESTROY -> state.removeModule(module.id);
             }
+            case DISABLE -> module.updateStatus(Buildable.Status.DISABLED);
+            case DESTROY -> state.removeModule(module.id);
         }
+    }
 
-        private void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
-            switch (packet.getConfigAction()) {
-                case ADD_MINER_BLACKLIST -> handleMinerBlacklist(
-                    module,
-                    packet.getStringPayload(),
-                    true,
-                    state,
-                    packet.moduleIndex);
-                case REMOVE_MINER_BLACKLIST -> handleMinerBlacklist(
-                    module,
-                    packet.getStringPayload(),
-                    false,
-                    state,
-                    packet.moduleIndex);
-                case SET_MINER_COPY_SETTINGS -> handleMinerCopySettings(
-                    module,
-                    packet.getBooleanPayload(),
-                    state,
-                    packet.moduleIndex);
-                case SET_ALLOW_SHOOTING_MODE -> handleHammerConfig(module, h -> {
-                    AllowShootingConfig.Mode mode = packet.getEnumPayload(AllowShootingConfig.Mode.class);
-                    return new AllowShootingConfig(
-                        mode,
-                        h.config()
-                            .threshold());
-                });
-                case SET_ALLOW_SHOOTING_THRESHOLD -> handleHammerConfig(
-                    module,
-                    h -> new AllowShootingConfig(
-                        h.config()
-                            .mode(),
-                        packet.getDoublePayload()));
-                case SET_PLANETARY_HANDLING -> {
-                    if (module.component() instanceof ModuleHammer hammer) {
-                        hammer.setPlanetaryHandling(packet.getBooleanPayload());
-                    }
+    private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
+        switch (packet.getConfigAction()) {
+            case ADD_MINER_BLACKLIST -> handleMinerBlacklist(
+                module,
+                packet.getStringPayload(),
+                true,
+                state,
+                packet.moduleIndex);
+            case REMOVE_MINER_BLACKLIST -> handleMinerBlacklist(
+                module,
+                packet.getStringPayload(),
+                false,
+                state,
+                packet.moduleIndex);
+            case SET_MINER_COPY_SETTINGS -> handleMinerCopySettings(
+                module,
+                packet.getBooleanPayload(),
+                state,
+                packet.moduleIndex);
+            case SET_ALLOW_SHOOTING_MODE -> handleHammerConfig(module, h -> {
+                AllowShootingConfig.Mode mode = packet.getEnumPayload(AllowShootingConfig.Mode.class);
+                return new AllowShootingConfig(
+                    mode,
+                    h.config()
+                        .threshold());
+            });
+            case SET_ALLOW_SHOOTING_THRESHOLD -> handleHammerConfig(
+                module,
+                h -> new AllowShootingConfig(
+                    h.config()
+                        .mode(),
+                    packet.getDoublePayload()));
+            case SET_PLANETARY_HANDLING -> {
+                if (module.component() instanceof ModuleHammer hammer) {
+                    hammer.setPlanetaryHandling(packet.getBooleanPayload());
                 }
-                case SET_ROUTE_PRIORITY -> {
-                    if (!(module.component() instanceof ModuleHammer hammer)) return;
-                    OrbitalTransferPlanner.RoutePriority priority = packet
-                        .getEnumPayload(OrbitalTransferPlanner.RoutePriority.class);
-                    if (priority == null) return;
-                    hammer.setRoutePriority(priority);
-                }
-                case SET_TIER -> {
-                    ModuleTier tier = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModuleTier.class);
-                    if (tier == null || !module.kind()
-                        .allowedTiers()
-                        .contains(tier)) {
-                        Galaxia.LOG.warn(
-                            "[Outpost] ModuleUpdate: rejected tier {} for {} on {}",
-                            tier,
-                            module.kind(),
-                            packet.assetId);
-                        return;
-                    }
-                    module.setTier(tier);
-                    state.layoutCache()
-                        .applyMutation(MutationKind.SET_TIER, module.kind(), module);
-                }
-                case SET_PRIORITY -> {
-                    ModulePriority priority = PacketUtil
-                        .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModulePriority.class);
-                    if (priority != null) module.setPriorityOverride(priority);
-                }
-                case SET_ENABLED -> {
-                    module.setEnabled(packet.getBooleanPayload());
-                    state.layoutCache()
-                        .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
-                }
-                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
             }
+            case SET_ROUTE_PRIORITY -> {
+                if (!(module.component() instanceof ModuleHammer hammer)) return;
+                OrbitalTransferPlanner.RoutePriority priority = packet
+                    .getEnumPayload(OrbitalTransferPlanner.RoutePriority.class);
+                if (priority == null) return;
+                hammer.setRoutePriority(priority);
+            }
+            case SET_TIER -> {
+                ModuleTier tier = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModuleTier.class);
+                if (tier == null || !module.kind()
+                    .allowedTiers()
+                    .contains(tier)) {
+                    LOG.warn(
+                        "[Outpost] ModuleUpdate: rejected tier {} for {} on {}",
+                        tier,
+                        module.kind(),
+                        packet.assetId);
+                    return;
+                }
+                module.setTier(tier);
+                state.layoutCache()
+                    .applyMutation(MutationKind.SET_TIER, module.kind(), module);
+            }
+            case SET_PRIORITY -> {
+                ModulePriority priority = PacketUtil
+                    .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), ModulePriority.class);
+                if (priority != null) module.setPriorityOverride(priority);
+            }
+            case SET_ENABLED -> {
+                module.setEnabled(packet.getBooleanPayload());
+                state.layoutCache()
+                    .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
+            }
+            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
+    }
 
-        private void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
-            if (!(module.component() instanceof IRecipeModule recipeModule)) return;
-            if (packet.rawPayload == null) return;
+    private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) return;
+        if (packet.rawPayload == null) return;
 
-            io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
-            int slotIndex = Byte.toUnsignedInt(payloadBuf.readByte());
-            if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) return;
+        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
+        int slotIndex = Byte.toUnsignedInt(payloadBuf.readByte());
+        if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) return;
 
-            RecipeConfig config = recipeModule.getRecipeConfig();
-            ConfigAction action = packet.getConfigAction();
+        RecipeConfig config = recipeModule.getRecipeConfig();
+        ConfigAction action = packet.getConfigAction();
 
-            if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
-                if (config == null) return;
-                if (config.slots()
-                    .getOrNull(slotIndex) == null) return;
-                config.slots()
-                    .remove(slotIndex);
-                state.markModuleDirty(module.id);
-                return;
-            }
-
-            // ADD or UPDATE: decode RecipeSlot from payload
-            if (packet.rawPayload.length < 25) return;
-            byte recipeMapOrdinal = payloadBuf.readByte();
-            int recipeIndex = payloadBuf.readInt();
-            long contentHash = payloadBuf.readLong();
-            RecipeSnapshot ref;
-            boolean enabled;
-            int inputGuard;
-            int outputGuard;
-            byte priority;
-            byte orderSize;
-            if (packet.rawPayload.length == 25) {
-                enabled = payloadBuf.readBoolean();
-                inputGuard = payloadBuf.readInt();
-                outputGuard = payloadBuf.readInt();
-                priority = payloadBuf.readByte();
-                orderSize = payloadBuf.readByte();
-                ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
-            } else {
-                int duration = payloadBuf.readInt();
-                int eut = payloadBuf.readInt();
-                ItemStack[] inputs = readItemStacks(payloadBuf);
-                ItemStack[] outputs = readItemStacks(payloadBuf);
-                FluidStack[] fluidInputs = readFluidStacks(payloadBuf);
-                FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
-                enabled = payloadBuf.readBoolean();
-                inputGuard = payloadBuf.readInt();
-                outputGuard = payloadBuf.readInt();
-                priority = payloadBuf.readByte();
-                orderSize = payloadBuf.readByte();
-                ref = new RecipeSnapshot(
-                    recipeMapOrdinal,
-                    recipeIndex,
-                    contentHash,
-                    inputs,
-                    outputs,
-                    fluidInputs,
-                    fluidOutputs,
-                    duration,
-                    eut);
-            }
-            RecipeSnapshot validated = RecipeSlotPayloadValidator.validate(recipeModule, ref);
-            if (validated == null) return;
-            RecipeSlot slot = new RecipeSlot(validated, enabled, inputGuard, outputGuard, priority, orderSize);
-
-            if (config == null) {
-                config = RecipeConfig.empty();
-                recipeModule.setRecipeConfig(config);
-            }
-
+        if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
+            if (config == null) return;
+            if (config.slots()
+                .getOrNull(slotIndex) == null) return;
             config.slots()
-                .set(slotIndex, slot);
+                .remove(slotIndex);
             state.markModuleDirty(module.id);
+            return;
         }
 
-        private void handleMinerBlacklist(ModuleInstance module, String payload, boolean add, AutomatedFacility state,
-            int moduleIndex) {
-            if (!(module.component() instanceof ModuleMiner miner)) return;
-            if (add) {
-                miner.addToBlacklist(payload);
-            } else {
-                miner.removeFromBlacklist(payload);
-            }
-            if (miner.copySettingsToOtherMiners()) {
-                copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
-            }
+        // ADD or UPDATE: decode RecipeSlot from payload
+        if (packet.rawPayload.length < 25) return;
+        byte recipeMapOrdinal = payloadBuf.readByte();
+        int recipeIndex = payloadBuf.readInt();
+        long contentHash = payloadBuf.readLong();
+        RecipeSnapshot ref;
+        boolean enabled;
+        int inputGuard;
+        int outputGuard;
+        byte priority;
+        byte orderSize;
+        if (packet.rawPayload.length == 25) {
+            enabled = payloadBuf.readBoolean();
+            inputGuard = payloadBuf.readInt();
+            outputGuard = payloadBuf.readInt();
+            priority = payloadBuf.readByte();
+            orderSize = payloadBuf.readByte();
+            ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
+        } else {
+            int duration = payloadBuf.readInt();
+            int eut = payloadBuf.readInt();
+            ItemStack[] inputs = readItemStacks(payloadBuf);
+            ItemStack[] outputs = readItemStacks(payloadBuf);
+            FluidStack[] fluidInputs = readFluidStacks(payloadBuf);
+            FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
+            enabled = payloadBuf.readBoolean();
+            inputGuard = payloadBuf.readInt();
+            outputGuard = payloadBuf.readInt();
+            priority = payloadBuf.readByte();
+            orderSize = payloadBuf.readByte();
+            ref = new RecipeSnapshot(
+                recipeMapOrdinal,
+                recipeIndex,
+                contentHash,
+                inputs,
+                outputs,
+                fluidInputs,
+                fluidOutputs,
+                duration,
+                eut);
+        }
+        RecipeSnapshot validated = RecipeSlotPayloadValidator.validate(recipeModule, ref);
+        if (validated == null) return;
+        RecipeSlot slot = new RecipeSlot(validated, enabled, inputGuard, outputGuard, priority, orderSize);
+
+        if (config == null) {
+            config = RecipeConfig.empty();
+            recipeModule.setRecipeConfig(config);
         }
 
-        private void handleMinerCopySettings(ModuleInstance module, boolean payload, AutomatedFacility state,
-            int moduleIndex) {
-            if (!(module.component() instanceof ModuleMiner miner)) return;
-            miner.setCopySettingToOtherMiners(payload);
-            if (payload) {
-                copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
-            }
-        }
+        config.slots()
+            .set(slotIndex, slot);
+        state.markModuleDirty(module.id);
+    }
 
-        private void handleHammerConfig(ModuleInstance module,
-            Function<ModuleHammer, AllowShootingConfig> configUpdater) {
-            if (!(module.component() instanceof ModuleHammer hammer)) return;
-            AllowShootingConfig newConfig = configUpdater.apply(hammer);
-            if (newConfig != null) {
-                hammer.setConfig(newConfig);
-            }
+    private static void handleMinerBlacklist(ModuleInstance module, String payload, boolean add,
+        AutomatedFacility state, int moduleIndex) {
+        if (!(module.component() instanceof ModuleMiner miner)) return;
+        if (add) {
+            miner.addToBlacklist(payload);
+        } else {
+            miner.removeFromBlacklist(payload);
+        }
+        if (miner.copySettingsToOtherMiners()) {
+            copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
+        }
+    }
+
+    private static void handleMinerCopySettings(ModuleInstance module, boolean payload, AutomatedFacility state,
+        int moduleIndex) {
+        if (!(module.component() instanceof ModuleMiner miner)) return;
+        miner.setCopySettingToOtherMiners(payload);
+        if (payload) {
+            copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
+        }
+    }
+
+    private static void handleHammerConfig(ModuleInstance module,
+        Function<ModuleHammer, AllowShootingConfig> configUpdater) {
+        if (!(module.component() instanceof ModuleHammer hammer)) return;
+        AllowShootingConfig newConfig = configUpdater.apply(hammer);
+        if (newConfig != null) {
+            hammer.setConfig(newConfig);
         }
     }
 
