@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeSlotListWidget;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
@@ -234,23 +233,27 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
         if (module.component() instanceof IRecipeModule) {
             lineY += SECTION_GAP;
-            RecipeSlotListWidget widget = new RecipeSlotListWidget(module);
-            lineY = widget.draw(x + CONTENT_PADDING, lineY, width - CONTENT_PADDING * 2);
-            recipeBtnX = widget.addRecipeX;
-            recipeBtnY = widget.addRecipeY;
-            recipeBtnW = widget.addRecipeW;
-
-            // [View Recipes] / [Hide Recipes] toggle button — right-aligned
             FontRenderer fr2 = Minecraft.getMinecraft().fontRenderer;
+
+            // [Add Recipe] button
+            String addLabel = "[Add Recipe]";
+            recipeBtnX = x + CONTENT_PADDING;
+            recipeBtnY = lineY;
+            recipeBtnW = fr2.getStringWidth(addLabel);
+            fr2.drawStringWithShadow(addLabel, recipeBtnX, recipeBtnY, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+
+            // [View Recipes] / [Hide Recipes] toggle — right-aligned
             String viewLabel = showRecipeList ? "[Hide Recipes]" : "[View Recipes]";
             viewRecipeBtnX = x + width - CONTENT_PADDING - fr2.getStringWidth(viewLabel);
-            viewRecipeBtnY = widget.addRecipeY;
+            viewRecipeBtnY = lineY;
             viewRecipeBtnW = fr2.getStringWidth(viewLabel);
             fr2.drawStringWithShadow(
                 viewLabel,
                 viewRecipeBtnX,
                 viewRecipeBtnY,
                 EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+
+            lineY += fr2.FONT_HEIGHT + 3;
 
             // Inline recipe list when toggled on
             if (showRecipeList) {
@@ -271,13 +274,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 } else {
                     for (int i = 0; i < slots.size(); i++) {
                         RecipeSlot slot = slots.get(i);
-                        String label = "#" + i
-                            + " "
-                            + (slot.enabled() ? "[ON] " : "[OFF] ")
-                            + "in:"
-                            + slot.inputGuard()
-                            + " out:"
-                            + slot.outputGuard();
+                        String label = "#" + i + " " + (slot.enabled() ? "[ON] " : "[OFF] ");
+                        if (slot.inputGuard() != 0 || slot.outputGuard() != Integer.MAX_VALUE) {
+                            label += " in:" + slot.inputGuard() + " out:" + slot.outputGuard();
+                        }
                         int enabledColor = slot.enabled() ? EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor()
                             : EnumColors.MAP_COLOR_TEXT_DANGER.getColor();
                         FontRenderer fr3 = Minecraft.getMinecraft().fontRenderer;

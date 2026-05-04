@@ -567,8 +567,17 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
             fillSequential(outputs, itemOutputs);
         }
 
+        Galaxia.LOG.info(
+            "[RecipeInput] fluid fill: stacksIn={} stacksOut={} slotCount={} tankCount={}",
+            inputs != null ? inputs.size() : -1,
+            outputs != null ? outputs.size() : -1,
+            layout.fluidInputs()
+                .size(),
+            fluidInputs.length);
         fillFluidsByPosition(inputs, layout.fluidInputs(), fluidInputs);
         fillFluidsByPosition(outputs, layout.fluidOutputs(), fluidOutputs);
+        fillFluidsSequential(inputs, fluidInputs);
+        fillFluidsSequential(outputs, fluidOutputs);
 
         onInputChanged();
     }
@@ -580,22 +589,19 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         for (PositionedStack positioned : stacks) {
             ItemStack stack = firstItem(positioned);
             if (stack == null) {
-                Galaxia.LOG.debug(
-                    "[RecipeInput] fillFluids: firstItem returned null for positioned at ({},{})",
-                    positioned.relx,
-                    positioned.rely);
+                Galaxia.LOG.info("[RecipeInput] fillFluids: firstItem returned null (positioned is null)");
                 continue;
             }
             FluidStack fluid = FluidInteractions.getFluidForItem(stack);
             if (fluid == null) {
-                Galaxia.LOG.debug(
+                Galaxia.LOG.info(
                     "[RecipeInput] fillFluids: getFluidForItem returned null for item={}",
                     stack.getDisplayName());
                 continue;
             }
             int slotIndex = findSlotFor(positioned, slots, used);
             if (slotIndex < 0 || slotIndex >= tanks.length) {
-                Galaxia.LOG.debug(
+                Galaxia.LOG.info(
                     "[RecipeInput] fillFluids: findSlotFor returned {} for fluid {} at ({},{}) (slots={}, tanks={})",
                     slotIndex,
                     fluid.getFluid()
@@ -614,6 +620,22 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
                 fluid.getFluid()
                     .getName(),
                 slotIndex);
+        }
+    }
+
+    /** Fills fluid tanks sequentially, skipping already-filled tanks. */
+    private static void fillFluidsSequential(@Nullable List<PositionedStack> stacks, FluidTank[] tanks) {
+        if (stacks == null || tanks.length == 0) return;
+        int t = 0;
+        for (PositionedStack positioned : stacks) {
+            ItemStack stack = firstItem(positioned);
+            if (stack == null) continue;
+            FluidStack fluid = FluidInteractions.getFluidForItem(stack);
+            if (fluid == null) continue;
+            while (t < tanks.length && tanks[t].getFluidAmount() > 0) t++;
+            if (t >= tanks.length) break;
+            tanks[t].fill(fluid.copy(), true);
+            t++;
         }
     }
 
@@ -657,10 +679,10 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         for (int i = 0; i < slots.size() && i < used.length; i++) {
             if (used[i]) continue;
             GTRecipeMapLayout.Slot slot = slots.get(i);
-            if (Math.abs(slot.x() - x) <= 5 && Math.abs(slot.y() - y) <= 5) return i;
-            if (Math.abs(slot.x() - x) <= 5 && Math.abs(RECIPE_Y + slot.y() - y) <= 5) return i;
+            if (Math.abs(slot.x() - x) <= 15 && Math.abs(slot.y() - y) <= 15) return i;
+            if (Math.abs(slot.x() - x) <= 15 && Math.abs(RECIPE_Y + slot.y() - y) <= 15) return i;
         }
-        Galaxia.LOG.debug(
+        Galaxia.LOG.info(
             "[RecipeInput] findSlotFor: no match for ({},{}) — slots: {}",
             x,
             y,
@@ -673,18 +695,18 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
 
     private static @Nullable ItemStack firstItem(PositionedStack positioned) {
         if (positioned == null) {
-            Galaxia.LOG.debug("[RecipeInput] firstItem: positioned is null");
+            Galaxia.LOG.info("[RecipeInput] firstItem: positioned is null");
             return null;
         }
         if (positioned.items == null) {
-            Galaxia.LOG.debug(
+            Galaxia.LOG.info(
                 "[RecipeInput] firstItem: positioned.items is null for pos ({},{})",
                 positioned.relx,
                 positioned.rely);
             return null;
         }
         if (positioned.items.length == 0) {
-            Galaxia.LOG.debug(
+            Galaxia.LOG.info(
                 "[RecipeInput] firstItem: positioned.items is empty for pos ({},{})",
                 positioned.relx,
                 positioned.rely);
@@ -692,16 +714,16 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         }
         for (ItemStack stack : positioned.items) {
             if (stack == null) {
-                Galaxia.LOG.debug("[RecipeInput] firstItem: stack is null in items array");
+                Galaxia.LOG.info("[RecipeInput] firstItem: stack is null in items array");
                 continue;
             }
             if (stack.getItem() == null) {
-                Galaxia.LOG.debug("[RecipeInput] firstItem: stack.getItem() is null for stack={}", stack);
+                Galaxia.LOG.info("[RecipeInput] firstItem: stack.getItem() is null for stack={}", stack);
                 continue;
             }
             return stack.copy();
         }
-        Galaxia.LOG.debug(
+        Galaxia.LOG.info(
             "[RecipeInput] firstItem: no valid stack in {} items for pos ({},{})",
             positioned.items.length,
             positioned.relx,
