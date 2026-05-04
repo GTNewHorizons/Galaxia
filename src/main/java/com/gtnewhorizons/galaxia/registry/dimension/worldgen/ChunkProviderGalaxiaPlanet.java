@@ -72,13 +72,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
      */
     @Override
     public Chunk provideChunk(int chunkX, int chunkZ) {
-        System.out.println("++++++++ START CHUNK GENERATION ++++++++");
+        if (showDebug) System.out.println("++++++++ START CHUNK GENERATION ++++++++");
         long startTime = System.nanoTime();
         Chunk chunk = new Chunk(worldObj, chunkX, chunkZ);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
         prepareCaveCache(chunkX, chunkZ);
         long preparationTime = System.nanoTime();
-        System.out.println("Time for preparing cave generation: " + (preparationTime - startTime));
+        if (showDebug) System.out.println("Time for preparing cave generation: " + (preparationTime - startTime));
 
         // Get local biomes
         double[] heightMap = generateBaseHeightmap();
@@ -126,7 +126,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
         }
         long blendingTime = System.nanoTime();
-        System.out.println("Time for blending biomes: " + (blendingTime - preparationTime));
+        if (showDebug) System.out.println("Time for blending biomes: " + (blendingTime - preparationTime));
 
         // Calculate terrain features
         for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
@@ -162,7 +162,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             heightMap[i] = Math.clamp(heightMap[i], 1, HEIGHT_LIMIT);
         }
         long terrainFeatureTime = System.nanoTime();
-        System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
+        if (showDebug) System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
 
         // Generate blocks
         long defaultVariableStart = System.nanoTime();
@@ -187,7 +187,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         long defaultVariableEnd = System.nanoTime();
         long defaultVariableTime = defaultVariableEnd - defaultVariableStart;
         long blockStorageTime = 0;
-        System.out.println("Time for creating default variables: " + (defaultVariableTime));
+        if (showDebug) System.out.println("Time for creating default variables: " + (defaultVariableTime));
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
                 long assignmentTimeStart = System.nanoTime();
@@ -287,22 +287,24 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
             }
         }
-        System.out.println("Time for assigning biome variables: " + (assignmentTime));
-        System.out.println("Time for creating block storage: " + (blockStorageTime));
-        System.out.println("Time for generating oceans: " + (oceanTime));
-        System.out.println("Time for generating caves: " + (caveTime));
-        System.out.println("Time for placing blocks: " + (placementTime));
-        System.out.println(
-            "Total time for all tracked block placement steps: "
-                + (assignmentTime + blockStorageTime + oceanTime + caveTime + placementTime + defaultVariableTime));
-        long blockGenerationTime = System.nanoTime();
-        System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
+        if (showDebug) {
+            System.out.println("Time for assigning biome variables: " + (assignmentTime));
+            System.out.println("Time for creating block storage: " + (blockStorageTime));
+            System.out.println("Time for generating oceans: " + (oceanTime));
+            System.out.println("Time for generating caves: " + (caveTime));
+            System.out.println("Time for placing blocks: " + (placementTime));
+            System.out.println(
+                "Total time for all tracked block placement steps: "
+                    + (assignmentTime + blockStorageTime + oceanTime + caveTime + placementTime + defaultVariableTime));
+            long blockGenerationTime = System.nanoTime();
+            System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
 
+            long lightGenerationTime = System.nanoTime();
+            System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
+
+            System.out.println("-------- END CHUNK GENERATION --------");
+        }
         chunk.generateSkylightMap();
-        long lightGenerationTime = System.nanoTime();
-        System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
-
-        System.out.println("-------- END CHUNK GENERATION --------");
         return chunk;
     }
 

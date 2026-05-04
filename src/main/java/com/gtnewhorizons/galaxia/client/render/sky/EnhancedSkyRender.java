@@ -35,7 +35,7 @@ public final class EnhancedSkyRender {
     private static final long BASE_SEED = 10842L;
 
     static {
-        DEFAULT_PRESET.brightStars(64, 0.25f, 0.85f, true)
+        DEFAULT_PRESET
             .billboardLayer(
                 new BillboardLayer(LocationGalaxia("textures/sky/nebula_01.png"), 22, 6.0f, 0.20f, 0.15f, 0.95f))
             .billboardLayer(
@@ -77,10 +77,6 @@ public final class EnhancedSkyRender {
             return;
         }
 
-        if (preset.brightStarCount > 0) {
-            renderBrightStars(world, preset, partialTicks);
-        }
-
         for (BillboardLayer layer : preset.billboardLayers) {
             renderBillboardLayer(world, preset, layer, partialTicks);
         }
@@ -99,84 +95,6 @@ public final class EnhancedSkyRender {
         GL11.glRotatef(-90.0F, 0.0F, 1.0F, 0.0F);
         float celestialAngle = world.getCelestialAngle(partialTicks);
         GL11.glRotatef(180.0F + celestialAngle * 360.0F, 1.0F, 0.0F, 0.0F);
-    }
-
-    private static void renderBrightStars(World world, SkyPreset preset, float partialTicks) {
-        float starBrightness = world.getStarBrightness(partialTicks);
-        if (starBrightness <= 0.0F) return;
-
-        final RandomXoshiro256StarStar random = new RandomXoshiro256StarStar(BASE_SEED ^ 0xA53D7F11L);
-        final Tessellator tessellator = Tessellator.instance;
-
-        GL11.glPushMatrix();
-        applySkyFacingTransform(world, partialTicks);
-
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-        GL11.glDisable(GL11.GL_ALPHA_TEST);
-        GL11.glDepthMask(false);
-
-        tessellator.startDrawingQuads();
-        for (int i = 0; i < preset.brightStarCount; ++i) {
-            Vector3 dir = randomUnitSphere(random);
-            if (dir == null) {
-                continue;
-            }
-
-            // Rarer and more prominent than vanilla stars.
-            double radius = 100.0D;
-            double starX = dir.x * radius;
-            double starY = dir.y * radius;
-            double starZ = dir.z * radius;
-
-            float size = lerp(preset.brightStarMinSize, preset.brightStarMaxSize, random.nextFloat()) * starBrightness;
-            double rotation = random.nextDouble() * Math.PI * 2.0D;
-            double sinRot = Math.sin(rotation);
-            double cosRot = Math.cos(rotation);
-
-            float r = 1.0f, g = 1.0f, b = 1.0f;
-            if (preset.colorfulBrightStars) {
-                int tint = random.nextInt(5);
-                if (tint == 1) {
-                    r = 0.95f;
-                    g = 0.98f;
-                    b = 1.00f;
-                } else if (tint == 2) {
-                    r = 1.00f;
-                    g = 0.95f;
-                    b = 0.88f;
-                } else if (tint == 3) {
-                    r = 1.00f;
-                    g = 0.88f;
-                    b = 0.84f;
-                } else if (tint == 4) {
-                    r = 0.88f;
-                    g = 0.92f;
-                    b = 1.00f;
-                }
-            }
-
-            tessellator.setColorRGBA_F(r, g, b, preset.brightStarAlpha * starBrightness);
-
-            for (int corner = 0; corner < 4; ++corner) {
-                double offU = (double) ((corner & 2) - 1) * size;
-                double offV = (double) ((corner + 1 & 2) - 1) * size;
-                double rotU = offU * cosRot - offV * sinRot;
-                double rotV = offV * cosRot + offU * sinRot;
-                tessellator.addVertex(starX + rotU, starY + rotV, starZ);
-            }
-        }
-        tessellator.draw();
-
-        // Restore state
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glEnable(GL11.GL_ALPHA_TEST);
-        GL11.glDepthMask(true);
-        GL11.glColor4f(1f, 1f, 1f, 1f);
-
-        GL11.glPopMatrix();
     }
 
     /**
@@ -364,55 +282,14 @@ public final class EnhancedSkyRender {
         return new SkyPreset(name);
     }
 
-    public static BillboardLayer billboard(ResourceLocation texture, int count, float minSize, float maxSize,
-        float alpha, float dayMin, float dayMax) {
-        return new BillboardLayer(texture, count, minSize, maxSize, alpha, dayMin, dayMax);
-    }
-
-    public static DomeLayer dome(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility) {
-        return new DomeLayer(texture, opacity, minVisibility, maxVisibility);
-    }
-
-    public static DomeLayer dome(ResourceLocation texture, float opacity, float minVisibility, float maxVisibility,
-        float radius, int segmentsLon, int segmentsLat, float textureVOffset, boolean allowDayVisible) {
-        return new DomeLayer(
-            texture,
-            opacity,
-            minVisibility,
-            maxVisibility,
-            radius,
-            segmentsLon,
-            segmentsLat,
-            textureVOffset,
-            allowDayVisible);
-    }
-
     public static final class SkyPreset {
 
         private final String name;
-        int brightStarCount = 0;
-        float brightStarMinSize = 0.25f;
-        float brightStarMaxSize = 0.85f;
-        float brightStarAlpha = 1.0f;
-        boolean colorfulBrightStars = true;
         final List<BillboardLayer> billboardLayers = new ArrayList<>();
         final List<DomeLayer> domeLayers = new ArrayList<>();
 
         public SkyPreset(String name) {
             this.name = name;
-        }
-
-        public SkyPreset brightStars(int count, float minSize, float maxSize, boolean colorful) {
-            this.brightStarCount = count;
-            this.brightStarMinSize = minSize;
-            this.brightStarMaxSize = maxSize;
-            this.colorfulBrightStars = colorful;
-            return this;
-        }
-
-        public SkyPreset brightStarAlpha(float alpha) {
-            this.brightStarAlpha = alpha;
-            return this;
         }
 
         public SkyPreset billboardLayer(BillboardLayer layer) {

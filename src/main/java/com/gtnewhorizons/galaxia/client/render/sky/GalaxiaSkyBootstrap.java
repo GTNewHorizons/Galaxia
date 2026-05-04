@@ -11,7 +11,6 @@ public final class GalaxiaSkyBootstrap {
 
     public static void clientInit() {
         SkyPreset milkyWayPreset = EnhancedSkyRender.preset("milky_way")
-            .brightStars(64, 0.25f, 0.85f, true)
             .billboardLayer(
                 new BillboardLayer(LocationGalaxia("textures/sky/nebula_01.png"), 22, 6.0f, 0.20f, 0.15f, 0.95f))
             .billboardLayer(

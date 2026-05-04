@@ -154,15 +154,6 @@ item.galaxia.rocket_schematic.modules=Modules: %d
 item.galaxia.rocket_schematic.height=Height: %.1fm
 item.galaxia.rocket_schematic.width=Width: %.1fm
 
-# Items - Tools - "Linking Tool"
-## UNUSED item.galaxia.linking_tool.name=Linking tool
-## UNUSED item.galaxia.linking_tool.desc.usage=§7Used to link machines together§r
-## UNUSED item.galaxia.linking_tool.desc.shift_rmb_air=§8Shift+RMB on air§7 - unbind§r
-## UNUSED item.galaxia.linking_tool.desc.shift_rmb=§8Shift+RMB§7 - bind master§r
-## UNUSED item.galaxia.linking_tool.desc.rmb=§8RMB§7 - connect slave§r
-## UNUSED item.galaxia.linking_tool.desc.bound_to=§7Bound to: §a%s §8[%d, %d, %d]§r
-## UNUSED item.galaxia.linking_tool.desc.not_bound=§8Not bound§r
-
 # Items - "Worldgen / Ores"
 item.galaxia.amber_shard.name=Amber Shard
 item.galaxia.cinnabar_scale.name=Cinnabar Scale
@@ -223,16 +214,6 @@ galaxia.gui.planet_teleporter.selected=Selected: %s
 # Elements - GUI - "Orbital GUI"
 galaxia.gui.orbital.search=Search
 galaxia.gui.orbital.search.placeholder=Enter name...
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.status=Zoom: ×%.2f   Speed: %s
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.paused=§cPAUSED§r
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.speed_multiplier=§a×%.1f§r
-# I GUESS YOU WANT THIS OFF? 
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.title=§6=== GALACTIC MAP DEBUG ===
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.camera=Camera: %.3f, %.3f
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.following=Following: %s  |  Paused: %b
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.time=Time: %.1fs  |  Speed: ×%.1f
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.zoom=ZoomLevel: %.2f | Scale: %.2f
-# I GUESS YOU WANT THIS OFF? galaxia.gui.orbital.debug.none=none
 
 # Elements - GUI - "Rocket Silo"
 galaxia.gui.rocket_silo.title=Rocket Silo
