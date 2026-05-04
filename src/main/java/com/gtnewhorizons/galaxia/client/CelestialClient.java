@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
+import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -76,6 +77,10 @@ public final class CelestialClient {
 
     public static CelestialAsset createAssetInConstruction(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
+        if (StarmapActionSyncHandler
+            .sendCreateAsset(celestialObjectId, displayName, kind, Buildable.Status.CONSTRUCTION_SITE)) {
+            return null;
+        }
         Galaxia.GALAXIA_NETWORK.sendToServer(
             new AssetCreatePacket(celestialObjectId, displayName, kind, Buildable.Status.CONSTRUCTION_SITE));
         return null;
@@ -83,6 +88,10 @@ public final class CelestialClient {
 
     public static CelestialAsset createOperationalAsset(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
+        if (StarmapActionSyncHandler
+            .sendCreateAsset(celestialObjectId, displayName, kind, Buildable.Status.OPERATIONAL)) {
+            return null;
+        }
         Galaxia.GALAXIA_NETWORK
             .sendToServer(new AssetCreatePacket(celestialObjectId, displayName, kind, Buildable.Status.OPERATIONAL));
         return null;
@@ -121,6 +130,15 @@ public final class CelestialClient {
             && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode;
         if (creativeBuildModeEnabled && creativePlayer) {
             module.completeConstruction();
+        }
+        if (StarmapActionSyncHandler.sendBuildModule(
+            assetId,
+            kind,
+            ModuleShape.SINGLE,
+            kind.defaultTier(),
+            creativeBuildModeEnabled,
+            tileCoord)) {
+            return;
         }
         Galaxia.GALAXIA_NETWORK.sendToServer(
             new AssetBuildModulePacket(

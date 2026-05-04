@@ -5,11 +5,12 @@ import java.util.UUID;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapActionPayload;
+import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapActionResult;
+import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapServerActions;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -56,18 +57,10 @@ public final class AssetCreatePacket implements IMessage {
             || packet.status == null) {
             return null;
         }
-        if (packet.kind == CelestialAsset.Kind.STATION) {
-            return null;
-        }
-
-        CelestialAsset asset = packet.status == Buildable.Status.OPERATIONAL
-            ? CelestialAssetStore
-                .createOperationalAsset(teamId, packet.celestialObjectId, packet.displayName, packet.kind)
-            : CelestialAssetStore
-                .createAssetInConstruction(teamId, packet.celestialObjectId, packet.displayName, packet.kind);
-
-        if (!(asset instanceof AutomatedFacility facility)) return null;
-        return AssetSyncPacket.fullSync(facility);
+        StarmapActionResult result = StarmapServerActions.apply(
+            teamId,
+            StarmapActionPayload.createAsset(packet.celestialObjectId, packet.displayName, packet.kind, packet.status));
+        return result.applied() ? result.syncPacket() : null;
     }
 
     public static final class Handler implements IMessageHandler<AssetCreatePacket, IMessage> {

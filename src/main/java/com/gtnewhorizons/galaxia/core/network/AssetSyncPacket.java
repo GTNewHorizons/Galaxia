@@ -68,6 +68,7 @@ public final class AssetSyncPacket implements IMessage {
     private CelestialObjectId planetaryAnchorBodyId;
     private Buildable.Status assetStatus;
     private CelestialAsset.Kind assetKind;
+    private String displayName;
     private long energyStored;
 
     private List<AssetSyncPacket> fullSyncDeltas;
@@ -87,21 +88,10 @@ public final class AssetSyncPacket implements IMessage {
     public AssetSyncPacket() {}
 
     public static AssetSyncPacket fullSync(AutomatedFacility state) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = state.assetId;
-        pkt.syncType = FULL_SYNC;
-        pkt.syncRevision = state.getSyncRevision();
-        pkt.syncRevision = state.getSyncRevision();
-
-        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyId = state.celestialObjectId;
+        AssetSyncPacket pkt = fullSync((CelestialAsset) state);
         pkt.systemId = state.systemId;
         pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
-        pkt.assetStatus = state.status();
-        pkt.assetKind = state.kind;
         pkt.energyStored = state.getEnergyStored();
-
-        pkt.fullSyncDeltas = new ArrayList<>();
 
         List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
@@ -140,6 +130,26 @@ public final class AssetSyncPacket implements IMessage {
             }
         }
 
+        return pkt;
+    }
+
+    public static AssetSyncPacket fullSync(CelestialAsset state) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = state.assetId;
+        pkt.syncType = FULL_SYNC;
+        pkt.syncRevision = state.getSyncRevision();
+        pkt.syncRevision = state.getSyncRevision();
+
+        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
+        pkt.celestialBodyId = state.celestialObjectId;
+        pkt.assetStatus = state.status();
+        pkt.assetKind = state.kind;
+        pkt.displayName = state.displayName();
+        pkt.systemId = CelestialObjectId.INVALID;
+        pkt.planetaryAnchorBodyId = CelestialObjectId.INVALID;
+        pkt.energyStored = 0L;
+
+        pkt.fullSyncDeltas = new ArrayList<>();
         return pkt;
     }
 
@@ -261,6 +271,7 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
                 PacketUtil.writeEnum(buf, assetStatus);
                 PacketUtil.writeEnum(buf, assetKind);
+                PacketUtil.writeString(buf, displayName == null ? "" : displayName);
                 buf.writeLong(energyStored);
 
                 buf.writeInt(fullSyncDeltas.size());
@@ -288,6 +299,7 @@ public final class AssetSyncPacket implements IMessage {
                 planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 assetStatus = PacketUtil.readEnum(buf, Buildable.Status.class);
                 assetKind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
+                displayName = PacketUtil.readString(buf);
                 energyStored = buf.readLong();
 
                 int count = buf.readInt();
@@ -661,11 +673,12 @@ public final class AssetSyncPacket implements IMessage {
         @SideOnly(Side.CLIENT)
         public IMessage onMessage(AssetSyncPacket packet, MessageContext ctx) {
             Minecraft.getMinecraft()
-                .func_152344_a(() -> handle(packet));
+                .func_152344_a(() -> handleClientSync(packet));
             return null;
         }
 
-        private void handle(AssetSyncPacket packet) {
+        @SideOnly(Side.CLIENT)
+        public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
@@ -678,16 +691,17 @@ public final class AssetSyncPacket implements IMessage {
             }
         }
 
-        private void handleFull(AssetSyncPacket packet) {
-            AutomatedFacility state = CelestialAssetStore.CLIENT
-                .findAssetInternal(packet.assetId) instanceof AutomatedFacility o ? o : null;
-            if (state == null) {
-                CelestialAsset newAsset = CelestialAsset
+        private static void handleFull(AssetSyncPacket packet) {
+            CelestialAsset asset = CelestialAssetStore.CLIENT.findAssetInternal(packet.assetId);
+            if (asset == null) {
+                asset = CelestialAsset
                     .create(packet.assetId, packet.celestialBodyId, packet.assetKind, packet.assetStatus);
-                if (!(newAsset instanceof AutomatedFacility newState)) return;
-                state = newState;
-                CelestialAssetStore.CLIENT.addInternal(packet.teamId, newState);
+                CelestialAssetStore.CLIENT.addInternal(packet.teamId, asset);
             }
+            asset.updateStatus(packet.assetStatus);
+            asset.setDisplayName(packet.displayName);
+            asset.setSyncRevision(packet.syncRevision);
+            if (!(asset instanceof AutomatedFacility state)) return;
 
             state.setEnergyStored(packet.energyStored);
 
@@ -704,7 +718,7 @@ public final class AssetSyncPacket implements IMessage {
             state.setSyncRevision(packet.syncRevision);
         }
 
-        private void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
+        private static void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
             switch (packet.syncType) {
                 case MODULE_ADDED -> {
                     if (packet.moduleIndex < state.modules()

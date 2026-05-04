@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 final class AssetCreatePacketTest {
 
@@ -51,6 +52,23 @@ final class AssetCreatePacketTest {
         CelestialAsset created = CelestialAssetStore.SERVER.allAssetsInternal()
             .get(0);
         assertInstanceOf(AutomatedFacility.class, created);
+        assertNotNull(CelestialAssetStore.SERVER.findAssetInternal(created.assetId));
+        assertNotNull(sync);
+    }
+
+    @Test
+    void createsBaseStationOnServerAndReturnsFullSync() {
+        AssetCreatePacket packet = new AssetCreatePacket(
+            CelestialObjectId.MARS,
+            "Mars Station",
+            CelestialAsset.Kind.STATION,
+            Buildable.Status.OPERATIONAL);
+
+        AssetSyncPacket sync = AssetCreatePacket.createOnServer(TEAM, packet);
+
+        CelestialAsset created = CelestialAssetStore.SERVER.allAssetsInternal()
+            .get(0);
+        assertInstanceOf(Station.class, created);
         assertNotNull(CelestialAssetStore.SERVER.findAssetInternal(created.assetId));
         assertNotNull(sync);
     }

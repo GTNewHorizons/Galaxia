@@ -1,0 +1,16 @@
+package com.gtnewhorizons.galaxia.core.starmap.sync;
+
+public enum StarmapAction {
+
+    CREATE_ASSET,
+    DESTROY_ASSET,
+    RENAME_ASSET,
+    START_DECONSTRUCTION,
+    BUILD_MODULE,
+    MODULE_ACTION,
+    MODULE_CONFIG,
+    INVENTORY_ADJUST,
+    LOGISTICS_CONFIG_SET,
+    LOGISTICS_CONFIG_REMOVE,
+    REQUEST_FULL_SYNC
+}
