@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -16,17 +15,12 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     public final FacilityModuleKind kind;
 
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
-    private final List<String> blacklistedItemKeys;
-    private boolean copySettingsToOtherMiners;
     private byte parallel = 1;
 
     private static final Random RANDOM = new java.util.Random();
 
-    public ModuleMiner(FacilityModuleKind kind, List<String> blacklistedItemKeys, boolean copySettingsToOtherMiners) {
+    public ModuleMiner(FacilityModuleKind kind) {
         this.kind = Objects.requireNonNull(kind, "kind");
-        this.blacklistedItemKeys = new ArrayList<>();
-        setBlacklist(blacklistedItemKeys);
-        this.copySettingsToOtherMiners = copySettingsToOtherMiners;
     }
 
     public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
@@ -57,42 +51,6 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
         return rollPercent < outpost.minerVoidChancePercent(oreKey);
     }
 
-    public void setBlacklist(List<String> itemKeys) {
-        blacklistedItemKeys.clear();
-        for (String itemKey : Objects.requireNonNull(itemKeys, "itemKeys")) {
-            requireItemKey(itemKey);
-            blacklistedItemKeys.add(itemKey);
-        }
-    }
-
-    public void addToBlacklist(String itemKey) {
-        requireItemKey(itemKey);
-        if (blacklistedItemKeys.contains(itemKey)) return;
-        blacklistedItemKeys.add(itemKey);
-    }
-
-    public void removeFromBlacklist(String itemKey) {
-        requireItemKey(itemKey);
-        if (!blacklistedItemKeys.contains(itemKey)) return;
-        blacklistedItemKeys.remove(itemKey);
-    }
-
-    public boolean isBlacklisted(String item) {
-        return blacklistedItemKeys.contains(requireItemKey(item));
-    }
-
-    public List<String> blacklistedItemKeys() {
-        return blacklistedItemKeys;
-    }
-
-    public boolean copySettingsToOtherMiners() {
-        return copySettingsToOtherMiners;
-    }
-
-    public void setCopySettingToOtherMiners(boolean newValue) {
-        this.copySettingsToOtherMiners = newValue;
-    }
-
     @Override
     public byte getParallel() {
         return parallel;
@@ -101,12 +59,6 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     @Override
     public void setParallel(byte parallel) {
         this.parallel = parallel;
-    }
-
-    private static String requireItemKey(String itemKey) {
-        Objects.requireNonNull(itemKey, "itemKey");
-        if (itemKey.isEmpty()) throw new IllegalArgumentException("itemKey cannot be empty");
-        return itemKey;
     }
 
     private static void requireRollPercent(int rollPercent) {

@@ -133,6 +133,23 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void obsoleteMinerBlacklistDataCrashesOnLoad() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        encoded.modules.get(1).data.getAsJsonObject()
+            .addProperty("blacklistedItemKeys", "ore:iron");
+
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, encoded));
+    }
+
+    @Test
     void bigHammerEvCrashesOnLoad() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();

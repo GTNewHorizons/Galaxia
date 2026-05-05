@@ -50,7 +50,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -377,10 +376,7 @@ public final class FacilityPersistenceManager {
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
             JsonObject moduleData = new JsonObject();
-            if (m.component() instanceof ModuleMiner miner) {
-                moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
-                moduleData.addProperty("copySettingsToOtherMiners", miner.copySettingsToOtherMiners());
-            } else if (m.component() instanceof ModuleHammer hammer) {
+            if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
                 moduleData.add("routePriority", PURE_GSON.toJsonTree(hammer.routePriority()));
                 moduleData.addProperty(
@@ -578,18 +574,11 @@ public final class FacilityPersistenceManager {
                         module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
                     }
                     case MINER -> {
-                        List<String> blacklist = new ArrayList<>();
-                        boolean copySettings = false;
-                        if (data.has("blacklistedItemKeys")) {
-                            blacklist = PURE_GSON.fromJson(
-                                data.get("blacklistedItemKeys"),
-                                new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
+                        if (data != null && !data.entrySet()
+                            .isEmpty()) {
+                            throw new IllegalStateException(
+                                "[PERSIST] Miner module " + moduleId + " has obsolete data");
                         }
-                        if (data.has("copySettingsToOtherMiners")) {
-                            copySettings = data.get("copySettingsToOtherMiners")
-                                .getAsBoolean();
-                        }
-                        module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
                     }
                     case POWER -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}

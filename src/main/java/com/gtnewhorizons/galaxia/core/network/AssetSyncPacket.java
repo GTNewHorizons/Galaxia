@@ -24,7 +24,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -438,14 +437,7 @@ public final class AssetSyncPacket implements IMessage {
         if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
 
         switch (module.kind()) {
-            case MINER -> {
-                ModuleMiner m = (ModuleMiner) module.component();
-                buf.writeInt(
-                    m.blacklistedItemKeys()
-                        .size());
-                for (String k : m.blacklistedItemKeys()) PacketUtil.writeString(buf, k);
-                buf.writeBoolean(m.copySettingsToOtherMiners());
-            }
+            case MINER -> {}
             case HAMMER -> {
                 ModuleHammer h = (ModuleHammer) module.component();
                 PacketUtil.writeEnum(
@@ -485,13 +477,7 @@ public final class AssetSyncPacket implements IMessage {
         module.setGroupId(groupId);
 
         switch (kind) {
-            case MINER -> {
-                int c = buf.readInt();
-                List<String> blacklist = new ArrayList<>(c);
-                for (int i = 0; i < c; i++) blacklist.add(PacketUtil.readString(buf));
-                boolean copySettings = buf.readBoolean();
-                module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
-            }
+            case MINER -> {}
             case HAMMER -> {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),

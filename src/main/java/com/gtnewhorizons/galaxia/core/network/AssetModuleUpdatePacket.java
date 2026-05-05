@@ -183,9 +183,6 @@ public final class AssetModuleUpdatePacket {
     }
 
     public enum ConfigAction {
-        ADD_MINER_BLACKLIST,
-        REMOVE_MINER_BLACKLIST,
-        SET_MINER_COPY_SETTINGS,
         SET_MINER_VOID_PERCENT,
         SET_ALLOW_SHOOTING_MODE,
         SET_ALLOW_SHOOTING_THRESHOLD,
@@ -215,12 +212,10 @@ public final class AssetModuleUpdatePacket {
 
         if (type == CONFIG_TYPE && configAction != null) {
             switch (configAction) {
-                case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> PacketUtil.writeString(buf, stringPayload);
                 case SET_MINER_VOID_PERCENT -> {
                     PacketUtil.writeString(buf, stringPayload);
                     buf.writeByte(bytePayload);
                 }
-                case SET_MINER_COPY_SETTINGS -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
@@ -260,12 +255,10 @@ public final class AssetModuleUpdatePacket {
         }
 
         switch (configAction) {
-            case ADD_MINER_BLACKLIST, REMOVE_MINER_BLACKLIST -> stringPayload = PacketUtil.readString(buf);
             case SET_MINER_VOID_PERCENT -> {
                 stringPayload = PacketUtil.readString(buf);
                 bytePayload = buf.readByte();
             }
-            case SET_MINER_COPY_SETTINGS -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
@@ -358,23 +351,6 @@ public final class AssetModuleUpdatePacket {
 
     private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
         switch (packet.getConfigAction()) {
-            case ADD_MINER_BLACKLIST -> handleMinerBlacklist(
-                module,
-                packet.getStringPayload(),
-                true,
-                state,
-                packet.moduleIndex);
-            case REMOVE_MINER_BLACKLIST -> handleMinerBlacklist(
-                module,
-                packet.getStringPayload(),
-                false,
-                state,
-                packet.moduleIndex);
-            case SET_MINER_COPY_SETTINGS -> handleMinerCopySettings(
-                module,
-                packet.getBooleanPayload(),
-                state,
-                packet.moduleIndex);
             case SET_MINER_VOID_PERCENT -> handleMinerVoidPercent(packet, state, module);
             case SET_ALLOW_SHOOTING_MODE -> handleHammerConfig(module, h -> {
                 AllowShootingConfig.Mode mode = Objects
@@ -546,28 +522,6 @@ public final class AssetModuleUpdatePacket {
         };
     }
 
-    private static void handleMinerBlacklist(ModuleInstance module, String payload, boolean add,
-        AutomatedFacility state, int moduleIndex) {
-        if (!(module.component() instanceof ModuleMiner miner)) return;
-        if (add) {
-            miner.addToBlacklist(payload);
-        } else {
-            miner.removeFromBlacklist(payload);
-        }
-        if (miner.copySettingsToOtherMiners()) {
-            copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
-        }
-    }
-
-    private static void handleMinerCopySettings(ModuleInstance module, boolean payload, AutomatedFacility state,
-        int moduleIndex) {
-        if (!(module.component() instanceof ModuleMiner miner)) return;
-        miner.setCopySettingToOtherMiners(payload);
-        if (payload) {
-            copyMinerSettingsToOtherMiners(state, moduleIndex, miner);
-        }
-    }
-
     private static void handleMinerVoidPercent(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof ModuleMiner)) {
@@ -700,17 +654,4 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
-    private static void copyMinerSettingsToOtherMiners(AutomatedFacility state, int sourceModuleIndex,
-        ModuleMiner sourceMiner) {
-        for (int i = 0; i < state.modules()
-            .size(); i++) {
-            if (i == sourceModuleIndex) continue;
-            ModuleInstance other = state.modules()
-                .get(i);
-            if (other.component() instanceof ModuleMiner miner) {
-                miner.setCopySettingToOtherMiners(sourceMiner.copySettingsToOtherMiners());
-                miner.setBlacklist(sourceMiner.blacklistedItemKeys());
-            }
-        }
-    }
 }

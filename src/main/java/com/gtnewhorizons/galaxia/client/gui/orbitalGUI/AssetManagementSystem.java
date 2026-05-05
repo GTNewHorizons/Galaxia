@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleConsumer;
@@ -32,12 +31,10 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -54,7 +51,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
@@ -104,8 +100,6 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
         this(label, value, items, false);
     }
 }
-
-record MinerOreOption(String key, String displayName, ItemStack displayStack, boolean blacklisted) {}
 
 enum InventorySortMode {
     NAME,
@@ -2039,138 +2033,12 @@ public final class AssetManagementSystem {
         }
 
         private void buildMinerConfigSubMenu(ParentWidget<?> modal, AutomatedFacility outpost, ModuleInstance module) {
-            int visibleHeight = Math.max(220, (modalBottom - modalTop) - 88);
-            ModuleMiner miner = (ModuleMiner) module.component();
-            List<MinerOreOption> options = buildMinerOreOptions(outpost, miner);
-
             modal.child(createTitleText("Miner Configuration").pos(12, 10));
             modal.child(createFooterButton("Back", true, () -> {
                 state.configuringModuleIndex = -1;
                 markStructureDirty();
             }).pos(12, 32)
                 .size(60, 20));
-            modal.child(
-                createFooterButton(miner.copySettingsToOtherMiners() ? "Copy: ON" : "Copy Settings", true, () -> {
-                    CelestialClient.updateModuleConfig(
-                        outpost.assetId,
-                        state.configuringModuleIndex,
-                        AssetModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS,
-                        !miner.copySettingsToOtherMiners());
-                    markStructureDirty();
-                }).pos(82, 32)
-                    .size(100, 20)
-                    .tooltip(t -> t.addLine("Apply settings to all other miners")));
-            modal.child(createBodyText("Planetary ores", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 58));
-            modal.child(createBodyText("Blacklist", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(428, 58));
-
-            VerticalScrollData scrollData = new VerticalScrollData();
-            ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(10, 78)
-                .widthRelOffset(1f, -20)
-                .heightRelOffset(1f, -88)
-                .background(
-                    drawable(
-                        (c, x, y, w, h) -> Gui
-                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
-            modalScrollData = scrollData;
-            modalScrollWidget = scroll;
-            activeScrollWidget = scroll;
-            ParentWidget<?> content = new ParentWidget<>().widthRel(1f);
-            int rowY = 0;
-            for (MinerOreOption option : options) {
-                ParentWidget<?> row = new ParentWidget<>().pos(4, rowY)
-                    .widthRelOffset(1f, -8)
-                    .height(28)
-                    .background(
-                        drawable(
-                            (c, x, y1, w, h) -> Gui
-                                .drawRect(x, y1, x + w, y1 + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-                if (option.displayStack() != null) {
-                    row.child(
-                        createItemWidget(option.displayStack(), 16).pos(4, 6)
-                            .size(16, 16));
-                } else {
-                    row.child(drawable((c, x, y1, w, h) -> {
-                        Gui.drawRect(x, y1, x + w, y1 + h, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-                        Gui.drawRect(x, y1, x + w, y1 + 1, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                        Gui.drawRect(x, y1 + h - 1, x + w, y1 + h, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                        Gui.drawRect(x, y1, x + 1, y1 + h, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                        Gui.drawRect(x + w - 1, y1, x + w, y1 + h, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                    }).asWidget()
-                        .pos(4, 6)
-                        .size(16, 16));
-                }
-                row.child(
-                    createBodyText(option.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(24, 8)
-                        .width(360));
-                row.child(createCheckboxButton(option.blacklisted(), () -> {
-                    boolean blacklisted = miner.isBlacklisted(option.key());
-                    AssetModuleUpdatePacket.ConfigAction action = blacklisted
-                        ? AssetModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST
-                        : AssetModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST;
-                    CelestialClient
-                        .updateModuleConfig(outpost.assetId, state.configuringModuleIndex, action, option.key());
-                    markStructureDirty();
-                }).pos(434, 4)
-                    .size(20, 20));
-                content.child(row);
-                rowY += 32;
-            }
-            if (options.isEmpty()) {
-                content.child(
-                    createBodyText("No ores available on this body.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                        .pos(8, 8));
-            }
-            int contentHeight = Math.max(visibleHeight, rowY + 8);
-            scrollData.setScrollSize(contentHeight);
-            content.height(contentHeight);
-            scroll.child(content);
-            scrollData.scrollTo(scroll.getScrollArea(), getCurrentModalScrollPosition());
-            content.scheduleResize();
-            scroll.scheduleResize();
-            modal.child(scroll);
-        }
-
-        private List<MinerOreOption> buildMinerOreOptions(AutomatedFacility outpost, ModuleMiner minerData) {
-            return GalaxiaCelestialAPI.get(outpost.celestialObjectId)
-                .map(
-                    body -> body.properties()
-                        .hasGtOreVeinOres() ? buildGtMinerOreOptions(body, minerData)
-                            : buildVanillaMinerOreOptions(body, minerData))
-                .orElse(List.of());
-        }
-
-        private List<MinerOreOption> buildGtMinerOreOptions(CelestialObject body, ModuleMiner minerData) {
-            Map<String, MinerOreOption> options = new LinkedHashMap<>();
-            body.properties()
-                .gtOreVeinOres()
-                .forEach(oreName -> {
-                    if (oreName == null || oreName.isEmpty() || options.containsKey(oreName)) return;
-                    ItemStack displayStack = GTUtility.getRawOreStack(oreName);
-                    String displayName = displayStack != null ? displayStack.getDisplayName() : oreName;
-                    options.put(
-                        oreName,
-                        new MinerOreOption(oreName, displayName, displayStack, minerData.isBlacklisted(oreName)));
-                });
-            return new ArrayList<>(options.values());
-        }
-
-        private List<MinerOreOption> buildVanillaMinerOreOptions(CelestialObject body, ModuleMiner minerData) {
-            List<MinerOreOption> options = new ArrayList<>();
-            for (ItemStack ore : body.properties()
-                .ores()) {
-                if (ore == null) continue;
-                ItemStackWrapper wrapper = ItemStackWrapper.of(ore);
-                if (wrapper == null) continue;
-                ItemStack displayStack = ore.copy();
-                displayStack.stackSize = 1;
-                options.add(
-                    new MinerOreOption(
-                        wrapper.toKey(),
-                        displayStack.getDisplayName(),
-                        displayStack,
-                        minerData.isBlacklisted(wrapper.toKey())));
-            }
-            return options;
         }
 
         private void buildPowerConfigSubMenu(ParentWidget<?> modal, AutomatedFacility outpost, ModuleInstance module) {
