@@ -47,6 +47,14 @@ final class ModuleHammerTest {
     }
 
     @Test
+    void chargeBarFinishesOneSecondBeforeShot() {
+        assertEquals(60 * 20 - 20, ModuleHammer.chargeTicks(HammerVariant.BASE, ModuleTier.EV));
+        assertTrue(ModuleHammer.chargeRateEuPerTick(HammerVariant.BASE, ModuleTier.EV) * 1180L >= 500_000L);
+        assertEquals(60 * 20 - 20, ModuleHammer.chargeTicks(HammerVariant.BIG, ModuleTier.LuV));
+        assertTrue(ModuleHammer.chargeRateEuPerTick(HammerVariant.BIG, ModuleTier.LuV) * 1180L >= 8_000_000L);
+    }
+
+    @Test
     void hammerConsumesShotEnergyOnlyWhenCooldownCompletes() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry

@@ -59,6 +59,16 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
         };
     }
 
+    public static int chargeTicks(HammerVariant variant, ModuleTier tier) {
+        return Math.max(1, cooldownTicks(variant, tier) - 20);
+    }
+
+    public static long chargeRateEuPerTick(HammerVariant variant, ModuleTier tier) {
+        long energy = shotEnergyEu(variant);
+        int chargeTicks = chargeTicks(variant, tier);
+        return Math.ceilDiv(energy, chargeTicks);
+    }
+
     public static boolean supportsTier(HammerVariant variant, ModuleTier tier) {
         try {
             cooldownTicks(variant, tier);
