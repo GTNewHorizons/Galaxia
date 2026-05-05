@@ -82,8 +82,7 @@ public final class LogisticsConfigUpdatePacket {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o
-            : null;
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
             return null;
@@ -98,8 +97,7 @@ public final class LogisticsConfigUpdatePacket {
             return null;
         }
 
-        ItemStackWrapper resource = this.resource != null ? this.resource
-            : ItemStackWrapper.fromKey(resourceKey);
+        ItemStackWrapper resource = this.resource != null ? this.resource : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
         if (removeEntry) {
             state.logisticsConfig.reset(resource);

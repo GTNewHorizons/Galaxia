@@ -53,8 +53,8 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendCreateAsset(CelestialObjectId bodyId, String displayName,
-        CelestialAsset.Kind kind, Buildable.Status status) {
+    public static boolean sendCreateAsset(CelestialObjectId bodyId, String displayName, CelestialAsset.Kind kind,
+        Buildable.Status status) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
         AssetCreatePacket packet = AssetCreatePacket.create(bodyId, displayName, kind, status);

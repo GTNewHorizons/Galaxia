@@ -80,15 +80,13 @@ public final class AssetInventoryUpdatePacket {
             return null;
         }
 
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o
-            : null;
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
             return null;
         }
 
-        ItemStackWrapper resource = this.resource != null ? this.resource
-            : ItemStackWrapper.fromKey(resourceKey);
+        ItemStackWrapper resource = this.resource != null ? this.resource : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
 
         if (delta == Long.MIN_VALUE) {

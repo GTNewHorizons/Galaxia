@@ -30,8 +30,8 @@ public final class AssetBuildModulePacket {
 
     public AssetBuildModulePacket() {}
 
-    public static AssetBuildModulePacket create(CelestialAsset.ID assetId, FacilityModuleKind kind,
-        ModuleShape shape, ModuleTier tier, boolean instantBuild, StationTileCoord tileCoord) {
+    public static AssetBuildModulePacket create(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, boolean instantBuild, StationTileCoord tileCoord) {
         AssetBuildModulePacket pkt = new AssetBuildModulePacket();
         pkt.assetId = assetId;
         pkt.moduleKind = kind;
@@ -82,7 +82,8 @@ public final class AssetBuildModulePacket {
             return null;
         }
 
-        if (!moduleKind.allowedTiers().contains(tier)) {
+        if (!moduleKind.allowedTiers()
+            .contains(tier)) {
             return null;
         }
 
@@ -91,8 +92,7 @@ public final class AssetBuildModulePacket {
             if (!facility.hasStationLayout()) return null;
 
             if (shape != ModuleShape.SINGLE) {
-                ShapeValidation footprintResult = ModuleFootprint
-                    .validate(facility.stationLayout(), anchor, shape);
+                ShapeValidation footprintResult = ModuleFootprint.validate(facility.stationLayout(), anchor, shape);
                 if (footprintResult != ShapeValidation.OK) return null;
             } else {
                 StationPlacementValidator.Result placementResult = StationPlacementValidator
@@ -103,8 +103,7 @@ public final class AssetBuildModulePacket {
             }
         }
 
-        ModuleInstance module = moduleKind
-            .create(anchor != null ? anchor : StationTileCoord.CORE, shape, tier);
+        ModuleInstance module = moduleKind.create(anchor != null ? anchor : StationTileCoord.CORE, shape, tier);
 
         boolean shouldInstantBuild = instantBuild && creativePlayer;
         if (shouldInstantBuild) module.completeConstruction();
