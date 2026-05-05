@@ -19,6 +19,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -90,6 +92,21 @@ final class StationPacketRoundTripTest {
     }
 
     // ── Delta sync ──
+
+    @Test
+    void fullSyncRoundTripPreservesHammerVariant() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
+        ((ModuleHammer) hammerModule.component()).setVariant(HammerVariant.BIG);
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleHammer clientHammer = (ModuleHammer) client.modules()
+            .get(0)
+            .component();
+        assertEquals(HammerVariant.BIG, clientHammer.variant());
+    }
 
     @Test
     void moduleAddedDeltaPlacesLayoutTileOnClient() {

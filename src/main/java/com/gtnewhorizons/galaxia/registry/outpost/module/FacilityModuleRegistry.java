@@ -52,8 +52,7 @@ public class FacilityModuleRegistry {
                 AllowShootingConfig.ALWAYS,
                 OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
                 false,
-                true,
-                false,
+                HammerVariant.BASE,
                 64));
         register(
             FacilityModuleKind.STORAGE,

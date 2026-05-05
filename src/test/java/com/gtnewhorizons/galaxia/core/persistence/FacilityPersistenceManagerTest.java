@@ -31,7 +31,9 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -80,6 +82,36 @@ final class FacilityPersistenceManagerTest {
                 .size());
         assertLayoutEquals(station.stationLayout(), decoded.stationLayout());
         assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+    }
+
+    @Test
+    void hammerVariantRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleHammer hammer = (ModuleHammer) station.modules()
+            .get(0)
+            .component();
+        hammer.setVariant(HammerVariant.BIG);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        assertEquals(
+            "BIG",
+            encoded.modules.get(0).data
+                .getAsJsonObject()
+                .get("variant")
+                .getAsString());
+
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
+            .get(0)
+            .component();
+        assertEquals(HammerVariant.BIG, decodedHammer.variant());
     }
 
     private static AutomatedFacility createStationWithFullLayout() {
@@ -224,30 +256,12 @@ final class FacilityPersistenceManagerTest {
         byte invalidTier = PacketUtil.enumOrdinal(ModuleTier.HV);
         encoded.modules.get(0).tier = invalidTier;
 
-        AutomatedFacility tierShrunk = new AutomatedFacility(
+        AutomatedFacility malformedTier = new AutomatedFacility(
             station.assetId,
             station.celestialObjectId,
             station.kind,
             station.status());
-        manager.decodeFacilityState(tierShrunk, encoded);
-
-        assertNotNull(tierShrunk.modules());
-        assertEquals(
-            2,
-            tierShrunk.modules()
-                .size());
-        // HAMMER module should be downgraded from HV to EV (defaultTier)
-        assertEquals(
-            ModuleTier.EV,
-            tierShrunk.modules()
-                .get(0)
-                .tier());
-        // MINER module should keep its EV tier
-        assertEquals(
-            ModuleTier.EV,
-            tierShrunk.modules()
-                .get(1)
-                .tier());
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(malformedTier, encoded));
     }
 
     @Test
@@ -953,7 +967,7 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void legacyBigHammerModuleIsMigratedToHammerOnLoad() throws Exception {
+    void legacyBigHammerModuleCrashesOnLoad() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
 
         // Simulate a legacy save with a BIG_HAMMER module (no longer in the enum)
@@ -992,39 +1006,11 @@ final class FacilityPersistenceManagerTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        manager.decodeFacilityState(decoded, legacy);
-
-        assertEquals(
-            1,
-            decoded.modules()
-                .size(),
-            "BIG_HAMMER module should be decoded as HAMMER (not skipped)");
-        assertEquals(
-            FacilityModuleKind.HAMMER,
-            decoded.modules()
-                .get(0)
-                .kind(),
-            "BIG_HAMMER should map to HAMMER");
-
-        // Verify layout tile is present and references the decoded module
-        StationLayout layout = decoded.stationLayout();
-        assertNotNull(layout);
-        StationTileCoord coord = StationTileCoord.of(1, 0);
-        assertTrue(layout.isOccupied(coord), "Layout should have the BIG_HAMMER anchor tile");
-        PlacedTile tile = layout.get(coord);
-        assertNotNull(tile);
-        assertNotNull(tile.module(), "PlacedTile should reference the decoded HAMMER module");
-        assertSame(
-            decoded.modules()
-                .get(0),
-            tile.module());
-
-        // Verify no zombie tiles — only CORE and the HAMMER anchor should exist
-        assertEquals(2, layout.size(), "Layout should have exactly CORE + HAMMER anchor tiles");
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, legacy));
     }
 
     @Test
-    void orphanLayoutTilesAreSkippedOnLoad() throws Exception {
+    void unknownModuleKindCrashesOnLoad() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
 
         // Simulate a save with a module that has an unresolvable kind (unknown enum value)
@@ -1059,6 +1045,9 @@ final class FacilityPersistenceManagerTest {
         unknownMj.enabled = true;
         unknownMj.cooldownTicks = 0;
         legacy.modules.add(unknownMj);
+        legacy.modules.clear();
+        legacy.modules.add(unknownMj);
+        legacy.modules.add(hammerMj);
 
         legacy.layoutTiles = new ArrayList<>();
 
@@ -1086,24 +1075,7 @@ final class FacilityPersistenceManagerTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        manager.decodeFacilityState(decoded, legacy);
-
-        // Only the HAMMER module should be decoded
-        assertEquals(
-            1,
-            decoded.modules()
-                .size(),
-            "Only HAMMER should survive; unknown kind should be skipped");
-
-        // The HAMMER anchor tile should exist
-        StationLayout layout = decoded.stationLayout();
-        assertNotNull(layout);
-        assertTrue(layout.isOccupied(StationTileCoord.of(1, 0)), "HAMMER anchor tile should exist");
-
-        // The orphan tile at (5,5) should NOT exist (skipped during decode)
-        assertFalse(
-            layout.isOccupied(StationTileCoord.of(5, 5)),
-            "Orphan layout tile for unknown module should be skipped, not blocking placement");
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, legacy));
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 import net.minecraft.item.ItemStack;
@@ -21,8 +23,9 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     private static final Random RANDOM = new java.util.Random();
 
     public ModuleMiner(FacilityModuleKind kind, List<String> blacklistedItemKeys, boolean copySettingsToOtherMiners) {
-        this.kind = kind;
-        this.blacklistedItemKeys = blacklistedItemKeys;
+        this.kind = Objects.requireNonNull(kind, "kind");
+        this.blacklistedItemKeys = new ArrayList<>();
+        setBlacklist(blacklistedItemKeys);
         this.copySettingsToOtherMiners = copySettingsToOtherMiners;
     }
 
@@ -49,21 +52,26 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     public void setBlacklist(List<String> itemKeys) {
         blacklistedItemKeys.clear();
-        blacklistedItemKeys.addAll(itemKeys);
+        for (String itemKey : Objects.requireNonNull(itemKeys, "itemKeys")) {
+            requireItemKey(itemKey);
+            blacklistedItemKeys.add(itemKey);
+        }
     }
 
     public void addToBlacklist(String itemKey) {
-        if (itemKey == null || itemKey.isEmpty() || blacklistedItemKeys.contains(itemKey)) return;
+        requireItemKey(itemKey);
+        if (blacklistedItemKeys.contains(itemKey)) return;
         blacklistedItemKeys.add(itemKey);
     }
 
     public void removeFromBlacklist(String itemKey) {
-        if (itemKey == null || itemKey.isEmpty() || !blacklistedItemKeys.contains(itemKey)) return;
+        requireItemKey(itemKey);
+        if (!blacklistedItemKeys.contains(itemKey)) return;
         blacklistedItemKeys.remove(itemKey);
     }
 
     public boolean isBlacklisted(String item) {
-        return blacklistedItemKeys.contains(item);
+        return blacklistedItemKeys.contains(requireItemKey(item));
     }
 
     public List<String> blacklistedItemKeys() {
@@ -86,5 +94,11 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     @Override
     public void setParallel(byte parallel) {
         this.parallel = parallel;
+    }
+
+    private static String requireItemKey(String itemKey) {
+        Objects.requireNonNull(itemKey, "itemKey");
+        if (itemKey.isEmpty()) throw new IllegalArgumentException("itemKey cannot be empty");
+        return itemKey;
     }
 }

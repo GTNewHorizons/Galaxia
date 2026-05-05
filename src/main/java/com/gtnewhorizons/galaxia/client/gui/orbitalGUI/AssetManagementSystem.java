@@ -51,6 +51,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -1755,12 +1756,10 @@ public final class AssetManagementSystem {
                 : null;
             String moduleLabel = module != null ? module.kind()
                 .getDisplayName() : "HAMMER";
-            boolean isBigHammer = module.component() instanceof ModuleHammer;
             ModuleHammer hammer = (ModuleHammer) module.component();
 
-            // Extract current shooting config and planetary flag from live module data
             AllowShootingConfig shootingCfg = hammer.config();
-            boolean planetaryHandling = hammer.planetaryHandling();
+            HammerVariant variant = hammer.variant();
             OrbitalTransferPlanner.RoutePriority routePriority = hammer.routePriority();
             AllowShootingConfig.Mode currentMode = shootingCfg.mode();
             double currentThreshold = shootingCfg.threshold();
@@ -1793,7 +1792,7 @@ public final class AssetManagementSystem {
                     case WHEN_DV_UNDER -> AllowShootingConfig.Mode.WHEN_TOF_UNDER;
                     case WHEN_TOF_UNDER -> AllowShootingConfig.Mode.ALWAYS;
                 };
-                applyShootingModeUpdate(module, outpost, modIdx, isBigHammer, next, currentThreshold);
+                applyShootingModeUpdate(module, outpost, modIdx, next, currentThreshold);
                 markStructureDirty();
             }).pos(74, 52)
                 .size(56, 18));
@@ -1802,38 +1801,37 @@ public final class AssetManagementSystem {
                 double step = currentMode == AllowShootingConfig.Mode.WHEN_DV_UNDER ? 1.0 : 3600.0;
                 modal.child(createFooterButton("-", module != null, () -> {
                     double newT = Math.max(0.0, currentThreshold - step);
-                    applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, newT);
+                    applyShootingThresholdUpdate(module, outpost, modIdx, currentMode, newT);
                     markStructureDirty();
                 }).pos(136, 52)
                     .size(18, 18));
                 modal.child(
                     createDecimalValueWidget(
-                        () -> getCurrentShootingThreshold(module, isBigHammer),
-                        value -> applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, value),
+                        () -> getCurrentShootingThreshold(module),
+                        value -> applyShootingThresholdUpdate(module, outpost, modIdx, currentMode, value),
                         0.0,
                         999999999.0,
                         currentMode == AllowShootingConfig.Mode.WHEN_TOF_UNDER).pos(158, 52)
                             .size(44, 18));
                 modal.child(createFooterButton("+", module != null, () -> {
                     double newT = currentThreshold + step;
-                    applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, newT);
+                    applyShootingThresholdUpdate(module, outpost, modIdx, currentMode, newT);
                     markStructureDirty();
                 }).pos(206, 52)
                     .size(18, 18));
             }
 
-            if (isBigHammer) {
-                modal.child(createBodyText("Planetary:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(234, 56));
-                modal.child(createFooterButton(planetaryHandling ? "ON" : "OFF", true, () -> {
-                    CelestialClient.updateModuleConfig(
-                        outpost.assetId,
-                        modIdx,
-                        AssetModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING,
-                        !planetaryHandling);
-                    markStructureDirty();
-                }).pos(296, 52)
-                    .size(34, 18));
-            }
+            modal.child(createBodyText("Variant:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(234, 56));
+            modal.child(createFooterButton(variant.name(), true, () -> {
+                HammerVariant next = variant == HammerVariant.BASE ? HammerVariant.BIG : HammerVariant.BASE;
+                CelestialClient.updateModuleConfig(
+                    outpost.assetId,
+                    modIdx,
+                    AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
+                    next);
+                markStructureDirty();
+            }).pos(288, 52)
+                .size(42, 18));
 
             // ── Column header labels ──────────────────────────────────────────
             modal.child(createBodyText("Priority:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 78));
@@ -2003,7 +2001,7 @@ public final class AssetManagementSystem {
         }
 
         private void applyShootingModeUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
-            boolean isBigHammer, AllowShootingConfig.Mode newMode, double threshold) {
+            AllowShootingConfig.Mode newMode, double threshold) {
             if (module == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
@@ -2013,7 +2011,7 @@ public final class AssetManagementSystem {
         }
 
         private void applyShootingThresholdUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
-            boolean isBigHammer, AllowShootingConfig.Mode mode, double newThreshold) {
+            AllowShootingConfig.Mode mode, double newThreshold) {
             if (module == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
@@ -2022,7 +2020,7 @@ public final class AssetManagementSystem {
                 newThreshold);
         }
 
-        private double getCurrentShootingThreshold(ModuleInstance module, boolean isBigHammer) {
+        private double getCurrentShootingThreshold(ModuleInstance module) {
             if (module == null) return 0.0;
             if (!(module.component() instanceof ModuleHammer hc)) return 0.0;
             return hc.config()

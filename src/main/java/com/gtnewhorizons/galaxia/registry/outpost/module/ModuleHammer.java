@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.Objects;
+
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
@@ -7,7 +9,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 public final class ModuleHammer implements ModuleComponent, IParallelModule {
 
     public final FacilityModuleKind kind;
-    public final boolean crossPlanetaryCapability;
 
     private byte parallel = 1;
 
@@ -15,18 +16,16 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
     private OrbitalTransferPlanner.RoutePriority routePriority;
     private boolean canFire;
 
-    private boolean planetaryHandling;
+    private HammerVariant variant;
     private AllowShootingConfig config;
 
     public ModuleHammer(FacilityModuleKind kind, AllowShootingConfig config,
-        OrbitalTransferPlanner.RoutePriority routePriority, boolean canFire, boolean planetaryHandling,
-        boolean crossPlanetaryCapability, int maxBatchSize) {
-        this.kind = kind;
-        this.config = config;
-        this.routePriority = routePriority;
+        OrbitalTransferPlanner.RoutePriority routePriority, boolean canFire, HammerVariant variant, int maxBatchSize) {
+        this.kind = Objects.requireNonNull(kind, "kind");
+        this.config = Objects.requireNonNull(config, "config");
+        this.routePriority = Objects.requireNonNull(routePriority, "routePriority");
         this.canFire = canFire;
-        this.planetaryHandling = planetaryHandling;
-        this.crossPlanetaryCapability = crossPlanetaryCapability;
+        this.variant = Objects.requireNonNull(variant, "variant");
         this.maxBatchSize = maxBatchSize;
     }
 
@@ -40,7 +39,7 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
     }
 
     public void setConfig(AllowShootingConfig newConfig) {
-        this.config = newConfig;
+        this.config = Objects.requireNonNull(newConfig, "newConfig");
     }
 
     public OrbitalTransferPlanner.RoutePriority routePriority() {
@@ -55,8 +54,8 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
         canFire = false;
     }
 
-    public boolean planetaryHandling() {
-        return planetaryHandling;
+    public HammerVariant variant() {
+        return variant;
     }
 
     public int maxBatchSize() {
@@ -64,11 +63,11 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
     }
 
     public void setRoutePriority(OrbitalTransferPlanner.RoutePriority routePriority) {
-        this.routePriority = routePriority;
+        this.routePriority = Objects.requireNonNull(routePriority, "routePriority");
     }
 
-    public void setPlanetaryHandling(boolean planetaryHandling) {
-        this.planetaryHandling = planetaryHandling;
+    public void setVariant(HammerVariant variant) {
+        this.variant = Objects.requireNonNull(variant, "variant");
     }
 
     @Override

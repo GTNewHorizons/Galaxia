@@ -26,6 +26,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -59,7 +60,7 @@ public class CelestialEventHandler {
         // All signals live in SYSTEM scope (one signal per resource per outpost).
         // Dispatch routing is decided at match time:
         // same planetary anchor → HAMMER
-        // different planetary anchors → HAMMER with crossPlanetaryCapability
+        // different planetary anchors -> BIG HAMMER
         for (Map.Entry<CelestialObjectId, List<LogisticSignal>> entry : LogisticStore
             // TODO: Use different scopes also?
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
@@ -148,8 +149,7 @@ public class CelestialEventHandler {
                 final boolean success = supplier.allOperationalModules()
                     .filter(
                         m -> m.component() instanceof ModuleHammer h && h.canFire()
-                            && (!shareAnchor || h.planetaryHandling())
-                            && (shareAnchor || h.crossPlanetaryCapability))
+                            && (shareAnchor || h.variant() == HammerVariant.BIG))
                     .map(m -> (ModuleHammer) m.component())
                     .anyMatch(hammer -> {
                         LogisticSignal.Scope deliveryScope = LogisticSignal.Scope.PLANETARY;

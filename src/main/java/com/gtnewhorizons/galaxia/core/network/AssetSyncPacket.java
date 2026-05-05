@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
@@ -417,8 +418,7 @@ public final class AssetSyncPacket implements IMessage {
                     h.config()
                         .threshold());
                 PacketUtil.writeEnum(buf, h.routePriority());
-                buf.writeBoolean(h.planetaryHandling());
-                buf.writeBoolean(h.crossPlanetaryCapability);
+                PacketUtil.writeEnum(buf, h.variant());
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
@@ -460,10 +460,9 @@ public final class AssetSyncPacket implements IMessage {
                     buf.readDouble());
                 OrbitalTransferPlanner.RoutePriority routePriority = PacketUtil
                     .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
-                boolean planetaryHandling = buf.readBoolean();
-                boolean crossPlanetaryCapability = buf.readBoolean();
+                HammerVariant variant = PacketUtil.readEnum(buf, HammerVariant.class);
                 module.setComponent(
-                    new ModuleHammer(kind, cfg, routePriority, false, planetaryHandling, crossPlanetaryCapability, 64));
+                    new ModuleHammer(kind, cfg, routePriority, false, variant, 64));
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
