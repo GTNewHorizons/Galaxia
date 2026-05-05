@@ -10,9 +10,12 @@ import net.minecraft.network.PacketBuffer;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -29,11 +32,14 @@ public final class StarmapActionSyncHandler extends SyncHandler {
 
     public static final String KEY = "starmap_actions";
 
-    private static final int REQUEST_ACTION = 1;
-    private static final int RESPONSE_SYNC = 2;
-    private static final int REQUEST_MODULE_UPDATE = 3;
-    private static final int REQUEST_INVENTORY_UPDATE = 4;
-    private static final int REQUEST_LOGISTICS_CONFIG = 5;
+    private static final int REQUEST_CREATE_ASSET = 1;
+    private static final int REQUEST_UPDATE_ASSET = 2;
+    private static final int REQUEST_BUILD_MODULE = 3;
+    private static final int REQUEST_MODULE_UPDATE = 4;
+    private static final int REQUEST_INVENTORY_UPDATE = 5;
+    private static final int REQUEST_LOGISTICS_CONFIG = 6;
+
+    private static final int RESPONSE_SYNC = 100;
 
     private static StarmapActionSyncHandler activeClientHandler;
 
@@ -54,14 +60,12 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendCreateAsset(CelestialObjectId bodyId, String displayName, CelestialAsset.Kind kind,
-        Buildable.Status status) {
+    public static boolean sendCreateAsset(CelestialObjectId bodyId, String displayName,
+        CelestialAsset.Kind kind, Buildable.Status status) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(
-            REQUEST_ACTION,
-            buf -> StarmapActionPayloadCodec
-                .write(buf, StarmapActionPayload.createAsset(bodyId, displayName, kind, status)));
+        AssetCreatePacket packet = AssetCreatePacket.create(bodyId, displayName, kind, status);
+        handler.syncToServer(REQUEST_CREATE_ASSET, packet::toBytes);
         return true;
     }
 
@@ -70,31 +74,42 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         ModuleTier tier, boolean instantBuild, StationTileCoord coord) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(
-            REQUEST_ACTION,
-            buf -> StarmapActionPayloadCodec
-                .write(buf, StarmapActionPayload.buildModule(assetId, kind, shape, tier, instantBuild, coord)));
+        AssetBuildModulePacket packet = AssetBuildModulePacket.create(assetId, kind, shape, tier, instantBuild, coord);
+        handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
         return true;
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendAssetOnly(StarmapAction action, CelestialAsset.ID assetId) {
+    public static boolean sendUpdateAsset(AssetUpdatePacket packet) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(
-            REQUEST_ACTION,
-            buf -> StarmapActionPayloadCodec.write(buf, StarmapActionPayload.assetOnly(action, assetId)));
+        handler.syncToServer(REQUEST_UPDATE_ASSET, packet::toBytes);
         return true;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendDestroyAsset(CelestialAsset.ID assetId) {
+        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.DESTROY_ASSET));
     }
 
     @SideOnly(Side.CLIENT)
     public static boolean sendRenameAsset(CelestialAsset.ID assetId, String displayName) {
-        StarmapActionSyncHandler handler = activeClientHandler;
-        if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(
-            REQUEST_ACTION,
-            buf -> StarmapActionPayloadCodec.write(buf, StarmapActionPayload.renameAsset(assetId, displayName)));
-        return true;
+        return sendUpdateAsset(AssetUpdatePacket.rename(assetId, displayName));
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendCancelConstruction(CelestialAsset.ID assetId) {
+        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION));
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendStartDeconstruction(CelestialAsset.ID assetId) {
+        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION));
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendRequestFullSync(CelestialAsset.ID assetId) {
+        return sendUpdateAsset(AssetUpdatePacket.create(assetId, AssetUpdatePacket.Action.REQUEST_FULL_SYNC));
     }
 
     @SideOnly(Side.CLIENT)
@@ -135,62 +150,43 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         EntityPlayer player = getSyncManager().getPlayer();
         if (!(player instanceof EntityPlayerMP playerMp)) return;
         UUID teamId = TempTeamCompat.getTeam(playerMp);
-        switch (id) {
-            case REQUEST_ACTION -> {
-                StarmapActionResult result = StarmapServerActions
-                    .apply(teamId, sanitizePayload(StarmapActionPayloadCodec.read(buf), playerMp));
-                syncResult(result);
-            }
-            case REQUEST_MODULE_UPDATE -> syncPacket(
-                AssetModuleUpdatePacket.apply(teamId, readModuleUpdatePacket(buf)));
-            case REQUEST_INVENTORY_UPDATE -> syncPacket(
-                AssetInventoryUpdatePacket
-                    .apply(teamId, playerMp.capabilities.isCreativeMode, readInventoryUpdatePacket(buf)));
-            case REQUEST_LOGISTICS_CONFIG -> syncPacket(
-                LogisticsConfigUpdatePacket.apply(teamId, readLogisticsConfigPacket(buf)));
-            default -> {}
-        }
-    }
+        boolean creative = playerMp.capabilities.isCreativeMode;
 
-    private void syncResult(StarmapActionResult result) {
-        if (result.applied()) {
-            syncPacket(result.syncPacket());
+        switch (id) {
+            case REQUEST_CREATE_ASSET -> {
+                AssetCreatePacket packet = new AssetCreatePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId));
+            }
+            case REQUEST_UPDATE_ASSET -> {
+                AssetUpdatePacket packet = new AssetUpdatePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId));
+            }
+            case REQUEST_BUILD_MODULE -> {
+                AssetBuildModulePacket packet = new AssetBuildModulePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId, creative));
+            }
+            case REQUEST_MODULE_UPDATE -> {
+                AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId));
+            }
+            case REQUEST_INVENTORY_UPDATE -> {
+                AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId, creative));
+            }
+            case REQUEST_LOGISTICS_CONFIG -> {
+                LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId));
+            }
         }
     }
 
     private void syncPacket(AssetSyncPacket packet) {
         if (packet != null) syncToClient(RESPONSE_SYNC, packet::toBytes);
-    }
-
-    private static AssetModuleUpdatePacket readModuleUpdatePacket(PacketBuffer buf) {
-        AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
-        packet.fromBytes(buf);
-        return packet;
-    }
-
-    private static AssetInventoryUpdatePacket readInventoryUpdatePacket(PacketBuffer buf) {
-        AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
-        packet.fromBytes(buf);
-        return packet;
-    }
-
-    private static LogisticsConfigUpdatePacket readLogisticsConfigPacket(PacketBuffer buf) {
-        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
-        packet.fromBytes(buf);
-        return packet;
-    }
-
-    private static StarmapActionPayload sanitizePayload(StarmapActionPayload payload, EntityPlayerMP player) {
-        if (payload.action() != StarmapAction.BUILD_MODULE || !payload.instantBuild()
-            || player.capabilities.isCreativeMode) {
-            return payload;
-        }
-        return StarmapActionPayload.buildModule(
-            payload.assetId(),
-            payload.moduleKind(),
-            payload.moduleShape(),
-            payload.moduleTier(),
-            false,
-            payload.tileCoord());
     }
 }

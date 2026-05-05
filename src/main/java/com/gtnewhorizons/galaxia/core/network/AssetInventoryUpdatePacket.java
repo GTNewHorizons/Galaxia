@@ -69,43 +69,43 @@ public final class AssetInventoryUpdatePacket {
         creativeOnly = buf.readBoolean();
     }
 
-    public static AssetSyncPacket apply(UUID teamId, boolean creativePlayer, AssetInventoryUpdatePacket packet) {
-        if (packet.creativeOnly && !creativePlayer) {
+    public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {
+        if (creativeOnly && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: player is not in creative mode.");
             return null;
         }
 
-        if (packet.creativeOnly && packet.delta <= 0) {
-            LOG.warn("[Logistics] InventoryDelta rejected: invalid amount {}", packet.delta);
+        if (creativeOnly && delta <= 0) {
+            LOG.warn("[Logistics] InventoryDelta rejected: invalid amount {}", delta);
             return null;
         }
 
-        AutomatedFacility state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedFacility o ? o
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o
             : null;
-        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, packet.assetId)) {
-            LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", packet.assetId);
+        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+            LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
             return null;
         }
 
-        ItemStackWrapper resource = packet.resource != null ? packet.resource
-            : ItemStackWrapper.fromKey(packet.resourceKey);
+        ItemStackWrapper resource = this.resource != null ? this.resource
+            : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
 
-        if (packet.delta == Long.MIN_VALUE) {
+        if (delta == Long.MIN_VALUE) {
             long amount = state.inventory.getAmount(resource);
             if (amount > 0) {
                 state.inventory.add(resource, -amount);
-                LOG.info("[Logistics] Removed {} x {} from outpost {}", amount, resource, packet.assetId);
-                return AssetSyncPacket.inventoryUpdate(packet.assetId, packet.resourceKey, -amount);
+                LOG.info("[Logistics] Removed {} x {} from outpost {}", amount, resource, assetId);
+                return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, -amount);
             }
         } else {
-            long effectiveDelta = packet.delta;
-            if (packet.creativeOnly) {
-                effectiveDelta = Math.min(packet.delta, Integer.MAX_VALUE);
+            long effectiveDelta = delta;
+            if (creativeOnly) {
+                effectiveDelta = Math.min(delta, Integer.MAX_VALUE);
             }
             state.inventory.add(resource, effectiveDelta);
-            LOG.info("[Logistics] Inventory update: {} x {} on outpost {}", effectiveDelta, resource, packet.assetId);
-            return AssetSyncPacket.inventoryUpdate(packet.assetId, packet.resourceKey, effectiveDelta);
+            LOG.info("[Logistics] Inventory update: {} x {} on outpost {}", effectiveDelta, resource, assetId);
+            return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, effectiveDelta);
         }
         return null;
     }

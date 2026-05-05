@@ -81,39 +81,39 @@ public final class LogisticsConfigUpdatePacket {
         removeEntry = buf.readBoolean();
     }
 
-    public static AssetSyncPacket apply(UUID teamId, LogisticsConfigUpdatePacket packet) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedFacility o ? o
+    public AssetSyncPacket apply(UUID teamId) {
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o
             : null;
-        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, packet.assetId)) {
-            LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", packet.assetId);
+        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+            LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
             return null;
         }
 
-        if (!packet.removeEntry && packet.orderSize <= 0) {
-            LOG.warn("[Logistics] LogisticsConfigUpdate rejected: orderSize must be > 0");
+        if (!removeEntry && orderSize <= 0) {
+            LOG.warn("[Logistics] LogisticsConfigUpdate rejected: orderSize must be >0");
             return null;
         }
-        if (!packet.removeEntry && packet.minReserve < 0) {
-            LOG.warn("[Logistics] LogisticsConfigUpdate rejected: minReserve must be >= 0");
+        if (!removeEntry && minReserve < 0) {
+            LOG.warn("[Logistics] LogisticsConfigUpdate rejected: minReserve must be >=0");
             return null;
         }
 
-        ItemStackWrapper resource = packet.resource != null ? packet.resource
-            : ItemStackWrapper.fromKey(packet.resourceKey);
+        ItemStackWrapper resource = this.resource != null ? this.resource
+            : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
-        if (packet.removeEntry) {
+        if (removeEntry) {
             state.logisticsConfig.reset(resource);
-            return AssetSyncPacket.logisticsConfigRemoved(packet.assetId, packet.resourceKey);
+            return AssetSyncPacket.logisticsConfigRemoved(assetId, resourceKey);
         } else {
             LogisticsResourceConfig config = new LogisticsResourceConfig(
-                packet.minReserve,
-                packet.orderSize,
-                packet.isImportEnabled,
-                packet.isSupplyEnabled);
+                minReserve,
+                orderSize,
+                isImportEnabled,
+                isSupplyEnabled);
             state.logisticsConfig.set(resource, config);
             return AssetSyncPacket.logisticsConfigUpdated(
-                packet.assetId,
-                packet.resourceKey,
+                assetId,
+                resourceKey,
                 config.minReserve(),
                 config.orderSize(),
                 config.isImportEnabled(),

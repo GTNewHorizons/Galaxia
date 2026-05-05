@@ -280,34 +280,34 @@ public final class AssetModuleUpdatePacket {
         return rawPayload;
     }
 
-    public static AssetSyncPacket apply(UUID teamId, AssetModuleUpdatePacket packet) {
-        CelestialAsset asset = CelestialAssetStore.findAsset(packet.assetId);
+    public AssetSyncPacket apply(UUID teamId) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (!(asset instanceof AutomatedFacility state)) return null;
-        if (!CelestialAssetStore.isOwnedBy(teamId, packet.assetId)) return null;
-        if (packet.type == ACTION_TYPE && packet.action == null) return null;
-        if (packet.type == CONFIG_TYPE && packet.configAction == null) return null;
+        if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return null;
+        if (type == ACTION_TYPE && action == null) return null;
+        if (type == CONFIG_TYPE && configAction == null) return null;
 
         var modules = state.modules();
-        packet.moduleIndex = state.moduleIndex(packet.moduleId);
-        if (packet.moduleIndex < 0 || packet.moduleIndex >= modules.size()) return null;
+        moduleIndex = state.moduleIndex(moduleId);
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return null;
 
-        ModuleInstance module = modules.get(packet.moduleIndex);
-        if (!packet.moduleId.equals(module.id)) return null;
+        ModuleInstance module = modules.get(moduleIndex);
+        if (!moduleId.equals(module.id)) return null;
 
-        switch (packet.type) {
-            case ACTION_TYPE -> handleAction(packet, state, module);
-            case CONFIG_TYPE -> handleConfig(packet, state, module);
+        switch (type) {
+            case ACTION_TYPE -> handleAction(this, state, module);
+            case CONFIG_TYPE -> handleConfig(this, state, module);
             default -> {
                 return null;
             }
         }
 
-        if (packet.type == ACTION_TYPE && packet.getAction() == Action.DESTROY) {
-            return AssetSyncPacket.moduleRemoved(packet.assetId, packet.moduleIndex, module.id)
+        if (type == ACTION_TYPE && getAction() == Action.DESTROY) {
+            return AssetSyncPacket.moduleRemoved(assetId, moduleIndex, module.id)
                 .withSyncRevision(state.getSyncRevision());
         }
         state.markModuleDirty(module.id);
-        return AssetSyncPacket.moduleUpdated(packet.assetId, packet.moduleIndex, module)
+        return AssetSyncPacket.moduleUpdated(assetId, moduleIndex, module)
             .withSyncRevision(state.getSyncRevision());
     }
 

@@ -16,7 +16,6 @@ import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
-import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapAction;
 import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
@@ -127,15 +126,15 @@ public final class CelestialClient {
     }
 
     public static boolean destroyAsset(ID assetId) {
-        return StarmapActionSyncHandler.sendAssetOnly(StarmapAction.DESTROY_ASSET, assetId);
+        return StarmapActionSyncHandler.sendDestroyAsset(assetId);
     }
 
     public static boolean cancelConstruction(ID assetId) {
-        return StarmapActionSyncHandler.sendAssetOnly(StarmapAction.CANCEL_CONSTRUCTION, assetId);
+        return StarmapActionSyncHandler.sendCancelConstruction(assetId);
     }
 
     public static boolean startDeconstruction(ID assetId) {
-        return StarmapActionSyncHandler.sendAssetOnly(StarmapAction.START_DECONSTRUCTION, assetId);
+        return StarmapActionSyncHandler.sendStartDeconstruction(assetId);
     }
 
     public static boolean renameAsset(ID assetId, String displayName) {
@@ -143,7 +142,7 @@ public final class CelestialClient {
     }
 
     public static void requestFullSync(ID assetId) {
-        StarmapActionSyncHandler.sendAssetOnly(StarmapAction.REQUEST_FULL_SYNC, assetId);
+        StarmapActionSyncHandler.sendRequestFullSync(assetId);
     }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
