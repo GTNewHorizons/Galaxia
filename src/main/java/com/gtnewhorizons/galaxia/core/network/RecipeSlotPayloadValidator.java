@@ -19,4 +19,3 @@ final class RecipeSlotPayloadValidator {
         return GTRecipeSlotPayloadValidator.validate(module, snapshot, LOG);
     }
 }
-
