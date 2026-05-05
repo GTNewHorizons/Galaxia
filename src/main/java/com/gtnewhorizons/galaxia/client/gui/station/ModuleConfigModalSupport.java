@@ -1,52 +1,34 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.lang.reflect.Field;
 import java.util.function.BooleanSupplier;
 
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.GuiScreen;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.factory.SimpleGuiFactory;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.WidgetOutline;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
-final class ModuleConfigScreenSupport {
+final class ModuleConfigModalSupport {
 
     static final int HEADER_HEIGHT = 24;
     static final int PANEL_PADDING = 8;
 
-    private ModuleConfigScreenSupport() {}
+    private ModuleConfigModalSupport() {}
 
-    static void addFrame(ModularPanel panel, String title, int width, int height) {
-        ParentWidget<?> backgroundLayer = new ParentWidget<>().pos(0, 0)
-            .size(width, height)
-            .background(drawable((ctx, x, y, w, h) -> {
-                net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-                net.minecraft.client.gui.Gui
-                    .drawRect(x, y, x + w, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-            }));
-        panel.child(backgroundLayer);
-        panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
-        panel.child(
-            IKey.str(title)
-                .asWidget()
-                .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                .shadow(true)
-                .pos(PANEL_PADDING, PANEL_PADDING));
+    static void drawFrame(String title, int width, int height) {
+        net.minecraft.client.gui.Gui.drawRect(0, 0, width, height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
+        net.minecraft.client.gui.Gui.drawRect(0, 0, width, HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
+        BorderedRect.draw(0, 0, width, height, 0x00000000, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
+        drawLine(title, PANEL_PADDING, PANEL_PADDING, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
     }
 
     static ButtonWidget<?> button(String label, Runnable onClick) {
@@ -97,19 +79,6 @@ final class ModuleConfigScreenSupport {
         }
         return facility.modules()
             .get(moduleIndex);
-    }
-
-    static void closeTo(@Nullable GuiScreen screen) {
-        Minecraft.getMinecraft()
-            .displayGuiScreen(screen);
-    }
-
-    static void resetFactoryHolder(SimpleGuiFactory factory) {
-        try {
-            Field field = SimpleGuiFactory.class.getDeclaredField("guiHolder");
-            field.setAccessible(true);
-            field.set(factory, null);
-        } catch (ReflectiveOperationException ignored) {}
     }
 
     static String formatEu(long amount) {

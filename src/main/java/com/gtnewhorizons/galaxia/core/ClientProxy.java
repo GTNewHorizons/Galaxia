@@ -7,8 +7,6 @@ import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.HammerConfigScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.MinerVoidConfigScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
@@ -59,8 +57,6 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
         GalaxiaSkyBootstrap.clientInit();
         ItemPickerScreen.FACTORY.init();
-        HammerConfigScreen.FACTORY.init();
-        MinerVoidConfigScreen.FACTORY.init();
         ModulePickerScreen.FACTORY.init();
         StationManagementScreen.FACTORY.init();
         MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
-final class HammerConfigScreenTest {
+final class HammerConfigRulesTest {
 
     @Test
     void baseHammerTierCycleMatchesAllowedTiers() {

@@ -47,9 +47,11 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private final StationMapWidget map;
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
+    private final ModuleConfigModalController configController;
 
-    public ModuleDetailPanel(StationMapWidget map) {
+    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController) {
         this.map = map;
+        this.configController = configController;
         child(
             createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerVoidConfig).pos(10, ACTION_Y)
                 .size(70, BUTTON_H));
@@ -169,6 +171,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                     EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
             }
         }
+
+        lineY = Math.max(lineY, ACTION_Y + BUTTON_H + SECTION_GAP);
 
         if (module.component() instanceof ModuleHammer hammer) {
             lineY += SECTION_GAP;
@@ -295,13 +299,13 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private void openHammerConfig() {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleHammer)) return;
-        HammerConfigScreen.open(map.assetId(), selected.moduleIndex);
+        configController.openHammer(selected.moduleIndex);
     }
 
     private void openMinerVoidConfig() {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleMiner)) return;
-        MinerVoidConfigScreen.open(map.assetId(), selected.moduleIndex);
+        configController.openMinerVoid(selected.moduleIndex);
     }
 
     private void openRecipeInput() {

@@ -68,6 +68,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             PADDING,
             PADDING,
             visionLayer);
+        ModuleConfigModalController configController = new ModuleConfigModalController();
 
         panel.child(
             new StationScreenBackground().left(0)
@@ -85,10 +86,20 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.55f, -PADDING * 2));
         panel.child(
-            new ModuleDetailPanel(map).left(PADDING)
+            new ModuleDetailPanel(map, configController).left(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));
+        panel.child(
+            new HammerConfigModalWidget(assetId, configController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                .top(PADDING * 2)
+                .width(HammerConfigModalWidget.WIDTH)
+                .height(HammerConfigModalWidget.HEIGHT));
+        panel.child(
+            new MinerVoidConfigModalWidget(assetId, configController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                .top(PADDING * 2)
+                .width(MinerVoidConfigModalWidget.WIDTH)
+                .height(MinerVoidConfigModalWidget.HEIGHT));
         return panel;
     }
 
