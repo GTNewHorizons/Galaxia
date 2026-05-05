@@ -5,7 +5,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-
 /**
  * Self-contained recipe data snapshot. Created by the picker GUI when
  * the player selects a recipe. The execution pipeline reads directly
