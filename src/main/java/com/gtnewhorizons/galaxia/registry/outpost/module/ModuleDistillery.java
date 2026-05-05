@@ -9,8 +9,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
-import gregtech.api.recipe.RecipeMaps;
-
 public class ModuleDistillery implements ModuleComponent, IParallelModule, IRecipeModule {
 
     private byte parallel = 1;
@@ -30,8 +28,8 @@ public class ModuleDistillery implements ModuleComponent, IParallelModule, IReci
     }
 
     @Override
-    public gregtech.api.recipe.RecipeMap<?> getRecipeMap() {
-        return RecipeMaps.distilleryRecipes;
+    public String getRecipeMapName() {
+        return "gt.recipe.distillery";
     }
 
     @Override

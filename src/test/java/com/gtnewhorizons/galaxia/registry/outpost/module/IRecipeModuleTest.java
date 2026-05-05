@@ -11,22 +11,20 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
-import gregtech.api.recipe.RecipeMap;
-
 final class IRecipeModuleTest {
 
     static final class StubRecipeModule implements IRecipeModule {
 
-        private final RecipeMap<?> recipeMap;
+        private final String recipeMapName;
         private RecipeConfig recipeConfig;
 
-        StubRecipeModule(RecipeMap<?> recipeMap) {
-            this.recipeMap = recipeMap;
+        StubRecipeModule(String recipeMapName) {
+            this.recipeMapName = recipeMapName;
         }
 
         @Override
-        public RecipeMap<?> getRecipeMap() {
-            return recipeMap;
+        public String getRecipeMapName() {
+            return recipeMapName;
         }
 
         @Override

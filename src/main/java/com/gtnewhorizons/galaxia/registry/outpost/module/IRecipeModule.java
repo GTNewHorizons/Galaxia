@@ -7,11 +7,9 @@ import java.util.Random;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
 
-import gregtech.api.recipe.RecipeMap;
-
 public interface IRecipeModule extends ModuleComponent {
 
-    RecipeMap<?> getRecipeMap();
+    String getRecipeMapName();
 
     /**
      * Returns additional NEI recipe transfer idents beyond the main RecipeMap's

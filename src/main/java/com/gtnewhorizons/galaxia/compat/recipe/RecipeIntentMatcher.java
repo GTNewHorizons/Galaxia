@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.outpost.recipe;
+package com.gtnewhorizons.galaxia.compat.recipe;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -11,7 +11,7 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.oredict.OreDictionary;
 
-import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import gregtech.api.util.GTRecipe;
 

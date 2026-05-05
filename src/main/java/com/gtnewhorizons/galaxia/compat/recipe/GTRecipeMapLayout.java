@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.client.gui.station.recipe;
+package com.gtnewhorizons.galaxia.compat.recipe;
 
 import java.util.ArrayList;
 import java.util.Collections;

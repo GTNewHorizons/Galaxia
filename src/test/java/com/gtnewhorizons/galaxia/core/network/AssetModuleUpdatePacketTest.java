@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import io.netty.buffer.ByteBuf;
@@ -224,6 +225,43 @@ final class AssetModuleUpdatePacketTest {
         decoded.fromBytes(buf);
         assertEquals(AssetModuleUpdatePacket.ConfigAction.SET_TIER, decoded.getConfigAction());
         assertNull(decoded.getRawPayload());
+    }
+
+    @Test
+    void applyRecipeSlotMutation_addOnEmptyList_appendsAtZero() {
+        RecipeSlotList slots = new RecipeSlotList();
+        RecipeSlot slot = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0, 0, (byte) 1, (byte) 1);
+
+        boolean changed = AssetModuleUpdatePacket
+            .applyRecipeSlotMutation(slots, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT, 0, slot);
+
+        assertTrue(changed);
+        assertEquals(1, slots.size());
+        assertSame(slot, slots.get(0));
+    }
+
+    @Test
+    void applyRecipeSlotMutation_addWithGapIndexIsRejected() {
+        RecipeSlotList slots = new RecipeSlotList();
+        RecipeSlot slot = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0, 0, (byte) 1, (byte) 1);
+
+        boolean changed = AssetModuleUpdatePacket
+            .applyRecipeSlotMutation(slots, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT, 1, slot);
+
+        assertFalse(changed);
+        assertTrue(slots.isEmpty());
+    }
+
+    @Test
+    void applyRecipeSlotMutation_updateMissingSlotIsRejected() {
+        RecipeSlotList slots = new RecipeSlotList();
+        RecipeSlot slot = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0, 0, (byte) 1, (byte) 1);
+
+        boolean changed = AssetModuleUpdatePacket
+            .applyRecipeSlotMutation(slots, AssetModuleUpdatePacket.ConfigAction.UPDATE_RECIPE_SLOT, 0, slot);
+
+        assertFalse(changed);
+        assertTrue(slots.isEmpty());
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) {

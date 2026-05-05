@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -155,70 +156,65 @@ public final class CelestialClient {
     }
 
     public static void updateModuleAction(ID assetId, int moduleIndex, AssetModuleUpdatePacket.Action action) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action);
-        StarmapActionSyncHandler.sendModuleUpdate(packet);
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .config(assetId, moduleIndex, module.id, configAction, payload);
-        StarmapActionSyncHandler.sendModuleUpdate(packet);
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .config(assetId, moduleIndex, module.id, configAction, payload);
-        StarmapActionSyncHandler.sendModuleUpdate(packet);
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .config(assetId, moduleIndex, module.id, configAction, payload);
-        StarmapActionSyncHandler.sendModuleUpdate(packet);
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
         T payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .config(assetId, moduleIndex, module.id, configAction, payload);
-        StarmapActionSyncHandler.sendModuleUpdate(packet);
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleRecipeSlot(ID assetId, int moduleIndex, ConfigAction configAction, byte slotIndex,
         RecipeSlot slot) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot);
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket
+                .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
+    }
+
+    private static void sendModuleUpdate(ID assetId, int moduleIndex,
+        Function<ModuleInstance, AssetModuleUpdatePacket> packetFactory) {
+        ModuleInstance module = resolveModule(assetId, moduleIndex);
+        if (module == null) return;
+        AssetModuleUpdatePacket packet = packetFactory.apply(module);
+        if (packet == null) return;
         StarmapActionSyncHandler.sendModuleUpdate(packet);
+    }
+
+    private static @Nullable ModuleInstance resolveModule(ID assetId, int moduleIndex) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return null;
+        var modules = state.modules();
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return null;
+        return modules.get(moduleIndex);
     }
 
     public static void addInventory(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {

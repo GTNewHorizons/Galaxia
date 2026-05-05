@@ -38,22 +38,23 @@ public final class GTRecipeSlotPayloadValidator {
 
         GTRecipeMapId mapId = ids[mapOrdinal];
         RecipeMap<?> expectedMap = GTRecipeMapId.findRecipeMap(mapId);
-        RecipeMap<?> moduleMap = module.getRecipeMap();
+        String moduleMapName = module.getRecipeMapName();
         if (expectedMap == null) {
             log.error(
                 "[RecipeValidator] REJECTED: GTRecipeMapId.findRecipeMap({}) returned null; RecipeMap not registered",
                 mapId);
             return null;
         }
-        if (moduleMap == null) {
-            log.error("[RecipeValidator] REJECTED: module.getRecipeMap() returned null; server-side invariant broken");
+        if (moduleMapName == null || moduleMapName.isEmpty()) {
+            log.error(
+                "[RecipeValidator] REJECTED: module.getRecipeMapName() returned blank; server-side invariant broken");
             return null;
         }
-        if (!expectedMap.unlocalizedName.equals(moduleMap.unlocalizedName)) {
+        if (!expectedMap.unlocalizedName.equals(moduleMapName)) {
             log.warn(
                 "[RecipeValidator] REJECTED: recipe map name mismatch; expected='{}' actual='{}'",
                 expectedMap.unlocalizedName,
-                moduleMap.unlocalizedName);
+                moduleMapName);
             return null;
         }
 

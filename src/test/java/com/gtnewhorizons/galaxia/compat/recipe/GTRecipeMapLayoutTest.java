@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.client.gui.station.recipe;
+package com.gtnewhorizons.galaxia.compat.recipe;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

@@ -4,6 +4,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
@@ -409,10 +411,7 @@ public final class AssetModuleUpdatePacket {
 
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
             if (config == null) return;
-            if (config.slots()
-                .getOrNull(slotIndex) == null) return;
-            config.slots()
-                .remove(slotIndex);
+            if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, null)) return;
             state.markModuleDirty(module.id);
             return;
         }
@@ -467,9 +466,34 @@ public final class AssetModuleUpdatePacket {
             recipeModule.setRecipeConfig(config);
         }
 
-        config.slots()
-            .set(slotIndex, slot);
+        if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, slot)) return;
         state.markModuleDirty(module.id);
+    }
+
+    static boolean applyRecipeSlotMutation(RecipeSlotList slots, ConfigAction action, int slotIndex,
+        @Nullable RecipeSlot slot) {
+        if (slots == null || action == null || slotIndex < 0 || slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) {
+            return false;
+        }
+
+        return switch (action) {
+            case ADD_RECIPE_SLOT -> {
+                if (slot == null || slotIndex > slots.size()) yield false;
+                slots.setOrAppend(slotIndex, slot);
+                yield true;
+            }
+            case UPDATE_RECIPE_SLOT -> {
+                if (slot == null || slots.getOrNull(slotIndex) == null) yield false;
+                slots.set(slotIndex, slot);
+                yield true;
+            }
+            case REMOVE_RECIPE_SLOT -> {
+                if (slots.getOrNull(slotIndex) == null) yield false;
+                slots.remove(slotIndex);
+                yield true;
+            }
+            default -> false;
+        };
     }
 
     private static void handleMinerBlacklist(ModuleInstance module, String payload, boolean add,

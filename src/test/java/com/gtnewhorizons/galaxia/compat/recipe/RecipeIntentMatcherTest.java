@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.outpost.recipe;
+package com.gtnewhorizons.galaxia.compat.recipe;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -11,7 +11,7 @@ import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import gregtech.api.util.GTRecipe;
 import sun.misc.Unsafe;

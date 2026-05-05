@@ -103,47 +103,35 @@ final class ModuleProductionTest {
         assertNull(m.getRecipeConfig());
     }
 
-    // ---------- getRecipeMap (GT5-runtime conditional) ----------
+    // ---------- getRecipeMapName ----------
 
     @Test
-    void getRecipeMap_centrifuge() {
+    void getRecipeMapName_centrifuge() {
         ModuleCentrifuge m = new ModuleCentrifuge();
-        try {
-            assertNotNull(m.getRecipeMap());
-        } catch (Error e) {
-            // GT5 not loaded in test environment
-        }
+        assertEquals("gt.recipe.centrifuge", m.getRecipeMapName());
     }
 
     @Test
-    void getRecipeMap_electrolyzer() {
+    void getRecipeMapName_electrolyzer() {
         ModuleElectrolyzer m = new ModuleElectrolyzer();
-        try {
-            assertNotNull(m.getRecipeMap());
-        } catch (Error e) {}
+        assertEquals("gt.recipe.electrolyzer", m.getRecipeMapName());
     }
 
     @Test
-    void getRecipeMap_chemicalReactor() {
+    void getRecipeMapName_chemicalReactor() {
         ModuleChemicalReactor m = new ModuleChemicalReactor();
-        try {
-            assertNotNull(m.getRecipeMap());
-        } catch (Error e) {}
+        assertEquals("gt.recipe.chemicalreactor", m.getRecipeMapName());
     }
 
     @Test
-    void getRecipeMap_assembler() {
+    void getRecipeMapName_assembler() {
         ModuleAssembler m = new ModuleAssembler();
-        try {
-            assertNotNull(m.getRecipeMap());
-        } catch (Error e) {}
+        assertEquals("gt.recipe.assembler", m.getRecipeMapName());
     }
 
     @Test
-    void getRecipeMap_distillery() {
+    void getRecipeMapName_distillery() {
         ModuleDistillery m = new ModuleDistillery();
-        try {
-            assertNotNull(m.getRecipeMap());
-        } catch (Error e) {}
+        assertEquals("gt.recipe.distillery", m.getRecipeMapName());
     }
 }

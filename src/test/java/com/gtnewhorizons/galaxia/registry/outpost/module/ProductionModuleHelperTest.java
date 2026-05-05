@@ -24,7 +24,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
-import gregtech.api.recipe.RecipeMap;
 import sun.misc.Unsafe;
 
 final class ProductionModuleHelperTest {
@@ -75,8 +74,8 @@ final class ProductionModuleHelperTest {
         }
 
         @Override
-        public RecipeMap<?> getRecipeMap() {
-            return null;
+        public String getRecipeMapName() {
+            return "gt.recipe.invalid";
         }
 
         @Override
