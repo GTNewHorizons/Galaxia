@@ -296,6 +296,19 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyMinerVoidPercentClampsPlayerInput() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .minerVoidPercent(facility.assetId, 0, module.id, "ore:iron", 150);
+
+        packet.apply(TEAM);
+
+        assertEquals(100, facility.minerVoidChancePercent("ore:iron"));
+    }
+
+    @Test
     void fromBytesCrashesOnRecipePayloadLargerThanCap() {
         ByteBuf buf = Unpooled.buffer();
         PacketUtil.writeId(buf, ASSET_ID);
@@ -380,8 +393,20 @@ final class AssetModuleUpdatePacketTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.HAMMER
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        ModuleInstance module = FacilityModuleKind.HAMMER.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        facility.addModule(module);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static AutomatedFacility addMinerFacilityToServer() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;

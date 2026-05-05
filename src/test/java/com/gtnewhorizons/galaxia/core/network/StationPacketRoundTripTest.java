@@ -110,6 +110,17 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncRoundTripPreservesMinerVoidChances() {
+        AutomatedFacility server = createFacility();
+        server.setMinerVoidChancePercent("ore:iron", 35);
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        assertEquals(35, client.minerVoidChancePercent("ore:iron"));
+    }
+
+    @Test
     void moduleAddedDeltaPlacesLayoutTileOnClient() {
         // Server: facility with 1 module, create FULL_SYNC for client baseline
         AutomatedFacility server = buildFacilityWithModules(1);

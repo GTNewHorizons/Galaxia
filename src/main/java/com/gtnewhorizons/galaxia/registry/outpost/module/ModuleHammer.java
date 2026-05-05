@@ -38,17 +38,17 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
     public static int cooldownTicks(HammerVariant variant, ModuleTier tier) {
         return switch (Objects.requireNonNull(variant, "variant")) {
             case BASE -> switch (Objects.requireNonNull(tier, "tier")) {
-                case EV -> 60 * 20;
-                case IV -> 45 * 20;
-                case LuV -> 30 * 20;
-                default -> throw invalidTier(variant, tier);
-            };
+                    case EV -> 60 * 20;
+                    case IV -> 45 * 20;
+                    case LuV -> 30 * 20;
+                    default -> throw invalidTier(variant, tier);
+                };
             case BIG -> switch (Objects.requireNonNull(tier, "tier")) {
-                case LuV -> 60 * 20;
-                case ZPM -> 45 * 20;
-                case UV -> 30 * 20;
-                default -> throw invalidTier(variant, tier);
-            };
+                    case LuV -> 60 * 20;
+                    case ZPM -> 45 * 20;
+                    case UV -> 30 * 20;
+                    default -> throw invalidTier(variant, tier);
+                };
         };
     }
 

@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.core.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -99,8 +98,7 @@ final class FacilityPersistenceManagerTest {
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         assertEquals(
             "BIG",
-            encoded.modules.get(0).data
-                .getAsJsonObject()
+            encoded.modules.get(0).data.getAsJsonObject()
                 .get("variant")
                 .getAsString());
 
@@ -115,6 +113,23 @@ final class FacilityPersistenceManagerTest {
             .get(0)
             .component();
         assertEquals(HammerVariant.BIG, decodedHammer.variant());
+    }
+
+    @Test
+    void minerVoidChancesRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        station.setMinerVoidChancePercent("ore:iron", 35);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(35, decoded.minerVoidChancePercent("ore:iron"));
     }
 
     @Test

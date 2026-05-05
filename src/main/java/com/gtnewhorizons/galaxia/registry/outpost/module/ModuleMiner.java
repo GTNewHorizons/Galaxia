@@ -30,7 +30,9 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     }
 
     public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
-        ModuleMiner miner = (ModuleMiner) instance.component();
+        if (!(instance.component() instanceof ModuleMiner)) {
+            throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
+        }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
                 var properties = registration.properties();
@@ -40,14 +42,19 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
                 if (totalSize == 0) return;
                 int idx = RANDOM.nextInt(totalSize);
                 ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
-                if (miner.isBlacklisted(
-                    ItemStackWrapper.of(chosen)
-                        .toKey()))
-                    return;
+                String oreKey = ItemStackWrapper.of(chosen)
+                    .toKey();
+                if (shouldVoidOre(outpost, oreKey, RANDOM.nextInt(100))) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
                 outpost.inventory.add(ItemStackWrapper.of(ore), 1);
             });
+    }
+
+    public static boolean shouldVoidOre(AutomatedFacility outpost, String oreKey, int rollPercent) {
+        Objects.requireNonNull(outpost, "outpost");
+        requireRollPercent(rollPercent);
+        return rollPercent < outpost.minerVoidChancePercent(oreKey);
     }
 
     public void setBlacklist(List<String> itemKeys) {
@@ -100,5 +107,11 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
         Objects.requireNonNull(itemKey, "itemKey");
         if (itemKey.isEmpty()) throw new IllegalArgumentException("itemKey cannot be empty");
         return itemKey;
+    }
+
+    private static void requireRollPercent(int rollPercent) {
+        if (rollPercent < 0 || rollPercent >= 100) {
+            throw new IllegalArgumentException("rollPercent out of range: " + rollPercent);
+        }
     }
 }

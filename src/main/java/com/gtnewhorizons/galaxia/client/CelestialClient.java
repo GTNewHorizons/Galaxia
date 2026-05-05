@@ -199,6 +199,13 @@ public final class CelestialClient {
                 .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
     }
 
+    public static void updateMinerVoidPercent(ID assetId, int moduleIndex, String oreKey, int percent) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerVoidPercent(assetId, moduleIndex, module.id, oreKey, percent));
+    }
+
     private static void sendModuleUpdate(ID assetId, int moduleIndex,
         Function<ModuleInstance, AssetModuleUpdatePacket> packetFactory) {
         ModuleInstance module = resolveModule(assetId, moduleIndex);

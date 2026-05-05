@@ -3,7 +3,10 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -43,11 +46,13 @@ public final class AutomatedFacility extends CelestialAsset {
     private final LayoutCacheBundle layoutCache;
 
     private final SettingsGroupRegistry settingsGroups;
+    private final Map<String, Integer> minerVoidChancePercentByOre;
 
     private long energyStored;
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
+    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
@@ -68,6 +73,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
+        this.minerVoidChancePercentByOre = new LinkedHashMap<>();
         this.energyStored = 0;
     }
 
@@ -159,13 +165,52 @@ public final class AutomatedFacility extends CelestialAsset {
         return modules;
     }
 
+    public Map<String, Integer> minerVoidChances() {
+        return Collections.unmodifiableMap(minerVoidChancePercentByOre);
+    }
+
+    public int minerVoidChancePercent(String oreKey) {
+        return minerVoidChancePercentByOre.getOrDefault(requireOreKey(oreKey), 0);
+    }
+
+    public void setMinerVoidChancePercent(String oreKey, int percent) {
+        String key = requireOreKey(oreKey);
+        requireMinerVoidChancePercent(percent);
+        Integer oldValue = minerVoidChancePercentByOre.get(key);
+        Integer newValue = percent == 0 ? null : percent;
+        if (newValue == null) {
+            minerVoidChancePercentByOre.remove(key);
+        } else {
+            minerVoidChancePercentByOre.put(key, newValue);
+        }
+        if (!Objects.equals(oldValue, newValue)) {
+            dirtyMinerVoidChanceOreKeys.add(key);
+            bumpSyncRevision();
+        }
+    }
+
+    public void setMinerVoidChances(Map<String, Integer> chances) {
+        Objects.requireNonNull(chances, "miner void chances");
+        minerVoidChancePercentByOre.clear();
+        for (Map.Entry<String, Integer> entry : chances.entrySet()) {
+            String key = requireOreKey(entry.getKey());
+            int percent = requireMinerVoidChancePercent(Objects.requireNonNull(entry.getValue(), key));
+            if (percent != 0) minerVoidChancePercentByOre.put(key, percent);
+        }
+        dirtyMinerVoidChanceOreKeys.clear();
+    }
+
+    public static int clampMinerVoidChancePercent(int percent) {
+        return Math.clamp(percent, 0, 100);
+    }
+
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);
         bumpSyncRevision();
     }
 
     public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyMinerVoidChanceOreKeys.isEmpty();
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
@@ -189,6 +234,15 @@ public final class AutomatedFacility extends CelestialAsset {
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
+        return result;
+    }
+
+    public Map<String, Integer> drainDirtyMinerVoidChances() {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        for (String oreKey : dirtyMinerVoidChanceOreKeys) {
+            result.put(oreKey, minerVoidChancePercent(oreKey));
+        }
+        dirtyMinerVoidChanceOreKeys.clear();
         return result;
     }
 
@@ -225,6 +279,19 @@ public final class AutomatedFacility extends CelestialAsset {
             if (k == FacilityModuleKind.HAMMER && m.isOperational()) return true;
         }
         return false;
+    }
+
+    private static String requireOreKey(String oreKey) {
+        Objects.requireNonNull(oreKey, "oreKey");
+        if (oreKey.isEmpty()) throw new IllegalArgumentException("oreKey cannot be empty");
+        return oreKey;
+    }
+
+    private static int requireMinerVoidChancePercent(int percent) {
+        if (percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("miner void chance percent out of range: " + percent);
+        }
+        return percent;
     }
 
     @Override

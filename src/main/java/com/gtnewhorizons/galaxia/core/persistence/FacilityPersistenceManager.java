@@ -357,6 +357,7 @@ public final class FacilityPersistenceManager {
         out.energyStored = state.getEnergyStored();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
+        out.minerVoidChances = new LinkedHashMap<>(state.minerVoidChances());
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -506,6 +507,8 @@ public final class FacilityPersistenceManager {
         state.setEnergyStored(json.energyStored);
         state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
+        state.setMinerVoidChances(
+            Objects.requireNonNull(json.minerVoidChances, "[PERSIST] Facility missing minerVoidChances"));
 
         int moduleDecodedCount = 0;
         if (json.modules != null) {
@@ -522,7 +525,8 @@ public final class FacilityPersistenceManager {
                         "[PERSIST] Module from JSON has malformed ID: '" + mj.moduleId + "' of kind " + rawKind);
                 }
                 if (moduleId == null) {
-                    throw new IllegalStateException("[PERSIST] Module of kind " + rawKind + " has null/missing moduleId");
+                    throw new IllegalStateException(
+                        "[PERSIST] Module of kind " + rawKind + " has null/missing moduleId");
                 }
                 ModuleShape shape = PacketUtil.enumFromByte(mj.shape, ModuleShape.class);
                 if (shape == null) {
@@ -564,22 +568,14 @@ public final class FacilityPersistenceManager {
                             PURE_GSON.fromJson(hammerData.get("config"), AllowShootingConfig.class),
                             "[PERSIST] Hammer module missing config");
                         OrbitalTransferPlanner.RoutePriority routePriority = Objects.requireNonNull(
-                            PURE_GSON.fromJson(
-                                hammerData.get("routePriority"),
-                                OrbitalTransferPlanner.RoutePriority.class),
+                            PURE_GSON
+                                .fromJson(hammerData.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class),
                             "[PERSIST] Hammer module missing routePriority");
                         HammerVariant variant = Objects.requireNonNull(
                             PURE_GSON.fromJson(hammerData.get("variant"), HammerVariant.class),
                             "[PERSIST] Hammer module missing variant");
                         ModuleHammer.requireTier(variant, tier);
-                        module.setComponent(
-                            new ModuleHammer(
-                                kind,
-                                config,
-                                routePriority,
-                                false,
-                                variant,
-                                64));
+                        module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
                     }
                     case MINER -> {
                         List<String> blacklist = new ArrayList<>();
@@ -632,9 +628,7 @@ public final class FacilityPersistenceManager {
                 moduleDecodedCount++;
             }
         }
-        LOG.info(
-            "[PERSIST] LOAD DECODE: finished decoding modules: {} decoded",
-            moduleDecodedCount);
+        LOG.info("[PERSIST] LOAD DECODE: finished decoding modules: {} decoded", moduleDecodedCount);
 
         if (json.buffer != null) {
             Map<ItemStackWrapper, Long> bufferSnapshot = new LinkedHashMap<>();
@@ -815,6 +809,7 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         long energyStored;
         short settingsGroupsNextId;
+        Map<String, Integer> minerVoidChances = new LinkedHashMap<>();
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;

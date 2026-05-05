@@ -57,8 +57,12 @@ final class ModuleHammerTest {
     @Test
     void hammerConsumesShotEnergyOnlyWhenCooldownCompletes() {
         AutomatedFacility outpost = createOutpost();
-        ModuleInstance module = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
         ModuleHammer hammer = (ModuleHammer) module.component();
         outpost.setEnergyStored(500_000L);

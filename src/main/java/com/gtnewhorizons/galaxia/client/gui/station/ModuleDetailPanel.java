@@ -1,22 +1,30 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
@@ -26,10 +34,12 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
@@ -47,35 +57,99 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private static final int RECIPE_LIST_Y = 88;
     private static final int RECIPE_ROW_H = 12;
     private static final int MAX_RECIPE_BUTTONS = 32;
+    private static final int MINER_VOID_LIST_Y = 88;
+    private static final int MINER_VOID_ROW_H = 14;
+    private static final int MAX_MINER_VOID_ROWS = 8;
 
     private final StationMapWidget map;
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
     private boolean showRecipeList;
     private boolean showHammerConfig;
+    private boolean showMinerVoidConfig;
+    private int minerVoidPage;
 
     public ModuleDetailPanel(StationMapWidget map) {
         this.map = map;
-        child(createPanelButton(() -> "Hammer", this::hasHammerSelected, this::openHammerConfig).pos(10, ACTION_Y)
-            .size(58, BUTTON_H));
-        child(createPanelButton(() -> "Add Recipe", this::hasRecipeModuleSelected, this::openRecipeInput).pos(72, ACTION_Y)
-            .size(62, BUTTON_H));
-        child(createPanelButton(() -> showRecipeList ? "Hide Recipes" : "View Recipes", this::hasRecipeModuleSelected, () -> {
-            showRecipeList = !showRecipeList;
-            showHammerConfig = false;
-        }).pos(138, ACTION_Y)
-            .size(58, BUTTON_H));
-        child(createPanelButton(this::hammerVariantLabel, this::canUseHammerConfigButtons, this::cycleHammerVariant).pos(10, 116)
-            .size(70, BUTTON_H));
-        child(createPanelButton(this::hammerTierLabel, this::canUseHammerConfigButtons, this::cycleHammerTier).pos(84, 116)
-            .size(50, BUTTON_H));
-        child(createPanelButton(() -> "Close", this::canUseHammerConfigButtons, () -> showHammerConfig = false).pos(138, 116)
-            .size(50, BUTTON_H));
+        child(
+            createPanelButton(() -> "Miner", this::hasMinerSelected, this::openMinerVoidConfig).pos(10, ACTION_Y)
+                .size(58, BUTTON_H));
+        child(
+            createPanelButton(() -> "Hammer", this::hasHammerSelected, this::openHammerConfig).pos(10, ACTION_Y)
+                .size(58, BUTTON_H));
+        child(
+            createPanelButton(() -> "Add Recipe", this::hasRecipeModuleSelected, this::openRecipeInput)
+                .pos(72, ACTION_Y)
+                .size(62, BUTTON_H));
+        child(
+            createPanelButton(
+                () -> showRecipeList ? "Hide Recipes" : "View Recipes",
+                this::hasRecipeModuleSelected,
+                () -> {
+                    showRecipeList = !showRecipeList;
+                    showHammerConfig = false;
+                    showMinerVoidConfig = false;
+                }).pos(138, ACTION_Y)
+                    .size(58, BUTTON_H));
+        child(
+            createPanelButton(this::hammerVariantLabel, this::canUseHammerConfigButtons, this::cycleHammerVariant)
+                .pos(10, 116)
+                .size(70, BUTTON_H));
+        child(
+            createPanelButton(this::hammerTierLabel, this::canUseHammerConfigButtons, this::cycleHammerTier)
+                .pos(84, 116)
+                .size(50, BUTTON_H));
+        child(
+            createPanelButton(() -> "Close", this::canUseHammerConfigButtons, () -> showHammerConfig = false)
+                .pos(138, 116)
+                .size(50, BUTTON_H));
+        child(
+            createPanelButton(() -> "Prev", () -> canUseMinerVoidPageButton(-1), () -> changeMinerVoidPage(-1))
+                .pos(124, 72)
+                .size(34, 10));
+        child(
+            createPanelButton(() -> "Next", () -> canUseMinerVoidPageButton(1), () -> changeMinerVoidPage(1))
+                .pos(162, 72)
+                .size(34, 10));
+        for (int i = 0; i < MAX_MINER_VOID_ROWS; i++) {
+            final int rowIndex = i;
+            int rowY = MINER_VOID_LIST_Y + rowIndex * MINER_VOID_ROW_H;
+            child(
+                createPanelButton(
+                    () -> "0",
+                    () -> canUseMinerVoidRowButton(rowIndex),
+                    () -> setMinerVoidPercent(rowIndex, 0)).pos(84, rowY)
+                        .size(16, 10));
+            child(
+                createPanelButton(
+                    () -> "-1",
+                    () -> canUseMinerVoidRowButton(rowIndex),
+                    () -> addMinerVoidPercent(rowIndex, -1)).pos(102, rowY)
+                        .size(20, 10));
+            child(
+                createMinerVoidPercentField(rowIndex).pos(124, rowY)
+                    .size(26, 10));
+            child(
+                createPanelButton(
+                    () -> "+1",
+                    () -> canUseMinerVoidRowButton(rowIndex),
+                    () -> addMinerVoidPercent(rowIndex, 1)).pos(152, rowY)
+                        .size(20, 10));
+            child(
+                createPanelButton(
+                    () -> "All",
+                    () -> canUseMinerVoidRowButton(rowIndex),
+                    () -> setMinerVoidPercent(rowIndex, 100)).pos(174, rowY)
+                        .size(24, 10));
+        }
         for (int i = 0; i < MAX_RECIPE_BUTTONS; i++) {
             final int slotIndex = i;
-            child(createPanelButton(() -> "Remove", () -> canRemoveRecipeSlot(slotIndex), () -> removeRecipeSlot(slotIndex))
-                .pos(144, RECIPE_LIST_Y + slotIndex * RECIPE_ROW_H)
-                .size(50, 10));
+            child(
+                createPanelButton(
+                    () -> "Remove",
+                    () -> canRemoveRecipeSlot(slotIndex),
+                    () -> removeRecipeSlot(slotIndex)).pos(144, RECIPE_LIST_Y + slotIndex * RECIPE_ROW_H)
+                        .size(50, 10));
         }
     }
 
@@ -191,6 +265,17 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         if (module.component() instanceof ModuleHammer hammer && showHammerConfig) {
             drawHammerConfig(module, hammer, x, 62, width);
             showRecipeList = false;
+            showMinerVoidConfig = false;
+        } else if (showHammerConfig) {
+            showHammerConfig = false;
+        }
+
+        if (module.component() instanceof ModuleMiner && showMinerVoidConfig) {
+            drawMinerVoidConfig(facility, x, 62, width);
+            showRecipeList = false;
+            showHammerConfig = false;
+        } else if (showMinerVoidConfig && !(module.component() instanceof ModuleMiner)) {
+            showMinerVoidConfig = false;
         }
 
         if (module.component() instanceof IRecipeModule) {
@@ -203,6 +288,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
             // Inline recipe list when toggled on
             if (showRecipeList) {
+                showMinerVoidConfig = false;
                 lineY += SECTION_GAP + 4;
 
                 RecipeConfig cfg = ((IRecipeModule) module.component()).getRecipeConfig();
@@ -259,11 +345,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int chargeTicks = ModuleHammer.chargeTicks(variant, tier);
         long shotEnergy = ModuleHammer.shotEnergyEu(variant);
         long chargeRate = ModuleHammer.chargeRateEuPerTick(variant, tier);
-        lineY = drawLine(
-            "Hammer config",
-            panelX + 6,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lineY = drawLine("Hammer config", panelX + 6, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         lineY = drawLine(
             "Shot: " + formatEu(shotEnergy) + " EU  Rate: " + formatEu(chargeRate) + " EU/t",
             panelX + 6,
@@ -282,13 +364,60 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int chargeProgress = Math.min(Math.max(module.ticks(), 0), chargeTicks);
         int fillW = (int) ((long) barW * chargeProgress / chargeTicks);
         Gui.drawRect(barX, barY, barX + barW, barY + barH, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
-        Gui.drawRect(barX, barY, barX + fillW, barY + barH, EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
+        Gui.drawRect(
+            barX,
+            barY,
+            barX + fillW,
+            barY + barH,
+            EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
+    }
+
+    private void drawMinerVoidConfig(AutomatedFacility facility, int x, int y, int width) {
+        int panelX = x + CONTENT_PADDING;
+        int panelW = width - CONTENT_PADDING * 2;
+        BorderedRect.draw(
+            panelX,
+            y,
+            panelW,
+            Math.max(72, getArea().height - y - CONTENT_PADDING),
+            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
+            EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
+
+        int lineY = y + 6;
+        lineY = drawLine("Miner void %", panelX + 6, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lineY = drawLine("Ore", panelX + 6, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+
+        List<MinerOreOption> options = minerOreOptions(facility);
+        if (options.isEmpty()) {
+            drawLine("No ores available", panelX + 6, lineY + 4, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            return;
+        }
+
+        minerVoidPage = Math.clamp(minerVoidPage, 0, maxMinerVoidPage(options.size()));
+        int offset = minerVoidPage * MAX_MINER_VOID_ROWS;
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int rows = Math.min(options.size() - offset, MAX_MINER_VOID_ROWS);
+        for (int i = 0; i < rows; i++) {
+            MinerOreOption option = options.get(offset + i);
+            int rowY = MINER_VOID_LIST_Y + i * MINER_VOID_ROW_H;
+            String name = fr.trimStringToWidth(option.displayName(), 82);
+            fr.drawStringWithShadow(name, panelX + 6, rowY + 1, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        }
+
+        if (options.size() > MAX_MINER_VOID_ROWS) {
+            drawLine(
+                "Page " + (minerVoidPage + 1) + "/" + (maxMinerVoidPage(options.size()) + 1),
+                panelX + 6,
+                MINER_VOID_LIST_Y + MAX_MINER_VOID_ROWS * MINER_VOID_ROW_H + 2,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        }
     }
 
     private ButtonWidget<?> createPanelButton(Supplier<String> labelSupplier, BooleanSupplier enabledSupplier,
         Runnable onClick) {
         return new ButtonWidget<>()
-            .background(drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+            .background(
+                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
             .hoverBackground(
                 drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
             .overlay(drawable((ctx, x, y, w, h) -> {
@@ -306,6 +435,48 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             });
     }
 
+    private TextFieldWidget createMinerVoidPercentField(int rowIndex) {
+        return new TextFieldWidget().setMaxLength(3)
+            .setPattern(Pattern.compile("[0-9]*"))
+            .setDefaultNumber(0)
+            .setNumbers(0, 100)
+            .setFormatAsInteger(true)
+            .acceptsExpressions(false)
+            .autoUpdateOnChange(false)
+            .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+            .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+            .background(drawable((ctx, x, y, w, h) -> {
+                if (canUseMinerVoidRowButton(rowIndex)) {
+                    BorderedRect.draw(
+                        x,
+                        y,
+                        w,
+                        h,
+                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+                }
+            }))
+            .value(new StringValue.Dynamic(() -> {
+                if (!(selectedModule() instanceof SelectedModule selected)) return "";
+                MinerOreOption option = minerOreOption(selected.facility, rowIndex);
+                return option == null ? "" : String.valueOf(selected.facility.minerVoidChancePercent(option.key()));
+            }, text -> {
+                if (!(selectedModule() instanceof SelectedModule selected)) return;
+                MinerOreOption option = minerOreOption(selected.facility, rowIndex);
+                if (option == null) return;
+                int parsed = 0;
+                if (text != null && !text.isEmpty()) {
+                    try {
+                        parsed = Integer.parseInt(text);
+                    } catch (NumberFormatException ignored) {
+                        parsed = selected.facility.minerVoidChancePercent(option.key());
+                    }
+                }
+                setMinerVoidPercent(selected, option.key(), parsed);
+            }))
+            .setFocusOnGuiOpen(false);
+    }
+
     private static void drawButtonBackground(int x, int y, int w, int h, boolean enabled, boolean hovered) {
         if (!enabled) return;
         BorderedRect.draw(
@@ -319,17 +490,33 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     }
 
     private boolean hasHammerSelected() {
-        return selectedModule() instanceof SelectedModule selected && selected.module.component() instanceof ModuleHammer;
+        return selectedModule() instanceof SelectedModule selected
+            && selected.module.component() instanceof ModuleHammer;
+    }
+
+    private boolean hasMinerSelected() {
+        return selectedModule() instanceof SelectedModule selected
+            && selected.module.component() instanceof ModuleMiner;
     }
 
     private boolean hasRecipeModuleSelected() {
-        return selectedModule() instanceof SelectedModule selected && selected.module.component() instanceof IRecipeModule;
+        return selectedModule() instanceof SelectedModule selected
+            && selected.module.component() instanceof IRecipeModule;
     }
 
     private void openHammerConfig() {
         if (!hasHammerSelected()) return;
         showHammerConfig = true;
         showRecipeList = false;
+        showMinerVoidConfig = false;
+    }
+
+    private void openMinerVoidConfig() {
+        if (!hasMinerSelected()) return;
+        showMinerVoidConfig = true;
+        showHammerConfig = false;
+        showRecipeList = false;
+        minerVoidPage = 0;
     }
 
     private void openRecipeInput() {
@@ -342,10 +529,31 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         return showHammerConfig && hasHammerSelected();
     }
 
+    private boolean canUseMinerVoidRowButton(int rowIndex) {
+        if (!showMinerVoidConfig) return false;
+        if (!(selectedModule() instanceof SelectedModule selected)) return false;
+        if (!(selected.module.component() instanceof ModuleMiner)) return false;
+        return rowIndex >= 0 && minerOreOption(selected.facility, rowIndex) != null;
+    }
+
+    private boolean canUseMinerVoidPageButton(int delta) {
+        if (!showMinerVoidConfig) return false;
+        if (!(selectedModule() instanceof SelectedModule selected)) return false;
+        int nextPage = minerVoidPage + delta;
+        return nextPage >= 0 && nextPage <= maxMinerVoidPage(minerOreOptions(selected.facility).size());
+    }
+
+    private void changeMinerVoidPage(int delta) {
+        if (!(selectedModule() instanceof SelectedModule selected)) return;
+        minerVoidPage = Math
+            .clamp(minerVoidPage + delta, 0, maxMinerVoidPage(minerOreOptions(selected.facility).size()));
+    }
+
     private String hammerVariantLabel() {
         ModuleHammer hammer = selectedHammer();
-        return hammer == null ? "Variant" : hammer.variant()
-            .name();
+        return hammer == null ? "Variant"
+            : hammer.variant()
+                .name();
     }
 
     private String hammerTierLabel() {
@@ -391,19 +599,81 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             null);
     }
 
+    private void addMinerVoidPercent(int rowIndex, int delta) {
+        if (!(selectedModule() instanceof SelectedModule selected)) return;
+        MinerOreOption option = minerOreOption(selected.facility, rowIndex);
+        if (option == null) return;
+        int current = selected.facility.minerVoidChancePercent(option.key());
+        setMinerVoidPercent(selected, option.key(), current + delta);
+    }
+
+    private void setMinerVoidPercent(int rowIndex, int percent) {
+        if (!(selectedModule() instanceof SelectedModule selected)) return;
+        MinerOreOption option = minerOreOption(selected.facility, rowIndex);
+        if (option == null) return;
+        setMinerVoidPercent(selected, option.key(), percent);
+    }
+
+    private void setMinerVoidPercent(SelectedModule selected, String oreKey, int percent) {
+        CelestialClient.updateMinerVoidPercent(
+            map.assetId(),
+            selected.moduleIndex,
+            oreKey,
+            AutomatedFacility.clampMinerVoidChancePercent(percent));
+    }
+
     private int recipeSlotCount() {
         if (!(selectedModule() instanceof SelectedModule selected)) return 0;
         if (!(selected.module.component() instanceof IRecipeModule recipeModule)) return 0;
         RecipeConfig cfg = recipeModule.getRecipeConfig();
-        return cfg == null ? 0 : cfg.slots()
-            .toList()
-            .size();
+        return cfg == null ? 0
+            : cfg.slots()
+                .toList()
+                .size();
+    }
+
+    private @Nullable MinerOreOption minerOreOption(AutomatedFacility facility, int rowIndex) {
+        List<MinerOreOption> options = minerOreOptions(facility);
+        int optionIndex = minerVoidPage * MAX_MINER_VOID_ROWS + rowIndex;
+        if (optionIndex < 0 || optionIndex >= options.size()) return null;
+        return options.get(optionIndex);
+    }
+
+    private static int maxMinerVoidPage(int optionCount) {
+        return optionCount <= 0 ? 0 : (optionCount - 1) / MAX_MINER_VOID_ROWS;
+    }
+
+    private static List<MinerOreOption> minerOreOptions(AutomatedFacility facility) {
+        return GalaxiaCelestialAPI.get(facility.celestialObjectId)
+            .<List<MinerOreOption>>map(body -> {
+                Map<String, MinerOreOption> options = new LinkedHashMap<>();
+                addMinerOreOptions(
+                    options,
+                    body.properties()
+                        .ores());
+                addMinerOreOptions(
+                    options,
+                    body.properties()
+                        .getResolvedGtVeinOreStacks());
+                return new ArrayList<>(options.values());
+            })
+            .orElse(List.of());
+    }
+
+    private static void addMinerOreOptions(Map<String, MinerOreOption> options, List<ItemStack> ores) {
+        for (ItemStack ore : ores) {
+            if (ore == null) continue;
+            ItemStackWrapper wrapper = ItemStackWrapper.of(ore);
+            if (wrapper == null || options.containsKey(wrapper.toKey())) continue;
+            ItemStack displayStack = ore.copy();
+            displayStack.stackSize = 1;
+            options.put(wrapper.toKey(), new MinerOreOption(wrapper.toKey(), displayStack.getDisplayName()));
+        }
     }
 
     private @Nullable ModuleHammer selectedHammer() {
-        return selectedModule() instanceof SelectedModule selected && selected.module.component() instanceof ModuleHammer hammer
-            ? hammer
-            : null;
+        return selectedModule() instanceof SelectedModule selected
+            && selected.module.component() instanceof ModuleHammer hammer ? hammer : null;
     }
 
     private @Nullable SelectedModule selectedModule() {
@@ -446,6 +716,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         CelestialAsset.ID id = map.assetId();
         return id != null && CelestialClient.getByAssetId(id) instanceof AutomatedFacility f ? f : null;
     }
+
+    private record MinerOreOption(String key, String displayName) {}
 
     private record SelectedModule(AutomatedFacility facility, ModuleInstance module, int moduleIndex) {}
 }
