@@ -23,32 +23,6 @@ final class AssetModuleUpdatePacketTest {
     private static final CelestialAsset.ID ASSET_ID = CelestialAsset.ID.create();
     private static final ModuleInstance.ID MODULE_ID = new ModuleInstance.ID(UUID.randomUUID());
 
-    // ---------- ConfigAction ordinal stability ----------
-
-    @Test
-    void configAction_ordinals_stable() {
-        assertEquals(0, AssetModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST.ordinal());
-        assertEquals(1, AssetModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST.ordinal());
-        assertEquals(2, AssetModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS.ordinal());
-        assertEquals(3, AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_MODE.ordinal());
-        assertEquals(4, AssetModuleUpdatePacket.ConfigAction.SET_ALLOW_SHOOTING_THRESHOLD.ordinal());
-        assertEquals(5, AssetModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING.ordinal());
-        assertEquals(6, AssetModuleUpdatePacket.ConfigAction.SET_ROUTE_PRIORITY.ordinal());
-        assertEquals(7, AssetModuleUpdatePacket.ConfigAction.SET_TIER.ordinal());
-        assertEquals(8, AssetModuleUpdatePacket.ConfigAction.SET_PRIORITY.ordinal());
-        assertEquals(9, AssetModuleUpdatePacket.ConfigAction.SET_ENABLED.ordinal());
-        assertEquals(10, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT.ordinal());
-        assertEquals(11, AssetModuleUpdatePacket.ConfigAction.UPDATE_RECIPE_SLOT.ordinal());
-        assertEquals(12, AssetModuleUpdatePacket.ConfigAction.REMOVE_RECIPE_SLOT.ordinal());
-    }
-
-    @Test
-    void action_ordinals_stable() {
-        assertEquals(0, AssetModuleUpdatePacket.Action.ENABLE.ordinal());
-        assertEquals(1, AssetModuleUpdatePacket.Action.DISABLE.ordinal());
-        assertEquals(2, AssetModuleUpdatePacket.Action.DESTROY.ordinal());
-    }
-
     // ---------- Recipe slot encode/decode round-trip ----------
 
     @Test

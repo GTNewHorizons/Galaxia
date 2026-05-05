@@ -1108,7 +1108,7 @@ public final class FacilityPersistenceManager {
                     RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
                     int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
                         .getAsInt() : i;
-                    slots.set(slotIndex, slot);
+                    slots.setOrAppend(slotIndex, slot);
                 }
             }
 

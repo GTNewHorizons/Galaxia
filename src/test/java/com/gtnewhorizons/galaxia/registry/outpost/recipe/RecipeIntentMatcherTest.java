@@ -11,6 +11,8 @@ import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
+
 import gregtech.api.util.GTRecipe;
 import sun.misc.Unsafe;
 

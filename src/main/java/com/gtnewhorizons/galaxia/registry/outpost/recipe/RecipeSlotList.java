@@ -4,51 +4,46 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class RecipeSlotList {
+public class RecipeSlotList extends ArrayList<RecipeSlot> {
 
     public static final int MAX_RECIPE_SLOTS = 32;
 
-    private final List<RecipeSlot> slots = new ArrayList<>(MAX_RECIPE_SLOTS);
+    public RecipeSlotList() {
+        super(MAX_RECIPE_SLOTS);
+    }
 
-    public void add(RecipeSlot slot) {
-        if (slots.size() >= MAX_RECIPE_SLOTS) {
+    @Override
+    public boolean add(RecipeSlot slot) {
+        if (size() >= MAX_RECIPE_SLOTS) {
             throw new IllegalStateException("Recipe slot list is full (" + MAX_RECIPE_SLOTS + " slots)");
         }
-        slots.add(slot);
+        return super.add(slot);
     }
 
-    public RecipeSlot get(int index) {
-        return slots.get(index);
+    @Override
+    public void add(int index, RecipeSlot element) {
+        if (size() >= MAX_RECIPE_SLOTS) {
+            throw new IllegalStateException("Recipe slot list is full (" + MAX_RECIPE_SLOTS + " slots)");
+        }
+        super.add(index, element);
     }
 
-    public void set(int index, RecipeSlot slot) {
-        if (index < slots.size()) {
-            slots.set(index, slot);
-        } else if (index == slots.size()) {
+    public void setOrAppend(int index, RecipeSlot slot) {
+        if (index < size()) {
+            super.set(index, slot);
+        } else if (index == size()) {
             add(slot);
         } else {
-            throw new IndexOutOfBoundsException("Index: " + index + " > size: " + slots.size());
+            throw new IndexOutOfBoundsException("Index: " + index + " > size: " + size());
         }
-    }
-
-    public void remove(int index) {
-        slots.remove(index);
-    }
-
-    public int size() {
-        return slots.size();
-    }
-
-    public boolean isEmpty() {
-        return slots.isEmpty();
     }
 
     /** Null-safe access: returns the slot at {@code index}, or {@code null} if out of bounds. */
     public RecipeSlot getOrNull(int index) {
-        return index >= 0 && index < slots.size() ? slots.get(index) : null;
+        return index >= 0 && index < size() ? get(index) : null;
     }
 
     public List<RecipeSlot> toList() {
-        return Collections.unmodifiableList(new ArrayList<>(slots));
+        return Collections.unmodifiableList(new ArrayList<>(this));
     }
 }

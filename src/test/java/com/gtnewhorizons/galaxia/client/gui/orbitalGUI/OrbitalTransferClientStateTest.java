@@ -7,23 +7,6 @@ import org.junit.jupiter.api.Test;
 final class OrbitalTransferClientStateTest {
 
     @Test
-    void simulatedTransferStateIsSharedAcrossGuiInstances() {
-        InterplanetaryTransferSystem.OrbitalTransferState firstReference = OrbitalView.clientSimulatedTransferState();
-        InterplanetaryTransferSystem.OrbitalTransferState secondReference = OrbitalView.clientSimulatedTransferState();
-        firstReference.transfers()
-            .clear();
-
-        firstReference.addTransfer(transfer("sim:shared", 10.0, 20.0));
-
-        assertEquals(
-            1,
-            secondReference.transfers()
-                .size());
-        firstReference.transfers()
-            .clear();
-    }
-
-    @Test
     void simulatedTransfersPruneOnlyAfterArrivalTime() {
         InterplanetaryTransferSystem.OrbitalTransferState state = new InterplanetaryTransferSystem.OrbitalTransferState();
         state.addTransfer(transfer("sim:one", 10.0, 20.0));

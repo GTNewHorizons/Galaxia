@@ -5,7 +5,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-import gregtech.api.util.GTRecipe;
 
 /**
  * Self-contained recipe data snapshot. Created by the picker GUI when
@@ -34,23 +33,18 @@ public record RecipeSnapshot(byte recipeMapOrdinal, int recipeIndex, long conten
         return new RecipeSnapshot(recipeMapOrdinal, recipeIndex, contentHash, null, null, null, null, 0, 0);
     }
 
-    public static RecipeSnapshot resolved(byte recipeMapOrdinal, int recipeIndex, GTRecipe recipe) {
+    public static RecipeSnapshot resolved(byte recipeMapOrdinal, int recipeIndex, ItemStack[] inputs,
+        ItemStack[] outputs, FluidStack[] fluidInputs, FluidStack[] fluidOutputs, int duration, int eut) {
         return new RecipeSnapshot(
             recipeMapOrdinal,
             recipeIndex,
-            computeContentHash(
-                recipe.mInputs,
-                recipe.mOutputs,
-                recipe.mFluidInputs,
-                recipe.mFluidOutputs,
-                recipe.mDuration,
-                recipe.mEUt),
-            recipe.mInputs,
-            recipe.mOutputs,
-            recipe.mFluidInputs,
-            recipe.mFluidOutputs,
-            recipe.mDuration,
-            recipe.mEUt);
+            computeContentHash(inputs, outputs, fluidInputs, fluidOutputs, duration, eut),
+            inputs,
+            outputs,
+            fluidInputs,
+            fluidOutputs,
+            duration,
+            eut);
     }
 
     public static long computeContentHash(ItemStack[] inputs, ItemStack[] outputs, FluidStack[] fluidInputs,

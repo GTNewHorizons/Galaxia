@@ -38,7 +38,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GTRecipeMapId;
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -339,3 +339,4 @@ public final class RecipePickerScreen implements IGuiHolder<GuiData> {
         }
     }
 }
+

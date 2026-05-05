@@ -11,6 +11,8 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.oredict.OreDictionary;
 
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
+
 import gregtech.api.util.GTRecipe;
 
 public final class RecipeIntentMatcher {
@@ -63,7 +65,15 @@ public final class RecipeIntentMatcher {
             1,
             recipeIndex,
             recipe,
-            RecipeSnapshot.resolved(mapOrdinal, recipeIndex, recipe));
+            RecipeSnapshot.resolved(
+                mapOrdinal,
+                recipeIndex,
+                recipe.mInputs,
+                recipe.mOutputs,
+                recipe.mFluidInputs,
+                recipe.mFluidOutputs,
+                recipe.mDuration,
+                recipe.mEUt));
     }
 
     private static boolean hasAnyHardSlot(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,

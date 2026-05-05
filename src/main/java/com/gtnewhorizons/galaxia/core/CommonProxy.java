@@ -10,6 +10,7 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtect
 
 import net.minecraftforge.common.MinecraftForge;
 
+import com.gtnewhorizons.galaxia.compat.GregTechCompat;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
@@ -61,7 +62,7 @@ public class CommonProxy {
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
-        boolean gt5 = Loader.isModLoaded("gregtech");
+        boolean gt5 = GregTechCompat.isGregTechLoaded();
         FacilityModuleKind.setGt5Available(gt5);
         FacilityModuleRegistry.init();
 

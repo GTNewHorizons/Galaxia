@@ -34,6 +34,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.fluid.FluidInteractions;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
+import com.cleanroommc.modularui.value.DoubleValue;
 import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -52,7 +53,7 @@ import com.gtnewhorizons.galaxia.core.starmap.sync.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.GTRecipeMapId;
+import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeIntentMatcher;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
@@ -273,7 +274,7 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         panel.child(
             new ProgressWidget().texture(progress.texture(), progress.imageSize())
                 .direction(progress.direction())
-                .progress(() -> (Minecraft.getSystemTime() % 1000L) / 1000.0)
+                .value(new DoubleValue.Dynamic(() -> (System.currentTimeMillis() % 1000L) / 1000.0, null))
                 .pos(progress.x(), RECIPE_Y + progress.y())
                 .size(progress.width(), progress.height()));
     }
@@ -955,3 +956,4 @@ public final class RecipeInputScreen implements IGuiHolder<GuiData> {
         }
     }
 }
+

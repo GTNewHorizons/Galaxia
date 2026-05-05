@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.outpost.recipe;
+package com.gtnewhorizons.galaxia.compat.recipe;
 
 import java.util.Collection;
 import java.util.EnumMap;
