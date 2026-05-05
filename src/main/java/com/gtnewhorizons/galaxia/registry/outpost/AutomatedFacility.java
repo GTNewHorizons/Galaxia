@@ -50,7 +50,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
-    public static final long MAX_ENERGY = 1_000_000L;
+    public static final long MAX_ENERGY = 8_000_000L;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
         super(assetId, celestialBodyId, kind, status, null);

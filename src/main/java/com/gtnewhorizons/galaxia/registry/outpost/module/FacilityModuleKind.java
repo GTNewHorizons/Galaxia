@@ -90,7 +90,8 @@ public enum FacilityModuleKind {
 
     public EnumSet<ModuleTier> allowedTiers() {
         return switch (this) {
-            case HAMMER, MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
+            case HAMMER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV);
+            case MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
             case POWER -> EnumSet.of(ModuleTier.NONE);
             case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
             case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);

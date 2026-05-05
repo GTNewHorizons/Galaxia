@@ -374,6 +374,7 @@ public final class AssetModuleUpdatePacket {
                 }
                 HammerVariant variant = Objects
                     .requireNonNull(packet.getEnumPayload(HammerVariant.class), "hammer variant");
+                ModuleHammer.requireTier(variant, module.tier());
                 hammer.setVariant(variant);
             }
             case SET_ROUTE_PRIORITY -> {
@@ -391,6 +392,9 @@ public final class AssetModuleUpdatePacket {
                     .contains(tier)) {
                     throw new IllegalStateException(
                         "rejected tier " + tier + " for " + module.kind() + " on " + packet.assetId);
+                }
+                if (module.component() instanceof ModuleHammer hammer) {
+                    ModuleHammer.requireTier(hammer.variant(), tier);
                 }
                 module.setTier(tier);
                 state.layoutCache()

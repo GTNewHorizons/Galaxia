@@ -43,7 +43,7 @@ public class FacilityModuleRegistry {
         register(
             FacilityModuleKind.HAMMER,
             1000L,
-            10L,
+            0L,
             20,
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleHammer::prepareToFire,

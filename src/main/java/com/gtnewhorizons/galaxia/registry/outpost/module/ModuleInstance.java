@@ -203,6 +203,9 @@ public class ModuleInstance implements Buildable {
     }
 
     public int cooldownTicks() {
+        if (component instanceof ModuleHammer hammer) {
+            return ModuleHammer.cooldownTicks(hammer.variant(), tier);
+        }
         return definition.cooldownTicks();
     }
 

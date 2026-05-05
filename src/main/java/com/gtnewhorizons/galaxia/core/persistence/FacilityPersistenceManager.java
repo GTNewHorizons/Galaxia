@@ -571,6 +571,7 @@ public final class FacilityPersistenceManager {
                         HammerVariant variant = Objects.requireNonNull(
                             PURE_GSON.fromJson(hammerData.get("variant"), HammerVariant.class),
                             "[PERSIST] Hammer module missing variant");
+                        ModuleHammer.requireTier(variant, tier);
                         module.setComponent(
                             new ModuleHammer(
                                 kind,

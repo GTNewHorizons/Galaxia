@@ -31,7 +31,45 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
 
     public static void prepareToFire(ModuleInstance instance, AutomatedFacility outpost) {
         ModuleHammer hammer = (ModuleHammer) instance.component();
+        if (!outpost.tryConsumeEnergy(shotEnergyEu(hammer.variant))) return;
         hammer.canFire = true;
+    }
+
+    public static int cooldownTicks(HammerVariant variant, ModuleTier tier) {
+        return switch (Objects.requireNonNull(variant, "variant")) {
+            case BASE -> switch (Objects.requireNonNull(tier, "tier")) {
+                case EV -> 60 * 20;
+                case IV -> 45 * 20;
+                case LuV -> 30 * 20;
+                default -> throw invalidTier(variant, tier);
+            };
+            case BIG -> switch (Objects.requireNonNull(tier, "tier")) {
+                case LuV -> 60 * 20;
+                case ZPM -> 45 * 20;
+                case UV -> 30 * 20;
+                default -> throw invalidTier(variant, tier);
+            };
+        };
+    }
+
+    public static long shotEnergyEu(HammerVariant variant) {
+        return switch (Objects.requireNonNull(variant, "variant")) {
+            case BASE -> 500_000L;
+            case BIG -> 8_000_000L;
+        };
+    }
+
+    public static boolean supportsTier(HammerVariant variant, ModuleTier tier) {
+        try {
+            cooldownTicks(variant, tier);
+            return true;
+        } catch (IllegalStateException ignored) {
+            return false;
+        }
+    }
+
+    public static void requireTier(HammerVariant variant, ModuleTier tier) {
+        cooldownTicks(variant, tier);
     }
 
     public AllowShootingConfig config() {
@@ -68,6 +106,10 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
 
     public void setVariant(HammerVariant variant) {
         this.variant = Objects.requireNonNull(variant, "variant");
+    }
+
+    private static IllegalStateException invalidTier(HammerVariant variant, ModuleTier tier) {
+        return new IllegalStateException("Hammer variant " + variant + " does not support tier " + tier);
     }
 
     @Override

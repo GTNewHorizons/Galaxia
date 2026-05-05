@@ -97,6 +97,7 @@ final class StationPacketRoundTripTest {
     void fullSyncRoundTripPreservesHammerVariant() {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
+        hammerModule.setTier(com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier.LuV);
         ((ModuleHammer) hammerModule.component()).setVariant(HammerVariant.BIG);
 
         AutomatedFacility client = createFacility();

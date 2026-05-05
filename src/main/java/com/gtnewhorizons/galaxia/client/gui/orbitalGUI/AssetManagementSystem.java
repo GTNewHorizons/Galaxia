@@ -1822,13 +1822,14 @@ public final class AssetManagementSystem {
             }
 
             modal.child(createBodyText("Variant:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(234, 56));
-            modal.child(createFooterButton(variant.name(), true, () -> {
-                HammerVariant next = variant == HammerVariant.BASE ? HammerVariant.BIG : HammerVariant.BASE;
+            HammerVariant nextVariant = variant == HammerVariant.BASE ? HammerVariant.BIG : HammerVariant.BASE;
+            boolean canSwitchVariant = module != null && ModuleHammer.supportsTier(nextVariant, module.tier());
+            modal.child(createFooterButton(variant.name(), canSwitchVariant, () -> {
                 CelestialClient.updateModuleConfig(
                     outpost.assetId,
                     modIdx,
                     AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
-                    next);
+                    nextVariant);
                 markStructureDirty();
             }).pos(288, 52)
                 .size(42, 18));

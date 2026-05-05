@@ -91,6 +91,9 @@ final class FacilityPersistenceManagerTest {
         ModuleHammer hammer = (ModuleHammer) station.modules()
             .get(0)
             .component();
+        station.modules()
+            .get(0)
+            .setTier(ModuleTier.LuV);
         hammer.setVariant(HammerVariant.BIG);
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
@@ -112,6 +115,18 @@ final class FacilityPersistenceManagerTest {
             .get(0)
             .component();
         assertEquals(HammerVariant.BIG, decodedHammer.variant());
+    }
+
+    @Test
+    void bigHammerEvCrashesOnLoad() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleHammer hammer = (ModuleHammer) station.modules()
+            .get(0)
+            .component();
+        hammer.setVariant(HammerVariant.BIG);
+
+        assertThrows(IllegalStateException.class, () -> manager.encodeFacilityState(station));
     }
 
     private static AutomatedFacility createStationWithFullLayout() {

@@ -461,6 +461,7 @@ public final class AssetSyncPacket implements IMessage {
                 OrbitalTransferPlanner.RoutePriority routePriority = PacketUtil
                     .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
                 HammerVariant variant = PacketUtil.readEnum(buf, HammerVariant.class);
+                ModuleHammer.requireTier(variant, tier);
                 module.setComponent(
                     new ModuleHammer(kind, cfg, routePriority, false, variant, 64));
             }
