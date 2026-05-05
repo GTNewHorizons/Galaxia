@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.core.starmap.sync;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -16,7 +15,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -56,16 +57,15 @@ final class StarmapServerActionsTest {
 
     @Test
     void createAssetAddsToServerStoreAndReturnsImmediateFullSync() {
-        StarmapActionPayload payload = StarmapActionPayload.createAsset(
+        AssetCreatePacket packet = AssetCreatePacket.create(
             CelestialObjectId.MARS,
             "Mars Automated Station",
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
-        StarmapActionResult result = StarmapServerActions.apply(TEAM, payload);
+        AssetSyncPacket result = packet.apply(TEAM);
 
-        assertTrue(result.applied());
-        assertNotNull(result.syncPacket(), "create must immediately echo sync data for the open GUI");
+        assertNotNull(result, "create must immediately echo sync data for the open GUI");
         CelestialAsset created = CelestialAssetStore.SERVER.allAssetsInternal()
             .get(0);
         assertInstanceOf(AutomatedFacility.class, created);
@@ -74,18 +74,12 @@ final class StarmapServerActionsTest {
 
     @Test
     void buildModuleRejectsMissingServerAsset() {
-        StarmapActionPayload payload = StarmapActionPayload.buildModule(
-            CelestialAsset.ID.create(),
-            FacilityModuleKind.STORAGE,
-            ModuleShape.SINGLE,
-            ModuleTier.HV,
-            true,
-            StationTileCoord.of(1, 0));
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = new com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket();
+        // Don't set assetId - will be null, should fail
 
-        StarmapActionResult result = StarmapServerActions.apply(TEAM, payload);
+        AssetSyncPacket result = packet.apply(TEAM, false);
 
-        assertFalse(result.applied());
-        assertEquals("missing_asset", result.errorKey());
+        assertNull(result);
         assertTrue(
             CelestialAssetStore.SERVER.allAssetsInternal()
                 .isEmpty());
@@ -101,13 +95,12 @@ final class StarmapServerActionsTest {
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         StationTileCoord coord = StationTileCoord.of(1, 0);
 
-        StarmapActionPayload payload = StarmapActionPayload
-            .buildModule(facility.assetId, FacilityModuleKind.STORAGE, ModuleShape.SINGLE, ModuleTier.HV, true, coord);
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
+            .create(facility.assetId, FacilityModuleKind.STORAGE, ModuleShape.SINGLE, ModuleTier.HV, true, coord);
 
-        StarmapActionResult result = StarmapServerActions.apply(TEAM, payload);
+        AssetSyncPacket result = packet.apply(TEAM, true);
 
-        assertTrue(result.applied());
-        assertNotNull(result.syncPacket(), "build must immediately echo sync data for the open GUI");
+        assertNotNull(result, "build must immediately echo sync data for the open GUI");
         assertEquals(
             1,
             facility.modules()
@@ -123,11 +116,10 @@ final class StarmapServerActionsTest {
     void renameAssetMutatesServerAndReturnsImmediateFullSync() {
         AutomatedFacility facility = addFacilityToServer();
 
-        StarmapActionResult result = StarmapServerActions
-            .apply(TEAM, StarmapActionPayload.renameAsset(facility.assetId, "Renamed Station"));
+        AssetUpdatePacket packet = AssetUpdatePacket.rename(facility.assetId, "Renamed Station");
+        AssetSyncPacket result = packet.apply(TEAM);
 
-        assertTrue(result.applied());
-        assertNotNull(result.syncPacket());
+        assertTrue(result != null);
         assertEquals(
             "Renamed Station",
             CelestialAssetStore.SERVER.findAssetInternal(facility.assetId)
@@ -139,11 +131,11 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
         facility.updateStatus(Buildable.Status.CONSTRUCTION_SITE);
 
-        StarmapActionResult result = StarmapServerActions
-            .apply(TEAM, StarmapActionPayload.assetOnly(StarmapAction.START_DECONSTRUCTION, facility.assetId));
+        AssetUpdatePacket packet = AssetUpdatePacket
+            .create(facility.assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION);
+        AssetSyncPacket result = packet.apply(TEAM);
 
-        assertTrue(result.applied());
-        assertNotNull(result.syncPacket());
+        assertTrue(result != null);
         assertEquals(
             Buildable.Status.DECONSTRUCTION,
             CelestialAssetStore.SERVER.findAssetInternal(facility.assetId)
@@ -155,11 +147,11 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
         facility.updateStatus(Buildable.Status.CONSTRUCTION_SITE);
 
-        StarmapActionResult result = StarmapServerActions
-            .apply(TEAM, StarmapActionPayload.assetOnly(StarmapAction.CANCEL_CONSTRUCTION, facility.assetId));
+        AssetUpdatePacket packet = AssetUpdatePacket
+            .create(facility.assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION);
+        AssetSyncPacket result = packet.apply(TEAM);
 
-        assertTrue(result.applied());
-        assertNotNull(result.syncPacket());
+        assertTrue(result != null);
         assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
     }
 
@@ -167,11 +159,10 @@ final class StarmapServerActionsTest {
     void destroyAssetRemovesServerAssetAndReturnsRemovalSync() {
         AutomatedFacility facility = addFacilityToServer();
 
-        StarmapActionResult result = StarmapServerActions
-            .apply(TEAM, StarmapActionPayload.assetOnly(StarmapAction.DESTROY_ASSET, facility.assetId));
+        AssetUpdatePacket packet = AssetUpdatePacket.create(facility.assetId, AssetUpdatePacket.Action.DESTROY_ASSET);
+        AssetSyncPacket result = packet.apply(TEAM);
 
-        assertTrue(result.applied());
-        assertNotNull(result.syncPacket());
+        assertTrue(result != null);
         assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
     }
 
@@ -180,8 +171,9 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = testResource();
 
-        Object result = AssetInventoryUpdatePacket
-            .apply(TEAM, true, AssetInventoryUpdatePacket.add(facility.assetId, resource, 32));
+        AssetSyncPacket result = com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket
+            .add(facility.assetId, resource, 32)
+            .apply(TEAM, true);
 
         assertNotNull(result);
         assertEquals(32, facility.inventory.getAmount(resource));
@@ -194,8 +186,7 @@ final class StarmapServerActionsTest {
         ItemStackWrapper resource = testResource();
         LogisticsResourceConfig config = new LogisticsResourceConfig(4, 16, true, false);
 
-        Object result = LogisticsConfigUpdatePacket
-            .apply(TEAM, new LogisticsConfigUpdatePacket(facility.assetId, resource, config));
+        AssetSyncPacket result = new LogisticsConfigUpdatePacket(facility.assetId, resource, config).apply(TEAM);
 
         assertNotNull(result);
         assertEquals(config, facility.logisticsConfig.get(resource));
