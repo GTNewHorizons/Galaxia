@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.core.starmap.sync;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -61,7 +60,8 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         if (handler == null || !handler.isValid()) return false;
         handler.syncToServer(
             REQUEST_ACTION,
-            buf -> writePayload(buf, StarmapActionPayload.createAsset(bodyId, displayName, kind, status)));
+            buf -> StarmapActionPayloadCodec
+                .write(buf, StarmapActionPayload.createAsset(bodyId, displayName, kind, status)));
         return true;
     }
 
@@ -72,9 +72,8 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         if (handler == null || !handler.isValid()) return false;
         handler.syncToServer(
             REQUEST_ACTION,
-            buf -> writePayload(
-                buf,
-                StarmapActionPayload.buildModule(assetId, kind, shape, tier, instantBuild, coord)));
+            buf -> StarmapActionPayloadCodec
+                .write(buf, StarmapActionPayload.buildModule(assetId, kind, shape, tier, instantBuild, coord)));
         return true;
     }
 
@@ -82,7 +81,9 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     public static boolean sendAssetOnly(StarmapAction action, CelestialAsset.ID assetId) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        handler.syncToServer(REQUEST_ACTION, buf -> writePayload(buf, StarmapActionPayload.assetOnly(action, assetId)));
+        handler.syncToServer(
+            REQUEST_ACTION,
+            buf -> StarmapActionPayloadCodec.write(buf, StarmapActionPayload.assetOnly(action, assetId)));
         return true;
     }
 
@@ -92,7 +93,7 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         if (handler == null || !handler.isValid()) return false;
         handler.syncToServer(
             REQUEST_ACTION,
-            buf -> writePayload(buf, StarmapActionPayload.renameAsset(assetId, displayName)));
+            buf -> StarmapActionPayloadCodec.write(buf, StarmapActionPayload.renameAsset(assetId, displayName)));
         return true;
     }
 
@@ -137,18 +138,16 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         switch (id) {
             case REQUEST_ACTION -> {
                 StarmapActionResult result = StarmapServerActions
-                    .apply(teamId, sanitizePayload(readPayload(buf), playerMp));
+                    .apply(teamId, sanitizePayload(StarmapActionPayloadCodec.read(buf), playerMp));
                 syncResult(result);
             }
             case REQUEST_MODULE_UPDATE -> syncPacket(
-                AssetModuleUpdatePacket.apply(teamId, readPacket(buf, AssetModuleUpdatePacket::new)));
+                AssetModuleUpdatePacket.apply(teamId, readModuleUpdatePacket(buf)));
             case REQUEST_INVENTORY_UPDATE -> syncPacket(
-                AssetInventoryUpdatePacket.apply(
-                    teamId,
-                    playerMp.capabilities.isCreativeMode,
-                    readPacket(buf, AssetInventoryUpdatePacket::new)));
+                AssetInventoryUpdatePacket
+                    .apply(teamId, playerMp.capabilities.isCreativeMode, readInventoryUpdatePacket(buf)));
             case REQUEST_LOGISTICS_CONFIG -> syncPacket(
-                LogisticsConfigUpdatePacket.apply(teamId, readPacket(buf, LogisticsConfigUpdatePacket::new)));
+                LogisticsConfigUpdatePacket.apply(teamId, readLogisticsConfigPacket(buf)));
             default -> {}
         }
     }
@@ -163,21 +162,22 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         if (packet != null) syncToClient(RESPONSE_SYNC, packet::toBytes);
     }
 
-    private static <T> T readPacket(PacketBuffer buf, PacketFactory<T> factory) {
-        T packet = factory.create();
-        if (packet instanceof AssetModuleUpdatePacket moduleUpdate) {
-            moduleUpdate.fromBytes(buf);
-        } else if (packet instanceof AssetInventoryUpdatePacket inventoryUpdate) {
-            inventoryUpdate.fromBytes(buf);
-        } else if (packet instanceof LogisticsConfigUpdatePacket logisticsConfig) {
-            logisticsConfig.fromBytes(buf);
-        }
+    private static AssetModuleUpdatePacket readModuleUpdatePacket(PacketBuffer buf) {
+        AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
+        packet.fromBytes(buf);
         return packet;
     }
 
-    private interface PacketFactory<T> {
+    private static AssetInventoryUpdatePacket readInventoryUpdatePacket(PacketBuffer buf) {
+        AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
+        packet.fromBytes(buf);
+        return packet;
+    }
 
-        T create();
+    private static LogisticsConfigUpdatePacket readLogisticsConfigPacket(PacketBuffer buf) {
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
+        packet.fromBytes(buf);
+        return packet;
     }
 
     private static StarmapActionPayload sanitizePayload(StarmapActionPayload payload, EntityPlayerMP player) {
@@ -192,99 +192,5 @@ public final class StarmapActionSyncHandler extends SyncHandler {
             payload.moduleTier(),
             false,
             payload.tileCoord());
-    }
-
-    private static void writePayload(PacketBuffer buf, StarmapActionPayload payload) {
-        writeEnum(buf, payload.action());
-        switch (payload.action()) {
-            case CREATE_ASSET -> {
-                writeEnum(buf, payload.bodyId());
-                writeString(buf, payload.displayName());
-                writeEnum(buf, payload.assetKind());
-                writeEnum(buf, payload.assetStatus());
-            }
-            case BUILD_MODULE -> {
-                writeAssetId(buf, payload.assetId());
-                writeEnum(buf, payload.moduleKind());
-                writeEnum(buf, payload.moduleShape());
-                writeEnum(buf, payload.moduleTier());
-                buf.writeBoolean(payload.instantBuild());
-                buf.writeBoolean(payload.tileCoord() != null);
-                if (payload.tileCoord() != null) writeStationTileCoord(buf, payload.tileCoord());
-            }
-            case DESTROY_ASSET, CANCEL_CONSTRUCTION, START_DECONSTRUCTION -> writeAssetId(buf, payload.assetId());
-            case RENAME_ASSET -> {
-                writeAssetId(buf, payload.assetId());
-                writeString(buf, payload.displayName());
-            }
-            default -> {}
-        }
-    }
-
-    private static StarmapActionPayload readPayload(PacketBuffer buf) {
-        StarmapAction action = readEnum(buf, StarmapAction.class);
-        return switch (action) {
-            case CREATE_ASSET -> StarmapActionPayload.createAsset(
-                readEnum(buf, CelestialObjectId.class),
-                readString(buf),
-                readEnum(buf, CelestialAsset.Kind.class),
-                readEnum(buf, Buildable.Status.class));
-            case BUILD_MODULE -> StarmapActionPayload.buildModule(
-                readAssetId(buf),
-                readEnum(buf, FacilityModuleKind.class),
-                readEnum(buf, ModuleShape.class),
-                readEnum(buf, ModuleTier.class),
-                buf.readBoolean(),
-                buf.readBoolean() ? readStationTileCoord(buf) : null);
-            case DESTROY_ASSET, CANCEL_CONSTRUCTION, START_DECONSTRUCTION -> StarmapActionPayload
-                .assetOnly(action, readAssetId(buf));
-            case RENAME_ASSET -> StarmapActionPayload.renameAsset(readAssetId(buf), readString(buf));
-            default -> throw new IllegalArgumentException("Unsupported starmap action: " + action);
-        };
-    }
-
-    private static void writeAssetId(PacketBuffer buf, CelestialAsset.ID id) {
-        UUID uuid = id.id();
-        buf.writeLong(uuid.getMostSignificantBits());
-        buf.writeLong(uuid.getLeastSignificantBits());
-    }
-
-    private static CelestialAsset.ID readAssetId(PacketBuffer buf) {
-        return new CelestialAsset.ID(new UUID(buf.readLong(), buf.readLong()));
-    }
-
-    private static void writeStationTileCoord(PacketBuffer buf, StationTileCoord coord) {
-        buf.writeByte(coord.dx());
-        buf.writeByte(coord.dy());
-    }
-
-    private static StationTileCoord readStationTileCoord(PacketBuffer buf) {
-        return new StationTileCoord(buf.readByte(), buf.readByte());
-    }
-
-    private static <T extends Enum<T>> void writeEnum(PacketBuffer buf, T value) {
-        buf.writeByte(value.ordinal());
-    }
-
-    private static <T extends Enum<T>> T readEnum(PacketBuffer buf, Class<T> enumClass) {
-        T[] values = enumClass.getEnumConstants();
-        int ordinal = buf.readUnsignedByte();
-        if (ordinal < 0 || ordinal >= values.length) {
-            throw new IllegalArgumentException("Invalid ordinal " + ordinal + " for " + enumClass.getSimpleName());
-        }
-        return values[ordinal];
-    }
-
-    private static void writeString(PacketBuffer buf, String value) {
-        byte[] bytes = (value == null ? "" : value).getBytes(StandardCharsets.UTF_8);
-        buf.writeShort(bytes.length);
-        buf.writeBytes(bytes);
-    }
-
-    private static String readString(PacketBuffer buf) {
-        int length = buf.readUnsignedShort();
-        byte[] bytes = new byte[length];
-        buf.readBytes(bytes);
-        return new String(bytes, StandardCharsets.UTF_8);
     }
 }
