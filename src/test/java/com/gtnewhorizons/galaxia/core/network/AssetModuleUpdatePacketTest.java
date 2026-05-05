@@ -4,16 +4,32 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.UUID;
 
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -23,6 +39,25 @@ final class AssetModuleUpdatePacketTest {
 
     private static final CelestialAsset.ID ASSET_ID = CelestialAsset.ID.create();
     private static final ModuleInstance.ID MODULE_ID = new ModuleInstance.ID(UUID.randomUUID());
+    private static final UUID TEAM = UUID.randomUUID();
+
+    @BeforeAll
+    static void initRegistries() {
+        CelestialRegistry.freezeAndBake();
+        FacilityModuleRegistry.init();
+    }
+
+    @BeforeEach
+    void cleanStores() {
+        CelestialAssetStore.SERVER.clearInternal();
+        CelestialAssetStore.CLIENT.clearInternal();
+    }
+
+    @AfterEach
+    void cleanStoresAfter() {
+        CelestialAssetStore.SERVER.clearInternal();
+        CelestialAssetStore.CLIENT.clearInternal();
+    }
 
     // ---------- Recipe slot encode/decode round-trip ----------
 
@@ -65,8 +100,10 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(0, payloadBuf.readInt()); // EU/t
         assertEquals(-1, payloadBuf.readInt()); // item inputs
         assertEquals(-1, payloadBuf.readInt()); // item outputs
+        assertEquals(-1, payloadBuf.readInt()); // item output chances
         assertEquals(-1, payloadBuf.readInt()); // fluid inputs
         assertEquals(-1, payloadBuf.readInt()); // fluid outputs
+        assertEquals(-1, payloadBuf.readInt()); // fluid output chances
         assertTrue(payloadBuf.readBoolean()); // enabled
         assertEquals(10, payloadBuf.readInt()); // inputGuard
         assertEquals(100, payloadBuf.readInt()); // outputGuard
@@ -75,7 +112,8 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void recipeSlotAdd_fullSnapshotPayload_roundTripIncludesFluidsAndRecipeStats() {
+    void recipeSlotAdd_fullSnapshotPayload_roundTripIncludesFluidsRecipeStatsAndOutputChances() {
+        Item itemOutput = new Item();
         FluidStack fluidInput = fluidStack("galaxia_packet_input_fluid", 144);
         FluidStack fluidOutput = fluidStack("galaxia_packet_output_fluid", 72);
         RecipeSlot slot = new RecipeSlot(
@@ -84,9 +122,11 @@ final class AssetModuleUpdatePacketTest {
                 42,
                 12345L,
                 null,
-                null,
+                new ItemStack[] { new ItemStack(itemOutput, 2, 0) },
                 new FluidStack[] { fluidInput },
                 new FluidStack[] { fluidOutput },
+                new int[] { 5000 },
+                new int[] { 7500 },
                 200,
                 512),
             true,
@@ -122,7 +162,14 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(512, payloadBuf.readInt());
 
         assertEquals(-1, payloadBuf.readInt()); // null item inputs
-        assertEquals(-1, payloadBuf.readInt()); // null item outputs
+        assertEquals(1, payloadBuf.readInt());
+        assertTrue(payloadBuf.readBoolean());
+        assertEquals(Item.getIdFromItem(itemOutput), payloadBuf.readInt());
+        assertEquals(0, payloadBuf.readInt());
+        assertEquals(2, payloadBuf.readInt());
+
+        assertEquals(1, payloadBuf.readInt());
+        assertEquals(5000, payloadBuf.readInt());
 
         assertEquals(1, payloadBuf.readInt());
         assertTrue(payloadBuf.readBoolean());
@@ -133,6 +180,9 @@ final class AssetModuleUpdatePacketTest {
         assertTrue(payloadBuf.readBoolean());
         assertEquals("galaxia_packet_output_fluid", PacketUtil.readString(payloadBuf));
         assertEquals(72, payloadBuf.readInt());
+
+        assertEquals(1, payloadBuf.readInt());
+        assertEquals(7500, payloadBuf.readInt());
 
         assertTrue(payloadBuf.readBoolean());
         assertEquals(10, payloadBuf.readInt());
@@ -200,8 +250,10 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(0, payloadBuf.readInt()); // EU/t
         assertEquals(-1, payloadBuf.readInt()); // item inputs
         assertEquals(-1, payloadBuf.readInt()); // item outputs
+        assertEquals(-1, payloadBuf.readInt()); // item output chances
         assertEquals(-1, payloadBuf.readInt()); // fluid inputs
         assertEquals(-1, payloadBuf.readInt()); // fluid outputs
+        assertEquals(-1, payloadBuf.readInt()); // fluid output chances
         assertFalse(payloadBuf.readBoolean()); // enabled
         assertEquals(5, payloadBuf.readInt()); // inputGuard
         assertEquals(50, payloadBuf.readInt()); // outputGuard
@@ -225,6 +277,35 @@ final class AssetModuleUpdatePacketTest {
         decoded.fromBytes(buf);
         assertEquals(AssetModuleUpdatePacket.ConfigAction.SET_TIER, decoded.getConfigAction());
         assertNull(decoded.getRawPayload());
+    }
+
+    @Test
+    void fromBytesCrashesOnRecipePayloadLargerThanCap() {
+        ByteBuf buf = Unpooled.buffer();
+        PacketUtil.writeId(buf, ASSET_ID);
+        buf.writeInt(0);
+        PacketUtil.writeId(buf, MODULE_ID);
+        buf.writeByte(1);
+        PacketUtil.writeEnum(buf, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT);
+        buf.writeInt(4097);
+
+        AssetModuleUpdatePacket decoded = new AssetModuleUpdatePacket();
+
+        assertThrows(IllegalArgumentException.class, () -> decoded.fromBytes(buf));
+    }
+
+    @Test
+    void applyCrashesOnMalformedRecipePayloadWithOversizedNestedItemArray() {
+        AutomatedFacility facility = addRecipeFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = decodeRecipePayload(
+            facility.assetId,
+            module.id,
+            malformedRecipePayloadWithItemArrayLength(4097));
+
+        assertThrows(IllegalArgumentException.class, () -> packet.apply(TEAM));
+        assertNull(((IRecipeModule) module.component()).getRecipeConfig());
     }
 
     @Test
@@ -262,6 +343,48 @@ final class AssetModuleUpdatePacketTest {
 
         assertFalse(changed);
         assertTrue(slots.isEmpty());
+    }
+
+    private static AutomatedFacility addRecipeFacilityToServer() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.MACERATOR
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
+        facility.addModule(module);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static AssetModuleUpdatePacket decodeRecipePayload(CelestialAsset.ID assetId, ModuleInstance.ID moduleId,
+        byte[] rawPayload) {
+        ByteBuf buf = Unpooled.buffer();
+        PacketUtil.writeId(buf, assetId);
+        buf.writeInt(0);
+        PacketUtil.writeId(buf, moduleId);
+        buf.writeByte(1);
+        PacketUtil.writeEnum(buf, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT);
+        buf.writeInt(rawPayload.length);
+        buf.writeBytes(rawPayload);
+        AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
+        packet.fromBytes(buf);
+        return packet;
+    }
+
+    private static byte[] malformedRecipePayloadWithItemArrayLength(int itemArrayLength) {
+        ByteBuf payload = Unpooled.buffer();
+        payload.writeByte(0);
+        payload.writeByte(1);
+        payload.writeInt(0);
+        payload.writeLong(0L);
+        payload.writeInt(20);
+        payload.writeInt(30);
+        payload.writeInt(itemArrayLength);
+        byte[] raw = new byte[payload.writerIndex()];
+        payload.readBytes(raw);
+        return raw;
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) {

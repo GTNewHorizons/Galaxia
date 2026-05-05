@@ -41,6 +41,8 @@ public final class AssetModuleUpdatePacket {
 
     private static final int ACTION_TYPE = 0;
     private static final int CONFIG_TYPE = 1;
+    private static final int MAX_RECIPE_PAYLOAD_BYTES = 4096;
+    private static final int MAX_RECIPE_STACKS = 64;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
@@ -137,6 +139,10 @@ public final class AssetModuleUpdatePacket {
                 payloadBuf,
                 slot.recipe()
                     .outputs());
+            writeIntArray(
+                payloadBuf,
+                slot.recipe()
+                    .outputChances());
             writeFluidStacks(
                 payloadBuf,
                 slot.recipe()
@@ -145,6 +151,10 @@ public final class AssetModuleUpdatePacket {
                 payloadBuf,
                 slot.recipe()
                     .fluidOutputs());
+            writeIntArray(
+                payloadBuf,
+                slot.recipe()
+                    .fluidOutputChances());
             payloadBuf.writeBoolean(slot.enabled());
             payloadBuf.writeInt(slot.inputGuard());
             payloadBuf.writeInt(slot.outputGuard());
@@ -244,10 +254,11 @@ public final class AssetModuleUpdatePacket {
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
-                if (len > 0) {
-                    rawPayload = new byte[len];
-                    buf.readBytes(rawPayload);
+                if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
+                    throw new IllegalArgumentException("invalid recipe payload length: " + len);
                 }
+                rawPayload = new byte[len];
+                buf.readBytes(rawPayload);
             }
         }
     }
@@ -400,16 +411,21 @@ public final class AssetModuleUpdatePacket {
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) return;
-        if (packet.rawPayload == null) return;
+        if (packet.rawPayload == null) throw new IllegalArgumentException("missing recipe slot payload");
 
         io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
         int slotIndex = Byte.toUnsignedInt(payloadBuf.readByte());
-        if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) return;
+        if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) {
+            throw new IllegalArgumentException("recipe slot index out of range: " + slotIndex);
+        }
 
         RecipeConfig config = recipeModule.getRecipeConfig();
         ConfigAction action = packet.getConfigAction();
 
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
+            if (packet.rawPayload.length != 1) {
+                throw new IllegalArgumentException("remove recipe slot payload must be exactly 1 byte");
+            }
             if (config == null) return;
             if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, null)) return;
             state.markModuleDirty(module.id);
@@ -417,7 +433,9 @@ public final class AssetModuleUpdatePacket {
         }
 
         // ADD or UPDATE: decode RecipeSlot from payload
-        if (packet.rawPayload.length < 25) return;
+        if (packet.rawPayload.length < 25) {
+            throw new IllegalArgumentException("truncated recipe slot payload");
+        }
         byte recipeMapOrdinal = payloadBuf.readByte();
         int recipeIndex = payloadBuf.readInt();
         long contentHash = payloadBuf.readLong();
@@ -439,8 +457,10 @@ public final class AssetModuleUpdatePacket {
             int eut = payloadBuf.readInt();
             ItemStack[] inputs = readItemStacks(payloadBuf);
             ItemStack[] outputs = readItemStacks(payloadBuf);
+            int[] outputChances = readIntArray(payloadBuf);
             FluidStack[] fluidInputs = readFluidStacks(payloadBuf);
             FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
+            int[] fluidOutputChances = readIntArray(payloadBuf);
             enabled = payloadBuf.readBoolean();
             inputGuard = payloadBuf.readInt();
             outputGuard = payloadBuf.readInt();
@@ -454,6 +474,8 @@ public final class AssetModuleUpdatePacket {
                 outputs,
                 fluidInputs,
                 fluidOutputs,
+                outputChances,
+                fluidOutputChances,
                 duration,
                 eut);
         }
@@ -544,10 +566,15 @@ public final class AssetModuleUpdatePacket {
 
     private static ItemStack[] readItemStacks(ByteBuf buf) {
         int len = buf.readInt();
-        if (len < 0) return null;
+        if (len == -1) return null;
+        if (len < -1 || len > MAX_RECIPE_STACKS || len > buf.readableBytes()) {
+            throw new IllegalArgumentException("invalid item stack array length: " + len);
+        }
         ItemStack[] stacks = new ItemStack[len];
         for (int i = 0; i < len; i++) {
+            if (buf.readableBytes() < 1) throw new IllegalArgumentException("truncated item stack marker");
             if (!buf.readBoolean()) continue;
+            if (buf.readableBytes() < 12) throw new IllegalArgumentException("truncated item stack payload");
             Item item = Item.getItemById(buf.readInt());
             int damage = buf.readInt();
             int size = buf.readInt();
@@ -570,13 +597,43 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
+    private static void writeIntArray(ByteBuf buf, int[] values) {
+        if (values == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(values.length);
+        for (int value : values) {
+            buf.writeInt(value);
+        }
+    }
+
+    private static int[] readIntArray(ByteBuf buf) {
+        int len = buf.readInt();
+        if (len == -1) return null;
+        if (len < -1 || len > MAX_RECIPE_STACKS || len > buf.readableBytes() / 4) {
+            throw new IllegalArgumentException("invalid int array length: " + len);
+        }
+        int[] values = new int[len];
+        for (int i = 0; i < len; i++) {
+            values[i] = buf.readInt();
+        }
+        return values;
+    }
+
     private static FluidStack[] readFluidStacks(ByteBuf buf) {
         int len = buf.readInt();
-        if (len < 0) return null;
+        if (len == -1) return null;
+        if (len < -1 || len > MAX_RECIPE_STACKS || len > buf.readableBytes()) {
+            throw new IllegalArgumentException("invalid fluid stack array length: " + len);
+        }
         FluidStack[] stacks = new FluidStack[len];
         for (int i = 0; i < len; i++) {
+            if (buf.readableBytes() < 1) throw new IllegalArgumentException("truncated fluid stack marker");
             if (!buf.readBoolean()) continue;
+            if (buf.readableBytes() < 2) throw new IllegalArgumentException("truncated fluid stack name");
             String fluidName = PacketUtil.readString(buf);
+            if (buf.readableBytes() < 4) throw new IllegalArgumentException("truncated fluid stack amount");
             int amount = buf.readInt();
             Fluid fluid = FluidRegistry.getFluid(fluidName);
             if (fluid != null) {

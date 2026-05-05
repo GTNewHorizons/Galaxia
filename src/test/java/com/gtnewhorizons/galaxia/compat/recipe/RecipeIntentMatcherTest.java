@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.lang.reflect.Field;
 
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
@@ -113,6 +114,22 @@ final class RecipeIntentMatcherTest {
     }
 
     @Test
+    void singleItemOutputMatchCopiesOutputChancesIntoSnapshot() throws Exception {
+        Item outputItem = new Item();
+        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
+        GTRecipe recipe = recipe(null, outputs, null, null, new int[] { 5000 }, 320, 480);
+
+        RecipeIntentMatcher.Result result = RecipeIntentMatcher
+            .match(GTRecipeMapId.DISTILLERY, new GTRecipe[] { recipe }, null, outputs, null, null);
+
+        assertEquals(RecipeIntentMatcher.Status.SINGLE_MATCH, result.status());
+        assertEquals(
+            5000,
+            result.snapshot()
+                .outputChances()[0]);
+    }
+
+    @Test
     void noHardSlotsAreReportedSeparatelyFromNoMatch() {
         RecipeIntentMatcher.Result result = RecipeIntentMatcher
             .match(GTRecipeMapId.DISTILLERY, new GTRecipe[0], null, null, null, null);
@@ -147,10 +164,16 @@ final class RecipeIntentMatcherTest {
 
     private static GTRecipe recipe(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,
         FluidStack[] fluidOutputs, int duration, int eut) throws Exception {
+        return recipe(itemInputs, itemOutputs, fluidInputs, fluidOutputs, null, duration, eut);
+    }
+
+    private static GTRecipe recipe(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,
+        FluidStack[] fluidOutputs, int[] outputChances, int duration, int eut) throws Exception {
         Unsafe unsafe = unsafe();
         GTRecipe recipe = (GTRecipe) unsafe.allocateInstance(GTRecipe.class);
         set(recipe, "mInputs", itemInputs);
         set(recipe, "mOutputs", itemOutputs);
+        set(recipe, "mOutputChances", outputChances);
         set(recipe, "mFluidInputs", fluidInputs);
         set(recipe, "mFluidOutputs", fluidOutputs);
         set(recipe, "mDuration", duration);

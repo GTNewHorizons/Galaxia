@@ -90,14 +90,24 @@ public final class GTRecipeSlotPayloadValidator {
             recipe.mOutputs,
             recipe.mFluidInputs,
             recipe.mFluidOutputs,
+            recipe.mOutputChances,
+            recipe.mFluidOutputChances,
+            recipe.mDuration,
+            recipe.mEUt);
+        long legacyHash = RecipeSnapshot.computeContentHash(
+            recipe.mInputs,
+            recipe.mOutputs,
+            recipe.mFluidInputs,
+            recipe.mFluidOutputs,
             recipe.mDuration,
             recipe.mEUt);
         long clientHash = snapshot.contentHash();
-        if (expectedHash != clientHash) {
+        if (expectedHash != clientHash && legacyHash != clientHash) {
             log.warn(
-                "[RecipeValidator] REJECTED: contentHash mismatch; client={} server={} (map={} index={})",
+                "[RecipeValidator] REJECTED: contentHash mismatch; client={} server={} legacyServer={} (map={} index={})",
                 clientHash,
                 expectedHash,
+                legacyHash,
                 mapId,
                 recipeIndex);
             return null;
@@ -110,6 +120,8 @@ public final class GTRecipeSlotPayloadValidator {
             recipe.mOutputs,
             recipe.mFluidInputs,
             recipe.mFluidOutputs,
+            recipe.mOutputChances,
+            recipe.mFluidOutputChances,
             recipe.mDuration,
             recipe.mEUt);
     }

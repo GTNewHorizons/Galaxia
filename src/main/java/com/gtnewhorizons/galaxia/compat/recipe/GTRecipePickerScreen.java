@@ -221,10 +221,18 @@ public final class GTRecipePickerScreen implements IGuiHolder<GuiData> {
                     RecipeSnapshot.computeContentHash(
                         entry.recipe.mInputs,
                         entry.recipe.mOutputs,
+                        entry.recipe.mFluidInputs,
+                        entry.recipe.mFluidOutputs,
+                        entry.recipe.mOutputChances,
+                        entry.recipe.mFluidOutputChances,
                         entry.recipe.mDuration,
                         entry.recipe.mEUt),
                     entry.recipe.mInputs,
                     entry.recipe.mOutputs,
+                    entry.recipe.mFluidInputs,
+                    entry.recipe.mFluidOutputs,
+                    entry.recipe.mOutputChances,
+                    entry.recipe.mFluidOutputChances,
                     entry.recipe.mDuration,
                     entry.recipe.mEUt);
                 pendingSelection = snapshot;

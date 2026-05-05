@@ -70,6 +70,11 @@ public final class AssetInventoryUpdatePacket {
     }
 
     public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {
+        if (delta > 0 && !creativePlayer) {
+            LOG.warn("[Logistics] InventoryDelta rejected: positive delta {} requires creative mode.", delta);
+            return null;
+        }
+
         if (creativeOnly && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: player is not in creative mode.");
             return null;

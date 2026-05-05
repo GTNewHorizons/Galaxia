@@ -72,6 +72,8 @@ public final class RecipeIntentMatcher {
                 recipe.mOutputs,
                 recipe.mFluidInputs,
                 recipe.mFluidOutputs,
+                recipe.mOutputChances,
+                recipe.mFluidOutputChances,
                 recipe.mDuration,
                 recipe.mEUt));
     }

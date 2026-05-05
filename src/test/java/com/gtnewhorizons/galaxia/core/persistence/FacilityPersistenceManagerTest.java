@@ -785,7 +785,10 @@ final class FacilityPersistenceManagerTest {
         IRecipeModule recipeModule = (IRecipeModule) macerator.component();
         FluidStack[] fluidInputs = { fluidStack("galaxia.persistence.input", 144) };
         FluidStack[] fluidOutputs = { fluidStack("galaxia.persistence.output", 72) };
-        long contentHash = RecipeSnapshot.computeContentHash(null, null, fluidInputs, fluidOutputs, 320, 480);
+        int[] outputChances = { 5000 };
+        int[] fluidOutputChances = { 7500 };
+        long contentHash = RecipeSnapshot
+            .computeContentHash(null, null, fluidInputs, fluidOutputs, outputChances, fluidOutputChances, 320, 480);
         RecipeSnapshot snapshot = new RecipeSnapshot(
             (byte) 1,
             7,
@@ -794,6 +797,8 @@ final class FacilityPersistenceManagerTest {
             null,
             fluidInputs,
             fluidOutputs,
+            outputChances,
+            fluidOutputChances,
             320,
             480);
         RecipeSlotList slots = new RecipeSlotList();
@@ -822,6 +827,8 @@ final class FacilityPersistenceManagerTest {
         assertEquals(320, decodedSnapshot.duration());
         assertEquals(480, decodedSnapshot.eut());
         assertEquals(contentHash, decodedSnapshot.contentHash());
+        assertEquals(5000, decodedSnapshot.outputChances()[0]);
+        assertEquals(7500, decodedSnapshot.fluidOutputChances()[0]);
         assertEquals("galaxia.persistence.input", fluidName(decodedSnapshot.fluidInputs()[0]));
         assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
         assertEquals("galaxia.persistence.output", fluidName(decodedSnapshot.fluidOutputs()[0]));

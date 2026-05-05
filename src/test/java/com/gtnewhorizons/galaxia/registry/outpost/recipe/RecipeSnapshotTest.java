@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -64,6 +66,29 @@ final class RecipeSnapshotTest {
     }
 
     @Test
+    void contentHashIncludesItemOutputChances() {
+        Item outputItem = new Item();
+        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
+
+        long base = RecipeSnapshot.computeContentHash(null, outputs, null, null, new int[] { 5000 }, 100, 512);
+        long differentChance = RecipeSnapshot
+            .computeContentHash(null, outputs, null, null, new int[] { 7500 }, 100, 512);
+
+        assertNotEquals(base, differentChance);
+    }
+
+    @Test
+    void contentHashIncludesFluidOutputChances() {
+        FluidStack[] outputs = { fluidStack("galaxia_test_hash_chanced_fluid", 144) };
+
+        long base = RecipeSnapshot.computeContentHash(null, null, null, outputs, null, new int[] { 5000 }, 100, 512);
+        long differentChance = RecipeSnapshot
+            .computeContentHash(null, null, null, outputs, null, new int[] { 7500 }, 100, 512);
+
+        assertNotEquals(base, differentChance);
+    }
+
+    @Test
     void unresolvedSnapshotHasNoResolvedStacksOrFluids() {
         RecipeSnapshot snapshot = RecipeSnapshot.unresolved((byte) 2, 9, 456L);
 
@@ -71,6 +96,8 @@ final class RecipeSnapshotTest {
         assertNull(snapshot.outputs());
         assertNull(snapshot.fluidInputs());
         assertNull(snapshot.fluidOutputs());
+        assertNull(snapshot.outputChances());
+        assertNull(snapshot.fluidOutputChances());
         assertEquals(0, snapshot.duration());
         assertEquals(0, snapshot.eut());
     }

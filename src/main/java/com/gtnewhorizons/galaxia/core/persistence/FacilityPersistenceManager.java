@@ -918,8 +918,10 @@ public final class FacilityPersistenceManager {
         slotObj.addProperty("eut", snapshot.eut());
         writeItemStacks(slotObj, "inputs", snapshot.inputs());
         writeItemStacks(slotObj, "outputs", snapshot.outputs());
+        writeIntArray(slotObj, "outputChances", snapshot.outputChances());
         writeFluidStacks(slotObj, "fluidInputs", snapshot.fluidInputs());
         writeFluidStacks(slotObj, "fluidOutputs", snapshot.fluidOutputs());
+        writeIntArray(slotObj, "fluidOutputChances", snapshot.fluidOutputChances());
     }
 
     private static RecipeSnapshot readRecipeSnapshot(JsonObject slotObj, byte recipeMapOrdinal, int recipeIndex,
@@ -927,8 +929,10 @@ public final class FacilityPersistenceManager {
         if (!slotObj.has("duration") && !slotObj.has("eut")
             && !slotObj.has("inputs")
             && !slotObj.has("outputs")
+            && !slotObj.has("outputChances")
             && !slotObj.has("fluidInputs")
-            && !slotObj.has("fluidOutputs")) {
+            && !slotObj.has("fluidOutputs")
+            && !slotObj.has("fluidOutputChances")) {
             return RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
         }
         int duration = slotObj.has("duration") ? slotObj.get("duration")
@@ -943,6 +947,8 @@ public final class FacilityPersistenceManager {
             readItemStacks(slotObj, "outputs"),
             readFluidStacks(slotObj, "fluidInputs"),
             readFluidStacks(slotObj, "fluidOutputs"),
+            readIntArray(slotObj, "outputChances"),
+            readIntArray(slotObj, "fluidOutputChances"),
             duration,
             eut);
     }
@@ -981,6 +987,26 @@ public final class FacilityPersistenceManager {
             stacks[i] = wrapper.toStack(amount);
         }
         return stacks;
+    }
+
+    private static void writeIntArray(JsonObject target, String key, int[] values) {
+        if (values == null) return;
+        com.google.gson.JsonArray array = new com.google.gson.JsonArray();
+        for (int value : values) {
+            array.add(new com.google.gson.JsonPrimitive(value));
+        }
+        target.add(key, array);
+    }
+
+    private static int[] readIntArray(JsonObject source, String key) {
+        if (!source.has(key)) return null;
+        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        int[] values = new int[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            JsonElement element = array.get(i);
+            values[i] = element != null && !element.isJsonNull() ? element.getAsInt() : 0;
+        }
+        return values;
     }
 
     private static void writeFluidStacks(JsonObject target, String key, FluidStack[] stacks) {
