@@ -997,49 +997,6 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void legacyBigHammerModuleCrashesOnLoad() throws Exception {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
-
-        // Simulate a legacy save with a BIG_HAMMER module (no longer in the enum)
-        FacilityPersistenceManager.FacilityStateJson legacy = new FacilityPersistenceManager.FacilityStateJson();
-        legacy.celestialBodyId = "PANSPIRA";
-        legacy.systemId = "NOVA_CAELUM";
-        legacy.planetaryAnchorBodyId = "PANSPIRA";
-        legacy.energyStored = 0L;
-        legacy.settingsGroupsNextId = 1;
-        legacy.modules = new ArrayList<>();
-
-        FacilityPersistenceManager.ModuleJson mj = new FacilityPersistenceManager.ModuleJson();
-        mj.moduleId = ModuleInstance.ID.create()
-            .toString();
-        mj.kind = "BIG_HAMMER";
-        mj.status = Buildable.Status.OPERATIONAL.name();
-        mj.tier = PacketUtil.enumOrdinal(ModuleTier.EV);
-        mj.shape = PacketUtil.enumOrdinal(ModuleShape.SINGLE);
-        mj.enabled = true;
-        mj.cooldownTicks = 0;
-        legacy.modules.add(mj);
-
-        legacy.layoutTiles = new ArrayList<>();
-        FacilityPersistenceManager.StationTileJson tj = new FacilityPersistenceManager.StationTileJson();
-        tj.dx = 1;
-        tj.dy = 0;
-        tj.state = StationTileState.OCCUPIED_OPERATIONAL.name();
-        tj.moduleId = mj.moduleId;
-        legacy.layoutTiles.add(tj);
-
-        legacy.buffer = new LinkedHashMap<>();
-        legacy.logisticsConfig = new LinkedHashMap<>();
-
-        AutomatedFacility decoded = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, legacy));
-    }
-
-    @Test
     void unknownModuleKindCrashesOnLoad() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
 
