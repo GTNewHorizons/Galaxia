@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.core.starmap.sync;
+package com.gtnewhorizons.galaxia.core.network;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -10,13 +10,6 @@ import net.minecraft.network.PacketBuffer;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
-import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
