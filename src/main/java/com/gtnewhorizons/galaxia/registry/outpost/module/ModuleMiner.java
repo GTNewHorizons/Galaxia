@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -45,9 +47,7 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
             });
     }
 
-    public static boolean shouldVoidOre(AutomatedFacility outpost, String oreKey, int rollPercent) {
-        Objects.requireNonNull(outpost, "outpost");
-        requireRollPercent(rollPercent);
+    public static boolean shouldVoidOre(@Nonnull AutomatedFacility outpost, String oreKey, int rollPercent) {
         return rollPercent < outpost.minerVoidChancePercent(oreKey);
     }
 
@@ -59,11 +59,5 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     @Override
     public void setParallel(byte parallel) {
         this.parallel = parallel;
-    }
-
-    private static void requireRollPercent(int rollPercent) {
-        if (rollPercent < 0 || rollPercent >= 100) {
-            throw new IllegalArgumentException("rollPercent out of range: " + rollPercent);
-        }
     }
 }

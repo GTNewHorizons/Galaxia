@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.logging.log4j.LogManager;
@@ -189,12 +190,12 @@ public final class AutomatedFacility extends CelestialAsset {
         }
     }
 
-    public void setMinerVoidChances(Map<String, Integer> chances) {
-        Objects.requireNonNull(chances, "miner void chances");
+    public void setMinerVoidChances(@Nonnull Map<String, Integer> chances) {
         minerVoidChancePercentByOre.clear();
         for (Map.Entry<String, Integer> entry : chances.entrySet()) {
             String key = requireOreKey(entry.getKey());
-            int percent = requireMinerVoidChancePercent(Objects.requireNonNull(entry.getValue(), key));
+            if (entry.getValue() == null) throw new IllegalArgumentException("Chance has to be present");
+            int percent = clampMinerVoidChancePercent(entry.getValue());
             if (percent != 0) minerVoidChancePercentByOre.put(key, percent);
         }
         dirtyMinerVoidChanceOreKeys.clear();
@@ -281,17 +282,9 @@ public final class AutomatedFacility extends CelestialAsset {
         return false;
     }
 
-    private static String requireOreKey(String oreKey) {
-        Objects.requireNonNull(oreKey, "oreKey");
+    private static String requireOreKey(@Nonnull String oreKey) {
         if (oreKey.isEmpty()) throw new IllegalArgumentException("oreKey cannot be empty");
         return oreKey;
-    }
-
-    private static int requireMinerVoidChancePercent(int percent) {
-        if (percent < 0 || percent > 100) {
-            throw new IllegalArgumentException("miner void chance percent out of range: " + percent);
-        }
-        return percent;
     }
 
     @Override
