@@ -594,6 +594,7 @@ public final class AssetManagementSystem {
         private boolean lastOutpostStatePresent = false;
         private int lastOutpostSyncRevision = -1;
         private int deferredOutpostSyncRevision = -1;
+        private int lastAssetListSignature = 0;
 
         private int modalLeft, modalTop, modalRight, modalBottom;
         private int scrollLeft, scrollTop, scrollRight, scrollBottom;
@@ -664,6 +665,7 @@ public final class AssetManagementSystem {
                 lastContentVersion = -1;
                 lastOutpostStatePresent = false;
                 lastOutpostSyncRevision = -1;
+                lastAssetListSignature = 0;
                 setEnabled(false);
                 size(0, 0);
                 return;
@@ -706,6 +708,16 @@ public final class AssetManagementSystem {
                 lastOutpostStatePresent = false;
                 lastOutpostSyncRevision = -1;
                 deferredOutpostSyncRevision = -1;
+            }
+
+            if (shouldShowPanel()) {
+                int assetListSignature = computeAssetListSignature(state.assetManagementBody);
+                if (assetListSignature != lastAssetListSignature) {
+                    lastAssetListSignature = assetListSignature;
+                    markContentDirty();
+                }
+            } else {
+                lastAssetListSignature = 0;
             }
 
             // Consume item picker result — works even if the starmap was closed and reopened
@@ -753,6 +765,25 @@ public final class AssetManagementSystem {
                 refreshMainPanelContent();
                 lastContentVersion = contentVersion;
             }
+        }
+
+        private int computeAssetListSignature(CelestialObject body) {
+            if (body == null) return 0;
+
+            List<CelestialAsset> assets = new ArrayList<>(CelestialClient.getState(body.id()));
+            assets.sort(Comparator.comparing(asset -> asset.assetId.toString()));
+
+            int result = 1;
+            for (CelestialAsset asset : assets) {
+                result = 31 * result + asset.assetId.hashCode();
+                result = 31 * result + asset.kind.hashCode();
+                result = 31 * result + asset.status()
+                    .hashCode();
+                result = 31 * result + asset.displayName()
+                    .hashCode();
+                result = 31 * result + asset.getSyncRevision();
+            }
+            return result;
         }
 
         @Override
