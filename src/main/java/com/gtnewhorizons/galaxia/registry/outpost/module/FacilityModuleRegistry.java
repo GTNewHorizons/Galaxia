@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -11,14 +12,57 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationCostResolver;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public class FacilityModuleRegistry {
 
+    private static final int DEFAULT_OPERATION_BUILD_TICKS = 200;
+    private static final int DEFAULT_OPERATION_COMPLETION_REFUND_PERCENT = 80;
+
     public record Definition(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawEuPerTick,
         int cooldownTicks, Map<ItemStack, Long> constructionCost,
-        BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<ModuleComponent> defaultFactory) {}
+        Map<ModuleOperationKind, ModuleOperationDefinition> operationDefinitions,
+        BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<ModuleComponent> defaultFactory) {
+
+        public Definition {
+            if (operationDefinitions == null) {
+                throw new IllegalArgumentException("FacilityModuleRegistry.Definition: operationDefinitions is null");
+            }
+            Map<ModuleOperationKind, ModuleOperationDefinition> copiedDefinitions = new EnumMap<>(
+                ModuleOperationKind.class);
+            copiedDefinitions.putAll(operationDefinitions);
+            for (Map.Entry<ModuleOperationKind, ModuleOperationDefinition> entry : copiedDefinitions.entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null) {
+                    throw new IllegalArgumentException(
+                        "FacilityModuleRegistry.Definition: operationDefinitions contains null key/value");
+                }
+                if (entry.getKey() != entry.getValue()
+                    .operationKind()) {
+                    throw new IllegalArgumentException(
+                        "FacilityModuleRegistry.Definition: operation definition key " + entry.getKey()
+                            + " does not match value kind "
+                            + entry.getValue()
+                                .operationKind());
+                }
+            }
+            operationDefinitions = Collections.unmodifiableMap(copiedDefinitions);
+        }
+
+        public ModuleOperationDefinition operationDefinition(ModuleOperationKind operationKind) {
+            ModuleOperationDefinition definition = operationDefinitions.get(operationKind);
+            if (definition == null) {
+                throw new IllegalStateException(
+                    "FacilityModuleRegistry.Definition: missing operation definition for kind=" + kind
+                        + ", operationKind="
+                        + operationKind);
+            }
+            return definition;
+        }
+    }
 
     private static final Map<FacilityModuleKind, Definition> DEFINITIONS = new EnumMap<>(FacilityModuleKind.class);
 
@@ -141,6 +185,21 @@ public class FacilityModuleRegistry {
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
         int cooldownTicks, Map<ItemStack, Long> constructionCost,
         BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<ModuleComponent> defaultFactory) {
+        register(
+            kind,
+            baseEnergyCapacity,
+            powerDrawPerClick,
+            cooldownTicks,
+            constructionCost,
+            defaultOperationDefinitions(constructionCost),
+            tickFunction,
+            defaultFactory);
+    }
+
+    public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
+        int cooldownTicks, Map<ItemStack, Long> constructionCost,
+        Map<ModuleOperationKind, ModuleOperationDefinition> operationDefinitions,
+        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<ModuleComponent> defaultFactory) {
         DEFINITIONS.put(
             kind,
             new Definition(
@@ -149,8 +208,22 @@ public class FacilityModuleRegistry {
                 powerDrawPerClick,
                 cooldownTicks,
                 constructionCost,
+                operationDefinitions,
                 tickFunction,
                 defaultFactory));
+    }
+
+    private static Map<ModuleOperationKind, ModuleOperationDefinition> defaultOperationDefinitions(
+        Map<ItemStack, Long> constructionCost) {
+        Map<ModuleOperationKind, ModuleOperationDefinition> definitions = new EnumMap<>(ModuleOperationKind.class);
+        definitions.put(
+            ModuleOperationKind.UPGRADE_REBUILD,
+            new ModuleOperationDefinition(
+                ModuleOperationKind.UPGRADE_REBUILD,
+                DEFAULT_OPERATION_BUILD_TICKS,
+                DEFAULT_OPERATION_COMPLETION_REFUND_PERCENT,
+                ModuleOperationCostResolver.fixed(constructionCost)));
+        return definitions;
     }
 
     public static Definition get(FacilityModuleKind kind) {
