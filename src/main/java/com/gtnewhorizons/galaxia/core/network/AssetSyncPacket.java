@@ -57,7 +57,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
-    public static final byte MINER_VOID_CONFIG_UPDATED = 11;
+    public static final byte MINER_BLACKLIST_UPDATED = 11;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -82,7 +82,7 @@ public final class AssetSyncPacket implements IMessage {
     private String resourceKey;
     private long inventoryDelta;
     private LogisticsResourceConfig logConfig;
-    private int minerVoidChancePercent;
+    private boolean minerOreBlacklisted;
 
     private StationTileCoord tileCoord;
     private StationTileState tileState;
@@ -125,9 +125,8 @@ public final class AssetSyncPacket implements IMessage {
                     cfg.isSupplyEnabled()));
         }
 
-        for (Map.Entry<String, Integer> e : state.minerVoidChances()
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(minerVoidConfigUpdated(state.assetId, e.getKey(), e.getValue()));
+        for (String oreKey : state.minerBlacklistedOreKeys()) {
+            pkt.fullSyncDeltas.add(minerBlacklistUpdated(state.assetId, oreKey, true));
         }
 
         StationLayout layout = state.stationLayout();
@@ -242,15 +241,12 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static AssetSyncPacket minerVoidConfigUpdated(CelestialAsset.ID assetId, String oreKey, int percent) {
+    public static AssetSyncPacket minerBlacklistUpdated(CelestialAsset.ID assetId, String oreKey, boolean blacklisted) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
-        pkt.syncType = MINER_VOID_CONFIG_UPDATED;
+        pkt.syncType = MINER_BLACKLIST_UPDATED;
         pkt.resourceKey = Objects.requireNonNull(oreKey, "oreKey");
-        if (percent < 0 || percent > 100) {
-            throw new IllegalArgumentException("miner void chance percent out of range: " + percent);
-        }
-        pkt.minerVoidChancePercent = percent;
+        pkt.minerOreBlacklisted = blacklisted;
         return pkt;
     }
 
@@ -265,7 +261,7 @@ public final class AssetSyncPacket implements IMessage {
             facility.markSyncedFor(playerId);
             facility.drainDirtyModules();
             facility.drainRemovedIds();
-            facility.drainDirtyMinerVoidChances();
+            facility.drainDirtyMinerBlacklist();
             return packets;
         }
         if (!facility.isDirty()) {
@@ -280,10 +276,10 @@ public final class AssetSyncPacket implements IMessage {
             int idx = facility.moduleIndex(m.id);
             packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
         }
-        for (Map.Entry<String, Integer> e : facility.drainDirtyMinerVoidChances()
+        for (Map.Entry<String, Boolean> e : facility.drainDirtyMinerBlacklist()
             .entrySet()) {
             packets.add(
-                minerVoidConfigUpdated(facility.assetId, e.getKey(), e.getValue())
+                minerBlacklistUpdated(facility.assetId, e.getKey(), e.getValue())
                     .withSyncRevision(facility.getSyncRevision()));
         }
         return packets;
@@ -378,9 +374,9 @@ public final class AssetSyncPacket implements IMessage {
                 if (hasModule) PacketUtil.writeId(buf, tileModuleId);
             }
             case LAYOUT_TILE_REMOVED -> PacketUtil.writeStationTileCoord(buf, tileCoord);
-            case MINER_VOID_CONFIG_UPDATED -> {
+            case MINER_BLACKLIST_UPDATED -> {
                 PacketUtil.writeString(buf, resourceKey);
-                buf.writeByte(minerVoidChancePercent);
+                buf.writeBoolean(minerOreBlacklisted);
             }
         }
     }
@@ -410,13 +406,9 @@ public final class AssetSyncPacket implements IMessage {
                 tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
             }
             case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readStationTileCoord(buf);
-            case MINER_VOID_CONFIG_UPDATED -> {
+            case MINER_BLACKLIST_UPDATED -> {
                 resourceKey = PacketUtil.readString(buf);
-                minerVoidChancePercent = buf.readUnsignedByte();
-                if (minerVoidChancePercent > 100) {
-                    throw new IllegalArgumentException(
-                        "miner void chance percent out of range: " + minerVoidChancePercent);
-                }
+                minerOreBlacklisted = buf.readBoolean();
             }
         }
     }
@@ -695,8 +687,8 @@ public final class AssetSyncPacket implements IMessage {
                 StationLayout layout = state.stationLayout();
                 if (layout != null) layout.remove(packet.tileCoord);
             }
-            case MINER_VOID_CONFIG_UPDATED -> state
-                .setMinerVoidChancePercent(packet.resourceKey, packet.minerVoidChancePercent);
+            case MINER_BLACKLIST_UPDATED -> state
+                .setMinerOreBlacklisted(packet.resourceKey, packet.minerOreBlacklisted);
         }
     }
 
@@ -740,7 +732,7 @@ public final class AssetSyncPacket implements IMessage {
             state.setEnergyStored(packet.energyStored);
 
             state.clearModules();
-            state.setMinerVoidChances(java.util.Collections.emptyMap());
+            state.setMinerBlacklistedOreKeys(java.util.Collections.emptySet());
             state.inventory.clear();
             state.logisticsConfig.clear();
             StationLayout layout = state.stationLayout();
@@ -811,8 +803,8 @@ public final class AssetSyncPacket implements IMessage {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
-                case MINER_VOID_CONFIG_UPDATED -> state
-                    .setMinerVoidChancePercent(packet.resourceKey, packet.minerVoidChancePercent);
+                case MINER_BLACKLIST_UPDATED -> state
+                    .setMinerOreBlacklisted(packet.resourceKey, packet.minerOreBlacklisted);
             }
         }
 

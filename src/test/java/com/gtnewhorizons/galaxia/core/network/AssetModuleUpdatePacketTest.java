@@ -296,16 +296,16 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyMinerVoidPercentClampsPlayerInput() {
+    void applyMinerBlacklistUpdatesOreState() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .minerVoidPercent(facility.assetId, 0, module.id, "ore:iron", 150);
+            .minerOreBlacklisted(facility.assetId, 0, module.id, "ore:iron", true);
 
         packet.apply(TEAM);
 
-        assertEquals(100, facility.minerVoidChancePercent("ore:iron"));
+        assertTrue(facility.isMinerOreBlacklisted("ore:iron"));
     }
 
     @Test

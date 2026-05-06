@@ -9,7 +9,7 @@ final class ModuleConfigModalController {
     enum Kind {
         NONE,
         HAMMER,
-        MINER_VOID
+        MINER_BLACKLIST
     }
 
     private final ModularPanel host;
@@ -20,7 +20,7 @@ final class ModuleConfigModalController {
     private ParentWidget<?> modal;
     private Kind kind = Kind.NONE;
     private int moduleIndex = -1;
-    private int minerVoidPage;
+    private int minerBlacklistPage;
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this.host = host;
@@ -33,7 +33,7 @@ final class ModuleConfigModalController {
         close();
         this.kind = Kind.HAMMER;
         this.moduleIndex = moduleIndex;
-        this.minerVoidPage = 0;
+        this.minerBlacklistPage = 0;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
         widget.left(x)
@@ -44,17 +44,17 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
-    void openMinerVoid(int moduleIndex) {
+    void openMinerBlacklist(int moduleIndex) {
         close();
-        this.kind = Kind.MINER_VOID;
+        this.kind = Kind.MINER_BLACKLIST;
         this.moduleIndex = moduleIndex;
-        this.minerVoidPage = 0;
+        this.minerBlacklistPage = 0;
 
-        MinerVoidConfigModalWidget widget = new MinerVoidConfigModalWidget(assetId, this);
+        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this);
         widget.left(x)
             .top(y)
-            .width(MinerVoidConfigModalWidget.WIDTH)
-            .height(MinerVoidConfigModalWidget.HEIGHT);
+            .width(MinerBlacklistConfigModalWidget.WIDTH)
+            .height(MinerBlacklistConfigModalWidget.HEIGHT);
         this.modal = widget;
         host.child(widget);
     }
@@ -66,7 +66,7 @@ final class ModuleConfigModalController {
         }
         this.kind = Kind.NONE;
         this.moduleIndex = -1;
-        this.minerVoidPage = 0;
+        this.minerBlacklistPage = 0;
     }
 
     boolean isOpen() {
@@ -77,19 +77,19 @@ final class ModuleConfigModalController {
         return kind == Kind.HAMMER;
     }
 
-    boolean isMinerVoidOpen() {
-        return kind == Kind.MINER_VOID;
+    boolean isMinerBlacklistOpen() {
+        return kind == Kind.MINER_BLACKLIST;
     }
 
     int moduleIndex() {
         return moduleIndex;
     }
 
-    int minerVoidPage() {
-        return minerVoidPage;
+    int minerBlacklistPage() {
+        return minerBlacklistPage;
     }
 
-    void setMinerVoidPage(int minerVoidPage) {
-        this.minerVoidPage = Math.max(0, minerVoidPage);
+    void setMinerBlacklistPage(int minerBlacklistPage) {
+        this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
     }
 }

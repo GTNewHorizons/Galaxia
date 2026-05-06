@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 
 import javax.annotation.Nonnull;
@@ -21,8 +20,8 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     private static final Random RANDOM = new java.util.Random();
 
-    public ModuleMiner(FacilityModuleKind kind) {
-        this.kind = Objects.requireNonNull(kind, "kind");
+    public ModuleMiner(@Nonnull FacilityModuleKind kind) {
+        this.kind = kind;
     }
 
     public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
@@ -40,15 +39,15 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
                 ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
                 String oreKey = ItemStackWrapper.of(chosen)
                     .toKey();
-                if (shouldVoidOre(outpost, oreKey, RANDOM.nextInt(100))) return;
+                if (shouldVoidOre(outpost, oreKey)) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
                 outpost.inventory.add(ItemStackWrapper.of(ore), 1);
             });
     }
 
-    public static boolean shouldVoidOre(@Nonnull AutomatedFacility outpost, String oreKey, int rollPercent) {
-        return rollPercent < outpost.minerVoidChancePercent(oreKey);
+    public static boolean shouldVoidOre(@Nonnull AutomatedFacility outpost, String oreKey) {
+        return outpost.isMinerOreBlacklisted(oreKey);
     }
 
     @Override

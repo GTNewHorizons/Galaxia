@@ -8,9 +8,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
@@ -356,7 +358,7 @@ public final class FacilityPersistenceManager {
         out.energyStored = state.getEnergyStored();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
-        out.minerVoidChances = new LinkedHashMap<>(state.minerVoidChances());
+        out.minerBlacklistedOreKeys = new LinkedHashSet<>(state.minerBlacklistedOreKeys());
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -503,8 +505,8 @@ public final class FacilityPersistenceManager {
         state.setEnergyStored(json.energyStored);
         state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
-        state.setMinerVoidChances(
-            Objects.requireNonNull(json.minerVoidChances, "[PERSIST] Facility missing minerVoidChances"));
+        state.setMinerBlacklistedOreKeys(
+            Objects.requireNonNull(json.minerBlacklistedOreKeys, "[PERSIST] Facility missing minerBlacklistedOreKeys"));
 
         int moduleDecodedCount = 0;
         if (json.modules != null) {
@@ -798,7 +800,7 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         long energyStored;
         short settingsGroupsNextId;
-        Map<String, Integer> minerVoidChances = new LinkedHashMap<>();
+        Set<String> minerBlacklistedOreKeys;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;

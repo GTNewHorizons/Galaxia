@@ -1,10 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,48 +22,50 @@ final class ModuleMinerTest {
     }
 
     @Test
-    void voidChanceIsSparseAndValidated() {
+    void minerBlacklistIsSparseAndValidated() {
         AutomatedFacility facility = createFacility();
 
-        assertEquals(0, facility.minerVoidChancePercent("ore:iron"));
+        assertFalse(facility.isMinerOreBlacklisted("ore:iron"));
 
-        facility.setMinerVoidChancePercent("ore:iron", 75);
-        assertEquals(75, facility.minerVoidChancePercent("ore:iron"));
+        facility.setMinerOreBlacklisted("ore:iron", true);
+        assertTrue(facility.isMinerOreBlacklisted("ore:iron"));
+        assertTrue(
+            facility.minerBlacklistedOreKeys()
+                .contains("ore:iron"));
 
-        facility.setMinerVoidChancePercent("ore:iron", 0);
-        assertEquals(0, facility.minerVoidChancePercent("ore:iron"));
+        facility.setMinerOreBlacklisted("ore:iron", false);
+        assertFalse(facility.isMinerOreBlacklisted("ore:iron"));
         assertFalse(
-            facility.minerVoidChances()
-                .containsKey("ore:iron"));
-
-        facility.setMinerVoidChancePercent("ore:iron", -1);
-        assertEquals(0, facility.minerVoidChancePercent("ore:iron"));
-        assertFalse(
-            facility.minerVoidChances()
-                .containsKey("ore:iron"));
-
-        facility.setMinerVoidChancePercent("ore:iron", 101);
-        assertEquals(100, facility.minerVoidChancePercent("ore:iron"));
+            facility.minerBlacklistedOreKeys()
+                .contains("ore:iron"));
     }
 
     @Test
-    void bulkVoidChanceLoadCrashesOnMalformedPercent() {
+    void bulkBlacklistLoadCrashesOnMalformedOreKey() {
         AutomatedFacility facility = createFacility();
 
         org.junit.jupiter.api.Assertions
-            .assertThrows(IllegalArgumentException.class, () -> facility.setMinerVoidChances(Map.of("ore:iron", 101)));
+            .assertThrows(IllegalArgumentException.class, () -> facility.setMinerBlacklistedOreKeys(Set.of("")));
     }
 
     @Test
-    void voidChanceUsesPercentThreshold() {
+    void bulkBlacklistLoadReplacesSparseSet() {
         AutomatedFacility facility = createFacility();
-        facility.setMinerVoidChancePercent("ore:iron", 50);
+        facility.setMinerOreBlacklisted("ore:iron", true);
 
-        assertTrue(ModuleMiner.shouldVoidOre(facility, "ore:iron", 0));
-        assertTrue(ModuleMiner.shouldVoidOre(facility, "ore:iron", 49));
-        assertFalse(ModuleMiner.shouldVoidOre(facility, "ore:iron", 50));
-        assertFalse(ModuleMiner.shouldVoidOre(facility, "ore:iron", 99));
-        assertFalse(ModuleMiner.shouldVoidOre(facility, "ore:copper", 0));
+        facility.setMinerBlacklistedOreKeys(Set.of("ore:copper"));
+
+        assertFalse(facility.isMinerOreBlacklisted("ore:iron"));
+        assertTrue(facility.isMinerOreBlacklisted("ore:copper"));
+    }
+
+    @Test
+    void blacklistVoidsOreAfterRoll() {
+        AutomatedFacility facility = createFacility();
+        facility.setMinerOreBlacklisted("ore:iron", true);
+
+        assertTrue(ModuleMiner.shouldVoidOre(facility, "ore:iron"));
+        assertFalse(ModuleMiner.shouldVoidOre(facility, "ore:copper"));
     }
 
     private static AutomatedFacility createFacility() {

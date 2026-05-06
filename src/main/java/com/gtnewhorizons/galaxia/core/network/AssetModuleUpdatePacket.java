@@ -110,11 +110,11 @@ public final class AssetModuleUpdatePacket {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket minerVoidPercent(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, String oreKey, int percent) {
-        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_MINER_VOID_PERCENT);
+    public static AssetModuleUpdatePacket minerOreBlacklisted(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, String oreKey, boolean blacklisted) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_MINER_ORE_BLACKLISTED);
         pkt.stringPayload = Objects.requireNonNull(oreKey, "oreKey");
-        pkt.bytePayload = (byte) AutomatedFacility.clampMinerVoidChancePercent(percent);
+        pkt.bytePayload = (byte) (blacklisted ? 1 : 0);
         return pkt;
     }
 
@@ -183,7 +183,7 @@ public final class AssetModuleUpdatePacket {
     }
 
     public enum ConfigAction {
-        SET_MINER_VOID_PERCENT,
+        SET_MINER_ORE_BLACKLISTED,
         SET_ALLOW_SHOOTING_MODE,
         SET_ALLOW_SHOOTING_THRESHOLD,
         SET_HAMMER_VARIANT,
@@ -212,7 +212,7 @@ public final class AssetModuleUpdatePacket {
 
         if (type == CONFIG_TYPE && configAction != null) {
             switch (configAction) {
-                case SET_MINER_VOID_PERCENT -> {
+                case SET_MINER_ORE_BLACKLISTED -> {
                     PacketUtil.writeString(buf, stringPayload);
                     buf.writeByte(bytePayload);
                 }
@@ -255,9 +255,12 @@ public final class AssetModuleUpdatePacket {
         }
 
         switch (configAction) {
-            case SET_MINER_VOID_PERCENT -> {
+            case SET_MINER_ORE_BLACKLISTED -> {
                 stringPayload = PacketUtil.readString(buf);
                 bytePayload = buf.readByte();
+                if (bytePayload != 0 && bytePayload != 1) {
+                    throw new IllegalStateException("invalid miner blacklist flag: " + bytePayload);
+                }
             }
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
@@ -327,9 +330,9 @@ public final class AssetModuleUpdatePacket {
             return AssetSyncPacket.moduleRemoved(assetId, moduleIndex, module.id)
                 .withSyncRevision(state.getSyncRevision());
         }
-        if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_VOID_PERCENT) {
+        if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_ORE_BLACKLISTED) {
             String oreKey = getStringPayload();
-            return AssetSyncPacket.minerVoidConfigUpdated(assetId, oreKey, state.minerVoidChancePercent(oreKey))
+            return AssetSyncPacket.minerBlacklistUpdated(assetId, oreKey, state.isMinerOreBlacklisted(oreKey))
                 .withSyncRevision(state.getSyncRevision());
         }
         state.markModuleDirty(module.id);
@@ -351,7 +354,7 @@ public final class AssetModuleUpdatePacket {
 
     private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
         switch (packet.getConfigAction()) {
-            case SET_MINER_VOID_PERCENT -> handleMinerVoidPercent(packet, state, module);
+            case SET_MINER_ORE_BLACKLISTED -> handleMinerOreBlacklisted(packet, state, module);
             case SET_ALLOW_SHOOTING_MODE -> handleHammerConfig(module, h -> {
                 AllowShootingConfig.Mode mode = Objects
                     .requireNonNull(packet.getEnumPayload(AllowShootingConfig.Mode.class), "allow shooting mode");
@@ -522,14 +525,12 @@ public final class AssetModuleUpdatePacket {
         };
     }
 
-    private static void handleMinerVoidPercent(AssetModuleUpdatePacket packet, AutomatedFacility state,
+    private static void handleMinerOreBlacklisted(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof ModuleMiner)) {
-            throw new IllegalStateException("SET_MINER_VOID_PERCENT sent to non-miner module " + module.id);
+            throw new IllegalStateException("SET_MINER_ORE_BLACKLISTED sent to non-miner module " + module.id);
         }
-        state.setMinerVoidChancePercent(
-            packet.getStringPayload(),
-            AutomatedFacility.clampMinerVoidChancePercent(Byte.toUnsignedInt(packet.bytePayload)));
+        state.setMinerOreBlacklisted(packet.getStringPayload(), packet.getBooleanPayload());
     }
 
     private static void handleHammerConfig(ModuleInstance module,

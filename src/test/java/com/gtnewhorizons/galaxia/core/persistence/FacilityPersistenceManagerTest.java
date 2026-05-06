@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -116,10 +117,10 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void minerVoidChancesRoundTripThroughPersistence() {
+    void minerBlacklistRoundTripsThroughPersistence() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();
-        station.setMinerVoidChancePercent("ore:iron", 35);
+        station.setMinerOreBlacklisted("ore:iron", true);
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -129,7 +130,7 @@ final class FacilityPersistenceManagerTest {
             station.status());
         manager.decodeFacilityState(decoded, encoded);
 
-        assertEquals(35, decoded.minerVoidChancePercent("ore:iron"));
+        assertTrue(decoded.isMinerOreBlacklisted("ore:iron"));
     }
 
     @Test
@@ -1073,6 +1074,7 @@ final class FacilityPersistenceManagerTest {
 
         legacy.buffer = new LinkedHashMap<>();
         legacy.logisticsConfig = new LinkedHashMap<>();
+        legacy.minerBlacklistedOreKeys = new LinkedHashSet<>();
 
         AutomatedFacility decoded = new AutomatedFacility(
             CelestialAsset.ID.create(),

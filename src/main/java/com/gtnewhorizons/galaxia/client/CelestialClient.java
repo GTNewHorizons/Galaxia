@@ -199,11 +199,12 @@ public final class CelestialClient {
                 .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
     }
 
-    public static void updateMinerVoidPercent(ID assetId, int moduleIndex, String oreKey, int percent) {
+    public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.minerVoidPercent(assetId, moduleIndex, module.id, oreKey, percent));
+            module -> AssetModuleUpdatePacket
+                .minerOreBlacklisted(assetId, moduleIndex, module.id, oreKey, blacklisted));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

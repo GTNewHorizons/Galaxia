@@ -110,14 +110,14 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
-    void fullSyncRoundTripPreservesMinerVoidChances() {
+    void fullSyncRoundTripPreservesMinerBlacklist() {
         AutomatedFacility server = createFacility();
-        server.setMinerVoidChancePercent("ore:iron", 35);
+        server.setMinerOreBlacklisted("ore:iron", true);
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
 
-        assertEquals(35, client.minerVoidChancePercent("ore:iron"));
+        assertTrue(client.isMinerOreBlacklisted("ore:iron"));
     }
 
     @Test

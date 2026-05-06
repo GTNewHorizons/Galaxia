@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -47,13 +46,13 @@ public final class AutomatedFacility extends CelestialAsset {
     private final LayoutCacheBundle layoutCache;
 
     private final SettingsGroupRegistry settingsGroups;
-    private final Map<String, Integer> minerVoidChancePercentByOre;
+    private final Set<String> minerBlacklistedOreKeys;
 
     private long energyStored;
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
+    private final Set<String> dirtyMinerBlacklistOreKeys = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
@@ -74,7 +73,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
-        this.minerVoidChancePercentByOre = new LinkedHashMap<>();
+        this.minerBlacklistedOreKeys = new HashSet<>();
         this.energyStored = 0;
     }
 
@@ -166,50 +165,34 @@ public final class AutomatedFacility extends CelestialAsset {
         return modules;
     }
 
-    public Map<String, Integer> minerVoidChances() {
-        return Collections.unmodifiableMap(minerVoidChancePercentByOre);
+    public Set<String> minerBlacklistedOreKeys() {
+        return Collections.unmodifiableSet(minerBlacklistedOreKeys);
     }
 
-    public int minerVoidChancePercent(String oreKey) {
-        return minerVoidChancePercentByOre.getOrDefault(requireOreKey(oreKey), 0);
+    public boolean isMinerOreBlacklisted(String oreKey) {
+        return minerBlacklistedOreKeys.contains(requireOreKey(oreKey));
     }
 
-    public void setMinerVoidChancePercent(String oreKey, int percent) {
+    public void setMinerOreBlacklisted(String oreKey, boolean blacklisted) {
         String key = requireOreKey(oreKey);
-        percent = clampMinerVoidChancePercent(percent);
-        Integer oldValue = minerVoidChancePercentByOre.get(key);
-        Integer newValue = percent == 0 ? null : percent;
-        if (newValue == null) {
-            minerVoidChancePercentByOre.remove(key);
+        boolean changed;
+        if (blacklisted) {
+            changed = minerBlacklistedOreKeys.add(key);
         } else {
-            minerVoidChancePercentByOre.put(key, newValue);
+            changed = minerBlacklistedOreKeys.remove(key);
         }
-        if (!Objects.equals(oldValue, newValue)) {
-            dirtyMinerVoidChanceOreKeys.add(key);
+        if (changed) {
+            dirtyMinerBlacklistOreKeys.add(key);
             bumpSyncRevision();
         }
     }
 
-    public void setMinerVoidChances(@Nonnull Map<String, Integer> chances) {
-        minerVoidChancePercentByOre.clear();
-        for (Map.Entry<String, Integer> entry : chances.entrySet()) {
-            String key = requireOreKey(entry.getKey());
-            if (entry.getValue() == null) throw new IllegalArgumentException("Chance has to be present");
-            int percent = requireMinerVoidChancePercent(entry.getValue());
-            if (percent != 0) minerVoidChancePercentByOre.put(key, percent);
+    public void setMinerBlacklistedOreKeys(@Nonnull Set<String> oreKeys) {
+        minerBlacklistedOreKeys.clear();
+        for (String oreKey : oreKeys) {
+            minerBlacklistedOreKeys.add(requireOreKey(oreKey));
         }
-        dirtyMinerVoidChanceOreKeys.clear();
-    }
-
-    private static int requireMinerVoidChancePercent(int percent) {
-        if (percent < 0 || percent > 100) {
-            throw new IllegalArgumentException("Miner void chance percent out of range: " + percent);
-        }
-        return percent;
-    }
-
-    public static int clampMinerVoidChancePercent(int percent) {
-        return Math.clamp(percent, 0, 100);
+        dirtyMinerBlacklistOreKeys.clear();
     }
 
     public void markModuleDirty(ModuleInstance.ID id) {
@@ -218,7 +201,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyMinerVoidChanceOreKeys.isEmpty();
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyMinerBlacklistOreKeys.isEmpty();
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
@@ -245,12 +228,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return result;
     }
 
-    public Map<String, Integer> drainDirtyMinerVoidChances() {
-        Map<String, Integer> result = new LinkedHashMap<>();
-        for (String oreKey : dirtyMinerVoidChanceOreKeys) {
-            result.put(oreKey, minerVoidChancePercent(oreKey));
+    public Map<String, Boolean> drainDirtyMinerBlacklist() {
+        Map<String, Boolean> result = new LinkedHashMap<>();
+        for (String oreKey : dirtyMinerBlacklistOreKeys) {
+            result.put(oreKey, isMinerOreBlacklisted(oreKey));
         }
-        dirtyMinerVoidChanceOreKeys.clear();
+        dirtyMinerBlacklistOreKeys.clear();
         return result;
     }
 

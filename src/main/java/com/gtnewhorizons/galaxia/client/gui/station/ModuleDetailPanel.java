@@ -58,7 +58,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         this.map = map;
         this.configController = configController;
         child(
-            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerVoidConfig)
+            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerBlacklistConfig)
                 .pos(ACTION_X, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
@@ -310,10 +310,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         configController.openHammer(selected.moduleIndex);
     }
 
-    private void openMinerVoidConfig() {
+    private void openMinerBlacklistConfig() {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleMiner)) return;
-        configController.openMinerVoid(selected.moduleIndex);
+        configController.openMinerBlacklist(selected.moduleIndex);
     }
 
     private void openRecipeInput() {
