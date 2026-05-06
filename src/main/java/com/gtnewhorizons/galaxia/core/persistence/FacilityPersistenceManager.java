@@ -54,6 +54,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -386,6 +391,7 @@ public final class FacilityPersistenceManager {
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
+            mj.moduleOperation = encodeModuleOperation(m.operationOrNull());
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
@@ -636,6 +642,7 @@ public final class FacilityPersistenceManager {
                         }
                     }
                 }
+                module.setOperation(decodeModuleOperation(mj.moduleOperation, module.id));
                 state.addModule(module);
                 moduleDecodedCount++;
             }
@@ -875,6 +882,24 @@ public final class FacilityPersistenceManager {
         byte parallel;
         JsonElement data;
         Map<String, Long> consumedResources;
+        ModuleOperationJson moduleOperation;
+    }
+
+    static final class ModuleOperationJson {
+
+        String operationKind;
+        String phase;
+        String sourceModuleKind;
+        String sourceTier;
+        String targetModuleKind;
+        String targetTier;
+        String targetVariantKey;
+        int buildTicks;
+        int completionRefundPercent;
+        boolean reserveItems;
+        int elapsedBuildTicks;
+        Map<String, Long> depositedResources;
+        Map<String, Long> refundBuffer;
     }
 
     static final class LogisticsConfigJson {
@@ -1080,6 +1105,104 @@ public final class FacilityPersistenceManager {
                 return null;
             }
         }
+    }
+
+    private static ModuleOperationJson encodeModuleOperation(ModuleOperationState operation) {
+        if (operation == null) return null;
+        ModuleOperationJson json = new ModuleOperationJson();
+        ModuleOperationPlan plan = operation.plan();
+        ModuleOperationTargetSpec target = plan.targetSpec();
+        json.operationKind = target.operationKind()
+            .name();
+        json.phase = operation.phase()
+            .name();
+        json.sourceModuleKind = target.sourceModuleKind() == null ? null
+            : target.sourceModuleKind()
+                .name();
+        json.sourceTier = target.sourceTier() == null ? null
+            : target.sourceTier()
+                .name();
+        json.targetModuleKind = target.targetModuleKind() == null ? null
+            : target.targetModuleKind()
+                .name();
+        json.targetTier = target.targetTier() == null ? null
+            : target.targetTier()
+                .name();
+        json.targetVariantKey = target.targetVariantKey();
+        json.buildTicks = plan.buildTicks();
+        json.completionRefundPercent = plan.completionRefundPercent();
+        json.reserveItems = plan.reserveItems();
+        json.elapsedBuildTicks = operation.elapsedBuildTicks();
+        json.depositedResources = new LinkedHashMap<>(operation.depositedResources());
+        json.refundBuffer = new LinkedHashMap<>(operation.refundBuffer());
+        return json;
+    }
+
+    private static ModuleOperationState decodeModuleOperation(ModuleOperationJson json, ModuleInstance.ID moduleId) {
+        if (json == null) return null;
+        ModuleOperationKind operationKind = requireEnum(
+            ModuleOperationKind.class,
+            json.operationKind,
+            "[PERSIST] Module " + moduleId + " has invalid operation kind: " + json.operationKind);
+        ModuleOperationPhase phase = requireEnum(
+            ModuleOperationPhase.class,
+            json.phase,
+            "[PERSIST] Module " + moduleId + " has invalid operation phase: " + json.phase);
+        FacilityModuleKind sourceModuleKind = requireOptionalEnum(
+            FacilityModuleKind.class,
+            json.sourceModuleKind,
+            "[PERSIST] Module " + moduleId + " has invalid operation source kind: " + json.sourceModuleKind);
+        ModuleTier sourceTier = requireOptionalEnum(
+            ModuleTier.class,
+            json.sourceTier,
+            "[PERSIST] Module " + moduleId + " has invalid operation source tier: " + json.sourceTier);
+        FacilityModuleKind targetModuleKind = requireOptionalEnum(
+            FacilityModuleKind.class,
+            json.targetModuleKind,
+            "[PERSIST] Module " + moduleId + " has invalid operation target kind: " + json.targetModuleKind);
+        ModuleTier targetTier = requireOptionalEnum(
+            ModuleTier.class,
+            json.targetTier,
+            "[PERSIST] Module " + moduleId + " has invalid operation target tier: " + json.targetTier);
+        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
+            operationKind,
+            sourceModuleKind,
+            sourceTier,
+            targetModuleKind,
+            targetTier,
+            json.targetVariantKey);
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            target,
+            json.buildTicks,
+            json.completionRefundPercent,
+            json.reserveItems);
+        return ModuleOperationState.restore(
+            plan,
+            phase,
+            json.elapsedBuildTicks,
+            requireOperationAmounts(json.depositedResources, "depositedResources", moduleId),
+            requireOperationAmounts(json.refundBuffer, "refundBuffer", moduleId));
+    }
+
+    private static Map<String, Long> requireOperationAmounts(Map<String, Long> amounts, String fieldName,
+        ModuleInstance.ID moduleId) {
+        if (amounts == null) {
+            throw new IllegalStateException("[PERSIST] Module " + moduleId + " operation missing " + fieldName);
+        }
+        return amounts;
+    }
+
+    private static <T extends Enum<T>> T requireEnum(Class<T> cls, String name, String message) {
+        T value = safeValueOf(cls, name);
+        if (value == null) throw new IllegalStateException(message);
+        return value;
+    }
+
+    private static <T extends Enum<T>> T requireOptionalEnum(Class<T> cls, String name, String message) {
+        if (name == null) return null;
+        T value = safeValueOf(cls, name);
+        if (value == null) throw new IllegalStateException(message);
+        return value;
     }
 
     private static SettingsGroupJson encodeSettingsGroup(SettingsGroup group) {

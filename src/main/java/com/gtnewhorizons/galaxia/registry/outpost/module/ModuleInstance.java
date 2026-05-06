@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -32,6 +33,7 @@ public class ModuleInstance implements Buildable {
     private short groupId = 0;
     private ModuleState state = ModuleState.IDLE;
     private BlockingReason blocking = BlockingReason.NONE;
+    private ModuleOperationState operation;
 
     public void tick(AutomatedFacility outpost) {
         if (this.status() == Buildable.Status.OPERATIONAL) {
@@ -178,6 +180,18 @@ public class ModuleInstance implements Buildable {
 
     public void setBlocking(BlockingReason blocking) {
         this.blocking = blocking;
+    }
+
+    public ModuleOperationState operationOrNull() {
+        return operation;
+    }
+
+    public void setOperation(ModuleOperationState operation) {
+        this.operation = operation;
+    }
+
+    public void clearOperation() {
+        this.operation = null;
     }
 
     public boolean isOperational() {

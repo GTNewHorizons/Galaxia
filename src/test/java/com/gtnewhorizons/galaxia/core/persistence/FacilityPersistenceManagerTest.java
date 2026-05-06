@@ -35,6 +35,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -165,6 +170,87 @@ final class FacilityPersistenceManagerTest {
             decoded.settingsGroups()
                 .require(groupId)
                 .displayName());
+    }
+
+    @Test
+    void moduleOperationRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance hammer = station.modules()
+            .get(0);
+        ModuleOperationState operation = ModuleOperationState
+            .waiting(
+                new ModuleOperationPlan(
+                    new ModuleOperationTargetSpec(
+                        ModuleOperationKind.UPGRADE_REBUILD,
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.EV,
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.LuV,
+                        "BIG"),
+                    200,
+                    80,
+                    true))
+            .withDepositedResources(Map.of("minecraft:iron_ingot:0", 8L))
+            .beginBuilding()
+            .tickBuilding();
+        hammer.setOperation(operation);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleOperationState decodedOperation = decoded.modules()
+            .get(0)
+            .operationOrNull();
+        assertNotNull(decodedOperation);
+        assertEquals(ModuleOperationPhase.BUILDING, decodedOperation.phase());
+        assertEquals(1, decodedOperation.elapsedBuildTicks());
+        assertTrue(decodedOperation.reserveItems());
+        assertEquals(
+            ModuleTier.LuV,
+            decodedOperation.plan()
+                .targetSpec()
+                .targetTier());
+        assertEquals(
+            8L,
+            decodedOperation.depositedResources()
+                .get("minecraft:iron_ingot:0"));
+    }
+
+    @Test
+    void malformedModuleOperationCrashesOnLoad() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance hammer = station.modules()
+            .get(0);
+        hammer.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new ModuleOperationTargetSpec(
+                        ModuleOperationKind.UPGRADE_REBUILD,
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.EV,
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.IV,
+                        "BASE"),
+                    100,
+                    80,
+                    false)));
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        encoded.modules.get(0).moduleOperation.phase = "BROKEN";
+
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, encoded));
     }
 
     @Test
