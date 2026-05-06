@@ -4,12 +4,15 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
@@ -42,6 +45,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private static final int SMALL_BUTTON_WIDTH = 18;
     private static final int VALUE_WIDTH = 34;
     private static final int TOGGLE_WIDTH = 30;
+    private static final int MAX_LOGISTICS_AMOUNT = 999_999;
+    private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
@@ -136,16 +141,6 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             STOCK_X,
             y + 5,
             EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-        ModuleConfigModalSupport.drawLine(
-            Integer.toString(cfg.minReserve()),
-            RESERVE_X + SMALL_BUTTON_WIDTH + 4,
-            y + 5,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawLine(
-            Integer.toString(cfg.orderSize()),
-            PACKAGE_X + SMALL_BUTTON_WIDTH + 4,
-            y + 5,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     @Override
@@ -159,6 +154,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                     .pos(RESERVE_X, y)
                     .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
             child(
+                amountField(rowIndex, true).pos(RESERVE_X + SMALL_BUTTON_WIDTH + 2, y)
+                    .size(VALUE_WIDTH - 2, BUTTON_HEIGHT));
+            child(
                 ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftReserve(rowIndex, 1))
                     .pos(RESERVE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, y)
                     .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
@@ -166,6 +164,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                 ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftPackage(rowIndex, -1))
                     .pos(PACKAGE_X, y)
                     .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
+            child(
+                amountField(rowIndex, false).pos(PACKAGE_X + SMALL_BUTTON_WIDTH + 2, y)
+                    .size(VALUE_WIDTH - 2, BUTTON_HEIGHT));
             child(
                 ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftPackage(rowIndex, 1))
                     .pos(PACKAGE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, y)
@@ -185,6 +186,61 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                     .pos(REMOVE_X, y)
                     .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         }
+    }
+
+    private TextFieldWidget amountField(int rowIndex, boolean reserve) {
+        return new TextFieldWidget().setMaxLength(6)
+            .setPattern(INTEGER_PATTERN)
+            .setDefaultNumber(reserve ? 0 : 1)
+            .setNumbers(reserve ? 0 : 1, MAX_LOGISTICS_AMOUNT)
+            .setFormatAsInteger(true)
+            .acceptsExpressions(false)
+            .autoUpdateOnChange(false)
+            .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+            .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+            .background(
+                ModuleConfigModalSupport.drawable(
+                    (ctx, x, y, w, h) -> com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect.draw(
+                        x,
+                        y,
+                        w,
+                        h,
+                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+            .value(
+                new StringValue.Dynamic(
+                    () -> amountText(rowIndex, reserve),
+                    text -> setAmount(rowIndex, reserve, text)))
+            .setFocusOnGuiOpen(false);
+    }
+
+    private String amountText(int rowIndex, boolean reserve) {
+        Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
+        if (row == null) return "";
+        int amount = reserve ? row.getValue()
+            .minReserve()
+            : row.getValue()
+                .orderSize();
+        return Integer.toString(amount);
+    }
+
+    private void setAmount(int rowIndex, boolean reserve, String text) {
+        Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
+        AutomatedFacility facility = facility();
+        if (row == null || facility == null) return;
+        int min = reserve ? 0 : 1;
+        int parsed = min;
+        if (text != null && !text.isEmpty()) {
+            try {
+                parsed = Integer.parseInt(text);
+            } catch (NumberFormatException ignored) {
+                parsed = min;
+            }
+        }
+        int clamped = Math.max(min, Math.min(MAX_LOGISTICS_AMOUNT, parsed));
+        LogisticsResourceConfig current = row.getValue();
+        LogisticsResourceConfig updated = reserve ? current.withMinReserve(clamped) : current.withOrderSize(clamped);
+        update(facility, row.getKey(), updated);
     }
 
     private void openItemPicker() {
