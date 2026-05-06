@@ -175,7 +175,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setMinerVoidChancePercent(String oreKey, int percent) {
         String key = requireOreKey(oreKey);
-        requireMinerVoidChancePercent(percent);
+        percent = clampMinerVoidChancePercent(percent);
         Integer oldValue = minerVoidChancePercentByOre.get(key);
         Integer newValue = percent == 0 ? null : percent;
         if (newValue == null) {

@@ -2,8 +2,9 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,8 +30,22 @@ final class ModuleMinerTest {
             facility.minerVoidChances()
                 .containsKey("ore:iron"));
 
-        assertThrows(IllegalArgumentException.class, () -> facility.setMinerVoidChancePercent("ore:iron", -1));
-        assertThrows(IllegalArgumentException.class, () -> facility.setMinerVoidChancePercent("ore:iron", 101));
+        facility.setMinerVoidChancePercent("ore:iron", -1);
+        assertEquals(0, facility.minerVoidChancePercent("ore:iron"));
+        assertFalse(
+            facility.minerVoidChances()
+                .containsKey("ore:iron"));
+
+        facility.setMinerVoidChancePercent("ore:iron", 101);
+        assertEquals(100, facility.minerVoidChancePercent("ore:iron"));
+    }
+
+    @Test
+    void bulkVoidChanceLoadCrashesOnMalformedPercent() {
+        AutomatedFacility facility = createFacility();
+
+        org.junit.jupiter.api.Assertions
+            .assertThrows(IllegalArgumentException.class, () -> facility.setMinerVoidChances(Map.of("ore:iron", 101)));
     }
 
     @Test
