@@ -15,6 +15,7 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
+import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
@@ -59,7 +60,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         this.dimension = dimension;
         this.worldObj = world;
 
-        this.rand = new Random(world.getSeed());
+        this.rand = new StdLCG(world.getSeed());
         this.baseNoise = new NoiseGeneratorOctaves(rand, 4);
         this.caveNoise = new NoiseGeneratorOctaves(rand, 4);
         this.crackNoise = new NoiseGeneratorOctaves(rand, 2);
@@ -482,13 +483,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
             // Generate surface features in locally random points within the chunk
             for (LocationRuleGalaxiaSurface feature : spaceBiome.getSurfaceFeatures()) {
-                int localX = x - 8;
-                int localZ = z - 8;
+                int localX = x + 8;
+                int localZ = z + 8;
                 if (!feature.isCentered()) {
                     localX += this.rand.nextInt(CHUNK_WIDTH);
                     localZ += this.rand.nextInt(CHUNK_WIDTH);
                 }
-                int localY = worldObj.getHeightValue(x, z);
+                int localY = worldObj.getHeightValue(localX, localZ);
                 feature.generate(worldObj, rand, localX, localY, localZ);
                 feature.getFeature()
                     .drainUpdateCoordinatesTo(updateCoordinates);
@@ -498,14 +499,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 int maximumHeight = feature.getMaximumHeight();
                 int minimumHeight = feature.getMinimumHeight();
                 for (int frequency = 0; frequency < feature.getFrequency(); frequency++) {
-                    int localX = x - 8;
-                    int localZ = z - 8;
+                    int localX = x + 8;
+                    int localZ = z + 8;
                     if (!feature.isCentered()) {
                         localX += this.rand.nextInt(CHUNK_WIDTH);
                         localZ += this.rand.nextInt(CHUNK_WIDTH);
                     }
-                    int localY = rand.nextInt(
-                        Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
+                    int localY = rand
+                        .nextInt(Math.min(worldObj.getHeightValue(localX, localZ), maximumHeight - minimumHeight) + 1)
+                        + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
                 }
                 feature.getFeature()
@@ -513,15 +515,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             }
             // Generate wall features
             for (LocationRuleGalaxiaWall feature : spaceBiome.getWallFeatures()) {
-                int localX = x - 8;
-                int localZ = z - 8;
+                int localX = x + 8;
+                int localZ = z + 8;
                 if (!feature.isCentered()) {
                     localX += this.rand.nextInt(CHUNK_WIDTH);
                     localZ += this.rand.nextInt(CHUNK_WIDTH);
                 }
                 int minimumHeight = feature.getMinimumHeight();
                 int localY = minimumHeight;
-                int localHeight = worldObj.getHeightValue(x, z);
+                int localHeight = worldObj.getHeightValue(localX, localZ);
                 if (localY > localHeight) {
                     continue;
                 }

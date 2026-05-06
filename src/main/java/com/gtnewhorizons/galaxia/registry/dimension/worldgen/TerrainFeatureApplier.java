@@ -5,6 +5,7 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
+import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 
 /**
@@ -36,7 +37,7 @@ public final class TerrainFeatureApplier {
         double width = feature.width();
         Block replacementBlock = feature.replacementBlock();
         long seed = (chunkX * 341873128712L + chunkZ * 132897987541L) ^ rand.nextLong();
-        Random localRand = new Random(seed);
+        Random localRand = new StdLCG(seed);
 
         switch (preset) {
             case SAND_DUNES:

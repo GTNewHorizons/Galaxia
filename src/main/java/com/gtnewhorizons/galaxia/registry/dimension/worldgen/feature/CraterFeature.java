@@ -27,14 +27,17 @@ public class CraterFeature extends Feature {
                 for (int rimY = -10; rimY <= 10; rimY++) {
                     if (rimDistance >= squaredCraterRadius - random.nextInt(96)
                         && rimDistance < squaredCraterRadius + random.nextInt(64)
-                        && !world.isAirBlock(x + localX, y + rimY + heightOffset, z + localZ)
-                        && world.isAirBlock(x + localX, y + rimY + heightOffset + 1, z + localZ)) {
+                        && !ChunkBoundedAccess
+                            .isAirBlockOr(world, x + localX, y + rimY + heightOffset, z + localZ, true)
+                        && ChunkBoundedAccess
+                            .isAirBlockOr(world, x + localX, y + rimY + heightOffset + 1, z + localZ, false)) {
                         setBlockFast(world, x + localX, y + rimY + heightOffset + 1, z + localZ, tektite, 0);
                         break;
                     }
                 }
                 for (int localY = -radius; localY <= radius; localY++) {
-                    if (world.isAirBlock(x + localX, y + localY + heightOffset, z + localZ)) continue;
+                    if (ChunkBoundedAccess.isAirBlockOr(world, x + localX, y + localY + heightOffset, z + localZ, true))
+                        continue;
                     double squaredDistance = rimDistance + localY * localY;
                     if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.1)) {
                         int wx = localX + x, wy = localY + y + heightOffset, wz = localZ + z;

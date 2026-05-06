@@ -14,6 +14,9 @@ public class StalactiteFeature extends Feature {
     }
 
     private void placeStalactite(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
+        if (!ChunkBoundedAccess.isLoaded(world, x, z)) {
+            return;
+        }
         if (!world.isAirBlock(x, y, z)) {
             return;
         }

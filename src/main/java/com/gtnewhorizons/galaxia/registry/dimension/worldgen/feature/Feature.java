@@ -33,7 +33,12 @@ public abstract class Feature {
     protected void setBlockFast(World world, int x, int y, int z, net.minecraft.block.Block block, int meta) {
         if (y < 0 || y > 255) return;
 
-        Chunk chunk = world.getChunkFromChunkCoords(x >> 4, z >> 4);
+        int cx = x >> 4;
+        int cz = z >> 4;
+        if (!world.getChunkProvider()
+            .chunkExists(cx, cz)) return;
+
+        Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
         int sectionY = y >> 4;
 
@@ -50,12 +55,7 @@ public abstract class Feature {
         currentBlockStorage.setExtBlockMetadata(lx, ly, lz, meta);
         chunk.isModified = true;
 
-        int cx = x >> 4;
-        int cz = z >> 4;
-        if (world.getChunkProvider()
-            .chunkExists(cx, cz)) {
-            updateCoordinates.add(((long) cx << 32) | (cz & 0xFFFFFFFFL));
-        }
+        updateCoordinates.add(((long) cx << 32) | (cz & 0xFFFFFFFFL));
     }
 
     public void drainUpdateCoordinatesTo(LongCollection sink) {

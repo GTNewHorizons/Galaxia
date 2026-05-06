@@ -214,7 +214,12 @@ public class WorldGenAsteroid extends WorldGenerator {
     private void setBlockFast(World world, int x, int y, int z, Block block, int meta) {
         if (y < 0 || y > 255) return;
 
-        Chunk chunk = world.getChunkFromChunkCoords(x >> 4, z >> 4);
+        int cx = x >> 4;
+        int cz = z >> 4;
+        if (!world.getChunkProvider()
+            .chunkExists(cx, cz)) return;
+
+        Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
         int sectionY = y >> 4;
 
