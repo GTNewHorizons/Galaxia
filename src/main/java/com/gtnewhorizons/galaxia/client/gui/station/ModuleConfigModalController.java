@@ -6,6 +6,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class ModuleConfigModalController {
@@ -131,9 +132,31 @@ final class ModuleConfigModalController {
         return kind != Kind.NONE;
     }
 
+    boolean containsMouse(int mouseX, int mouseY) {
+        if (modal == null) return false;
+        return mouseX >= modal.getArea().rx && mouseX < modal.getArea().rx + modal.getArea().width
+            && mouseY >= modal.getArea().ry
+            && mouseY < modal.getArea().ry + modal.getArea().height;
+    }
+
     void closeIfTargetMissing() {
         if (kind != Kind.NONE && moduleId != null && moduleIndex() < 0) {
             close();
+        }
+    }
+
+    void retargetTo(ModuleInstance module) {
+        if (kind == Kind.NONE) return;
+        if (module == null) {
+            close();
+            return;
+        }
+        switch (kind) {
+            case HAMMER -> retargetHammer(module);
+            case HAMMER_UPGRADE -> retargetHammerUpgrade(module);
+            case LOGISTICS -> retargetLogistics(module);
+            case MINER_BLACKLIST -> retargetMinerBlacklist(module);
+            case NONE -> {}
         }
     }
 
@@ -219,5 +242,39 @@ final class ModuleConfigModalController {
     private ModuleInstance.ID resolveModuleId(int moduleIndex) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         return module == null ? null : module.id;
+    }
+
+    private void retargetHammer(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleHammer)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
+    }
+
+    private void retargetHammerUpgrade(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleHammer hammer)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
+        hammerUpgradeVariant = hammer.variant();
+        hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(hammer.variant(), module.tier());
+        hammerUpgradeReserveItems = false;
+        hammerUpgradeVoidRefund = false;
+    }
+
+    private void retargetLogistics(ModuleInstance module) {
+        moduleId = module.id;
+    }
+
+    private void retargetMinerBlacklist(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
+        minerBlacklistPage = 0;
+        minerSettingsGroupMenuOpen = false;
     }
 }

@@ -31,6 +31,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private final CelestialAsset.ID assetId;
     private final @Nullable Consumer<StationTileCoord> expansionSlotClickHandler;
+    private final @Nullable Consumer<PlacedTile> moduleSelectionHandler;
     private final int contentLeft;
     private final int contentRightPadding;
     private final int contentVerticalPadding;
@@ -55,18 +56,30 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     private static final int CLICK_DRAG_THRESHOLD = 3;
 
     public StationMapWidget(CelestialAsset.ID assetId) {
-        this(assetId, null);
+        this(assetId, null, null);
     }
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler) {
-        this(assetId, expansionSlotClickHandler, 0, 0, 0);
+        this(assetId, expansionSlotClickHandler, null);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler) {
+        this(assetId, expansionSlotClickHandler, moduleSelectionHandler, 0, 0, 0);
     }
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         int contentLeft, int contentRightPadding, int contentVerticalPadding) {
+        this(assetId, expansionSlotClickHandler, null, contentLeft, contentRightPadding, contentVerticalPadding);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding) {
         this(
             assetId,
             expansionSlotClickHandler,
+            moduleSelectionHandler,
             contentLeft,
             contentRightPadding,
             contentVerticalPadding,
@@ -75,8 +88,22 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         int contentLeft, int contentRightPadding, int contentVerticalPadding, StationVisionLayer visionLayer) {
+        this(
+            assetId,
+            expansionSlotClickHandler,
+            null,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            visionLayer);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding, StationVisionLayer visionLayer) {
         this.assetId = assetId;
         this.expansionSlotClickHandler = expansionSlotClickHandler;
+        this.moduleSelectionHandler = moduleSelectionHandler;
         this.contentLeft = contentLeft;
         this.contentRightPadding = contentRightPadding;
         this.contentVerticalPadding = contentVerticalPadding;
@@ -146,6 +173,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             if (hit == null || !hit.equals(pressedTile)) return false;
             boolean occupied = layout.isOccupied(hit);
             selected = hit;
+            if (occupied && moduleSelectionHandler != null) {
+                PlacedTile tile = layout.get(hit);
+                if (tile != null) moduleSelectionHandler.accept(tile);
+            }
             if (!occupied && expansionSlotClickHandler != null) expansionSlotClickHandler.accept(hit);
             pressedTile = null;
             return true;

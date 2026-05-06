@@ -61,18 +61,19 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         CelestialAsset.ID assetId = pendingAssetId;
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationVisionLayer visionLayer = pendingVisionLayer;
-        StationMapWidget map = new StationMapWidget(
-            assetId,
-            coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
-            LEFT_PANEL_WIDTH + PADDING,
-            PADDING,
-            PADDING,
-            visionLayer);
         ModuleConfigModalController configController = new ModuleConfigModalController(
             panel,
             assetId,
             LEFT_PANEL_WIDTH + PADDING * 2,
             PADDING * 2);
+        StationMapWidget map = new StationMapWidget(
+            assetId,
+            coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
+            tile -> configController.retargetTo(tile.isCore() ? null : tile.module()),
+            LEFT_PANEL_WIDTH + PADDING,
+            PADDING,
+            PADDING,
+            visionLayer);
 
         panel.child(
             new StationScreenBackground().left(0)
@@ -141,21 +142,25 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             if (listenersRegistered) return;
             listenersRegistered = true;
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> controller.isOpen());
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> controller.isOpen()
+                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> controller.isOpen());
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> controller.isOpen()
+                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> controller.isOpen());
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> controller.isOpen()
+                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
         }
 
         @Override
         public boolean canHover() {
-            return controller.isOpen();
+            return controller.isOpen() && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
         }
 
         @Override
         public boolean canHoverThrough() {
-            return !controller.isOpen();
+            return !controller.isOpen()
+                || !controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
         }
     }
 }
