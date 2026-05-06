@@ -5,16 +5,18 @@ import java.util.Comparator;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.RenderItem;
+import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -34,7 +36,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int GROUP_OPTION_Y = GROUP_BUTTON_Y + GROUP_BUTTON_HEIGHT + 2;
     private static final int GROUP_OPTION_HEIGHT = 12;
     private static final int MAX_GROUP_OPTIONS = 10;
-    private static final int ROW_TOP_OFFSET = 62;
+    private static final int ROW_TOP_OFFSET = 54;
     private static final int ROW_Y = BODY_TOP + ROW_TOP_OFFSET;
     private static final int ROW_HEIGHT = 18;
     private static final int MAX_ROWS = 6;
@@ -46,16 +48,15 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int FOOTER_Y = HEIGHT - 28;
     private static final int FOOTER_BUTTON_HEIGHT = 20;
     private static final int CLOSE_BUTTON_WIDTH = 54;
-    private static final int ROW_BUTTON_Y_OFFSET = 4;
-    private static final int ROW_STATE_X = 150;
-    private static final int ROW_KEEP_BUTTON_X = 202;
-    private static final int ROW_KEEP_BUTTON_WIDTH = 34;
-    private static final int ROW_VOID_BUTTON_X = 244;
-    private static final int ROW_VOID_BUTTON_WIDTH = 34;
-    private static final int ROW_FOCUS_BUTTON_X = 286;
+    private static final int ROW_ICON_X = ModuleConfigModalSupport.PANEL_PADDING;
+    private static final int ROW_ICON_Y_OFFSET = 1;
+    private static final int ROW_NAME_X = ROW_ICON_X + 22;
+    private static final int ROW_NAME_WIDTH = 210;
+    private static final int ROW_FOCUS_BUTTON_X = 244;
     private static final int ROW_FOCUS_BUTTON_WIDTH = 42;
-    private static final int ROW_BUTTON_HEIGHT = 10;
-    private static final int ROW_NAME_WIDTH = 136;
+    private static final int ROW_CHECKBOX_X = ROW_FOCUS_BUTTON_X + ROW_FOCUS_BUTTON_WIDTH + 18;
+    private static final int ROW_CHECKBOX_SIZE = 14;
+    private static final int ROW_CHECKBOX_Y_OFFSET = 2;
     private static final int PAGE_LABEL_Y = HEIGHT - 24;
 
     private final CelestialAsset.ID assetId;
@@ -93,17 +94,13 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             int rowY = ROW_Y + rowIndex * ROW_HEIGHT;
             child(
                 ModuleConfigModalSupport
-                    .button(() -> canUseRow(rowIndex), "Keep", () -> setBlacklisted(rowIndex, false))
-                    .pos(ROW_KEEP_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
-                    .size(ROW_KEEP_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "Void", () -> setBlacklisted(rowIndex, true))
-                    .pos(ROW_VOID_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
-                    .size(ROW_VOID_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport.button(() -> canUseFocusRow(rowIndex), "Focus", () -> planFocus(rowIndex))
-                    .pos(ROW_FOCUS_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
-                    .size(ROW_FOCUS_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
+                    .checkbox(
+                        () -> canUseRow(rowIndex),
+                        () -> isBlacklisted(rowIndex),
+                        "Void this ore after mining",
+                        () -> toggleBlacklisted(rowIndex))
+                    .pos(ROW_CHECKBOX_X, rowY + ROW_CHECKBOX_Y_OFFSET)
+                    .size(ROW_CHECKBOX_SIZE, ROW_CHECKBOX_SIZE));
         }
         child(
             ModuleConfigModalSupport.button(() -> controller.isMinerBlacklistOpen(), "Close", controller::close)
@@ -141,11 +138,6 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             ModuleConfigModalSupport.PANEL_PADDING,
             GROUP_LABEL_Y,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawLine(
-            focusLabel((ModuleMiner) module.component()),
-            ModuleConfigModalSupport.PANEL_PADDING,
-            BODY_TOP + 36,
-            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
 
         List<MinerBlacklistOptions.Entry> options = MinerBlacklistOptions.forFacility(facility);
         if (options.isEmpty()) {
@@ -158,22 +150,26 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         }
 
         controller.setMinerBlacklistPage(Math.clamp(controller.minerBlacklistPage(), 0, maxPage(options.size())));
+        ModuleConfigModalSupport.drawLine(
+            "Planetary ores",
+            ModuleConfigModalSupport.PANEL_PADDING,
+            ROW_Y - 14,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Blacklist",
+            ROW_CHECKBOX_X + ROW_CHECKBOX_SIZE / 2,
+            ROW_Y - 14,
+            58,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
         int offset = controller.minerBlacklistPage() * MAX_ROWS;
         int rows = Math.min(options.size() - offset, MAX_ROWS);
         for (int i = 0; i < rows; i++) {
             MinerBlacklistOptions.Entry option = options.get(offset + i);
             int rowY = ROW_Y + i * ROW_HEIGHT;
-            String name = Minecraft.getMinecraft().fontRenderer.trimStringToWidth(option.displayName(), 136);
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-                name,
-                ModuleConfigModalSupport.PANEL_PADDING,
-                rowY + 5,
-                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-                facility.isMinerOreBlacklisted(module, option.key()) ? "VOID" : "KEEP",
-                ROW_STATE_X,
-                rowY + 5,
-                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            renderItemIcon(option.displayStack(), ROW_ICON_X, rowY + ROW_ICON_Y_OFFSET);
+            String name = Minecraft.getMinecraft().fontRenderer.trimStringToWidth(option.displayName(), ROW_NAME_WIDTH);
+            Minecraft.getMinecraft().fontRenderer
+                .drawStringWithShadow(name, ROW_NAME_X, rowY + 5, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
         if (controller.isMinerSettingsGroupMenuOpen()) {
             drawGroupOptionHint();
@@ -185,10 +181,19 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
-    private void setBlacklisted(int rowIndex, boolean blacklisted) {
+    private boolean isBlacklisted(int rowIndex) {
+        MinerBlacklistOptions.Entry option = optionAt(rowIndex);
+        ModuleInstance module = selectedModule();
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        return option != null && module != null
+            && facility != null
+            && facility.isMinerOreBlacklisted(module, option.key());
+    }
+
+    private void toggleBlacklisted(int rowIndex) {
         MinerBlacklistOptions.Entry option = optionAt(rowIndex);
         if (option == null) return;
-        setBlacklisted(option.key(), blacklisted);
+        setBlacklisted(option.key(), !isBlacklisted(rowIndex));
     }
 
     private void setBlacklisted(String oreKey, boolean blacklisted) {
@@ -196,19 +201,6 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         if (module == null || !(module.component() instanceof ModuleMiner)) return;
         controller.closeMinerSettingsGroupMenu();
         CelestialClient.updateMinerOreBlacklisted(assetId, controller.moduleIndex(), oreKey, blacklisted);
-    }
-
-    private void planFocus(int rowIndex) {
-        MinerBlacklistOptions.Entry option = optionAt(rowIndex);
-        ModuleInstance module = selectedModule();
-        if (option == null || module == null || !(module.component() instanceof ModuleMiner miner)) return;
-        controller.closeMinerSettingsGroupMenu();
-        MinerFocusTier targetTier = targetFocusTier(miner, option.key());
-        CelestialClient.planMinerFocus(
-            assetId,
-            controller.moduleIndex(),
-            targetTier,
-            targetTier == MinerFocusTier.NONE ? null : option.key());
     }
 
     private void selectGroupOption(int optionIndex) {
@@ -229,11 +221,6 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         return controller.isMinerBlacklistOpen() && !controller.isMinerSettingsGroupMenuOpen()
             && selectedModule() != null
             && optionAt(rowIndex) != null;
-    }
-
-    private boolean canUseFocusRow(int rowIndex) {
-        ModuleInstance module = selectedModule();
-        return canUseRow(rowIndex) && module != null && module.operationOrNull() == null;
     }
 
     private boolean canChangePage(int delta) {
@@ -339,18 +326,19 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         return optionCount <= 0 ? 0 : (optionCount - 1) / MAX_ROWS;
     }
 
-    private static MinerFocusTier targetFocusTier(ModuleMiner miner, String oreKey) {
-        if (miner.focusTier() == MinerFocusTier.NONE) return MinerFocusTier.I;
-        if (!oreKey.equals(miner.focusOreKeyOrNull())) return miner.focusTier();
-        return miner.focusTier()
-            .next();
-    }
-
-    private static String focusLabel(ModuleMiner miner) {
-        if (miner.focusTier() == MinerFocusTier.NONE) return "Focus: none";
-        int progress = miner.focusAlignmentProgress() * 100 / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
-        return "Focus: " + miner.focusTier()
-            .name() + " " + miner.focusOreKeyOrNull() + " " + progress + "%";
+    private static void renderItemIcon(ItemStack stack, int x, int y) {
+        if (stack == null) return;
+        Minecraft mc = Minecraft.getMinecraft();
+        org.lwjgl.opengl.GL11.glPushMatrix();
+        org.lwjgl.opengl.GL11.glTranslatef(x, y, 0);
+        org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        RenderItem renderItem = RenderItem.getInstance();
+        float previousZ = renderItem.zLevel;
+        renderItem.zLevel = 200f;
+        renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
+        renderItem.zLevel = previousZ;
+        org.lwjgl.opengl.GL11.glPopMatrix();
     }
 
     private enum GroupOptionAction {

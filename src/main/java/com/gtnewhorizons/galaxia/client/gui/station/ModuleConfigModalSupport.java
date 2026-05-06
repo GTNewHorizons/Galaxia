@@ -66,6 +66,33 @@ final class ModuleConfigModalSupport {
             .setEnabledIf(w -> enabledSupplier.getAsBoolean());
     }
 
+    static ButtonWidget<?> checkbox(BooleanSupplier enabledSupplier, BooleanSupplier checkedSupplier, String tooltip,
+        Runnable onClick) {
+        return new ButtonWidget<>()
+            .background(
+                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+            .hoverBackground(
+                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
+            .overlay(drawable((ctx, x, y, w, h) -> {
+                if (!enabledSupplier.getAsBoolean() || !checkedSupplier.getAsBoolean()) return;
+                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+                int textW = fr.getStringWidth("X");
+                fr.drawStringWithShadow(
+                    "X",
+                    x + (w - textW) / 2,
+                    y + (h - fr.FONT_HEIGHT) / 2 + 1,
+                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+            }))
+            .onMousePressed(mouseButton -> {
+                if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
+                onClick.run();
+                return true;
+            })
+            .tooltipDynamic(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); })
+            .onUpdateListener(ButtonWidget::markTooltipDirty, true)
+            .setEnabledIf(w -> enabledSupplier.getAsBoolean());
+    }
+
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, String label, String tooltip, Runnable onClick) {
         return button(enabledSupplier, label, onClick)
             .tooltipDynamic(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); })
