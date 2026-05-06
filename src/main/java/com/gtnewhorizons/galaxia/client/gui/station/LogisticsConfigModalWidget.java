@@ -65,8 +65,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private static final int STOCK_X = columnX(0.39f);
     private static final int RESERVE_X = columnX(0.50f);
     private static final int PACKAGE_X = columnX(0.65f);
-    private static final int IMPORT_X = columnX(0.81f);
-    private static final int EXPORT_X = columnX(0.90f);
+    private static final int IMPORT_X = columnX(0.79f);
+    private static final int EXPORT_X = columnX(0.88f);
     private static final int REMOVE_X = LIST_WIDTH - REMOVE_BUTTON_WIDTH;
     private static final int MAX_LOGISTICS_AMOUNT = 999_999;
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
@@ -100,8 +100,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         addHeaderTooltip(STOCK_X, RESERVE_X - STOCK_X, "Items stored in this station");
         addHeaderTooltip(RESERVE_X, CONTROL_GROUP_WIDTH, "Minimum stock kept in station inventory");
         addHeaderTooltip(PACKAGE_X, CONTROL_GROUP_WIDTH, "Items requested per logistics order");
-        addHeaderTooltip(IMPORT_X, TOGGLE_WIDTH, "Allow incoming logistics orders");
-        addHeaderTooltip(EXPORT_X, TOGGLE_WIDTH, "Allow outgoing logistics supply");
+        addHeaderTooltip(IMPORT_X, TOGGLE_WIDTH, "Request this item from other stations");
+        addHeaderTooltip(EXPORT_X, TOGGLE_WIDTH, "Send this item to other stations");
     }
 
     @Override

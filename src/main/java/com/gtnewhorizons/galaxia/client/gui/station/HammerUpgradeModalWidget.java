@@ -67,7 +67,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
                 .button(
                     this::canUseControls,
                     this::reserveLabel,
-                    "Collect required items before building",
+                    "Store delivered build items in this module until all costs are ready",
                     controller::toggleHammerUpgradeReserveItems)
                 .pos(x, BUTTON_TOP)
                 .size(RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT));
@@ -77,7 +77,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
                 .button(
                     this::canUseControls,
                     this::voidLabel,
-                    "Delete refunded old-module items",
+                    "Delete the 80% refund from the replaced module",
                     controller::toggleHammerUpgradeVoidRefund)
                 .pos(x, BUTTON_TOP)
                 .size(VOID_BUTTON_WIDTH, BUTTON_HEIGHT));
@@ -273,8 +273,6 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             lineY = ModuleConfigModalSupport.drawTrimmedLine(
                 tier.name() + "  Cooldown "
                     + (ModuleHammer.cooldownTicks(variant, tier) / 20)
-                    + "s  Charge "
-                    + (ModuleHammer.chargeTicks(variant, tier) / 20)
                     + "s  Rate "
                     + ModuleConfigModalSupport.formatEu(ModuleHammer.chargeRateEuPerTick(variant, tier))
                     + " EU/t",
