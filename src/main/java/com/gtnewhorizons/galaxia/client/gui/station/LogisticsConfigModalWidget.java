@@ -6,12 +6,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
+
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.ScrollWidget;
+import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -20,63 +30,77 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModalWidget> {
 
-    static final int WIDTH = 430;
-    static final int HEIGHT = 260;
+    static final int WIDTH = 600;
+    static final int HEIGHT = 310;
 
-    private static final int BODY_TOP_OFFSET = 34;
-    private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + BODY_TOP_OFFSET;
-    private static final int ROW_HEIGHT = 24;
-    private static final int ROW_COUNT = 5;
+    private static final int TOP_BUTTON_Y = ModuleConfigModalSupport.HEADER_HEIGHT + 8;
     private static final int BUTTON_HEIGHT = 18;
-    private static final int FOOTER_TOP = HEIGHT - 30;
-    private static final int ADD_BUTTON_X = 8;
+    private static final int BACK_BUTTON_X = 8;
     private static final int BACK_BUTTON_WIDTH = 54;
-    private static final int NAME_X = 8;
-    private static final int STOCK_X = 150;
-    private static final int RESERVE_X = 196;
-    private static final int PACKAGE_X = 270;
-    private static final int IMPORT_X = 342;
-    private static final int EXPORT_X = 378;
-    private static final int REMOVE_X = 406;
+    private static final int ADD_BUTTON_X = 76;
+    private static final int ADD_BUTTON_WIDTH = 72;
+    private static final int HEADER_Y = ModuleConfigModalSupport.HEADER_HEIGHT + 38;
+    private static final int SCROLL_X = 8;
+    private static final int SCROLL_Y = ModuleConfigModalSupport.HEADER_HEIGHT + 52;
+    private static final int SCROLL_WIDTH = WIDTH - SCROLL_X * 2;
+    private static final int SCROLL_HEIGHT = HEIGHT - SCROLL_Y - 10;
+    private static final int SCROLLBAR_GAP = 8;
+    private static final int ROW_HEIGHT = 31;
+    private static final int ROW_GAP = 2;
+    private static final int ICON_X = 8;
+    private static final int ICON_Y = 7;
+    private static final int NAME_X = 30;
+    private static final int NAME_WIDTH = 184;
+    private static final int STOCK_X = 225;
+    private static final int RESERVE_X = 285;
+    private static final int PACKAGE_X = 365;
+    private static final int IMPORT_X = 445;
+    private static final int EXPORT_X = 500;
+    private static final int REMOVE_X = 558;
     private static final int SMALL_BUTTON_WIDTH = 18;
-    private static final int VALUE_WIDTH = 34;
-    private static final int TOGGLE_WIDTH = 30;
+    private static final int VALUE_WIDTH = 42;
+    private static final int TOGGLE_WIDTH = 48;
+    private static final int REMOVE_BUTTON_WIDTH = 18;
     private static final int MAX_LOGISTICS_AMOUNT = 999_999;
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private int page;
+    private final VerticalScrollData scrollData = new VerticalScrollData();
+    private final ParentWidget<?> scrollContent = new ParentWidget<>().widthRel(1f);
+
+    private String rowSignature = "";
 
     LogisticsConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
         this.controller = controller;
         child(
-            ModuleConfigModalSupport.button(controller::isLogisticsOpen, "Add Item", this::openItemPicker)
-                .pos(ADD_BUTTON_X, ModuleConfigModalSupport.HEADER_HEIGHT + 8)
-                .size(72, BUTTON_HEIGHT));
-        child(
-            ModuleConfigModalSupport.button(this::hasPreviousPage, "Prev", () -> page--)
-                .pos(92, ModuleConfigModalSupport.HEADER_HEIGHT + 8)
-                .size(44, BUTTON_HEIGHT));
-        child(
-            ModuleConfigModalSupport.button(this::hasNextPage, "Next", () -> page++)
-                .pos(142, ModuleConfigModalSupport.HEADER_HEIGHT + 8)
-                .size(44, BUTTON_HEIGHT));
-        child(
             ModuleConfigModalSupport.button(controller::isLogisticsOpen, "Back", this::back)
-                .pos(WIDTH - ModuleConfigModalSupport.PANEL_PADDING - BACK_BUTTON_WIDTH, FOOTER_TOP)
+                .pos(BACK_BUTTON_X, TOP_BUTTON_Y)
                 .size(BACK_BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(controller::isLogisticsOpen, "Add Item", this::openItemPicker)
+                .pos(ADD_BUTTON_X, TOP_BUTTON_Y)
+                .size(ADD_BUTTON_WIDTH, BUTTON_HEIGHT));
+        ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(SCROLL_X, SCROLL_Y)
+            .size(SCROLL_WIDTH, SCROLL_HEIGHT)
+            .background(
+                ModuleConfigModalSupport.drawable(
+                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
+        scroll.child(scrollContent);
+        child(scroll);
     }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
         consumePickedItem();
+        refreshRows();
     }
 
     @Override
@@ -87,105 +111,138 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isLogisticsOpen()) return;
-        ModuleConfigModalSupport.drawFrame("Logistics items", WIDTH, HEIGHT);
+        ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
         AutomatedFacility facility = facility();
         if (facility == null) {
             ModuleConfigModalSupport.drawLine(
                 "No station selected",
                 ModuleConfigModalSupport.PANEL_PADDING,
-                BODY_TOP,
+                HEADER_Y,
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
-
-        int headerY = BODY_TOP - 14;
-        ModuleConfigModalSupport.drawLine("Item", NAME_X, headerY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawLine("Stock", STOCK_X, headerY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawLine("Reserve", RESERVE_X, headerY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawLine("Packet", PACKAGE_X, headerY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawLine("I", IMPORT_X + 8, headerY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport.drawLine("E", EXPORT_X + 8, headerY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-
-        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(facility);
-        clampPage(rows.size());
-        if (rows.isEmpty()) {
+        drawHeaders();
+        if (rows(facility).isEmpty()) {
             ModuleConfigModalSupport.drawLine(
                 "No tracked items",
-                ModuleConfigModalSupport.PANEL_PADDING,
-                BODY_TOP,
+                SCROLL_X + ModuleConfigModalSupport.PANEL_PADDING,
+                SCROLL_Y + ModuleConfigModalSupport.PANEL_PADDING,
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        }
+    }
+
+    private void refreshRows() {
+        AutomatedFacility facility = facility();
+        if (facility == null || !controller.isLogisticsOpen()) {
+            rowSignature = "";
+            setRows(List.of(), facility);
             return;
         }
-        int start = page * ROW_COUNT;
-        int end = Math.min(rows.size(), start + ROW_COUNT);
-        int y = BODY_TOP;
-        for (int i = start; i < end; i++) {
-            drawRow(facility, rows.get(i), y);
-            y += ROW_HEIGHT;
-        }
+        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(facility);
+        String signature = rowSignature(rows);
+        if (signature.equals(rowSignature)) return;
+        rowSignature = signature;
+        setRows(rows, facility);
     }
 
-    private void drawRow(AutomatedFacility facility, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
-        int y) {
+    private void setRows(List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows, AutomatedFacility facility) {
+        scrollContent.removeAll();
+        int y = 0;
+        for (int i = 0; i < rows.size(); i++) {
+            scrollContent.child(rowWidget(i, rows.get(i), facility).pos(0, y));
+            y += ROW_HEIGHT + ROW_GAP;
+        }
+        int contentHeight = Math.max(SCROLL_HEIGHT, y + ROW_GAP);
+        scrollContent.height(contentHeight);
+        scrollData.setScrollSize(contentHeight);
+        scrollContent.scheduleResize();
+        scheduleResize();
+    }
+
+    private ParentWidget<?> rowWidget(int rowIndex, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
+        AutomatedFacility facility) {
+        ParentWidget<?> row = new ParentWidget<>().widthRelOffset(1f, -SCROLLBAR_GAP)
+            .height(ROW_HEIGHT)
+            .background(
+                ModuleConfigModalSupport.drawable(
+                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+        row.child(
+            ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawRowText(facility, entry, x, y, w))
+                .asWidget()
+                .pos(0, 0)
+                .widthRel(1f)
+                .height(ROW_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftReserve(rowIndex, -1))
+                .pos(RESERVE_X, 6)
+                .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            amountField(rowIndex, true).pos(RESERVE_X + SMALL_BUTTON_WIDTH + 2, 6)
+                .size(VALUE_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftReserve(rowIndex, 1))
+                .pos(RESERVE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH + 4, 6)
+                .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftPackage(rowIndex, -1))
+                .pos(PACKAGE_X, 6)
+                .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            amountField(rowIndex, false).pos(PACKAGE_X + SMALL_BUTTON_WIDTH + 2, 6)
+                .size(VALUE_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftPackage(rowIndex, 1))
+                .pos(PACKAGE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH + 4, 6)
+                .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport
+                .button(() -> rowEntry(rowIndex) != null, () -> importLabel(rowIndex), () -> toggleImport(rowIndex))
+                .pos(IMPORT_X, 6)
+                .size(TOGGLE_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport
+                .button(() -> rowEntry(rowIndex) != null, () -> exportLabel(rowIndex), () -> toggleExport(rowIndex))
+                .pos(EXPORT_X, 6)
+                .size(TOGGLE_WIDTH, BUTTON_HEIGHT));
+        row.child(
+            ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "X", () -> removeEntry(rowIndex))
+                .pos(REMOVE_X, 6)
+                .size(REMOVE_BUTTON_WIDTH, BUTTON_HEIGHT));
+        return row;
+    }
+
+    private void drawHeaders() {
+        ModuleConfigModalSupport
+            .drawLine("Item", SCROLL_X + NAME_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Inventory", SCROLL_X + STOCK_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Reserve", SCROLL_X + RESERVE_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Packet", SCROLL_X + PACKAGE_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Import", SCROLL_X + IMPORT_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Export", SCROLL_X + EXPORT_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+    }
+
+    private void drawRowText(AutomatedFacility facility, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
+        int x, int y, int width) {
         ItemStackWrapper wrapper = entry.getKey();
-        LogisticsResourceConfig cfg = entry.getValue();
         ItemStack stack = wrapper.toStack(1);
+        renderItemIcon(stack, x + ICON_X, y + ICON_Y);
         ModuleConfigModalSupport.drawTrimmedLine(
             stack.getDisplayName(),
-            NAME_X,
-            y + 5,
-            STOCK_X - NAME_X - 6,
+            x + NAME_X,
+            y + 11,
+            Math.min(NAME_WIDTH, STOCK_X - NAME_X - 8),
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawLine(
+        ModuleConfigModalSupport.drawTrimmedLine(
             formatAmount(facility.inventory.getAmount(wrapper)),
-            STOCK_X,
-            y + 5,
+            x + STOCK_X,
+            y + 11,
+            RESERVE_X - STOCK_X - 8,
             EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-    }
-
-    @Override
-    public void onInit() {
-        super.onInit();
-        for (int row = 0; row < ROW_COUNT; row++) {
-            int rowIndex = row;
-            int y = BODY_TOP + row * ROW_HEIGHT + 2;
-            child(
-                ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftReserve(rowIndex, -1))
-                    .pos(RESERVE_X, y)
-                    .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
-            child(
-                amountField(rowIndex, true).pos(RESERVE_X + SMALL_BUTTON_WIDTH + 2, y)
-                    .size(VALUE_WIDTH - 2, BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftReserve(rowIndex, 1))
-                    .pos(RESERVE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, y)
-                    .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftPackage(rowIndex, -1))
-                    .pos(PACKAGE_X, y)
-                    .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
-            child(
-                amountField(rowIndex, false).pos(PACKAGE_X + SMALL_BUTTON_WIDTH + 2, y)
-                    .size(VALUE_WIDTH - 2, BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftPackage(rowIndex, 1))
-                    .pos(PACKAGE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, y)
-                    .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport
-                    .button(() -> rowEntry(rowIndex) != null, () -> importLabel(rowIndex), () -> toggleImport(rowIndex))
-                    .pos(IMPORT_X, y)
-                    .size(TOGGLE_WIDTH, BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport
-                    .button(() -> rowEntry(rowIndex) != null, () -> exportLabel(rowIndex), () -> toggleExport(rowIndex))
-                    .pos(EXPORT_X, y)
-                    .size(TOGGLE_WIDTH, BUTTON_HEIGHT));
-            child(
-                ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "X", () -> removeEntry(rowIndex))
-                    .pos(REMOVE_X, y)
-                    .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
-        }
     }
 
     private TextFieldWidget amountField(int rowIndex, boolean reserve) {
@@ -305,6 +362,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         if (row == null || facility == null) return;
         facility.logisticsConfig.reset(row.getKey());
         CelestialClient.removeLogisticsConfig(facility.assetId, row.getKey());
+        rowSignature = "";
+        refreshRows();
     }
 
     private void update(AutomatedFacility facility, ItemStackWrapper wrapper, LogisticsResourceConfig config) {
@@ -328,23 +387,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         AutomatedFacility facility = facility();
         if (facility == null) return null;
         List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(facility);
-        clampPage(rows.size());
-        int index = page * ROW_COUNT + rowIndex;
-        return index >= 0 && index < rows.size() ? rows.get(index) : null;
-    }
-
-    private boolean hasPreviousPage() {
-        return page > 0;
-    }
-
-    private boolean hasNextPage() {
-        AutomatedFacility facility = facility();
-        return facility != null && (page + 1) * ROW_COUNT < rows(facility).size();
-    }
-
-    private void clampPage(int size) {
-        int maxPage = Math.max(0, (size - 1) / ROW_COUNT);
-        if (page > maxPage) page = maxPage;
+        return rowIndex >= 0 && rowIndex < rows.size() ? rows.get(rowIndex) : null;
     }
 
     private List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows(AutomatedFacility facility) {
@@ -360,19 +403,60 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         return rows;
     }
 
+    private String rowSignature(List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows) {
+        StringBuilder signature = new StringBuilder();
+        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row : rows) {
+            signature.append(
+                row.getKey()
+                    .toKey())
+                .append(';');
+        }
+        return signature.toString();
+    }
+
     private void back() {
         int moduleIndex = controller.moduleIndex();
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
-        if (module != null
-            && module.component() instanceof com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer) {
+        if (module != null && module.component() instanceof ModuleHammer) {
             controller.openHammer(moduleIndex);
             return;
         }
         controller.close();
     }
 
+    private String title() {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleIndex());
+        if (module == null) return "Logistics";
+        if (module.component() instanceof ModuleHammer hammer) {
+            return "Logistics: " + hammer.variant()
+                .name() + " HAMMER";
+        }
+        return "Logistics: " + module.kind()
+            .getDisplayName();
+    }
+
     private AutomatedFacility facility() {
         return ModuleConfigModalSupport.facility(assetId);
+    }
+
+    private static void renderItemIcon(ItemStack stack, int x, int y) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.fontRenderer == null || mc.getTextureManager() == null) return;
+        com.cleanroommc.modularui.utils.GlStateManager.pushMatrix();
+        com.cleanroommc.modularui.utils.GlStateManager.translate(x, y, 200f);
+        GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        RenderHelper.enableGUIStandardItemLighting();
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        RenderItem renderItem = RenderItem.getInstance();
+        float previousZ = renderItem.zLevel;
+        renderItem.zLevel = 200f;
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
+        renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
+        renderItem.zLevel = previousZ;
+        RenderHelper.disableStandardItemLighting();
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        com.cleanroommc.modularui.utils.GlStateManager.popMatrix();
     }
 
     private static String formatAmount(long amount) {
