@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.item.ItemStack;
@@ -20,18 +22,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 
 final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidget> {
 
-    static final int WIDTH = 320;
-    static final int HEIGHT = 210;
+    static final int WIDTH = 390;
+    static final int HEIGHT = 260;
 
     private static final int BODY_TOP_OFFSET = 10;
     private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + BODY_TOP_OFFSET;
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_TOP = HEIGHT - 58;
     private static final int FOOTER_TOP = HEIGHT - 30;
-    private static final int TARGET_BUTTON_WIDTH = 58;
-    private static final int TIER_BUTTON_WIDTH = 42;
-    private static final int RESERVE_BUTTON_WIDTH = 62;
-    private static final int VOID_BUTTON_WIDTH = 54;
+    private static final int TARGET_BUTTON_WIDTH = 64;
+    private static final int TIER_BUTTON_WIDTH = 50;
+    private static final int RESERVE_BUTTON_WIDTH = 84;
+    private static final int VOID_BUTTON_WIDTH = 98;
     private static final int CONFIRM_BUTTON_WIDTH = 72;
     private static final int BACK_BUTTON_WIDTH = 54;
     private static final int COLUMN_GAP = 4;
@@ -45,29 +47,38 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
         this.controller = controller;
         int x = ModuleConfigModalSupport.PANEL_PADDING;
         child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Variant", this::cycleVariant)
+            ModuleConfigModalSupport
+                .button(this::canUseControls, "Variant", "Switch target hammer variant", this::cycleVariant)
                 .pos(x, BUTTON_TOP)
                 .size(TARGET_BUTTON_WIDTH, BUTTON_HEIGHT));
         x += TARGET_BUTTON_WIDTH + COLUMN_GAP;
         child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Tier -", () -> shiftTier(-1))
+            ModuleConfigModalSupport.button(() -> canShiftTier(-1), "Tier -", "Lower target tier", () -> shiftTier(-1))
                 .pos(x, BUTTON_TOP)
                 .size(TIER_BUTTON_WIDTH, BUTTON_HEIGHT));
         x += TIER_BUTTON_WIDTH + COLUMN_GAP;
         child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Tier +", () -> shiftTier(1))
+            ModuleConfigModalSupport.button(() -> canShiftTier(1), "Tier +", "Raise target tier", () -> shiftTier(1))
                 .pos(x, BUTTON_TOP)
                 .size(TIER_BUTTON_WIDTH, BUTTON_HEIGHT));
         x += TIER_BUTTON_WIDTH + COLUMN_GAP;
         child(
             ModuleConfigModalSupport
-                .button(this::canUseControls, this::reserveLabel, controller::toggleHammerUpgradeReserveItems)
+                .button(
+                    this::canUseControls,
+                    this::reserveLabel,
+                    "Collect required items before building",
+                    controller::toggleHammerUpgradeReserveItems)
                 .pos(x, BUTTON_TOP)
                 .size(RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT));
         x += RESERVE_BUTTON_WIDTH + COLUMN_GAP;
         child(
             ModuleConfigModalSupport
-                .button(this::canUseControls, this::voidLabel, controller::toggleHammerUpgradeVoidRefund)
+                .button(
+                    this::canUseControls,
+                    this::voidLabel,
+                    "Delete refunded old-module items",
+                    controller::toggleHammerUpgradeVoidRefund)
                 .pos(x, BUTTON_TOP)
                 .size(VOID_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
@@ -120,23 +131,19 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             x,
             lineY,
             EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        lineY = ModuleConfigModalSupport.drawLine(
-            "Shot: " + ModuleConfigModalSupport.formatEu(ModuleHammer.shotEnergyEu(targetVariant))
-                + " EU  Rate: "
-                + ModuleConfigModalSupport.formatEu(ModuleHammer.chargeRateEuPerTick(targetVariant, targetTier))
-                + " EU/t",
-            x,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        lineY = ModuleConfigModalSupport.drawLine(
-            "Cooldown: " + (ModuleHammer.cooldownTicks(targetVariant, targetTier) / 20)
-                + "s  Charge: "
-                + (ModuleHammer.chargeTicks(targetVariant, targetTier) / 20)
-                + "s",
-            x,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY += 3;
+        lineY = ModuleConfigModalSupport.drawLine("Variants", x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lineY = drawVariantLine(lineY, HammerVariant.BASE);
+        lineY = drawVariantLine(lineY, HammerVariant.BIG);
+        lineY += 3;
+        lineY = ModuleConfigModalSupport
+            .drawLine("Tiers for " + targetVariant.name(), x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lineY = drawTierLine(lineY, targetVariant, targetTier);
         lineY += 4;
+        if (!targetChanged(module, hammer)) {
+            ModuleConfigModalSupport.drawLine("No change", x, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            return;
+        }
         lineY = ModuleConfigModalSupport.drawLine("Cost:", x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         Map<ItemStack, Long> cost = FacilityModuleRegistry.get(module.kind())
             .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
@@ -172,36 +179,21 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     private void shiftTier(int delta) {
         HammerVariant variant = controller.hammerUpgradeVariant();
         ModuleTier current = controller.hammerUpgradeTier();
-        ModuleTier[] values = ModuleTier.values();
-        int currentSupportedIndex = -1;
-        int supportedCount = 0;
-        for (ModuleTier value : values) {
-            if (!ModuleHammer.supportsTier(variant, value)) continue;
-            if (value == current) currentSupportedIndex = supportedCount;
-            supportedCount++;
-        }
-        if (currentSupportedIndex < 0 || supportedCount == 0) {
+        List<ModuleTier> supported = supportedTiers(variant);
+        int currentSupportedIndex = supported.indexOf(current);
+        if (currentSupportedIndex < 0 || supported.isEmpty()) {
             throw new IllegalStateException("Hammer upgrade target tier is invalid: " + variant + "/" + current);
         }
-        int nextSupportedIndex = Math.floorMod(currentSupportedIndex + delta, supportedCount);
-        int seen = 0;
-        for (ModuleTier value : values) {
-            if (!ModuleHammer.supportsTier(variant, value)) continue;
-            if (seen == nextSupportedIndex) {
-                controller.setHammerUpgradeTier(value);
-                return;
-            }
-            seen++;
-        }
-        throw new IllegalStateException("Failed to resolve next hammer tier for " + variant + "/" + current);
+        int nextSupportedIndex = Math.max(0, Math.min(supported.size() - 1, currentSupportedIndex + delta));
+        controller.setHammerUpgradeTier(supported.get(nextSupportedIndex));
     }
 
     private String reserveLabel() {
-        return controller.hammerUpgradeReserveItems() ? "Res On" : "Res Off";
+        return controller.hammerUpgradeReserveItems() ? "Reserve On" : "Reserve Off";
     }
 
     private String voidLabel() {
-        return controller.hammerUpgradeVoidRefund() ? "Void On" : "Void Off";
+        return controller.hammerUpgradeVoidRefund() ? "Void refund On" : "Void refund Off";
     }
 
     private boolean canUseControls() {
@@ -212,7 +204,15 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
         ModuleInstance module = selectedModule();
         if (module == null || !(module.component() instanceof ModuleHammer hammer) || hasActiveOperation())
             return false;
-        return hammer.variant() != controller.hammerUpgradeVariant() || module.tier() != controller.hammerUpgradeTier();
+        return targetChanged(module, hammer);
+    }
+
+    private boolean canShiftTier(int delta) {
+        if (!canUseControls()) return false;
+        HammerVariant variant = controller.hammerUpgradeVariant();
+        List<ModuleTier> supported = supportedTiers(variant);
+        int index = supported.indexOf(controller.hammerUpgradeTier());
+        return index >= 0 && index + delta >= 0 && index + delta < supported.size();
     }
 
     private boolean hasActiveOperation() {
@@ -255,5 +255,46 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
 
     private ModuleInstance selectedModule() {
         return ModuleConfigModalSupport.module(assetId, controller.moduleIndex());
+    }
+
+    private int drawVariantLine(int lineY, HammerVariant variant) {
+        return ModuleConfigModalSupport.drawTrimmedLine(
+            variant.name() + "  Shot " + ModuleConfigModalSupport.formatEu(ModuleHammer.shotEnergyEu(variant)) + " EU",
+            ModuleConfigModalSupport.PANEL_PADDING + 8,
+            lineY,
+            BODY_WIDTH,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+    }
+
+    private int drawTierLine(int lineY, HammerVariant variant, ModuleTier selectedTier) {
+        for (ModuleTier tier : supportedTiers(variant)) {
+            int color = tier == selectedTier ? EnumColors.MAP_COLOR_TEXT_SECTION.getColor()
+                : EnumColors.MAP_COLOR_TEXT_BODY.getColor();
+            lineY = ModuleConfigModalSupport.drawTrimmedLine(
+                tier.name() + "  Cooldown "
+                    + (ModuleHammer.cooldownTicks(variant, tier) / 20)
+                    + "s  Charge "
+                    + (ModuleHammer.chargeTicks(variant, tier) / 20)
+                    + "s  Rate "
+                    + ModuleConfigModalSupport.formatEu(ModuleHammer.chargeRateEuPerTick(variant, tier))
+                    + " EU/t",
+                ModuleConfigModalSupport.PANEL_PADDING + 8,
+                lineY,
+                BODY_WIDTH,
+                color);
+        }
+        return lineY;
+    }
+
+    private boolean targetChanged(ModuleInstance module, ModuleHammer hammer) {
+        return hammer.variant() != controller.hammerUpgradeVariant() || module.tier() != controller.hammerUpgradeTier();
+    }
+
+    private static List<ModuleTier> supportedTiers(HammerVariant variant) {
+        List<ModuleTier> supported = new ArrayList<>();
+        for (ModuleTier tier : ModuleTier.values()) {
+            if (ModuleHammer.supportsTier(variant, tier)) supported.add(tier);
+        }
+        return supported;
     }
 }

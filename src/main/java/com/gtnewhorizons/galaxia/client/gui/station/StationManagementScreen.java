@@ -94,6 +94,11 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));
+        panel.child(
+            new ModalInputBlocker(configController).left(0)
+                .top(0)
+                .widthRel(1f)
+                .heightRel(1f));
         return panel;
     }
 
@@ -112,6 +117,39 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
             BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF08101B, 0xFF17283C);
+        }
+    }
+
+    private static final class ModalInputBlocker extends ParentWidget<ModalInputBlocker> {
+
+        private final ModuleConfigModalController controller;
+        private boolean listenersRegistered;
+
+        private ModalInputBlocker(ModuleConfigModalController controller) {
+            this.controller = controller;
+        }
+
+        @Override
+        public void onInit() {
+            super.onInit();
+            if (listenersRegistered) return;
+            listenersRegistered = true;
+            listenGuiAction(
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> controller.isOpen());
+            listenGuiAction(
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> controller.isOpen());
+            listenGuiAction(
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> controller.isOpen());
+        }
+
+        @Override
+        public boolean canHover() {
+            return controller.isOpen();
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return !controller.isOpen();
         }
     }
 }

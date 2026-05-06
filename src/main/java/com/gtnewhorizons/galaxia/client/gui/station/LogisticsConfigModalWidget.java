@@ -50,22 +50,24 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     private static final int SCROLL_WIDTH = WIDTH - SCROLL_X * 2;
     private static final int SCROLL_HEIGHT = HEIGHT - SCROLL_Y - 10;
     private static final int SCROLLBAR_GAP = 8;
+    private static final int LIST_WIDTH = SCROLL_WIDTH - SCROLLBAR_GAP;
     private static final int ROW_HEIGHT = 31;
     private static final int ROW_GAP = 2;
     private static final int ICON_X = 8;
     private static final int ICON_Y = 7;
     private static final int NAME_X = 30;
     private static final int NAME_WIDTH = 184;
-    private static final int STOCK_X = 225;
-    private static final int RESERVE_X = 285;
-    private static final int PACKAGE_X = 365;
-    private static final int IMPORT_X = 445;
-    private static final int EXPORT_X = 500;
-    private static final int REMOVE_X = 558;
     private static final int SMALL_BUTTON_WIDTH = 18;
     private static final int VALUE_WIDTH = 42;
+    private static final int CONTROL_GROUP_WIDTH = SMALL_BUTTON_WIDTH + VALUE_WIDTH + SMALL_BUTTON_WIDTH;
     private static final int TOGGLE_WIDTH = 48;
     private static final int REMOVE_BUTTON_WIDTH = 18;
+    private static final int STOCK_X = columnX(0.39f);
+    private static final int RESERVE_X = columnX(0.50f);
+    private static final int PACKAGE_X = columnX(0.65f);
+    private static final int IMPORT_X = columnX(0.81f);
+    private static final int EXPORT_X = columnX(0.90f);
+    private static final int REMOVE_X = LIST_WIDTH - REMOVE_BUTTON_WIDTH;
     private static final int MAX_LOGISTICS_AMOUNT = 999_999;
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
 
@@ -94,6 +96,12 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
         scroll.child(scrollContent);
         child(scroll);
+        addHeaderTooltip(NAME_X, NAME_WIDTH, "Tracked item");
+        addHeaderTooltip(STOCK_X, RESERVE_X - STOCK_X, "Items stored in this station");
+        addHeaderTooltip(RESERVE_X, CONTROL_GROUP_WIDTH, "Minimum stock kept in station inventory");
+        addHeaderTooltip(PACKAGE_X, CONTROL_GROUP_WIDTH, "Items requested per logistics order");
+        addHeaderTooltip(IMPORT_X, TOGGLE_WIDTH, "Allow incoming logistics orders");
+        addHeaderTooltip(EXPORT_X, TOGGLE_WIDTH, "Allow outgoing logistics supply");
     }
 
     @Override
@@ -177,22 +185,22 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
                 .pos(RESERVE_X, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
-            amountField(rowIndex, true).pos(RESERVE_X + SMALL_BUTTON_WIDTH + 2, 6)
+            amountField(rowIndex, true).pos(RESERVE_X + SMALL_BUTTON_WIDTH, 6)
                 .size(VALUE_WIDTH, BUTTON_HEIGHT));
         row.child(
             ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftReserve(rowIndex, 1))
-                .pos(RESERVE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH + 4, 6)
+                .pos(RESERVE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
             ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "-", () -> shiftPackage(rowIndex, -1))
                 .pos(PACKAGE_X, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
-            amountField(rowIndex, false).pos(PACKAGE_X + SMALL_BUTTON_WIDTH + 2, 6)
+            amountField(rowIndex, false).pos(PACKAGE_X + SMALL_BUTTON_WIDTH, 6)
                 .size(VALUE_WIDTH, BUTTON_HEIGHT));
         row.child(
             ModuleConfigModalSupport.button(() -> rowEntry(rowIndex) != null, "+", () -> shiftPackage(rowIndex, 1))
-                .pos(PACKAGE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH + 4, 6)
+                .pos(PACKAGE_X + SMALL_BUTTON_WIDTH + VALUE_WIDTH, 6)
                 .size(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT));
         row.child(
             ModuleConfigModalSupport
@@ -212,18 +220,42 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private void drawHeaders() {
-        ModuleConfigModalSupport
-            .drawLine("Item", SCROLL_X + NAME_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport
-            .drawLine("Inventory", SCROLL_X + STOCK_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport
-            .drawLine("Reserve", SCROLL_X + RESERVE_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport
-            .drawLine("Packet", SCROLL_X + PACKAGE_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport
-            .drawLine("Import", SCROLL_X + IMPORT_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        ModuleConfigModalSupport
-            .drawLine("Export", SCROLL_X + EXPORT_X, HEADER_Y, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Item",
+            SCROLL_X + NAME_X + NAME_WIDTH / 2,
+            HEADER_Y,
+            NAME_WIDTH,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Inventory",
+            SCROLL_X + STOCK_X + (RESERVE_X - STOCK_X) / 2,
+            HEADER_Y,
+            RESERVE_X - STOCK_X,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Reserve",
+            SCROLL_X + RESERVE_X + CONTROL_GROUP_WIDTH / 2,
+            HEADER_Y,
+            CONTROL_GROUP_WIDTH,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Packet",
+            SCROLL_X + PACKAGE_X + CONTROL_GROUP_WIDTH / 2,
+            HEADER_Y,
+            CONTROL_GROUP_WIDTH,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Import",
+            SCROLL_X + IMPORT_X + TOGGLE_WIDTH / 2,
+            HEADER_Y,
+            TOGGLE_WIDTH,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawCenteredLine(
+            "Export",
+            SCROLL_X + EXPORT_X + TOGGLE_WIDTH / 2,
+            HEADER_Y,
+            TOGGLE_WIDTH,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
     private void drawRowText(AutomatedFacility facility, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
@@ -439,6 +471,15 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         return ModuleConfigModalSupport.facility(assetId);
     }
 
+    private void addHeaderTooltip(int x, int width, String text) {
+        child(
+            ModuleConfigModalSupport.drawable((ctx, drawX, drawY, drawW, drawH) -> {})
+                .asWidget()
+                .pos(SCROLL_X + x, HEADER_Y - 2)
+                .size(width, 13)
+                .tooltip(t -> t.addLine(text)));
+    }
+
     private static void renderItemIcon(ItemStack stack, int x, int y) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc == null || mc.fontRenderer == null || mc.getTextureManager() == null) return;
@@ -463,5 +504,9 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         if (amount < 1_000L) return Long.toString(amount);
         if (amount < 1_000_000L) return (amount / 1_000L) + "k";
         return (amount / 1_000_000L) + "M";
+    }
+
+    private static int columnX(float rel) {
+        return Math.round(LIST_WIDTH * rel);
     }
 }

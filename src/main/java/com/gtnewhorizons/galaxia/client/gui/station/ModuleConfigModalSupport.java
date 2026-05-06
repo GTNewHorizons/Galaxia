@@ -65,9 +65,25 @@ final class ModuleConfigModalSupport {
             });
     }
 
+    static ButtonWidget<?> button(BooleanSupplier enabledSupplier, String label, String tooltip, Runnable onClick) {
+        return button(enabledSupplier, label, onClick).tooltip(t -> t.addLine(tooltip));
+    }
+
+    static ButtonWidget<?> button(BooleanSupplier enabledSupplier, Supplier<String> labelSupplier, String tooltip,
+        Runnable onClick) {
+        return button(enabledSupplier, labelSupplier, onClick).tooltip(t -> t.addLine(tooltip));
+    }
+
     static int drawLine(String text, int x, int y, int color) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         fr.drawStringWithShadow(text, x, y, color);
+        return y + fr.FONT_HEIGHT + 3;
+    }
+
+    static int drawCenteredLine(String text, int centerX, int y, int maxWidth, int color) {
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        String trimmed = fr.trimStringToWidth(text, maxWidth);
+        fr.drawStringWithShadow(trimmed, centerX - fr.getStringWidth(trimmed) / 2, y, color);
         return y + fr.FONT_HEIGHT + 3;
     }
 
