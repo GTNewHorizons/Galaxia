@@ -644,6 +644,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         rocket.setCapsuleIndex(getFirstCapsuleIndex());
         rocket.setDestination(destination);
         Galaxia.GALAXIA_NETWORK.sendToServer(new RocketDestinationSyncPacket(rocket.getEntityId(), destination));
+
+        rocket.setModules(new ArrayList<>(modules));
+        this.shouldRender = false;
+        sync();
+
         rocket.interactFirst(data.getPlayer());
         if (!rocket.shouldRender()) rocket.launch();
     }
@@ -660,10 +665,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         assembler.removeModule(id);
         assembler.sendModule(id, this);
         assembly = null;
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
+        sync();
     }
 
     /**
@@ -675,11 +677,13 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public boolean receiveModule(int id) {
         modules.add(id);
         assembly = null;
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        if (entityRocket != null && !shouldRender) {
+            entityRocket.setModules(new ArrayList<>(modules));
         }
+
+        sync();
         return true;
+
     }
 
     /**
@@ -754,6 +758,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         modules.clear();
 
         assembly = null;
+        if (entityRocket != null && !shouldRender) {
+            entityRocket.setModules(new ArrayList<>(modules));
+        }
+        this.shouldRender = true;
         sync();
     }
 
