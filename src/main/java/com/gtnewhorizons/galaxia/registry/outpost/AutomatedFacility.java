@@ -195,10 +195,17 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<String, Integer> entry : chances.entrySet()) {
             String key = requireOreKey(entry.getKey());
             if (entry.getValue() == null) throw new IllegalArgumentException("Chance has to be present");
-            int percent = clampMinerVoidChancePercent(entry.getValue());
+            int percent = requireMinerVoidChancePercent(entry.getValue());
             if (percent != 0) minerVoidChancePercentByOre.put(key, percent);
         }
         dirtyMinerVoidChanceOreKeys.clear();
+    }
+
+    private static int requireMinerVoidChancePercent(int percent) {
+        if (percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("Miner void chance percent out of range: " + percent);
+        }
+        return percent;
     }
 
     public static int clampMinerVoidChancePercent(int percent) {
