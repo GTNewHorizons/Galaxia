@@ -74,6 +74,32 @@ public final class SettingsGroupRegistry {
         return group;
     }
 
+    public SettingsGroup sync(short id, FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        SettingsGroup existing = groups.get(id);
+        if (existing != null) {
+            if (existing.kind() != kind) {
+                throw new IllegalStateException(
+                    "SettingsGroupRegistry.sync: groupId=" + id
+                        + " kind changed from "
+                        + existing.kind()
+                        + " to "
+                        + kind);
+            }
+            existing.setDisplayName(displayName);
+            existing.setSettings(settings);
+            return existing;
+        }
+        SettingsGroup group = new SettingsGroup(id, kind, displayName, settings);
+        groups.put(id, group);
+        if (id >= nextGroupId) {
+            if (id == Short.MAX_VALUE) {
+                throw new IllegalStateException("SettingsGroup ID space exhausted");
+            }
+            nextGroupId = (short) (id + 1);
+        }
+        return group;
+    }
+
     public SettingsGroup get(short groupId) {
         return groups.get(groupId);
     }

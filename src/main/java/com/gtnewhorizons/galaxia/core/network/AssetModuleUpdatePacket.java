@@ -330,6 +330,14 @@ public final class AssetModuleUpdatePacket {
             return AssetSyncPacket.moduleRemoved(assetId, moduleIndex, module.id)
                 .withSyncRevision(state.getSyncRevision());
         }
+        if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_ORE_BLACKLISTED
+            && module.groupId() != 0) {
+            return AssetSyncPacket.settingsGroupUpdated(
+                assetId,
+                state.settingsGroups()
+                    .require(module.groupId(), module.kind()))
+                .withSyncRevision(state.getSyncRevision());
+        }
         state.markModuleDirty(module.id);
         return AssetSyncPacket.moduleUpdated(assetId, moduleIndex, module)
             .withSyncRevision(state.getSyncRevision());

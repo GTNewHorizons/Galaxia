@@ -126,6 +126,28 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
+    void fullSyncRoundTripPreservesMinerSettingsGroup() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
+        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
+            .id();
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleInstance clientMiner = client.modules()
+            .get(0);
+        assertEquals(groupId, clientMiner.groupId());
+        assertEquals(
+            "Shared miners",
+            client.settingsGroups()
+                .require(groupId)
+                .displayName());
+        assertTrue(client.isMinerOreBlacklisted(clientMiner, "ore:iron"));
+    }
+
+    @Test
     void moduleAddedDeltaPlacesLayoutTileOnClient() {
         // Server: facility with 1 module, create FULL_SYNC for client baseline
         AutomatedFacility server = buildFacilityWithModules(1);
@@ -238,6 +260,8 @@ final class StationPacketRoundTripTest {
 
     private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {
         client.clearModules();
+        client.settingsGroups()
+            .clear();
         client.inventory.clear();
         client.logisticsConfig.clear();
         StationLayout layout = client.stationLayout();

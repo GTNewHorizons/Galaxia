@@ -39,6 +39,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -59,6 +60,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
+    public static final byte SETTINGS_GROUP_UPDATED = 11;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -88,6 +90,11 @@ public final class AssetSyncPacket implements IMessage {
     private StationTileState tileState;
     private ModuleInstance.ID tileModuleId;
 
+    private short settingsGroupId;
+    private FacilityModuleKind settingsGroupKind;
+    private String settingsGroupName;
+    private MinerSettings minerSettings;
+
     public AssetSyncPacket() {}
 
     public static AssetSyncPacket fullSync(AutomatedFacility state) {
@@ -95,6 +102,13 @@ public final class AssetSyncPacket implements IMessage {
         pkt.systemId = state.systemId;
         pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
         pkt.energyStored = state.getEnergyStored();
+
+        state.settingsGroups()
+            .groups()
+            .values()
+            .stream()
+            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
+            .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
 
         List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
@@ -215,6 +229,21 @@ public final class AssetSyncPacket implements IMessage {
         pkt.assetId = assetId;
         pkt.syncType = LOGISTICS_CONFIG_REMOVED;
         pkt.resourceKey = resourceKey;
+        return pkt;
+    }
+
+    public static AssetSyncPacket settingsGroupUpdated(CelestialAsset.ID assetId, SettingsGroup group) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = SETTINGS_GROUP_UPDATED;
+        pkt.settingsGroupId = group.id();
+        pkt.settingsGroupKind = group.kind();
+        pkt.settingsGroupName = group.displayName();
+        if (group.settings() instanceof MinerSettings settings) {
+            pkt.minerSettings = settings.copy();
+        } else {
+            throw new IllegalStateException("Unsupported settings group payload " + group.settings());
+        }
         return pkt;
     }
 
@@ -354,6 +383,12 @@ public final class AssetSyncPacket implements IMessage {
                 if (hasModule) PacketUtil.writeId(buf, tileModuleId);
             }
             case LAYOUT_TILE_REMOVED -> PacketUtil.writeStationTileCoord(buf, tileCoord);
+            case SETTINGS_GROUP_UPDATED -> {
+                buf.writeShort(settingsGroupId);
+                PacketUtil.writeEnum(buf, settingsGroupKind);
+                PacketUtil.writeString(buf, settingsGroupName);
+                writeMinerSettingsPayload(buf, minerSettings);
+            }
         }
     }
 
@@ -382,6 +417,12 @@ public final class AssetSyncPacket implements IMessage {
                 tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
             }
             case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readStationTileCoord(buf);
+            case SETTINGS_GROUP_UPDATED -> {
+                settingsGroupId = buf.readShort();
+                settingsGroupKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
+                settingsGroupName = PacketUtil.readString(buf);
+                minerSettings = readMinerSettingsPayload(buf, "settingsGroup=" + settingsGroupId);
+            }
         }
     }
 
@@ -472,6 +513,10 @@ public final class AssetSyncPacket implements IMessage {
         MinerSettings settings = miner.localSettingsOrNull();
         buf.writeBoolean(settings != null);
         if (settings == null) return;
+        writeMinerSettingsPayload(buf, settings);
+    }
+
+    private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {
         buf.writeInt(
             settings.blacklistedOreKeys()
                 .size());
@@ -492,16 +537,20 @@ public final class AssetSyncPacket implements IMessage {
             miner.clearLocalSettings();
             return;
         }
+        miner.setLocalSettings(readMinerSettingsPayload(buf, module.id.toString()));
+    }
+
+    private static MinerSettings readMinerSettingsPayload(ByteBuf buf, String context) {
         int count = buf.readInt();
         if (count < 0 || count > 4096) {
             throw new IllegalStateException(
-                "Network decoded invalid miner blacklist count " + count + " for " + module.id);
+                "Network decoded invalid miner blacklist count " + count + " for " + context);
         }
         MinerSettings settings = new MinerSettings();
         for (int i = 0; i < count; i++) {
             settings.setOreBlacklisted(PacketUtil.readString(buf), true);
         }
-        miner.setLocalSettings(settings);
+        return settings;
     }
 
     private static void writeLogisticsConfig(ByteBuf buf, LogisticsResourceConfig cfg) {
@@ -655,6 +704,7 @@ public final class AssetSyncPacket implements IMessage {
                 if (layout != null && module.anchorOrNull() != null) {
                     layout.place(module);
                 }
+                Handler.syncModuleGroupMembership(state, module);
             }
             case MODULE_REMOVED -> {
                 state.removeModule(packet.moduleId);
@@ -666,6 +716,7 @@ public final class AssetSyncPacket implements IMessage {
                     .size()) {
                     state.modulesInternal()
                         .set(packet.moduleIndex, packet.moduleData);
+                    Handler.syncModuleGroupMembership(state, packet.moduleData);
                 }
             }
             case INVENTORY_UPDATE -> {
@@ -696,6 +747,12 @@ public final class AssetSyncPacket implements IMessage {
                 StationLayout layout = state.stationLayout();
                 if (layout != null) layout.remove(packet.tileCoord);
             }
+            case SETTINGS_GROUP_UPDATED -> state.settingsGroups()
+                .sync(
+                    packet.settingsGroupId,
+                    packet.settingsGroupKind,
+                    packet.settingsGroupName,
+                    packet.minerSettings.copy());
         }
     }
 
@@ -739,6 +796,8 @@ public final class AssetSyncPacket implements IMessage {
             state.setEnergyStored(packet.energyStored);
 
             state.clearModules();
+            state.settingsGroups()
+                .clear();
             state.inventory.clear();
             state.logisticsConfig.clear();
             StationLayout layout = state.stationLayout();
@@ -767,6 +826,7 @@ public final class AssetSyncPacket implements IMessage {
                     if (layout != null && module.anchorOrNull() != null) {
                         layout.place(module);
                     }
+                    syncModuleGroupMembership(state, module);
                 }
                 case MODULE_REMOVED -> {
                     state.removeModule(packet.moduleId);
@@ -778,6 +838,7 @@ public final class AssetSyncPacket implements IMessage {
                         .size()) {
                         state.modulesInternal()
                             .set(packet.moduleIndex, packet.moduleData);
+                        syncModuleGroupMembership(state, packet.moduleData);
                     }
                 }
                 case INVENTORY_UPDATE -> {
@@ -809,6 +870,12 @@ public final class AssetSyncPacket implements IMessage {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
+                case SETTINGS_GROUP_UPDATED -> state.settingsGroups()
+                    .sync(
+                        packet.settingsGroupId,
+                        packet.settingsGroupKind,
+                        packet.settingsGroupName,
+                        packet.minerSettings.copy());
             }
         }
 
@@ -818,6 +885,21 @@ public final class AssetSyncPacket implements IMessage {
                 if (m.id.equals(id)) return m;
             }
             return null;
+        }
+
+        private static void syncModuleGroupMembership(AutomatedFacility state, ModuleInstance module) {
+            if (module.groupId() == 0 || module.anchorOrNull() == null) return;
+            SettingsGroup group = state.settingsGroups()
+                .get(module.groupId());
+            if (group == null) {
+                throw new IllegalStateException(
+                    "Client received module " + module.id + " for missing settings group " + module.groupId());
+            }
+            if (!group.members()
+                .contains(module.anchorOrNull())) {
+                state.settingsGroups()
+                    .addMember(module.groupId(), module.anchor());
+            }
         }
     }
 }
