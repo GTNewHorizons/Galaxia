@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -19,6 +20,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
@@ -135,6 +138,25 @@ final class AutomatedFacilityOperationTest {
             () -> facility.tryReserveOperationMaterials(module, Map.of(material(), 1L)));
     }
 
+    @Test
+    void tickCompletesHammerUpgradeAndAppliesTargetSpec() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.waiting(hammerUpgradePlan(2))
+                .beginBuilding());
+
+        assertEquals(ModuleTier.EV, module.tier());
+
+        facility.tick();
+        facility.tick();
+
+        assertNull(module.operationOrNull());
+        assertEquals(ModuleTier.LuV, module.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) module.component()).variant());
+    }
+
     private static AutomatedFacility facilityWithHammer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -158,6 +180,21 @@ final class AutomatedFacilityOperationTest {
                 "BIG"),
             200,
             80,
+            false);
+    }
+
+    private static ModuleOperationPlan hammerUpgradePlan(int buildTicks) {
+        return new ModuleOperationPlan(
+            new ModuleOperationTargetSpec(
+                ModuleOperationKind.UPGRADE_REBUILD,
+                FacilityModuleKind.HAMMER,
+                ModuleTier.EV,
+                "BASE",
+                FacilityModuleKind.HAMMER,
+                ModuleTier.LuV,
+                "BIG"),
+            buildTicks,
+            0,
             false);
     }
 

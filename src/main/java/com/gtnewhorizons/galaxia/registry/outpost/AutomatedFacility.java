@@ -21,10 +21,17 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -451,9 +458,151 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void tick() {
         for (ModuleInstance module : modules) {
-            module.tick(this);
+            tickModuleOperation(module);
+            if (!isBuildingOperation(module)) {
+                module.tick(this);
+            }
         }
 
         LogisticStore.updateSignalsForFacility(this);
+    }
+
+    private void tickModuleOperation(ModuleInstance module) {
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation == null) return;
+        switch (operation.phase()) {
+            case WAITING_FOR_MATERIALS -> tryBeginModuleOperation(module, operation);
+            case BUILDING -> tickBuildingOperation(module, operation);
+            case REFUNDING -> flushModuleOperationRefund(module);
+            case COMPLETE -> applyCompletedModuleOperation(module, operation);
+            case CANCELLED -> {
+                module.clearOperation();
+                markModuleDirty(module.id);
+            }
+        }
+    }
+
+    private boolean isBuildingOperation(ModuleInstance module) {
+        ModuleOperationState operation = module.operationOrNull();
+        return operation != null && operation.phase() == ModuleOperationPhase.BUILDING;
+    }
+
+    private void tryBeginModuleOperation(ModuleInstance module, ModuleOperationState operation) {
+        ModuleOperationDefinition definition = operationDefinition(
+            operation.plan()
+                .targetSpec());
+        if (!tryReserveOperationMaterials(
+            module,
+            definition.materialCost(
+                operation.plan()
+                    .targetSpec()))) {
+            return;
+        }
+        module.setOperation(
+            module.operationOrNull()
+                .beginBuilding());
+        markModuleDirty(module.id);
+    }
+
+    private void tickBuildingOperation(ModuleInstance module, ModuleOperationState operation) {
+        ModuleOperationState next = operation.tickBuilding();
+        module.setOperation(next);
+        markModuleDirty(module.id);
+        if (next.phase() == ModuleOperationPhase.COMPLETE) {
+            applyCompletedModuleOperation(module, next);
+        }
+    }
+
+    private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
+        ModuleOperationTargetSpec target = operation.plan()
+            .targetSpec();
+        if (target.operationKind() != ModuleOperationKind.UPGRADE_REBUILD) {
+            throw new IllegalStateException(
+                "Unsupported operation kind " + target.operationKind() + " for " + module.id);
+        }
+        if (target.sourceModuleKind() != null && target.sourceModuleKind() != module.kind()) {
+            throw new IllegalStateException(
+                "Operation source kind mismatch for " + module.id
+                    + ": expected "
+                    + target.sourceModuleKind()
+                    + ", got "
+                    + module.kind());
+        }
+        if (target.targetModuleKind() != null && target.targetModuleKind() != module.kind()) {
+            throw new IllegalStateException(
+                "Operation target kind changes are not implemented for " + module.id
+                    + ": "
+                    + target.targetModuleKind());
+        }
+        if (target.sourceTier() != null && target.sourceTier() != module.tier()) {
+            throw new IllegalStateException(
+                "Operation source tier mismatch for " + module.id
+                    + ": expected "
+                    + target.sourceTier()
+                    + ", got "
+                    + module.tier());
+        }
+        applyHammerOperationTarget(module, target);
+        refundCompletedOperationSource(module, operation);
+        module.clearOperation();
+        markModuleDirty(module.id);
+    }
+
+    private void applyHammerOperationTarget(ModuleInstance module, ModuleOperationTargetSpec target) {
+        if (!(module.component() instanceof ModuleHammer hammer)) {
+            throw new IllegalStateException("HAMMER operation applied to non-hammer module " + module.id);
+        }
+        if (target.sourceVariantKey() != null && !target.sourceVariantKey()
+            .equals(
+                hammer.variant()
+                    .name())) {
+            throw new IllegalStateException(
+                "Operation source variant mismatch for " + module.id
+                    + ": expected "
+                    + target.sourceVariantKey()
+                    + ", got "
+                    + hammer.variant()
+                        .name());
+        }
+        if (target.targetVariantKey() == null || target.targetTier() == null) {
+            throw new IllegalStateException("HAMMER operation target is incomplete for module " + module.id);
+        }
+        HammerVariant targetVariant = HammerVariant.valueOf(target.targetVariantKey());
+        ModuleTier targetTier = target.targetTier();
+        ModuleHammer.requireTier(targetVariant, targetTier);
+        hammer.setVariant(targetVariant);
+        module.setTier(targetTier);
+        layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
+    }
+
+    private void refundCompletedOperationSource(ModuleInstance module, ModuleOperationState operation) {
+        int refundPercent = operation.plan()
+            .completionRefundPercent();
+        if (refundPercent <= 0) return;
+        FacilityModuleKind sourceKind = operation.plan()
+            .targetSpec()
+            .sourceModuleKind();
+        if (sourceKind == null) return;
+        for (Map.Entry<ItemStack, Long> entry : FacilityModuleRegistry.get(sourceKind)
+            .constructionCost()
+            .entrySet()) {
+            long amount = entry.getValue() * refundPercent / 100L;
+            if (amount <= 0L) continue;
+            ItemStackWrapper wrapper = ItemStackWrapper.of(entry.getKey());
+            if (wrapper == null) {
+                throw new IllegalStateException("Operation refund contains unkeyable stack for module " + module.id);
+            }
+            inventory.add(wrapper, amount);
+        }
+    }
+
+    private ModuleOperationDefinition operationDefinition(ModuleOperationTargetSpec target) {
+        FacilityModuleKind targetKind = target.targetModuleKind() != null ? target.targetModuleKind()
+            : target.sourceModuleKind();
+        if (targetKind == null) {
+            throw new IllegalStateException("Operation target and source kind are both null for " + target);
+        }
+        return FacilityModuleRegistry.get(targetKind)
+            .operationDefinition(target.operationKind());
     }
 }
