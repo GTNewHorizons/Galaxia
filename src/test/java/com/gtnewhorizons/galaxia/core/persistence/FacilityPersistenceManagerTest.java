@@ -2,18 +2,21 @@ package com.gtnewhorizons.galaxia.core.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -27,13 +30,24 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+
+import sun.misc.Unsafe;
 
 final class FacilityPersistenceManagerTest {
 
@@ -67,6 +81,84 @@ final class FacilityPersistenceManagerTest {
                 .size());
         assertLayoutEquals(station.stationLayout(), decoded.stationLayout());
         assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+    }
+
+    @Test
+    void hammerVariantRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleHammer hammer = (ModuleHammer) station.modules()
+            .get(0)
+            .component();
+        station.modules()
+            .get(0)
+            .setTier(ModuleTier.LuV);
+        hammer.setVariant(HammerVariant.BIG);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        assertEquals(
+            "BIG",
+            encoded.modules.get(0).data.getAsJsonObject()
+                .get("variant")
+                .getAsString());
+
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
+            .get(0)
+            .component();
+        assertEquals(HammerVariant.BIG, decodedHammer.variant());
+    }
+
+    @Test
+    void minerVoidChancesRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        station.setMinerVoidChancePercent("ore:iron", 35);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(35, decoded.minerVoidChancePercent("ore:iron"));
+    }
+
+    @Test
+    void obsoleteMinerBlacklistDataCrashesOnLoad() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        encoded.modules.get(1).data.getAsJsonObject()
+            .addProperty("blacklistedItemKeys", "ore:iron");
+
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, encoded));
+    }
+
+    @Test
+    void bigHammerEvCrashesOnLoad() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleHammer hammer = (ModuleHammer) station.modules()
+            .get(0)
+            .component();
+        hammer.setVariant(HammerVariant.BIG);
+
+        assertThrows(IllegalStateException.class, () -> manager.encodeFacilityState(station));
     }
 
     private static AutomatedFacility createStationWithFullLayout() {
@@ -211,30 +303,12 @@ final class FacilityPersistenceManagerTest {
         byte invalidTier = PacketUtil.enumOrdinal(ModuleTier.HV);
         encoded.modules.get(0).tier = invalidTier;
 
-        AutomatedFacility tierShrunk = new AutomatedFacility(
+        AutomatedFacility malformedTier = new AutomatedFacility(
             station.assetId,
             station.celestialObjectId,
             station.kind,
             station.status());
-        manager.decodeFacilityState(tierShrunk, encoded);
-
-        assertNotNull(tierShrunk.modules());
-        assertEquals(
-            2,
-            tierShrunk.modules()
-                .size());
-        // HAMMER module should be downgraded from HV to EV (defaultTier)
-        assertEquals(
-            ModuleTier.EV,
-            tierShrunk.modules()
-                .get(0)
-                .tier());
-        // MINER module should keep its EV tier
-        assertEquals(
-            ModuleTier.EV,
-            tierShrunk.modules()
-                .get(1)
-                .tier());
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(malformedTier, encoded));
     }
 
     @Test
@@ -346,6 +420,28 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void fluidBufferRoundTripsThroughFacilityPersistence() throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        station.inventory.addFluid("galaxia.persistence.buffer", 4096);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(4096, decoded.inventory.getFluidAmount("galaxia.persistence.buffer"));
+        assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
+    }
+
+    @Test
     void everyModuleKindSurvivesRoundTrip() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
@@ -354,7 +450,7 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
-        // Create ALL 7 module kinds with various statuses
+        // Create ALL module kinds with various statuses
         // Layout coordinates starting at (1,0) and spreading right/down — no overlaps
         ModuleInstance hammer = createAndPlaceModule(
             station,
@@ -405,6 +501,48 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.NONE,
             StationTileCoord.of(1, 2));
+        ModuleInstance macerator = createAndPlaceModule(
+            station,
+            FacilityModuleKind.MACERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 2));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.CENTRIFUGE,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(3, 2));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.ELECTROLYZER,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(1, 3));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.CHEMICAL_REACTOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 3));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.ASSEMBLER,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(3, 3));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.DISTILLERY,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(1, 4));
 
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
@@ -414,15 +552,15 @@ final class FacilityPersistenceManagerTest {
 
         // Dump JSON for inspection
         String encodedJson = FacilityPersistenceManagerTest.GSON.toJson(encoded);
-        System.out.println("=== Encoded FacilityStateJson (all 7 kinds) ===");
+        System.out.println("=== Encoded FacilityStateJson (all kinds) ===");
         System.out.println(encodedJson);
         System.out.println("=== End encoded JSON ===");
         System.out.println("Module count: " + encoded.modules.size());
         System.out.println("Layout tile count: " + encoded.layoutTiles.size());
 
         // Verify module entries
-        assertEquals(7, encoded.modules.size());
-        assertEquals(7, encoded.layoutTiles.size());
+        assertEquals(13, encoded.modules.size());
+        assertEquals(13, encoded.layoutTiles.size());
 
         // Verify each kind appears in encoded modules
         assertTrue(
@@ -446,6 +584,24 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "MAINTENANCE_BAY".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "MACERATOR".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "CENTRIFUGE".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "ELECTROLYZER".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "CHEMICAL_REACTOR".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "ASSEMBLER".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "DISTILLERY".equals(mj.kind)));
 
         // Verify shape bytes — SINGLE has ordinal 0
         for (FacilityPersistenceManager.ModuleJson mj : encoded.modules) {
@@ -465,10 +621,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                7,
+                13,
                 decoded.modules()
                     .size(),
-                "Expected 7 modules, got " + decoded.modules()
+                "Expected 13 modules, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -489,6 +645,12 @@ final class FacilityPersistenceManagerTest {
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 1), "TANK anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 1), "BATTERY anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 2), "MAINTENANCE_BAY anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 2), "MACERATOR anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 2), "CENTRIFUGE anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 3), "ELECTROLYZER anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 3), "CHEMICAL_REACTOR anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 3), "ASSEMBLER anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 4), "DISTILLERY anchor"),
             () -> assertLayoutEquals(layout, decoded.stationLayout()),
             // JSON identity — byte-perfect round-trip
             () -> assertEquals(
@@ -665,6 +827,79 @@ final class FacilityPersistenceManagerTest {
         assertEquals(encodedJson, GSON.toJson(manager.encodeFacilityState(decoded)));
     }
 
+    @Test
+    void recipeSlotSnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+
+        ModuleInstance macerator = createAndPlaceModule(
+            station,
+            FacilityModuleKind.MACERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.SINGLE,
+            ModuleTier.HV,
+            StationTileCoord.of(2, 2));
+        IRecipeModule recipeModule = (IRecipeModule) macerator.component();
+        FluidStack[] fluidInputs = { fluidStack("galaxia.persistence.input", 144) };
+        FluidStack[] fluidOutputs = { fluidStack("galaxia.persistence.output", 72) };
+        int[] outputChances = { 5000 };
+        int[] fluidOutputChances = { 7500 };
+        long contentHash = RecipeSnapshot
+            .computeContentHash(null, null, fluidInputs, fluidOutputs, outputChances, fluidOutputChances, 320, 480);
+        RecipeSnapshot snapshot = new RecipeSnapshot(
+            (byte) 1,
+            7,
+            contentHash,
+            null,
+            null,
+            fluidInputs,
+            fluidOutputs,
+            outputChances,
+            fluidOutputChances,
+            320,
+            480);
+        RecipeSlotList slots = new RecipeSlotList();
+        slots.add(new RecipeSlot(snapshot, true, 11, 22, (byte) 3, (byte) 4));
+        recipeModule.setRecipeConfig(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleInstance decodedMacerator = decoded.modules()
+            .stream()
+            .filter(m -> m.kind() == FacilityModuleKind.MACERATOR)
+            .findFirst()
+            .orElseThrow();
+        RecipeConfig decodedConfig = ((IRecipeModule) decodedMacerator.component()).getRecipeConfig();
+        assertNotNull(decodedConfig);
+        RecipeSlot decodedSlot = decodedConfig.slots()
+            .get(0);
+        RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
+        assertEquals(320, decodedSnapshot.duration());
+        assertEquals(480, decodedSnapshot.eut());
+        assertEquals(contentHash, decodedSnapshot.contentHash());
+        assertEquals(5000, decodedSnapshot.outputChances()[0]);
+        assertEquals(7500, decodedSnapshot.fluidOutputChances()[0]);
+        assertEquals("galaxia.persistence.input", fluidName(decodedSnapshot.fluidInputs()[0]));
+        assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
+        assertEquals("galaxia.persistence.output", fluidName(decodedSnapshot.fluidOutputs()[0]));
+        assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
+        assertEquals(11, decodedSlot.inputGuard());
+        assertEquals(22, decodedSlot.outputGuard());
+        assertEquals(3, decodedSlot.priority());
+        assertEquals(4, decodedSlot.orderSize());
+    }
+
     // ── Helpers ──
 
     private static ModuleInstance createAndPlaceModule(AutomatedFacility station, FacilityModuleKind kind,
@@ -753,79 +988,33 @@ final class FacilityPersistenceManagerTest {
             .orElse(null);
     }
 
-    @Test
-    void legacyBigHammerModuleIsMigratedToHammerOnLoad() throws Exception {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
+        Fluid fluid = new Fluid(fluidName);
+        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        Unsafe unsafe = (Unsafe) unsafeField.get(null);
+        FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
+        Field fluidField = FluidStack.class.getDeclaredField("fluid");
+        fluidField.setAccessible(true);
+        fluidField.set(stack, fluid);
+        stack.amount = amount;
+        return stack;
+    }
 
-        // Simulate a legacy save with a BIG_HAMMER module (no longer in the enum)
-        FacilityPersistenceManager.FacilityStateJson legacy = new FacilityPersistenceManager.FacilityStateJson();
-        legacy.celestialBodyId = "PANSPIRA";
-        legacy.systemId = "NOVA_CAELUM";
-        legacy.planetaryAnchorBodyId = "PANSPIRA";
-        legacy.energyStored = 0L;
-        legacy.settingsGroupsNextId = 1;
-        legacy.modules = new ArrayList<>();
-
-        FacilityPersistenceManager.ModuleJson mj = new FacilityPersistenceManager.ModuleJson();
-        mj.moduleId = ModuleInstance.ID.create()
-            .toString();
-        mj.kind = "BIG_HAMMER";
-        mj.status = Buildable.Status.OPERATIONAL.name();
-        mj.tier = PacketUtil.enumOrdinal(ModuleTier.EV);
-        mj.shape = PacketUtil.enumOrdinal(ModuleShape.SINGLE);
-        mj.enabled = true;
-        mj.cooldownTicks = 0;
-        legacy.modules.add(mj);
-
-        legacy.layoutTiles = new ArrayList<>();
-        FacilityPersistenceManager.StationTileJson tj = new FacilityPersistenceManager.StationTileJson();
-        tj.dx = 1;
-        tj.dy = 0;
-        tj.state = StationTileState.OCCUPIED_OPERATIONAL.name();
-        tj.moduleId = mj.moduleId;
-        legacy.layoutTiles.add(tj);
-
-        legacy.buffer = new LinkedHashMap<>();
-        legacy.logisticsConfig = new LinkedHashMap<>();
-
-        AutomatedFacility decoded = new AutomatedFacility(
-            CelestialAsset.ID.create(),
-            CelestialObjectId.PANSPIRA,
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-        manager.decodeFacilityState(decoded, legacy);
-
-        assertEquals(
-            1,
-            decoded.modules()
-                .size(),
-            "BIG_HAMMER module should be decoded as HAMMER (not skipped)");
-        assertEquals(
-            FacilityModuleKind.HAMMER,
-            decoded.modules()
-                .get(0)
-                .kind(),
-            "BIG_HAMMER should map to HAMMER");
-
-        // Verify layout tile is present and references the decoded module
-        StationLayout layout = decoded.stationLayout();
-        assertNotNull(layout);
-        StationTileCoord coord = StationTileCoord.of(1, 0);
-        assertTrue(layout.isOccupied(coord), "Layout should have the BIG_HAMMER anchor tile");
-        PlacedTile tile = layout.get(coord);
-        assertNotNull(tile);
-        assertNotNull(tile.module(), "PlacedTile should reference the decoded HAMMER module");
-        assertSame(
-            decoded.modules()
-                .get(0),
-            tile.module());
-
-        // Verify no zombie tiles — only CORE and the HAMMER anchor should exist
-        assertEquals(2, layout.size(), "Layout should have exactly CORE + HAMMER anchor tiles");
+    private static String fluidName(FluidStack stack) throws Exception {
+        try {
+            return stack.getFluid()
+                .getName();
+        } catch (RuntimeException e) {
+            Field fluidField = FluidStack.class.getDeclaredField("fluid");
+            fluidField.setAccessible(true);
+            Fluid fluid = (Fluid) fluidField.get(stack);
+            return fluid != null ? fluid.getName() : null;
+        }
     }
 
     @Test
-    void orphanLayoutTilesAreSkippedOnLoad() throws Exception {
+    void unknownModuleKindCrashesOnLoad() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
 
         // Simulate a save with a module that has an unresolvable kind (unknown enum value)
@@ -860,6 +1049,9 @@ final class FacilityPersistenceManagerTest {
         unknownMj.enabled = true;
         unknownMj.cooldownTicks = 0;
         legacy.modules.add(unknownMj);
+        legacy.modules.clear();
+        legacy.modules.add(unknownMj);
+        legacy.modules.add(hammerMj);
 
         legacy.layoutTiles = new ArrayList<>();
 
@@ -887,24 +1079,7 @@ final class FacilityPersistenceManagerTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        manager.decodeFacilityState(decoded, legacy);
-
-        // Only the HAMMER module should be decoded
-        assertEquals(
-            1,
-            decoded.modules()
-                .size(),
-            "Only HAMMER should survive; unknown kind should be skipped");
-
-        // The HAMMER anchor tile should exist
-        StationLayout layout = decoded.stationLayout();
-        assertNotNull(layout);
-        assertTrue(layout.isOccupied(StationTileCoord.of(1, 0)), "HAMMER anchor tile should exist");
-
-        // The orphan tile at (5,5) should NOT exist (skipped during decode)
-        assertFalse(
-            layout.isOccupied(StationTileCoord.of(5, 5)),
-            "Orphan layout tile for unknown module should be skipped, not blocking placement");
+        assertThrows(IllegalStateException.class, () -> manager.decodeFacilityState(decoded, legacy));
     }
 
     @Test
@@ -916,16 +1091,23 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
 
-        // Create ALL 7 module kinds with both single-tile and multi-tile placements
-        int x = 3;
+        // Create ALL module kinds with both single-tile and multi-tile placements,
+        // arranged in rows to stay within StationTileCoord range [-31, 31].
+        int rowY = 5;
+        int colX = -30;
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             ModuleShape shape = (kind.ordinal() % 3 == 0) ? ModuleShape.SINGLE
                 : (kind.ordinal() % 3 == 1) ? ModuleShape.QUAD_2x2 : ModuleShape.BLOCK_3x3;
-            StationTileCoord coord = StationTileCoord.of(x, 5);
+            int step = shape == ModuleShape.BLOCK_3x3 ? 6 : (shape == ModuleShape.QUAD_2x2 ? 4 : 3);
+            if (colX + step > 31) {
+                rowY += 3;
+                colX = -30;
+            }
+            StationTileCoord coord = StationTileCoord.of(colX, rowY);
             ModuleTier tier = kind.defaultTier();
             ModuleInstance m = createAndPlaceModule(before, kind, Buildable.Status.OPERATIONAL, shape, tier, coord);
             assertNotNull(m.anchorOrNull(), "Module " + kind + " must have non-null anchor after placement");
-            x += (shape == ModuleShape.BLOCK_3x3 ? 5 : (shape == ModuleShape.QUAD_2x2 ? 3 : 2));
+            colX += step;
         }
 
         StationLayout layoutBefore = before.stationLayout();

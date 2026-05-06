@@ -6,5 +6,7 @@ public enum ModuleTier {
     HV,
     EV,
     IV,
-    LuV;
+    LuV,
+    ZPM,
+    UV;
 }

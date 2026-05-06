@@ -1,0 +1,209 @@
+package com.gtnewhorizons.galaxia.core.starmap.sync;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.UUID;
+
+import net.minecraft.item.Item;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+
+final class StarmapServerActionsTest {
+
+    private static final UUID TEAM = UUID.randomUUID();
+
+    @BeforeAll
+    static void init() {
+        CelestialRegistry.freezeAndBake();
+        FacilityModuleRegistry.init();
+    }
+
+    @BeforeEach
+    void cleanStores() {
+        CelestialAssetStore.SERVER.clearInternal();
+        CelestialAssetStore.CLIENT.clearInternal();
+    }
+
+    @AfterEach
+    void cleanStoresAfter() {
+        CelestialAssetStore.SERVER.clearInternal();
+        CelestialAssetStore.CLIENT.clearInternal();
+    }
+
+    @Test
+    void createAssetAddsToServerStoreAndReturnsImmediateFullSync() {
+        AssetCreatePacket packet = AssetCreatePacket.create(
+            CelestialObjectId.MARS,
+            "Mars Automated Station",
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+
+        AssetSyncPacket result = packet.apply(TEAM);
+
+        assertNotNull(result, "create must immediately echo sync data for the open GUI");
+        CelestialAsset created = CelestialAssetStore.SERVER.allAssetsInternal()
+            .get(0);
+        assertInstanceOf(AutomatedFacility.class, created);
+        assertEquals("Mars Automated Station", created.displayName());
+    }
+
+    @Test
+    void buildModuleRejectsMissingServerAsset() {
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = new com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket();
+        // Don't set assetId - will be null, should fail
+
+        AssetSyncPacket result = packet.apply(TEAM, false);
+
+        assertNull(result);
+        assertTrue(
+            CelestialAssetStore.SERVER.allAssetsInternal()
+                .isEmpty());
+    }
+
+    @Test
+    void buildModuleAddsServerModuleAndReturnsImmediateFullSync() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        StationTileCoord coord = StationTileCoord.of(1, 0);
+
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
+            .create(facility.assetId, FacilityModuleKind.STORAGE, ModuleShape.SINGLE, ModuleTier.HV, true, coord);
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "build must immediately echo sync data for the open GUI");
+        assertEquals(
+            1,
+            facility.modules()
+                .size());
+        assertEquals(
+            coord,
+            facility.modules()
+                .get(0)
+                .anchor());
+    }
+
+    @Test
+    void renameAssetMutatesServerAndReturnsImmediateFullSync() {
+        AutomatedFacility facility = addFacilityToServer();
+
+        AssetUpdatePacket packet = AssetUpdatePacket.rename(facility.assetId, "Renamed Station");
+        AssetSyncPacket result = packet.apply(TEAM);
+
+        assertTrue(result != null);
+        assertEquals(
+            "Renamed Station",
+            CelestialAssetStore.SERVER.findAssetInternal(facility.assetId)
+                .displayName());
+    }
+
+    @Test
+    void startDeconstructionMutatesServerAndReturnsImmediateFullSync() {
+        AutomatedFacility facility = addFacilityToServer();
+        facility.updateStatus(Buildable.Status.CONSTRUCTION_SITE);
+
+        AssetUpdatePacket packet = AssetUpdatePacket
+            .create(facility.assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION);
+        AssetSyncPacket result = packet.apply(TEAM);
+
+        assertTrue(result != null);
+        assertEquals(
+            Buildable.Status.DECONSTRUCTION,
+            CelestialAssetStore.SERVER.findAssetInternal(facility.assetId)
+                .status());
+    }
+
+    @Test
+    void cancelConstructionRemovesServerAssetAndReturnsRemovalSync() {
+        AutomatedFacility facility = addFacilityToServer();
+        facility.updateStatus(Buildable.Status.CONSTRUCTION_SITE);
+
+        AssetUpdatePacket packet = AssetUpdatePacket
+            .create(facility.assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION);
+        AssetSyncPacket result = packet.apply(TEAM);
+
+        assertTrue(result != null);
+        assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
+    }
+
+    @Test
+    void destroyAssetRemovesServerAssetAndReturnsRemovalSync() {
+        AutomatedFacility facility = addFacilityToServer();
+
+        AssetUpdatePacket packet = AssetUpdatePacket.create(facility.assetId, AssetUpdatePacket.Action.DESTROY_ASSET);
+        AssetSyncPacket result = packet.apply(TEAM);
+
+        assertTrue(result != null);
+        assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
+    }
+
+    @Test
+    void inventoryPacketApplyMutatesServerStoreNotClientMirror() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = testResource();
+
+        AssetSyncPacket result = com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket
+            .add(facility.assetId, resource, 32)
+            .apply(TEAM, true);
+
+        assertNotNull(result);
+        assertEquals(32, facility.inventory.getAmount(resource));
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+    }
+
+    @Test
+    void logisticsPacketApplyMutatesServerStoreWithOwnershipCheck() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = testResource();
+        LogisticsResourceConfig config = new LogisticsResourceConfig(4, 16, true, false);
+
+        AssetSyncPacket result = new LogisticsConfigUpdatePacket(facility.assetId, resource, config).apply(TEAM);
+
+        assertNotNull(result);
+        assertEquals(config, facility.logisticsConfig.get(resource));
+        assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
+    }
+
+    private static AutomatedFacility addFacilityToServer() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static ItemStackWrapper testResource() {
+        return new ItemStackWrapper(new Item(), 0, null);
+    }
+}

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.mixin;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +20,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
@@ -42,6 +45,9 @@ public abstract class RenderGlobalSkyMixin {
     @Final
     private static ResourceLocation locationMoonPhasesPng;
 
+    @Unique
+    private static final ResourceLocation GALAXIA_EMPTY_SKY = LocationGalaxia("textures/sky/empty.png");
+
     private static final List<CelestialBody> DEFAULT_OVERWORLD_BODIES = SkyBuilder.builder()
         .addBody(
             b -> b.texture(locationSunPng)
@@ -61,42 +67,91 @@ public abstract class RenderGlobalSkyMixin {
                 .phaseCount(8))
         .build();
 
+    @Unique
+    private boolean galaxia$isCustomSkyDim() {
+        World world = mc.theWorld;
+        if (world == null) return false;
+        int dimId = world.provider.dimensionId;
+        return dimId == 0 || SolarSystemRegistry.getById(dimId) != null;
+    }
+
     /**
-     * Replaces the sun and moon in the skybox with custom based on Galaxia Registry
+     * Redirects vanilla sun texture to transparent when a custom sky is active.
+     * Vanilla still draws its quad; it just becomes invisible.
+     */
+    @Redirect(
+        method = "renderSky",
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/minecraft/client/renderer/RenderGlobal;locationSunPng:Lnet/minecraft/util/ResourceLocation;",
+            opcode = Opcodes.GETSTATIC))
+    private ResourceLocation galaxia$redirectSunTexture() {
+        return galaxia$isCustomSkyDim() ? GALAXIA_EMPTY_SKY : locationSunPng;
+    }
+
+    /**
+     * Redirects vanilla moon texture to transparent when a custom sky is active.
+     */
+    @Redirect(
+        method = "renderSky",
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/minecraft/client/renderer/RenderGlobal;locationMoonPhasesPng:Lnet/minecraft/util/ResourceLocation;",
+            opcode = Opcodes.GETSTATIC))
+    private ResourceLocation galaxia$redirectMoonTexture() {
+        return galaxia$isCustomSkyDim() ? GALAXIA_EMPTY_SKY : locationMoonPhasesPng;
+    }
+
+    /**
+     * Draws custom skybox and celestial bodies.
+     *
+     * <p>
+     * Matrix accounting: at this inject point vanilla has already done
+     * {@code glPushMatrix()} for the sun/moon block. We pop that push to reach
+     * the outer sky matrix, draw everything in a fresh push, then push a dummy
+     * matrix so vanilla's {@code glPopMatrix()} after the moon remains balanced.
+     * Vanilla's invisible sun/moon quads are drawn inside that dummy push.
      *
      * @param partialTicks How far through the current tick
-     * @param ci           The callback info (used in things like early cancels of methods etc.)
+     * @param ci           Callback info
      */
     @Inject(
         method = "renderSky",
         at = @At(
             value = "FIELD",
             target = "Lnet/minecraft/client/renderer/RenderGlobal;locationSunPng:Lnet/minecraft/util/ResourceLocation;",
-            opcode = Opcodes.GETSTATIC),
-        cancellable = true)
-    private void galaxia$replaceSunMoon(float partialTicks, CallbackInfo ci) {
+            opcode = Opcodes.GETSTATIC))
+    private void galaxia$renderCustomBodies(float partialTicks, CallbackInfo ci) {
         World world = mc.theWorld;
         int dimId = world.provider.dimensionId;
-
         DimensionDef def = SolarSystemRegistry.getById(dimId);
-        boolean isGalaxiaDim = def != null;
 
-        if (dimId != 0 && !isGalaxiaDim) {
-            return; // vanilla sky (nether, end, other mods)
+        if (dimId != 0 && def == null) {
+            return; // non-galaxia dim that isn't overworld
         }
 
-        Tessellator t = Tessellator.instance;
-
         List<CelestialBody> bodies = (dimId == 0) ? DEFAULT_OVERWORLD_BODIES : def.celestialBodies();
-
         if (bodies.isEmpty()) {
             return;
         }
 
+        Tessellator t = Tessellator.instance;
         double worldTime = world.getWorldTime();
         double timeWithPartial = worldTime + partialTicks;
 
-        // angles
+        // Stack entering inject: base | sky | vanilla-sun-push
+        GL11.glPopMatrix(); // base | sky
+        GL11.glPushMatrix(); // base | sky | this
+
+        if (def != null && def.skyboxTexture() != null) {
+            drawCubemapSkybox(t, def.skyboxTexture());
+            // Restore state the skybox disabled
+            GL11.glEnable(GL11.GL_CULL_FACE);
+        }
+
+        GL11.glRotatef(-90F, 0F, 1F, 0F);
+        OpenGlHelper.glBlendFunc(775, 1, 1, 0);
+
         List<Float> angles = new ArrayList<>();
         for (CelestialBody body : bodies) {
             float angle = (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
@@ -123,23 +178,14 @@ public abstract class RenderGlobalSkyMixin {
                 bodies.get(i1)
                     .distance()));
 
-        GL11.glPopMatrix();
-        GL11.glPushMatrix();
-        if (def != null && def.skyboxTexture() != null) {
-            drawCubemapSkybox(t, def.skyboxTexture());
-        }
-        GL11.glRotatef(-90F, 0F, 1F, 0F);
-        OpenGlHelper.glBlendFunc(775, 1, 1, 0);
-
         for (int idx : indices) {
-            CelestialBody body = bodies.get(idx);
-            float angle = angles.get(idx);
-            drawCelestialBody(t, body, angle, primarySunAngle);
+            drawCelestialBody(t, bodies.get(idx), angles.get(idx), primarySunAngle);
         }
 
-        GL11.glPopMatrix();
-        restoreGLState();
-        ci.cancel();
+        GL11.glPopMatrix(); // base | sky
+        GL11.glPushMatrix(); // base | sky | dummy
+        // Vanilla will glPopMatrix() after drawing its invisible moon quad,
+        // consuming this dummy push and leaving the stack correct.
     }
 
     /**
@@ -265,19 +311,5 @@ public abstract class RenderGlobalSkyMixin {
         t.addVertexWithUV(x2, y2, z2, 1, 1);
         t.addVertexWithUV(x3, y3, z3, 0, 1);
         t.draw();
-    }
-
-    /**
-     * Restores the GLState to regular levels
-     */
-    @Unique
-    private void restoreGLState() {
-        GL11.glColor4f(1F, 1F, 1F, 1F);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glEnable(GL11.GL_ALPHA_TEST);
-        GL11.glDepthMask(true);
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        GL11.glEnable(GL11.GL_FOG);
     }
 }

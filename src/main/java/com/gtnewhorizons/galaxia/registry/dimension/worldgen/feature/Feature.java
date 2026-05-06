@@ -1,15 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+
+import it.unimi.dsi.fastutil.longs.LongCollection;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 /**
  * Generates a feature with a defined shape within a chunk.
@@ -17,8 +16,7 @@ import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
  */
 public abstract class Feature {
 
-    private final Set<Chunk> touchedChunks = new HashSet<>();
-    private final List<Integer[]> updateCoordinates = new ArrayList<>();
+    private final LongOpenHashSet updateCoordinates = new LongOpenHashSet();
 
     public abstract void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements);
 
@@ -52,26 +50,16 @@ public abstract class Feature {
         currentBlockStorage.setExtBlockMetadata(lx, ly, lz, meta);
         chunk.isModified = true;
 
-        // Add chunks for updating
         int cx = x >> 4;
         int cz = z >> 4;
         if (world.getChunkProvider()
             .chunkExists(cx, cz)) {
-            Chunk chunkToAdd = world.getChunkFromChunkCoords(cx, cz);
-            if (!touchedChunks.contains(chunkToAdd)) {
-                touchedChunks.add(chunkToAdd);
-                updateCoordinates.add(new Integer[] { cx << 4, cz << 4 });
-            }
+            updateCoordinates.add(((long) cx << 32) | (cz & 0xFFFFFFFFL));
         }
     }
 
-    public void finishGeneration() {
-        for (Chunk chunk : touchedChunks) {
-            chunk.generateSkylightMap();
-        }
-    }
-
-    public List<Integer[]> getUpdateCoordinates() {
-        return updateCoordinates;
+    public void drainUpdateCoordinatesTo(LongCollection sink) {
+        sink.addAll(updateCoordinates);
+        updateCoordinates.clear();
     }
 }

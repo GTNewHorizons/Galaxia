@@ -14,6 +14,7 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 
 import cpw.mods.fml.relauncher.Side;
@@ -54,6 +55,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     @Override
     public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings settings) {
+        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_station_management")
             .fullScreenInvisible();
         CelestialAsset.ID assetId = pendingAssetId;
@@ -66,6 +68,11 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             PADDING,
             PADDING,
             visionLayer);
+        ModuleConfigModalController configController = new ModuleConfigModalController(
+            panel,
+            assetId,
+            LEFT_PANEL_WIDTH + PADDING * 2,
+            PADDING * 2);
 
         panel.child(
             new StationScreenBackground().left(0)
@@ -83,7 +90,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.55f, -PADDING * 2));
         panel.child(
-            new ModuleDetailPanel(map).left(PADDING)
+            new ModuleDetailPanel(map, configController).left(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));

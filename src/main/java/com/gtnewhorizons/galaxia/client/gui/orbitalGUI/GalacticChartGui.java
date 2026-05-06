@@ -8,6 +8,7 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public class GalacticChartGui {
@@ -15,6 +16,7 @@ public class GalacticChartGui {
     private static final int LEFT_PANEL_WIDTH = 216;
 
     public ModularPanel build(PanelSyncManager syncManager) {
+        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         ModularPanel panel = ModularPanel.defaultPanel("galactic_orbital_map")
             .fullScreenInvisible();
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();

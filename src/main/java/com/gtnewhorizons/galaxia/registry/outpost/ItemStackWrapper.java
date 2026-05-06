@@ -4,7 +4,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
@@ -13,6 +14,8 @@ import cpw.mods.fml.common.registry.GameRegistry;
  */
 
 public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     public static ItemStackWrapper of(ItemStack stack) {
         if (stack == null || stack.getItem() == null) {
@@ -26,12 +29,22 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
     }
 
     public String toKey() {
-        GameRegistry.UniqueIdentifier id = GameRegistry.findUniqueIdentifierFor(item);
+        GameRegistry.UniqueIdentifier id;
+        try {
+            id = GameRegistry.findUniqueIdentifierFor(item);
+        } catch (RuntimeException e) {
+            LOG.warn(
+                "[ItemStackWrapper] Item {} cannot be resolved by the registry; key will not resolve on reload.",
+                item != null ? item.getClass()
+                    .getName() : "null",
+                e);
+            return "unknown:unknown:" + meta;
+        }
         if (id == null) {
-            Galaxia.LOG.warn(
+            LOG.warn(
                 "[ItemStackWrapper] Item {} has no registry entry; key will not resolve on reload.",
-                item.getClass()
-                    .getName());
+                item != null ? item.getClass()
+                    .getName() : "null");
             return "unknown:unknown:" + meta;
         }
         return id.modId + ":" + id.name + ":" + meta;
@@ -43,7 +56,7 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
         try {
             Item item = GameRegistry.findItem(parts[0], parts[1]);
             if (item == null) {
-                Galaxia.LOG.warn("[ItemStackWrapper] Unknown item key '{}'; entry dropped.", key);
+                LOG.warn("[ItemStackWrapper] Unknown item key '{}'; entry dropped.", key);
                 return null;
             }
             int meta = Integer.parseInt(parts[2]);
