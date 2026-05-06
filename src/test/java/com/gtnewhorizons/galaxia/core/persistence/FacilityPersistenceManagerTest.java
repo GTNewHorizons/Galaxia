@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -70,6 +71,8 @@ import sun.misc.Unsafe;
 final class FacilityPersistenceManagerTest {
 
     private static final Gson GSON = new Gson();
+    private static final Gson PERSISTENCE_GSON = new GsonBuilder().serializeNulls()
+        .create();
 
     @BeforeAll
     static void initRegistries() {
@@ -192,6 +195,31 @@ final class FacilityPersistenceManagerTest {
             .id();
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        JsonObject encodedState = PERSISTENCE_GSON.toJsonTree(encoded)
+            .getAsJsonObject();
+        JsonObject encodedMinerData = null;
+        com.google.gson.JsonArray modules = encodedState.getAsJsonArray("modules");
+        for (int i = 0; i < modules.size(); i++) {
+            JsonObject moduleJson = modules.get(i)
+                .getAsJsonObject();
+            if (miner.id.toString()
+                .equals(
+                    moduleJson.get("moduleId")
+                        .getAsString())) {
+                encodedMinerData = moduleJson.getAsJsonObject("data");
+                break;
+            }
+        }
+        assertNotNull(encodedMinerData);
+        assertTrue(encodedMinerData.has("localSettings"));
+        assertTrue(
+            encodedMinerData.get("localSettings")
+                .isJsonNull());
+        assertTrue(encodedMinerData.has("focusOreKey"));
+        assertTrue(
+            encodedMinerData.get("focusOreKey")
+                .isJsonNull());
+
         AutomatedFacility decoded = new AutomatedFacility(
             station.assetId,
             station.celestialObjectId,

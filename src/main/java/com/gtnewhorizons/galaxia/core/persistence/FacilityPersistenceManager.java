@@ -28,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
@@ -92,6 +93,7 @@ public final class FacilityPersistenceManager {
 
     public FacilityPersistenceManager() {
         gson = new GsonBuilder().setPrettyPrinting()
+            .serializeNulls()
             .create();
     }
 
@@ -393,12 +395,14 @@ public final class FacilityPersistenceManager {
                         .name());
             } else if (m.component() instanceof ModuleMiner miner) {
                 MinerSettings settings = miner.localSettingsOrNull();
-                moduleData.add("localSettings", settings == null ? null : PURE_GSON.toJsonTree(settings));
+                moduleData.add("localSettings", settings == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(settings));
                 moduleData.addProperty(
                     "focusTier",
                     miner.focusTier()
                         .name());
-                moduleData.addProperty("focusOreKey", miner.focusOreKeyOrNull());
+                String focusOreKey = miner.focusOreKeyOrNull();
+                moduleData
+                    .add("focusOreKey", focusOreKey == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(focusOreKey));
                 moduleData.addProperty("focusAlignmentProgress", miner.focusAlignmentProgress());
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
