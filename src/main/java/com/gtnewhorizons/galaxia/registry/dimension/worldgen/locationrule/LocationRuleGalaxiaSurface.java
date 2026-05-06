@@ -45,7 +45,6 @@ public class LocationRuleGalaxiaSurface extends LocationRuleGalaxiaBase {
             return false;
         }
         feature.generateFeature(world, random, x, y, z, surfaceRequirements);
-        feature.finishGeneration();
         return true;
     }
 }

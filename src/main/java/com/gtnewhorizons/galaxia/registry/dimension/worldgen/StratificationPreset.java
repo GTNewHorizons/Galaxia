@@ -1,30 +1,39 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
-import java.util.HashMap;
-
 import net.minecraft.block.Block;
 
 public class StratificationPreset {
 
     private final Block defaultBlock;
-    private final HashMap<Integer, Block> strataMap = new HashMap<>();
+    private final Block[] strataMap = new Block[ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT];
+    private boolean frozen = false;
 
     public StratificationPreset(Block defaultBlock) {
         this.defaultBlock = defaultBlock;
     }
 
+    public StratificationPreset freeze() {
+        this.frozen = true;
+        return this;
+    }
+
     public StratificationPreset addStrataLayer(Block strataBlock, int minimumHeight, int maximumHeight) {
-        for (int height = minimumHeight; height <= maximumHeight; height++) {
-            strataMap.put(height, strataBlock);
+        if (frozen) {
+            throw new IllegalStateException("Cannot mutate a frozen StratificationPreset");
+        }
+        int lo = Math.max(0, minimumHeight);
+        int hi = Math.min(strataMap.length - 1, maximumHeight);
+        for (int height = lo; height <= hi; height++) {
+            strataMap[height] = strataBlock;
         }
         return this;
     }
 
     public Block getStrataBlock(int height) {
-        Block strataBlock = strataMap.get(height);
-        if (strataBlock == null) {
-            strataBlock = defaultBlock;
+        if (height < 0 || height >= strataMap.length) {
+            return defaultBlock;
         }
-        return strataBlock;
+        Block strataBlock = strataMap[height];
+        return strataBlock != null ? strataBlock : defaultBlock;
     }
 }
