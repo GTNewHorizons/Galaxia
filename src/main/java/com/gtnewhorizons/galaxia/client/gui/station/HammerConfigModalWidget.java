@@ -178,6 +178,6 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     private ModuleInstance selectedModule() {
-        return ModuleConfigModalSupport.module(assetId, controller.moduleIndex());
+        return ModuleConfigModalSupport.module(assetId, controller.moduleId());
     }
 }

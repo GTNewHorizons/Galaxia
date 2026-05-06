@@ -716,6 +716,10 @@ public final class AssetSyncPacket implements IMessage {
                     .size()) {
                     state.modulesInternal()
                         .set(packet.moduleIndex, packet.moduleData);
+                    StationLayout layout = state.stationLayout();
+                    if (layout != null && packet.moduleData.anchorOrNull() != null) {
+                        layout.place(packet.moduleData);
+                    }
                     Handler.syncModuleGroupMembership(state, packet.moduleData);
                 }
             }
@@ -838,6 +842,10 @@ public final class AssetSyncPacket implements IMessage {
                         .size()) {
                         state.modulesInternal()
                             .set(packet.moduleIndex, packet.moduleData);
+                        StationLayout layout = state.stationLayout();
+                        if (layout != null && packet.moduleData.anchorOrNull() != null) {
+                            layout.place(packet.moduleData);
+                        }
                         syncModuleGroupMembership(state, packet.moduleData);
                     }
                 }

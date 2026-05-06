@@ -111,6 +111,25 @@ final class ModuleConfigModalSupport {
             .get(moduleIndex);
     }
 
+    static int moduleIndex(CelestialAsset.ID assetId, ModuleInstance.ID moduleId) {
+        AutomatedFacility facility = facility(assetId);
+        if (facility == null || moduleId == null) return -1;
+        for (int i = 0; i < facility.modules()
+            .size(); i++) {
+            if (moduleId.equals(
+                facility.modules()
+                    .get(i).id)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    static @Nullable ModuleInstance module(CelestialAsset.ID assetId, ModuleInstance.ID moduleId) {
+        int moduleIndex = moduleIndex(assetId, moduleId);
+        return moduleIndex >= 0 ? module(assetId, moduleIndex) : null;
+    }
+
     static String formatEu(long amount) {
         if (amount < 1_000L) return Long.toString(amount);
         if (amount < 1_000_000L) return (amount / 1_000L) + "k";

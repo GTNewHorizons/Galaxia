@@ -270,7 +270,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     }
 
     private ModuleInstance selectedModule() {
-        return ModuleConfigModalSupport.module(assetId, controller.moduleIndex());
+        return ModuleConfigModalSupport.module(assetId, controller.moduleId());
     }
 
     private boolean hasMinerSelected() {
@@ -292,9 +292,10 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
 
     private String currentGroupLabel(AutomatedFacility facility, ModuleInstance module) {
         if (module.groupId() == 0) return "No Group";
-        return facility.settingsGroups()
-            .require(module.groupId(), module.kind())
-            .displayName();
+        SettingsGroup group = facility.settingsGroups()
+            .get(module.groupId());
+        if (group == null) return "No Group";
+        return group.displayName();
     }
 
     private String groupOptionLabel(int optionIndex) {

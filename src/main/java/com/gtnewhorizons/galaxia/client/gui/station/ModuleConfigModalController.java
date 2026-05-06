@@ -5,6 +5,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class ModuleConfigModalController {
@@ -24,7 +25,7 @@ final class ModuleConfigModalController {
 
     private ParentWidget<?> modal;
     private Kind kind = Kind.NONE;
-    private int moduleIndex = -1;
+    private ModuleInstance.ID moduleId;
     private int minerBlacklistPage;
     private boolean minerSettingsGroupMenuOpen;
     private HammerVariant hammerUpgradeVariant = HammerVariant.BASE;
@@ -40,9 +41,11 @@ final class ModuleConfigModalController {
     }
 
     void openHammer(int moduleIndex) {
+        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
+        if (targetModuleId == null) return;
         close();
         this.kind = Kind.HAMMER;
-        this.moduleIndex = moduleIndex;
+        this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
 
@@ -56,9 +59,11 @@ final class ModuleConfigModalController {
     }
 
     void openHammerUpgrade(int moduleIndex, HammerVariant variant, ModuleTier tier) {
+        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
+        if (targetModuleId == null) return;
         close();
         this.kind = Kind.HAMMER_UPGRADE;
-        this.moduleIndex = moduleIndex;
+        this.moduleId = targetModuleId;
         this.hammerUpgradeVariant = variant;
         this.hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(variant, tier);
         this.hammerUpgradeReserveItems = false;
@@ -74,9 +79,11 @@ final class ModuleConfigModalController {
     }
 
     void openLogistics(int moduleIndex) {
+        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
+        if (targetModuleId == null) return;
         close();
         this.kind = Kind.LOGISTICS;
-        this.moduleIndex = moduleIndex;
+        this.moduleId = targetModuleId;
 
         LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
         widget.left(x)
@@ -88,9 +95,11 @@ final class ModuleConfigModalController {
     }
 
     void openMinerBlacklist(int moduleIndex) {
+        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
+        if (targetModuleId == null) return;
         close();
         this.kind = Kind.MINER_BLACKLIST;
-        this.moduleIndex = moduleIndex;
+        this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
 
@@ -109,7 +118,7 @@ final class ModuleConfigModalController {
             modal = null;
         }
         this.kind = Kind.NONE;
-        this.moduleIndex = -1;
+        this.moduleId = null;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
         this.hammerUpgradeVariant = HammerVariant.BASE;
@@ -120,6 +129,12 @@ final class ModuleConfigModalController {
 
     boolean isOpen() {
         return kind != Kind.NONE;
+    }
+
+    void closeIfTargetMissing() {
+        if (kind != Kind.NONE && moduleId != null && moduleIndex() < 0) {
+            close();
+        }
     }
 
     boolean isHammerOpen() {
@@ -139,7 +154,12 @@ final class ModuleConfigModalController {
     }
 
     int moduleIndex() {
-        return moduleIndex;
+        if (moduleId == null) return -1;
+        return ModuleConfigModalSupport.moduleIndex(assetId, moduleId);
+    }
+
+    ModuleInstance.ID moduleId() {
+        return moduleId;
     }
 
     int minerBlacklistPage() {
@@ -194,5 +214,10 @@ final class ModuleConfigModalController {
 
     void toggleHammerUpgradeVoidRefund() {
         hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
+    }
+
+    private ModuleInstance.ID resolveModuleId(int moduleIndex) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+        return module == null ? null : module.id;
     }
 }

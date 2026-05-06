@@ -448,7 +448,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private void back() {
         int moduleIndex = controller.moduleIndex();
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
         if (module != null && module.component() instanceof ModuleHammer) {
             controller.openHammer(moduleIndex);
             return;
@@ -457,7 +457,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private String title() {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleIndex());
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
         if (module == null) return "Logistics";
         if (module.component() instanceof ModuleHammer hammer) {
             return "Logistics: " + hammer.variant()

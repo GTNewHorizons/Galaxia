@@ -1,9 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.lang.reflect.Field;
 import java.util.UUID;
 
 import net.minecraft.item.Item;
@@ -20,8 +18,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
-final class AssetInventoryUpdatePacketTest {
+final class LogisticsConfigUpdatePacketTest {
 
     private static final UUID TEAM = UUID.randomUUID();
 
@@ -43,25 +42,15 @@ final class AssetInventoryUpdatePacketTest {
     }
 
     @Test
-    void applyRejectsPositiveDeltaFromNonCreativeEvenWhenPacketClearsCreativeOnly() throws Exception {
+    void applyBumpsSyncRevisionForLogisticsConfigDelta() {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
-        setCreativeOnly(packet, false);
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
+            facility.assetId,
+            resource,
+            new LogisticsResourceConfig(12, 64, true, false));
 
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertNull(sync);
-        assertEquals(0, facility.inventory.getAmount(resource));
-    }
-
-    @Test
-    void applyBumpsSyncRevisionForInventoryDelta() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
-
-        AssetSyncPacket sync = packet.apply(TEAM, true);
+        AssetSyncPacket sync = packet.apply(TEAM);
 
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
@@ -75,11 +64,5 @@ final class AssetInventoryUpdatePacketTest {
             Buildable.Status.OPERATIONAL);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;
-    }
-
-    private static void setCreativeOnly(AssetInventoryUpdatePacket packet, boolean value) throws Exception {
-        Field field = AssetInventoryUpdatePacket.class.getDeclaredField("creativeOnly");
-        field.setAccessible(true);
-        field.setBoolean(packet, value);
     }
 }

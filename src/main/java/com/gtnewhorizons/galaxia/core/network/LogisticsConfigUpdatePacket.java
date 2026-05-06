@@ -101,7 +101,9 @@ public final class LogisticsConfigUpdatePacket {
         if (resource == null) return null;
         if (removeEntry) {
             state.logisticsConfig.reset(resource);
-            return AssetSyncPacket.logisticsConfigRemoved(assetId, resourceKey);
+            state.bumpSyncRevision();
+            return AssetSyncPacket.logisticsConfigRemoved(assetId, resourceKey)
+                .withSyncRevision(state.getSyncRevision());
         } else {
             LogisticsResourceConfig config = new LogisticsResourceConfig(
                 minReserve,
@@ -109,13 +111,16 @@ public final class LogisticsConfigUpdatePacket {
                 isImportEnabled,
                 isSupplyEnabled);
             state.logisticsConfig.set(resource, config);
-            return AssetSyncPacket.logisticsConfigUpdated(
-                assetId,
-                resourceKey,
-                config.minReserve(),
-                config.orderSize(),
-                config.isImportEnabled(),
-                config.isSupplyEnabled());
+            state.bumpSyncRevision();
+            return AssetSyncPacket
+                .logisticsConfigUpdated(
+                    assetId,
+                    resourceKey,
+                    config.minReserve(),
+                    config.orderSize(),
+                    config.isImportEnabled(),
+                    config.isSupplyEnabled())
+                .withSyncRevision(state.getSyncRevision());
         }
     }
 }

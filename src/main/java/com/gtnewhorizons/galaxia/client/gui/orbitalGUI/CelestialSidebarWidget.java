@@ -176,6 +176,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return true;
         }
         map.focusOn(entry.body());
+        handleMapSelection(entry.body());
         return true;
     }
 

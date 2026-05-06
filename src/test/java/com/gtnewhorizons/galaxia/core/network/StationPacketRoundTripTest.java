@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
@@ -217,6 +218,32 @@ final class StationPacketRoundTripTest {
     }
 
     // ── Helpers ──
+
+    @Test
+    void moduleUpdatedDeltaRefreshesLayoutTileOnClient() {
+        AutomatedFacility server = buildFacilityWithModules(1);
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        StationTileCoord anchor = StationTileCoord.of(1, 0);
+        ModuleInstance module = server.modules()
+            .get(0);
+        module.updateStatus(Buildable.Status.DISABLED);
+
+        AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
+        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+
+        ModuleInstance updatedModule = client.modules()
+            .get(0);
+        PlacedTile tile = client.stationLayout()
+            .snapshot()
+            .get(anchor);
+        assertSame(updatedModule, tile.module(), "layout tile must point at the updated module instance");
+        assertEquals(
+            StationTileState.OCCUPIED_DISABLED,
+            tile.state(),
+            "layout tile state must match updated module status");
+    }
 
     private static AssetSyncPacket roundTrip(AssetSyncPacket pkt) {
         var buf = Unpooled.buffer();

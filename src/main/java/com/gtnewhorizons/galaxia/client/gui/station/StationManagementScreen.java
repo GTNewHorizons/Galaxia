@@ -130,6 +130,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         }
 
         @Override
+        public void onUpdate() {
+            super.onUpdate();
+            controller.closeIfTargetMissing();
+        }
+
+        @Override
         public void onInit() {
             super.onInit();
             if (listenersRegistered) return;

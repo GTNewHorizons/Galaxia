@@ -254,7 +254,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     }
 
     private ModuleInstance selectedModule() {
-        return ModuleConfigModalSupport.module(assetId, controller.moduleIndex());
+        return ModuleConfigModalSupport.module(assetId, controller.moduleId());
     }
 
     private int drawVariantLine(int lineY, HammerVariant variant) {
