@@ -124,17 +124,17 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 // Reorganize block contributions into biome order
                 double maxContrib = 0;
                 for (int i = 0; i < contribSize; i++) {
-                    BiomeGenBase b = blockBiomes[i];
-                    int idx = biomeIdxOf.getInt(b);
+                    final BiomeGenBase biome = blockBiomes[i];
+                    int idx = biomeIdxOf.getInt(biome);
                     if (idx < 0) {
                         idx = biomeList.size();
-                        biomeList.add(b);
-                        biomeIdxOf.put(b, idx);
+                        biomeList.add(biome);
+                        biomeIdxOf.put(biome, idx);
                         biomeContrib[idx] = new double[CHUNK_AREA];
                     }
                     if (blockContrib[i] > maxContrib) {
                         maxContrib = blockContrib[i];
-                        chunkBiomes[x + (z << 4)] = b;
+                        chunkBiomes[x + (z << 4)] = biome;
                     }
                     biomeContrib[idx][x + (z << 4)] += blockContrib[i];
                 }
@@ -147,10 +147,10 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         }
 
         // Calculate terrain features
-        for (int bi = 0; bi < biomeList.size(); bi++) {
-            BiomeGenBase currentBiome = biomeList.get(bi);
+        for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
+            BiomeGenBase currentBiome = biomeList.get(biomeIndex);
             if (currentBiome instanceof BiomeGenSpace spaceBiome) {
-                double[] terrainRelevance = biomeContrib[bi];
+                double[] terrainRelevance = biomeContrib[biomeIndex];
                 TerrainConfiguration terrain = spaceBiome.getTerrain();
                 for (TerrainFeature f : terrain.getMacroFeatures()) {
                     TerrainFeatureApplier.applyToHeightmap(
