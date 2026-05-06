@@ -898,6 +898,7 @@ public final class FacilityPersistenceManager {
         int buildTicks;
         int completionRefundPercent;
         boolean reserveItems;
+        boolean voidCompletionRefund;
         int elapsedBuildTicks;
         Map<String, Long> depositedResources;
         Map<String, Long> refundBuffer;
@@ -1134,6 +1135,7 @@ public final class FacilityPersistenceManager {
         json.buildTicks = plan.buildTicks();
         json.completionRefundPercent = plan.completionRefundPercent();
         json.reserveItems = plan.reserveItems();
+        json.voidCompletionRefund = plan.voidCompletionRefund();
         json.elapsedBuildTicks = operation.elapsedBuildTicks();
         json.depositedResources = new LinkedHashMap<>(operation.depositedResources());
         json.refundBuffer = new LinkedHashMap<>(operation.refundBuffer());
@@ -1178,7 +1180,8 @@ public final class FacilityPersistenceManager {
             target,
             json.buildTicks,
             json.completionRefundPercent,
-            json.reserveItems);
+            json.reserveItems,
+            json.voidCompletionRefund);
         return ModuleOperationState.restore(
             plan,
             phase,

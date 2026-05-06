@@ -30,6 +30,7 @@ final class ModuleConfigModalController {
     private HammerVariant hammerUpgradeVariant = HammerVariant.BASE;
     private ModuleTier hammerUpgradeTier = ModuleTier.EV;
     private boolean hammerUpgradeReserveItems;
+    private boolean hammerUpgradeVoidRefund;
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this.host = host;
@@ -61,6 +62,7 @@ final class ModuleConfigModalController {
         this.hammerUpgradeVariant = variant;
         this.hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(variant, tier);
         this.hammerUpgradeReserveItems = false;
+        this.hammerUpgradeVoidRefund = false;
 
         HammerUpgradeModalWidget widget = new HammerUpgradeModalWidget(assetId, this);
         widget.left(x)
@@ -113,6 +115,7 @@ final class ModuleConfigModalController {
         this.hammerUpgradeVariant = HammerVariant.BASE;
         this.hammerUpgradeTier = ModuleTier.EV;
         this.hammerUpgradeReserveItems = false;
+        this.hammerUpgradeVoidRefund = false;
     }
 
     boolean isOpen() {
@@ -183,5 +186,13 @@ final class ModuleConfigModalController {
 
     void toggleHammerUpgradeReserveItems() {
         hammerUpgradeReserveItems = !hammerUpgradeReserveItems;
+    }
+
+    boolean hammerUpgradeVoidRefund() {
+        return hammerUpgradeVoidRefund;
+    }
+
+    void toggleHammerUpgradeVoidRefund() {
+        hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
     }
 }

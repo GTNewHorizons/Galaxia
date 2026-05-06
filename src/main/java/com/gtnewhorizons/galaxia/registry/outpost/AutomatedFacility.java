@@ -226,6 +226,36 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
+    public boolean tryReserveAvailableOperationMaterials(ModuleInstance module, Map<ItemStack, Long> materialCost) {
+        ModuleOperationState operation = requireWaitingOperation(module);
+        List<OperationMaterial> requested = materialCostToMaterials(materialCost);
+        Map<String, Long> deposited = new java.util.LinkedHashMap<>();
+        boolean changed = false;
+        for (OperationMaterial material : requested) {
+            long alreadyDeposited = operation.depositedResources()
+                .getOrDefault(material.itemKey(), 0L);
+            long remaining = material.amount() - alreadyDeposited;
+            if (remaining <= 0L) continue;
+            long available = inventory.getAmount(material.item());
+            long reserved = Math.min(available, remaining);
+            if (reserved <= 0L) continue;
+            if (!inventory.tryConsume(material.item(), reserved)) {
+                throw new IllegalStateException(
+                    "Operation partial reservation became inconsistent for module " + module.id
+                        + ", item="
+                        + material.itemKey());
+            }
+            deposited.merge(material.itemKey(), reserved, Long::sum);
+            changed = true;
+        }
+        if (changed) {
+            module.setOperation(
+                operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
+            markModuleDirty(module.id);
+        }
+        return operationHasFullDeposit(requireOperation(module), requested);
+    }
+
     public void cancelModuleOperation(ModuleInstance module) {
         ModuleOperationState operation = requireOperation(module);
         module.setOperation(operation.cancel());
@@ -239,7 +269,11 @@ public final class AutomatedFacility extends CelestialAsset {
             .entrySet()) {
             inventory.add(requireItemKey(entry.getKey(), module), entry.getValue());
         }
-        module.setOperation(operation.finishRefunding());
+        if (isCompletionRefund(operation)) {
+            module.clearOperation();
+        } else {
+            module.setOperation(operation.finishRefunding());
+        }
         markModuleDirty(module.id);
         return true;
     }
@@ -491,11 +525,12 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationDefinition definition = operationDefinition(
             operation.plan()
                 .targetSpec());
-        if (!tryReserveOperationMaterials(
-            module,
-            definition.materialCost(
-                operation.plan()
-                    .targetSpec()))) {
+        Map<ItemStack, Long> materialCost = definition.materialCost(
+            operation.plan()
+                .targetSpec());
+        boolean hasFullCost = operation.reserveItems() ? tryReserveAvailableOperationMaterials(module, materialCost)
+            : tryReserveOperationMaterials(module, materialCost);
+        if (!hasFullCost) {
             return;
         }
         module.setOperation(
@@ -543,8 +578,12 @@ public final class AutomatedFacility extends CelestialAsset {
                     + module.tier());
         }
         applyHammerOperationTarget(module, target);
-        refundCompletedOperationSource(module, operation);
-        module.clearOperation();
+        Map<String, Long> completionRefund = completionRefund(operation);
+        if (completionRefund.isEmpty()) {
+            module.clearOperation();
+        } else {
+            module.setOperation(operation.refundAfterCompletion(completionRefund));
+        }
         markModuleDirty(module.id);
     }
 
@@ -575,14 +614,19 @@ public final class AutomatedFacility extends CelestialAsset {
         layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
     }
 
-    private void refundCompletedOperationSource(ModuleInstance module, ModuleOperationState operation) {
+    private Map<String, Long> completionRefund(ModuleOperationState operation) {
+        if (operation.plan()
+            .voidCompletionRefund()) {
+            return Map.of();
+        }
         int refundPercent = operation.plan()
             .completionRefundPercent();
-        if (refundPercent <= 0) return;
+        if (refundPercent <= 0) return Map.of();
         FacilityModuleKind sourceKind = operation.plan()
             .targetSpec()
             .sourceModuleKind();
-        if (sourceKind == null) return;
+        if (sourceKind == null) return Map.of();
+        Map<String, Long> refund = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStack, Long> entry : FacilityModuleRegistry.get(sourceKind)
             .constructionCost()
             .entrySet()) {
@@ -590,10 +634,11 @@ public final class AutomatedFacility extends CelestialAsset {
             if (amount <= 0L) continue;
             ItemStackWrapper wrapper = ItemStackWrapper.of(entry.getKey());
             if (wrapper == null) {
-                throw new IllegalStateException("Operation refund contains unkeyable stack for module " + module.id);
+                throw new IllegalStateException("Operation completion refund contains unkeyable stack");
             }
-            inventory.add(wrapper, amount);
+            refund.merge(wrapper.toKey(), amount, Long::sum);
         }
+        return refund;
     }
 
     private ModuleOperationDefinition operationDefinition(ModuleOperationTargetSpec target) {
@@ -604,5 +649,24 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         return FacilityModuleRegistry.get(targetKind)
             .operationDefinition(target.operationKind());
+    }
+
+    private static boolean operationHasFullDeposit(ModuleOperationState operation, List<OperationMaterial> requested) {
+        for (OperationMaterial material : requested) {
+            if (operation.depositedResources()
+                .getOrDefault(material.itemKey(), 0L) < material.amount()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isCompletionRefund(ModuleOperationState operation) {
+        return operation.plan()
+            .targetSpec()
+            .operationKind()
+            .buildPhaseRequired()
+            && operation.elapsedBuildTicks() >= operation.plan()
+                .buildTicks();
     }
 }

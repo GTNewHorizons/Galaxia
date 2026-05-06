@@ -75,6 +75,18 @@ public final class ModuleOperationState {
         return new ModuleOperationState(plan, ModuleOperationPhase.BUILDING, 0, depositedResources, refundBuffer);
     }
 
+    public ModuleOperationState refundAfterCompletion(Map<String, Long> completionRefund) {
+        if (phase != ModuleOperationPhase.COMPLETE) {
+            throw new IllegalStateException("refundAfterCompletion requires COMPLETE phase, got " + phase);
+        }
+        return new ModuleOperationState(
+            plan,
+            ModuleOperationPhase.REFUNDING,
+            elapsedBuildTicks,
+            Map.of(),
+            completionRefund);
+    }
+
     public ModuleOperationState tickBuilding() {
         if (phase != ModuleOperationPhase.BUILDING) {
             throw new IllegalStateException("tickBuilding requires BUILDING phase, got " + phase);

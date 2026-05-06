@@ -224,12 +224,12 @@ public final class CelestialClient {
     }
 
     public static void planHammerUpgrade(ID assetId, int moduleIndex, HammerVariant variant, ModuleTier tier,
-        boolean reserveItems) {
+        boolean reserveItems, boolean voidCompletionRefund) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
             module -> AssetModuleUpdatePacket
-                .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems));
+                .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems, voidCompletionRefund));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

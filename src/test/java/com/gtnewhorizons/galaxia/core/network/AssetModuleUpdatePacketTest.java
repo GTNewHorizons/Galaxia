@@ -290,13 +290,13 @@ final class AssetModuleUpdatePacketTest {
     @Test
     void hammerUpgradePlanPayload_roundTripsTargetAndReserveFlag() {
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .hammerUpgradePlan(ASSET_ID, 0, MODULE_ID, HammerVariant.BIG, ModuleTier.ZPM, true);
+            .hammerUpgradePlan(ASSET_ID, 0, MODULE_ID, HammerVariant.BIG, ModuleTier.ZPM, true, true);
 
         AssetModuleUpdatePacket decoded = roundTrip(packet);
 
         assertEquals(AssetModuleUpdatePacket.ConfigAction.PLAN_HAMMER_UPGRADE, decoded.getConfigAction());
         assertArrayEquals(
-            new byte[] { (byte) HammerVariant.BIG.ordinal(), (byte) ModuleTier.ZPM.ordinal(), 1 },
+            new byte[] { (byte) HammerVariant.BIG.ordinal(), (byte) ModuleTier.ZPM.ordinal(), 1, 1 },
             decoded.getRawPayload());
     }
 
@@ -375,7 +375,7 @@ final class AssetModuleUpdatePacketTest {
             .get(0);
         AssetModuleUpdatePacket packet = roundTrip(
             AssetModuleUpdatePacket
-                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, true));
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, true, true));
 
         packet.apply(TEAM);
 
@@ -385,6 +385,10 @@ final class AssetModuleUpdatePacketTest {
         assertTrue(
             module.operationOrNull()
                 .reserveItems());
+        assertTrue(
+            module.operationOrNull()
+                .plan()
+                .voidCompletionRefund());
         assertEquals(
             ModuleTier.ZPM,
             module.operationOrNull()

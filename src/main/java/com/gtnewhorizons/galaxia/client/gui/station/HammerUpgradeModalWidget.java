@@ -28,12 +28,13 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_TOP = HEIGHT - 58;
     private static final int FOOTER_TOP = HEIGHT - 30;
-    private static final int TARGET_BUTTON_WIDTH = 68;
-    private static final int TIER_BUTTON_WIDTH = 52;
-    private static final int RESERVE_BUTTON_WIDTH = 84;
+    private static final int TARGET_BUTTON_WIDTH = 58;
+    private static final int TIER_BUTTON_WIDTH = 42;
+    private static final int RESERVE_BUTTON_WIDTH = 62;
+    private static final int VOID_BUTTON_WIDTH = 54;
     private static final int CONFIRM_BUTTON_WIDTH = 72;
     private static final int BACK_BUTTON_WIDTH = 54;
-    private static final int COLUMN_GAP = 8;
+    private static final int COLUMN_GAP = 4;
     private static final int BODY_WIDTH = WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2;
 
     private final CelestialAsset.ID assetId;
@@ -63,6 +64,12 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
                 .button(this::canUseControls, this::reserveLabel, controller::toggleHammerUpgradeReserveItems)
                 .pos(x, BUTTON_TOP)
                 .size(RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT));
+        x += RESERVE_BUTTON_WIDTH + COLUMN_GAP;
+        child(
+            ModuleConfigModalSupport
+                .button(this::canUseControls, this::voidLabel, controller::toggleHammerUpgradeVoidRefund)
+                .pos(x, BUTTON_TOP)
+                .size(VOID_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(this::canConfirm, "Confirm", this::confirm)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_TOP)
@@ -190,7 +197,11 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     }
 
     private String reserveLabel() {
-        return controller.hammerUpgradeReserveItems() ? "Reserve: On" : "Reserve: Off";
+        return controller.hammerUpgradeReserveItems() ? "Res On" : "Res Off";
+    }
+
+    private String voidLabel() {
+        return controller.hammerUpgradeVoidRefund() ? "Void On" : "Void Off";
     }
 
     private boolean canUseControls() {
@@ -219,7 +230,8 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             controller.moduleIndex(),
             controller.hammerUpgradeVariant(),
             controller.hammerUpgradeTier(),
-            controller.hammerUpgradeReserveItems());
+            controller.hammerUpgradeReserveItems(),
+            controller.hammerUpgradeVoidRefund());
         controller.close();
     }
 

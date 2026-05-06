@@ -1,7 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.operation;
 
 public record ModuleOperationPlan(ModuleOperationTargetSpec targetSpec, int buildTicks, int completionRefundPercent,
-    boolean reserveItems) {
+    boolean reserveItems, boolean voidCompletionRefund) {
+
+    public ModuleOperationPlan(ModuleOperationTargetSpec targetSpec, int buildTicks, int completionRefundPercent,
+        boolean reserveItems) {
+        this(targetSpec, buildTicks, completionRefundPercent, reserveItems, false);
+    }
 
     public ModuleOperationPlan {
         if (targetSpec == null) {

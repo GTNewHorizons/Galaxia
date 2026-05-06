@@ -191,6 +191,7 @@ final class FacilityPersistenceManagerTest {
                         "BIG"),
                     200,
                     80,
+                    true,
                     true))
             .withDepositedResources(Map.of("minecraft:iron_ingot:0", 8L))
             .beginBuilding()
@@ -212,6 +213,9 @@ final class FacilityPersistenceManagerTest {
         assertEquals(ModuleOperationPhase.BUILDING, decodedOperation.phase());
         assertEquals(1, decodedOperation.elapsedBuildTicks());
         assertTrue(decodedOperation.reserveItems());
+        assertTrue(
+            decodedOperation.plan()
+                .voidCompletionRefund());
         assertEquals(
             "BASE",
             decodedOperation.plan()

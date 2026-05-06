@@ -80,6 +80,35 @@ final class AutomatedFacilityOperationTest {
     }
 
     @Test
+    void reserveAvailableOperationMaterialsCollectsPartialDeposits() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStack material = material();
+        ItemStackWrapper key = ItemStackWrapper.of(material);
+        facility.inventory.add(key, 2L);
+        module.setOperation(ModuleOperationState.waiting(plan()));
+
+        assertFalse(facility.tryReserveAvailableOperationMaterials(module, Map.of(material, 5L)));
+
+        assertEquals(0L, facility.inventory.getAmount(key));
+        assertEquals(
+            2L,
+            module.operationOrNull()
+                .depositedResources()
+                .get(key.toKey()));
+
+        facility.inventory.add(key, 3L);
+
+        assertTrue(facility.tryReserveAvailableOperationMaterials(module, Map.of(material, 5L)));
+        assertEquals(
+            5L,
+            module.operationOrNull()
+                .depositedResources()
+                .get(key.toKey()));
+    }
+
+    @Test
     void cancelQueuesFullDepositIntoRefundBuffer() {
         AutomatedFacility facility = facilityWithHammer();
         ModuleInstance module = facility.modules()
@@ -144,7 +173,7 @@ final class AutomatedFacilityOperationTest {
         ModuleInstance module = facility.modules()
             .get(0);
         module.setOperation(
-            ModuleOperationState.waiting(hammerUpgradePlan(2))
+            ModuleOperationState.waiting(hammerUpgradePlan(2, true))
                 .beginBuilding());
 
         assertEquals(ModuleTier.EV, module.tier());
@@ -184,6 +213,10 @@ final class AutomatedFacilityOperationTest {
     }
 
     private static ModuleOperationPlan hammerUpgradePlan(int buildTicks) {
+        return hammerUpgradePlan(buildTicks, false);
+    }
+
+    private static ModuleOperationPlan hammerUpgradePlan(int buildTicks, boolean voidCompletionRefund) {
         return new ModuleOperationPlan(
             new ModuleOperationTargetSpec(
                 ModuleOperationKind.UPGRADE_REBUILD,
@@ -194,8 +227,9 @@ final class AutomatedFacilityOperationTest {
                 ModuleTier.LuV,
                 "BIG"),
             buildTicks,
-            0,
-            false);
+            80,
+            false,
+            voidCompletionRefund);
     }
 
     private static ItemStack material() {
