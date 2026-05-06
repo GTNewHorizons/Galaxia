@@ -223,6 +223,13 @@ public final class CelestialClient {
             module -> AssetModuleUpdatePacket.createMinerSettingsGroup(assetId, moduleIndex, module.id));
     }
 
+    public static void cancelModuleOperation(ID assetId, int moduleIndex) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.cancelModuleOperation(assetId, moduleIndex, module.id));
+    }
+
     public static void planHammerUpgrade(ID assetId, int moduleIndex, HammerVariant variant, ModuleTier tier,
         boolean reserveItems, boolean voidCompletionRefund) {
         sendModuleUpdate(

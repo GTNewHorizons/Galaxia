@@ -138,6 +138,11 @@ public final class AssetModuleUpdatePacket {
         return config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
     }
 
+    public static AssetModuleUpdatePacket cancelModuleOperation(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId) {
+        return config(assetId, moduleIndex, moduleId, ConfigAction.CANCEL_MODULE_OPERATION);
+    }
+
     public static AssetModuleUpdatePacket hammerUpgradePlan(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, HammerVariant variant, ModuleTier tier, boolean reserveItems,
         boolean voidCompletionRefund) {
@@ -226,6 +231,7 @@ public final class AssetModuleUpdatePacket {
         SET_ENABLED,
         SET_SETTINGS_GROUP,
         CREATE_SETTINGS_GROUP,
+        CANCEL_MODULE_OPERATION,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT
@@ -261,7 +267,7 @@ public final class AssetModuleUpdatePacket {
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
                 case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
-                case CREATE_SETTINGS_GROUP -> {}
+                case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
                 case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
@@ -322,7 +328,7 @@ public final class AssetModuleUpdatePacket {
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
             case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
-            case CREATE_SETTINGS_GROUP -> {}
+            case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
@@ -483,6 +489,7 @@ public final class AssetModuleUpdatePacket {
             }
             case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, packet.shortPayload);
             case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
+            case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
     }

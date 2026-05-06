@@ -5,6 +5,7 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -25,6 +26,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     private static final int UPGRADE_BUTTON_WIDTH = 70;
     private static final int ITEMS_BUTTON_X = 86;
     private static final int ITEMS_BUTTON_WIDTH = 54;
+    private static final int CANCEL_BUTTON_X = 148;
+    private static final int CANCEL_BUTTON_WIDTH = 54;
     private static final int CLOSE_BUTTON_X = WIDTH - 62;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int BAR_TOP_OFFSET = 2;
@@ -44,6 +47,10 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Items", this::openLogistics)
                 .pos(ITEMS_BUTTON_X, FOOTER_Y)
                 .size(ITEMS_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::hasCancellableOperation, "Cancel", this::cancelOperation)
+                .pos(CANCEL_BUTTON_X, FOOTER_Y)
+                .size(CANCEL_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Close", controller::close)
                 .pos(CLOSE_BUTTON_X, FOOTER_Y)
@@ -130,12 +137,26 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         controller.openLogistics(controller.moduleIndex());
     }
 
+    private void cancelOperation() {
+        if (!hasCancellableOperation()) return;
+        CelestialClient.cancelModuleOperation(assetId, controller.moduleIndex());
+    }
+
     private boolean canUseControls() {
         ModuleInstance module = selectedModule();
         return controller.isHammerOpen() && module != null
             && (module.operationOrNull() == null || module.operationOrNull()
                 .phase()
                 .isTerminal());
+    }
+
+    private boolean hasCancellableOperation() {
+        ModuleInstance module = selectedModule();
+        return controller.isHammerOpen() && module != null
+            && module.operationOrNull() != null
+            && !module.operationOrNull()
+                .phase()
+                .isTerminal();
     }
 
     private ModuleInstance selectedModule() {

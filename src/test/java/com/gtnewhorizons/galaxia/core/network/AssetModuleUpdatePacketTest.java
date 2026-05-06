@@ -435,6 +435,36 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyCancelModuleOperationCancelsActiveOperation() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new ModuleOperationTargetSpec(
+                        ModuleOperationKind.UPGRADE_REBUILD,
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.EV,
+                        "BASE",
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.IV,
+                        "BASE"),
+                    200,
+                    80,
+                    false)));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.cancelModuleOperation(facility.assetId, 0, module.id));
+
+        packet.apply(TEAM);
+
+        assertEquals(
+            ModuleOperationPhase.CANCELLED,
+            module.operationOrNull()
+                .phase());
+    }
+
+    @Test
     void applyMinerBlacklistUpdatesOreState() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
