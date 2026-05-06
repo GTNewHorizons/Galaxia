@@ -139,6 +139,35 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void minerSettingsGroupRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance miner = station.modules()
+            .get(1);
+        station.setMinerOreBlacklisted(miner, "ore:iron", true);
+        short groupId = station.createSettingsGroupForModule(miner, "Shared miners")
+            .id();
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleInstance decodedMiner = decoded.modules()
+            .get(1);
+        assertEquals(groupId, decodedMiner.groupId());
+        assertTrue(decoded.isMinerOreBlacklisted(decodedMiner, "ore:iron"));
+        assertEquals(
+            "Shared miners",
+            decoded.settingsGroups()
+                .require(groupId)
+                .displayName());
+    }
+
+    @Test
     void obsoleteMinerBlacklistDataCrashesOnLoad() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();
@@ -1030,6 +1059,7 @@ final class FacilityPersistenceManagerTest {
         legacy.planetaryAnchorBodyId = "PANSPIRA";
         legacy.energyStored = 0L;
         legacy.settingsGroupsNextId = 1;
+        legacy.settingsGroups = new ArrayList<>();
         legacy.modules = new ArrayList<>();
 
         // One valid HAMMER module

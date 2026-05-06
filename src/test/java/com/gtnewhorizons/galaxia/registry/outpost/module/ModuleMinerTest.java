@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 final class ModuleMinerTest {
 
@@ -80,6 +81,30 @@ final class ModuleMinerTest {
         assertFalse(ModuleMiner.shouldVoidOre(miner, facility, "ore:copper"));
     }
 
+    @Test
+    void minerSettingsGroupSharesAndCopiesSettingsOnLeave() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance first = createMiner(StationTileCoord.of(1, 0));
+        ModuleInstance second = createMiner(StationTileCoord.of(2, 0));
+        facility.addModule(first);
+        facility.addModule(second);
+        facility.setMinerOreBlacklisted(first, "ore:iron", true);
+
+        SettingsGroup group = facility.createSettingsGroupForModule(first, "Tin line");
+        facility.assignSettingsGroup(second, group.id());
+
+        assertTrue(facility.isMinerOreBlacklisted(second, "ore:iron"));
+
+        facility.setMinerOreBlacklisted(second, "ore:copper", true);
+        assertTrue(facility.isMinerOreBlacklisted(first, "ore:copper"));
+
+        facility.leaveSettingsGroup(second);
+        facility.setMinerOreBlacklisted(first, "ore:gold", true);
+
+        assertTrue(facility.isMinerOreBlacklisted(second, "ore:copper"));
+        assertFalse(facility.isMinerOreBlacklisted(second, "ore:gold"));
+    }
+
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -89,12 +114,12 @@ final class ModuleMinerTest {
     }
 
     private static ModuleInstance createMiner() {
-        ModuleInstance miner = FacilityModuleRegistry.create(
-            ModuleInstance.ID.create(),
-            FacilityModuleKind.MINER,
-            StationTileCoord.of(1, 0),
-            ModuleShape.SINGLE,
-            ModuleTier.EV);
+        return createMiner(StationTileCoord.of(1, 0));
+    }
+
+    private static ModuleInstance createMiner(StationTileCoord anchor) {
+        ModuleInstance miner = FacilityModuleRegistry
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, anchor, ModuleShape.SINGLE, ModuleTier.EV);
         miner.updateStatus(Buildable.Status.OPERATIONAL);
         return miner;
     }

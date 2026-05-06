@@ -23,7 +23,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
 public final class AutomatedFacility extends CelestialAsset {
@@ -166,8 +169,12 @@ public final class AutomatedFacility extends CelestialAsset {
             throw new IllegalStateException("Miner settings requested for non-miner module " + module.id);
         }
         if (module.groupId() != 0) {
-            throw new IllegalStateException(
-                "Grouped miner settings are not wired yet for module " + module.id + ", groupId=" + module.groupId());
+            SettingsGroup group = settingsGroups.require(module.groupId(), FacilityModuleKind.MINER);
+            if (!(group.settings() instanceof MinerSettings settings)) {
+                throw new IllegalStateException(
+                    "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
+            }
+            return settings;
         }
         return miner.requireLocalSettings();
     }
@@ -178,7 +185,85 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
         if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
-            markModuleDirty(module.id);
+            if (module.groupId() == 0) {
+                markModuleDirty(module.id);
+            } else {
+                markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
+            }
+        }
+    }
+
+    public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
+        ModuleSettings settings = copySettings(module);
+        detachFromSettingsGroup(module);
+        SettingsGroup group = settingsGroups.create(module.kind(), displayName, settings);
+        attachToSettingsGroup(module, group);
+        return group;
+    }
+
+    public void assignSettingsGroup(ModuleInstance module, short groupId) {
+        if (groupId == 0) {
+            leaveSettingsGroup(module);
+            return;
+        }
+        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        detachFromSettingsGroup(module);
+        attachToSettingsGroup(module, group);
+    }
+
+    public void leaveSettingsGroup(ModuleInstance module) {
+        if (module.groupId() == 0) return;
+        ModuleSettings settings = copySettings(module);
+        detachFromSettingsGroup(module);
+        applyLocalSettings(module, settings);
+        markModuleDirty(module.id);
+    }
+
+    private ModuleSettings copySettings(ModuleInstance module) {
+        if (module.component() instanceof ModuleMiner) {
+            return minerSettings(module).copy();
+        }
+        throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+    }
+
+    private void attachToSettingsGroup(ModuleInstance module, SettingsGroup group) {
+        settingsGroups.require(group.id(), module.kind());
+        settingsGroups.addMember(group.id(), module.anchor());
+        module.setGroupId(group.id());
+        clearLocalSettings(module);
+        markModuleDirty(module.id);
+    }
+
+    private void detachFromSettingsGroup(ModuleInstance module) {
+        if (module.groupId() == 0) return;
+        short oldGroupId = module.groupId();
+        settingsGroups.removeMember(oldGroupId, module.anchor());
+        module.setGroupId((short) 0);
+    }
+
+    private void applyLocalSettings(ModuleInstance module, ModuleSettings settings) {
+        if (settings instanceof MinerSettings minerSettings && module.component() instanceof ModuleMiner miner) {
+            miner.setLocalSettings(minerSettings);
+            return;
+        }
+        throw new IllegalStateException("Cannot apply settings " + settings + " to module " + module.id);
+    }
+
+    private void clearLocalSettings(ModuleInstance module) {
+        if (module.component() instanceof ModuleMiner miner) {
+            miner.clearLocalSettings();
+            return;
+        }
+        throw new IllegalStateException("Cannot clear local settings for module " + module.id);
+    }
+
+    private void markSettingsGroupMembersDirty(SettingsGroup group) {
+        for (StationTileCoord coord : group.members()) {
+            for (ModuleInstance module : modules) {
+                if (coord.equals(module.anchorOrNull())) {
+                    markModuleDirty(module.id);
+                }
+            }
         }
     }
 

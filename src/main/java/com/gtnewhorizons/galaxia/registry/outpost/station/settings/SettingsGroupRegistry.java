@@ -21,6 +21,11 @@ public final class SettingsGroupRegistry {
         return Collections.unmodifiableMap(groups);
     }
 
+    public void clear() {
+        groups.clear();
+        nextGroupId = 1;
+    }
+
     public short nextGroupId() {
         return nextGroupId;
     }
@@ -51,6 +56,19 @@ public final class SettingsGroupRegistry {
             throw new IllegalStateException("SettingsGroup ID space exhausted");
         }
         short id = nextGroupId++;
+        SettingsGroup group = new SettingsGroup(id, kind, displayName, settings);
+        groups.put(id, group);
+        return group;
+    }
+
+    public SettingsGroup restore(short id, FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        if (groups.containsKey(id)) {
+            throw new IllegalStateException("SettingsGroupRegistry.restore: duplicate groupId=" + id);
+        }
+        if (id >= nextGroupId) {
+            throw new IllegalStateException(
+                "SettingsGroupRegistry.restore: groupId=" + id + " is not below nextGroupId=" + nextGroupId);
+        }
         SettingsGroup group = new SettingsGroup(id, kind, displayName, settings);
         groups.put(id, group);
         return group;

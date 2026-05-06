@@ -66,6 +66,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -359,6 +361,13 @@ public final class FacilityPersistenceManager {
         out.energyStored = state.getEnergyStored();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
+        out.settingsGroups = new ArrayList<>();
+        state.settingsGroups()
+            .groups()
+            .values()
+            .stream()
+            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
+            .forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -507,7 +516,18 @@ public final class FacilityPersistenceManager {
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.settingsGroups()
+            .clear();
+        state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
+        List<SettingsGroupJson> settingsGroups = Objects
+            .requireNonNull(json.settingsGroups, "[PERSIST] Facility missing settingsGroups");
+        for (SettingsGroupJson groupJson : settingsGroups) {
+            FacilityModuleKind groupKind = Objects.requireNonNull(
+                safeValueOf(FacilityModuleKind.class, groupJson.kind),
+                "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
+            state.settingsGroups()
+                .restore(groupJson.id, groupKind, groupJson.displayName, decodeSettingsGroupSettings(groupJson));
+        }
 
         int moduleDecodedCount = 0;
         if (json.modules != null) {
@@ -747,6 +767,21 @@ public final class FacilityPersistenceManager {
                 json.layoutTiles != null ? json.layoutTiles.size() : 0);
         }
 
+        for (ModuleInstance module : state.modules()) {
+            if (module.groupId() != 0) {
+                state.settingsGroups()
+                    .addMember(module.groupId(), module.anchor());
+            }
+        }
+        for (SettingsGroup group : state.settingsGroups()
+            .groups()
+            .values()) {
+            if (group.members()
+                .isEmpty()) {
+                throw new IllegalStateException("[PERSIST] Settings group " + group.id() + " has no member modules");
+            }
+        }
+
         LOG.info(
             "[PERSIST] LOAD DECODE END: facility {} has {} module(s), layout has {} tile(s)",
             state.assetId,
@@ -801,6 +836,7 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         long energyStored;
         short settingsGroupsNextId;
+        List<SettingsGroupJson> settingsGroups;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
@@ -814,6 +850,14 @@ public final class FacilityPersistenceManager {
         int dy;
         String state;
         String moduleId;
+    }
+
+    static final class SettingsGroupJson {
+
+        short id;
+        String kind;
+        String displayName;
+        JsonObject data;
     }
 
     static final class ModuleJson {
@@ -1036,6 +1080,50 @@ public final class FacilityPersistenceManager {
                 return null;
             }
         }
+    }
+
+    private static SettingsGroupJson encodeSettingsGroup(SettingsGroup group) {
+        SettingsGroupJson json = new SettingsGroupJson();
+        json.id = group.id();
+        json.kind = group.kind()
+            .name();
+        json.displayName = group.displayName();
+        json.data = encodeSettingsGroupSettings(group.settings());
+        return json;
+    }
+
+    private static JsonObject encodeSettingsGroupSettings(ModuleSettings settings) {
+        JsonObject data = new JsonObject();
+        if (settings instanceof MinerSettings minerSettings) {
+            data.add("minerSettings", PURE_GSON.toJsonTree(minerSettings));
+            return data;
+        }
+        throw new IllegalStateException("[PERSIST] Unsupported settings group payload " + settings);
+    }
+
+    private static ModuleSettings decodeSettingsGroupSettings(SettingsGroupJson groupJson) {
+        JsonObject data = Objects
+            .requireNonNull(groupJson.data, "[PERSIST] Settings group " + groupJson.id + " missing data");
+        FacilityModuleKind kind = Objects.requireNonNull(
+            safeValueOf(FacilityModuleKind.class, groupJson.kind),
+            "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
+        if (kind == FacilityModuleKind.MINER) {
+            if (data.entrySet()
+                .size() != 1 || !data.has("minerSettings")) {
+                throw new IllegalStateException(
+                    "[PERSIST] Miner settings group " + groupJson.id + " has malformed data");
+            }
+            JsonObject settingsData = data.getAsJsonObject("minerSettings");
+            JsonElement keysElement = Objects.requireNonNull(
+                settingsData.get("blacklistedOreKeys"),
+                "[PERSIST] Miner settings group " + groupJson.id + " missing blacklistedOreKeys");
+            Type keySetType = new TypeToken<Set<String>>() {}.getType();
+            Set<String> keys = Objects.requireNonNull(
+                PURE_GSON.fromJson(keysElement, keySetType),
+                "[PERSIST] Miner settings group " + groupJson.id + " has null blacklistedOreKeys");
+            return new MinerSettings(keys);
+        }
+        throw new IllegalStateException("[PERSIST] Unsupported settings group kind " + kind);
     }
 
     private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {
