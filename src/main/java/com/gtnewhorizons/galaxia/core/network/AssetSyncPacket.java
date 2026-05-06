@@ -19,11 +19,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -57,6 +57,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
+    public static final byte MINER_VOID_CONFIG_UPDATED = 11;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -81,6 +82,7 @@ public final class AssetSyncPacket implements IMessage {
     private String resourceKey;
     private long inventoryDelta;
     private LogisticsResourceConfig logConfig;
+    private int minerVoidChancePercent;
 
     private StationTileCoord tileCoord;
     private StationTileState tileState;
@@ -121,6 +123,11 @@ public final class AssetSyncPacket implements IMessage {
                     cfg.orderSize(),
                     cfg.isImportEnabled(),
                     cfg.isSupplyEnabled()));
+        }
+
+        for (Map.Entry<String, Integer> e : state.minerVoidChances()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(minerVoidConfigUpdated(state.assetId, e.getKey(), e.getValue()));
         }
 
         StationLayout layout = state.stationLayout();
@@ -235,6 +242,18 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    public static AssetSyncPacket minerVoidConfigUpdated(CelestialAsset.ID assetId, String oreKey, int percent) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = MINER_VOID_CONFIG_UPDATED;
+        pkt.resourceKey = Objects.requireNonNull(oreKey, "oreKey");
+        if (percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("miner void chance percent out of range: " + percent);
+        }
+        pkt.minerVoidChancePercent = percent;
+        return pkt;
+    }
+
     /**
      * Decides what to sync for the given facility and player. Returns a list of packets
      * (full sync or individual deltas) and updates the facility's dirty/sync state.
@@ -246,6 +265,7 @@ public final class AssetSyncPacket implements IMessage {
             facility.markSyncedFor(playerId);
             facility.drainDirtyModules();
             facility.drainRemovedIds();
+            facility.drainDirtyMinerVoidChances();
             return packets;
         }
         if (!facility.isDirty()) {
@@ -259,6 +279,12 @@ public final class AssetSyncPacket implements IMessage {
         for (ModuleInstance m : facility.drainDirtyModules()) {
             int idx = facility.moduleIndex(m.id);
             packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
+        }
+        for (Map.Entry<String, Integer> e : facility.drainDirtyMinerVoidChances()
+            .entrySet()) {
+            packets.add(
+                minerVoidConfigUpdated(facility.assetId, e.getKey(), e.getValue())
+                    .withSyncRevision(facility.getSyncRevision()));
         }
         return packets;
     }
@@ -352,6 +378,10 @@ public final class AssetSyncPacket implements IMessage {
                 if (hasModule) PacketUtil.writeId(buf, tileModuleId);
             }
             case LAYOUT_TILE_REMOVED -> PacketUtil.writeStationTileCoord(buf, tileCoord);
+            case MINER_VOID_CONFIG_UPDATED -> {
+                PacketUtil.writeString(buf, resourceKey);
+                buf.writeByte(minerVoidChancePercent);
+            }
         }
     }
 
@@ -380,6 +410,14 @@ public final class AssetSyncPacket implements IMessage {
                 tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
             }
             case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readStationTileCoord(buf);
+            case MINER_VOID_CONFIG_UPDATED -> {
+                resourceKey = PacketUtil.readString(buf);
+                minerVoidChancePercent = buf.readUnsignedByte();
+                if (minerVoidChancePercent > 100) {
+                    throw new IllegalArgumentException(
+                        "miner void chance percent out of range: " + minerVoidChancePercent);
+                }
+            }
         }
     }
 
@@ -399,14 +437,7 @@ public final class AssetSyncPacket implements IMessage {
         if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
 
         switch (module.kind()) {
-            case MINER -> {
-                ModuleMiner m = (ModuleMiner) module.component();
-                buf.writeInt(
-                    m.blacklistedItemKeys()
-                        .size());
-                for (String k : m.blacklistedItemKeys()) PacketUtil.writeString(buf, k);
-                buf.writeBoolean(m.copySettingsToOtherMiners());
-            }
+            case MINER -> {}
             case HAMMER -> {
                 ModuleHammer h = (ModuleHammer) module.component();
                 PacketUtil.writeEnum(
@@ -417,8 +448,7 @@ public final class AssetSyncPacket implements IMessage {
                     h.config()
                         .threshold());
                 PacketUtil.writeEnum(buf, h.routePriority());
-                buf.writeBoolean(h.planetaryHandling());
-                buf.writeBoolean(h.crossPlanetaryCapability);
+                PacketUtil.writeEnum(buf, h.variant());
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
@@ -447,23 +477,16 @@ public final class AssetSyncPacket implements IMessage {
         module.setGroupId(groupId);
 
         switch (kind) {
-            case MINER -> {
-                int c = buf.readInt();
-                List<String> blacklist = new ArrayList<>(c);
-                for (int i = 0; i < c; i++) blacklist.add(PacketUtil.readString(buf));
-                boolean copySettings = buf.readBoolean();
-                module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
-            }
+            case MINER -> {}
             case HAMMER -> {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
                     buf.readDouble());
                 OrbitalTransferPlanner.RoutePriority routePriority = PacketUtil
                     .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
-                boolean planetaryHandling = buf.readBoolean();
-                boolean crossPlanetaryCapability = buf.readBoolean();
-                module.setComponent(
-                    new ModuleHammer(kind, cfg, routePriority, false, planetaryHandling, crossPlanetaryCapability, 64));
+                HammerVariant variant = PacketUtil.readEnum(buf, HammerVariant.class);
+                ModuleHammer.requireTier(variant, tier);
+                module.setComponent(new ModuleHammer(kind, cfg, routePriority, false, variant, 64));
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
@@ -672,6 +695,8 @@ public final class AssetSyncPacket implements IMessage {
                 StationLayout layout = state.stationLayout();
                 if (layout != null) layout.remove(packet.tileCoord);
             }
+            case MINER_VOID_CONFIG_UPDATED -> state
+                .setMinerVoidChancePercent(packet.resourceKey, packet.minerVoidChancePercent);
         }
     }
 
@@ -715,6 +740,7 @@ public final class AssetSyncPacket implements IMessage {
             state.setEnergyStored(packet.energyStored);
 
             state.clearModules();
+            state.setMinerVoidChances(java.util.Collections.emptyMap());
             state.inventory.clear();
             state.logisticsConfig.clear();
             StationLayout layout = state.stationLayout();
@@ -785,6 +811,8 @@ public final class AssetSyncPacket implements IMessage {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
+                case MINER_VOID_CONFIG_UPDATED -> state
+                    .setMinerVoidChancePercent(packet.resourceKey, packet.minerVoidChancePercent);
             }
         }
 

@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -280,6 +281,34 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyHammerVariantRejectsTierMismatch() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket.config(
+            facility.assetId,
+            0,
+            module.id,
+            AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
+            HammerVariant.BIG);
+
+        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+    }
+
+    @Test
+    void applyMinerVoidPercentClampsPlayerInput() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .minerVoidPercent(facility.assetId, 0, module.id, "ore:iron", 150);
+
+        packet.apply(TEAM);
+
+        assertEquals(100, facility.minerVoidChancePercent("ore:iron"));
+    }
+
+    @Test
     void fromBytesCrashesOnRecipePayloadLargerThanCap() {
         ByteBuf buf = Unpooled.buffer();
         PacketUtil.writeId(buf, ASSET_ID);
@@ -353,6 +382,31 @@ final class AssetModuleUpdatePacketTest {
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = FacilityModuleKind.MACERATOR
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
+        facility.addModule(module);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static AutomatedFacility addHammerFacilityToServer(ModuleTier tier) {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.HAMMER.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        facility.addModule(module);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static AutomatedFacility addMinerFacilityToServer() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;

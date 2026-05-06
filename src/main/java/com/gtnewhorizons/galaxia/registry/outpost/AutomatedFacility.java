@@ -3,11 +3,15 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.logging.log4j.LogManager;
@@ -43,14 +47,16 @@ public final class AutomatedFacility extends CelestialAsset {
     private final LayoutCacheBundle layoutCache;
 
     private final SettingsGroupRegistry settingsGroups;
+    private final Map<String, Integer> minerVoidChancePercentByOre;
 
     private long energyStored;
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
+    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
-    public static final long MAX_ENERGY = 1_000_000L;
+    public static final long MAX_ENERGY = 8_000_000L;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
         super(assetId, celestialBodyId, kind, status, null);
@@ -68,6 +74,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
+        this.minerVoidChancePercentByOre = new LinkedHashMap<>();
         this.energyStored = 0;
     }
 
@@ -159,13 +166,59 @@ public final class AutomatedFacility extends CelestialAsset {
         return modules;
     }
 
+    public Map<String, Integer> minerVoidChances() {
+        return Collections.unmodifiableMap(minerVoidChancePercentByOre);
+    }
+
+    public int minerVoidChancePercent(String oreKey) {
+        return minerVoidChancePercentByOre.getOrDefault(requireOreKey(oreKey), 0);
+    }
+
+    public void setMinerVoidChancePercent(String oreKey, int percent) {
+        String key = requireOreKey(oreKey);
+        percent = clampMinerVoidChancePercent(percent);
+        Integer oldValue = minerVoidChancePercentByOre.get(key);
+        Integer newValue = percent == 0 ? null : percent;
+        if (newValue == null) {
+            minerVoidChancePercentByOre.remove(key);
+        } else {
+            minerVoidChancePercentByOre.put(key, newValue);
+        }
+        if (!Objects.equals(oldValue, newValue)) {
+            dirtyMinerVoidChanceOreKeys.add(key);
+            bumpSyncRevision();
+        }
+    }
+
+    public void setMinerVoidChances(@Nonnull Map<String, Integer> chances) {
+        minerVoidChancePercentByOre.clear();
+        for (Map.Entry<String, Integer> entry : chances.entrySet()) {
+            String key = requireOreKey(entry.getKey());
+            if (entry.getValue() == null) throw new IllegalArgumentException("Chance has to be present");
+            int percent = requireMinerVoidChancePercent(entry.getValue());
+            if (percent != 0) minerVoidChancePercentByOre.put(key, percent);
+        }
+        dirtyMinerVoidChanceOreKeys.clear();
+    }
+
+    private static int requireMinerVoidChancePercent(int percent) {
+        if (percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("Miner void chance percent out of range: " + percent);
+        }
+        return percent;
+    }
+
+    public static int clampMinerVoidChancePercent(int percent) {
+        return Math.clamp(percent, 0, 100);
+    }
+
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);
         bumpSyncRevision();
     }
 
     public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyMinerVoidChanceOreKeys.isEmpty();
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
@@ -189,6 +242,15 @@ public final class AutomatedFacility extends CelestialAsset {
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
+        return result;
+    }
+
+    public Map<String, Integer> drainDirtyMinerVoidChances() {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        for (String oreKey : dirtyMinerVoidChanceOreKeys) {
+            result.put(oreKey, minerVoidChancePercent(oreKey));
+        }
+        dirtyMinerVoidChanceOreKeys.clear();
         return result;
     }
 
@@ -225,6 +287,11 @@ public final class AutomatedFacility extends CelestialAsset {
             if (k == FacilityModuleKind.HAMMER && m.isOperational()) return true;
         }
         return false;
+    }
+
+    private static String requireOreKey(@Nonnull String oreKey) {
+        if (oreKey.isEmpty()) throw new IllegalArgumentException("oreKey cannot be empty");
+        return oreKey;
     }
 
     @Override

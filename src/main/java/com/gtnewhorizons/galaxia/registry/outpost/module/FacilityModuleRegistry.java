@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -39,11 +38,11 @@ public class FacilityModuleRegistry {
             20,
             Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleMiner::generateOre,
-            () -> new ModuleMiner(FacilityModuleKind.MINER, new ArrayList<>(), false));
+            () -> new ModuleMiner(FacilityModuleKind.MINER));
         register(
             FacilityModuleKind.HAMMER,
             1000L,
-            10L,
+            0L,
             20,
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleHammer::prepareToFire,
@@ -52,8 +51,7 @@ public class FacilityModuleRegistry {
                 AllowShootingConfig.ALWAYS,
                 OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
                 false,
-                true,
-                false,
+                HammerVariant.BASE,
                 64));
         register(
             FacilityModuleKind.STORAGE,
