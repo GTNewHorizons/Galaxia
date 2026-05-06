@@ -66,12 +66,14 @@ final class ModuleConfigModalSupport {
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, String label, String tooltip, Runnable onClick) {
-        return button(enabledSupplier, label, onClick).tooltip(t -> t.addLine(tooltip));
+        return button(enabledSupplier, label, onClick)
+            .tooltip(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); });
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, Supplier<String> labelSupplier, String tooltip,
         Runnable onClick) {
-        return button(enabledSupplier, labelSupplier, onClick).tooltip(t -> t.addLine(tooltip));
+        return button(enabledSupplier, labelSupplier, onClick)
+            .tooltip(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); });
     }
 
     static int drawLine(String text, int x, int y, int color) {

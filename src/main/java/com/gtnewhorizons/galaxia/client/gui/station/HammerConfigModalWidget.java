@@ -26,12 +26,11 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     private static final int UPGRADE_BUTTON_WIDTH = 70;
     private static final int ITEMS_BUTTON_X = 86;
     private static final int ITEMS_BUTTON_WIDTH = 54;
-    private static final int CANCEL_BUTTON_X = 148;
-    private static final int CANCEL_BUTTON_WIDTH = 54;
     private static final int CLOSE_BUTTON_X = WIDTH - 62;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int BAR_TOP_OFFSET = 2;
     private static final int BAR_HEIGHT = 8;
+    private static final int OPERATION_TEXT_OFFSET = 5;
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
@@ -40,17 +39,14 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         this.assetId = assetId;
         this.controller = controller;
         child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Upgrade", this::openUpgrade)
+            ModuleConfigModalSupport
+                .button(this::canUsePrimaryButton, this::primaryButtonLabel, this::primaryButtonAction)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
                 .size(UPGRADE_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Items", this::openLogistics)
                 .pos(ITEMS_BUTTON_X, FOOTER_Y)
                 .size(ITEMS_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
-        child(
-            ModuleConfigModalSupport.button(this::hasCancellableOperation, "Cancel", this::cancelOperation)
-                .pos(CANCEL_BUTTON_X, FOOTER_Y)
-                .size(CANCEL_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Close", controller::close)
                 .pos(CLOSE_BUTTON_X, FOOTER_Y)
@@ -115,14 +111,9 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             barY + BAR_HEIGHT,
             EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
         if (module.operationOrNull() != null) {
-            int operationY = barY + BAR_HEIGHT + 5;
-            ModuleConfigModalSupport.drawLine(
-                "Operation: " + module.operationOrNull()
-                    .phase()
-                    .name(),
-                x,
-                operationY,
-                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            int operationY = barY + BAR_HEIGHT + OPERATION_TEXT_OFFSET;
+            ModuleConfigModalSupport
+                .drawLine(operationLabel(module), x, operationY, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
         }
     }
 
@@ -142,7 +133,23 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         CelestialClient.cancelModuleOperation(assetId, controller.moduleIndex());
     }
 
-    private boolean canUseControls() {
+    private boolean canUsePrimaryButton() {
+        return canOpenUpgrade() || hasCancellableOperation();
+    }
+
+    private String primaryButtonLabel() {
+        return hasCancellableOperation() ? "Cancel" : "Upgrade";
+    }
+
+    private void primaryButtonAction() {
+        if (hasCancellableOperation()) {
+            cancelOperation();
+        } else {
+            openUpgrade();
+        }
+    }
+
+    private boolean canOpenUpgrade() {
         ModuleInstance module = selectedModule();
         return controller.isHammerOpen() && module != null
             && (module.operationOrNull() == null || module.operationOrNull()
@@ -157,6 +164,17 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             && !module.operationOrNull()
                 .phase()
                 .isTerminal();
+    }
+
+    private static String operationLabel(ModuleInstance module) {
+        return switch (module.operationOrNull()
+            .phase()) {
+            case WAITING_FOR_MATERIALS -> "Module is waiting for materials";
+            case BUILDING -> "Module is upgrading";
+            case REFUNDING -> "Module is refunding";
+            case COMPLETE -> "Upgrade complete";
+            case CANCELLED -> "Upgrade cancelled";
+        };
     }
 
     private ModuleInstance selectedModule() {

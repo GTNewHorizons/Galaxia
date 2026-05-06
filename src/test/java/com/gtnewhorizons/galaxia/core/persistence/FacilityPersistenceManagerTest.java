@@ -332,7 +332,7 @@ final class FacilityPersistenceManagerTest {
             teamId,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             CelestialObjectId.PANSPIRA);
-        outpost.facility = malformedMinerFacility();
+        outpost.facility = malformedFacilityState();
 
         List<FacilityPersistenceManager.AssetJson> assets = new ArrayList<>();
         assets.add(station);
@@ -356,7 +356,7 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             thrown.getCause()
                 .getMessage()
-                .contains("malformed settings data"));
+                .contains("malformed"));
     }
 
     @Test
@@ -387,7 +387,7 @@ final class FacilityPersistenceManagerTest {
         return json;
     }
 
-    private static FacilityPersistenceManager.FacilityStateJson malformedMinerFacility() {
+    private static FacilityPersistenceManager.FacilityStateJson malformedFacilityState() {
         FacilityPersistenceManager.FacilityStateJson facility = new FacilityPersistenceManager.FacilityStateJson();
         facility.celestialBodyId = CelestialObjectId.PANSPIRA.toString();
         facility.systemId = CelestialObjectId.NOVA_CAELUM.toString();

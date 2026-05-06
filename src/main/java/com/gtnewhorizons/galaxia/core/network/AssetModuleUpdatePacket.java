@@ -516,19 +516,22 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
-    private static void planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
+    private static boolean planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
         ModuleTier targetTier) {
-        planHammerUpgrade(module, hammer, targetVariant, targetTier, false, false);
+        return planHammerUpgrade(module, hammer, targetVariant, targetTier, false, false);
     }
 
-    private static void planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
+    private static boolean planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
         ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund) {
         ModuleHammer.requireTier(targetVariant, targetTier);
         ModuleOperationState existingOperation = module.operationOrNull();
         if (existingOperation != null && !existingOperation.phase()
             .isTerminal()) {
-            throw new IllegalStateException(
-                "Module " + module.id + " already has active operation " + existingOperation.phase());
+            LOG.warn(
+                "Rejected hammer upgrade for module {} because operation {} is active",
+                module.id,
+                existingOperation.phase());
+            return false;
         }
         ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
             ModuleOperationKind.UPGRADE_REBUILD,
@@ -548,6 +551,7 @@ public final class AssetModuleUpdatePacket {
             reserveItems,
             voidCompletionRefund);
         module.setOperation(ModuleOperationState.waiting(plan));
+        return true;
     }
 
     private static void handleHammerUpgradePlan(AssetModuleUpdatePacket packet, ModuleInstance module) {

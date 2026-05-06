@@ -411,7 +411,7 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyHammerPhysicalChangeRejectsActiveOperation() {
+    void applyHammerPhysicalChangeIgnoresActiveOperationRequest() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
             .get(0);
@@ -430,9 +430,15 @@ final class AssetModuleUpdatePacketTest {
                     80,
                     false)));
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.IV);
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.LuV);
 
-        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        assertDoesNotThrow(() -> packet.apply(TEAM));
+        assertEquals(
+            ModuleTier.IV,
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetTier());
     }
 
     @Test
