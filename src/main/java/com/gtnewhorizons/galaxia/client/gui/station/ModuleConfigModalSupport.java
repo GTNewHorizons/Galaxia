@@ -62,18 +62,21 @@ final class ModuleConfigModalSupport {
                 if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
                 onClick.run();
                 return true;
-            });
+            })
+            .setEnabledIf(w -> enabledSupplier.getAsBoolean());
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, String label, String tooltip, Runnable onClick) {
         return button(enabledSupplier, label, onClick)
-            .tooltip(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); });
+            .tooltipDynamic(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); })
+            .onUpdateListener(ButtonWidget::markTooltipDirty, true);
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, Supplier<String> labelSupplier, String tooltip,
         Runnable onClick) {
         return button(enabledSupplier, labelSupplier, onClick)
-            .tooltip(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); });
+            .tooltipDynamic(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); })
+            .onUpdateListener(ButtonWidget::markTooltipDirty, true);
     }
 
     static int drawLine(String text, int x, int y, int color) {
