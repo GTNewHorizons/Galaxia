@@ -87,6 +87,57 @@ public class FacilityModuleRegistry {
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L),
             (instance, outpost) -> {},
             ModuleMaintenanceBay::new);
+
+        if (FacilityModuleKind.MACERATOR.isAvailable()) {
+            register(
+                FacilityModuleKind.MACERATOR,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleMacerator::processRecipe,
+                ModuleMacerator::new);
+            register(
+                FacilityModuleKind.CENTRIFUGE,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleCentrifuge::processRecipe,
+                ModuleCentrifuge::new);
+            register(
+                FacilityModuleKind.ELECTROLYZER,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleElectrolyzer::processRecipe,
+                ModuleElectrolyzer::new);
+            register(
+                FacilityModuleKind.CHEMICAL_REACTOR,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleChemicalReactor::processRecipe,
+                ModuleChemicalReactor::new);
+            register(
+                FacilityModuleKind.ASSEMBLER,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleAssembler::processRecipe,
+                ModuleAssembler::new);
+            register(
+                FacilityModuleKind.DISTILLERY,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleDistillery::processRecipe,
+                ModuleDistillery::new);
+        }
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,

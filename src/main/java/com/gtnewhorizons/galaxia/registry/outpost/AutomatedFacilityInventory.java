@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 public final class AutomatedFacilityInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
+    private final Map<String, Long> fluidAmounts = new LinkedHashMap<>();
 
     /** Returns the stored amount for the given item, or 0 if absent. */
     public long getAmount(ItemStackWrapper item) {
@@ -67,6 +68,33 @@ public final class AutomatedFacilityInventory {
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
 
+    public long getFluidAmount(String fluidName) {
+        if (fluidName == null) return 0L;
+        Long v = fluidAmounts.get(fluidName);
+        return v == null ? 0L : v;
+    }
+
+    public long addFluid(String fluidName, long delta) {
+        if (fluidName == null || fluidName.isEmpty()) return 0L;
+        long current = getFluidAmount(fluidName);
+        if (delta < 0) {
+            long actual = Math.max(delta, -current);
+            long newValue = current + actual;
+            if (newValue == 0) {
+                fluidAmounts.remove(fluidName);
+            } else {
+                fluidAmounts.put(fluidName, newValue);
+            }
+            return actual;
+        }
+        fluidAmounts.put(fluidName, current + delta);
+        return delta;
+    }
+
+    public @Nonnull Map<String, Long> fluidSnapshot() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
+    }
+
     /** Replaces the entire inventory contents (used during deserialization and migration). */
     public void loadFromSnapshot(@Nonnull Map<ItemStackWrapper, Long> snapshot) {
         amounts.clear();
@@ -75,9 +103,19 @@ public final class AutomatedFacilityInventory {
         }
     }
 
+    public void loadFluidSnapshot(@Nonnull Map<String, Long> snapshot) {
+        fluidAmounts.clear();
+        for (Map.Entry<String, Long> e : snapshot.entrySet()) {
+            if (e.getKey() != null && !e.getKey()
+                .isEmpty() && e.getValue() > 0) {
+                fluidAmounts.put(e.getKey(), e.getValue());
+            }
+        }
+    }
+
     /** Returns {@code true} if the inventory contains no resources. */
     public boolean isEmpty() {
-        return amounts.isEmpty();
+        return amounts.isEmpty() && fluidAmounts.isEmpty();
     }
 
     /** Sets the exact amount for a resource (used by client-side delta updates). */
@@ -91,5 +129,6 @@ public final class AutomatedFacilityInventory {
 
     public void clear() {
         amounts.clear();
+        fluidAmounts.clear();
     }
 }

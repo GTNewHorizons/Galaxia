@@ -5,27 +5,31 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
+import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -74,14 +78,15 @@ public final class CelestialClient {
 
     public static CelestialAsset createAssetInConstruction(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
-        return CelestialAssetStore.CLIENT
-            .createAssetInConstructionInternal(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
+        StarmapActionSyncHandler
+            .sendCreateAsset(celestialObjectId, displayName, kind, Buildable.Status.CONSTRUCTION_SITE);
+        return null;
     }
 
     public static CelestialAsset createOperationalAsset(CelestialObjectId celestialObjectId, String displayName,
         CelestialAsset.Kind kind) {
-        return CelestialAssetStore.CLIENT
-            .createOperationalAssetInternal(TempTeamCompat.getTeam(), celestialObjectId, displayName, kind);
+        StarmapActionSyncHandler.sendCreateAsset(celestialObjectId, displayName, kind, Buildable.Status.OPERATIONAL);
+        return null;
     }
 
     // ── Logistics mirror ──
@@ -111,21 +116,33 @@ public final class CelestialClient {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
         if (state == null) return;
         if (!kind.isAllowedOn(state.kind)) return;
-        StationTileCoord anchor = tileCoord != null ? tileCoord : StationTileCoord.CORE;
-        ModuleInstance module = kind.create(anchor, ModuleShape.SINGLE, kind.defaultTier());
-        boolean creativePlayer = Minecraft.getMinecraft().thePlayer != null
-            && Minecraft.getMinecraft().thePlayer.capabilities.isCreativeMode;
-        if (creativeBuildModeEnabled && creativePlayer) {
-            module.completeConstruction();
-        }
-        Galaxia.GALAXIA_NETWORK.sendToServer(
-            new AssetBuildModulePacket(
-                assetId,
-                kind,
-                ModuleShape.SINGLE,
-                kind.defaultTier(),
-                creativeBuildModeEnabled,
-                tileCoord));
+        StarmapActionSyncHandler.sendBuildModule(
+            assetId,
+            kind,
+            ModuleShape.SINGLE,
+            kind.defaultTier(),
+            creativeBuildModeEnabled,
+            tileCoord);
+    }
+
+    public static boolean destroyAsset(ID assetId) {
+        return StarmapActionSyncHandler.sendDestroyAsset(assetId);
+    }
+
+    public static boolean cancelConstruction(ID assetId) {
+        return StarmapActionSyncHandler.sendCancelConstruction(assetId);
+    }
+
+    public static boolean startDeconstruction(ID assetId) {
+        return StarmapActionSyncHandler.sendStartDeconstruction(assetId);
+    }
+
+    public static boolean renameAsset(ID assetId, String displayName) {
+        return StarmapActionSyncHandler.sendRenameAsset(assetId, displayName);
+    }
+
+    public static void requestFullSync(ID assetId) {
+        StarmapActionSyncHandler.sendRequestFullSync(assetId);
     }
 
     public static List<TransferTarget> getTransferTargetsInSystem(CelestialObject root, CelestialObject body) {
@@ -138,53 +155,86 @@ public final class CelestialClient {
     }
 
     public static void updateModuleAction(ID assetId, int moduleIndex, AssetModuleUpdatePacket.Action action) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        Galaxia.GALAXIA_NETWORK.sendToServer(AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.action(assetId, moduleIndex, module.id, action));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, String payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, boolean payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction, double payload) {
-        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
-        var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
     }
 
     public static <T extends Enum<T>> void updateModuleConfig(ID assetId, int moduleIndex, ConfigAction configAction,
         T payload) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
+    }
+
+    public static void updateModuleRecipeSlot(ID assetId, int moduleIndex, ConfigAction configAction, byte slotIndex,
+        RecipeSlot slot) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket
+                .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
+    }
+
+    private static void sendModuleUpdate(ID assetId, int moduleIndex,
+        Function<ModuleInstance, AssetModuleUpdatePacket> packetFactory) {
+        ModuleInstance module = resolveModule(assetId, moduleIndex);
+        if (module == null) return;
+        AssetModuleUpdatePacket packet = packetFactory.apply(module);
+        if (packet == null) return;
+        StarmapActionSyncHandler.sendModuleUpdate(packet);
+    }
+
+    private static @Nullable ModuleInstance resolveModule(ID assetId, int moduleIndex) {
         AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null) return;
+        if (state == null) return null;
         var modules = state.modules();
-        if (moduleIndex < 0 || moduleIndex >= modules.size()) return;
-        ModuleInstance module = modules.get(moduleIndex);
-        Galaxia.GALAXIA_NETWORK
-            .sendToServer(AssetModuleUpdatePacket.config(assetId, moduleIndex, module.id, configAction, payload));
+        if (moduleIndex < 0 || moduleIndex >= modules.size()) return null;
+        return modules.get(moduleIndex);
+    }
+
+    public static void addInventory(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(assetId, resource, amount);
+        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+    }
+
+    public static void removeInventory(CelestialAsset.ID assetId, ItemStackWrapper resource) {
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(assetId, resource);
+        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+    }
+
+    public static void updateLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource,
+        LogisticsResourceConfig config) {
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(assetId, resource, config);
+        StarmapActionSyncHandler.sendLogisticsConfig(packet);
+    }
+
+    public static void removeLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource) {
+        LogisticsConfigUpdatePacket packet = LogisticsConfigUpdatePacket.remove(assetId, resource);
+        StarmapActionSyncHandler.sendLogisticsConfig(packet);
     }
 
     // ── Signal mirror ──

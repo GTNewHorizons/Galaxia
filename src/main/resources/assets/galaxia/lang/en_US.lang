@@ -279,12 +279,21 @@ galaxia.outpost.module.hammer=HAMMER
 galaxia.outpost.module.big_hammer=BIG HAMMER
 galaxia.outpost.module.miner=MINER
 galaxia.outpost.module.power=POWER
+galaxia.outpost.module.storage=STORAGE
+galaxia.outpost.module.tank=TANK
+galaxia.outpost.module.battery=BATTERY
 galaxia.outpost.module.kind.station=STATION
 galaxia.outpost.module.kind.automated_station=AUTOMATED STATION
 galaxia.outpost.module.kind.automated_outpost=AUTOMATED OUTPOST
 galaxia.outpost.module.location.orbit=ORBIT
 galaxia.outpost.module.location.surface=SURFACE
 galaxia.outpost.module.maintenance_bay=MAINTENANCE BAY
+galaxia.outpost.module.macerator=Macerator
+galaxia.outpost.module.centrifuge=Centrifuge
+galaxia.outpost.module.electrolyzer=Electrolyzer
+galaxia.outpost.module.chemical_reactor=Chemical Reactor
+galaxia.outpost.module.assembler=Assembler
+galaxia.outpost.module.distillery=Distillery
 
 # Elements - "Other"
 # Elements - Other - "Effect"

@@ -39,12 +39,8 @@ import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetRequestSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -314,10 +310,13 @@ public final class AssetManagementSystem {
                     true);
                 return;
             }
-            CelestialAssetStore.CLIENT.destroyAssetInternal(state.pendingAssetDestruction.asset().assetId);
-            // TODO: Localize
-            callbacks.showActionStatus("Asset destroyed");
-            state.pendingAssetDestruction = null;
+            if (CelestialClient.destroyAsset(state.pendingAssetDestruction.asset().assetId)) {
+                // TODO: Localize
+                callbacks.showActionStatus("Asset destroyed");
+                state.pendingAssetDestruction = null;
+                return;
+            }
+            callbacks.showActionStatus("Destroy failed");
         }
 
         void openPendingAssetManagement(OrbitalAssetUiState state, CelestialAsset asset) {
@@ -345,11 +344,13 @@ public final class AssetManagementSystem {
 
         void confirmPendingConstructionCancellation(OrbitalAssetUiState state) {
             if (state.pendingConstructionCancellation == null) return;
-            CelestialAssetStore.CLIENT
-                .startDeconstructionInternal(state.pendingConstructionCancellation.asset().assetId);
-            // TODO: Localize
-            callbacks.showActionStatus("Construction site converted to deconstruction");
-            state.pendingConstructionCancellation = null;
+            if (CelestialClient.startDeconstruction(state.pendingConstructionCancellation.asset().assetId)) {
+                // TODO: Localize
+                callbacks.showActionStatus("Construction site converted to deconstruction");
+                state.pendingConstructionCancellation = null;
+                return;
+            }
+            callbacks.showActionStatus("Construction cancellation failed");
         }
 
         void openPendingResourceTransfer(OrbitalAssetUiState state, CelestialObject root, CelestialAsset asset) {
@@ -386,7 +387,7 @@ public final class AssetManagementSystem {
                 closePendingAssetRename(state);
                 return;
             }
-            if (CelestialAssetStore.CLIENT.renameAssetInternal(state.pendingAssetRename.asset().assetId, renamed)) {
+            if (CelestialClient.renameAsset(state.pendingAssetRename.asset().assetId, renamed)) {
                 // TODO: Localize
                 callbacks.showActionStatus("Asset renamed");
                 closePendingAssetRename(state);
@@ -732,8 +733,7 @@ public final class AssetManagementSystem {
                             "[Outpost UI] Added logistics tracked item {} to outpost {} from item picker",
                             wrapper.toKey(),
                             outpost.assetId);
-                        Galaxia.GALAXIA_NETWORK
-                            .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, newCfg));
+                        CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, newCfg);
                     } else if (wrapper != null) {
                         Galaxia.LOG.info(
                             "[Outpost UI] Ignored item picker add for {} on outpost {} because it is already tracked",
@@ -1198,7 +1198,7 @@ public final class AssetManagementSystem {
             ParentWidget<?> modal = createModalRoot(bounds);
 
             if (outpost == null) {
-                Galaxia.GALAXIA_NETWORK.sendToServer(new AssetRequestSyncPacket(asset.assetId));
+                CelestialClient.requestFullSync(asset.assetId);
                 // TODO: Localize
                 modal.child(createTitleText("Manage Outpost").pos(12, 10));
                 modal.child(createBodyText("Loading data...", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 50));
@@ -1306,8 +1306,10 @@ public final class AssetManagementSystem {
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(8, 6));
 
                 boolean isHammer = m.kind() == FacilityModuleKind.HAMMER;
-                boolean isConfigurable = isHammer || m.kind() == FacilityModuleKind.MINER
-                    || m.kind() == FacilityModuleKind.POWER;
+                boolean isProduction = m.kind()
+                    .isProductionModule();
+                boolean isConfigurable = m.kind()
+                    .isDirectlyConfigurable();
                 boolean operational = m.status() != Buildable.Status.IN_CONSTRUCTION;
                 boolean isDisabled = m.status() == Buildable.Status.DISABLED;
 
@@ -1543,8 +1545,7 @@ public final class AssetManagementSystem {
                         .toKey();
                     if (resourceKey.equals(state.armedDumpResourceKey)) {
                         state.armedDumpResourceKey = null;
-                        Galaxia.GALAXIA_NETWORK
-                            .sendToServer(AssetInventoryUpdatePacket.remove(outpost.assetId, entry.getKey()));
+                        CelestialClient.removeInventory(outpost.assetId, entry.getKey());
                     } else {
                         state.armedDumpResourceKey = resourceKey;
                         markStructureDirty();
@@ -1744,7 +1745,7 @@ public final class AssetManagementSystem {
          *
          * <p>
          * The reserve value is displayed as a text widget between the decrement/increment
-         * buttons, while the buttons themselves send a {@link LogisticsConfigUpdatePacket}.
+         * buttons, while the buttons themselves send synced updates.
          */
         private void buildLogisticsSubMenu(ParentWidget<?> modal, AutomatedFacility outpost) {
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 106);
@@ -1902,8 +1903,7 @@ public final class AssetManagementSystem {
                     int newRes = Math.max(0, cfg.minReserve() - 1);
                     LogisticsResourceConfig updated = cfg.withMinReserve(newRes);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(246, 4)
                     .size(18, 20));
@@ -1915,8 +1915,7 @@ public final class AssetManagementSystem {
                             LogisticsResourceConfig current = outpost.logisticsConfig.get(wrapper);
                             LogisticsResourceConfig updated = current.withMinReserve(value);
                             outpost.logisticsConfig.set(wrapper, updated);
-                            Galaxia.GALAXIA_NETWORK
-                                .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                            CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                         },
                         0,
                         999999).pos(268, 4)
@@ -1925,8 +1924,7 @@ public final class AssetManagementSystem {
                     int newRes = cfg.minReserve() + 1;
                     LogisticsResourceConfig updated = cfg.withMinReserve(newRes);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(306, 4)
                     .size(18, 20));
@@ -1935,8 +1933,7 @@ public final class AssetManagementSystem {
                     int newPkg = Math.max(1, cfg.orderSize() - 1);
                     LogisticsResourceConfig updated = cfg.withOrderSize(newPkg);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(330, 4)
                     .size(18, 20));
@@ -1948,8 +1945,7 @@ public final class AssetManagementSystem {
                             LogisticsResourceConfig current = outpost.logisticsConfig.get(wrapper);
                             LogisticsResourceConfig updated = current.withOrderSize(value);
                             outpost.logisticsConfig.set(wrapper, updated);
-                            Galaxia.GALAXIA_NETWORK
-                                .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                            CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                         },
                         1,
                         999999).pos(352, 4)
@@ -1958,8 +1954,7 @@ public final class AssetManagementSystem {
                     int newPkg = cfg.orderSize() + 1;
                     LogisticsResourceConfig updated = cfg.withOrderSize(newPkg);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(390, 4)
                     .size(18, 20));
@@ -1967,8 +1962,7 @@ public final class AssetManagementSystem {
                 row.child(createFooterButton(cfg.isImportEnabled() ? "ON" : "OFF", true, () -> {
                     LogisticsResourceConfig updated = cfg.withImportEnabled(!cfg.isImportEnabled());
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(416, 4)
                     .size(34, 20));
@@ -1976,14 +1970,13 @@ public final class AssetManagementSystem {
                 row.child(createFooterButton(cfg.isSupplyEnabled() ? "ON" : "OFF", true, () -> {
                     LogisticsResourceConfig updated = cfg.withSupplyEnabled(!cfg.isSupplyEnabled());
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(454, 4)
                     .size(34, 20));
                 row.child(createFooterButton("X", true, () -> {
                     outpost.logisticsConfig.reset(wrapper);
-                    Galaxia.GALAXIA_NETWORK.sendToServer(LogisticsConfigUpdatePacket.remove(outpost.assetId, wrapper));
+                    CelestialClient.removeLogisticsConfig(outpost.assetId, wrapper);
                     markStructureDirty();
                 }).pos(502, 4)
                     .size(18, 20));
@@ -2228,6 +2221,12 @@ public final class AssetManagementSystem {
                 case TANK -> "Increases station fluid storage capacity. Adjacent modules boost each other.";
                 case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
                 case MAINTENANCE_BAY -> "Passively maintains station systems. Reduces wear over time.";
+                case MACERATOR -> "Processes materials through a macerator.";
+                case CENTRIFUGE -> "Separates materials by density in a centrifuge.";
+                case ELECTROLYZER -> "Breaks down materials using electrical current.";
+                case CHEMICAL_REACTOR -> "Combines materials in a chemical reaction.";
+                case ASSEMBLER -> "Assembles components into complex items.";
+                case DISTILLERY -> "Distills fluids into purer forms.";
             };
         }
 
@@ -2803,16 +2802,22 @@ public final class AssetManagementSystem {
                 return;
             }
             if (callbacks.isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.CLIENT.cancelConstructionInternal(asset.assetId);
-                callbacks.showActionStatus("Construction canceled");
+                if (CelestialClient.cancelConstruction(asset.assetId)) {
+                    callbacks.showActionStatus("Construction canceled");
+                } else {
+                    callbacks.showActionStatus("Construction cancel failed");
+                }
                 return;
             }
             if (callbacks.hasStoredConstructionResources(asset)) {
                 callbacks.openPendingConstructionCancellation(asset);
                 return;
             }
-            CelestialAssetStore.CLIENT.cancelConstructionInternal(asset.assetId);
-            callbacks.showActionStatus("Construction canceled");
+            if (CelestialClient.cancelConstruction(asset.assetId)) {
+                callbacks.showActionStatus("Construction canceled");
+            } else {
+                callbacks.showActionStatus("Construction cancel failed");
+            }
         }
 
         private void updateModalBounds(int left, int top, int right, int bottom) {

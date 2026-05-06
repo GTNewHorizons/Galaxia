@@ -20,11 +20,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -49,6 +56,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LOGISTICS_CONFIG_REMOVED = 7;
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte LAYOUT_TILE_REMOVED = 9;
+    public static final byte ASSET_REMOVED = 10;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -61,6 +69,7 @@ public final class AssetSyncPacket implements IMessage {
     private CelestialObjectId planetaryAnchorBodyId;
     private Buildable.Status assetStatus;
     private CelestialAsset.Kind assetKind;
+    private String displayName;
     private long energyStored;
 
     private List<AssetSyncPacket> fullSyncDeltas;
@@ -80,21 +89,10 @@ public final class AssetSyncPacket implements IMessage {
     public AssetSyncPacket() {}
 
     public static AssetSyncPacket fullSync(AutomatedFacility state) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = state.assetId;
-        pkt.syncType = FULL_SYNC;
-        pkt.syncRevision = state.getSyncRevision();
-        pkt.syncRevision = state.getSyncRevision();
-
-        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
-        pkt.celestialBodyId = state.celestialObjectId;
+        AssetSyncPacket pkt = fullSync((CelestialAsset) state);
         pkt.systemId = state.systemId;
         pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
-        pkt.assetStatus = state.status();
-        pkt.assetKind = state.kind;
         pkt.energyStored = state.getEnergyStored();
-
-        pkt.fullSyncDeltas = new ArrayList<>();
 
         List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
@@ -133,6 +131,33 @@ public final class AssetSyncPacket implements IMessage {
             }
         }
 
+        return pkt;
+    }
+
+    public static AssetSyncPacket fullSync(CelestialAsset state) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = state.assetId;
+        pkt.syncType = FULL_SYNC;
+        pkt.syncRevision = state.getSyncRevision();
+        pkt.syncRevision = state.getSyncRevision();
+
+        pkt.teamId = CelestialAssetStore.getTeamId(state.assetId);
+        pkt.celestialBodyId = state.celestialObjectId;
+        pkt.assetStatus = state.status();
+        pkt.assetKind = state.kind;
+        pkt.displayName = state.displayName();
+        pkt.systemId = CelestialObjectId.INVALID;
+        pkt.planetaryAnchorBodyId = CelestialObjectId.INVALID;
+        pkt.energyStored = 0L;
+
+        pkt.fullSyncDeltas = new ArrayList<>();
+        return pkt;
+    }
+
+    public static AssetSyncPacket assetRemoved(CelestialAsset.ID assetId) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = ASSET_REMOVED;
         return pkt;
     }
 
@@ -254,6 +279,7 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
                 PacketUtil.writeEnum(buf, assetStatus);
                 PacketUtil.writeEnum(buf, assetKind);
+                PacketUtil.writeString(buf, displayName == null ? "" : displayName);
                 buf.writeLong(energyStored);
 
                 buf.writeInt(fullSyncDeltas.size());
@@ -281,6 +307,7 @@ public final class AssetSyncPacket implements IMessage {
                 planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                 assetStatus = PacketUtil.readEnum(buf, Buildable.Status.class);
                 assetKind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
+                displayName = PacketUtil.readString(buf);
                 energyStored = buf.readLong();
 
                 int count = buf.readInt();
@@ -367,6 +394,10 @@ public final class AssetSyncPacket implements IMessage {
         buf.writeShort(module.groupId());
         buf.writeByte(module.component() instanceof IParallelModule pm ? pm.getParallel() : 1);
 
+        StationTileCoord anchor = module.anchorOrNull();
+        buf.writeBoolean(anchor != null);
+        if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
+
         switch (module.kind()) {
             case MINER -> {
                 ModuleMiner m = (ModuleMiner) module.component();
@@ -391,6 +422,10 @@ public final class AssetSyncPacket implements IMessage {
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> writeRecipeConfig(
+                buf,
+                module);
+            default -> {}
         }
     }
 
@@ -404,8 +439,9 @@ public final class AssetSyncPacket implements IMessage {
         boolean enabled = buf.readBoolean();
         short groupId = buf.readShort();
         byte parallel = buf.readByte();
+        StationTileCoord anchor = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
 
-        ModuleInstance module = FacilityModuleRegistry.create(id, kind, null, shape, tier);
+        ModuleInstance module = FacilityModuleRegistry.create(id, kind, anchor, shape, tier);
         module.setPriorityOverride(modulePriority);
         module.setEnabled(enabled);
         module.setGroupId(groupId);
@@ -431,6 +467,10 @@ public final class AssetSyncPacket implements IMessage {
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
+            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> readRecipeConfig(
+                buf,
+                module);
+            default -> {}
         }
 
         if (module.component() instanceof IParallelModule pm) {
@@ -451,9 +491,188 @@ public final class AssetSyncPacket implements IMessage {
         return new LogisticsResourceConfig(buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readBoolean());
     }
 
+    private static void writeRecipeConfig(ByteBuf buf, ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            buf.writeBoolean(false);
+            return;
+        }
+        RecipeConfig config = recipeModule.getRecipeConfig();
+        if (config == null) {
+            buf.writeBoolean(false);
+            return;
+        }
+        buf.writeBoolean(true);
+        buf.writeByte(
+            config.mode()
+                .ordinal());
+        buf.writeByte(
+            config.notDoablePolicy()
+                .ordinal());
+        buf.writeByte(config.orderCursor());
+        buf.writeByte(config.orderRemaining());
+
+        List<RecipeSlot> slots = config.slots()
+            .toList();
+        buf.writeByte(slots.size());
+        for (RecipeSlot slot : slots) {
+            RecipeSnapshot snap = slot.recipe();
+            buf.writeByte(snap.recipeMapOrdinal());
+            buf.writeInt(snap.recipeIndex());
+            buf.writeLong(snap.contentHash());
+            buf.writeBoolean(slot.enabled());
+            buf.writeInt(slot.inputGuard());
+            buf.writeInt(slot.outputGuard());
+            buf.writeByte(slot.priority());
+            buf.writeByte(slot.orderSize());
+        }
+    }
+
+    private static void readRecipeConfig(ByteBuf buf, ModuleInstance module) {
+        if (!buf.readBoolean()) return;
+        int modeOrd = Byte.toUnsignedInt(buf.readByte());
+        int policyOrd = Byte.toUnsignedInt(buf.readByte());
+        byte orderCursor = buf.readByte();
+        byte orderRemaining = buf.readByte();
+
+        RecipeSchedulerMode[] modes = RecipeSchedulerMode.values();
+        if (modeOrd >= modes.length) return;
+        RecipeSchedulerMode mode = modes[modeOrd];
+
+        NotDoablePolicy[] policies = NotDoablePolicy.values();
+        if (policyOrd >= policies.length) return;
+        NotDoablePolicy policy = policies[policyOrd];
+
+        int slotCount = Byte.toUnsignedInt(buf.readByte());
+        if (slotCount < 0 || slotCount > RecipeSlotList.MAX_RECIPE_SLOTS) return;
+
+        RecipeConfig config = new RecipeConfig(new RecipeSlotList(), mode, policy, orderCursor, orderRemaining);
+
+        for (int i = 0; i < slotCount; i++) {
+            byte mapOrdinal = buf.readByte();
+            int recipeIndex = buf.readInt();
+            long contentHash = buf.readLong();
+            boolean enabled = buf.readBoolean();
+            int inputGuard = buf.readInt();
+            int outputGuard = buf.readInt();
+            byte priority = buf.readByte();
+            byte orderSize = buf.readByte();
+
+            RecipeSnapshot ref = RecipeSnapshot.unresolved(mapOrdinal, recipeIndex, contentHash);
+            RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
+            config.slots()
+                .add(slot);
+        }
+
+        if (module.component() instanceof IRecipeModule recipeModule) {
+            recipeModule.setRecipeConfig(config);
+        }
+    }
+
     public AssetSyncPacket withSyncRevision(int rev) {
         this.syncRevision = rev;
         return this;
+    }
+
+    // ── Test-support: package-private accessors ──
+
+    byte syncType() {
+        return syncType;
+    }
+
+    int moduleIndex() {
+        return moduleIndex;
+    }
+
+    ModuleInstance.ID moduleId() {
+        return moduleId;
+    }
+
+    ModuleInstance moduleData() {
+        return moduleData;
+    }
+
+    StationTileCoord tileCoord() {
+        return tileCoord;
+    }
+
+    StationTileState tileState() {
+        return tileState;
+    }
+
+    ModuleInstance.ID tileModuleId() {
+        return tileModuleId;
+    }
+
+    List<AssetSyncPacket> fullSyncDeltas() {
+        return fullSyncDeltas;
+    }
+
+    int syncRevision() {
+        return syncRevision;
+    }
+
+    /**
+     * Package-private test helper: applies a decoded delta packet to a facility.
+     * Mirrors the logic in {@link Handler#handleDelta}.
+     */
+    static void applyDeltaToFacility(AutomatedFacility state, AssetSyncPacket packet) {
+        switch (packet.syncType) {
+            case MODULE_ADDED -> {
+                if (packet.moduleIndex < state.modules()
+                    .size()) {
+                    state.modulesInternal()
+                        .set(packet.moduleIndex, packet.moduleData);
+                } else {
+                    state.addModule(packet.moduleData);
+                }
+                // Place layout tiles for the module
+                StationLayout layout = state.stationLayout();
+                ModuleInstance module = packet.moduleData;
+                if (layout != null && module.anchorOrNull() != null) {
+                    layout.place(module);
+                }
+            }
+            case MODULE_REMOVED -> {
+                state.removeModule(packet.moduleId);
+                StationLayout layout = state.stationLayout();
+                if (layout != null) layout.removeTileForModule(packet.moduleId);
+            }
+            case MODULE_UPDATED -> {
+                if (packet.moduleIndex < state.modules()
+                    .size()) {
+                    state.modulesInternal()
+                        .set(packet.moduleIndex, packet.moduleData);
+                }
+            }
+            case INVENTORY_UPDATE -> {
+                ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
+                if (r != null) {
+                    if (packet.inventoryDelta > 0) {
+                        state.inventory.setAmount(r, state.inventory.getAmount(r) + packet.inventoryDelta);
+                    } else {
+                        state.inventory
+                            .setAmount(r, Math.max(0, state.inventory.getAmount(r) - Math.abs(packet.inventoryDelta)));
+                    }
+                }
+            }
+            case LOGISTICS_CONFIG_UPDATED -> {
+                ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
+                if (r != null) state.logisticsConfig.set(r, packet.logConfig);
+            }
+            case LOGISTICS_CONFIG_REMOVED -> {
+                ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
+                if (r != null) state.logisticsConfig.reset(r);
+            }
+            case LAYOUT_TILE_UPDATED -> {
+                ModuleInstance module = Handler.findModuleById(state, packet.tileModuleId);
+                StationLayout layout = state.stationLayout();
+                if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
+            }
+            case LAYOUT_TILE_REMOVED -> {
+                StationLayout layout = state.stationLayout();
+                if (layout != null) layout.remove(packet.tileCoord);
+            }
+        }
     }
 
     public static final class Handler implements IMessageHandler<AssetSyncPacket, IMessage> {
@@ -462,12 +681,14 @@ public final class AssetSyncPacket implements IMessage {
         @SideOnly(Side.CLIENT)
         public IMessage onMessage(AssetSyncPacket packet, MessageContext ctx) {
             Minecraft.getMinecraft()
-                .func_152344_a(() -> handle(packet));
+                .func_152344_a(() -> handleClientSync(packet));
             return null;
         }
 
-        private void handle(AssetSyncPacket packet) {
+        @SideOnly(Side.CLIENT)
+        public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
+                case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
                     if (CelestialAssetStore.CLIENT
@@ -479,16 +700,17 @@ public final class AssetSyncPacket implements IMessage {
             }
         }
 
-        private void handleFull(AssetSyncPacket packet) {
-            AutomatedFacility state = CelestialAssetStore.CLIENT
-                .findAssetInternal(packet.assetId) instanceof AutomatedFacility o ? o : null;
-            if (state == null) {
-                CelestialAsset newAsset = CelestialAsset
+        private static void handleFull(AssetSyncPacket packet) {
+            CelestialAsset asset = CelestialAssetStore.CLIENT.findAssetInternal(packet.assetId);
+            if (asset == null) {
+                asset = CelestialAsset
                     .create(packet.assetId, packet.celestialBodyId, packet.assetKind, packet.assetStatus);
-                if (!(newAsset instanceof AutomatedFacility newState)) return;
-                state = newState;
-                CelestialAssetStore.CLIENT.addInternal(packet.teamId, newState);
+                CelestialAssetStore.CLIENT.addInternal(packet.teamId, asset);
             }
+            asset.updateStatus(packet.assetStatus);
+            asset.setDisplayName(packet.displayName);
+            asset.setSyncRevision(packet.syncRevision);
+            if (!(asset instanceof AutomatedFacility state)) return;
 
             state.setEnergyStored(packet.energyStored);
 
@@ -505,7 +727,7 @@ public final class AssetSyncPacket implements IMessage {
             state.setSyncRevision(packet.syncRevision);
         }
 
-        private void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
+        private static void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
             switch (packet.syncType) {
                 case MODULE_ADDED -> {
                     if (packet.moduleIndex < state.modules()
@@ -515,8 +737,18 @@ public final class AssetSyncPacket implements IMessage {
                     } else {
                         state.addModule(packet.moduleData);
                     }
+                    // Place layout tiles for the module on the client mirror
+                    StationLayout layout = state.stationLayout();
+                    ModuleInstance module = packet.moduleData;
+                    if (layout != null && module.anchorOrNull() != null) {
+                        layout.place(module);
+                    }
                 }
-                case MODULE_REMOVED -> state.removeModule(packet.moduleId);
+                case MODULE_REMOVED -> {
+                    state.removeModule(packet.moduleId);
+                    StationLayout layout = state.stationLayout();
+                    if (layout != null) layout.removeTileForModule(packet.moduleId);
+                }
                 case MODULE_UPDATED -> {
                     if (packet.moduleIndex < state.modules()
                         .size()) {
@@ -556,7 +788,7 @@ public final class AssetSyncPacket implements IMessage {
             }
         }
 
-        private ModuleInstance findModuleById(AutomatedFacility state, ModuleInstance.ID id) {
+        static ModuleInstance findModuleById(AutomatedFacility state, ModuleInstance.ID id) {
             if (id == null) return null;
             for (ModuleInstance m : state.modules()) {
                 if (m.id.equals(id)) return m;

@@ -319,6 +319,15 @@ public class OrbitalView {
         }
     }
 
+    // Static so state persists across GUI close/reopen cycles (client-side only, never sent to server).
+    private static final InterplanetaryTransferSystem.OrbitalTransferSimulatorState transferSimulatorState = new InterplanetaryTransferSystem.OrbitalTransferSimulatorState();
+    private static final InterplanetaryTransferSystem.OrbitalTransferState clientSimulatedTransferState = new InterplanetaryTransferSystem.OrbitalTransferState();
+    private static boolean creativeBuildModePersisted = false;
+
+    static InterplanetaryTransferSystem.OrbitalTransferState clientSimulatedTransferState() {
+        return clientSimulatedTransferState;
+    }
+
     public static class OrbitalMapWidget extends Widget<OrbitalMapWidget> {
 
         @FunctionalInterface
@@ -365,7 +374,6 @@ public class OrbitalView {
         private final InterplanetaryTransferSystem.OrbitalTransferState transferState = new InterplanetaryTransferSystem.OrbitalTransferState();
         private final InterplanetaryTransferSystem.OrbitalTransferRenderer transferRenderer;
         private final InterplanetaryTransferSystem.OrbitalTransferTooltipWidget transferTooltipWidget;
-        private final InterplanetaryTransferSystem.OrbitalTransferSimulatorState transferSimulatorState = new InterplanetaryTransferSystem.OrbitalTransferSimulatorState();
         private final InterplanetaryTransferSystem.OrbitalTransferSimulatorWidget transferSimulatorWidget;
         private final OrbitalScene.OrbitalSceneRenderer sceneRenderer;
         private final OrbitalPinnedInfoContentBuilder pinnedInfoContentBuilder = new OrbitalPinnedInfoContentBuilder();
@@ -381,7 +389,7 @@ public class OrbitalView {
         private int orbitalClockRevision = Integer.MIN_VALUE;
         private int lastRenderedLogisticsClockRevision = Integer.MIN_VALUE;
         private TextFieldWidget renameField = null;
-        private boolean creativeBuildMode = false;
+        private boolean creativeBuildMode = creativeBuildModePersisted;
         private boolean guiActionsRegistered = false;
         private OrbitalLayerTransitionState transitionState = new OrbitalLayerTransitionState();
         private static final double ZOOM_BASE = 1.18;
@@ -681,17 +689,20 @@ public class OrbitalView {
 
                     @Override
                     public InterplanetaryTransferJob getHoveredTransfer() {
-                        return transferState.hoveredTransfer();
+                        InterplanetaryTransferJob simulatedTransfer = clientSimulatedTransferState.hoveredTransfer();
+                        return simulatedTransfer == null ? transferState.hoveredTransfer() : simulatedTransfer;
                     }
 
                     @Override
                     public int getTooltipMouseX() {
-                        return transferState.hoverX();
+                        return clientSimulatedTransferState.hoveredTransfer() == null ? transferState.hoverX()
+                            : clientSimulatedTransferState.hoverX();
                     }
 
                     @Override
                     public int getTooltipMouseY() {
-                        return transferState.hoverY();
+                        return clientSimulatedTransferState.hoveredTransfer() == null ? transferState.hoverY()
+                            : clientSimulatedTransferState.hoverY();
                     }
 
                     @Override
@@ -1052,10 +1063,12 @@ public class OrbitalView {
         public void toggleCreativeBuildMode() {
             if (!isCreativeModeAvailable()) {
                 creativeBuildMode = false;
+                creativeBuildModePersisted = false;
                 transferSimulatorState.close();
                 return;
             }
             creativeBuildMode = !creativeBuildMode;
+            creativeBuildModePersisted = creativeBuildMode;
             if (!creativeBuildMode) transferSimulatorState.close();
             showActionStatus("Creative build mode " + (creativeBuildMode ? "enabled" : "disabled"));
         }
@@ -1079,7 +1092,6 @@ public class OrbitalView {
                 return;
             }
             transferSimulatorState.open();
-            transferSimulatorState.resetSelection();
             showActionStatus("Transfer simulator opened");
         }
 
@@ -1860,6 +1872,12 @@ public class OrbitalView {
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
+                transferRenderer.drawTransferPaths(
+                    clientSimulatedTransferState,
+                    globalTime,
+                    viewRoot.objectClass() == CelestialObject.Class.STAR
+                        ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
+                        : 0f);
                 transferRenderer.drawPreviewTrajectory(
                     transferSimulatorState,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
@@ -1875,6 +1893,12 @@ public class OrbitalView {
             if (!transfersHidden) {
                 transferRenderer.drawTransferDots(
                     transferState,
+                    globalTime,
+                    viewRoot.objectClass() == CelestialObject.Class.STAR
+                        ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
+                        : 0f);
+                transferRenderer.drawTransferDots(
+                    clientSimulatedTransferState,
                     globalTime,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
@@ -1897,9 +1921,15 @@ public class OrbitalView {
                 || assetUiState.isAssetManagementOpen()
                 || contextMenuState.isOpen()) {
                 transferState.updateHoveredTransfer(null, localMouseX, localMouseY);
+                clientSimulatedTransferState.updateHoveredTransfer(null, localMouseX, localMouseY);
             } else {
+                InterplanetaryTransferJob hoveredSimulatedTransfer = transferRenderer
+                    .findHoveredTransfer(clientSimulatedTransferState, globalTime, localMouseX, localMouseY);
+                clientSimulatedTransferState.updateHoveredTransfer(hoveredSimulatedTransfer, localMouseX, localMouseY);
                 transferState.updateHoveredTransfer(
-                    transferRenderer.findHoveredTransfer(transferState, globalTime, localMouseX, localMouseY),
+                    hoveredSimulatedTransfer == null
+                        ? transferRenderer.findHoveredTransfer(transferState, globalTime, localMouseX, localMouseY)
+                        : null,
                     localMouseX,
                     localMouseY);
             }
@@ -1966,7 +1996,11 @@ public class OrbitalView {
                 || assetUiState.isAssetManagementOpen()
                 || contextMenuState.isOpen()
                 || transferSimulatorState.isWaitingForPick()) return null;
-            return transferRenderer.findHoveredTransfer(transferState, globalTime, mouseX, mouseY);
+            InterplanetaryTransferJob simulatedTransfer = transferRenderer
+                .findHoveredTransfer(clientSimulatedTransferState, globalTime, mouseX, mouseY);
+            return simulatedTransfer == null
+                ? transferRenderer.findHoveredTransfer(transferState, globalTime, mouseX, mouseY)
+                : simulatedTransfer;
         }
 
         private CelestialObject findBodyAtLocal(float localX, float localY) {
@@ -2116,7 +2150,7 @@ public class OrbitalView {
                 showActionStatus("Transfer failed");
                 return;
             }
-            transferState.addTransfer(transfer);
+            clientSimulatedTransferState.addTransfer(transfer);
             showActionStatus("Transfer dispatched");
         }
 
