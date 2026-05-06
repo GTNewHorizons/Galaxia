@@ -153,48 +153,38 @@ public final class FacilityPersistenceManager {
             Type listType = new TypeToken<List<AssetJson>>() {}.getType();
             list = gson.fromJson(reader, listType);
         } catch (IOException | JsonParseException e) {
-            LOG.error("[PERSIST] LOAD FAILED: read error {}: {}", file, e.getMessage());
-            return;
+            throw new IllegalStateException("[PERSIST] LOAD FAILED: read error " + file + ": " + e.getMessage(), e);
         }
         if (list == null) {
-            LOG.warn("[PERSIST] LOAD: asset registry {} contained no asset list", file);
-            return;
+            throw new IllegalStateException(
+                "[PERSIST] LOAD FAILED: asset registry " + file + " contained no asset list");
         }
 
         LOG.info("[PERSIST] LOAD: found {} asset(s) in JSON", list.size());
         int loadedCount = 0;
-        int skippedCount = 0;
         for (AssetJson json : list) {
-            try {
-                CelestialAsset asset = decodeAsset(json);
-                if (asset == null) {
-                    skippedCount++;
-                    LOG.warn("[PERSIST] LOAD: skipping malformed asset entry in {}", file);
-                    continue;
-                }
-                UUID teamId = UUID.fromString(json.teamId);
-                int moduleCount = (json.facility != null && json.facility.modules != null)
-                    ? json.facility.modules.size()
-                    : 0;
-                int tileCount = (json.facility != null && json.facility.layoutTiles != null)
-                    ? json.facility.layoutTiles.size()
-                    : 0;
-                LOG.info(
-                    "[PERSIST] LOAD: decoding asset {} kind={} status={} with {} module(s), {} layout tile(s)",
-                    json.assetId,
-                    json.kind,
-                    json.status,
-                    moduleCount,
-                    tileCount);
-                decodeFacilityState(asset, json.facility);
-                CelestialAssetStore.add(teamId, asset);
-                loadedCount++;
-            } catch (RuntimeException e) {
-                skippedCount++;
-                LOG.error("[PERSIST] LOAD FAILED: skipping asset entry {}: {}", json.assetId, e.getMessage());
+            CelestialAsset asset = decodeAsset(json);
+            if (asset == null) {
+                throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asset entry in " + file);
             }
+            UUID teamId = UUID.fromString(json.teamId);
+            int moduleCount = (json.facility != null && json.facility.modules != null) ? json.facility.modules.size()
+                : 0;
+            int tileCount = (json.facility != null && json.facility.layoutTiles != null)
+                ? json.facility.layoutTiles.size()
+                : 0;
+            LOG.info(
+                "[PERSIST] LOAD: decoding asset {} kind={} status={} with {} module(s), {} layout tile(s)",
+                json.assetId,
+                json.kind,
+                json.status,
+                moduleCount,
+                tileCount);
+            decodeFacilityState(asset, json.facility);
+            CelestialAssetStore.add(teamId, asset);
+            loadedCount++;
         }
-        LOG.info("[PERSIST] LOAD END: {} asset(s) loaded, {} skipped", loadedCount, skippedCount);
+        LOG.info("[PERSIST] LOAD END: {} asset(s) loaded", loadedCount);
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {

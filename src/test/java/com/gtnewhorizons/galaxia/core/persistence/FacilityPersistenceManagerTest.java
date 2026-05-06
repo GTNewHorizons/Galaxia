@@ -8,22 +8,32 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -36,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -309,6 +320,46 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void malformedAssetFileCrashesInsteadOfSkippingAsset(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        UUID teamId = UUID.randomUUID();
+
+        FacilityPersistenceManager.AssetJson station = assetJson(
+            teamId,
+            CelestialAsset.Kind.STATION,
+            CelestialObjectId.MOON);
+        FacilityPersistenceManager.AssetJson outpost = assetJson(
+            teamId,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            CelestialObjectId.PANSPIRA);
+        outpost.facility = malformedMinerFacility();
+
+        List<FacilityPersistenceManager.AssetJson> assets = new ArrayList<>();
+        assets.add(station);
+        assets.add(outpost);
+
+        File file = tempDir.resolve("_assets.json")
+            .toFile();
+        Files.write(
+            file.toPath(),
+            GSON.toJson(assets)
+                .getBytes(StandardCharsets.UTF_8));
+
+        CelestialAssetStore.clear();
+        Method loadAssets = FacilityPersistenceManager.class.getDeclaredMethod("loadAssets", File.class);
+        loadAssets.setAccessible(true);
+
+        InvocationTargetException thrown = assertThrows(
+            InvocationTargetException.class,
+            () -> loadAssets.invoke(manager, file));
+        assertTrue(thrown.getCause() instanceof IllegalStateException);
+        assertTrue(
+            thrown.getCause()
+                .getMessage()
+                .contains("malformed settings data"));
+    }
+
+    @Test
     void bigHammerEvCrashesOnLoad() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();
@@ -318,6 +369,54 @@ final class FacilityPersistenceManagerTest {
         hammer.setVariant(HammerVariant.BIG);
 
         assertThrows(IllegalStateException.class, () -> manager.encodeFacilityState(station));
+    }
+
+    private static FacilityPersistenceManager.AssetJson assetJson(UUID teamId, CelestialAsset.Kind kind,
+        CelestialObjectId body) {
+        FacilityPersistenceManager.AssetJson json = new FacilityPersistenceManager.AssetJson();
+        json.teamId = teamId.toString();
+        json.assetId = CelestialAsset.ID.create();
+        json.celestialObjectId = body.toString();
+        json.displayName = body + ":" + kind;
+        json.kind = kind.name();
+        json.location = CelestialAsset.Location.ofKind(kind)
+            .name();
+        json.status = Buildable.Status.OPERATIONAL.name();
+        json.requiredResources = new LinkedHashMap<>();
+        json.constructionInventory = new LinkedHashMap<>();
+        return json;
+    }
+
+    private static FacilityPersistenceManager.FacilityStateJson malformedMinerFacility() {
+        FacilityPersistenceManager.FacilityStateJson facility = new FacilityPersistenceManager.FacilityStateJson();
+        facility.celestialBodyId = CelestialObjectId.PANSPIRA.toString();
+        facility.systemId = CelestialObjectId.NOVA_CAELUM.toString();
+        facility.planetaryAnchorBodyId = CelestialObjectId.PANSPIRA.toString();
+        facility.settingsGroupsNextId = 1;
+        facility.settingsGroups = new ArrayList<>();
+        facility.modules = new ArrayList<>();
+        facility.buffer = new LinkedHashMap<>();
+        facility.fluidBuffer = new LinkedHashMap<>();
+        facility.logisticsConfig = new LinkedHashMap<>();
+        facility.layoutTiles = new ArrayList<>();
+
+        FacilityPersistenceManager.ModuleJson miner = new FacilityPersistenceManager.ModuleJson();
+        miner.moduleId = ModuleInstance.ID.create()
+            .toString();
+        miner.kind = FacilityModuleKind.MINER.name();
+        miner.status = Buildable.Status.OPERATIONAL.name();
+        miner.tier = PacketUtil.enumOrdinal(ModuleTier.EV);
+        miner.shape = PacketUtil.enumOrdinal(ModuleShape.SINGLE);
+        miner.priorityOverride = PacketUtil.enumOrdinal(ModulePriority.NORMAL);
+        miner.enabled = true;
+        miner.parallel = 1;
+        JsonObject minerData = new JsonObject();
+        JsonObject localSettings = new JsonObject();
+        localSettings.add("blacklistedOreKeys", GSON.toJsonTree(new ArrayList<String>()));
+        minerData.add("localSettings", localSettings);
+        miner.data = minerData;
+        facility.modules.add(miner);
+        return facility;
     }
 
     private static AutomatedFacility createStationWithFullLayout() {
