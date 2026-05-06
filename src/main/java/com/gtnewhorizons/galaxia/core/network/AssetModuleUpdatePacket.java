@@ -54,6 +54,7 @@ public final class AssetModuleUpdatePacket {
 
     private String stringPayload;
     private byte bytePayload;
+    private short shortPayload;
     private double doublePayload;
     private byte[] rawPayload;
 
@@ -116,6 +117,18 @@ public final class AssetModuleUpdatePacket {
         pkt.stringPayload = Objects.requireNonNull(oreKey, "oreKey");
         pkt.bytePayload = (byte) (blacklisted ? 1 : 0);
         return pkt;
+    }
+
+    public static AssetModuleUpdatePacket minerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, short groupId) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_SETTINGS_GROUP);
+        pkt.shortPayload = groupId;
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId) {
+        return config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
     }
 
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
@@ -191,6 +204,8 @@ public final class AssetModuleUpdatePacket {
         SET_TIER,
         SET_PRIORITY,
         SET_ENABLED,
+        SET_SETTINGS_GROUP,
+        CREATE_SETTINGS_GROUP,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT
@@ -219,6 +234,8 @@ public final class AssetModuleUpdatePacket {
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
+                case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
+                case CREATE_SETTINGS_GROUP -> {}
                 case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
@@ -265,6 +282,8 @@ public final class AssetModuleUpdatePacket {
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
+            case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
+            case CREATE_SETTINGS_GROUP -> {}
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
@@ -336,6 +355,11 @@ public final class AssetModuleUpdatePacket {
                 assetId,
                 state.settingsGroups()
                     .require(module.groupId(), module.kind()))
+                .withSyncRevision(state.getSyncRevision());
+        }
+        if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
+            || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP)) {
+            return AssetSyncPacket.fullSync(state)
                 .withSyncRevision(state.getSyncRevision());
         }
         state.markModuleDirty(module.id);
@@ -414,6 +438,8 @@ public final class AssetModuleUpdatePacket {
                 state.layoutCache()
                     .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
             }
+            case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, packet.shortPayload);
+            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
     }

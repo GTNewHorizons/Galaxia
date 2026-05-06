@@ -202,6 +202,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void assignSettingsGroup(ModuleInstance module, short groupId) {
+        if (module.groupId() == groupId) return;
         if (groupId == 0) {
             leaveSettingsGroup(module);
             return;

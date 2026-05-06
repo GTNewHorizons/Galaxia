@@ -207,6 +207,20 @@ public final class CelestialClient {
                 .minerOreBlacklisted(assetId, moduleIndex, module.id, oreKey, blacklisted));
     }
 
+    public static void updateMinerSettingsGroup(ID assetId, int moduleIndex, short groupId) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerSettingsGroup(assetId, moduleIndex, module.id, groupId));
+    }
+
+    public static void createMinerSettingsGroup(ID assetId, int moduleIndex) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.createMinerSettingsGroup(assetId, moduleIndex, module.id));
+    }
+
     private static void sendModuleUpdate(ID assetId, int moduleIndex,
         Function<ModuleInstance, AssetModuleUpdatePacket> packetFactory) {
         ModuleInstance module = resolveModule(assetId, moduleIndex);

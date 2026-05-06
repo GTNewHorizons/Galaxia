@@ -25,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
@@ -309,6 +310,48 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyCreateMinerSettingsGroupCopiesCurrentMinerBlacklist() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        facility.setMinerOreBlacklisted(module, "ore:iron", true);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.createMinerSettingsGroup(facility.assetId, 0, module.id));
+
+        packet.apply(TEAM);
+
+        assertNotEquals(0, module.groupId());
+        assertNull(((ModuleMiner) module.component()).localSettingsOrNull());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
+        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+    }
+
+    @Test
+    void applyMinerSettingsGroupZeroLeavesGroupWithCopiedSettings() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        facility.setMinerOreBlacklisted(module, "ore:iron", true);
+        facility.createSettingsGroupForModule(module, null);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerSettingsGroup(facility.assetId, 0, module.id, (short) 0));
+
+        packet.apply(TEAM);
+
+        assertEquals(0, module.groupId());
+        assertTrue(
+            facility.settingsGroups()
+                .groups()
+                .isEmpty());
+        assertNotNull(((ModuleMiner) module.component()).localSettingsOrNull());
+        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+    }
+
+    @Test
     void fromBytesCrashesOnRecipePayloadLargerThanCap() {
         ByteBuf buf = Unpooled.buffer();
         PacketUtil.writeId(buf, ASSET_ID);
@@ -410,6 +453,14 @@ final class AssetModuleUpdatePacketTest {
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;
+    }
+
+    private static AssetModuleUpdatePacket roundTrip(AssetModuleUpdatePacket packet) {
+        ByteBuf buf = Unpooled.buffer();
+        packet.toBytes(buf);
+        AssetModuleUpdatePacket decoded = new AssetModuleUpdatePacket();
+        decoded.fromBytes(buf);
+        return decoded;
     }
 
     private static AssetModuleUpdatePacket decodeRecipePayload(CelestialAsset.ID assetId, ModuleInstance.ID moduleId,

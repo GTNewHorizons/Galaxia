@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +37,10 @@ final class ModuleConfigModalSupport {
     }
 
     static ButtonWidget<?> button(BooleanSupplier enabledSupplier, String label, Runnable onClick) {
+        return button(enabledSupplier, () -> label, onClick);
+    }
+
+    static ButtonWidget<?> button(BooleanSupplier enabledSupplier, Supplier<String> labelSupplier, Runnable onClick) {
         return new ButtonWidget<>()
             .background(
                 drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
@@ -44,6 +49,7 @@ final class ModuleConfigModalSupport {
             .overlay(drawable((ctx, x, y, w, h) -> {
                 if (!enabledSupplier.getAsBoolean()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+                String label = labelSupplier.get();
                 String trimmed = fr.trimStringToWidth(label, w - 4);
                 int textW = fr.getStringWidth(trimmed);
                 fr.drawStringWithShadow(

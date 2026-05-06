@@ -21,6 +21,7 @@ final class ModuleConfigModalController {
     private Kind kind = Kind.NONE;
     private int moduleIndex = -1;
     private int minerBlacklistPage;
+    private boolean minerSettingsGroupMenuOpen;
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this.host = host;
@@ -34,6 +35,7 @@ final class ModuleConfigModalController {
         this.kind = Kind.HAMMER;
         this.moduleIndex = moduleIndex;
         this.minerBlacklistPage = 0;
+        this.minerSettingsGroupMenuOpen = false;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
         widget.left(x)
@@ -49,6 +51,7 @@ final class ModuleConfigModalController {
         this.kind = Kind.MINER_BLACKLIST;
         this.moduleIndex = moduleIndex;
         this.minerBlacklistPage = 0;
+        this.minerSettingsGroupMenuOpen = false;
 
         MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this);
         widget.left(x)
@@ -67,6 +70,7 @@ final class ModuleConfigModalController {
         this.kind = Kind.NONE;
         this.moduleIndex = -1;
         this.minerBlacklistPage = 0;
+        this.minerSettingsGroupMenuOpen = false;
     }
 
     boolean isOpen() {
@@ -91,5 +95,17 @@ final class ModuleConfigModalController {
 
     void setMinerBlacklistPage(int minerBlacklistPage) {
         this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
+    }
+
+    boolean isMinerSettingsGroupMenuOpen() {
+        return minerSettingsGroupMenuOpen;
+    }
+
+    void toggleMinerSettingsGroupMenu() {
+        minerSettingsGroupMenuOpen = !minerSettingsGroupMenuOpen;
+    }
+
+    void closeMinerSettingsGroupMenu() {
+        minerSettingsGroupMenuOpen = false;
     }
 }
