@@ -99,7 +99,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isHammerUpgradeOpen()) return;
-        ModuleConfigModalSupport.drawFrame("Hammer upgrade", WIDTH, HEIGHT);
+        ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
         ModuleInstance module = selectedModule();
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) {
             ModuleConfigModalSupport.drawLine(
@@ -255,6 +255,11 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
 
     private ModuleInstance selectedModule() {
         return ModuleConfigModalSupport.module(assetId, controller.moduleId());
+    }
+
+    private String title() {
+        ModuleInstance module = selectedModule();
+        return module == null ? "Hammer Upgrade" : ModuleConfigModalSupport.moduleTitle(module, "Upgrade");
     }
 
     private int drawVariantLine(int lineY, HammerVariant variant) {

@@ -16,7 +16,9 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class ModuleConfigModalSupport {
 
@@ -166,8 +168,36 @@ final class ModuleConfigModalSupport {
         return (amount / 1_000_000L) + "M";
     }
 
+    static String moduleTitle(ModuleInstance module, String suffix) {
+        StationTileCoord anchor = module.anchor();
+        return moduleDisplayName(module) + " (" + (int) anchor.dx() + "," + (int) anchor.dy() + ") " + suffix;
+    }
+
     static IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
+    }
+
+    private static String moduleDisplayName(ModuleInstance module) {
+        if (module.component() instanceof ModuleHammer hammer) {
+            return hammer.variant()
+                .name() + " Hammer";
+        }
+        String name = module.kind()
+            .name()
+            .toLowerCase();
+        StringBuilder title = new StringBuilder(name.length());
+        boolean nextUpper = true;
+        for (int i = 0; i < name.length(); i++) {
+            char ch = name.charAt(i);
+            if (ch == '_') {
+                title.append(' ');
+                nextUpper = true;
+                continue;
+            }
+            title.append(nextUpper ? Character.toUpperCase(ch) : ch);
+            nextUpper = false;
+        }
+        return title.toString();
     }
 
     private static void drawButtonBackground(int x, int y, int w, int h, boolean enabled, boolean hovered) {

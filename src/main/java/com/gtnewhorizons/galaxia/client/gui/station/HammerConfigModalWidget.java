@@ -61,7 +61,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isHammerOpen()) return;
-        ModuleConfigModalSupport.drawFrame("Hammer configuration", WIDTH, HEIGHT);
+        ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
         ModuleInstance module = selectedModule();
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) {
             ModuleConfigModalSupport.drawLine(
@@ -179,5 +179,10 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     private ModuleInstance selectedModule() {
         return ModuleConfigModalSupport.module(assetId, controller.moduleId());
+    }
+
+    private String title() {
+        ModuleInstance module = selectedModule();
+        return module == null ? "Hammer Configuration" : ModuleConfigModalSupport.moduleTitle(module, "Configuration");
     }
 }

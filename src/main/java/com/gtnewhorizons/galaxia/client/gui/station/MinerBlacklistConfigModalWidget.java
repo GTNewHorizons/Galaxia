@@ -116,7 +116,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isMinerBlacklistOpen()) return;
-        ModuleConfigModalSupport.drawFrame("Miner blacklist configuration", WIDTH, HEIGHT);
+        ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
         ModuleConfigModalSupport.drawLine(
             "Void selected ores after they are mined.",
             ModuleConfigModalSupport.PANEL_PADDING,
@@ -258,6 +258,12 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
 
     private ModuleInstance selectedModule() {
         return ModuleConfigModalSupport.module(assetId, controller.moduleId());
+    }
+
+    private String title() {
+        ModuleInstance module = selectedModule();
+        return module == null ? "Miner Blacklist Configuration"
+            : ModuleConfigModalSupport.moduleTitle(module, "Blacklist Configuration");
     }
 
     private boolean hasMinerSelected() {

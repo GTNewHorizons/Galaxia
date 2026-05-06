@@ -458,13 +458,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private String title() {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
-        if (module == null) return "Logistics";
-        if (module.component() instanceof ModuleHammer hammer) {
-            return "Logistics: " + hammer.variant()
-                .name() + " HAMMER";
-        }
-        return "Logistics: " + module.kind()
-            .getDisplayName();
+        return module == null ? "Logistics" : ModuleConfigModalSupport.moduleTitle(module, "Logistics");
     }
 
     private AutomatedFacility facility() {
