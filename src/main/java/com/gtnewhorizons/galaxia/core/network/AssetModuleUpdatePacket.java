@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
@@ -28,6 +29,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
@@ -400,10 +406,12 @@ public final class AssetModuleUpdatePacket {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
                     throw new IllegalStateException("SET_HAMMER_VARIANT sent to non-hammer module " + module.id);
                 }
-                HammerVariant variant = Objects
-                    .requireNonNull(packet.getEnumPayload(HammerVariant.class), "hammer variant");
-                ModuleHammer.requireTier(variant, module.tier());
-                hammer.setVariant(variant);
+                HammerVariant variant = packet.getEnumPayload(HammerVariant.class);
+                if (variant == null) {
+                    throw new IllegalStateException("SET_HAMMER_VARIANT missing variant for module " + module.id);
+                }
+                ModuleTier tier = ModuleHammer.tierForVariantSwitch(variant, module.tier());
+                planHammerUpgrade(module, hammer, variant, tier);
             }
             case SET_ROUTE_PRIORITY -> {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
@@ -422,11 +430,12 @@ public final class AssetModuleUpdatePacket {
                         "rejected tier " + tier + " for " + module.kind() + " on " + packet.assetId);
                 }
                 if (module.component() instanceof ModuleHammer hammer) {
-                    ModuleHammer.requireTier(hammer.variant(), tier);
+                    planHammerUpgrade(module, hammer, hammer.variant(), tier);
+                } else {
+                    module.setTier(tier);
+                    state.layoutCache()
+                        .applyMutation(MutationKind.SET_TIER, module.kind(), module);
                 }
-                module.setTier(tier);
-                state.layoutCache()
-                    .applyMutation(MutationKind.SET_TIER, module.kind(), module);
             }
             case SET_PRIORITY -> {
                 ModulePriority priority = PacketUtil
@@ -442,6 +451,30 @@ public final class AssetModuleUpdatePacket {
             case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
+    }
+
+    private static void planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
+        ModuleTier targetTier) {
+        ModuleHammer.requireTier(targetVariant, targetTier);
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            throw new IllegalStateException(
+                "Module " + module.id + " already has active operation " + existingOperation.phase());
+        }
+        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
+            ModuleOperationKind.UPGRADE_REBUILD,
+            module.kind(),
+            module.tier(),
+            hammer.variant()
+                .name(),
+            module.kind(),
+            targetTier,
+            targetVariant.name());
+        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
+            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD);
+        ModuleOperationPlan plan = definition.createPlan(target, false);
+        module.setOperation(ModuleOperationState.waiting(plan));
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

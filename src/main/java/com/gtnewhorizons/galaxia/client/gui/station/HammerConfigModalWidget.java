@@ -115,14 +115,6 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         ModuleInstance module = selectedModule();
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
         HammerVariant next = hammer.variant() == HammerVariant.BASE ? HammerVariant.BIG : HammerVariant.BASE;
-        ModuleTier nextTier = ModuleHammer.tierForVariantSwitch(next, module.tier());
-        if (nextTier != module.tier()) {
-            CelestialClient.updateModuleConfig(
-                assetId,
-                controller.moduleIndex(),
-                AssetModuleUpdatePacket.ConfigAction.SET_TIER,
-                nextTier);
-        }
         CelestialClient.updateModuleConfig(
             assetId,
             controller.moduleIndex(),
@@ -141,7 +133,11 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     private boolean canUseControls() {
-        return controller.isHammerOpen() && selectedModule() != null;
+        ModuleInstance module = selectedModule();
+        return controller.isHammerOpen() && module != null
+            && (module.operationOrNull() == null || module.operationOrNull()
+                .phase()
+                .isTerminal());
     }
 
     private ModuleInstance selectedModule() {

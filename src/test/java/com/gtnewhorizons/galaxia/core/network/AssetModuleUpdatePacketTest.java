@@ -24,9 +24,15 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -282,16 +288,94 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyHammerVariantRejectsTierMismatch() {
+    void applyHammerVariantPlansRebuildWithoutMutatingModule() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
             .get(0);
+        ModuleHammer hammer = (ModuleHammer) module.component();
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket.config(
             facility.assetId,
             0,
             module.id,
             AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
             HammerVariant.BIG);
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(HammerVariant.BASE, hammer.variant());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleOperationPhase.WAITING_FOR_MATERIALS,
+            module.operationOrNull()
+                .phase());
+        assertEquals(
+            ModuleOperationKind.UPGRADE_REBUILD,
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .operationKind());
+        assertEquals(
+            "BASE",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .sourceVariantKey());
+        assertEquals(
+            ModuleTier.LuV,
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetTier());
+        assertEquals(
+            "BIG",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetVariantKey());
+    }
+
+    @Test
+    void applyHammerTierPlansRebuildWithoutMutatingTier() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.IV);
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleTier.IV,
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetTier());
+    }
+
+    @Test
+    void applyHammerPhysicalChangeRejectsActiveOperation() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new ModuleOperationTargetSpec(
+                        ModuleOperationKind.UPGRADE_REBUILD,
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.EV,
+                        "BASE",
+                        FacilityModuleKind.HAMMER,
+                        ModuleTier.IV,
+                        "BASE"),
+                    200,
+                    80,
+                    false)));
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.IV);
 
         assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
     }

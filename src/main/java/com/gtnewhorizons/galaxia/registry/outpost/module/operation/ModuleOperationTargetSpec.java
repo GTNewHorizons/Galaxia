@@ -4,7 +4,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 public record ModuleOperationTargetSpec(ModuleOperationKind operationKind, FacilityModuleKind sourceModuleKind,
-    ModuleTier sourceTier, FacilityModuleKind targetModuleKind, ModuleTier targetTier, String targetVariantKey) {
+    ModuleTier sourceTier, String sourceVariantKey, FacilityModuleKind targetModuleKind, ModuleTier targetTier,
+    String targetVariantKey) {
+
+    public ModuleOperationTargetSpec(ModuleOperationKind operationKind, FacilityModuleKind sourceModuleKind,
+        ModuleTier sourceTier, FacilityModuleKind targetModuleKind, ModuleTier targetTier, String targetVariantKey) {
+        this(operationKind, sourceModuleKind, sourceTier, null, targetModuleKind, targetTier, targetVariantKey);
+    }
 
     public ModuleOperationTargetSpec {
         if (operationKind == null) {
@@ -15,6 +21,10 @@ public record ModuleOperationTargetSpec(ModuleOperationKind operationKind, Facil
         }
         if (targetTier != null && targetModuleKind == null) {
             throw new IllegalArgumentException("targetModuleKind must not be null when targetTier is set");
+        }
+        if (sourceVariantKey != null && sourceVariantKey.trim()
+            .isEmpty()) {
+            throw new IllegalArgumentException("sourceVariantKey must be null or non-blank");
         }
         if (targetVariantKey != null && targetVariantKey.trim()
             .isEmpty()) {

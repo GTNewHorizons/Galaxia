@@ -891,6 +891,7 @@ public final class FacilityPersistenceManager {
         String phase;
         String sourceModuleKind;
         String sourceTier;
+        String sourceVariantKey;
         String targetModuleKind;
         String targetTier;
         String targetVariantKey;
@@ -1122,6 +1123,7 @@ public final class FacilityPersistenceManager {
         json.sourceTier = target.sourceTier() == null ? null
             : target.sourceTier()
                 .name();
+        json.sourceVariantKey = target.sourceVariantKey();
         json.targetModuleKind = target.targetModuleKind() == null ? null
             : target.targetModuleKind()
                 .name();
@@ -1168,6 +1170,7 @@ public final class FacilityPersistenceManager {
             operationKind,
             sourceModuleKind,
             sourceTier,
+            json.sourceVariantKey,
             targetModuleKind,
             targetTier,
             json.targetVariantKey);

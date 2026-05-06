@@ -185,6 +185,7 @@ final class FacilityPersistenceManagerTest {
                         ModuleOperationKind.UPGRADE_REBUILD,
                         FacilityModuleKind.HAMMER,
                         ModuleTier.EV,
+                        "BASE",
                         FacilityModuleKind.HAMMER,
                         ModuleTier.LuV,
                         "BIG"),
@@ -212,6 +213,11 @@ final class FacilityPersistenceManagerTest {
         assertEquals(1, decodedOperation.elapsedBuildTicks());
         assertTrue(decodedOperation.reserveItems());
         assertEquals(
+            "BASE",
+            decodedOperation.plan()
+                .targetSpec()
+                .sourceVariantKey());
+        assertEquals(
             ModuleTier.LuV,
             decodedOperation.plan()
                 .targetSpec()
@@ -235,6 +241,7 @@ final class FacilityPersistenceManagerTest {
                         ModuleOperationKind.UPGRADE_REBUILD,
                         FacilityModuleKind.HAMMER,
                         ModuleTier.EV,
+                        "BASE",
                         FacilityModuleKind.HAMMER,
                         ModuleTier.IV,
                         "BASE"),
