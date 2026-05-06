@@ -71,6 +71,12 @@ final class ModuleConfigModalSupport {
         return y + fr.FONT_HEIGHT + 3;
     }
 
+    static int drawTrimmedLine(String text, int x, int y, int maxWidth, int color) {
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        fr.drawStringWithShadow(fr.trimStringToWidth(text, maxWidth), x, y, color);
+        return y + fr.FONT_HEIGHT + 3;
+    }
+
     static @Nullable AutomatedFacility facility(CelestialAsset.ID assetId) {
         return assetId != null && CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility
             : null;

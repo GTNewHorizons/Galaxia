@@ -5,9 +5,7 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
@@ -24,9 +22,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     private static final int BAR_WIDTH = WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2;
     private static final int FOOTER_Y = HEIGHT - 28;
     private static final int FOOTER_BUTTON_HEIGHT = 20;
-    private static final int VARIANT_BUTTON_WIDTH = 66;
-    private static final int TIER_BUTTON_X = 80;
-    private static final int TIER_BUTTON_WIDTH = 54;
+    private static final int UPGRADE_BUTTON_WIDTH = 70;
     private static final int CLOSE_BUTTON_X = WIDTH - 62;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int BAR_TOP_OFFSET = 2;
@@ -39,15 +35,11 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         this.assetId = assetId;
         this.controller = controller;
         child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Variant", this::cycleVariant)
+            ModuleConfigModalSupport.button(this::canUseControls, "Upgrade", this::openUpgrade)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
-                .size(VARIANT_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
+                .size(UPGRADE_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Tier", this::cycleTier)
-                .pos(TIER_BUTTON_X, FOOTER_Y)
-                .size(TIER_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
-        child(
-            ModuleConfigModalSupport.button(this::canUseControls, "Close", controller::close)
+            ModuleConfigModalSupport.button(controller::isHammerOpen, "Close", controller::close)
                 .pos(CLOSE_BUTTON_X, FOOTER_Y)
                 .size(CLOSE_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
     }
@@ -109,27 +101,22 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             x + fillW,
             barY + BAR_HEIGHT,
             EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
+        if (module.operationOrNull() != null) {
+            int operationY = barY + BAR_HEIGHT + 5;
+            ModuleConfigModalSupport.drawLine(
+                "Operation: " + module.operationOrNull()
+                    .phase()
+                    .name(),
+                x,
+                operationY,
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+        }
     }
 
-    private void cycleVariant() {
+    private void openUpgrade() {
         ModuleInstance module = selectedModule();
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
-        HammerVariant next = hammer.variant() == HammerVariant.BASE ? HammerVariant.BIG : HammerVariant.BASE;
-        CelestialClient.updateModuleConfig(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
-            next);
-    }
-
-    private void cycleTier() {
-        ModuleInstance module = selectedModule();
-        if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
-        CelestialClient.updateModuleConfig(
-            assetId,
-            controller.moduleIndex(),
-            AssetModuleUpdatePacket.ConfigAction.SET_TIER,
-            ModuleHammer.nextTier(hammer.variant(), module.tier()));
+        controller.openHammerUpgrade(controller.moduleIndex(), hammer.variant(), module.tier());
     }
 
     private boolean canUseControls() {

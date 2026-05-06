@@ -50,6 +50,7 @@ public final class AssetModuleUpdatePacket {
     private static final int CONFIG_TYPE = 1;
     private static final int MAX_RECIPE_PAYLOAD_BYTES = 4096;
     private static final int MAX_RECIPE_STACKS = 64;
+    private static final int HAMMER_UPGRADE_PAYLOAD_BYTES = 3;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
@@ -137,6 +138,17 @@ public final class AssetModuleUpdatePacket {
         return config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
     }
 
+    public static AssetModuleUpdatePacket hammerUpgradePlan(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, HammerVariant variant, ModuleTier tier, boolean reserveItems) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_HAMMER_UPGRADE);
+        pkt.rawPayload = new byte[] { (byte) Objects.requireNonNull(variant, "variant")
+            .ordinal(),
+            (byte) Objects.requireNonNull(tier, "tier")
+                .ordinal(),
+            (byte) (reserveItems ? 1 : 0) };
+        return pkt;
+    }
+
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, RecipeSlot slot) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
@@ -206,6 +218,7 @@ public final class AssetModuleUpdatePacket {
         SET_ALLOW_SHOOTING_MODE,
         SET_ALLOW_SHOOTING_THRESHOLD,
         SET_HAMMER_VARIANT,
+        PLAN_HAMMER_UPGRADE,
         SET_ROUTE_PRIORITY,
         SET_TIER,
         SET_PRIORITY,
@@ -238,6 +251,12 @@ public final class AssetModuleUpdatePacket {
                     buf.writeByte(bytePayload);
                 }
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
+                case PLAN_HAMMER_UPGRADE -> {
+                    if (rawPayload == null || rawPayload.length != HAMMER_UPGRADE_PAYLOAD_BYTES) {
+                        throw new IllegalArgumentException("invalid hammer upgrade payload");
+                    }
+                    buf.writeBytes(rawPayload);
+                }
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
                 case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
@@ -286,6 +305,16 @@ public final class AssetModuleUpdatePacket {
                 }
             }
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
+            case PLAN_HAMMER_UPGRADE -> {
+                if (buf.readableBytes() < HAMMER_UPGRADE_PAYLOAD_BYTES) {
+                    throw new IllegalArgumentException("missing hammer upgrade payload");
+                }
+                rawPayload = new byte[HAMMER_UPGRADE_PAYLOAD_BYTES];
+                buf.readBytes(rawPayload);
+                if (rawPayload[2] != 0 && rawPayload[2] != 1) {
+                    throw new IllegalStateException("invalid hammer upgrade reserve flag: " + rawPayload[2]);
+                }
+            }
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
             case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
@@ -413,6 +442,7 @@ public final class AssetModuleUpdatePacket {
                 ModuleTier tier = ModuleHammer.tierForVariantSwitch(variant, module.tier());
                 planHammerUpgrade(module, hammer, variant, tier);
             }
+            case PLAN_HAMMER_UPGRADE -> handleHammerUpgradePlan(packet, module);
             case SET_ROUTE_PRIORITY -> {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
                     throw new IllegalStateException("SET_ROUTE_PRIORITY sent to non-hammer module " + module.id);
@@ -455,6 +485,11 @@ public final class AssetModuleUpdatePacket {
 
     private static void planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
         ModuleTier targetTier) {
+        planHammerUpgrade(module, hammer, targetVariant, targetTier, false);
+    }
+
+    private static void planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
+        ModuleTier targetTier, boolean reserveItems) {
         ModuleHammer.requireTier(targetVariant, targetTier);
         ModuleOperationState existingOperation = module.operationOrNull();
         if (existingOperation != null && !existingOperation.phase()
@@ -473,8 +508,25 @@ public final class AssetModuleUpdatePacket {
             targetVariant.name());
         ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
             .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD);
-        ModuleOperationPlan plan = definition.createPlan(target, false);
+        ModuleOperationPlan plan = definition.createPlan(target, reserveItems);
         module.setOperation(ModuleOperationState.waiting(plan));
+    }
+
+    private static void handleHammerUpgradePlan(AssetModuleUpdatePacket packet, ModuleInstance module) {
+        if (!(module.component() instanceof ModuleHammer hammer)) {
+            throw new IllegalStateException("PLAN_HAMMER_UPGRADE sent to non-hammer module " + module.id);
+        }
+        if (packet.rawPayload == null || packet.rawPayload.length != HAMMER_UPGRADE_PAYLOAD_BYTES) {
+            throw new IllegalStateException("PLAN_HAMMER_UPGRADE malformed payload for module " + module.id);
+        }
+        HammerVariant variant = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.rawPayload[0]), HammerVariant.class);
+        ModuleTier tier = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.rawPayload[1]), ModuleTier.class);
+        if (variant == null || tier == null) {
+            throw new IllegalStateException(
+                "PLAN_HAMMER_UPGRADE invalid target for module " + module.id + ": " + variant + "/" + tier);
+        }
+        boolean reserveItems = packet.rawPayload[2] == 1;
+        planHammerUpgrade(module, hammer, variant, tier, reserveItems);
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

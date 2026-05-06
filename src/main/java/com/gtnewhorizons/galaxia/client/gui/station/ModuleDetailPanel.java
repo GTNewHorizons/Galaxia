@@ -238,6 +238,36 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        if (module.operationOrNull() != null && !module.operationOrNull()
+            .phase()
+            .isTerminal()) {
+            lineY = drawLine(
+                "Operation: " + module.operationOrNull()
+                    .phase()
+                    .name(),
+                panelX,
+                lineY,
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            if (module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetTier() != null) {
+                lineY = drawLine(
+                    "Target: " + module.operationOrNull()
+                        .plan()
+                        .targetSpec()
+                        .targetVariantKey()
+                        + " "
+                        + module.operationOrNull()
+                            .plan()
+                            .targetSpec()
+                            .targetTier()
+                            .name(),
+                    panelX,
+                    lineY,
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            }
+        }
 
         int barX = panelX;
         int barY = lineY + CHARGE_BAR_TOP_OFFSET;

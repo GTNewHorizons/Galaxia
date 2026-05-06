@@ -288,6 +288,19 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void hammerUpgradePlanPayload_roundTripsTargetAndReserveFlag() {
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .hammerUpgradePlan(ASSET_ID, 0, MODULE_ID, HammerVariant.BIG, ModuleTier.ZPM, true);
+
+        AssetModuleUpdatePacket decoded = roundTrip(packet);
+
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.PLAN_HAMMER_UPGRADE, decoded.getConfigAction());
+        assertArrayEquals(
+            new byte[] { (byte) HammerVariant.BIG.ordinal(), (byte) ModuleTier.ZPM.ordinal(), 1 },
+            decoded.getRawPayload());
+    }
+
+    @Test
     void applyHammerVariantPlansRebuildWithoutMutatingModule() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
@@ -353,6 +366,43 @@ final class AssetModuleUpdatePacketTest {
                 .plan()
                 .targetSpec()
                 .targetTier());
+    }
+
+    @Test
+    void applyHammerUpgradePlanCreatesSingleTargetSpecWithReserveFlag() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, true));
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(HammerVariant.BASE, ((ModuleHammer) module.component()).variant());
+        assertNotNull(module.operationOrNull());
+        assertTrue(
+            module.operationOrNull()
+                .reserveItems());
+        assertEquals(
+            ModuleTier.ZPM,
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetTier());
+        assertEquals(
+            "BASE",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .sourceVariantKey());
+        assertEquals(
+            "BIG",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetVariantKey());
     }
 
     @Test

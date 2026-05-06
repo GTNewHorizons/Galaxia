@@ -3,12 +3,16 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class ModuleConfigModalController {
 
     enum Kind {
         NONE,
         HAMMER,
+        HAMMER_UPGRADE,
         MINER_BLACKLIST
     }
 
@@ -22,6 +26,9 @@ final class ModuleConfigModalController {
     private int moduleIndex = -1;
     private int minerBlacklistPage;
     private boolean minerSettingsGroupMenuOpen;
+    private HammerVariant hammerUpgradeVariant = HammerVariant.BASE;
+    private ModuleTier hammerUpgradeTier = ModuleTier.EV;
+    private boolean hammerUpgradeReserveItems;
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this.host = host;
@@ -42,6 +49,23 @@ final class ModuleConfigModalController {
             .top(y)
             .width(HammerConfigModalWidget.WIDTH)
             .height(HammerConfigModalWidget.HEIGHT);
+        this.modal = widget;
+        host.child(widget);
+    }
+
+    void openHammerUpgrade(int moduleIndex, HammerVariant variant, ModuleTier tier) {
+        close();
+        this.kind = Kind.HAMMER_UPGRADE;
+        this.moduleIndex = moduleIndex;
+        this.hammerUpgradeVariant = variant;
+        this.hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(variant, tier);
+        this.hammerUpgradeReserveItems = false;
+
+        HammerUpgradeModalWidget widget = new HammerUpgradeModalWidget(assetId, this);
+        widget.left(x)
+            .top(y)
+            .width(HammerUpgradeModalWidget.WIDTH)
+            .height(HammerUpgradeModalWidget.HEIGHT);
         this.modal = widget;
         host.child(widget);
     }
@@ -71,6 +95,9 @@ final class ModuleConfigModalController {
         this.moduleIndex = -1;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
+        this.hammerUpgradeVariant = HammerVariant.BASE;
+        this.hammerUpgradeTier = ModuleTier.EV;
+        this.hammerUpgradeReserveItems = false;
     }
 
     boolean isOpen() {
@@ -79,6 +106,10 @@ final class ModuleConfigModalController {
 
     boolean isHammerOpen() {
         return kind == Kind.HAMMER;
+    }
+
+    boolean isHammerUpgradeOpen() {
+        return kind == Kind.HAMMER_UPGRADE;
     }
 
     boolean isMinerBlacklistOpen() {
@@ -107,5 +138,31 @@ final class ModuleConfigModalController {
 
     void closeMinerSettingsGroupMenu() {
         minerSettingsGroupMenuOpen = false;
+    }
+
+    HammerVariant hammerUpgradeVariant() {
+        return hammerUpgradeVariant;
+    }
+
+    void setHammerUpgradeVariant(HammerVariant hammerUpgradeVariant) {
+        this.hammerUpgradeVariant = hammerUpgradeVariant;
+        this.hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(hammerUpgradeVariant, hammerUpgradeTier);
+    }
+
+    ModuleTier hammerUpgradeTier() {
+        return hammerUpgradeTier;
+    }
+
+    void setHammerUpgradeTier(ModuleTier hammerUpgradeTier) {
+        ModuleHammer.requireTier(hammerUpgradeVariant, hammerUpgradeTier);
+        this.hammerUpgradeTier = hammerUpgradeTier;
+    }
+
+    boolean hammerUpgradeReserveItems() {
+        return hammerUpgradeReserveItems;
+    }
+
+    void toggleHammerUpgradeReserveItems() {
+        hammerUpgradeReserveItems = !hammerUpgradeReserveItems;
     }
 }
