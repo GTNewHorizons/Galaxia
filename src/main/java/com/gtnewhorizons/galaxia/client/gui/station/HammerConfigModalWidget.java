@@ -23,6 +23,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     private static final int FOOTER_Y = HEIGHT - 28;
     private static final int FOOTER_BUTTON_HEIGHT = 20;
     private static final int UPGRADE_BUTTON_WIDTH = 70;
+    private static final int ITEMS_BUTTON_X = 86;
+    private static final int ITEMS_BUTTON_WIDTH = 54;
     private static final int CLOSE_BUTTON_X = WIDTH - 62;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int BAR_TOP_OFFSET = 2;
@@ -38,6 +40,10 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             ModuleConfigModalSupport.button(this::canUseControls, "Upgrade", this::openUpgrade)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
                 .size(UPGRADE_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(controller::isHammerOpen, "Items", this::openLogistics)
+                .pos(ITEMS_BUTTON_X, FOOTER_Y)
+                .size(ITEMS_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Close", controller::close)
                 .pos(CLOSE_BUTTON_X, FOOTER_Y)
@@ -117,6 +123,11 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         ModuleInstance module = selectedModule();
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
         controller.openHammerUpgrade(controller.moduleIndex(), hammer.variant(), module.tier());
+    }
+
+    private void openLogistics() {
+        if (selectedModule() == null) return;
+        controller.openLogistics(controller.moduleIndex());
     }
 
     private boolean canUseControls() {

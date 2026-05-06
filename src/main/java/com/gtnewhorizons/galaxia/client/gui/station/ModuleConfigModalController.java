@@ -13,6 +13,7 @@ final class ModuleConfigModalController {
         NONE,
         HAMMER,
         HAMMER_UPGRADE,
+        LOGISTICS,
         MINER_BLACKLIST
     }
 
@@ -70,6 +71,20 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
+    void openLogistics(int moduleIndex) {
+        close();
+        this.kind = Kind.LOGISTICS;
+        this.moduleIndex = moduleIndex;
+
+        LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
+        widget.left(x)
+            .top(y)
+            .width(LogisticsConfigModalWidget.WIDTH)
+            .height(LogisticsConfigModalWidget.HEIGHT);
+        this.modal = widget;
+        host.child(widget);
+    }
+
     void openMinerBlacklist(int moduleIndex) {
         close();
         this.kind = Kind.MINER_BLACKLIST;
@@ -114,6 +129,10 @@ final class ModuleConfigModalController {
 
     boolean isMinerBlacklistOpen() {
         return kind == Kind.MINER_BLACKLIST;
+    }
+
+    boolean isLogisticsOpen() {
+        return kind == Kind.LOGISTICS;
     }
 
     int moduleIndex() {
