@@ -23,10 +23,33 @@ final class MinerVoidConfigModalWidget extends ParentWidget<MinerVoidConfigModal
     static final int WIDTH = 340;
     static final int HEIGHT = 252;
 
-    private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + 10;
-    private static final int ROW_Y = BODY_TOP + 34;
+    private static final int BODY_TOP_OFFSET = 10;
+    private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + BODY_TOP_OFFSET;
+    private static final int ROW_TOP_OFFSET = 34;
+    private static final int ROW_Y = BODY_TOP + ROW_TOP_OFFSET;
     private static final int ROW_HEIGHT = 18;
     private static final int MAX_ROWS = 8;
+    private static final int PAGE_BUTTON_WIDTH = 48;
+    private static final int PAGE_BUTTON_HEIGHT = 14;
+    private static final int PAGE_PREV_BUTTON_X = WIDTH - 116;
+    private static final int PAGE_NEXT_BUTTON_X = WIDTH - 62;
+    private static final int FOOTER_Y = HEIGHT - 28;
+    private static final int FOOTER_BUTTON_HEIGHT = 20;
+    private static final int CLOSE_BUTTON_WIDTH = 54;
+    private static final int ROW_BUTTON_Y_OFFSET = 4;
+    private static final int ROW_ZERO_BUTTON_X = 150;
+    private static final int ROW_ZERO_BUTTON_WIDTH = 18;
+    private static final int ROW_MINUS_BUTTON_X = 172;
+    private static final int ROW_MINUS_BUTTON_WIDTH = 22;
+    private static final int ROW_FIELD_X = 198;
+    private static final int ROW_FIELD_WIDTH = 30;
+    private static final int ROW_PLUS_BUTTON_X = 232;
+    private static final int ROW_PLUS_BUTTON_WIDTH = 22;
+    private static final int ROW_ALL_BUTTON_X = 258;
+    private static final int ROW_ALL_BUTTON_WIDTH = 28;
+    private static final int ROW_BUTTON_HEIGHT = 10;
+    private static final int ROW_NAME_WIDTH = 136;
+    private static final int PAGE_LABEL_Y = HEIGHT - 24;
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
@@ -36,39 +59,39 @@ final class MinerVoidConfigModalWidget extends ParentWidget<MinerVoidConfigModal
         this.controller = controller;
         child(
             ModuleConfigModalSupport.button(() -> canChangePage(-1), "Prev", () -> changePage(-1))
-                .pos(WIDTH - 116, BODY_TOP)
-                .size(48, 14));
+                .pos(PAGE_PREV_BUTTON_X, BODY_TOP)
+                .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(() -> canChangePage(1), "Next", () -> changePage(1))
-                .pos(WIDTH - 62, BODY_TOP)
-                .size(48, 14));
+                .pos(PAGE_NEXT_BUTTON_X, BODY_TOP)
+                .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT));
         for (int i = 0; i < MAX_ROWS; i++) {
             int rowIndex = i;
             int rowY = ROW_Y + rowIndex * ROW_HEIGHT;
             child(
                 ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "0", () -> setPercent(rowIndex, 0))
-                    .pos(150, rowY + 4)
-                    .size(18, 10));
+                    .pos(ROW_ZERO_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
+                    .size(ROW_ZERO_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
             child(
                 ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "-1", () -> addPercent(rowIndex, -1))
-                    .pos(172, rowY + 4)
-                    .size(22, 10));
+                    .pos(ROW_MINUS_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
+                    .size(ROW_MINUS_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
             child(
-                createPercentField(rowIndex).pos(198, rowY + 4)
-                    .size(30, 10));
+                createPercentField(rowIndex).pos(ROW_FIELD_X, rowY + ROW_BUTTON_Y_OFFSET)
+                    .size(ROW_FIELD_WIDTH, ROW_BUTTON_HEIGHT));
             child(
                 ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "+1", () -> addPercent(rowIndex, 1))
-                    .pos(232, rowY + 4)
-                    .size(22, 10));
+                    .pos(ROW_PLUS_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
+                    .size(ROW_PLUS_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
             child(
                 ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "All", () -> setPercent(rowIndex, 100))
-                    .pos(258, rowY + 4)
-                    .size(28, 10));
+                    .pos(ROW_ALL_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
+                    .size(ROW_ALL_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
         }
         child(
             ModuleConfigModalSupport.button(() -> controller.isMinerVoidOpen(), "Close", controller::close)
-                .pos(WIDTH - 62, HEIGHT - 28)
-                .size(54, 20));
+                .pos(PAGE_NEXT_BUTTON_X, FOOTER_Y)
+                .size(CLOSE_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
     }
 
     @Override

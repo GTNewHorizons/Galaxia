@@ -42,7 +42,12 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private static final int CONTENT_PADDING = 10;
     private static final int SECTION_GAP = 4;
     private static final int BUTTON_H = 16;
+    private static final int ACTION_X = 10;
     private static final int ACTION_Y = 40;
+    private static final int ACTION_BUTTON_WIDTH = 70;
+    private static final int CHARGE_BAR_TOP_OFFSET = 2;
+    private static final int CHARGE_BAR_HEIGHT = 8;
+    private static final int CHARGE_BAR_BOTTOM_GAP = 3;
 
     private final StationMapWidget map;
     private StationTileCoord lastCoveredAnchor;
@@ -53,14 +58,17 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         this.map = map;
         this.configController = configController;
         child(
-            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerVoidConfig).pos(10, ACTION_Y)
-                .size(70, BUTTON_H));
+            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerVoidConfig)
+                .pos(ACTION_X, ACTION_Y)
+                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
-            createPanelButton(() -> "Configure", this::hasHammerSelected, this::openHammerConfig).pos(10, ACTION_Y)
-                .size(70, BUTTON_H));
+            createPanelButton(() -> "Configure", this::hasHammerSelected, this::openHammerConfig)
+                .pos(ACTION_X, ACTION_Y)
+                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
-            createPanelButton(() -> "Configure", this::hasRecipeModuleSelected, this::openRecipeInput).pos(10, ACTION_Y)
-                .size(70, BUTTON_H));
+            createPanelButton(() -> "Configure", this::hasRecipeModuleSelected, this::openRecipeInput)
+                .pos(ACTION_X, ACTION_Y)
+                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
     }
 
     @Override
@@ -232,9 +240,9 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
         int barX = panelX;
-        int barY = lineY + 2;
+        int barY = lineY + CHARGE_BAR_TOP_OFFSET;
         int barW = panelW;
-        int barH = 8;
+        int barH = CHARGE_BAR_HEIGHT;
         int chargeProgress = Math.min(Math.max(module.ticks(), 0), chargeTicks);
         int fillW = (int) ((long) barW * chargeProgress / chargeTicks);
         Gui.drawRect(barX, barY, barX + barW, barY + barH, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
@@ -244,7 +252,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             barX + fillW,
             barY + barH,
             EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
-        return barY + barH + 3;
+        return barY + barH + CHARGE_BAR_BOTTOM_GAP;
     }
 
     private ButtonWidget<?> createPanelButton(Supplier<String> labelSupplier, BooleanSupplier enabledSupplier,

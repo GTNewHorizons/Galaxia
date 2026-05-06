@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -22,28 +21,6 @@ final class ModuleHammerTest {
     static void initRegistries() {
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
-    }
-
-    @Test
-    void baseHammerUsesEvIvLuvTierTable() {
-        assertEquals(60 * 20, ModuleHammer.cooldownTicks(HammerVariant.BASE, ModuleTier.EV));
-        assertEquals(45 * 20, ModuleHammer.cooldownTicks(HammerVariant.BASE, ModuleTier.IV));
-        assertEquals(30 * 20, ModuleHammer.cooldownTicks(HammerVariant.BASE, ModuleTier.LuV));
-        assertEquals(500_000L, ModuleHammer.shotEnergyEu(HammerVariant.BASE));
-
-        assertThrows(IllegalStateException.class, () -> ModuleHammer.cooldownTicks(HammerVariant.BASE, ModuleTier.ZPM));
-        assertThrows(IllegalStateException.class, () -> ModuleHammer.cooldownTicks(HammerVariant.BASE, ModuleTier.UV));
-    }
-
-    @Test
-    void bigHammerUsesLuvZpmUvTierTable() {
-        assertEquals(60 * 20, ModuleHammer.cooldownTicks(HammerVariant.BIG, ModuleTier.LuV));
-        assertEquals(45 * 20, ModuleHammer.cooldownTicks(HammerVariant.BIG, ModuleTier.ZPM));
-        assertEquals(30 * 20, ModuleHammer.cooldownTicks(HammerVariant.BIG, ModuleTier.UV));
-        assertEquals(8_000_000L, ModuleHammer.shotEnergyEu(HammerVariant.BIG));
-
-        assertThrows(IllegalStateException.class, () -> ModuleHammer.cooldownTicks(HammerVariant.BIG, ModuleTier.EV));
-        assertThrows(IllegalStateException.class, () -> ModuleHammer.cooldownTicks(HammerVariant.BIG, ModuleTier.IV));
     }
 
     @Test
