@@ -44,7 +44,7 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     @Override
     public boolean canHoverThrough() {
-        return !controller.isHammerOpen();
+        return false;
     }
 
     @Override

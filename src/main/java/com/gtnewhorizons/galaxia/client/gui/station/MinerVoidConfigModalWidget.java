@@ -73,7 +73,7 @@ final class MinerVoidConfigModalWidget extends ParentWidget<MinerVoidConfigModal
 
     @Override
     public boolean canHoverThrough() {
-        return !controller.isMinerVoidOpen();
+        return false;
     }
 
     @Override
