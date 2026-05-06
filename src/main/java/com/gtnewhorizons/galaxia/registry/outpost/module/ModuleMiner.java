@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 
 public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
@@ -17,6 +18,7 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
     private byte parallel = 1;
+    private MinerSettings localSettings = new MinerSettings();
 
     private static final Random RANDOM = new java.util.Random();
 
@@ -39,15 +41,36 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
                 ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
                 String oreKey = ItemStackWrapper.of(chosen)
                     .toKey();
-                if (shouldVoidOre(outpost, oreKey)) return;
+                if (shouldVoidOre(instance, outpost, oreKey)) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
                 outpost.inventory.add(ItemStackWrapper.of(ore), 1);
             });
     }
 
-    public static boolean shouldVoidOre(@Nonnull AutomatedFacility outpost, String oreKey) {
-        return outpost.isMinerOreBlacklisted(oreKey);
+    public static boolean shouldVoidOre(@Nonnull ModuleInstance instance, @Nonnull AutomatedFacility outpost,
+        String oreKey) {
+        return outpost.isMinerOreBlacklisted(instance, oreKey);
+    }
+
+    public MinerSettings localSettingsOrNull() {
+        return localSettings;
+    }
+
+    public MinerSettings requireLocalSettings() {
+        if (localSettings == null) {
+            throw new IllegalStateException(
+                "Miner module has no local settings because it belongs to a settings group");
+        }
+        return localSettings;
+    }
+
+    public void setLocalSettings(@Nonnull MinerSettings localSettings) {
+        this.localSettings = localSettings.copy();
+    }
+
+    public void clearLocalSettings() {
+        this.localSettings = null;
     }
 
     @Override

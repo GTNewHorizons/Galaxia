@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -37,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -57,7 +59,6 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_UPDATED = 8;
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
-    public static final byte MINER_BLACKLIST_UPDATED = 11;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -82,7 +83,6 @@ public final class AssetSyncPacket implements IMessage {
     private String resourceKey;
     private long inventoryDelta;
     private LogisticsResourceConfig logConfig;
-    private boolean minerOreBlacklisted;
 
     private StationTileCoord tileCoord;
     private StationTileState tileState;
@@ -123,10 +123,6 @@ public final class AssetSyncPacket implements IMessage {
                     cfg.orderSize(),
                     cfg.isImportEnabled(),
                     cfg.isSupplyEnabled()));
-        }
-
-        for (String oreKey : state.minerBlacklistedOreKeys()) {
-            pkt.fullSyncDeltas.add(minerBlacklistUpdated(state.assetId, oreKey, true));
         }
 
         StationLayout layout = state.stationLayout();
@@ -241,15 +237,6 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static AssetSyncPacket minerBlacklistUpdated(CelestialAsset.ID assetId, String oreKey, boolean blacklisted) {
-        AssetSyncPacket pkt = new AssetSyncPacket();
-        pkt.assetId = assetId;
-        pkt.syncType = MINER_BLACKLIST_UPDATED;
-        pkt.resourceKey = Objects.requireNonNull(oreKey, "oreKey");
-        pkt.minerOreBlacklisted = blacklisted;
-        return pkt;
-    }
-
     /**
      * Decides what to sync for the given facility and player. Returns a list of packets
      * (full sync or individual deltas) and updates the facility's dirty/sync state.
@@ -261,7 +248,6 @@ public final class AssetSyncPacket implements IMessage {
             facility.markSyncedFor(playerId);
             facility.drainDirtyModules();
             facility.drainRemovedIds();
-            facility.drainDirtyMinerBlacklist();
             return packets;
         }
         if (!facility.isDirty()) {
@@ -275,12 +261,6 @@ public final class AssetSyncPacket implements IMessage {
         for (ModuleInstance m : facility.drainDirtyModules()) {
             int idx = facility.moduleIndex(m.id);
             packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
-        }
-        for (Map.Entry<String, Boolean> e : facility.drainDirtyMinerBlacklist()
-            .entrySet()) {
-            packets.add(
-                minerBlacklistUpdated(facility.assetId, e.getKey(), e.getValue())
-                    .withSyncRevision(facility.getSyncRevision()));
         }
         return packets;
     }
@@ -374,10 +354,6 @@ public final class AssetSyncPacket implements IMessage {
                 if (hasModule) PacketUtil.writeId(buf, tileModuleId);
             }
             case LAYOUT_TILE_REMOVED -> PacketUtil.writeStationTileCoord(buf, tileCoord);
-            case MINER_BLACKLIST_UPDATED -> {
-                PacketUtil.writeString(buf, resourceKey);
-                buf.writeBoolean(minerOreBlacklisted);
-            }
         }
     }
 
@@ -406,10 +382,6 @@ public final class AssetSyncPacket implements IMessage {
                 tileModuleId = buf.readBoolean() ? PacketUtil.readModuleId(buf) : null;
             }
             case LAYOUT_TILE_REMOVED -> tileCoord = PacketUtil.readStationTileCoord(buf);
-            case MINER_BLACKLIST_UPDATED -> {
-                resourceKey = PacketUtil.readString(buf);
-                minerOreBlacklisted = buf.readBoolean();
-            }
         }
     }
 
@@ -429,7 +401,7 @@ public final class AssetSyncPacket implements IMessage {
         if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
 
         switch (module.kind()) {
-            case MINER -> {}
+            case MINER -> writeMinerSettings(buf, module);
             case HAMMER -> {
                 ModuleHammer h = (ModuleHammer) module.component();
                 PacketUtil.writeEnum(
@@ -469,7 +441,7 @@ public final class AssetSyncPacket implements IMessage {
         module.setGroupId(groupId);
 
         switch (kind) {
-            case MINER -> {}
+            case MINER -> readMinerSettings(buf, module);
             case HAMMER -> {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
@@ -493,6 +465,43 @@ public final class AssetSyncPacket implements IMessage {
         }
         module.updateStatus(status);
         return module;
+    }
+
+    private static void writeMinerSettings(ByteBuf buf, ModuleInstance module) {
+        ModuleMiner miner = (ModuleMiner) module.component();
+        MinerSettings settings = miner.localSettingsOrNull();
+        buf.writeBoolean(settings != null);
+        if (settings == null) return;
+        buf.writeInt(
+            settings.blacklistedOreKeys()
+                .size());
+        for (String oreKey : settings.blacklistedOreKeys()) {
+            PacketUtil.writeString(buf, oreKey);
+        }
+    }
+
+    private static void readMinerSettings(ByteBuf buf, ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner miner)) {
+            throw new IllegalStateException("Network decoded MINER module with non-miner component " + module.id);
+        }
+        boolean hasLocalSettings = buf.readBoolean();
+        if (!hasLocalSettings) {
+            if (module.groupId() == 0) {
+                throw new IllegalStateException("Network decoded ungrouped miner without local settings " + module.id);
+            }
+            miner.clearLocalSettings();
+            return;
+        }
+        int count = buf.readInt();
+        if (count < 0 || count > 4096) {
+            throw new IllegalStateException(
+                "Network decoded invalid miner blacklist count " + count + " for " + module.id);
+        }
+        MinerSettings settings = new MinerSettings();
+        for (int i = 0; i < count; i++) {
+            settings.setOreBlacklisted(PacketUtil.readString(buf), true);
+        }
+        miner.setLocalSettings(settings);
     }
 
     private static void writeLogisticsConfig(ByteBuf buf, LogisticsResourceConfig cfg) {
@@ -687,8 +696,6 @@ public final class AssetSyncPacket implements IMessage {
                 StationLayout layout = state.stationLayout();
                 if (layout != null) layout.remove(packet.tileCoord);
             }
-            case MINER_BLACKLIST_UPDATED -> state
-                .setMinerOreBlacklisted(packet.resourceKey, packet.minerOreBlacklisted);
         }
     }
 
@@ -732,7 +739,6 @@ public final class AssetSyncPacket implements IMessage {
             state.setEnergyStored(packet.energyStored);
 
             state.clearModules();
-            state.setMinerBlacklistedOreKeys(java.util.Collections.emptySet());
             state.inventory.clear();
             state.logisticsConfig.clear();
             StationLayout layout = state.stationLayout();
@@ -803,8 +809,6 @@ public final class AssetSyncPacket implements IMessage {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
-                case MINER_BLACKLIST_UPDATED -> state
-                    .setMinerOreBlacklisted(packet.resourceKey, packet.minerOreBlacklisted);
             }
         }
 

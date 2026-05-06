@@ -8,7 +8,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +51,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -65,6 +65,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -358,7 +359,6 @@ public final class FacilityPersistenceManager {
         out.energyStored = state.getEnergyStored();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
-        out.minerBlacklistedOreKeys = new LinkedHashSet<>(state.minerBlacklistedOreKeys());
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -385,6 +385,9 @@ public final class FacilityPersistenceManager {
                     "variant",
                     hammer.variant()
                         .name());
+            } else if (m.component() instanceof ModuleMiner miner) {
+                MinerSettings settings = miner.localSettingsOrNull();
+                moduleData.add("localSettings", settings == null ? null : PURE_GSON.toJsonTree(settings));
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -505,8 +508,6 @@ public final class FacilityPersistenceManager {
         state.setEnergyStored(json.energyStored);
         state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
-        state.setMinerBlacklistedOreKeys(
-            Objects.requireNonNull(json.minerBlacklistedOreKeys, "[PERSIST] Facility missing minerBlacklistedOreKeys"));
 
         int moduleDecodedCount = 0;
         if (json.modules != null) {
@@ -558,6 +559,7 @@ public final class FacilityPersistenceManager {
                     (module.anchorOrNull() != null ? (int) module.anchorOrNull()
                         .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE));
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : null;
+                module.setGroupId(mj.groupId);
 
                 switch (kind) {
                     case HAMMER -> {
@@ -576,11 +578,11 @@ public final class FacilityPersistenceManager {
                         module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
                     }
                     case MINER -> {
-                        if (data != null && !data.entrySet()
-                            .isEmpty()) {
+                        if (!(module.component() instanceof ModuleMiner miner)) {
                             throw new IllegalStateException(
-                                "[PERSIST] Miner module " + moduleId + " has obsolete data");
+                                "[PERSIST] Miner module " + moduleId + " has non-miner data");
                         }
+                        decodeMinerSettings(module, miner, data);
                     }
                     case POWER -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
@@ -601,7 +603,6 @@ public final class FacilityPersistenceManager {
                 module.setTicks(mj.cooldownTicks);
                 module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
-                module.setGroupId(mj.groupId);
                 if (module.component() instanceof IParallelModule pm) {
                     pm.setParallel(mj.parallel);
                 }
@@ -800,7 +801,6 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         long energyStored;
         short settingsGroupsNextId;
-        Set<String> minerBlacklistedOreKeys;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
@@ -1036,6 +1036,42 @@ public final class FacilityPersistenceManager {
                 return null;
             }
         }
+    }
+
+    private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {
+        JsonObject minerData = Objects.requireNonNull(data, "[PERSIST] Miner module " + module.id + " missing data");
+        if (minerData.entrySet()
+            .size() != 1 || !minerData.has("localSettings")) {
+            throw new IllegalStateException("[PERSIST] Miner module " + module.id + " has malformed settings data");
+        }
+        JsonElement localSettingsElement = Objects.requireNonNull(
+            minerData.get("localSettings"),
+            "[PERSIST] Miner module " + module.id + " missing localSettings");
+        if (module.groupId() != 0) {
+            if (!localSettingsElement.isJsonNull()) {
+                throw new IllegalStateException(
+                    "[PERSIST] Grouped miner module " + module.id + " must not persist local settings");
+            }
+            miner.clearLocalSettings();
+            return;
+        }
+        if (localSettingsElement.isJsonNull()) {
+            throw new IllegalStateException(
+                "[PERSIST] Ungrouped miner module " + module.id + " has null local settings");
+        }
+        JsonObject localSettingsData = localSettingsElement.getAsJsonObject();
+        if (localSettingsData.entrySet()
+            .size() != 1 || !localSettingsData.has("blacklistedOreKeys")) {
+            throw new IllegalStateException("[PERSIST] Miner module " + module.id + " has malformed local settings");
+        }
+        JsonElement keysElement = Objects.requireNonNull(
+            localSettingsData.get("blacklistedOreKeys"),
+            "[PERSIST] Miner module " + module.id + " missing blacklistedOreKeys");
+        Type keySetType = new TypeToken<Set<String>>() {}.getType();
+        Set<String> keys = Objects.requireNonNull(
+            PURE_GSON.fromJson(keysElement, keySetType),
+            "[PERSIST] Miner module " + module.id + " has null blacklistedOreKeys");
+        miner.setLocalSettings(new MinerSettings(keys));
     }
 
     private static RecipeConfig decodeRecipeConfig(JsonObject data) {

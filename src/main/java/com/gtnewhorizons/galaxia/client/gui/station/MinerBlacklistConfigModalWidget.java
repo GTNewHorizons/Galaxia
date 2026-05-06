@@ -123,7 +123,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
                 rowY + 5,
                 EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(
-                facility.isMinerOreBlacklisted(option.key()) ? "VOID" : "KEEP",
+                facility.isMinerOreBlacklisted(module, option.key()) ? "VOID" : "KEEP",
                 ROW_STATE_X,
                 rowY + 5,
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());

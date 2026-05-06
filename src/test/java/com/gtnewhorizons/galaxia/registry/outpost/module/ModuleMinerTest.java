@@ -13,59 +13,71 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 
 final class ModuleMinerTest {
 
     @BeforeAll
     static void initRegistries() {
         CelestialRegistry.freezeAndBake();
+        FacilityModuleRegistry.init();
     }
 
     @Test
-    void minerBlacklistIsSparseAndValidated() {
+    void ungroupedMinerBlacklistIsSparseAndValidated() {
         AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
 
-        assertFalse(facility.isMinerOreBlacklisted("ore:iron"));
+        assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
 
-        facility.setMinerOreBlacklisted("ore:iron", true);
-        assertTrue(facility.isMinerOreBlacklisted("ore:iron"));
+        facility.setMinerOreBlacklisted(miner, "ore:iron", true);
+        assertTrue(facility.isMinerOreBlacklisted(miner, "ore:iron"));
         assertTrue(
-            facility.minerBlacklistedOreKeys()
+            ((ModuleMiner) miner.component()).requireLocalSettings()
+                .blacklistedOreKeys()
                 .contains("ore:iron"));
 
-        facility.setMinerOreBlacklisted("ore:iron", false);
-        assertFalse(facility.isMinerOreBlacklisted("ore:iron"));
+        facility.setMinerOreBlacklisted(miner, "ore:iron", false);
+        assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
         assertFalse(
-            facility.minerBlacklistedOreKeys()
+            ((ModuleMiner) miner.component()).requireLocalSettings()
+                .blacklistedOreKeys()
                 .contains("ore:iron"));
     }
 
     @Test
     void bulkBlacklistLoadCrashesOnMalformedOreKey() {
-        AutomatedFacility facility = createFacility();
-
         org.junit.jupiter.api.Assertions
-            .assertThrows(IllegalArgumentException.class, () -> facility.setMinerBlacklistedOreKeys(Set.of("")));
+            .assertThrows(IllegalArgumentException.class, () -> new MinerSettings(Set.of("")));
     }
 
     @Test
     void bulkBlacklistLoadReplacesSparseSet() {
-        AutomatedFacility facility = createFacility();
-        facility.setMinerOreBlacklisted("ore:iron", true);
+        ModuleInstance miner = createMiner();
+        ModuleMiner component = (ModuleMiner) miner.component();
+        component.requireLocalSettings()
+            .setOreBlacklisted("ore:iron", true);
 
-        facility.setMinerBlacklistedOreKeys(Set.of("ore:copper"));
+        component.setLocalSettings(new MinerSettings(Set.of("ore:copper")));
 
-        assertFalse(facility.isMinerOreBlacklisted("ore:iron"));
-        assertTrue(facility.isMinerOreBlacklisted("ore:copper"));
+        assertFalse(
+            component.requireLocalSettings()
+                .isOreBlacklisted("ore:iron"));
+        assertTrue(
+            component.requireLocalSettings()
+                .isOreBlacklisted("ore:copper"));
     }
 
     @Test
     void blacklistVoidsOreAfterRoll() {
         AutomatedFacility facility = createFacility();
-        facility.setMinerOreBlacklisted("ore:iron", true);
+        ModuleInstance miner = createMiner();
+        facility.setMinerOreBlacklisted(miner, "ore:iron", true);
 
-        assertTrue(ModuleMiner.shouldVoidOre(facility, "ore:iron"));
-        assertFalse(ModuleMiner.shouldVoidOre(facility, "ore:copper"));
+        assertTrue(ModuleMiner.shouldVoidOre(miner, facility, "ore:iron"));
+        assertFalse(ModuleMiner.shouldVoidOre(miner, facility, "ore:copper"));
     }
 
     private static AutomatedFacility createFacility() {
@@ -74,5 +86,16 @@ final class ModuleMinerTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
+    }
+
+    private static ModuleInstance createMiner() {
+        ModuleInstance miner = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        miner.updateStatus(Buildable.Status.OPERATIONAL);
+        return miner;
     }
 }

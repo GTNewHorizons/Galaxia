@@ -3,14 +3,11 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.logging.log4j.LogManager;
@@ -22,9 +19,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
 public final class AutomatedFacility extends CelestialAsset {
@@ -46,13 +45,11 @@ public final class AutomatedFacility extends CelestialAsset {
     private final LayoutCacheBundle layoutCache;
 
     private final SettingsGroupRegistry settingsGroups;
-    private final Set<String> minerBlacklistedOreKeys;
 
     private long energyStored;
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Set<String> dirtyMinerBlacklistOreKeys = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
@@ -73,7 +70,6 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
-        this.minerBlacklistedOreKeys = new HashSet<>();
         this.energyStored = 0;
     }
 
@@ -165,34 +161,25 @@ public final class AutomatedFacility extends CelestialAsset {
         return modules;
     }
 
-    public Set<String> minerBlacklistedOreKeys() {
-        return Collections.unmodifiableSet(minerBlacklistedOreKeys);
+    public MinerSettings minerSettings(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner miner)) {
+            throw new IllegalStateException("Miner settings requested for non-miner module " + module.id);
+        }
+        if (module.groupId() != 0) {
+            throw new IllegalStateException(
+                "Grouped miner settings are not wired yet for module " + module.id + ", groupId=" + module.groupId());
+        }
+        return miner.requireLocalSettings();
     }
 
-    public boolean isMinerOreBlacklisted(String oreKey) {
-        return minerBlacklistedOreKeys.contains(requireOreKey(oreKey));
+    public boolean isMinerOreBlacklisted(ModuleInstance module, String oreKey) {
+        return minerSettings(module).isOreBlacklisted(oreKey);
     }
 
-    public void setMinerOreBlacklisted(String oreKey, boolean blacklisted) {
-        String key = requireOreKey(oreKey);
-        boolean changed;
-        if (blacklisted) {
-            changed = minerBlacklistedOreKeys.add(key);
-        } else {
-            changed = minerBlacklistedOreKeys.remove(key);
+    public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
+        if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
+            markModuleDirty(module.id);
         }
-        if (changed) {
-            dirtyMinerBlacklistOreKeys.add(key);
-            bumpSyncRevision();
-        }
-    }
-
-    public void setMinerBlacklistedOreKeys(@Nonnull Set<String> oreKeys) {
-        minerBlacklistedOreKeys.clear();
-        for (String oreKey : oreKeys) {
-            minerBlacklistedOreKeys.add(requireOreKey(oreKey));
-        }
-        dirtyMinerBlacklistOreKeys.clear();
     }
 
     public void markModuleDirty(ModuleInstance.ID id) {
@@ -201,7 +188,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyMinerBlacklistOreKeys.isEmpty();
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
@@ -225,15 +212,6 @@ public final class AutomatedFacility extends CelestialAsset {
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
-        return result;
-    }
-
-    public Map<String, Boolean> drainDirtyMinerBlacklist() {
-        Map<String, Boolean> result = new LinkedHashMap<>();
-        for (String oreKey : dirtyMinerBlacklistOreKeys) {
-            result.put(oreKey, isMinerOreBlacklisted(oreKey));
-        }
-        dirtyMinerBlacklistOreKeys.clear();
         return result;
     }
 
@@ -270,11 +248,6 @@ public final class AutomatedFacility extends CelestialAsset {
             if (k == FacilityModuleKind.HAMMER && m.isOperational()) return true;
         }
         return false;
-    }
-
-    private static String requireOreKey(@Nonnull String oreKey) {
-        if (oreKey.isEmpty()) throw new IllegalArgumentException("oreKey cannot be empty");
-        return oreKey;
     }
 
     @Override

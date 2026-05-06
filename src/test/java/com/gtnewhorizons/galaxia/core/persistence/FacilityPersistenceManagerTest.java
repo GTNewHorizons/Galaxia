@@ -12,7 +12,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -120,7 +119,9 @@ final class FacilityPersistenceManagerTest {
     void minerBlacklistRoundTripsThroughPersistence() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();
-        station.setMinerOreBlacklisted("ore:iron", true);
+        ModuleInstance miner = station.modules()
+            .get(1);
+        station.setMinerOreBlacklisted(miner, "ore:iron", true);
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -130,7 +131,11 @@ final class FacilityPersistenceManagerTest {
             station.status());
         manager.decodeFacilityState(decoded, encoded);
 
-        assertTrue(decoded.isMinerOreBlacklisted("ore:iron"));
+        assertTrue(
+            decoded.isMinerOreBlacklisted(
+                decoded.modules()
+                    .get(1),
+                "ore:iron"));
     }
 
     @Test
@@ -1074,8 +1079,6 @@ final class FacilityPersistenceManagerTest {
 
         legacy.buffer = new LinkedHashMap<>();
         legacy.logisticsConfig = new LinkedHashMap<>();
-        legacy.minerBlacklistedOreKeys = new LinkedHashSet<>();
-
         AutomatedFacility decoded = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,

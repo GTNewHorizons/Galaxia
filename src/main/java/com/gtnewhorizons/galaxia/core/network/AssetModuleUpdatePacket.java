@@ -330,11 +330,6 @@ public final class AssetModuleUpdatePacket {
             return AssetSyncPacket.moduleRemoved(assetId, moduleIndex, module.id)
                 .withSyncRevision(state.getSyncRevision());
         }
-        if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_ORE_BLACKLISTED) {
-            String oreKey = getStringPayload();
-            return AssetSyncPacket.minerBlacklistUpdated(assetId, oreKey, state.isMinerOreBlacklisted(oreKey))
-                .withSyncRevision(state.getSyncRevision());
-        }
         state.markModuleDirty(module.id);
         return AssetSyncPacket.moduleUpdated(assetId, moduleIndex, module)
             .withSyncRevision(state.getSyncRevision());
@@ -530,7 +525,7 @@ public final class AssetModuleUpdatePacket {
         if (!(module.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("SET_MINER_ORE_BLACKLISTED sent to non-miner module " + module.id);
         }
-        state.setMinerOreBlacklisted(packet.getStringPayload(), packet.getBooleanPayload());
+        state.setMinerOreBlacklisted(module, packet.getStringPayload(), packet.getBooleanPayload());
     }
 
     private static void handleHammerConfig(ModuleInstance module,

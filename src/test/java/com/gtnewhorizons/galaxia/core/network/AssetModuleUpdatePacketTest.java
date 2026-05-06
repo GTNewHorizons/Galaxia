@@ -305,7 +305,7 @@ final class AssetModuleUpdatePacketTest {
 
         packet.apply(TEAM);
 
-        assertTrue(facility.isMinerOreBlacklisted("ore:iron"));
+        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
     }
 
     @Test

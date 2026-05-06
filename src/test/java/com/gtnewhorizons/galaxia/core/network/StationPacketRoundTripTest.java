@@ -112,12 +112,17 @@ final class StationPacketRoundTripTest {
     @Test
     void fullSyncRoundTripPreservesMinerBlacklist() {
         AutomatedFacility server = createFacility();
-        server.setMinerOreBlacklisted("ore:iron", true);
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
 
-        assertTrue(client.isMinerOreBlacklisted("ore:iron"));
+        assertTrue(
+            client.isMinerOreBlacklisted(
+                client.modules()
+                    .get(0),
+                "ore:iron"));
     }
 
     @Test
