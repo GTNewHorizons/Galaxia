@@ -23,6 +23,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -577,7 +578,13 @@ public final class AutomatedFacility extends CelestialAsset {
                     + ", got "
                     + module.tier());
         }
-        applyHammerOperationTarget(module, target);
+        if (module.component() instanceof ModuleHammer) {
+            applyHammerOperationTarget(module, target);
+        } else if (module.component() instanceof ModuleMiner) {
+            applyMinerOperationTarget(module, target);
+        } else {
+            throw new IllegalStateException("Operation target is unsupported for module " + module.id);
+        }
         Map<String, Long> completionRefund = completionRefund(operation);
         if (completionRefund.isEmpty()) {
             module.clearOperation();
@@ -612,6 +619,43 @@ public final class AutomatedFacility extends CelestialAsset {
         hammer.setVariant(targetVariant);
         module.setTier(targetTier);
         layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
+    }
+
+    private void applyMinerOperationTarget(ModuleInstance module, ModuleOperationTargetSpec target) {
+        if (!(module.component() instanceof ModuleMiner miner)) {
+            throw new IllegalStateException("MINER operation applied to non-miner module " + module.id);
+        }
+        if (target.targetTier() != null && target.targetTier() != module.tier()) {
+            throw new IllegalStateException(
+                "MINER focus operation cannot change module tier for " + module.id + ": " + target.targetTier());
+        }
+        if (target.sourceFocusTierKey() != null && !target.sourceFocusTierKey()
+            .equals(
+                miner.focusTier()
+                    .name())) {
+            throw new IllegalStateException(
+                "Operation source focus tier mismatch for " + module.id
+                    + ": expected "
+                    + target.sourceFocusTierKey()
+                    + ", got "
+                    + miner.focusTier()
+                        .name());
+        }
+        if (target.sourceFocusOreKey() != null && !target.sourceFocusOreKey()
+            .equals(miner.focusOreKeyOrNull())) {
+            throw new IllegalStateException(
+                "Operation source focus ore mismatch for " + module.id
+                    + ": expected "
+                    + target.sourceFocusOreKey()
+                    + ", got "
+                    + miner.focusOreKeyOrNull());
+        }
+        if (target.targetFocusTierKey() == null) {
+            throw new IllegalStateException("MINER operation target focus tier is missing for module " + module.id);
+        }
+        MinerFocusTier focusTier = MinerFocusTier.valueOf(target.targetFocusTierKey());
+        String focusOreKey = focusTier == MinerFocusTier.NONE ? null : target.targetFocusOreKey();
+        miner.setFocus(focusTier, focusOreKey, 0);
     }
 
     private Map<String, Long> completionRefund(ModuleOperationState operation) {

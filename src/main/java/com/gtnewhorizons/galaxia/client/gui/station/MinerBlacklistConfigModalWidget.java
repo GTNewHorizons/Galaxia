@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -51,6 +52,8 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int ROW_KEEP_BUTTON_WIDTH = 34;
     private static final int ROW_VOID_BUTTON_X = 244;
     private static final int ROW_VOID_BUTTON_WIDTH = 34;
+    private static final int ROW_FOCUS_BUTTON_X = 286;
+    private static final int ROW_FOCUS_BUTTON_WIDTH = 42;
     private static final int ROW_BUTTON_HEIGHT = 10;
     private static final int ROW_NAME_WIDTH = 136;
     private static final int PAGE_LABEL_Y = HEIGHT - 24;
@@ -97,6 +100,10 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
                 ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "Void", () -> setBlacklisted(rowIndex, true))
                     .pos(ROW_VOID_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
                     .size(ROW_VOID_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
+            child(
+                ModuleConfigModalSupport.button(() -> canUseFocusRow(rowIndex), "Focus", () -> planFocus(rowIndex))
+                    .pos(ROW_FOCUS_BUTTON_X, rowY + ROW_BUTTON_Y_OFFSET)
+                    .size(ROW_FOCUS_BUTTON_WIDTH, ROW_BUTTON_HEIGHT));
         }
         child(
             ModuleConfigModalSupport.button(() -> controller.isMinerBlacklistOpen(), "Close", controller::close)
@@ -134,6 +141,11 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             ModuleConfigModalSupport.PANEL_PADDING,
             GROUP_LABEL_Y,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        ModuleConfigModalSupport.drawLine(
+            focusLabel((ModuleMiner) module.component()),
+            ModuleConfigModalSupport.PANEL_PADDING,
+            BODY_TOP + 36,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
 
         List<MinerBlacklistOptions.Entry> options = MinerBlacklistOptions.forFacility(facility);
         if (options.isEmpty()) {
@@ -186,6 +198,19 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         CelestialClient.updateMinerOreBlacklisted(assetId, controller.moduleIndex(), oreKey, blacklisted);
     }
 
+    private void planFocus(int rowIndex) {
+        MinerBlacklistOptions.Entry option = optionAt(rowIndex);
+        ModuleInstance module = selectedModule();
+        if (option == null || module == null || !(module.component() instanceof ModuleMiner miner)) return;
+        controller.closeMinerSettingsGroupMenu();
+        MinerFocusTier targetTier = targetFocusTier(miner, option.key());
+        CelestialClient.planMinerFocus(
+            assetId,
+            controller.moduleIndex(),
+            targetTier,
+            targetTier == MinerFocusTier.NONE ? null : option.key());
+    }
+
     private void selectGroupOption(int optionIndex) {
         GroupOption option = groupOptionAt(optionIndex);
         ModuleInstance module = selectedModule();
@@ -204,6 +229,11 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         return controller.isMinerBlacklistOpen() && !controller.isMinerSettingsGroupMenuOpen()
             && selectedModule() != null
             && optionAt(rowIndex) != null;
+    }
+
+    private boolean canUseFocusRow(int rowIndex) {
+        ModuleInstance module = selectedModule();
+        return canUseRow(rowIndex) && module != null && module.operationOrNull() == null;
     }
 
     private boolean canChangePage(int delta) {
@@ -306,6 +336,20 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
 
     private static int maxPage(int optionCount) {
         return optionCount <= 0 ? 0 : (optionCount - 1) / MAX_ROWS;
+    }
+
+    private static MinerFocusTier targetFocusTier(ModuleMiner miner, String oreKey) {
+        if (miner.focusTier() == MinerFocusTier.NONE) return MinerFocusTier.I;
+        if (!oreKey.equals(miner.focusOreKeyOrNull())) return miner.focusTier();
+        return miner.focusTier()
+            .next();
+    }
+
+    private static String focusLabel(ModuleMiner miner) {
+        if (miner.focusTier() == MinerFocusTier.NONE) return "Focus: none";
+        int progress = miner.focusAlignmentProgress() * 100 / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
+        return "Focus: " + miner.focusTier()
+            .name() + " " + miner.focusOreKeyOrNull() + " " + progress + "%";
     }
 
     private enum GroupOptionAction {

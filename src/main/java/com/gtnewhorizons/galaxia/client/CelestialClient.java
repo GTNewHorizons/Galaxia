@@ -29,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
@@ -237,6 +238,13 @@ public final class CelestialClient {
             moduleIndex,
             module -> AssetModuleUpdatePacket
                 .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems, voidCompletionRefund));
+    }
+
+    public static void planMinerFocus(ID assetId, int moduleIndex, MinerFocusTier focusTier, String oreKey) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerFocusPlan(assetId, moduleIndex, module.id, focusTier, oreKey));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

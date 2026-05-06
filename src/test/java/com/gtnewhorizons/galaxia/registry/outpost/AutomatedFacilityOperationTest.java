@@ -21,8 +21,10 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -186,6 +188,25 @@ final class AutomatedFacilityOperationTest {
         assertEquals(HammerVariant.BIG, ((ModuleHammer) module.component()).variant());
     }
 
+    @Test
+    void tickCompletesMinerFocusOperationAndResetsAlignment() {
+        AutomatedFacility facility = facilityWithMiner();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+        module.setOperation(
+            ModuleOperationState.waiting(minerFocusPlan(2))
+                .beginBuilding());
+
+        facility.tick();
+        facility.tick();
+
+        assertNull(module.operationOrNull());
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertEquals("ore:iron", miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
+    }
+
     private static AutomatedFacility facilityWithHammer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -193,6 +214,18 @@ final class AutomatedFacilityOperationTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        facility.addModule(module);
+        return facility;
+    }
+
+    private static AutomatedFacility facilityWithMiner() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.MINER
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
         return facility;
@@ -230,6 +263,26 @@ final class AutomatedFacilityOperationTest {
             80,
             false,
             voidCompletionRefund);
+    }
+
+    private static ModuleOperationPlan minerFocusPlan(int buildTicks) {
+        return new ModuleOperationPlan(
+            new ModuleOperationTargetSpec(
+                ModuleOperationKind.UPGRADE_REBUILD,
+                FacilityModuleKind.MINER,
+                ModuleTier.EV,
+                null,
+                FacilityModuleKind.MINER,
+                ModuleTier.EV,
+                null,
+                MinerFocusTier.NONE.name(),
+                null,
+                MinerFocusTier.II.name(),
+                "ore:iron"),
+            buildTicks,
+            0,
+            false,
+            true);
     }
 
     private static ItemStack material() {

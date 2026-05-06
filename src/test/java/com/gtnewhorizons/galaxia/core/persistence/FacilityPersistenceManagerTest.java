@@ -32,8 +32,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -141,6 +143,31 @@ final class FacilityPersistenceManagerTest {
                 decoded.modules()
                     .get(1),
                 "ore:iron"));
+    }
+
+    @Test
+    void minerFocusRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleMiner miner = (ModuleMiner) station.modules()
+            .get(1)
+            .component();
+        miner.setFocus(MinerFocusTier.III, "ore:iron", 1200);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleMiner decodedMiner = (ModuleMiner) decoded.modules()
+            .get(1)
+            .component();
+        assertEquals(MinerFocusTier.III, decodedMiner.focusTier());
+        assertEquals("ore:iron", decodedMiner.focusOreKeyOrNull());
+        assertEquals(1200, decodedMiner.focusAlignmentProgress());
     }
 
     @Test

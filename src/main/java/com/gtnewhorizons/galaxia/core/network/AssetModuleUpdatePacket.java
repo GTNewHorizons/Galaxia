@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -155,6 +156,17 @@ public final class AssetModuleUpdatePacket {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket minerFocusPlan(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, MinerFocusTier focusTier, String oreKey) {
+        if (focusTier == null) {
+            throw new IllegalArgumentException("focusTier must not be null");
+        }
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_MINER_FOCUS);
+        pkt.bytePayload = (byte) focusTier.ordinal();
+        pkt.stringPayload = oreKey == null ? "" : oreKey;
+        return pkt;
+    }
+
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, RecipeSlot slot) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
@@ -225,6 +237,7 @@ public final class AssetModuleUpdatePacket {
         SET_ALLOW_SHOOTING_THRESHOLD,
         SET_HAMMER_VARIANT,
         PLAN_HAMMER_UPGRADE,
+        PLAN_MINER_FOCUS,
         SET_ROUTE_PRIORITY,
         SET_TIER,
         SET_PRIORITY,
@@ -256,6 +269,10 @@ public final class AssetModuleUpdatePacket {
                 case SET_MINER_ORE_BLACKLISTED -> {
                     PacketUtil.writeString(buf, stringPayload);
                     buf.writeByte(bytePayload);
+                }
+                case PLAN_MINER_FOCUS -> {
+                    buf.writeByte(bytePayload);
+                    PacketUtil.writeString(buf, stringPayload);
                 }
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
                 case PLAN_HAMMER_UPGRADE -> {
@@ -310,6 +327,10 @@ public final class AssetModuleUpdatePacket {
                 if (bytePayload != 0 && bytePayload != 1) {
                     throw new IllegalStateException("invalid miner blacklist flag: " + bytePayload);
                 }
+            }
+            case PLAN_MINER_FOCUS -> {
+                bytePayload = buf.readByte();
+                stringPayload = PacketUtil.readString(buf);
             }
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case PLAN_HAMMER_UPGRADE -> {
@@ -453,6 +474,7 @@ public final class AssetModuleUpdatePacket {
                 planHammerUpgrade(module, hammer, variant, tier);
             }
             case PLAN_HAMMER_UPGRADE -> handleHammerUpgradePlan(packet, module);
+            case PLAN_MINER_FOCUS -> handleMinerFocusPlan(packet, module);
             case SET_ROUTE_PRIORITY -> {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
                     throw new IllegalStateException("SET_ROUTE_PRIORITY sent to non-hammer module " + module.id);
@@ -544,6 +566,43 @@ public final class AssetModuleUpdatePacket {
         boolean reserveItems = packet.rawPayload[2] == 1;
         boolean voidCompletionRefund = packet.rawPayload[3] == 1;
         planHammerUpgrade(module, hammer, variant, tier, reserveItems, voidCompletionRefund);
+    }
+
+    private static void handleMinerFocusPlan(AssetModuleUpdatePacket packet, ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner miner)) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS sent to non-miner module " + module.id);
+        }
+        MinerFocusTier targetTier = PacketUtil
+            .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), MinerFocusTier.class);
+        if (targetTier == null) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS invalid tier for module " + module.id);
+        }
+        String targetOreKey = targetTier == MinerFocusTier.NONE ? null : packet.stringPayload;
+        if (targetTier != MinerFocusTier.NONE && (targetOreKey == null || targetOreKey.isBlank())) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS missing target ore for module " + module.id);
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            throw new IllegalStateException(
+                "Module " + module.id + " already has active operation " + existingOperation.phase());
+        }
+        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
+            ModuleOperationKind.UPGRADE_REBUILD,
+            module.kind(),
+            module.tier(),
+            null,
+            module.kind(),
+            module.tier(),
+            null,
+            miner.focusTier()
+                .name(),
+            miner.focusOreKeyOrNull(),
+            targetTier.name(),
+            targetOreKey);
+        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
+            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD);
+        module.setOperation(ModuleOperationState.waiting(definition.createPlan(target, false)));
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

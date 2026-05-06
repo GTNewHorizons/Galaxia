@@ -19,6 +19,9 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
     private byte parallel = 1;
     private MinerSettings localSettings = new MinerSettings();
+    private MinerFocusTier focusTier = MinerFocusTier.NONE;
+    private String focusOreKey;
+    private int focusAlignmentProgress;
 
     private static final Random RANDOM = new java.util.Random();
 
@@ -35,17 +38,38 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
                 var properties = registration.properties();
                 List<ItemStack> ores = properties.ores();
                 List<ItemStack> veinOres = properties.getResolvedGtVeinOreStacks();
-                int totalSize = ores.size() + veinOres.size();
-                if (totalSize == 0) return;
-                int idx = RANDOM.nextInt(totalSize);
-                ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
+                List<ItemStack> candidates = new java.util.ArrayList<>(ores.size() + veinOres.size());
+                candidates.addAll(ores);
+                candidates.addAll(veinOres);
+                if (candidates.isEmpty()) return;
+                ItemStack chosen = chooseFocusedOre((ModuleMiner) instance.component(), candidates);
                 String oreKey = ItemStackWrapper.of(chosen)
                     .toKey();
+                ((ModuleMiner) instance.component()).advanceFocusAlignment();
                 if (shouldVoidOre(instance, outpost, oreKey)) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
                 outpost.inventory.add(ItemStackWrapper.of(ore), 1);
             });
+    }
+
+    private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {
+        int totalWeight = 0;
+        int[] weights = new int[candidates.size()];
+        for (int i = 0; i < candidates.size(); i++) {
+            ItemStack stack = candidates.get(i);
+            String key = ItemStackWrapper.of(stack)
+                .toKey();
+            int weight = 100 + miner.effectiveFocusBonusFor(key);
+            weights[i] = weight;
+            totalWeight += weight;
+        }
+        int roll = RANDOM.nextInt(totalWeight);
+        for (int i = 0; i < candidates.size(); i++) {
+            roll -= weights[i];
+            if (roll < 0) return candidates.get(i);
+        }
+        throw new IllegalStateException("Failed to choose focused ore from " + candidates.size() + " candidates");
     }
 
     public static boolean shouldVoidOre(@Nonnull ModuleInstance instance, @Nonnull AutomatedFacility outpost,
@@ -71,6 +95,53 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     public void clearLocalSettings() {
         this.localSettings = null;
+    }
+
+    public MinerFocusTier focusTier() {
+        return focusTier;
+    }
+
+    public String focusOreKeyOrNull() {
+        return focusOreKey;
+    }
+
+    public int focusAlignmentProgress() {
+        return focusAlignmentProgress;
+    }
+
+    public void setFocus(MinerFocusTier focusTier, String focusOreKey, int focusAlignmentProgress) {
+        if (focusTier == null) {
+            throw new IllegalArgumentException("Miner focus tier must not be null");
+        }
+        if (focusTier == MinerFocusTier.NONE) {
+            if (focusOreKey != null) {
+                throw new IllegalArgumentException("Miner focus ore must be null when focus tier is NONE");
+            }
+            this.focusTier = focusTier;
+            this.focusOreKey = null;
+            this.focusAlignmentProgress = 0;
+            return;
+        }
+        if (focusOreKey == null || focusOreKey.isBlank()) {
+            throw new IllegalArgumentException("Miner focus ore must not be null/blank when focus is active");
+        }
+        this.focusTier = focusTier;
+        this.focusOreKey = focusOreKey;
+        this.focusAlignmentProgress = Math.clamp(focusAlignmentProgress, 0, MinerFocusTier.ALIGNMENT_REQUIRED_TICKS);
+    }
+
+    public void resetFocusAlignment() {
+        focusAlignmentProgress = 0;
+    }
+
+    private void advanceFocusAlignment() {
+        if (focusTier == MinerFocusTier.NONE || focusOreKey == null) return;
+        focusAlignmentProgress = Math.min(MinerFocusTier.ALIGNMENT_REQUIRED_TICKS, focusAlignmentProgress + 1);
+    }
+
+    private int effectiveFocusBonusFor(String oreKey) {
+        if (focusTier == MinerFocusTier.NONE || focusOreKey == null || !focusOreKey.equals(oreKey)) return 0;
+        return focusTier.bonusPercent() * focusAlignmentProgress / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
     }
 
     @Override

@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -475,6 +476,41 @@ final class AssetModuleUpdatePacketTest {
         packet.apply(TEAM);
 
         assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+    }
+
+    @Test
+    void applyMinerFocusPlanCreatesPhysicalOperation() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerFocusPlan(facility.assetId, 0, module.id, MinerFocusTier.II, "ore:iron"));
+
+        packet.apply(TEAM);
+
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleOperationPhase.WAITING_FOR_MATERIALS,
+            module.operationOrNull()
+                .phase());
+        assertEquals(
+            "NONE",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .sourceFocusTierKey());
+        assertEquals(
+            "II",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetFocusTierKey());
+        assertEquals(
+            "ore:iron",
+            module.operationOrNull()
+                .plan()
+                .targetSpec()
+                .targetFocusOreKey());
     }
 
     @Test

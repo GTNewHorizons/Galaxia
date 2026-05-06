@@ -49,6 +49,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
@@ -403,6 +404,12 @@ public final class FacilityPersistenceManager {
             } else if (m.component() instanceof ModuleMiner miner) {
                 MinerSettings settings = miner.localSettingsOrNull();
                 moduleData.add("localSettings", settings == null ? null : PURE_GSON.toJsonTree(settings));
+                moduleData.addProperty(
+                    "focusTier",
+                    miner.focusTier()
+                        .name());
+                moduleData.addProperty("focusOreKey", miner.focusOreKeyOrNull());
+                moduleData.addProperty("focusAlignmentProgress", miner.focusAlignmentProgress());
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -895,6 +902,10 @@ public final class FacilityPersistenceManager {
         String targetModuleKind;
         String targetTier;
         String targetVariantKey;
+        String sourceFocusTierKey;
+        String sourceFocusOreKey;
+        String targetFocusTierKey;
+        String targetFocusOreKey;
         int buildTicks;
         int completionRefundPercent;
         boolean reserveItems;
@@ -1132,6 +1143,10 @@ public final class FacilityPersistenceManager {
             : target.targetTier()
                 .name();
         json.targetVariantKey = target.targetVariantKey();
+        json.sourceFocusTierKey = target.sourceFocusTierKey();
+        json.sourceFocusOreKey = target.sourceFocusOreKey();
+        json.targetFocusTierKey = target.targetFocusTierKey();
+        json.targetFocusOreKey = target.targetFocusOreKey();
         json.buildTicks = plan.buildTicks();
         json.completionRefundPercent = plan.completionRefundPercent();
         json.reserveItems = plan.reserveItems();
@@ -1175,7 +1190,11 @@ public final class FacilityPersistenceManager {
             json.sourceVariantKey,
             targetModuleKind,
             targetTier,
-            json.targetVariantKey);
+            json.targetVariantKey,
+            json.sourceFocusTierKey,
+            json.sourceFocusOreKey,
+            json.targetFocusTierKey,
+            json.targetFocusOreKey);
         ModuleOperationPlan plan = new ModuleOperationPlan(
             target,
             json.buildTicks,
@@ -1258,12 +1277,16 @@ public final class FacilityPersistenceManager {
     private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {
         JsonObject minerData = Objects.requireNonNull(data, "[PERSIST] Miner module " + module.id + " missing data");
         if (minerData.entrySet()
-            .size() != 1 || !minerData.has("localSettings")) {
+            .size() != 4 || !minerData.has("localSettings")
+            || !minerData.has("focusTier")
+            || !minerData.has("focusOreKey")
+            || !minerData.has("focusAlignmentProgress")) {
             throw new IllegalStateException("[PERSIST] Miner module " + module.id + " has malformed settings data");
         }
         JsonElement localSettingsElement = Objects.requireNonNull(
             minerData.get("localSettings"),
             "[PERSIST] Miner module " + module.id + " missing localSettings");
+        decodeMinerFocus(module, miner, minerData);
         if (module.groupId() != 0) {
             if (!localSettingsElement.isJsonNull()) {
                 throw new IllegalStateException(
@@ -1289,6 +1312,20 @@ public final class FacilityPersistenceManager {
             PURE_GSON.fromJson(keysElement, keySetType),
             "[PERSIST] Miner module " + module.id + " has null blacklistedOreKeys");
         miner.setLocalSettings(new MinerSettings(keys));
+    }
+
+    private static void decodeMinerFocus(ModuleInstance module, ModuleMiner miner, JsonObject minerData) {
+        MinerFocusTier focusTier = requireEnum(
+            MinerFocusTier.class,
+            minerData.get("focusTier")
+                .getAsString(),
+            "[PERSIST] Miner module " + module.id + " has invalid focus tier");
+        JsonElement focusOreElement = minerData.get("focusOreKey");
+        String focusOreKey = focusOreElement == null || focusOreElement.isJsonNull() ? null
+            : focusOreElement.getAsString();
+        int focusAlignmentProgress = minerData.get("focusAlignmentProgress")
+            .getAsInt();
+        miner.setFocus(focusTier, focusOreKey, focusAlignmentProgress);
     }
 
     private static RecipeConfig decodeRecipeConfig(JsonObject data) {
