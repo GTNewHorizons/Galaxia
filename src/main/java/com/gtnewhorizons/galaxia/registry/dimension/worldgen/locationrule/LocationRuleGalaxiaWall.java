@@ -51,7 +51,6 @@ public class LocationRuleGalaxiaWall extends LocationRuleGalaxiaBase {
             return false;
         }
         feature.generateFeature(world, random, x, y, z, wallRequirements);
-        feature.finishGeneration();
         return true;
     }
 

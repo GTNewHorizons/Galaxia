@@ -1,10 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
@@ -24,6 +22,10 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.Locati
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
+import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
+
 /**
  * ChunkProvider implementation for Galaxia Planets
  */
@@ -31,10 +33,11 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
-    private static final int HEIGHT_LIMIT = 256;
+    static final int HEIGHT_LIMIT = 256;
     private static final double ALLOWED_DIVERGENCE = 0.25;
     private static final double HORIZONTAL_CAVE_STRETCH = 0.1;
     private static final double VERTICAL_CAVE_STRETCH = 0.1;
+    private static final StratificationPreset DEFAULT_STONE_FILLER = new StratificationPreset(Blocks.stone).freeze();
 
     private final DimensionEnum dimension;
     private final World worldObj;
@@ -72,13 +75,19 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
      */
     @Override
     public Chunk provideChunk(int chunkX, int chunkZ) {
-        if (showDebug) System.out.println("++++++++ START CHUNK GENERATION ++++++++");
-        long startTime = System.nanoTime();
+        long startTime = 0;
+        if (showDebug) {
+            System.out.println("++++++++ START CHUNK GENERATION ++++++++");
+            startTime = System.nanoTime();
+        }
         Chunk chunk = new Chunk(worldObj, chunkX, chunkZ);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
         prepareCaveCache(chunkX, chunkZ);
-        long preparationTime = System.nanoTime();
-        if (showDebug) System.out.println("Time for preparing cave generation: " + (preparationTime - startTime));
+        long preparationTime = 0;
+        if (showDebug) {
+            preparationTime = System.nanoTime();
+            System.out.println("Time for preparing cave generation: " + (preparationTime - startTime));
+        }
 
         // Get local biomes
         double[] heightMap = generateBaseHeightmap();
@@ -87,6 +96,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
         double[][] biomeContrib = new double[biomeCount][];
         List<BiomeGenBase> biomeList = new ArrayList<>();
+        final Reference2IntOpenHashMap<BiomeGenBase> biomeIdxOf = new Reference2IntOpenHashMap<>();
+        biomeIdxOf.defaultReturnValue(-1);
         // Between 0 and 1, smooth range between biome (0 is not smoothed, vertical
         // cliffs, 1 is indistinguishable
         // between biomes)
@@ -113,20 +124,27 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 // Reorganize block contributions into biome order
                 double maxContrib = 0;
                 for (int i = 0; i < contribSize; i++) {
-                    if (!biomeList.contains(blockBiomes[i])) {
-                        biomeList.add(blockBiomes[i]);
-                        biomeContrib[biomeList.indexOf(blockBiomes[i])] = new double[CHUNK_AREA];
+                    final BiomeGenBase biome = blockBiomes[i];
+                    int idx = biomeIdxOf.getInt(biome);
+                    if (idx < 0) {
+                        idx = biomeList.size();
+                        biomeList.add(biome);
+                        biomeIdxOf.put(biome, idx);
+                        biomeContrib[idx] = new double[CHUNK_AREA];
                     }
                     if (blockContrib[i] > maxContrib) {
                         maxContrib = blockContrib[i];
-                        chunkBiomes[x + (z << 4)] = blockBiomes[i];
+                        chunkBiomes[x + (z << 4)] = biome;
                     }
-                    biomeContrib[biomeList.indexOf(blockBiomes[i])][x + (z << 4)] += blockContrib[i];
+                    biomeContrib[idx][x + (z << 4)] += blockContrib[i];
                 }
             }
         }
-        long blendingTime = System.nanoTime();
-        if (showDebug) System.out.println("Time for blending biomes: " + (blendingTime - preparationTime));
+        long blendingTime = 0;
+        if (showDebug) {
+            blendingTime = System.nanoTime();
+            System.out.println("Time for blending biomes: " + (blendingTime - preparationTime));
+        }
 
         // Calculate terrain features
         for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
@@ -161,13 +179,17 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         for (int i = 0; i < CHUNK_AREA; i++) {
             heightMap[i] = Math.clamp(heightMap[i], 1, HEIGHT_LIMIT);
         }
-        long terrainFeatureTime = System.nanoTime();
-        if (showDebug) System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
+        long terrainFeatureTime = 0;
+        if (showDebug) {
+            terrainFeatureTime = System.nanoTime();
+            System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
+        }
 
         // Generate blocks
-        long defaultVariableStart = System.nanoTime();
+        long defaultVariableStart = 0;
+        if (showDebug) defaultVariableStart = System.nanoTime();
         Block topBlock = Blocks.grass;
-        StratificationPreset fillerBlocks = new StratificationPreset(Blocks.stone);
+        StratificationPreset fillerBlocks = DEFAULT_STONE_FILLER;
         Block snowBlock = Blocks.snow;
         Block oceanFiller = Blocks.water;
         Block oceanSurface = Blocks.sand;
@@ -184,13 +206,16 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         long oceanTime = 0;
         long caveTime = 0;
         long placementTime = 0;
-        long defaultVariableEnd = System.nanoTime();
-        long defaultVariableTime = defaultVariableEnd - defaultVariableStart;
         long blockStorageTime = 0;
-        if (showDebug) System.out.println("Time for creating default variables: " + (defaultVariableTime));
+        long defaultVariableTime = 0;
+        if (showDebug) {
+            defaultVariableTime = System.nanoTime() - defaultVariableStart;
+            System.out.println("Time for creating default variables: " + (defaultVariableTime));
+        }
         for (int localX = 0; localX < CHUNK_WIDTH; localX++) {
             for (int localZ = 0; localZ < CHUNK_WIDTH; localZ++) {
-                long assignmentTimeStart = System.nanoTime();
+                long assignmentTimeStart = 0;
+                if (showDebug) assignmentTimeStart = System.nanoTime();
                 BiomeGenBase localBiome = chunkBiomes[localX + localZ * CHUNK_WIDTH];
                 if (localBiome instanceof BiomeGenSpace spaceBiome) {
                     topBlock = getSurfaceBlock(
@@ -211,18 +236,18 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     oceanCrackThickness = spaceBiome.getOceanCrackThickness();
                     oceanCrackComplexity = spaceBiome.getOceanCrackComplexity();
                 }
-                long assignmentTimeFinish = System.nanoTime();
-                assignmentTime += (assignmentTimeFinish - assignmentTimeStart);
+                if (showDebug) assignmentTime += System.nanoTime() - assignmentTimeStart;
                 int height = Math.max(1, (int) heightMap[localX + (localZ << 4)]);
                 Block replacementBlock = surfaceReplacementMap[localX + (localZ << 4)];
                 for (int y = 0; y < Math.max(oceanHeight, height); y++) {
-                    long blockStorageStart = System.nanoTime();
+                    long blockStorageStart = 0;
+                    if (showDebug) blockStorageStart = System.nanoTime();
                     int sy = y >> 4;
                     if (storage[sy] == null) {
                         storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
                     }
-                    long blockStorageFinish = System.nanoTime();
-                    blockStorageTime += (blockStorageFinish - blockStorageStart);
+                    if (showDebug) blockStorageTime += System.nanoTime() - blockStorageStart;
+                    Block currentFiller = fillerBlocks.getStrataBlock(y);
                     Block block;
                     if (y >= height - surfaceDepth) {
                         block = topBlock;
@@ -232,12 +257,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             continue;
                         }
                     } else {
-                        block = fillerBlocks.getStrataBlock(y);
+                        block = currentFiller;
                     }
                     if (block == topBlock && y >= snowHeight) {
                         block = snowBlock;
                     }
-                    long oceanTimeStart = System.nanoTime();
+                    long oceanTimeStart = 0;
+                    if (showDebug) oceanTimeStart = System.nanoTime();
                     if (y <= oceanHeight) {
                         if (y > height - 1) {
                             if (y == oceanHeight - 2 && oceanHeight - height >= 2) {
@@ -270,23 +296,28 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                             }
                         }
                     }
-                    long oceanTimeFinish = System.nanoTime();
-                    oceanTime += (oceanTimeFinish - oceanTimeStart);
-                    if (generateCaves
-                        && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
+                    long oceanTimeFinish = 0;
+                    if (showDebug) {
+                        oceanTimeFinish = System.nanoTime();
+                        oceanTime += oceanTimeFinish - oceanTimeStart;
+                    }
+                    if (generateCaves && (block == currentFiller || block == topBlock || block == snowBlock)
                         && generateCave(localX, y, localZ, height)) {
                         block = Blocks.air;
                     }
-                    long caveGenerationTime = System.nanoTime();
-                    caveTime += (caveGenerationTime - oceanTimeFinish);
+                    long caveGenerationTime = 0;
+                    if (showDebug) {
+                        caveGenerationTime = System.nanoTime();
+                        caveTime += caveGenerationTime - oceanTimeFinish;
+                    }
                     if (block != null) {
                         storage[sy].func_150818_a(localX, y & 15, localZ, block);
                     }
-                    long blockPlacementTime = System.nanoTime();
-                    placementTime += (blockPlacementTime - caveGenerationTime);
+                    if (showDebug) placementTime += System.nanoTime() - caveGenerationTime;
                 }
             }
         }
+        long blockGenerationTime = 0;
         if (showDebug) {
             System.out.println("Time for assigning biome variables: " + (assignmentTime));
             System.out.println("Time for creating block storage: " + (blockStorageTime));
@@ -296,15 +327,15 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             System.out.println(
                 "Total time for all tracked block placement steps: "
                     + (assignmentTime + blockStorageTime + oceanTime + caveTime + placementTime + defaultVariableTime));
-            long blockGenerationTime = System.nanoTime();
+            blockGenerationTime = System.nanoTime();
             System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
-
-            long lightGenerationTime = System.nanoTime();
-            System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
-
-            System.out.println("-------- END CHUNK GENERATION --------");
         }
         chunk.generateSkylightMap();
+        if (showDebug) {
+            long lightGenerationTime = System.nanoTime();
+            System.out.println("Time for generating light: " + (lightGenerationTime - blockGenerationTime));
+            System.out.println("-------- END CHUNK GENERATION --------");
+        }
         return chunk;
     }
 
@@ -443,7 +474,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         // Get local biome
         BiomeGenBase localBiome = worldObj.getWorldChunkManager()
             .getBiomeGenAt(x, z);
-        Set<Integer[]> updateCoordinates = new HashSet<>();
+        final LongOpenHashSet updateCoordinates = new LongOpenHashSet();
         if (localBiome instanceof BiomeGenSpace spaceBiome) {
             if (spaceBiome.getSurfaceFeatures()
                 .isEmpty()) {
@@ -459,9 +490,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
                 int localY = worldObj.getHeightValue(x, z);
                 feature.generate(worldObj, rand, localX, localY, localZ);
-                updateCoordinates.addAll(
-                    feature.getFeature()
-                        .getUpdateCoordinates());
+                feature.getFeature()
+                    .drainUpdateCoordinatesTo(updateCoordinates);
             }
             // Generate cave features
             for (LocationRuleGalaxiaCave feature : spaceBiome.getCaveFeatures()) {
@@ -477,10 +507,9 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     int localY = rand.nextInt(
                         Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
-                    updateCoordinates.addAll(
-                        feature.getFeature()
-                            .getUpdateCoordinates());
                 }
+                feature.getFeature()
+                    .drainUpdateCoordinatesTo(updateCoordinates);
             }
             // Generate wall features
             for (LocationRuleGalaxiaWall feature : spaceBiome.getWallFeatures()) {
@@ -499,16 +528,22 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 localY += rand.nextInt(
                     Math.max(1, Math.min(feature.getMaximumHeight() - minimumHeight, localHeight - minimumHeight)));
                 feature.generate(worldObj, rand, localX, localY, localZ);
-                updateCoordinates.addAll(
-                    feature.getFeature()
-                        .getUpdateCoordinates());
+                feature.getFeature()
+                    .drainUpdateCoordinatesTo(updateCoordinates);
             }
         }
 
-        // Update affected chunks
-        for (Integer[] coordinates : updateCoordinates) {
-            int localX = coordinates[0];
-            int localZ = coordinates[1];
+        final IChunkProvider chunkProvider = worldObj.getChunkProvider();
+        final LongIterator it = updateCoordinates.iterator();
+        while (it.hasNext()) {
+            long packed = it.nextLong();
+            final int chunkXCoord = (int) (packed >> 32);
+            final int chunkZCoord = (int) packed;
+            if (!chunkProvider.chunkExists(chunkXCoord, chunkZCoord)) continue;
+            final Chunk touched = worldObj.getChunkFromChunkCoords(chunkXCoord, chunkZCoord);
+            touched.generateSkylightMap();
+            int localX = chunkXCoord << 4;
+            int localZ = chunkZCoord << 4;
             Block originalBlock = worldObj.getBlock(localX, 0, localZ);
             int originalMeta = worldObj.getBlockMetadata(localX, 0, localZ);
             worldObj.setBlock(localX, 0, localZ, originalBlock, originalMeta, 3);
