@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
+
+import net.minecraft.item.ItemStack;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,6 +23,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -193,6 +198,45 @@ public final class AutomatedFacility extends CelestialAsset {
         }
     }
 
+    public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStack, Long> materialCost) {
+        ModuleOperationState operation = requireWaitingOperation(module);
+        List<OperationMaterial> requested = materialCostToMaterials(materialCost);
+        for (OperationMaterial material : requested) {
+            if (inventory.getAmount(material.item()) < material.amount()) return false;
+        }
+        Map<String, Long> deposited = new java.util.LinkedHashMap<>();
+        for (OperationMaterial material : requested) {
+            if (!inventory.tryConsume(material.item(), material.amount())) {
+                throw new IllegalStateException(
+                    "Operation material reservation became inconsistent for module " + module.id
+                        + ", item="
+                        + material.itemKey());
+            }
+            deposited.merge(material.itemKey(), material.amount(), Long::sum);
+        }
+        module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
+        markModuleDirty(module.id);
+        return true;
+    }
+
+    public void cancelModuleOperation(ModuleInstance module) {
+        ModuleOperationState operation = requireOperation(module);
+        module.setOperation(operation.cancel());
+        markModuleDirty(module.id);
+    }
+
+    public boolean flushModuleOperationRefund(ModuleInstance module) {
+        ModuleOperationState operation = requireOperation(module);
+        if (operation.phase() != ModuleOperationPhase.REFUNDING) return false;
+        for (Map.Entry<String, Long> entry : operation.refundBuffer()
+            .entrySet()) {
+            inventory.add(requireItemKey(entry.getKey(), module), entry.getValue());
+        }
+        module.setOperation(operation.finishRefunding());
+        markModuleDirty(module.id);
+        return true;
+    }
+
     public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
         ModuleSettings settings = copySettings(module);
         detachFromSettingsGroup(module);
@@ -267,6 +311,65 @@ public final class AutomatedFacility extends CelestialAsset {
             }
         }
     }
+
+    private ModuleOperationState requireWaitingOperation(ModuleInstance module) {
+        ModuleOperationState operation = requireOperation(module);
+        if (operation.phase() != ModuleOperationPhase.WAITING_FOR_MATERIALS) {
+            throw new IllegalStateException(
+                "Module " + module.id + " operation must be WAITING_FOR_MATERIALS, got " + operation.phase());
+        }
+        return operation;
+    }
+
+    private ModuleOperationState requireOperation(ModuleInstance module) {
+        if (module == null) {
+            throw new IllegalArgumentException("Module operation requested for null module");
+        }
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation == null) {
+            throw new IllegalStateException("Module " + module.id + " has no active operation");
+        }
+        return operation;
+    }
+
+    private List<OperationMaterial> materialCostToMaterials(Map<ItemStack, Long> materialCost) {
+        if (materialCost == null) {
+            throw new IllegalArgumentException("Operation material cost must not be null");
+        }
+        List<OperationMaterial> materials = new ArrayList<>();
+        for (Map.Entry<ItemStack, Long> entry : materialCost.entrySet()) {
+            ItemStack stack = entry.getKey();
+            Long amount = entry.getValue();
+            ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
+            if (wrapper == null) {
+                throw new IllegalArgumentException("Operation material cost contains null/unkeyable stack");
+            }
+            if (amount == null || amount <= 0L) {
+                throw new IllegalArgumentException(
+                    "Operation material cost amount must be > 0 for " + wrapper.toKey() + ", got " + amount);
+            }
+            materials.add(new OperationMaterial(wrapper.toKey(), wrapper, amount));
+        }
+        return materials;
+    }
+
+    private ItemStackWrapper requireItemKey(String itemKey, ModuleInstance module) {
+        ItemStackWrapper item = ItemStackWrapper.fromKey(itemKey);
+        if (item == null) {
+            throw new IllegalStateException("Module " + module.id + " operation has unresolvable item key " + itemKey);
+        }
+        return item;
+    }
+
+    private static Map<String, Long> mergeAmounts(Map<String, Long> base, Map<String, Long> added) {
+        Map<String, Long> merged = new java.util.LinkedHashMap<>(base);
+        for (Map.Entry<String, Long> entry : added.entrySet()) {
+            merged.merge(entry.getKey(), entry.getValue(), Long::sum);
+        }
+        return merged;
+    }
+
+    private record OperationMaterial(String itemKey, ItemStackWrapper item, long amount) {}
 
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);

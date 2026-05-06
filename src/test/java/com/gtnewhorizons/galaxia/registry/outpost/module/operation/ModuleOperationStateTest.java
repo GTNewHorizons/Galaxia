@@ -112,6 +112,23 @@ final class ModuleOperationStateTest {
                 .isEmpty());
     }
 
+    @Test
+    void finishRefundingClearsRefundAndDepositState() {
+        ModuleOperationState refunding = ModuleOperationState.waiting(rebuildPlan(true, 5))
+            .withDepositedResources(Map.of("plate.titanium", 3L))
+            .cancel();
+
+        ModuleOperationState cancelled = refunding.finishRefunding();
+
+        assertEquals(ModuleOperationPhase.CANCELLED, cancelled.phase());
+        assertTrue(
+            cancelled.depositedResources()
+                .isEmpty());
+        assertTrue(
+            cancelled.refundBuffer()
+                .isEmpty());
+    }
+
     private static ModuleOperationPlan rebuildPlan(boolean reserveItems, int buildTicks) {
         ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
             ModuleOperationKind.UPGRADE_REBUILD,

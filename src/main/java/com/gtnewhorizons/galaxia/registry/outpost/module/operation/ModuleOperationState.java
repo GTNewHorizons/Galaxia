@@ -112,6 +112,13 @@ public final class ModuleOperationState {
             depositedResources);
     }
 
+    public ModuleOperationState finishRefunding() {
+        if (phase != ModuleOperationPhase.REFUNDING) {
+            throw new IllegalStateException("finishRefunding requires REFUNDING phase, got " + phase);
+        }
+        return new ModuleOperationState(plan, ModuleOperationPhase.CANCELLED, elapsedBuildTicks, Map.of(), Map.of());
+    }
+
     private void validatePhaseDataConsistency() {
         if (phase == ModuleOperationPhase.WAITING_FOR_MATERIALS && elapsedBuildTicks != 0) {
             throw new IllegalStateException(

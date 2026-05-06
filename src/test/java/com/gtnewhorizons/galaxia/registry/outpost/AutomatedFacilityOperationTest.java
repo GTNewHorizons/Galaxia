@@ -1,0 +1,167 @@
+package com.gtnewhorizons.galaxia.registry.outpost;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Map;
+
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+
+final class AutomatedFacilityOperationTest {
+
+    @BeforeAll
+    static void initRegistries() {
+        CelestialRegistry.freezeAndBake();
+        FacilityModuleRegistry.init();
+    }
+
+    @Test
+    void reserveOperationMaterialsMovesItemsFromInventoryToDeposit() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStack material = material();
+        ItemStackWrapper key = ItemStackWrapper.of(material);
+        facility.inventory.add(key, 8L);
+        module.setOperation(ModuleOperationState.waiting(plan()));
+
+        assertTrue(facility.tryReserveOperationMaterials(module, Map.of(material, 5L)));
+
+        assertEquals(3L, facility.inventory.getAmount(key));
+        assertEquals(
+            5L,
+            module.operationOrNull()
+                .depositedResources()
+                .get(key.toKey()));
+    }
+
+    @Test
+    void reserveOperationMaterialsIsAtomicWhenInventoryIsShort() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStack material = material();
+        ItemStackWrapper key = ItemStackWrapper.of(material);
+        facility.inventory.add(key, 2L);
+        module.setOperation(ModuleOperationState.waiting(plan()));
+
+        assertFalse(facility.tryReserveOperationMaterials(module, Map.of(material, 5L)));
+
+        assertEquals(2L, facility.inventory.getAmount(key));
+        assertTrue(
+            module.operationOrNull()
+                .depositedResources()
+                .isEmpty());
+    }
+
+    @Test
+    void cancelQueuesFullDepositIntoRefundBuffer() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStack material = material();
+        ItemStackWrapper key = ItemStackWrapper.of(material);
+        facility.inventory.add(key, 8L);
+        module.setOperation(ModuleOperationState.waiting(plan()));
+        facility.tryReserveOperationMaterials(module, Map.of(material, 5L));
+
+        facility.cancelModuleOperation(module);
+
+        assertEquals(
+            ModuleOperationPhase.REFUNDING,
+            module.operationOrNull()
+                .phase());
+        assertEquals(3L, facility.inventory.getAmount(key));
+        assertEquals(
+            5L,
+            module.operationOrNull()
+                .refundBuffer()
+                .get(key.toKey()));
+    }
+
+    @Test
+    void flushModuleOperationRefundCrashesOnUnresolvableItemKey() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStack material = material();
+        ItemStackWrapper key = ItemStackWrapper.of(material);
+        facility.inventory.add(key, 8L);
+        module.setOperation(ModuleOperationState.waiting(plan()));
+        facility.tryReserveOperationMaterials(module, Map.of(material, 5L));
+        facility.cancelModuleOperation(module);
+
+        assertThrows(IllegalStateException.class, () -> facility.flushModuleOperationRefund(module));
+    }
+
+    @Test
+    void reserveOperationMaterialsRejectsMalformedState() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> facility.tryReserveOperationMaterials(module, Map.of(material(), 1L)));
+
+        module.setOperation(
+            ModuleOperationState.waiting(plan())
+                .beginBuilding());
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> facility.tryReserveOperationMaterials(module, Map.of(material(), 1L)));
+    }
+
+    private static AutomatedFacility facilityWithHammer() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        facility.addModule(module);
+        return facility;
+    }
+
+    private static ModuleOperationPlan plan() {
+        return new ModuleOperationPlan(
+            new ModuleOperationTargetSpec(
+                ModuleOperationKind.UPGRADE_REBUILD,
+                FacilityModuleKind.HAMMER,
+                ModuleTier.EV,
+                FacilityModuleKind.HAMMER,
+                ModuleTier.LuV,
+                "BIG"),
+            200,
+            80,
+            false);
+    }
+
+    private static ItemStack material() {
+        return new ItemStack(new Item());
+    }
+}
