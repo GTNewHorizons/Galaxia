@@ -10,7 +10,7 @@ public class TubeNoise {
     private static final byte ADDITIONAL_BITSHIFT = 4;
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
-    private static final short DEVIATION_MARGIN = 16;
+    private static final short DEVIATION_MARGIN = 32;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
     private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
 
@@ -45,7 +45,8 @@ public class TubeNoise {
         x += quadrantX << ADDITIONAL_BITSHIFT;
         z += quadrantZ << ADDITIONAL_BITSHIFT;
         for (LinearFunction3D linearFunction : linearFunctions) {
-            if (linearFunction.getDeviation(x, y, z) < DEVIATION_MARGIN) {
+            float deviation = linearFunction.getDeviation(x, y, z);
+            if (deviation * deviation < DEVIATION_MARGIN) {
                 return true;
             }
         }
