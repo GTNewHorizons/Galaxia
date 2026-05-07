@@ -14,7 +14,9 @@ public class TubeNoise {
     private static final short DEVIATION_MARGIN = 32;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
     private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
-    private static final byte TUBE_COUNT = 8;
+    private static final byte TUBE_COUNT = 32;
+    private static final byte BASE_TUBE_HEIGHT = 16;
+    private static final int TUBE_HEIGHT_VARIATION = ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 4;
 
     private final Random xRandom = new Random();
     private final Random zRandom = new Random();
@@ -49,8 +51,8 @@ public class TubeNoise {
         x += quadrantX << ADDITIONAL_BITSHIFT;
         z += quadrantZ << ADDITIONAL_BITSHIFT;
         for (int i = 0; i < TUBE_COUNT; i++) {
-            if (x > xEndPoints[i]) return false;
-            if (x < xStartPoints[i]) return false;
+            if (x > xEndPoints[i]) continue;
+            if (x < xStartPoints[i]) continue;
             float deviation = linearFunctions[i].getDeviation(x, y, z);
             if (deviation * deviation < DEVIATION_MARGIN) {
                 return true;
@@ -88,8 +90,8 @@ public class TubeNoise {
             }
             linearFunctions[i].setFunction(
                 zRandom.nextInt(COORDINATE_BOUND) - SHIFT_MARGIN,
-                xRandom.nextInt(ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 3),
-                zRandom.nextInt(ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 3),
+                xRandom.nextInt(TUBE_HEIGHT_VARIATION) + BASE_TUBE_HEIGHT,
+                zRandom.nextInt(TUBE_HEIGHT_VARIATION) + BASE_TUBE_HEIGHT,
                 zInclination,
                 xyInclination,
                 zyInclination
