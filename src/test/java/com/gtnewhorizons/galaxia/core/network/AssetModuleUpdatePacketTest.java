@@ -411,6 +411,22 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyHammerUpgradePlanInCreativeAppliesTargetImmediately() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, false, false));
+
+        packet.apply(TEAM, true);
+
+        assertEquals(ModuleTier.ZPM, module.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) module.component()).variant());
+        assertNull(module.operationOrNull());
+    }
+
+    @Test
     void applyHammerPhysicalChangeIgnoresActiveOperationRequest() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()

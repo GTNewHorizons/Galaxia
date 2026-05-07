@@ -390,6 +390,10 @@ public final class AssetModuleUpdatePacket {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
+        return apply(teamId, false);
+    }
+
+    public AssetSyncPacket apply(UUID teamId, boolean creative) {
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (!(asset instanceof AutomatedFacility state)) return null;
         if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return null;
@@ -405,7 +409,7 @@ public final class AssetModuleUpdatePacket {
 
         switch (type) {
             case ACTION_TYPE -> handleAction(this, state, module);
-            case CONFIG_TYPE -> handleConfig(this, state, module);
+            case CONFIG_TYPE -> handleConfig(this, state, module, creative);
             default -> {
                 return null;
             }
@@ -445,7 +449,8 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
-    private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
+    private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module,
+        boolean creative) {
         switch (packet.getConfigAction()) {
             case SET_MINER_ORE_BLACKLISTED -> handleMinerOreBlacklisted(packet, state, module);
             case SET_ALLOW_SHOOTING_MODE -> handleHammerConfig(module, h -> {
@@ -471,9 +476,9 @@ public final class AssetModuleUpdatePacket {
                     throw new IllegalStateException("SET_HAMMER_VARIANT missing variant for module " + module.id);
                 }
                 ModuleTier tier = ModuleHammer.tierForVariantSwitch(variant, module.tier());
-                planHammerUpgrade(module, hammer, variant, tier);
+                planHammerUpgrade(state, module, hammer, variant, tier, creative);
             }
-            case PLAN_HAMMER_UPGRADE -> handleHammerUpgradePlan(packet, module);
+            case PLAN_HAMMER_UPGRADE -> handleHammerUpgradePlan(packet, state, module, creative);
             case PLAN_MINER_FOCUS -> handleMinerFocusPlan(packet, module);
             case SET_ROUTE_PRIORITY -> {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
@@ -492,7 +497,7 @@ public final class AssetModuleUpdatePacket {
                         "rejected tier " + tier + " for " + module.kind() + " on " + packet.assetId);
                 }
                 if (module.component() instanceof ModuleHammer hammer) {
-                    planHammerUpgrade(module, hammer, hammer.variant(), tier);
+                    planHammerUpgrade(state, module, hammer, hammer.variant(), tier, creative);
                 } else {
                     module.setTier(tier);
                     state.layoutCache()
@@ -516,13 +521,14 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
-    private static boolean planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
-        ModuleTier targetTier) {
-        return planHammerUpgrade(module, hammer, targetVariant, targetTier, false, false);
+    private static boolean planHammerUpgrade(AutomatedFacility state, ModuleInstance module, ModuleHammer hammer,
+        HammerVariant targetVariant, ModuleTier targetTier, boolean creative) {
+        return planHammerUpgrade(state, module, hammer, targetVariant, targetTier, false, false, creative);
     }
 
-    private static boolean planHammerUpgrade(ModuleInstance module, ModuleHammer hammer, HammerVariant targetVariant,
-        ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund) {
+    private static boolean planHammerUpgrade(AutomatedFacility state, ModuleInstance module, ModuleHammer hammer,
+        HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund,
+        boolean creative) {
         ModuleHammer.requireTier(targetVariant, targetTier);
         ModuleOperationState existingOperation = module.operationOrNull();
         if (existingOperation != null && !existingOperation.phase()
@@ -550,11 +556,20 @@ public final class AssetModuleUpdatePacket {
             definition.completionRefundPercent(),
             reserveItems,
             voidCompletionRefund);
+        if (creative) {
+            if (state == null) {
+                throw new IllegalStateException(
+                    "Creative hammer upgrade requires facility state for module " + module.id);
+            }
+            state.applyCreativeModuleOperation(module, plan);
+            return true;
+        }
         module.setOperation(ModuleOperationState.waiting(plan));
         return true;
     }
 
-    private static void handleHammerUpgradePlan(AssetModuleUpdatePacket packet, ModuleInstance module) {
+    private static void handleHammerUpgradePlan(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module, boolean creative) {
         if (!(module.component() instanceof ModuleHammer hammer)) {
             throw new IllegalStateException("PLAN_HAMMER_UPGRADE sent to non-hammer module " + module.id);
         }
@@ -569,7 +584,7 @@ public final class AssetModuleUpdatePacket {
         }
         boolean reserveItems = packet.rawPayload[2] == 1;
         boolean voidCompletionRefund = packet.rawPayload[3] == 1;
-        planHammerUpgrade(module, hammer, variant, tier, reserveItems, voidCompletionRefund);
+        planHammerUpgrade(state, module, hammer, variant, tier, reserveItems, voidCompletionRefund, creative);
     }
 
     private static void handleMinerFocusPlan(AssetModuleUpdatePacket packet, ModuleInstance module) {

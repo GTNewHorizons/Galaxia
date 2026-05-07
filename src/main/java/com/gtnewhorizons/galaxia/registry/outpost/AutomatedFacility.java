@@ -31,6 +31,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
@@ -260,6 +261,24 @@ public final class AutomatedFacility extends CelestialAsset {
     public void cancelModuleOperation(ModuleInstance module) {
         ModuleOperationState operation = requireOperation(module);
         module.setOperation(operation.cancel());
+        markModuleDirty(module.id);
+    }
+
+    public void applyCreativeModuleOperation(ModuleInstance module, ModuleOperationPlan plan) {
+        if (module == null) {
+            throw new IllegalArgumentException("applyCreativeModuleOperation: module must not be null");
+        }
+        if (plan == null) {
+            throw new IllegalArgumentException("applyCreativeModuleOperation: plan must not be null for " + module.id);
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            throw new IllegalStateException(
+                "Module " + module.id + " already has active operation " + existingOperation.phase());
+        }
+        applyOperationTarget(module, plan.targetSpec());
+        module.clearOperation();
         markModuleDirty(module.id);
     }
 
@@ -552,6 +571,17 @@ public final class AutomatedFacility extends CelestialAsset {
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
         ModuleOperationTargetSpec target = operation.plan()
             .targetSpec();
+        applyOperationTarget(module, target);
+        Map<String, Long> completionRefund = completionRefund(operation);
+        if (completionRefund.isEmpty()) {
+            module.clearOperation();
+        } else {
+            module.setOperation(operation.refundAfterCompletion(completionRefund));
+        }
+        markModuleDirty(module.id);
+    }
+
+    private void applyOperationTarget(ModuleInstance module, ModuleOperationTargetSpec target) {
         if (target.operationKind() != ModuleOperationKind.UPGRADE_REBUILD) {
             throw new IllegalStateException(
                 "Unsupported operation kind " + target.operationKind() + " for " + module.id);
@@ -585,13 +615,6 @@ public final class AutomatedFacility extends CelestialAsset {
         } else {
             throw new IllegalStateException("Operation target is unsupported for module " + module.id);
         }
-        Map<String, Long> completionRefund = completionRefund(operation);
-        if (completionRefund.isEmpty()) {
-            module.clearOperation();
-        } else {
-            module.setOperation(operation.refundAfterCompletion(completionRefund));
-        }
-        markModuleDirty(module.id);
     }
 
     private void applyHammerOperationTarget(ModuleInstance module, ModuleOperationTargetSpec target) {
