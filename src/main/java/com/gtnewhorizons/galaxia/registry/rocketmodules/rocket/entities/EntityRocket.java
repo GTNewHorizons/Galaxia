@@ -228,7 +228,7 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
             String syncedModules = dataWatcher.getWatchableObjectString(DW_MODULES);
             return getPhase() != Phase.IDLE || (syncedModules != null && !syncedModules.isEmpty());
         }
-        return getPhase() != Phase.IDLE;
+        return getPhase() != Phase.IDLE || !modules.isEmpty();
     }
 
     /**
@@ -349,6 +349,9 @@ public class EntityRocket extends Entity implements IEntityAdditionalSpawnData {
             assembly = new RocketAssembly(modules);
             syncModules();
             silo.launch();
+            setPhase(Phase.LAUNCHING);
+        } else {
+            setPhase(Phase.LAUNCHING);
         }
     }
 
