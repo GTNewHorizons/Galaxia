@@ -73,7 +73,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             LEFT_PANEL_WIDTH + PADDING,
             PADDING,
             PADDING,
-            visionLayer);
+            visionLayer,
+            (mouseX, mouseY) -> configController.isOpen() && configController.containsMouse(mouseX, mouseY));
 
         panel.child(
             new StationScreenBackground().left(0)
