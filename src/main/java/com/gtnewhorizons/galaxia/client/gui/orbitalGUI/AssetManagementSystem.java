@@ -49,8 +49,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
@@ -2130,17 +2131,19 @@ public final class AssetManagementSystem {
 
         private String buildModuleStats(FacilityModuleKind kind) {
             FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
-            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-def.powerDrawEuPerTick()) + " EU/t"
-                : "Consumes " + def.powerDrawEuPerTick() + " EU/t";
+            ModuleTierData data = def.getTierData(kind.defaultTier());
+            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
+                : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
             String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
-            return powerLine + " | Cap " + def.baseEnergyCapacity() + " EU | " + restrictionLine;
+            return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
         }
 
         private String buildModuleCost(FacilityModuleKind kind) {
             FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
+            ModuleTierData data = def.getTierData(kind.defaultTier());
             StringBuilder sb = new StringBuilder("Cost: ");
             boolean first = true;
-            for (Map.Entry<ItemStack, Long> entry : def.constructionCost()
+            for (Map.Entry<ItemStack, Long> entry : data.constructionCost()
                 .entrySet()) {
                 ItemStack stack = entry.getKey();
                 if (!first) sb.append(", ");

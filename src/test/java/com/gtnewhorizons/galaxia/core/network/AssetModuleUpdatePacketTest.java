@@ -21,19 +21,20 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -323,26 +324,21 @@ final class AssetModuleUpdatePacketTest {
             ModuleOperationPhase.WAITING_FOR_MATERIALS,
             module.operationOrNull()
                 .phase());
-        assertEquals(
-            ModuleOperationKind.UPGRADE_REBUILD,
+        assertTrue(
             module.operationOrNull()
                 .plan()
-                .operationKind());
-        assertEquals(
-            "BASE",
-            module.operationOrNull()
-                .plan()
-                .sourceVariantKey());
+                .spec() instanceof HammerModuleOperation);
         assertEquals(
             ModuleTier.LuV,
             module.operationOrNull()
                 .plan()
+                .spec()
                 .targetTier());
         assertEquals(
             "BIG",
-            module.operationOrNull()
+            ((HammerModuleOperation) module.operationOrNull()
                 .plan()
-                .targetVariantKey());
+                .spec()).targetVariantKey());
     }
 
     @Test
@@ -361,6 +357,7 @@ final class AssetModuleUpdatePacketTest {
             ModuleTier.IV,
             module.operationOrNull()
                 .plan()
+                .spec()
                 .targetTier());
     }
 
@@ -389,17 +386,13 @@ final class AssetModuleUpdatePacketTest {
             ModuleTier.ZPM,
             module.operationOrNull()
                 .plan()
+                .spec()
                 .targetTier());
         assertEquals(
-            "BASE",
-            module.operationOrNull()
-                .plan()
-                .sourceVariantKey());
-        assertEquals(
             "BIG",
-            module.operationOrNull()
+            ((HammerModuleOperation) module.operationOrNull()
                 .plan()
-                .targetVariantKey());
+                .spec()).targetVariantKey());
     }
 
     @Test
@@ -472,6 +465,7 @@ final class AssetModuleUpdatePacketTest {
             ModuleTier.IV,
             module.operationOrNull()
                 .plan()
+                .spec()
                 .targetTier());
     }
 
@@ -522,20 +516,15 @@ final class AssetModuleUpdatePacketTest {
             module.operationOrNull()
                 .phase());
         assertEquals(
-            "NONE",
-            module.operationOrNull()
-                .plan()
-                .sourceFocusTierKey());
-        assertEquals(
             "II",
-            module.operationOrNull()
+            ((MinerFocusOperation) module.operationOrNull()
                 .plan()
-                .targetFocusTierKey());
+                .spec()).targetFocusTierKey());
         assertEquals(
             "ore:iron",
-            module.operationOrNull()
+            ((MinerFocusOperation) module.operationOrNull()
                 .plan()
-                .targetFocusOreKey());
+                .spec()).targetFocusOreKey());
     }
 
     @Test
@@ -672,18 +661,18 @@ final class AssetModuleUpdatePacketTest {
 
     private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,
         HammerVariant targetVariant) {
-        ModuleHammer hammer = (ModuleHammer) module.component();
-        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .withTarget(
-                module.kind(),
-                module.tier(),
-                hammer.variant()
-                    .name(),
-                module.kind(),
-                targetTier,
-                targetVariant.name());
-        return new ModuleOperationPlan(definition, false);
+        int buildTicks = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier())
+            .buildTicks();
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(module.kind())
+                .getTierData(targetTier)
+                .constructionCost());
+        return new ModuleOperationPlan(
+            new HammerModuleOperation(targetTier, targetVariant.name()),
+            buildTicks,
+            cost,
+            false);
     }
 
     private static AutomatedFacility addMinerFacilityToServer() {

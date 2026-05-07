@@ -9,7 +9,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class ModuleOperationStateTest {
@@ -131,12 +131,10 @@ final class ModuleOperationStateTest {
     }
 
     private static ModuleOperationPlan rebuildPlan(boolean reserveItems, int buildTicks) {
-        ModuleOperationDefinition definition = new ModuleOperationDefinition(
-            ModuleOperationKind.UPGRADE_REBUILD,
+        return new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
             buildTicks,
-            80,
-            java.util.Map.of())
-                .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.IV, "BIG");
-        return new ModuleOperationPlan(definition, reserveItems);
+            Map.of(),
+            reserveItems);
     }
 }

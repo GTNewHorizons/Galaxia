@@ -11,12 +11,13 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidget> {
 
@@ -143,18 +144,9 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             return;
         }
         lineY = ModuleConfigModalSupport.drawLine("Cost:", x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .withTarget(
-                module.kind(),
-                module.tier(),
-                hammer.variant()
-                    .name(),
-                module.kind(),
-                controller.hammerUpgradeTier(),
-                controller.hammerUpgradeVariant()
-                    .name())
-            .materialCost();
+        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(controller.hammerUpgradeTier());
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(targetData.constructionCost());
         if (cost.isEmpty()) {
             ModuleConfigModalSupport.drawLine("None", x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             return;
@@ -259,7 +251,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
 
     private int drawVariantLine(int lineY, HammerVariant variant) {
         return ModuleConfigModalSupport.drawTrimmedLine(
-            variant.name() + "  Shot " + ModuleConfigModalSupport.formatEu(ModuleHammer.shotEnergyEu(variant)) + " EU",
+            variant.name() + "  Shot " + ModuleConfigModalSupport.formatEu(variant.shotEnergyEu()) + " EU",
             ModuleConfigModalSupport.PANEL_PADDING + 8,
             lineY,
             BODY_WIDTH,
@@ -270,11 +262,18 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
         for (ModuleTier tier : supportedTiers(variant)) {
             int color = tier == selectedTier ? EnumColors.MAP_COLOR_TEXT_SECTION.getColor()
                 : EnumColors.MAP_COLOR_TEXT_BODY.getColor();
+            ModuleTierData data = FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
+                .getTierData(tier);
+            int cooldown = data.variantCooldowns() != null && data.variantCooldowns()
+                .containsKey(variant.name()) ? data.variantCooldowns()
+                    .get(variant.name()) : data.cooldownTicks();
+            int chargeTicks = Math.max(1, cooldown - 20);
+            long chargeRate = Math.ceilDiv(variant.shotEnergyEu(), chargeTicks);
             lineY = ModuleConfigModalSupport.drawTrimmedLine(
                 tier.name() + "  Cooldown "
-                    + (ModuleHammer.cooldownTicks(variant, tier) / 20)
+                    + (cooldown / 20)
                     + "s  Rate "
-                    + ModuleConfigModalSupport.formatEu(ModuleHammer.chargeRateEuPerTick(variant, tier))
+                    + ModuleConfigModalSupport.formatEu(chargeRate)
                     + " EU/t",
                 ModuleConfigModalSupport.PANEL_PADDING + 8,
                 lineY,

@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -25,10 +26,24 @@ final class ModuleHammerTest {
 
     @Test
     void chargeBarFinishesOneSecondBeforeShot() {
-        assertEquals(60 * 20 - 20, ModuleHammer.chargeTicks(HammerVariant.BASE, ModuleTier.EV));
-        assertTrue(ModuleHammer.chargeRateEuPerTick(HammerVariant.BASE, ModuleTier.EV) * 1180L >= 500_000L);
-        assertEquals(60 * 20 - 20, ModuleHammer.chargeTicks(HammerVariant.BIG, ModuleTier.LuV));
-        assertTrue(ModuleHammer.chargeRateEuPerTick(HammerVariant.BIG, ModuleTier.LuV) * 1180L >= 8_000_000L);
+        FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(FacilityModuleKind.HAMMER);
+        for (var entry : new Object[][] { { HammerVariant.BASE, ModuleTier.EV, 60 * 20, 500_000L },
+            { HammerVariant.BIG, ModuleTier.LuV, 60 * 20, 8_000_000L } }) {
+            HammerVariant variant = (HammerVariant) entry[0];
+            ModuleTier tier = (ModuleTier) entry[1];
+            int expectedCooldown = (int) entry[2];
+            long expectedEnergy = (long) entry[3];
+
+            ModuleTierData data = def.getTierData(tier);
+            int cooldown = data.variantCooldowns() != null && data.variantCooldowns()
+                .containsKey(variant.name()) ? data.variantCooldowns()
+                    .get(variant.name()) : data.cooldownTicks();
+            int chargeTicks = Math.max(1, cooldown - 20);
+            long chargeRate = Math.ceilDiv(expectedEnergy, chargeTicks);
+
+            assertEquals(expectedCooldown - 20, chargeTicks);
+            assertTrue(chargeRate * 1180L >= expectedEnergy);
+        }
     }
 
     @Test

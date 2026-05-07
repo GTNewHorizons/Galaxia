@@ -4,10 +4,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
 
-public interface IRecipeModule extends ModuleComponent {
+public interface IRecipeModule extends IModuleComponent {
 
     String getRecipeMapName();
 

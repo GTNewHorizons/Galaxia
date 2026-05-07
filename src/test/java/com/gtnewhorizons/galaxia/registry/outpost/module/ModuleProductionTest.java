@@ -6,6 +6,12 @@ import java.util.EnumSet;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleCentrifuge;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleChemicalReactor;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDistillery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyzer;
+
 final class ModuleProductionTest {
 
     // ---------- Kind existence and ordinals ----------

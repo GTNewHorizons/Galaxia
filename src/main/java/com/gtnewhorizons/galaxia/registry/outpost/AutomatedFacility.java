@@ -22,17 +22,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -287,7 +282,7 @@ public final class AutomatedFacility extends CelestialAsset {
                     "Creative operation cannot replace active operation with stored items for module " + module.id);
             }
         }
-        applyOperationTarget(module, plan.definition());
+        applyOperationTarget(module, plan);
         module.clearOperation();
         markModuleDirty(module.id);
     }
@@ -299,7 +294,7 @@ public final class AutomatedFacility extends CelestialAsset {
             .entrySet()) {
             inventory.add(requireItemKey(entry.getKey(), module), entry.getValue());
         }
-        if (isCompletionRefund(operation)) {
+        if (isCompletionRefund(module, operation)) {
             module.clearOperation();
         } else {
             module.setOperation(operation.finishRefunding());
@@ -534,9 +529,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private boolean tryBeginModuleOperation(ModuleInstance module, ModuleOperationState operation) {
-        ModuleOperationDefinition definition = operation.plan()
-            .definition();
-        Map<ItemStackWrapper, Long> materialCost = definition.materialCost();
+        Map<ItemStackWrapper, Long> materialCost = operation.plan()
+            .materialCost();
         boolean hasFullCost = operation.reserveItems() ? tryReserveAvailableOperationMaterials(module, materialCost)
             : tryReserveOperationMaterials(module, materialCost);
         if (!hasFullCost) {
@@ -559,10 +553,9 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
-        ModuleOperationDefinition definition = operation.plan()
-            .definition();
-        applyOperationTarget(module, definition);
-        Map<String, Long> completionRefund = completionRefund(operation);
+        ModuleOperationPlan plan = operation.plan();
+        applyOperationTarget(module, plan);
+        Map<String, Long> completionRefund = completionRefund(module, operation);
         if (completionRefund.isEmpty()) {
             module.clearOperation();
         } else {
@@ -571,119 +564,26 @@ public final class AutomatedFacility extends CelestialAsset {
         markModuleDirty(module.id);
     }
 
-    private void applyOperationTarget(ModuleInstance module, ModuleOperationDefinition definition) {
-        if (definition.operationKind() != ModuleOperationKind.UPGRADE_REBUILD) {
-            throw new IllegalStateException(
-                "Unsupported operation kind " + definition.operationKind() + " for " + module.id);
-        }
-        if (definition.sourceModuleKind() != null && definition.sourceModuleKind() != module.kind()) {
-            throw new IllegalStateException(
-                "Operation source kind mismatch for " + module.id
-                    + ": expected "
-                    + definition.sourceModuleKind()
-                    + ", got "
-                    + module.kind());
-        }
-        if (definition.targetModuleKind() != null && definition.targetModuleKind() != module.kind()) {
-            throw new IllegalStateException(
-                "Operation target kind changes are not implemented for " + module.id
-                    + ": "
-                    + definition.targetModuleKind());
-        }
-        if (definition.sourceTier() != null && definition.sourceTier() != module.tier()) {
-            throw new IllegalStateException(
-                "Operation source tier mismatch for " + module.id
-                    + ": expected "
-                    + definition.sourceTier()
-                    + ", got "
-                    + module.tier());
-        }
-        if (module.component() instanceof ModuleHammer) {
-            applyHammerOperationTarget(module, definition);
-        } else if (module.component() instanceof ModuleMiner) {
-            applyMinerOperationTarget(module, definition);
-        } else {
-            throw new IllegalStateException("Operation target is unsupported for module " + module.id);
+    private void applyOperationTarget(ModuleInstance module, ModuleOperationPlan plan) {
+        ModuleTier oldTier = module.tier();
+        module.component()
+            .applyOperationTarget(plan.spec(), module);
+        if (module.tier() != oldTier) {
+            layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
         }
     }
 
-    private void applyHammerOperationTarget(ModuleInstance module, ModuleOperationDefinition definition) {
-        if (!(module.component() instanceof ModuleHammer hammer)) {
-            throw new IllegalStateException("HAMMER operation applied to non-hammer module " + module.id);
-        }
-        if (definition.sourceVariantKey() != null && !definition.sourceVariantKey()
-            .equals(
-                hammer.variant()
-                    .name())) {
-            throw new IllegalStateException(
-                "Operation source variant mismatch for " + module.id
-                    + ": expected "
-                    + definition.sourceVariantKey()
-                    + ", got "
-                    + hammer.variant()
-                        .name());
-        }
-        if (definition.targetVariantKey() == null || definition.targetTier() == null) {
-            throw new IllegalStateException("HAMMER operation target is incomplete for module " + module.id);
-        }
-        HammerVariant targetVariant = HammerVariant.valueOf(definition.targetVariantKey());
-        ModuleTier targetTier = definition.targetTier();
-        ModuleHammer.requireTier(targetVariant, targetTier);
-        hammer.setVariant(targetVariant);
-        module.setTier(targetTier);
-        layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
-    }
-
-    private void applyMinerOperationTarget(ModuleInstance module, ModuleOperationDefinition definition) {
-        if (!(module.component() instanceof ModuleMiner miner)) {
-            throw new IllegalStateException("MINER operation applied to non-miner module " + module.id);
-        }
-        if (definition.targetTier() != null && definition.targetTier() != module.tier()) {
-            throw new IllegalStateException(
-                "MINER focus operation cannot change module tier for " + module.id + ": " + definition.targetTier());
-        }
-        if (definition.sourceFocusTierKey() != null && !definition.sourceFocusTierKey()
-            .equals(
-                miner.focusTier()
-                    .name())) {
-            throw new IllegalStateException(
-                "Operation source focus tier mismatch for " + module.id
-                    + ": expected "
-                    + definition.sourceFocusTierKey()
-                    + ", got "
-                    + miner.focusTier()
-                        .name());
-        }
-        if (definition.sourceFocusOreKey() != null && !definition.sourceFocusOreKey()
-            .equals(miner.focusOreKeyOrNull())) {
-            throw new IllegalStateException(
-                "Operation source focus ore mismatch for " + module.id
-                    + ": expected "
-                    + definition.sourceFocusOreKey()
-                    + ", got "
-                    + miner.focusOreKeyOrNull());
-        }
-        if (definition.targetFocusTierKey() == null) {
-            throw new IllegalStateException("MINER operation target focus tier is missing for module " + module.id);
-        }
-        MinerFocusTier focusTier = MinerFocusTier.valueOf(definition.targetFocusTierKey());
-        String focusOreKey = focusTier == MinerFocusTier.NONE ? null : definition.targetFocusOreKey();
-        miner.setFocus(focusTier, focusOreKey, 0);
-    }
-
-    private Map<String, Long> completionRefund(ModuleOperationState operation) {
+    private Map<String, Long> completionRefund(ModuleInstance module, ModuleOperationState operation) {
         if (operation.plan()
             .voidCompletionRefund()) {
             return Map.of();
         }
-        int refundPercent = operation.plan()
+        FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(module.kind());
+        int refundPercent = def.getTierData(module.tier())
             .completionRefundPercent();
         if (refundPercent <= 0) return Map.of();
-        FacilityModuleKind sourceKind = operation.plan()
-            .sourceModuleKind();
-        if (sourceKind == null) return Map.of();
         Map<String, Long> refund = new java.util.LinkedHashMap<>();
-        for (Map.Entry<ItemStack, Long> entry : FacilityModuleRegistry.get(sourceKind)
+        for (Map.Entry<ItemStack, Long> entry : def.getTierData(module.tier())
             .constructionCost()
             .entrySet()) {
             long amount = entry.getValue() * refundPercent / 100L;
@@ -712,11 +612,10 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    private static boolean isCompletionRefund(ModuleOperationState operation) {
-        return operation.plan()
-            .operationKind()
-            .buildPhaseRequired()
-            && operation.elapsedBuildTicks() >= operation.plan()
-                .buildTicks();
+    private boolean isCompletionRefund(ModuleInstance module, ModuleOperationState operation) {
+        int buildTicks = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier())
+            .buildTicks();
+        return operation.elapsedBuildTicks() >= buildTicks;
     }
 }

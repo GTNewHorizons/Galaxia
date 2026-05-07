@@ -22,15 +22,15 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -240,37 +240,21 @@ final class AutomatedFacilityOperationTest {
     }
 
     private static ModuleOperationPlan hammerUpgradePlan(int buildTicks, boolean voidCompletionRefund) {
-        ModuleOperationDefinition definition = new ModuleOperationDefinition(
-            ModuleOperationKind.UPGRADE_REBUILD,
+        return new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
             buildTicks,
-            80,
-            Map.of(ItemStackWrapper.of(material()), 1L)).withTarget(
-                FacilityModuleKind.HAMMER,
-                ModuleTier.EV,
-                "BASE",
-                FacilityModuleKind.HAMMER,
-                ModuleTier.LuV,
-                "BIG");
-        return new ModuleOperationPlan(definition, false, voidCompletionRefund);
+            Map.of(ItemStackWrapper.of(material()), 1L),
+            false,
+            voidCompletionRefund);
     }
 
     private static ModuleOperationPlan minerFocusPlan(int buildTicks) {
-        ModuleOperationDefinition definition = new ModuleOperationDefinition(
-            ModuleOperationKind.UPGRADE_REBUILD,
+        return new ModuleOperationPlan(
+            new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), "ore:iron"),
             buildTicks,
-            0,
-            Map.of()).withTarget(
-                FacilityModuleKind.MINER,
-                ModuleTier.EV,
-                null,
-                FacilityModuleKind.MINER,
-                ModuleTier.EV,
-                null,
-                MinerFocusTier.NONE.name(),
-                null,
-                MinerFocusTier.II.name(),
-                "ore:iron");
-        return new ModuleOperationPlan(definition, false, true);
+            Map.of(),
+            false,
+            true);
     }
 
     private static ItemStack material() {

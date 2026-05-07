@@ -142,11 +142,6 @@ public final class ModuleOperationState {
         }
 
         if (phase == ModuleOperationPhase.BUILDING) {
-            if (!plan.operationKind()
-                .buildPhaseRequired()) {
-                throw new IllegalStateException(
-                    "BUILDING phase is not valid for operation kind " + plan.operationKind());
-            }
             if (elapsedBuildTicks >= plan.buildTicks()) {
                 throw new IllegalStateException(
                     "BUILDING phase requires elapsedBuildTicks < buildTicks (" + plan.buildTicks()
@@ -155,8 +150,7 @@ public final class ModuleOperationState {
             }
         }
 
-        if (phase == ModuleOperationPhase.COMPLETE && plan.operationKind()
-            .buildPhaseRequired() && elapsedBuildTicks < plan.buildTicks()) {
+        if (phase == ModuleOperationPhase.COMPLETE && elapsedBuildTicks < plan.buildTicks()) {
             throw new IllegalStateException(
                 "COMPLETE phase requires elapsedBuildTicks >= buildTicks (" + plan.buildTicks()
                     + "), got "

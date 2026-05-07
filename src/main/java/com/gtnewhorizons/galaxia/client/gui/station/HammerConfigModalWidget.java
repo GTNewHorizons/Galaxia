@@ -9,9 +9,9 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget> {
 
@@ -79,9 +79,10 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         int y = BODY_TOP;
         HammerVariant variant = hammer.variant();
         ModuleTier tier = module.tier();
-        int chargeTicks = ModuleHammer.chargeTicks(variant, tier);
-        long shotEnergy = ModuleHammer.shotEnergyEu(variant);
-        long chargeRate = ModuleHammer.chargeRateEuPerTick(variant, tier);
+        int cooldown = module.cooldownTicks();
+        int chargeTicks = Math.max(1, cooldown - 20);
+        long shotEnergy = variant.shotEnergyEu();
+        long chargeRate = Math.ceilDiv(shotEnergy, chargeTicks);
 
         int lineY = y;
         lineY = ModuleConfigModalSupport.drawLine(

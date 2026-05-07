@@ -7,7 +7,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 
 public final class MinerSettings implements ModuleSettings {
 

@@ -1,9 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.operation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
@@ -13,67 +11,61 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 
 final class ModuleOperationDefinitionTest {
 
     @Test
-    void createPlanUsesDefinitionTimingRefundAndReserveChoice() {
-        ModuleOperationDefinition definition = new ModuleOperationDefinition(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            120,
-            75,
-            cost(4L));
-        ModuleOperationDefinition targetDefinition = hammerDefinition(definition);
-
-        ModuleOperationPlan plan = targetDefinition.createPlan(true);
-
-        assertSame(targetDefinition, plan.definition());
-        assertEquals(120, plan.buildTicks());
-        assertEquals(75, plan.completionRefundPercent());
-        assertTrue(plan.reserveItems());
+    void tierDataValidatesBuildTicks() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(new Item()), 1L), 0, 80));
     }
 
     @Test
-    void materialCostIsResolvedAndDefensivelyCopied() {
-        ItemStack stack = new ItemStack(new Item());
-        ModuleOperationDefinition definition = new ModuleOperationDefinition(
-            ModuleOperationKind.UPGRADE_REBUILD,
+    void tierDataValidatesRefundPercent() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(new Item()), 1L), 200, -1));
+    }
+
+    @Test
+    void hammerSpecRejectsBlankVariant() {
+        assertThrows(IllegalArgumentException.class, () -> new HammerModuleOperation(ModuleTier.EV, " "));
+    }
+
+    @Test
+    void planHasCorrectTimingAndRefund() {
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
             120,
-            80,
-            Map.of(ItemStackWrapper.of(stack), 6L));
+            cost(4L),
+            true);
+
+        assertEquals(120, plan.buildTicks());
+        assertEquals(true, plan.reserveItems());
+    }
+
+    @Test
+    void materialCostIsDefensivelyCopied() {
+        ItemStack stack = new ItemStack(new Item());
+        Map<ItemStackWrapper, Long> cost = cost(6L);
         stack.stackSize = 32;
 
-        Map<ItemStackWrapper, Long> cost = definition.materialCost();
+        Map<ItemStackWrapper, Long> planCost = new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
+            120,
+            cost,
+            false).materialCost();
 
-        assertEquals(1, cost.size());
+        assertEquals(1, planCost.size());
         assertEquals(
             6L,
-            cost.values()
+            planCost.values()
                 .iterator()
                 .next());
-        assertEquals(
-            ItemStackWrapper.of(stack),
-            cost.keySet()
-                .iterator()
-                .next());
-    }
-
-    @Test
-    void malformedDefinitionOrCostCrashes() {
-        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationDefinition(null, 120, 80, cost(4L)));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(ModuleOperationKind.UPGRADE_REBUILD, 0, 80, cost(4L)));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(ModuleOperationKind.UPGRADE_REBUILD, 120, 80, cost(0L)));
-    }
-
-    private static ModuleOperationDefinition hammerDefinition(ModuleOperationDefinition definition) {
-        return definition
-            .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.LuV, "BIG");
     }
 
     private static Map<ItemStackWrapper, Long> cost(long amount) {

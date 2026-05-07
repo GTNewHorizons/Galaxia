@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.outpost.module;
+package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
 import java.util.List;
 import java.util.Random;
@@ -8,10 +8,17 @@ import javax.annotation.Nonnull;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 
-public final class ModuleMiner implements ModuleComponent, IParallelModule {
+public final class ModuleMiner implements IModuleComponent, IParallelModule {
 
     public final FacilityModuleKind kind;
 
@@ -85,6 +92,18 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     public int focusAlignmentProgress() {
         return focusAlignmentProgress;
+    }
+
+    @Override
+    public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
+        if (!(spec instanceof MinerFocusOperation minerSpec)) {
+            throw new IllegalStateException(
+                "MINER cannot handle " + spec.getClass()
+                    .getSimpleName());
+        }
+        MinerFocusTier focusTier = MinerFocusTier.valueOf(minerSpec.targetFocusTierKey());
+        String focusOreKey = focusTier == MinerFocusTier.NONE ? null : minerSpec.targetFocusOreKey();
+        setFocus(focusTier, focusOreKey, 0);
     }
 
     public void setFocus(MinerFocusTier focusTier, String focusOreKey, int focusAlignmentProgress) {

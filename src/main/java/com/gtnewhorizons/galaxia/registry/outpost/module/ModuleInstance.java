@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -9,9 +10,11 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -20,7 +23,7 @@ public class ModuleInstance implements Buildable {
     public final ID id;
     private final Map<ItemStack, Long> consumedResources = new HashMap<>();
     private final FacilityModuleRegistry.Definition definition;
-    private ModuleComponent component;
+    private IModuleComponent component;
 
     private Buildable.Status status = Buildable.Status.IN_CONSTRUCTION;
     private int ticks = 0;
@@ -34,6 +37,10 @@ public class ModuleInstance implements Buildable {
     private ModuleState state = ModuleState.IDLE;
     private BlockingReason blocking = BlockingReason.NONE;
     private ModuleOperationState operation;
+
+    private ModuleTierData currentTierData() {
+        return definition.getTierData(this.tier);
+    }
 
     public void tick(AutomatedFacility outpost) {
         if (this.status() == Buildable.Status.OPERATIONAL) {
@@ -66,16 +73,20 @@ public class ModuleInstance implements Buildable {
         this.tier = tier;
     }
 
-    public ModuleComponent component() {
+    public IModuleComponent component() {
         return component;
     }
 
-    public void setComponent(ModuleComponent component) {
+    public void setComponent(IModuleComponent component) {
         this.component = component;
     }
 
     public FacilityModuleKind kind() {
         return definition.kind();
+    }
+
+    public Map<ModuleTier, ModuleTierData> allTierData() {
+        return definition.tierData();
     }
 
     @Override
@@ -85,7 +96,7 @@ public class ModuleInstance implements Buildable {
 
     @Override
     public Map<ItemStack, Long> getRequiredResources() {
-        return definition.constructionCost();
+        return currentTierData().constructionCost();
     }
 
     @Override
@@ -110,7 +121,6 @@ public class ModuleInstance implements Buildable {
         this.ticks = ticks;
     }
 
-    /** Sentinel value used in log messages when {@link #anchor()} is null. */
     public static final int NULL_ANCHOR_LOG_VALUE = -999;
 
     public StationTileCoord anchor() {
@@ -205,26 +215,49 @@ public class ModuleInstance implements Buildable {
 
     public long getDisplayedPowerEuPerTick() {
         if (!isOperational()) return 0L;
-        return definition.powerDrawEuPerTick();
+        return currentTierData().powerDrawEuPerTick();
     }
 
     public long baseEnergyCapacity() {
-        return definition.baseEnergyCapacity();
+        return currentTierData().baseEnergyCapacity();
+    }
+
+    public long baseCapacity() {
+        ModuleTierData data = currentTierData();
+        return data.hasCapacity() ? data.capacity() : 0L;
     }
 
     public long powerDrawEuPerTick() {
-        return definition.powerDrawEuPerTick();
+        return currentTierData().powerDrawEuPerTick();
+    }
+
+    public ModuleTier nextTier() {
+        ModuleTier[] available = definition.tierData()
+            .keySet()
+            .toArray(new ModuleTier[0]);
+        Arrays.sort(available);
+        for (int i = 0; i < available.length; i++) {
+            if (available[i] == this.tier) {
+                return available[Math.min(i + 1, available.length - 1)];
+            }
+        }
+        return available[0];
     }
 
     public int cooldownTicks() {
-        if (component instanceof ModuleHammer hammer) {
-            return ModuleHammer.cooldownTicks(hammer.variant(), tier);
+        ModuleTierData data = currentTierData();
+        if (component instanceof ModuleHammer hammer && data.variantCooldowns() != null) {
+            Integer override = data.variantCooldowns()
+                .get(
+                    hammer.variant()
+                        .name());
+            if (override != null) return override;
         }
-        return definition.cooldownTicks();
+        return data.cooldownTicks();
     }
 
     public Map<ItemStack, Long> getConstructionCost() {
-        return definition.constructionCost();
+        return currentTierData().constructionCost();
     }
 
     @Override

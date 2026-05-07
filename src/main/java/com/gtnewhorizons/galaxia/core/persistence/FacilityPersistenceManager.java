@@ -51,16 +51,17 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -890,20 +891,13 @@ public final class FacilityPersistenceManager {
 
     static final class ModuleOperationJson {
 
-        String operationKind;
+        String specType;
         String phase;
-        String sourceModuleKind;
-        String sourceTier;
-        String sourceVariantKey;
         String targetModuleKind;
         String targetTier;
         String targetVariantKey;
-        String sourceFocusTierKey;
-        String sourceFocusOreKey;
         String targetFocusTierKey;
         String targetFocusOreKey;
-        int buildTicks;
-        int completionRefundPercent;
         boolean reserveItems;
         boolean voidCompletionRefund;
         int elapsedBuildTicks;
@@ -1120,30 +1114,22 @@ public final class FacilityPersistenceManager {
         if (operation == null) return null;
         ModuleOperationJson json = new ModuleOperationJson();
         ModuleOperationPlan plan = operation.plan();
-        json.operationKind = plan.operationKind()
-            .name();
         json.phase = operation.phase()
             .name();
-        json.sourceModuleKind = plan.sourceModuleKind() == null ? null
-            : plan.sourceModuleKind()
+        if (plan.spec() instanceof HammerModuleOperation hammerSpec) {
+            json.specType = "HAMMER";
+            json.targetModuleKind = FacilityModuleKind.HAMMER.name();
+            json.targetTier = hammerSpec.targetTier()
                 .name();
-        json.sourceTier = plan.sourceTier() == null ? null
-            : plan.sourceTier()
+            json.targetVariantKey = hammerSpec.targetVariantKey();
+        } else if (plan.spec() instanceof MinerFocusOperation minerSpec) {
+            json.specType = "MINER_FOCUS";
+            json.targetModuleKind = FacilityModuleKind.MINER.name();
+            json.targetTier = minerSpec.targetTier()
                 .name();
-        json.sourceVariantKey = plan.sourceVariantKey();
-        json.targetModuleKind = plan.targetModuleKind() == null ? null
-            : plan.targetModuleKind()
-                .name();
-        json.targetTier = plan.targetTier() == null ? null
-            : plan.targetTier()
-                .name();
-        json.targetVariantKey = plan.targetVariantKey();
-        json.sourceFocusTierKey = plan.sourceFocusTierKey();
-        json.sourceFocusOreKey = plan.sourceFocusOreKey();
-        json.targetFocusTierKey = plan.targetFocusTierKey();
-        json.targetFocusOreKey = plan.targetFocusOreKey();
-        json.buildTicks = plan.buildTicks();
-        json.completionRefundPercent = plan.completionRefundPercent();
+            json.targetFocusTierKey = minerSpec.targetFocusTierKey();
+            json.targetFocusOreKey = minerSpec.targetFocusOreKey();
+        }
         json.reserveItems = plan.reserveItems();
         json.voidCompletionRefund = plan.voidCompletionRefund();
         json.elapsedBuildTicks = operation.elapsedBuildTicks();
@@ -1154,65 +1140,44 @@ public final class FacilityPersistenceManager {
 
     private static ModuleOperationState decodeModuleOperation(ModuleOperationJson json, ModuleInstance.ID moduleId) {
         if (json == null) return null;
-        ModuleOperationKind operationKind = requireEnum(
-            ModuleOperationKind.class,
-            json.operationKind,
-            "[PERSIST] Module " + moduleId + " has invalid operation kind: " + json.operationKind);
         ModuleOperationPhase phase = requireEnum(
             ModuleOperationPhase.class,
             json.phase,
             "[PERSIST] Module " + moduleId + " has invalid operation phase: " + json.phase);
-        FacilityModuleKind sourceModuleKind = requireOptionalEnum(
-            FacilityModuleKind.class,
-            json.sourceModuleKind,
-            "[PERSIST] Module " + moduleId + " has invalid operation source kind: " + json.sourceModuleKind);
-        ModuleTier sourceTier = requireOptionalEnum(
-            ModuleTier.class,
-            json.sourceTier,
-            "[PERSIST] Module " + moduleId + " has invalid operation source tier: " + json.sourceTier);
-        FacilityModuleKind targetModuleKind = requireOptionalEnum(
-            FacilityModuleKind.class,
-            json.targetModuleKind,
-            "[PERSIST] Module " + moduleId + " has invalid operation target kind: " + json.targetModuleKind);
-        ModuleTier targetTier = requireOptionalEnum(
+        FacilityModuleKind regKind = json.targetModuleKind != null
+            ? requireOptionalEnum(
+                FacilityModuleKind.class,
+                json.targetModuleKind,
+                "[PERSIST] Module " + moduleId + " has invalid target kind: " + json.targetModuleKind)
+            : null;
+        ModuleTier targetTier = requireEnum(
             ModuleTier.class,
             json.targetTier,
-            "[PERSIST] Module " + moduleId + " has invalid operation target tier: " + json.targetTier);
-        FacilityModuleKind definitionKind = targetModuleKind != null ? targetModuleKind : sourceModuleKind;
-        if (definitionKind == null) {
+            "[PERSIST] Module " + moduleId + " has invalid target tier: " + json.targetTier);
+        FacilityModuleKind kindForLookup = regKind != null ? regKind : FacilityModuleKind.HAMMER;
+        int buildTicks = FacilityModuleRegistry.get(kindForLookup)
+            .getTierData(targetTier)
+            .buildTicks();
+        IModuleOperation spec;
+        if ("HAMMER".equals(json.specType)) {
+            spec = new HammerModuleOperation(targetTier, json.targetVariantKey);
+        } else if ("MINER_FOCUS".equals(json.specType)) {
+            spec = new MinerFocusOperation(targetTier, json.targetFocusTierKey, json.targetFocusOreKey);
+        } else {
             throw new IllegalStateException(
-                "[PERSIST] Module " + moduleId + " operation missing source and target kind");
+                "[PERSIST] Module " + moduleId + " has unknown spec type: " + json.specType);
         }
-        ModuleOperationDefinition definition = FacilityModuleRegistry.get(definitionKind)
-            .operationDefinition(operationKind)
-            .withTarget(
-                sourceModuleKind,
-                sourceTier,
-                json.sourceVariantKey,
-                targetModuleKind,
-                targetTier,
-                json.targetVariantKey,
-                json.sourceFocusTierKey,
-                json.sourceFocusOreKey,
-                json.targetFocusTierKey,
-                json.targetFocusOreKey);
-        if (definition.buildTicks() != json.buildTicks) {
-            throw new IllegalStateException(
-                "[PERSIST] Module " + moduleId
-                    + " operation buildTicks mismatch: expected "
-                    + definition.buildTicks()
-                    + ", got "
-                    + json.buildTicks);
-        }
-        if (definition.completionRefundPercent() != json.completionRefundPercent) {
-            throw new IllegalStateException(
-                "[PERSIST] Module " + moduleId
-                    + " operation refund percent mismatch: expected "
-                    + definition.completionRefundPercent()
-                    + ", got "
-                    + json.completionRefundPercent);
-        }
-        ModuleOperationPlan plan = new ModuleOperationPlan(definition, json.reserveItems, json.voidCompletionRefund);
+        Map<ItemStackWrapper, Long> cost = regKind != null ? FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(regKind)
+                .getTierData(targetTier)
+                .constructionCost())
+            : Map.of();
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            spec,
+            buildTicks,
+            cost,
+            json.reserveItems,
+            json.voidCompletionRefund);
         return ModuleOperationState.restore(
             plan,
             phase,

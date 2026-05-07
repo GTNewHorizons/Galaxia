@@ -40,21 +40,21 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -267,13 +267,17 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             decodedOperation.plan()
                 .voidCompletionRefund());
-        assertEquals(
-            "BASE",
+        assertTrue(
             decodedOperation.plan()
-                .sourceVariantKey());
+                .spec() instanceof HammerModuleOperation);
+        assertEquals(
+            "BIG",
+            ((HammerModuleOperation) decodedOperation.plan()
+                .spec()).targetVariantKey());
         assertEquals(
             ModuleTier.LuV,
             decodedOperation.plan()
+                .spec()
                 .targetTier());
         assertEquals(
             8L,
@@ -356,18 +360,6 @@ final class FacilityPersistenceManagerTest {
             thrown.getCause()
                 .getMessage()
                 .contains("malformed"));
-    }
-
-    @Test
-    void bigHammerEvCrashesOnLoad() {
-        FacilityPersistenceManager manager = new FacilityPersistenceManager();
-        AutomatedFacility station = createStationWithFullLayout();
-        ModuleHammer hammer = (ModuleHammer) station.modules()
-            .get(0)
-            .component();
-        hammer.setVariant(HammerVariant.BIG);
-
-        assertThrows(IllegalStateException.class, () -> manager.encodeFacilityState(station));
     }
 
     private static FacilityPersistenceManager.AssetJson assetJson(UUID teamId, CelestialAsset.Kind kind,
@@ -471,18 +463,19 @@ final class FacilityPersistenceManagerTest {
 
     private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,
         HammerVariant targetVariant, boolean reserveItems, boolean voidCompletionRefund) {
-        ModuleHammer hammer = (ModuleHammer) module.component();
-        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .withTarget(
-                module.kind(),
-                module.tier(),
-                hammer.variant()
-                    .name(),
-                module.kind(),
-                targetTier,
-                targetVariant.name());
-        return new ModuleOperationPlan(definition, reserveItems, voidCompletionRefund);
+        int buildTicks = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier())
+            .buildTicks();
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(module.kind())
+                .getTierData(targetTier)
+                .constructionCost());
+        return new ModuleOperationPlan(
+            new HammerModuleOperation(targetTier, targetVariant.name()),
+            buildTicks,
+            cost,
+            reserveItems,
+            voidCompletionRefund);
     }
 
     @Test

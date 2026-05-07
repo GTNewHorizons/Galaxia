@@ -12,9 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 
 final class FacilityModuleRegistryTest {
@@ -26,50 +24,52 @@ final class FacilityModuleRegistryTest {
     }
 
     @Test
-    void registeredModulesExposeDefaultUpgradeDefinition() {
+    void registeredModulesExposeDefaultUpgradeTemplate() {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(FacilityModuleKind.HAMMER);
 
-        ModuleOperationPlan plan = definition.operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.LuV, "BIG")
-            .createPlan(false);
+        ModuleTierData tierData = definition.getTierData(ModuleTier.LuV);
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.LuV, "BIG"),
+            tierData.buildTicks(),
+            Map.of(),
+            false);
 
-        assertEquals(ModuleTier.LuV, plan.targetTier());
-        assertEquals("BIG", plan.targetVariantKey());
+        assertEquals(
+            ModuleTier.LuV,
+            plan.spec()
+                .targetTier());
+        assertEquals("BIG", ((HammerModuleOperation) plan.spec()).targetVariantKey());
         assertEquals(200, plan.buildTicks());
-        assertEquals(80, plan.completionRefundPercent());
         assertFalse(plan.reserveItems());
     }
 
     @Test
-    void definitionAllowsOperationDefinitionOverride() {
-        Map<ModuleOperationKind, ModuleOperationDefinition> operationDefinitions = Map.of(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            new ModuleOperationDefinition(ModuleOperationKind.UPGRADE_REBUILD, 40, 50, cost(2L)));
-
-        FacilityModuleRegistry.Definition registryDefinition = new FacilityModuleRegistry.Definition(
-            FacilityModuleKind.MAINTENANCE_BAY,
-            500L,
+    void tierDataCarriesBuildTicksAndRefundPercent() {
+        ModuleTierData data = new ModuleTierData(
+            1000L,
             0L,
-            100,
-            Map.of(new ItemStack(new Item()), 8L),
-            operationDefinitions,
-            (instance, outpost) -> {},
-            ModuleMaintenanceBay::new);
+            10,
+            null,
+            null,
+            Map.of(new ItemStack(new Item()), 1L),
+            40,
+            50);
 
-        ModuleOperationDefinition definition = registryDefinition
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD);
-
-        assertEquals(40, definition.buildTicks());
-        assertEquals(50, definition.completionRefundPercent());
-        assertEquals(
-            2L,
-            definition.materialCost()
-                .values()
-                .iterator()
-                .next());
+        assertEquals(40, data.buildTicks());
+        assertEquals(50, data.completionRefundPercent());
     }
 
-    private static Map<ItemStackWrapper, Long> cost(long amount) {
-        return Map.of(ItemStackWrapper.of(new ItemStack(new Item())), amount);
+    @Test
+    void tierDataIsAccessible() {
+        FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(FacilityModuleKind.STORAGE);
+        ModuleTierData hvData = definition.getTierData(ModuleTier.HV);
+
+        assertEquals(1024L, hvData.capacity());
+        assertEquals(500L, hvData.baseEnergyCapacity());
+        assertEquals(0L, hvData.powerDrawEuPerTick());
+
+        ModuleTierData ivData = definition.getTierData(ModuleTier.IV);
+        assertEquals(16384L, ivData.capacity());
+        assertEquals(8000L, ivData.baseEnergyCapacity());
     }
 }

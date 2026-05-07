@@ -9,58 +9,47 @@ import java.util.function.Supplier;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleAssembler;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleBattery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleCentrifuge;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleChemicalReactor;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDistillery;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyzer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMacerator;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMaintenanceBay;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModulePower;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleStorage;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleTank;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public class FacilityModuleRegistry {
 
-    private static final int DEFAULT_OPERATION_BUILD_TICKS = 200;
-    private static final int DEFAULT_OPERATION_COMPLETION_REFUND_PERCENT = 80;
-
-    public record Definition(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawEuPerTick,
-        int cooldownTicks, Map<ItemStack, Long> constructionCost,
-        Map<ModuleOperationKind, ModuleOperationDefinition> operationDefinitions,
-        BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<ModuleComponent> defaultFactory) {
+    public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
+        BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<IModuleComponent> defaultFactory) {
 
         public Definition {
-            if (operationDefinitions == null) {
-                throw new IllegalArgumentException("FacilityModuleRegistry.Definition: operationDefinitions is null");
+            if (tierData == null || tierData.isEmpty()) {
+                throw new IllegalArgumentException("Definition: tierData must not be null or empty");
             }
-            Map<ModuleOperationKind, ModuleOperationDefinition> copiedDefinitions = new EnumMap<>(
-                ModuleOperationKind.class);
-            copiedDefinitions.putAll(operationDefinitions);
-            for (Map.Entry<ModuleOperationKind, ModuleOperationDefinition> entry : copiedDefinitions.entrySet()) {
-                if (entry.getKey() == null || entry.getValue() == null) {
-                    throw new IllegalArgumentException(
-                        "FacilityModuleRegistry.Definition: operationDefinitions contains null key/value");
-                }
-                if (entry.getKey() != entry.getValue()
-                    .operationKind()) {
-                    throw new IllegalArgumentException(
-                        "FacilityModuleRegistry.Definition: operation definition key " + entry.getKey()
-                            + " does not match value kind "
-                            + entry.getValue()
-                                .operationKind());
-                }
-            }
-            operationDefinitions = Collections.unmodifiableMap(copiedDefinitions);
+            Map<ModuleTier, ModuleTierData> copiedTiers = new EnumMap<>(ModuleTier.class);
+            copiedTiers.putAll(tierData);
+            tierData = Collections.unmodifiableMap(copiedTiers);
         }
 
-        public ModuleOperationDefinition operationDefinition(ModuleOperationKind operationKind) {
-            ModuleOperationDefinition definition = operationDefinitions.get(operationKind);
-            if (definition == null) {
-                throw new IllegalStateException(
-                    "FacilityModuleRegistry.Definition: missing operation definition for kind=" + kind
-                        + ", operationKind="
-                        + operationKind);
+        public ModuleTierData getTierData(ModuleTier tier) {
+            ModuleTierData data = tierData.get(tier);
+            if (data == null) {
+                throw new IllegalStateException("No tier data for kind=" + kind + ", tier=" + tier);
             }
-            return definition;
+            return data;
         }
     }
 
@@ -69,26 +58,77 @@ public class FacilityModuleRegistry {
     public static void init() {
         register(
             FacilityModuleKind.POWER,
-            1500L,
-            -ModulePower.EU_TICK,
-            1,
-            Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L),
+            new ModuleTierData(
+                1500L,
+                -ModulePower.EU_TICK,
+                1,
+                null,
+                Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L)),
             ModulePower::doNothing,
             ModulePower::new);
         register(
             FacilityModuleKind.MINER,
-            2000L,
-            128L,
-            20,
-            Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
+            new TierMapBuilder()
+                .add(
+                    ModuleTier.EV,
+                    2000L,
+                    128L,
+                    20,
+                    Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L))
+                .add(
+                    ModuleTier.IV,
+                    8000L,
+                    512L,
+                    20,
+                    Map.of(new ItemStack(Items.diamond), 32L, new ItemStack(Items.gold_ingot), 256L))
+                .add(
+                    ModuleTier.LuV,
+                    32000L,
+                    2048L,
+                    20,
+                    Map.of(new ItemStack(Items.diamond), 128L, new ItemStack(Items.gold_ingot), 1024L))
+                .build(),
             ModuleMiner::generateOre,
             () -> new ModuleMiner(FacilityModuleKind.MINER));
         register(
             FacilityModuleKind.HAMMER,
-            1000L,
-            0L,
-            20,
-            Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L),
+            new TierMapBuilder()
+                .add(
+                    ModuleTier.EV,
+                    1000L,
+                    0L,
+                    1200,
+                    Map.of(HammerVariant.BASE.name(), 1200),
+                    Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L))
+                .add(
+                    ModuleTier.IV,
+                    4000L,
+                    0L,
+                    900,
+                    Map.of(HammerVariant.BASE.name(), 900),
+                    Map.of(new ItemStack(Items.iron_ingot), 32L, new ItemStack(Items.gold_ingot), 256L))
+                .add(
+                    ModuleTier.LuV,
+                    16000L,
+                    0L,
+                    600,
+                    Map.of(HammerVariant.BASE.name(), 600, HammerVariant.BIG.name(), 1200),
+                    Map.of(new ItemStack(Items.iron_ingot), 128L, new ItemStack(Items.gold_ingot), 1024L))
+                .add(
+                    ModuleTier.ZPM,
+                    64000L,
+                    0L,
+                    900,
+                    Map.of(HammerVariant.BIG.name(), 900),
+                    Map.of(new ItemStack(Items.iron_ingot), 512L, new ItemStack(Items.gold_ingot), 4096L))
+                .add(
+                    ModuleTier.UV,
+                    256000L,
+                    0L,
+                    600,
+                    Map.of(HammerVariant.BIG.name(), 600),
+                    Map.of(new ItemStack(Items.iron_ingot), 2048L, new ItemStack(Items.gold_ingot), 16384L))
+                .build(),
             ModuleHammer::prepareToFire,
             () -> new ModuleHammer(
                 FacilityModuleKind.HAMMER,
@@ -99,144 +139,159 @@ public class FacilityModuleRegistry {
                 64));
         register(
             FacilityModuleKind.STORAGE,
-            500L,
-            0L,
-            1,
-            Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L),
+            new TierMapBuilder()
+                .add(
+                    ModuleTier.HV,
+                    500L,
+                    0L,
+                    1,
+                    1024L,
+                    Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L))
+                .add(
+                    ModuleTier.EV,
+                    2000L,
+                    0L,
+                    1,
+                    4096L,
+                    Map.of(new ItemStack(Items.iron_ingot), 64L, new ItemStack(Items.gold_ingot), 128L))
+                .add(
+                    ModuleTier.IV,
+                    8000L,
+                    0L,
+                    1,
+                    16384L,
+                    Map.of(new ItemStack(Items.iron_ingot), 256L, new ItemStack(Items.gold_ingot), 512L))
+                .build(),
             (instance, outpost) -> {},
             ModuleStorage::new);
         register(
             FacilityModuleKind.TANK,
-            500L,
-            0L,
-            1,
-            Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L),
+            new TierMapBuilder()
+                .add(
+                    ModuleTier.HV,
+                    500L,
+                    0L,
+                    1,
+                    16_000L,
+                    Map.of(new ItemStack(Items.iron_ingot), 16L, new ItemStack(Items.gold_ingot), 32L))
+                .add(
+                    ModuleTier.EV,
+                    2000L,
+                    0L,
+                    1,
+                    64_000L,
+                    Map.of(new ItemStack(Items.iron_ingot), 64L, new ItemStack(Items.gold_ingot), 128L))
+                .add(
+                    ModuleTier.IV,
+                    8000L,
+                    0L,
+                    1,
+                    256_000L,
+                    Map.of(new ItemStack(Items.iron_ingot), 256L, new ItemStack(Items.gold_ingot), 512L))
+                .build(),
             (instance, outpost) -> {},
             ModuleTank::new);
         register(
             FacilityModuleKind.BATTERY,
-            500L,
-            0L,
-            1,
-            Map.of(new ItemStack(Items.redstone), 16L, new ItemStack(Items.gold_ingot), 32L),
+            new TierMapBuilder()
+                .add(
+                    ModuleTier.HV,
+                    500L,
+                    0L,
+                    1,
+                    100_000L,
+                    Map.of(new ItemStack(Items.redstone), 16L, new ItemStack(Items.gold_ingot), 32L))
+                .add(
+                    ModuleTier.EV,
+                    2000L,
+                    0L,
+                    1,
+                    400_000L,
+                    Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 128L))
+                .add(
+                    ModuleTier.IV,
+                    8000L,
+                    0L,
+                    1,
+                    1_600_000L,
+                    Map.of(new ItemStack(Items.redstone), 256L, new ItemStack(Items.gold_ingot), 512L))
+                .build(),
             (instance, outpost) -> {},
             ModuleBattery::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
-            500L,
-            0L,
-            100,
-            Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L),
+            new ModuleTierData(
+                500L,
+                0L,
+                100,
+                null,
+                Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L)),
             (instance, outpost) -> {},
             ModuleMaintenanceBay::new);
 
         if (FacilityModuleKind.MACERATOR.isAvailable()) {
             register(
                 FacilityModuleKind.MACERATOR,
-                2000L,
-                32L,
-                20,
-                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    .build(),
                 ModuleMacerator::processRecipe,
                 ModuleMacerator::new);
             register(
                 FacilityModuleKind.CENTRIFUGE,
-                2000L,
-                32L,
-                20,
-                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    .build(),
                 ModuleCentrifuge::processRecipe,
                 ModuleCentrifuge::new);
             register(
                 FacilityModuleKind.ELECTROLYZER,
-                2000L,
-                32L,
-                20,
-                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    .build(),
                 ModuleElectrolyzer::processRecipe,
                 ModuleElectrolyzer::new);
             register(
                 FacilityModuleKind.CHEMICAL_REACTOR,
-                2000L,
-                32L,
-                20,
-                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    .build(),
                 ModuleChemicalReactor::processRecipe,
                 ModuleChemicalReactor::new);
             register(
                 FacilityModuleKind.ASSEMBLER,
-                2000L,
-                32L,
-                20,
-                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    .build(),
                 ModuleAssembler::processRecipe,
                 ModuleAssembler::new);
             register(
                 FacilityModuleKind.DISTILLERY,
-                2000L,
-                32L,
-                20,
-                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                    .build(),
                 ModuleDistillery::processRecipe,
                 ModuleDistillery::new);
         }
     }
 
-    public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
-        int cooldownTicks, Map<ItemStack, Long> constructionCost,
-        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<ModuleComponent> defaultFactory) {
-        register(
-            kind,
-            baseEnergyCapacity,
-            powerDrawPerClick,
-            cooldownTicks,
-            constructionCost,
-            defaultOperationDefinitions(constructionCost),
-            tickFunction,
-            defaultFactory);
+    public static void register(FacilityModuleKind kind, ModuleTierData data,
+        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
+        DEFINITIONS.put(kind, new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory));
     }
 
-    public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,
-        int cooldownTicks, Map<ItemStack, Long> constructionCost,
-        Map<ModuleOperationKind, ModuleOperationDefinition> operationDefinitions,
-        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<ModuleComponent> defaultFactory) {
-        DEFINITIONS.put(
-            kind,
-            new Definition(
-                kind,
-                baseEnergyCapacity,
-                powerDrawPerClick,
-                cooldownTicks,
-                constructionCost,
-                operationDefinitions,
-                tickFunction,
-                defaultFactory));
+    public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
+        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
+        DEFINITIONS.put(kind, new Definition(kind, tierData, tickFunction, defaultFactory));
     }
 
-    private static Map<ModuleOperationKind, ModuleOperationDefinition> defaultOperationDefinitions(
-        Map<ItemStack, Long> constructionCost) {
-        Map<ModuleOperationKind, ModuleOperationDefinition> definitions = new EnumMap<>(ModuleOperationKind.class);
-        definitions.put(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            new ModuleOperationDefinition(
-                ModuleOperationKind.UPGRADE_REBUILD,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                DEFAULT_OPERATION_BUILD_TICKS,
-                DEFAULT_OPERATION_COMPLETION_REFUND_PERCENT,
-                operationCost(constructionCost)));
-        return definitions;
-    }
-
-    private static Map<ItemStackWrapper, Long> operationCost(Map<ItemStack, Long> constructionCost) {
+    public static Map<ItemStackWrapper, Long> operationCost(Map<ItemStack, Long> constructionCost) {
         Map<ItemStackWrapper, Long> wrapped = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStack, Long> entry : constructionCost.entrySet()) {
             ItemStackWrapper item = ItemStackWrapper.of(entry.getKey());
@@ -269,12 +324,12 @@ public class FacilityModuleRegistry {
         return instance;
     }
 
-    static ModuleComponent createComponent(FacilityModuleKind kind) {
+    static IModuleComponent createComponent(FacilityModuleKind kind) {
         Definition def = get(kind);
         if (def == null) {
             throw new IllegalStateException("FacilityModuleRegistry: no definition registered for kind " + kind);
         }
-        ModuleComponent component = def.defaultFactory.get();
+        IModuleComponent component = def.defaultFactory.get();
         if (component == null) {
             throw new IllegalStateException("FacilityModuleRegistry: defaultFactory returned null for kind " + kind);
         }
@@ -283,5 +338,41 @@ public class FacilityModuleRegistry {
 
     public static boolean isRegistered(FacilityModuleKind kind) {
         return DEFINITIONS.containsKey(kind);
+    }
+
+    public static class TierMapBuilder {
+
+        private final EnumMap<ModuleTier, ModuleTierData> map = new EnumMap<>(ModuleTier.class);
+
+        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, Map<ItemStack, Long> cost) {
+            if (map.put(tier, new ModuleTierData(energy, power, cooldown, null, cost)) != null) {
+                throw new IllegalArgumentException("Duplicate tier entry: " + tier);
+            }
+            return this;
+        }
+
+        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, long capacity,
+            Map<ItemStack, Long> cost) {
+            if (map.put(tier, new ModuleTierData(energy, power, cooldown, capacity, cost)) != null) {
+                throw new IllegalArgumentException("Duplicate tier entry: " + tier);
+            }
+            return this;
+        }
+
+        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown,
+            Map<String, Integer> variantCooldowns, Map<ItemStack, Long> cost) {
+            if (map.put(tier, new ModuleTierData(energy, power, cooldown, null, variantCooldowns, cost, 200, 80))
+                != null) {
+                throw new IllegalArgumentException("Duplicate tier entry: " + tier);
+            }
+            return this;
+        }
+
+        public Map<ModuleTier, ModuleTierData> build() {
+            if (map.isEmpty()) {
+                throw new IllegalStateException("No tiers added to builder");
+            }
+            return Collections.unmodifiableMap(new EnumMap<>(map));
+        }
     }
 }

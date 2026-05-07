@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
@@ -20,20 +21,21 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
@@ -529,17 +531,19 @@ public final class AssetModuleUpdatePacket {
         HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund,
         boolean creative) {
         ModuleHammer.requireTier(targetVariant, targetTier);
-        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .withTarget(
-                module.kind(),
-                module.tier(),
-                hammer.variant()
-                    .name(),
-                module.kind(),
-                targetTier,
-                targetVariant.name());
-        ModuleOperationPlan plan = new ModuleOperationPlan(definition, reserveItems, voidCompletionRefund);
+        int buildTicks = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier())
+            .buildTicks();
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(module.kind())
+                .getTierData(targetTier)
+                .constructionCost());
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new HammerModuleOperation(targetTier, targetVariant.name()),
+            buildTicks,
+            cost,
+            reserveItems,
+            voidCompletionRefund);
         if (creative) {
             if (state == null) {
                 throw new IllegalStateException(
@@ -599,21 +603,20 @@ public final class AssetModuleUpdatePacket {
             throw new IllegalStateException(
                 "Module " + module.id + " already has active operation " + existingOperation.phase());
         }
-        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .withTarget(
-                module.kind(),
-                module.tier(),
-                null,
-                module.kind(),
-                module.tier(),
-                null,
-                miner.focusTier()
-                    .name(),
-                miner.focusOreKeyOrNull(),
-                targetTier.name(),
-                targetOreKey);
-        module.setOperation(ModuleOperationState.waiting(definition.createPlan(false)));
+        int buildTicks = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier())
+            .buildTicks();
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(module.kind())
+                .getTierData(module.tier())
+                .constructionCost());
+        module.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new MinerFocusOperation(module.tier(), targetTier.name(), targetOreKey),
+                    buildTicks,
+                    cost,
+                    false)));
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

@@ -12,10 +12,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
@@ -204,48 +204,42 @@ final class CapacityClusterBuilderTest {
     }
 
     @Test
-    void nonCapacityComponentInCapacityModuleThrows() {
+    void nonCapacityComponentInCapacityModuleStillWorks() {
+        // Capacity is now read from registry tier data, not the component.
         StationLayout layout = new StationLayout();
         ModuleInstance module = FacilityModuleKind.STORAGE
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
-        // Sabotage: replace component with a non-ICapacityModule implementation
-        module.setComponent(new ModuleComponent() {});
+        module.setComponent(new IModuleComponent() {});
         layout.place(module);
 
-        assertThrows(
-            IllegalStateException.class,
-            () -> CapacityClusterBuilder.build(layout, FacilityModuleKind.STORAGE),
-            "CapacityClusterBuilder must throw when a capacity module's component does not implement ICapacityModule");
+        assertEquals(
+            1024L,
+            CapacityClusterBuilder.build(layout, FacilityModuleKind.STORAGE)
+                .get(0)
+                .effectiveCapacity());
     }
 
     @Test
-    void baseCapacityForTier_returnsZeroForNONE() {
-        // All capacity modules return 0 for NONE tier — sentinel behavior
+    void baseCapacityMatchesTierData() {
         assertEquals(
-            0L,
+            1024L,
             FacilityModuleKind.STORAGE.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV)
-                .component() instanceof com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule icm
-                    ? icm.baseCapacityForTier(ModuleTier.NONE)
-                    : -1L);
+                .baseCapacity());
         assertEquals(
-            0L,
+            16_000L,
             FacilityModuleKind.TANK.create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.HV)
-                .component() instanceof com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule icm
-                    ? icm.baseCapacityForTier(ModuleTier.NONE)
-                    : -1L);
+                .baseCapacity());
         assertEquals(
-            0L,
+            100_000L,
             FacilityModuleKind.BATTERY.create(StationTileCoord.of(3, 0), ModuleShape.SINGLE, ModuleTier.HV)
-                .component() instanceof com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule icm
-                    ? icm.baseCapacityForTier(ModuleTier.NONE)
-                    : -1L);
+                .baseCapacity());
     }
 
     @Test
     void maintenanceBayDoesNotImplementIParallelModule() {
         ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
-        ModuleComponent comp = bay.component();
+        IModuleComponent comp = bay.component();
         assertFalse(
             comp instanceof IParallelModule,
             "MaintenanceBay must not implement IParallelModule — it has no parallel mechanic");

@@ -12,52 +12,42 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class ModuleOperationPlanTest {
 
     @Test
-    void rejectsMalformedDefinition() {
-        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationDefinition(null, 200, 80, cost(1L)));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(
-                ModuleOperationKind.UPGRADE_REBUILD,
-                FacilityModuleKind.HAMMER,
-                ModuleTier.EV,
-                null,
-                FacilityModuleKind.HAMMER,
-                ModuleTier.IV,
-                " ",
-                null,
-                null,
-                null,
-                null,
-                200,
-                80,
-                Map.of()));
-    }
-
-    @Test
-    void rejectsMalformedPlan() {
-        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationPlan(null, true));
+    void rejectsNullSpec() {
+        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationPlan(null, 200, cost(1L), true));
     }
 
     @Test
     void keepsReserveItemsFlagAsConfigured() {
-        ModuleOperationDefinition definition = new ModuleOperationDefinition(
-            ModuleOperationKind.UPGRADE_REBUILD,
+        ModuleOperationPlan reserved = new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
             400,
-            80,
-            cost(1L))
-                .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.LuV, "BIG");
-
-        ModuleOperationPlan reserved = new ModuleOperationPlan(definition, true);
-        ModuleOperationPlan notReserved = new ModuleOperationPlan(definition, false);
+            cost(1L),
+            true);
+        ModuleOperationPlan notReserved = new ModuleOperationPlan(
+            new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
+            400,
+            cost(1L),
+            false);
 
         assertTrue(reserved.reserveItems());
         assertFalse(notReserved.reserveItems());
+    }
+
+    @Test
+    void rejectsMaterialCostWithZeroAmount() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> new ModuleOperationPlan(
+                new HammerModuleOperation(ModuleTier.IV, HammerVariant.BIG.name()),
+                200,
+                cost(0L),
+                true));
     }
 
     private static Map<ItemStackWrapper, Long> cost(long amount) {
