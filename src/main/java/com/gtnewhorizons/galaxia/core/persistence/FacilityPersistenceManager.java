@@ -394,8 +394,6 @@ public final class FacilityPersistenceManager {
                     hammer.variant()
                         .name());
             } else if (m.component() instanceof ModuleMiner miner) {
-                MinerSettings settings = miner.localSettingsOrNull();
-                moduleData.add("localSettings", settings == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(settings));
                 moduleData.addProperty(
                     "focusTier",
                     miner.focusTier()
@@ -608,6 +606,10 @@ public final class FacilityPersistenceManager {
                         if (!(module.component() instanceof ModuleMiner miner)) {
                             throw new IllegalStateException(
                                 "[PERSIST] Miner module " + moduleId + " has non-miner data");
+                        }
+                        if (module.groupId() == 0) {
+                            throw new IllegalStateException(
+                                "[PERSIST] Miner module " + moduleId + " malformed: has no settings group");
                         }
                         decodeMinerSettings(module, miner, data);
                     }
@@ -1271,41 +1273,12 @@ public final class FacilityPersistenceManager {
     private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {
         JsonObject minerData = Objects.requireNonNull(data, "[PERSIST] Miner module " + module.id + " missing data");
         if (minerData.entrySet()
-            .size() != 4 || !minerData.has("localSettings")
-            || !minerData.has("focusTier")
+            .size() != 3 || !minerData.has("focusTier")
             || !minerData.has("focusOreKey")
             || !minerData.has("focusAlignmentProgress")) {
             throw new IllegalStateException("[PERSIST] Miner module " + module.id + " has malformed settings data");
         }
-        JsonElement localSettingsElement = Objects.requireNonNull(
-            minerData.get("localSettings"),
-            "[PERSIST] Miner module " + module.id + " missing localSettings");
         decodeMinerFocus(module, miner, minerData);
-        if (module.groupId() != 0) {
-            if (!localSettingsElement.isJsonNull()) {
-                throw new IllegalStateException(
-                    "[PERSIST] Grouped miner module " + module.id + " must not persist local settings");
-            }
-            miner.clearLocalSettings();
-            return;
-        }
-        if (localSettingsElement.isJsonNull()) {
-            throw new IllegalStateException(
-                "[PERSIST] Ungrouped miner module " + module.id + " has null local settings");
-        }
-        JsonObject localSettingsData = localSettingsElement.getAsJsonObject();
-        if (localSettingsData.entrySet()
-            .size() != 1 || !localSettingsData.has("blacklistedOreKeys")) {
-            throw new IllegalStateException("[PERSIST] Miner module " + module.id + " has malformed local settings");
-        }
-        JsonElement keysElement = Objects.requireNonNull(
-            localSettingsData.get("blacklistedOreKeys"),
-            "[PERSIST] Miner module " + module.id + " missing blacklistedOreKeys");
-        Type keySetType = new TypeToken<Set<String>>() {}.getType();
-        Set<String> keys = Objects.requireNonNull(
-            PURE_GSON.fromJson(keysElement, keySetType),
-            "[PERSIST] Miner module " + module.id + " has null blacklistedOreKeys");
-        miner.setLocalSettings(new MinerSettings(keys));
     }
 
     private static void decodeMinerFocus(ModuleInstance module, ModuleMiner miner, JsonObject minerData) {

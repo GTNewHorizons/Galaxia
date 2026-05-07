@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -211,10 +212,7 @@ final class FacilityPersistenceManagerTest {
             }
         }
         assertNotNull(encodedMinerData);
-        assertTrue(encodedMinerData.has("localSettings"));
-        assertTrue(
-            encodedMinerData.get("localSettings")
-                .isJsonNull());
+        assertFalse(encodedMinerData.has("localSettings"));
         assertTrue(encodedMinerData.has("focusOreKey"));
         assertTrue(
             encodedMinerData.get("focusOreKey")
@@ -455,16 +453,30 @@ final class FacilityPersistenceManagerTest {
             Buildable.Status.OPERATIONAL);
         station.setEnergyStored(245_760L);
 
-        ModuleInstance hammer = addModule(station, FacilityModuleKind.HAMMER, Buildable.Status.OPERATIONAL);
-        ModuleInstance miner = addModule(station, FacilityModuleKind.MINER, Buildable.Status.DISABLED);
-        ModuleInstance power = addModule(station, FacilityModuleKind.POWER, Buildable.Status.IN_CONSTRUCTION);
-
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
+
+        ModuleInstance hammer = addModule(
+            station,
+            FacilityModuleKind.HAMMER,
+            Buildable.Status.OPERATIONAL,
+            StationTileCoord.of(1, 0));
         hammer.initAnchor(StationTileCoord.of(1, 0));
         layout.place(hammer);
+
+        ModuleInstance miner = addModule(
+            station,
+            FacilityModuleKind.MINER,
+            Buildable.Status.DISABLED,
+            StationTileCoord.of(2, 0));
         miner.initAnchor(StationTileCoord.of(2, 0));
         layout.place(miner);
+
+        ModuleInstance power = addModule(
+            station,
+            FacilityModuleKind.POWER,
+            Buildable.Status.IN_CONSTRUCTION,
+            StationTileCoord.of(2, 1));
         power.initAnchor(StationTileCoord.of(2, 1));
         layout.place(power);
         return station;
@@ -472,8 +484,13 @@ final class FacilityPersistenceManagerTest {
 
     private static ModuleInstance addModule(AutomatedFacility station, FacilityModuleKind kind,
         Buildable.Status status) {
+        return addModule(station, kind, status, null);
+    }
+
+    private static ModuleInstance addModule(AutomatedFacility station, FacilityModuleKind kind, Buildable.Status status,
+        StationTileCoord anchor) {
         ModuleInstance module = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), kind, null, ModuleShape.SINGLE, kind.defaultTier());
+            .create(ModuleInstance.ID.create(), kind, anchor, ModuleShape.SINGLE, kind.defaultTier());
         module.updateStatus(status);
         station.addModule(module);
         return module;
@@ -1192,8 +1209,8 @@ final class FacilityPersistenceManagerTest {
         Buildable.Status status, ModuleShape shape, ModuleTier tier, StationTileCoord coord) {
         ModuleInstance module = FacilityModuleRegistry.create(ModuleInstance.ID.create(), kind, null, shape, tier);
         module.updateStatus(status);
-        station.addModule(module);
         module.initAnchor(coord);
+        station.addModule(module);
         StationLayout layout = station.stationLayout();
         assertNotNull(layout);
         layout.place(module);

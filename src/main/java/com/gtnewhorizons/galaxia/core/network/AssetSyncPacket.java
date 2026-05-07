@@ -24,7 +24,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -442,7 +441,7 @@ public final class AssetSyncPacket implements IMessage {
         if (anchor != null) PacketUtil.writeStationTileCoord(buf, anchor);
 
         switch (module.kind()) {
-            case MINER -> writeMinerSettings(buf, module);
+            case MINER -> {}
             case HAMMER -> {
                 ModuleHammer h = (ModuleHammer) module.component();
                 PacketUtil.writeEnum(
@@ -482,7 +481,7 @@ public final class AssetSyncPacket implements IMessage {
         module.setGroupId(groupId);
 
         switch (kind) {
-            case MINER -> readMinerSettings(buf, module);
+            case MINER -> {}
             case HAMMER -> {
                 AllowShootingConfig cfg = new AllowShootingConfig(
                     PacketUtil.readEnum(buf, AllowShootingConfig.Mode.class),
@@ -508,14 +507,6 @@ public final class AssetSyncPacket implements IMessage {
         return module;
     }
 
-    private static void writeMinerSettings(ByteBuf buf, ModuleInstance module) {
-        ModuleMiner miner = (ModuleMiner) module.component();
-        MinerSettings settings = miner.localSettingsOrNull();
-        buf.writeBoolean(settings != null);
-        if (settings == null) return;
-        writeMinerSettingsPayload(buf, settings);
-    }
-
     private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {
         buf.writeInt(
             settings.blacklistedOreKeys()
@@ -523,21 +514,6 @@ public final class AssetSyncPacket implements IMessage {
         for (String oreKey : settings.blacklistedOreKeys()) {
             PacketUtil.writeString(buf, oreKey);
         }
-    }
-
-    private static void readMinerSettings(ByteBuf buf, ModuleInstance module) {
-        if (!(module.component() instanceof ModuleMiner miner)) {
-            throw new IllegalStateException("Network decoded MINER module with non-miner component " + module.id);
-        }
-        boolean hasLocalSettings = buf.readBoolean();
-        if (!hasLocalSettings) {
-            if (module.groupId() == 0) {
-                throw new IllegalStateException("Network decoded ungrouped miner without local settings " + module.id);
-            }
-            miner.clearLocalSettings();
-            return;
-        }
-        miner.setLocalSettings(readMinerSettingsPayload(buf, module.id.toString()));
     }
 
     private static MinerSettings readMinerSettingsPayload(ByteBuf buf, String context) {

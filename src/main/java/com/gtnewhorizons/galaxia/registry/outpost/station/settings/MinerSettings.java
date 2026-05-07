@@ -48,19 +48,18 @@ public final class MinerSettings implements ModuleSettings {
 
     @Override
     public void applyTo(ModuleInstance instance) {
-        if (!(instance.component() instanceof ModuleMiner miner)) {
+        if (!(instance.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("MinerSettings applied to non-miner module " + instance.id);
         }
-        miner.setLocalSettings(copy());
+        throw new UnsupportedOperationException("Miner settings are stored in station settings groups");
     }
 
     @Override
     public ModuleSettings from(ModuleInstance instance) {
-        if (!(instance.component() instanceof ModuleMiner miner)) {
+        if (!(instance.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("MinerSettings read from non-miner module " + instance.id);
         }
-        return miner.requireLocalSettings()
-            .copy();
+        throw new UnsupportedOperationException("Miner settings are stored in station settings groups");
     }
 
     public static String requireOreKey(String oreKey) {

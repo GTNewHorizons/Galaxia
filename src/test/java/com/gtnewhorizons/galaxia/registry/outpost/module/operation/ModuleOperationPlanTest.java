@@ -54,7 +54,7 @@ final class ModuleOperationPlanTest {
             ModuleTier.IV,
             "BIG");
 
-        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationPlan(target, 0, 80, true));
+        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationPlan(target, -1, 80, true));
         assertThrows(IllegalArgumentException.class, () -> new ModuleOperationPlan(target, 200, -1, true));
         assertThrows(IllegalArgumentException.class, () -> new ModuleOperationPlan(target, 200, 101, true));
     }

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.operation;
 
+import javax.annotation.Nonnull;
+
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
@@ -8,7 +10,7 @@ public record ModuleOperationTargetSpec(ModuleOperationKind operationKind, Facil
     String targetVariantKey, String sourceFocusTierKey, String sourceFocusOreKey, String targetFocusTierKey,
     String targetFocusOreKey) {
 
-    public ModuleOperationTargetSpec(ModuleOperationKind operationKind, FacilityModuleKind sourceModuleKind,
+    public ModuleOperationTargetSpec(@Nonnull ModuleOperationKind operationKind, FacilityModuleKind sourceModuleKind,
         ModuleTier sourceTier, FacilityModuleKind targetModuleKind, ModuleTier targetTier, String targetVariantKey) {
         this(
             operationKind,
@@ -24,7 +26,7 @@ public record ModuleOperationTargetSpec(ModuleOperationKind operationKind, Facil
             null);
     }
 
-    public ModuleOperationTargetSpec(ModuleOperationKind operationKind, FacilityModuleKind sourceModuleKind,
+    public ModuleOperationTargetSpec(@Nonnull ModuleOperationKind operationKind, FacilityModuleKind sourceModuleKind,
         ModuleTier sourceTier, String sourceVariantKey, FacilityModuleKind targetModuleKind, ModuleTier targetTier,
         String targetVariantKey) {
         this(

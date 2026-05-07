@@ -28,7 +28,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -587,7 +586,6 @@ final class AssetModuleUpdatePacketTest {
         packet.apply(TEAM);
 
         assertNotEquals(0, module.groupId());
-        assertNull(((ModuleMiner) module.component()).localSettingsOrNull());
         assertEquals(
             1,
             facility.settingsGroups()
@@ -608,12 +606,12 @@ final class AssetModuleUpdatePacketTest {
 
         packet.apply(TEAM);
 
-        assertEquals(0, module.groupId());
-        assertTrue(
+        assertNotEquals(0, module.groupId());
+        assertEquals(
+            1,
             facility.settingsGroups()
                 .groups()
-                .isEmpty());
-        assertNotNull(((ModuleMiner) module.component()).localSettingsOrNull());
+                .size());
         assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
     }
 

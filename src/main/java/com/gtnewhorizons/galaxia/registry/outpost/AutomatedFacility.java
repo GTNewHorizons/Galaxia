@@ -124,6 +124,9 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
+        if (module.component() instanceof ModuleMiner && module.groupId() == 0) {
+            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new MinerSettings()));
+        }
         dirtyModuleIds.add(module.id);
         bumpSyncRevision();
         LOG.debug(
@@ -142,6 +145,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
+            detachFromSettingsGroup(removed);
             dirtyRemovedIds.add(removed.id);
             dirtyModuleIds.remove(removed.id);
             bumpSyncRevision();
@@ -179,18 +183,18 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public MinerSettings minerSettings(ModuleInstance module) {
-        if (!(module.component() instanceof ModuleMiner miner)) {
+        if (!(module.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("Miner settings requested for non-miner module " + module.id);
         }
-        if (module.groupId() != 0) {
-            SettingsGroup group = settingsGroups.require(module.groupId(), FacilityModuleKind.MINER);
-            if (!(group.settings() instanceof MinerSettings settings)) {
-                throw new IllegalStateException(
-                    "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
-            }
-            return settings;
+        if (module.groupId() == 0) {
+            throw new IllegalStateException("Miner module " + module.id + " has no settings group");
         }
-        return miner.requireLocalSettings();
+        SettingsGroup group = settingsGroups.require(module.groupId(), FacilityModuleKind.MINER);
+        if (!(group.settings() instanceof MinerSettings settings)) {
+            throw new IllegalStateException(
+                "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
+        }
+        return settings;
     }
 
     public boolean isMinerOreBlacklisted(ModuleInstance module, String oreKey) {
@@ -199,11 +203,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
         if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
-            if (module.groupId() == 0) {
-                markModuleDirty(module.id);
-            } else {
-                markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
-            }
+            markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
         }
     }
 
@@ -329,10 +329,9 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {
-        if (module.groupId() == 0) return;
         ModuleSettings settings = copySettings(module);
         detachFromSettingsGroup(module);
-        applyLocalSettings(module, settings);
+        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
         markModuleDirty(module.id);
     }
 
@@ -347,7 +346,6 @@ public final class AutomatedFacility extends CelestialAsset {
         settingsGroups.require(group.id(), module.kind());
         settingsGroups.addMember(group.id(), module.anchor());
         module.setGroupId(group.id());
-        clearLocalSettings(module);
         markModuleDirty(module.id);
     }
 
@@ -356,22 +354,6 @@ public final class AutomatedFacility extends CelestialAsset {
         short oldGroupId = module.groupId();
         settingsGroups.removeMember(oldGroupId, module.anchor());
         module.setGroupId((short) 0);
-    }
-
-    private void applyLocalSettings(ModuleInstance module, ModuleSettings settings) {
-        if (settings instanceof MinerSettings minerSettings && module.component() instanceof ModuleMiner miner) {
-            miner.setLocalSettings(minerSettings);
-            return;
-        }
-        throw new IllegalStateException("Cannot apply settings " + settings + " to module " + module.id);
-    }
-
-    private void clearLocalSettings(ModuleInstance module) {
-        if (module.component() instanceof ModuleMiner miner) {
-            miner.clearLocalSettings();
-            return;
-        }
-        throw new IllegalStateException("Cannot clear local settings for module " + module.id);
     }
 
     private void markSettingsGroupMembersDirty(SettingsGroup group) {
@@ -538,8 +520,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void tick() {
         for (ModuleInstance module : modules) {
-            tickModuleOperation(module);
-            if (!isBuildingOperation(module)) {
+            boolean moduleTickBlocked = tickModuleOperation(module);
+            if (!moduleTickBlocked) {
                 module.tick(this);
             }
         }
@@ -547,27 +529,32 @@ public final class AutomatedFacility extends CelestialAsset {
         LogisticStore.updateSignalsForFacility(this);
     }
 
-    private void tickModuleOperation(ModuleInstance module) {
+    private boolean tickModuleOperation(ModuleInstance module) {
         ModuleOperationState operation = module.operationOrNull();
-        if (operation == null) return;
-        switch (operation.phase()) {
+        if (operation == null) return false;
+        return switch (operation.phase()) {
             case WAITING_FOR_MATERIALS -> tryBeginModuleOperation(module, operation);
-            case BUILDING -> tickBuildingOperation(module, operation);
-            case REFUNDING -> flushModuleOperationRefund(module);
-            case COMPLETE -> applyCompletedModuleOperation(module, operation);
+            case BUILDING -> {
+                tickBuildingOperation(module, operation);
+                yield true;
+            }
+            case REFUNDING -> {
+                flushModuleOperationRefund(module);
+                yield true;
+            }
+            case COMPLETE -> {
+                applyCompletedModuleOperation(module, operation);
+                yield false;
+            }
             case CANCELLED -> {
                 module.clearOperation();
                 markModuleDirty(module.id);
+                yield false;
             }
-        }
+        };
     }
 
-    private boolean isBuildingOperation(ModuleInstance module) {
-        ModuleOperationState operation = module.operationOrNull();
-        return operation != null && operation.phase() == ModuleOperationPhase.BUILDING;
-    }
-
-    private void tryBeginModuleOperation(ModuleInstance module, ModuleOperationState operation) {
+    private boolean tryBeginModuleOperation(ModuleInstance module, ModuleOperationState operation) {
         ModuleOperationDefinition definition = operationDefinition(
             operation.plan()
                 .targetSpec());
@@ -578,12 +565,13 @@ public final class AutomatedFacility extends CelestialAsset {
         boolean hasFullCost = operation.reserveItems() ? tryReserveAvailableOperationMaterials(module, materialCost)
             : tryReserveOperationMaterials(module, materialCost);
         if (!hasFullCost) {
-            return;
+            return false;
         }
         module.setOperation(
             module.operationOrNull()
                 .beginBuilding());
         markModuleDirty(module.id);
+        return true;
     }
 
     private void tickBuildingOperation(ModuleInstance module, ModuleOperationState operation) {

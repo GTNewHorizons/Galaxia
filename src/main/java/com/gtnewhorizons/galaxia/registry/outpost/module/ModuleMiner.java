@@ -10,7 +10,6 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 
 public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
@@ -18,7 +17,6 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
 
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
     private byte parallel = 1;
-    private MinerSettings localSettings = new MinerSettings();
     private MinerFocusTier focusTier = MinerFocusTier.NONE;
     private String focusOreKey;
     private int focusAlignmentProgress;
@@ -75,26 +73,6 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     public static boolean shouldVoidOre(@Nonnull ModuleInstance instance, @Nonnull AutomatedFacility outpost,
         String oreKey) {
         return outpost.isMinerOreBlacklisted(instance, oreKey);
-    }
-
-    public MinerSettings localSettingsOrNull() {
-        return localSettings;
-    }
-
-    public MinerSettings requireLocalSettings() {
-        if (localSettings == null) {
-            throw new IllegalStateException(
-                "Miner module has no local settings because it belongs to a settings group");
-        }
-        return localSettings;
-    }
-
-    public void setLocalSettings(@Nonnull MinerSettings localSettings) {
-        this.localSettings = localSettings.copy();
-    }
-
-    public void clearLocalSettings() {
-        this.localSettings = null;
     }
 
     public MinerFocusTier focusTier() {
