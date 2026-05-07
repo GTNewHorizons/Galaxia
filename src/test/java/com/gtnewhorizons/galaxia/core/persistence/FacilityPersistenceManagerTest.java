@@ -50,11 +50,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -243,20 +243,7 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance hammer = station.modules()
             .get(0);
         ModuleOperationState operation = ModuleOperationState
-            .waiting(
-                new ModuleOperationPlan(
-                    new ModuleOperationTargetSpec(
-                        ModuleOperationKind.UPGRADE_REBUILD,
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.EV,
-                        "BASE",
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.LuV,
-                        "BIG"),
-                    200,
-                    80,
-                    true,
-                    true))
+            .waiting(hammerOperationPlan(hammer, ModuleTier.LuV, HammerVariant.BIG, true, true))
             .withDepositedResources(Map.of("minecraft:iron_ingot:0", 8L))
             .beginBuilding()
             .tickBuilding();
@@ -283,12 +270,10 @@ final class FacilityPersistenceManagerTest {
         assertEquals(
             "BASE",
             decodedOperation.plan()
-                .targetSpec()
                 .sourceVariantKey());
         assertEquals(
             ModuleTier.LuV,
             decodedOperation.plan()
-                .targetSpec()
                 .targetTier());
         assertEquals(
             8L,
@@ -303,19 +288,7 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance hammer = station.modules()
             .get(0);
         hammer.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(
-                    new ModuleOperationTargetSpec(
-                        ModuleOperationKind.UPGRADE_REBUILD,
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.EV,
-                        "BASE",
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.IV,
-                        "BASE"),
-                    100,
-                    80,
-                    false)));
+            ModuleOperationState.waiting(hammerOperationPlan(hammer, ModuleTier.IV, HammerVariant.BASE, false, false)));
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         encoded.modules.get(0).moduleOperation.phase = "BROKEN";
 
@@ -494,6 +467,22 @@ final class FacilityPersistenceManagerTest {
         module.updateStatus(status);
         station.addModule(module);
         return module;
+    }
+
+    private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,
+        HammerVariant targetVariant, boolean reserveItems, boolean voidCompletionRefund) {
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
+            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
+            .withTarget(
+                module.kind(),
+                module.tier(),
+                hammer.variant()
+                    .name(),
+                module.kind(),
+                targetTier,
+                targetVariant.name());
+        return new ModuleOperationPlan(definition, reserveItems, voidCompletionRefund);
     }
 
     @Test

@@ -34,7 +34,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
@@ -530,23 +529,17 @@ public final class AssetModuleUpdatePacket {
         HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund,
         boolean creative) {
         ModuleHammer.requireTier(targetVariant, targetTier);
-        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            module.kind(),
-            module.tier(),
-            hammer.variant()
-                .name(),
-            module.kind(),
-            targetTier,
-            targetVariant.name());
         ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD);
-        ModuleOperationPlan plan = new ModuleOperationPlan(
-            target,
-            definition.buildTicks(),
-            definition.completionRefundPercent(),
-            reserveItems,
-            voidCompletionRefund);
+            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
+            .withTarget(
+                module.kind(),
+                module.tier(),
+                hammer.variant()
+                    .name(),
+                module.kind(),
+                targetTier,
+                targetVariant.name());
+        ModuleOperationPlan plan = new ModuleOperationPlan(definition, reserveItems, voidCompletionRefund);
         if (creative) {
             if (state == null) {
                 throw new IllegalStateException(
@@ -606,22 +599,21 @@ public final class AssetModuleUpdatePacket {
             throw new IllegalStateException(
                 "Module " + module.id + " already has active operation " + existingOperation.phase());
         }
-        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            module.kind(),
-            module.tier(),
-            null,
-            module.kind(),
-            module.tier(),
-            null,
-            miner.focusTier()
-                .name(),
-            miner.focusOreKeyOrNull(),
-            targetTier.name(),
-            targetOreKey);
         ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
-            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD);
-        module.setOperation(ModuleOperationState.waiting(definition.createPlan(target, false)));
+            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
+            .withTarget(
+                module.kind(),
+                module.tier(),
+                null,
+                module.kind(),
+                module.tier(),
+                null,
+                miner.focusTier()
+                    .name(),
+                miner.focusOreKeyOrNull(),
+                targetTier.name(),
+                targetOreKey);
+        module.setOperation(ModuleOperationState.waiting(definition.createPlan(false)));
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

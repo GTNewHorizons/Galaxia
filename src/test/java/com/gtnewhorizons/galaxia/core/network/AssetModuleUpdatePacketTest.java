@@ -29,11 +29,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -327,25 +327,21 @@ final class AssetModuleUpdatePacketTest {
             ModuleOperationKind.UPGRADE_REBUILD,
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .operationKind());
         assertEquals(
             "BASE",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .sourceVariantKey());
         assertEquals(
             ModuleTier.LuV,
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetTier());
         assertEquals(
             "BIG",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetVariantKey());
     }
 
@@ -365,7 +361,6 @@ final class AssetModuleUpdatePacketTest {
             ModuleTier.IV,
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetTier());
     }
 
@@ -394,19 +389,16 @@ final class AssetModuleUpdatePacketTest {
             ModuleTier.ZPM,
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetTier());
         assertEquals(
             "BASE",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .sourceVariantKey());
         assertEquals(
             "BIG",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetVariantKey());
     }
 
@@ -470,20 +462,8 @@ final class AssetModuleUpdatePacketTest {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
             .get(0);
-        module.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(
-                    new ModuleOperationTargetSpec(
-                        ModuleOperationKind.UPGRADE_REBUILD,
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.EV,
-                        "BASE",
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.IV,
-                        "BASE"),
-                    200,
-                    80,
-                    false)));
+        module
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE)));
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
             .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.LuV);
 
@@ -492,7 +472,6 @@ final class AssetModuleUpdatePacketTest {
             ModuleTier.IV,
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetTier());
     }
 
@@ -501,20 +480,8 @@ final class AssetModuleUpdatePacketTest {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
             .get(0);
-        module.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(
-                    new ModuleOperationTargetSpec(
-                        ModuleOperationKind.UPGRADE_REBUILD,
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.EV,
-                        "BASE",
-                        FacilityModuleKind.HAMMER,
-                        ModuleTier.IV,
-                        "BASE"),
-                    200,
-                    80,
-                    false)));
+        module
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE)));
         AssetModuleUpdatePacket packet = roundTrip(
             AssetModuleUpdatePacket.cancelModuleOperation(facility.assetId, 0, module.id));
 
@@ -558,19 +525,16 @@ final class AssetModuleUpdatePacketTest {
             "NONE",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .sourceFocusTierKey());
         assertEquals(
             "II",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetFocusTierKey());
         assertEquals(
             "ore:iron",
             module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetFocusOreKey());
     }
 
@@ -709,19 +673,17 @@ final class AssetModuleUpdatePacketTest {
     private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,
         HammerVariant targetVariant) {
         ModuleHammer hammer = (ModuleHammer) module.component();
-        return new ModuleOperationPlan(
-            new ModuleOperationTargetSpec(
-                ModuleOperationKind.UPGRADE_REBUILD,
+        ModuleOperationDefinition definition = FacilityModuleRegistry.get(module.kind())
+            .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
+            .withTarget(
                 module.kind(),
                 module.tier(),
                 hammer.variant()
                     .name(),
                 module.kind(),
                 targetTier,
-                targetVariant.name()),
-            200,
-            80,
-            false);
+                targetVariant.name());
+        return new ModuleOperationPlan(definition, false);
     }
 
     private static AutomatedFacility addMinerFacilityToServer() {

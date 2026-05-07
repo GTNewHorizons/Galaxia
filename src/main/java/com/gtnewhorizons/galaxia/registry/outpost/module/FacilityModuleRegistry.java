@@ -11,6 +11,7 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
@@ -219,10 +220,30 @@ public class FacilityModuleRegistry {
             ModuleOperationKind.UPGRADE_REBUILD,
             new ModuleOperationDefinition(
                 ModuleOperationKind.UPGRADE_REBUILD,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 DEFAULT_OPERATION_BUILD_TICKS,
                 DEFAULT_OPERATION_COMPLETION_REFUND_PERCENT,
-                constructionCost));
+                operationCost(constructionCost)));
         return definitions;
+    }
+
+    private static Map<ItemStackWrapper, Long> operationCost(Map<ItemStack, Long> constructionCost) {
+        Map<ItemStackWrapper, Long> wrapped = new java.util.LinkedHashMap<>();
+        for (Map.Entry<ItemStack, Long> entry : constructionCost.entrySet()) {
+            ItemStackWrapper item = ItemStackWrapper.of(entry.getKey());
+            if (item == null) continue;
+            wrapped.merge(item, entry.getValue(), Long::sum);
+        }
+        return wrapped;
     }
 
     public static Definition get(FacilityModuleKind kind) {

@@ -250,17 +250,14 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
             if (module.operationOrNull()
                 .plan()
-                .targetSpec()
                 .targetTier() != null) {
                 lineY = drawLine(
                     "Target: " + module.operationOrNull()
                         .plan()
-                        .targetSpec()
                         .targetVariantKey()
                         + " "
                         + module.operationOrNull()
                             .plan()
-                            .targetSpec()
                             .targetTier()
                             .name(),
                     panelX,

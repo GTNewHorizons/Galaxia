@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.Map;
 
@@ -13,10 +12,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 
 final class FacilityModuleRegistryTest {
 
@@ -29,18 +28,13 @@ final class FacilityModuleRegistryTest {
     @Test
     void registeredModulesExposeDefaultUpgradeDefinition() {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(FacilityModuleKind.HAMMER);
-        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            FacilityModuleKind.HAMMER,
-            ModuleTier.EV,
-            FacilityModuleKind.HAMMER,
-            ModuleTier.LuV,
-            "BIG");
 
         ModuleOperationPlan plan = definition.operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .createPlan(target, false);
+            .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.LuV, "BIG")
+            .createPlan(false);
 
-        assertSame(target, plan.targetSpec());
+        assertEquals(ModuleTier.LuV, plan.targetTier());
+        assertEquals("BIG", plan.targetVariantKey());
         assertEquals(200, plan.buildTicks());
         assertEquals(80, plan.completionRefundPercent());
         assertFalse(plan.reserveItems());
@@ -50,11 +44,7 @@ final class FacilityModuleRegistryTest {
     void definitionAllowsOperationDefinitionOverride() {
         Map<ModuleOperationKind, ModuleOperationDefinition> operationDefinitions = Map.of(
             ModuleOperationKind.UPGRADE_REBUILD,
-            new ModuleOperationDefinition(
-                ModuleOperationKind.UPGRADE_REBUILD,
-                40,
-                50,
-                Map.of(new ItemStack(new Item()), 2L)));
+            new ModuleOperationDefinition(ModuleOperationKind.UPGRADE_REBUILD, 40, 50, cost(2L)));
 
         FacilityModuleRegistry.Definition registryDefinition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.MAINTENANCE_BAY,
@@ -73,17 +63,13 @@ final class FacilityModuleRegistryTest {
         assertEquals(50, definition.completionRefundPercent());
         assertEquals(
             2L,
-            definition
-                .materialCost(
-                    new ModuleOperationTargetSpec(
-                        ModuleOperationKind.UPGRADE_REBUILD,
-                        FacilityModuleKind.MAINTENANCE_BAY,
-                        ModuleTier.NONE,
-                        FacilityModuleKind.MAINTENANCE_BAY,
-                        ModuleTier.NONE,
-                        null))
+            definition.materialCost()
                 .values()
                 .iterator()
                 .next());
+    }
+
+    private static Map<ItemStackWrapper, Long> cost(long amount) {
+        return Map.of(ItemStackWrapper.of(new ItemStack(new Item())), amount);
     }
 }

@@ -4,21 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.item.ItemStack;
-
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationTargetSpec;
 
 final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidget> {
 
@@ -145,15 +143,24 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             return;
         }
         lineY = ModuleConfigModalSupport.drawLine("Cost:", x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        Map<ItemStack, Long> cost = FacilityModuleRegistry.get(module.kind())
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.get(module.kind())
             .operationDefinition(ModuleOperationKind.UPGRADE_REBUILD)
-            .materialCost(targetSpec(module, hammer));
+            .withTarget(
+                module.kind(),
+                module.tier(),
+                hammer.variant()
+                    .name(),
+                module.kind(),
+                controller.hammerUpgradeTier(),
+                controller.hammerUpgradeVariant()
+                    .name())
+            .materialCost();
         if (cost.isEmpty()) {
             ModuleConfigModalSupport.drawLine("None", x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             return;
         }
         int shown = 0;
-        for (Map.Entry<ItemStack, Long> entry : cost.entrySet()) {
+        for (Map.Entry<ItemStackWrapper, Long> entry : cost.entrySet()) {
             if (shown >= 3) {
                 ModuleConfigModalSupport.drawLine("...", x, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
                 break;
@@ -161,6 +168,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             lineY = ModuleConfigModalSupport.drawTrimmedLine(
                 entry.getValue() + "x "
                     + entry.getKey()
+                        .toStack(1)
                         .getDisplayName(),
                 x,
                 lineY,
@@ -238,19 +246,6 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     private void back() {
         int moduleIndex = controller.moduleIndex();
         controller.openHammer(moduleIndex);
-    }
-
-    private ModuleOperationTargetSpec targetSpec(ModuleInstance module, ModuleHammer hammer) {
-        return new ModuleOperationTargetSpec(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            module.kind(),
-            module.tier(),
-            hammer.variant()
-                .name(),
-            module.kind(),
-            controller.hammerUpgradeTier(),
-            controller.hammerUpgradeVariant()
-                .name());
     }
 
     private ModuleInstance selectedModule() {

@@ -69,16 +69,17 @@ final class ModuleOperationStateTest {
         ModuleOperationState state = ModuleOperationState.waiting(rebuildPlan(false, 3))
             .beginBuilding();
 
-        ModuleOperationState tick1 = state.tickBuilding();
-        ModuleOperationState tick2 = tick1.tickBuilding();
-        ModuleOperationState tick3 = tick2.tickBuilding();
+        state.tickBuilding();
+        assertEquals(ModuleOperationPhase.BUILDING, state.phase());
+        assertEquals(1, state.elapsedBuildTicks());
 
-        assertEquals(ModuleOperationPhase.BUILDING, tick1.phase());
-        assertEquals(1, tick1.elapsedBuildTicks());
-        assertEquals(ModuleOperationPhase.BUILDING, tick2.phase());
-        assertEquals(2, tick2.elapsedBuildTicks());
-        assertEquals(ModuleOperationPhase.COMPLETE, tick3.phase());
-        assertEquals(3, tick3.elapsedBuildTicks());
+        state.tickBuilding();
+        assertEquals(ModuleOperationPhase.BUILDING, state.phase());
+        assertEquals(2, state.elapsedBuildTicks());
+
+        state.tickBuilding();
+        assertEquals(ModuleOperationPhase.COMPLETE, state.phase());
+        assertEquals(3, state.elapsedBuildTicks());
     }
 
     @Test
@@ -130,13 +131,12 @@ final class ModuleOperationStateTest {
     }
 
     private static ModuleOperationPlan rebuildPlan(boolean reserveItems, int buildTicks) {
-        ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
+        ModuleOperationDefinition definition = new ModuleOperationDefinition(
             ModuleOperationKind.UPGRADE_REBUILD,
-            FacilityModuleKind.HAMMER,
-            ModuleTier.EV,
-            FacilityModuleKind.HAMMER,
-            ModuleTier.IV,
-            "BIG");
-        return new ModuleOperationPlan(target, buildTicks, 80, reserveItems);
+            buildTicks,
+            80,
+            java.util.Map.of())
+                .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.IV, "BIG");
+        return new ModuleOperationPlan(definition, reserveItems);
     }
 }

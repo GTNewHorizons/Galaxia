@@ -12,6 +12,7 @@ import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
@@ -23,12 +24,12 @@ final class ModuleOperationDefinitionTest {
             ModuleOperationKind.UPGRADE_REBUILD,
             120,
             75,
-            Map.of(new ItemStack(new Item()), 4L));
-        ModuleOperationTargetSpec target = hammerTarget();
+            cost(4L));
+        ModuleOperationDefinition targetDefinition = hammerDefinition(definition);
 
-        ModuleOperationPlan plan = definition.createPlan(target, true);
+        ModuleOperationPlan plan = targetDefinition.createPlan(true);
 
-        assertSame(target, plan.targetSpec());
+        assertSame(targetDefinition, plan.definition());
         assertEquals(120, plan.buildTicks());
         assertEquals(75, plan.completionRefundPercent());
         assertTrue(plan.reserveItems());
@@ -41,10 +42,10 @@ final class ModuleOperationDefinitionTest {
             ModuleOperationKind.UPGRADE_REBUILD,
             120,
             80,
-            Map.of(stack, 6L));
+            Map.of(ItemStackWrapper.of(stack), 6L));
         stack.stackSize = 32;
 
-        Map<ItemStack, Long> cost = definition.materialCost(hammerTarget());
+        Map<ItemStackWrapper, Long> cost = definition.materialCost();
 
         assertEquals(1, cost.size());
         assertEquals(
@@ -53,40 +54,29 @@ final class ModuleOperationDefinitionTest {
                 .iterator()
                 .next());
         assertEquals(
-            1,
+            ItemStackWrapper.of(stack),
             cost.keySet()
                 .iterator()
-                .next().stackSize);
+                .next());
     }
 
     @Test
     void malformedDefinitionOrCostCrashes() {
+        assertThrows(IllegalArgumentException.class, () -> new ModuleOperationDefinition(null, 120, 80, cost(4L)));
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(null, 120, 80, Map.of(new ItemStack(new Item()), 4L)));
+            () -> new ModuleOperationDefinition(ModuleOperationKind.UPGRADE_REBUILD, 0, 80, cost(4L)));
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(
-                ModuleOperationKind.UPGRADE_REBUILD,
-                0,
-                80,
-                Map.of(new ItemStack(new Item()), 4L)));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(
-                ModuleOperationKind.UPGRADE_REBUILD,
-                120,
-                80,
-                Map.of(new ItemStack(new Item()), 0L)));
+            () -> new ModuleOperationDefinition(ModuleOperationKind.UPGRADE_REBUILD, 120, 80, cost(0L)));
     }
 
-    private static ModuleOperationTargetSpec hammerTarget() {
-        return new ModuleOperationTargetSpec(
-            ModuleOperationKind.UPGRADE_REBUILD,
-            FacilityModuleKind.HAMMER,
-            ModuleTier.EV,
-            FacilityModuleKind.HAMMER,
-            ModuleTier.LuV,
-            "BIG");
+    private static ModuleOperationDefinition hammerDefinition(ModuleOperationDefinition definition) {
+        return definition
+            .withTarget(FacilityModuleKind.HAMMER, ModuleTier.EV, FacilityModuleKind.HAMMER, ModuleTier.LuV, "BIG");
+    }
+
+    private static Map<ItemStackWrapper, Long> cost(long amount) {
+        return Map.of(ItemStackWrapper.of(new ItemStack(new Item())), amount);
     }
 }
