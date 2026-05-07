@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.LinearFunction2D;
+
 import java.util.Random;
 
 public class TubeNoise {
@@ -8,17 +10,18 @@ public class TubeNoise {
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
     private static final byte MINIMUM_TUBE_LENGTH = 100;
-    private static final byte DEVIATION_MARGIN = 2;
+    private static final byte DEVIATION_MARGIN = 4;
+    private static final short Z_SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
+    private static final byte INCLINATION_MULTIPLIER = 8;
 
     private final Random xRandom = new Random();
     private final Random zRandom = new Random();
+    private final LinearFunction2D linearFunction = new LinearFunction2D();
 
     private boolean cached = false;
     private long seed;
     private int xStartPoint;
-    private int zStartPoint;
     private int xEndPoint;
-    private int zEndPoint;
     private int cacheChunkX;
     private int cacheChunkZ;
     private int quadrantX;
@@ -39,11 +42,7 @@ public class TubeNoise {
         z += quadrantZ << ADDITIONAL_BITSHIFT;
         if (x > xEndPoint) return false;
         if (x < xStartPoint) return false;
-        if (z > zEndPoint) return false;
-        if (z < zStartPoint) return false;
-        float functionInclination = (float) (zEndPoint - zStartPoint) / (xEndPoint - xStartPoint);
-        float coordinateInclination = (float) (zEndPoint - z) / (xEndPoint - x);
-        float deviation = Math.abs(functionInclination - coordinateInclination);
+        float deviation = Math.abs(z - linearFunction.getLocalY(x));
         return deviation < DEVIATION_MARGIN;
     }
 
@@ -62,8 +61,11 @@ public class TubeNoise {
         xRandom.setSeed(seed + xQuadrant);
         zRandom.setSeed(seed + zQuadrant);
         xEndPoint = xRandom.nextInt(COORDINATE_BOUND) + 1;
-        zEndPoint = zRandom.nextInt(COORDINATE_BOUND);
         xStartPoint = xRandom.nextInt(Math.max(1, xEndPoint - MINIMUM_TUBE_LENGTH));
-        zStartPoint = zRandom.nextInt(COORDINATE_BOUND);
+        float inclination = xRandom.nextFloat() * INCLINATION_MULTIPLIER;
+        if (xRandom.nextBoolean()) {
+            inclination = -inclination;
+        }
+        linearFunction.setFunction(zRandom.nextInt(COORDINATE_BOUND) - Z_SHIFT_MARGIN, inclination);
     }
 }
