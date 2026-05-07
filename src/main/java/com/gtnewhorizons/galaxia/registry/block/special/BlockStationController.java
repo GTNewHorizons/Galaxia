@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.registry.block.special;
 
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
-import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
@@ -17,6 +15,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 
 public class BlockStationController extends BlockUpdatable implements ITileEntityProvider {

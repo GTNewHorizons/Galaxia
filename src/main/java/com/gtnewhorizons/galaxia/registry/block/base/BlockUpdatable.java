@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.block.base;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
-import gregtech.api.GregTechAPI;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.compat.GTUtility;
+
+import gregtech.api.GregTechAPI;
 
 public abstract class BlockUpdatable extends Block {
 

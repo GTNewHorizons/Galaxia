@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.block.base;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.TEXTURE_PREFIX;
+
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.util.IIcon;
-
-import static com.gtnewhorizons.galaxia.core.Galaxia.TEXTURE_PREFIX;
 
 // TODO: make proper builder for configuration
 public class BlockCasing extends BlockUpdatable {

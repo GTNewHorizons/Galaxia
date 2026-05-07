@@ -1,17 +1,5 @@
 package com.gtnewhorizons.galaxia.core.threads;
 
-
-import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.interfaces.IMachineBlockUpdateable;
-import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,8 +8,22 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
+
+import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.interfaces.IMachineBlockUpdateable;
+
+import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
+
 /**
- * Credits to GT5-unofficial (<a href="https://github.com/GTNewHorizons/GT5-Unofficial/blob/master/src/main/java/gregtech/api/threads/RunnableMachineUpdate.java">...</a>)
+ * Credits to GT5-unofficial (<a href=
+ * "https://github.com/GTNewHorizons/GT5-Unofficial/blob/master/src/main/java/gregtech/api/threads/RunnableMachineUpdate.java">...</a>)
  */
 public class RunnableMachineUpdate implements Runnable {
 
@@ -195,15 +197,15 @@ public class RunnableMachineUpdate implements Runnable {
 
                 // TODO: Leave this here in case we ever add cables
                 // Skip propagation through pipes\cables\etc, but save some BaseMetaPipeEntity data for later
-//                if (Gregtech.features.speedupMachineUpdateThread) {
-//                    final boolean isBaseMetaPipeEntity = tTileEntity instanceof BaseMetaPipeEntity;
-//                    if (isBaseMetaPipeEntity) {
-//                        final BMPEdata bmpeData = new BMPEdata((BaseMetaPipeEntity) tTileEntity, posX, posY, posZ);
-//                        adjacentCableKeys.add(packedCoords);
-//                        adjacentCableList.add(bmpeData);
-//                        if (!bmpeData.isPotentialStructureBlock) continue;
-//                    }
-//                }
+                // if (Gregtech.features.speedupMachineUpdateThread) {
+                // final boolean isBaseMetaPipeEntity = tTileEntity instanceof BaseMetaPipeEntity;
+                // if (isBaseMetaPipeEntity) {
+                // final BMPEdata bmpeData = new BMPEdata((BaseMetaPipeEntity) tTileEntity, posX, posY, posZ);
+                // adjacentCableKeys.add(packedCoords);
+                // adjacentCableList.add(bmpeData);
+                // if (!bmpeData.isPotentialStructureBlock) continue;
+                // }
+                // }
 
                 // Now see if we should add the nearby blocks to the queue:
                 // 1) If we've visited less than 5 blocks, then yes
@@ -211,7 +213,7 @@ public class RunnableMachineUpdate implements Runnable {
                 // 3) If the block at the coordinates is marked as a machine block
                 if (visited.size() < 5
                     || (tTileEntity instanceof IMachineBlockUpdateable
-                    && ((IMachineBlockUpdateable) tTileEntity).isMachineBlockUpdateRecursive())
+                        && ((IMachineBlockUpdateable) tTileEntity).isMachineBlockUpdateRecursive())
                     || isMachineBlock) {
                     for (int i = 0; i < ForgeDirection.VALID_DIRECTIONS.length; i++) {
                         final ForgeDirection side = ForgeDirection.VALID_DIRECTIONS[i];
@@ -228,19 +230,19 @@ public class RunnableMachineUpdate implements Runnable {
             // Check for connected cables-likes and create RunnableCableUpdate for them.
             // Requires a full list of visited machines to avoid missing not-yet-visited connections
             // and a full list of BMPEs to avoid false-positives (e.g. cable runs)
-//            for (var cable : adjacentCableList) {
-//                if (!cable.isMetaPipe) continue;
-//                for (int i = 0; i < ForgeDirection.VALID_DIRECTIONS.length; i++) {
-//                    final ForgeDirection side = ForgeDirection.VALID_DIRECTIONS[i];
-//                    if (!cable.metaPipe.isConnectedAtSide(side)) continue;
-//                    final long targetCoords = CoordinatePacker
-//                        .pack(cable.x + side.offsetX, cable.y + side.offsetY, cable.z + side.offsetZ);
-//                    if (adjacentCableKeys.contains(targetCoords)) continue;
-//                    if (visited.contains(targetCoords)) {
-//                        RunnableCableUpdate.setCableUpdateValues(world, cable.x, cable.y, cable.z);
-//                    }
-//                }
-//            }
+            // for (var cable : adjacentCableList) {
+            // if (!cable.isMetaPipe) continue;
+            // for (int i = 0; i < ForgeDirection.VALID_DIRECTIONS.length; i++) {
+            // final ForgeDirection side = ForgeDirection.VALID_DIRECTIONS[i];
+            // if (!cable.metaPipe.isConnectedAtSide(side)) continue;
+            // final long targetCoords = CoordinatePacker
+            // .pack(cable.x + side.offsetX, cable.y + side.offsetY, cable.z + side.offsetZ);
+            // if (adjacentCableKeys.contains(targetCoords)) continue;
+            // if (visited.contains(targetCoords)) {
+            // RunnableCableUpdate.setCableUpdateValues(world, cable.x, cable.y, cable.z);
+            // }
+            // }
+            // }
 
         } catch (Exception e) {
             Galaxia.LOG.error(

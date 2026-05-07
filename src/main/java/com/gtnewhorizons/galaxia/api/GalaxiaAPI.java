@@ -9,6 +9,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -16,11 +17,14 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.core.threads.RunnableMachineUpdate;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -43,6 +47,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import baubles.api.BaublesApi;
+import gregtech.api.GregTechAPI;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 
@@ -420,6 +425,54 @@ public final class GalaxiaAPI {
             }
         }
 
+        return false;
+    }
+
+    public static boolean isMachineBlock(Block block, int blockMetadata) {
+        if (GTUtility.isGTLoaded) {
+            return GregTechAPI.isMachineBlock(block, blockMetadata);
+        }
+
+        if (block != null) {
+            Integer id = sMachineIDs.get(block);
+            if (id != null) {
+                if (id == -1) // for all-meta registrations, also with meta > 32
+                    return true;
+                return (id & B[blockMetadata]) != 0;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Adds a Multi-Machine Block, like my Machine Casings for example. You should call @causeMachineUpdate
+     * in @Block.breakBlock and in {@link Block#onBlockAdded} of your registered Block. You don't need to register
+     * TileEntities which implement {@link com.gtnewhorizons.galaxia.registry.interfaces.IMachineBlockUpdateable}
+     *
+     * @param aBlock the Block
+     * @param aMeta  the Metadata of the Blocks as Bitmask! -1 or ~0 for all Meta-values
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public static boolean registerMachineBlock(Block aBlock, int aMeta) {
+        if (aBlock == null) return false;
+        sMachineIDs.put(aBlock, aMeta);
+        return true;
+    }
+
+    /**
+     * Causes a Machineblock Update This update will cause surrounding MultiBlock Machines to update their
+     * Configuration. You should call this Function in @Block.breakBlock and in @Block.onBlockAdded of your Machine.
+     *
+     * @param aWorld is being the World
+     * @param aX     is the X-Coord of the update causing Block
+     * @param aY     is the Y-Coord of the update causing Block
+     * @param aZ     is the Z-Coord of the update causing Block
+     */
+    public static boolean causeMachineUpdate(World aWorld, int aX, int aY, int aZ) {
+        if (aWorld != null && !aWorld.isRemote) { // World might be null during World-gen
+            RunnableMachineUpdate.setMachineUpdateValues(aWorld, aX, aY, aZ);
+            return true;
+        }
         return false;
     }
 

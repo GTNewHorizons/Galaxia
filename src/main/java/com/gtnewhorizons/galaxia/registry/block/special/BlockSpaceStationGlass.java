@@ -1,18 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
-import java.util.Random;
-
-import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockGlass;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.world.IBlockAccess;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import net.minecraft.world.IBlockAccess;
 
 public class BlockSpaceStationGlass extends BlockUpdatable {
 
@@ -39,13 +36,11 @@ public class BlockSpaceStationGlass extends BlockUpdatable {
         return 1;
     }
 
-    public boolean renderAsNormalBlock()
-    {
+    public boolean renderAsNormalBlock() {
         return false;
     }
 
-    protected boolean canSilkHarvest()
-    {
+    protected boolean canSilkHarvest() {
         return true;
     }
 
