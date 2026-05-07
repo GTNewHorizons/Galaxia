@@ -10,13 +10,17 @@ public class TubeNoise {
     private static final byte ADDITIONAL_BITSHIFT = 4;
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
+    private static final byte MINIMUM_TUBE_LENGTH = 100;
     private static final short DEVIATION_MARGIN = 32;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
     private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
+    private static final byte TUBE_COUNT = 8;
 
     private final Random xRandom = new Random();
     private final Random zRandom = new Random();
-    private final LinearFunction3D[] linearFunctions = new LinearFunction3D[8];
+    private final LinearFunction3D[] linearFunctions = new LinearFunction3D[TUBE_COUNT];
+    private final int[] xEndPoints = new int[TUBE_COUNT];
+    private final int[] xStartPoints = new int[TUBE_COUNT];
 
     private boolean cached = false;
     private long seed;
@@ -44,8 +48,10 @@ public class TubeNoise {
         z = Math.abs(z);
         x += quadrantX << ADDITIONAL_BITSHIFT;
         z += quadrantZ << ADDITIONAL_BITSHIFT;
-        for (LinearFunction3D linearFunction : linearFunctions) {
-            float deviation = linearFunction.getDeviation(x, y, z);
+        for (int i = 0; i < TUBE_COUNT; i++) {
+            if (x > xEndPoints[i]) return false;
+            if (x < xStartPoints[i]) return false;
+            float deviation = linearFunctions[i].getDeviation(x, y, z);
             if (deviation * deviation < DEVIATION_MARGIN) {
                 return true;
             }
@@ -67,7 +73,7 @@ public class TubeNoise {
         cached = true;
         xRandom.setSeed(seed + xQuadrant);
         zRandom.setSeed(seed + zQuadrant);
-        for (LinearFunction3D linearFunction : linearFunctions) {
+        for (int i = 0; i < TUBE_COUNT; i++) {
             float zInclination = xRandom.nextFloat();
             if (xRandom.nextBoolean()) {
                 zInclination = -zInclination;
@@ -80,7 +86,7 @@ public class TubeNoise {
             if (zRandom.nextBoolean()) {
                 zyInclination = -zyInclination;
             }
-            linearFunction.setFunction(
+            linearFunctions[i].setFunction(
                 zRandom.nextInt(COORDINATE_BOUND) - SHIFT_MARGIN,
                 xRandom.nextInt(ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 3),
                 zRandom.nextInt(ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 3),
@@ -88,6 +94,8 @@ public class TubeNoise {
                 xyInclination,
                 zyInclination
             );
+            xEndPoints[i] = xRandom.nextInt(COORDINATE_BOUND) + 1;
+            xStartPoints[i] = xRandom.nextInt(Math.max(1, xEndPoints[i] - MINIMUM_TUBE_LENGTH));
         }
     }
 }
