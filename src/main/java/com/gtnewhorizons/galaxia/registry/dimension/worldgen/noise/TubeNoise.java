@@ -11,7 +11,8 @@ public class TubeNoise {
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
     private static final byte MINIMUM_TUBE_LENGTH = 100;
-    private static final short DEVIATION_MARGIN = 32;
+    private static final short DEVIATION_MARGIN = 16;
+    private static final byte DEVIATION_VARIATION = 4;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
     private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
     private static final byte TUBE_COUNT = 32;
@@ -23,6 +24,7 @@ public class TubeNoise {
     private final LinearFunction3D[] linearFunctions = new LinearFunction3D[TUBE_COUNT];
     private final int[] xEndPoints = new int[TUBE_COUNT];
     private final int[] xStartPoints = new int[TUBE_COUNT];
+    private final short[] deviationMargins = new short[TUBE_COUNT];
 
     private boolean cached = false;
     private long seed;
@@ -54,7 +56,7 @@ public class TubeNoise {
             if (x > xEndPoints[i]) continue;
             if (x < xStartPoints[i]) continue;
             float deviation = linearFunctions[i].getDeviation(x, y, z);
-            if (deviation * deviation < DEVIATION_MARGIN) {
+            if (deviation * deviation < deviationMargins[i]) {
                 return true;
             }
         }
@@ -98,6 +100,7 @@ public class TubeNoise {
             );
             xEndPoints[i] = xRandom.nextInt(COORDINATE_BOUND) + 1;
             xStartPoints[i] = xRandom.nextInt(Math.max(1, xEndPoints[i] - MINIMUM_TUBE_LENGTH));
+            deviationMargins[i] = (short) (DEVIATION_MARGIN + xRandom.nextInt(DEVIATION_MARGIN) * zRandom.nextInt(DEVIATION_VARIATION + 1));
         }
     }
 }
