@@ -3,22 +3,29 @@ package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 import java.util.Random;
 
 public class TubeNoise {
+    private static final byte CHUNK_BITSHIFT = 4;
+    private static final byte ADDITIONAL_BITSHIFT = 4;
+    private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
+    private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
+    private static final byte MINIMUM_TUBE_LENGTH = 100;
+    private static final byte DEVIATION_MARGIN = 2;
+
     private final Random xRandom = new Random();
     private final Random zRandom = new Random();
 
-    private boolean notCached = true;
+    private boolean cached = false;
     private long seed;
-    private int xQuadrant;
-    private int zQuadrant;
     private int xStartPoint;
     private int zStartPoint;
     private int xEndPoint;
     private int zEndPoint;
     private int cacheChunkX;
     private int cacheChunkZ;
+    private int quadrantX;
+    private int quadrantZ;
 
     public boolean isCached() {
-        return notCached;
+        return cached;
     }
 
     public void setSeed(Random random) {
@@ -26,12 +33,16 @@ public class TubeNoise {
     }
 
     public boolean isIntersectingTube(int x, int z) {
-        int excessiveX = x >> 8;
-        excessiveX = excessiveX << 8;
-        int excessiveZ = z >> 8;
-        excessiveZ = excessiveZ << 8;
-        x -= excessiveX;
-        z -= excessiveZ;
+        x = Math.abs(x);
+        z = Math.abs(z);
+        x += quadrantX << ADDITIONAL_BITSHIFT;
+        x += quadrantZ << ADDITIONAL_BITSHIFT;
+//        System.out.println("Local x: " + x);
+//        System.out.println("Local z: " + z);
+//        System.out.println("x start point: " + xStartPoint);
+//        System.out.println("x end point: " + xEndPoint);
+//        System.out.println("z start point: " + zStartPoint);
+//        System.out.println("z end point: " + zEndPoint);
         if (x > xEndPoint) return false;
         if (x < xStartPoint) return false;
         if (z > zEndPoint) return false;
@@ -39,7 +50,8 @@ public class TubeNoise {
         float functionInclination = (float) (zEndPoint - zStartPoint) / (xEndPoint - xStartPoint);
         float coordinateInclination = (float) (zEndPoint - z) / (xEndPoint - x);
         float deviation = Math.abs(functionInclination - coordinateInclination);
-        return deviation < 2;
+//        System.out.println("Deviation: " + deviation);
+        return deviation < DEVIATION_MARGIN;
     }
 
     public boolean isInDifferentChunk(int chunkX, int chunkZ) {
@@ -47,16 +59,18 @@ public class TubeNoise {
     }
 
     public void updateCache(int chunkX, int chunkZ) {
-        xQuadrant = chunkX >> 4;
-        zQuadrant = chunkZ >> 4;
+        int xQuadrant = chunkX >> ADDITIONAL_BITSHIFT;
+        int zQuadrant = chunkZ >> ADDITIONAL_BITSHIFT;
+        quadrantX = chunkX - (xQuadrant << ADDITIONAL_BITSHIFT);
+        quadrantZ = chunkZ - (zQuadrant << ADDITIONAL_BITSHIFT);
         cacheChunkX = chunkX;
         cacheChunkZ = chunkZ;
-        notCached = false;
+        cached = true;
         xRandom.setSeed(seed + xQuadrant);
         zRandom.setSeed(seed + zQuadrant);
-        xEndPoint = xRandom.nextInt(64) + 1;
-        zEndPoint = zRandom.nextInt(64);
-        xStartPoint = xRandom.nextInt(xEndPoint);
-        zStartPoint = zRandom.nextInt(64);
+        xEndPoint = xRandom.nextInt(COORDINATE_BOUND) + 1;
+        zEndPoint = zRandom.nextInt(COORDINATE_BOUND);
+        xStartPoint = xRandom.nextInt(Math.max(1, xEndPoint - MINIMUM_TUBE_LENGTH));
+        zStartPoint = zRandom.nextInt(COORDINATE_BOUND);
     }
 }
