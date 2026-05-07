@@ -24,17 +24,13 @@ public class BlockSpaceStationGlass extends BlockUpdatable {
         this.stepSound = soundTypeMetal;
         this.setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F);
         this.setCreativeTab(Galaxia.creativeTab);
+        this.setLightOpacity(0);
     }
 
     @SideOnly(Side.CLIENT)
     @Override
     public void registerBlockIcons(IIconRegister reg) {
         this.blockIcon = reg.registerIcon("galaxia:space_station/space_station_glass");
-    }
-
-    @Override
-    public int quantityDropped(Random random) {
-        return 1;
     }
 
     @SideOnly(Side.CLIENT)
@@ -58,5 +54,10 @@ public class BlockSpaceStationGlass extends BlockUpdatable {
     public boolean shouldSideBeRendered(IBlockAccess worldIn, int x, int y, int z, int side) {
         Block block = worldIn.getBlock(x, y, z);
         return !this.ignoreSimilatiry && block == this ? false : super.shouldSideBeRendered(worldIn, x, y, z, side);
+    }
+
+    @Override
+    public boolean isOpaqueCube() {
+        return false;
     }
 }
