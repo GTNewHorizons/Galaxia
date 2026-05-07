@@ -825,11 +825,9 @@ public final class InterplanetaryTransferSystem {
         }
 
         void close() {
-            if (!open && pickMode == TransferPickMode.NONE && originBody == null && destinationBody == null) return;
+            if (!open && pickMode == TransferPickMode.NONE) return;
             open = false;
             pickMode = TransferPickMode.NONE;
-            originBody = null;
-            destinationBody = null;
             clearPreview();
             version++;
         }

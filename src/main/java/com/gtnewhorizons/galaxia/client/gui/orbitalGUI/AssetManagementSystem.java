@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleConsumer;
@@ -32,19 +31,13 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.core.network.AssetRequestSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -55,9 +48,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
@@ -107,8 +100,6 @@ record PinnedInfoRow(String label, String value, List<ItemStack> items, boolean 
         this(label, value, items, false);
     }
 }
-
-record MinerOreOption(String key, String displayName, ItemStack displayStack, boolean blacklisted) {}
 
 enum InventorySortMode {
     NAME,
@@ -314,10 +305,13 @@ public final class AssetManagementSystem {
                     true);
                 return;
             }
-            CelestialAssetStore.CLIENT.destroyAssetInternal(state.pendingAssetDestruction.asset().assetId);
-            // TODO: Localize
-            callbacks.showActionStatus("Asset destroyed");
-            state.pendingAssetDestruction = null;
+            if (CelestialClient.destroyAsset(state.pendingAssetDestruction.asset().assetId)) {
+                // TODO: Localize
+                callbacks.showActionStatus("Asset destroyed");
+                state.pendingAssetDestruction = null;
+                return;
+            }
+            callbacks.showActionStatus("Destroy failed");
         }
 
         void openPendingAssetManagement(OrbitalAssetUiState state, CelestialAsset asset) {
@@ -345,11 +339,13 @@ public final class AssetManagementSystem {
 
         void confirmPendingConstructionCancellation(OrbitalAssetUiState state) {
             if (state.pendingConstructionCancellation == null) return;
-            CelestialAssetStore.CLIENT
-                .startDeconstructionInternal(state.pendingConstructionCancellation.asset().assetId);
-            // TODO: Localize
-            callbacks.showActionStatus("Construction site converted to deconstruction");
-            state.pendingConstructionCancellation = null;
+            if (CelestialClient.startDeconstruction(state.pendingConstructionCancellation.asset().assetId)) {
+                // TODO: Localize
+                callbacks.showActionStatus("Construction site converted to deconstruction");
+                state.pendingConstructionCancellation = null;
+                return;
+            }
+            callbacks.showActionStatus("Construction cancellation failed");
         }
 
         void openPendingResourceTransfer(OrbitalAssetUiState state, CelestialObject root, CelestialAsset asset) {
@@ -386,7 +382,7 @@ public final class AssetManagementSystem {
                 closePendingAssetRename(state);
                 return;
             }
-            if (CelestialAssetStore.CLIENT.renameAssetInternal(state.pendingAssetRename.asset().assetId, renamed)) {
+            if (CelestialClient.renameAsset(state.pendingAssetRename.asset().assetId, renamed)) {
                 // TODO: Localize
                 callbacks.showActionStatus("Asset renamed");
                 closePendingAssetRename(state);
@@ -732,8 +728,7 @@ public final class AssetManagementSystem {
                             "[Outpost UI] Added logistics tracked item {} to outpost {} from item picker",
                             wrapper.toKey(),
                             outpost.assetId);
-                        Galaxia.GALAXIA_NETWORK
-                            .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, newCfg));
+                        CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, newCfg);
                     } else if (wrapper != null) {
                         Galaxia.LOG.info(
                             "[Outpost UI] Ignored item picker add for {} on outpost {} because it is already tracked",
@@ -1198,7 +1193,7 @@ public final class AssetManagementSystem {
             ParentWidget<?> modal = createModalRoot(bounds);
 
             if (outpost == null) {
-                Galaxia.GALAXIA_NETWORK.sendToServer(new AssetRequestSyncPacket(asset.assetId));
+                CelestialClient.requestFullSync(asset.assetId);
                 // TODO: Localize
                 modal.child(createTitleText("Manage Outpost").pos(12, 10));
                 modal.child(createBodyText("Loading data...", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 50));
@@ -1306,8 +1301,10 @@ public final class AssetManagementSystem {
                         EnumColors.MAP_COLOR_TEXT_TITLE.getColor()).pos(8, 6));
 
                 boolean isHammer = m.kind() == FacilityModuleKind.HAMMER;
-                boolean isConfigurable = isHammer || m.kind() == FacilityModuleKind.MINER
-                    || m.kind() == FacilityModuleKind.POWER;
+                boolean isProduction = m.kind()
+                    .isProductionModule();
+                boolean isConfigurable = m.kind()
+                    .isDirectlyConfigurable();
                 boolean operational = m.status() != Buildable.Status.IN_CONSTRUCTION;
                 boolean isDisabled = m.status() == Buildable.Status.DISABLED;
 
@@ -1543,8 +1540,7 @@ public final class AssetManagementSystem {
                         .toKey();
                     if (resourceKey.equals(state.armedDumpResourceKey)) {
                         state.armedDumpResourceKey = null;
-                        Galaxia.GALAXIA_NETWORK
-                            .sendToServer(AssetInventoryUpdatePacket.remove(outpost.assetId, entry.getKey()));
+                        CelestialClient.removeInventory(outpost.assetId, entry.getKey());
                     } else {
                         state.armedDumpResourceKey = resourceKey;
                         markStructureDirty();
@@ -1744,7 +1740,7 @@ public final class AssetManagementSystem {
          *
          * <p>
          * The reserve value is displayed as a text widget between the decrement/increment
-         * buttons, while the buttons themselves send a {@link LogisticsConfigUpdatePacket}.
+         * buttons, while the buttons themselves send synced updates.
          */
         private void buildLogisticsSubMenu(ParentWidget<?> modal, AutomatedFacility outpost) {
             int visibleHeight = Math.max(220, (modalBottom - modalTop) - 106);
@@ -1754,12 +1750,10 @@ public final class AssetManagementSystem {
                 : null;
             String moduleLabel = module != null ? module.kind()
                 .getDisplayName() : "HAMMER";
-            boolean isBigHammer = module.component() instanceof ModuleHammer;
             ModuleHammer hammer = (ModuleHammer) module.component();
 
-            // Extract current shooting config and planetary flag from live module data
             AllowShootingConfig shootingCfg = hammer.config();
-            boolean planetaryHandling = hammer.planetaryHandling();
+            HammerVariant variant = hammer.variant();
             OrbitalTransferPlanner.RoutePriority routePriority = hammer.routePriority();
             AllowShootingConfig.Mode currentMode = shootingCfg.mode();
             double currentThreshold = shootingCfg.threshold();
@@ -1792,7 +1786,7 @@ public final class AssetManagementSystem {
                     case WHEN_DV_UNDER -> AllowShootingConfig.Mode.WHEN_TOF_UNDER;
                     case WHEN_TOF_UNDER -> AllowShootingConfig.Mode.ALWAYS;
                 };
-                applyShootingModeUpdate(module, outpost, modIdx, isBigHammer, next, currentThreshold);
+                applyShootingModeUpdate(module, outpost, modIdx, next, currentThreshold);
                 markStructureDirty();
             }).pos(74, 52)
                 .size(56, 18));
@@ -1801,38 +1795,38 @@ public final class AssetManagementSystem {
                 double step = currentMode == AllowShootingConfig.Mode.WHEN_DV_UNDER ? 1.0 : 3600.0;
                 modal.child(createFooterButton("-", module != null, () -> {
                     double newT = Math.max(0.0, currentThreshold - step);
-                    applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, newT);
+                    applyShootingThresholdUpdate(module, outpost, modIdx, currentMode, newT);
                     markStructureDirty();
                 }).pos(136, 52)
                     .size(18, 18));
                 modal.child(
                     createDecimalValueWidget(
-                        () -> getCurrentShootingThreshold(module, isBigHammer),
-                        value -> applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, value),
+                        () -> getCurrentShootingThreshold(module),
+                        value -> applyShootingThresholdUpdate(module, outpost, modIdx, currentMode, value),
                         0.0,
                         999999999.0,
                         currentMode == AllowShootingConfig.Mode.WHEN_TOF_UNDER).pos(158, 52)
                             .size(44, 18));
                 modal.child(createFooterButton("+", module != null, () -> {
                     double newT = currentThreshold + step;
-                    applyShootingThresholdUpdate(module, outpost, modIdx, isBigHammer, currentMode, newT);
+                    applyShootingThresholdUpdate(module, outpost, modIdx, currentMode, newT);
                     markStructureDirty();
                 }).pos(206, 52)
                     .size(18, 18));
             }
 
-            if (isBigHammer) {
-                modal.child(createBodyText("Planetary:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(234, 56));
-                modal.child(createFooterButton(planetaryHandling ? "ON" : "OFF", true, () -> {
-                    CelestialClient.updateModuleConfig(
-                        outpost.assetId,
-                        modIdx,
-                        AssetModuleUpdatePacket.ConfigAction.SET_PLANETARY_HANDLING,
-                        !planetaryHandling);
-                    markStructureDirty();
-                }).pos(296, 52)
-                    .size(34, 18));
-            }
+            modal.child(createBodyText("Variant:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(234, 56));
+            HammerVariant nextVariant = variant == HammerVariant.BASE ? HammerVariant.BIG : HammerVariant.BASE;
+            boolean canSwitchVariant = module != null && ModuleHammer.supportsTier(nextVariant, module.tier());
+            modal.child(createFooterButton(variant.name(), canSwitchVariant, () -> {
+                CelestialClient.updateModuleConfig(
+                    outpost.assetId,
+                    modIdx,
+                    AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
+                    nextVariant);
+                markStructureDirty();
+            }).pos(288, 52)
+                .size(42, 18));
 
             // ── Column header labels ──────────────────────────────────────────
             modal.child(createBodyText("Priority:", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 78));
@@ -1902,8 +1896,7 @@ public final class AssetManagementSystem {
                     int newRes = Math.max(0, cfg.minReserve() - 1);
                     LogisticsResourceConfig updated = cfg.withMinReserve(newRes);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(246, 4)
                     .size(18, 20));
@@ -1915,8 +1908,7 @@ public final class AssetManagementSystem {
                             LogisticsResourceConfig current = outpost.logisticsConfig.get(wrapper);
                             LogisticsResourceConfig updated = current.withMinReserve(value);
                             outpost.logisticsConfig.set(wrapper, updated);
-                            Galaxia.GALAXIA_NETWORK
-                                .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                            CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                         },
                         0,
                         999999).pos(268, 4)
@@ -1925,8 +1917,7 @@ public final class AssetManagementSystem {
                     int newRes = cfg.minReserve() + 1;
                     LogisticsResourceConfig updated = cfg.withMinReserve(newRes);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(306, 4)
                     .size(18, 20));
@@ -1935,8 +1926,7 @@ public final class AssetManagementSystem {
                     int newPkg = Math.max(1, cfg.orderSize() - 1);
                     LogisticsResourceConfig updated = cfg.withOrderSize(newPkg);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(330, 4)
                     .size(18, 20));
@@ -1948,8 +1938,7 @@ public final class AssetManagementSystem {
                             LogisticsResourceConfig current = outpost.logisticsConfig.get(wrapper);
                             LogisticsResourceConfig updated = current.withOrderSize(value);
                             outpost.logisticsConfig.set(wrapper, updated);
-                            Galaxia.GALAXIA_NETWORK
-                                .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                            CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                         },
                         1,
                         999999).pos(352, 4)
@@ -1958,8 +1947,7 @@ public final class AssetManagementSystem {
                     int newPkg = cfg.orderSize() + 1;
                     LogisticsResourceConfig updated = cfg.withOrderSize(newPkg);
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(390, 4)
                     .size(18, 20));
@@ -1967,8 +1955,7 @@ public final class AssetManagementSystem {
                 row.child(createFooterButton(cfg.isImportEnabled() ? "ON" : "OFF", true, () -> {
                     LogisticsResourceConfig updated = cfg.withImportEnabled(!cfg.isImportEnabled());
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(416, 4)
                     .size(34, 20));
@@ -1976,14 +1963,13 @@ public final class AssetManagementSystem {
                 row.child(createFooterButton(cfg.isSupplyEnabled() ? "ON" : "OFF", true, () -> {
                     LogisticsResourceConfig updated = cfg.withSupplyEnabled(!cfg.isSupplyEnabled());
                     outpost.logisticsConfig.set(wrapper, updated);
-                    Galaxia.GALAXIA_NETWORK
-                        .sendToServer(new LogisticsConfigUpdatePacket(outpost.assetId, wrapper, updated));
+                    CelestialClient.updateLogisticsConfig(outpost.assetId, wrapper, updated);
                     markStructureDirty();
                 }).pos(454, 4)
                     .size(34, 20));
                 row.child(createFooterButton("X", true, () -> {
                     outpost.logisticsConfig.reset(wrapper);
-                    Galaxia.GALAXIA_NETWORK.sendToServer(LogisticsConfigUpdatePacket.remove(outpost.assetId, wrapper));
+                    CelestialClient.removeLogisticsConfig(outpost.assetId, wrapper);
                     markStructureDirty();
                 }).pos(502, 4)
                     .size(18, 20));
@@ -2010,7 +1996,7 @@ public final class AssetManagementSystem {
         }
 
         private void applyShootingModeUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
-            boolean isBigHammer, AllowShootingConfig.Mode newMode, double threshold) {
+            AllowShootingConfig.Mode newMode, double threshold) {
             if (module == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
@@ -2020,7 +2006,7 @@ public final class AssetManagementSystem {
         }
 
         private void applyShootingThresholdUpdate(ModuleInstance module, AutomatedFacility outpost, int modIdx,
-            boolean isBigHammer, AllowShootingConfig.Mode mode, double newThreshold) {
+            AllowShootingConfig.Mode mode, double newThreshold) {
             if (module == null) return;
             CelestialClient.updateModuleConfig(
                 outpost.assetId,
@@ -2029,7 +2015,7 @@ public final class AssetManagementSystem {
                 newThreshold);
         }
 
-        private double getCurrentShootingThreshold(ModuleInstance module, boolean isBigHammer) {
+        private double getCurrentShootingThreshold(ModuleInstance module) {
             if (module == null) return 0.0;
             if (!(module.component() instanceof ModuleHammer hc)) return 0.0;
             return hc.config()
@@ -2047,138 +2033,12 @@ public final class AssetManagementSystem {
         }
 
         private void buildMinerConfigSubMenu(ParentWidget<?> modal, AutomatedFacility outpost, ModuleInstance module) {
-            int visibleHeight = Math.max(220, (modalBottom - modalTop) - 88);
-            ModuleMiner miner = (ModuleMiner) module.component();
-            List<MinerOreOption> options = buildMinerOreOptions(outpost, miner);
-
             modal.child(createTitleText("Miner Configuration").pos(12, 10));
             modal.child(createFooterButton("Back", true, () -> {
                 state.configuringModuleIndex = -1;
                 markStructureDirty();
             }).pos(12, 32)
                 .size(60, 20));
-            modal.child(
-                createFooterButton(miner.copySettingsToOtherMiners() ? "Copy: ON" : "Copy Settings", true, () -> {
-                    CelestialClient.updateModuleConfig(
-                        outpost.assetId,
-                        state.configuringModuleIndex,
-                        AssetModuleUpdatePacket.ConfigAction.SET_MINER_COPY_SETTINGS,
-                        !miner.copySettingsToOtherMiners());
-                    markStructureDirty();
-                }).pos(82, 32)
-                    .size(100, 20)
-                    .tooltip(t -> t.addLine("Apply settings to all other miners")));
-            modal.child(createBodyText("Planetary ores", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(12, 58));
-            modal.child(createBodyText("Blacklist", EnumColors.MAP_COLOR_TEXT_MUTED.getColor()).pos(428, 58));
-
-            VerticalScrollData scrollData = new VerticalScrollData();
-            ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(10, 78)
-                .widthRelOffset(1f, -20)
-                .heightRelOffset(1f, -88)
-                .background(
-                    drawable(
-                        (c, x, y, w, h) -> Gui
-                            .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_SCROLL_BG.getColor())));
-            modalScrollData = scrollData;
-            modalScrollWidget = scroll;
-            activeScrollWidget = scroll;
-            ParentWidget<?> content = new ParentWidget<>().widthRel(1f);
-            int rowY = 0;
-            for (MinerOreOption option : options) {
-                ParentWidget<?> row = new ParentWidget<>().pos(4, rowY)
-                    .widthRelOffset(1f, -8)
-                    .height(28)
-                    .background(
-                        drawable(
-                            (c, x, y1, w, h) -> Gui
-                                .drawRect(x, y1, x + w, y1 + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-                if (option.displayStack() != null) {
-                    row.child(
-                        createItemWidget(option.displayStack(), 16).pos(4, 6)
-                            .size(16, 16));
-                } else {
-                    row.child(drawable((c, x, y1, w, h) -> {
-                        Gui.drawRect(x, y1, x + w, y1 + h, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-                        Gui.drawRect(x, y1, x + w, y1 + 1, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                        Gui.drawRect(x, y1 + h - 1, x + w, y1 + h, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                        Gui.drawRect(x, y1, x + 1, y1 + h, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                        Gui.drawRect(x + w - 1, y1, x + w, y1 + h, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-                    }).asWidget()
-                        .pos(4, 6)
-                        .size(16, 16));
-                }
-                row.child(
-                    createBodyText(option.displayName(), EnumColors.MAP_COLOR_TEXT_BODY.getColor()).pos(24, 8)
-                        .width(360));
-                row.child(createCheckboxButton(option.blacklisted(), () -> {
-                    boolean blacklisted = miner.isBlacklisted(option.key());
-                    AssetModuleUpdatePacket.ConfigAction action = blacklisted
-                        ? AssetModuleUpdatePacket.ConfigAction.REMOVE_MINER_BLACKLIST
-                        : AssetModuleUpdatePacket.ConfigAction.ADD_MINER_BLACKLIST;
-                    CelestialClient
-                        .updateModuleConfig(outpost.assetId, state.configuringModuleIndex, action, option.key());
-                    markStructureDirty();
-                }).pos(434, 4)
-                    .size(20, 20));
-                content.child(row);
-                rowY += 32;
-            }
-            if (options.isEmpty()) {
-                content.child(
-                    createBodyText("No ores available on this body.", EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                        .pos(8, 8));
-            }
-            int contentHeight = Math.max(visibleHeight, rowY + 8);
-            scrollData.setScrollSize(contentHeight);
-            content.height(contentHeight);
-            scroll.child(content);
-            scrollData.scrollTo(scroll.getScrollArea(), getCurrentModalScrollPosition());
-            content.scheduleResize();
-            scroll.scheduleResize();
-            modal.child(scroll);
-        }
-
-        private List<MinerOreOption> buildMinerOreOptions(AutomatedFacility outpost, ModuleMiner minerData) {
-            return GalaxiaCelestialAPI.get(outpost.celestialObjectId)
-                .map(
-                    body -> body.properties()
-                        .hasGtOreVeinOres() ? buildGtMinerOreOptions(body, minerData)
-                            : buildVanillaMinerOreOptions(body, minerData))
-                .orElse(List.of());
-        }
-
-        private List<MinerOreOption> buildGtMinerOreOptions(CelestialObject body, ModuleMiner minerData) {
-            Map<String, MinerOreOption> options = new LinkedHashMap<>();
-            body.properties()
-                .gtOreVeinOres()
-                .forEach(oreName -> {
-                    if (oreName == null || oreName.isEmpty() || options.containsKey(oreName)) return;
-                    ItemStack displayStack = GTUtility.getRawOreStack(oreName);
-                    String displayName = displayStack != null ? displayStack.getDisplayName() : oreName;
-                    options.put(
-                        oreName,
-                        new MinerOreOption(oreName, displayName, displayStack, minerData.isBlacklisted(oreName)));
-                });
-            return new ArrayList<>(options.values());
-        }
-
-        private List<MinerOreOption> buildVanillaMinerOreOptions(CelestialObject body, ModuleMiner minerData) {
-            List<MinerOreOption> options = new ArrayList<>();
-            for (ItemStack ore : body.properties()
-                .ores()) {
-                if (ore == null) continue;
-                ItemStackWrapper wrapper = ItemStackWrapper.of(ore);
-                if (wrapper == null) continue;
-                ItemStack displayStack = ore.copy();
-                displayStack.stackSize = 1;
-                options.add(
-                    new MinerOreOption(
-                        wrapper.toKey(),
-                        displayStack.getDisplayName(),
-                        displayStack,
-                        minerData.isBlacklisted(wrapper.toKey())));
-            }
-            return options;
         }
 
         private void buildPowerConfigSubMenu(ParentWidget<?> modal, AutomatedFacility outpost, ModuleInstance module) {
@@ -2228,6 +2088,12 @@ public final class AssetManagementSystem {
                 case TANK -> "Increases station fluid storage capacity. Adjacent modules boost each other.";
                 case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
                 case MAINTENANCE_BAY -> "Passively maintains station systems. Reduces wear over time.";
+                case MACERATOR -> "Processes materials through a macerator.";
+                case CENTRIFUGE -> "Separates materials by density in a centrifuge.";
+                case ELECTROLYZER -> "Breaks down materials using electrical current.";
+                case CHEMICAL_REACTOR -> "Combines materials in a chemical reaction.";
+                case ASSEMBLER -> "Assembles components into complex items.";
+                case DISTILLERY -> "Distills fluids into purer forms.";
             };
         }
 
@@ -2803,16 +2669,22 @@ public final class AssetManagementSystem {
                 return;
             }
             if (callbacks.isCreativeBuildModeEnabled()) {
-                CelestialAssetStore.CLIENT.cancelConstructionInternal(asset.assetId);
-                callbacks.showActionStatus("Construction canceled");
+                if (CelestialClient.cancelConstruction(asset.assetId)) {
+                    callbacks.showActionStatus("Construction canceled");
+                } else {
+                    callbacks.showActionStatus("Construction cancel failed");
+                }
                 return;
             }
             if (callbacks.hasStoredConstructionResources(asset)) {
                 callbacks.openPendingConstructionCancellation(asset);
                 return;
             }
-            CelestialAssetStore.CLIENT.cancelConstructionInternal(asset.assetId);
-            callbacks.showActionStatus("Construction canceled");
+            if (CelestialClient.cancelConstruction(asset.assetId)) {
+                callbacks.showActionStatus("Construction canceled");
+            } else {
+                callbacks.showActionStatus("Construction cancel failed");
+            }
         }
 
         private void updateModalBounds(int left, int top, int right, int bottom) {

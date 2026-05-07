@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
+
+import javax.annotation.Nonnull;
 
 import net.minecraft.item.ItemStack;
 
@@ -14,20 +17,18 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
     public final FacilityModuleKind kind;
 
     public static final FacilityModuleKind KIND = FacilityModuleKind.MINER;
-    private final List<String> blacklistedItemKeys;
-    private boolean copySettingsToOtherMiners;
     private byte parallel = 1;
 
     private static final Random RANDOM = new java.util.Random();
 
-    public ModuleMiner(FacilityModuleKind kind, List<String> blacklistedItemKeys, boolean copySettingsToOtherMiners) {
-        this.kind = kind;
-        this.blacklistedItemKeys = blacklistedItemKeys;
-        this.copySettingsToOtherMiners = copySettingsToOtherMiners;
+    public ModuleMiner(FacilityModuleKind kind) {
+        this.kind = Objects.requireNonNull(kind, "kind");
     }
 
     public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
-        ModuleMiner miner = (ModuleMiner) instance.component();
+        if (!(instance.component() instanceof ModuleMiner)) {
+            throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
+        }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
                 var properties = registration.properties();
@@ -37,45 +38,17 @@ public final class ModuleMiner implements ModuleComponent, IParallelModule {
                 if (totalSize == 0) return;
                 int idx = RANDOM.nextInt(totalSize);
                 ItemStack chosen = idx < ores.size() ? ores.get(idx) : veinOres.get(idx - ores.size());
-                if (miner.isBlacklisted(
-                    ItemStackWrapper.of(chosen)
-                        .toKey()))
-                    return;
+                String oreKey = ItemStackWrapper.of(chosen)
+                    .toKey();
+                if (shouldVoidOre(outpost, oreKey, RANDOM.nextInt(100))) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
                 outpost.inventory.add(ItemStackWrapper.of(ore), 1);
             });
     }
 
-    public void setBlacklist(List<String> itemKeys) {
-        blacklistedItemKeys.clear();
-        blacklistedItemKeys.addAll(itemKeys);
-    }
-
-    public void addToBlacklist(String itemKey) {
-        if (itemKey == null || itemKey.isEmpty() || blacklistedItemKeys.contains(itemKey)) return;
-        blacklistedItemKeys.add(itemKey);
-    }
-
-    public void removeFromBlacklist(String itemKey) {
-        if (itemKey == null || itemKey.isEmpty() || !blacklistedItemKeys.contains(itemKey)) return;
-        blacklistedItemKeys.remove(itemKey);
-    }
-
-    public boolean isBlacklisted(String item) {
-        return blacklistedItemKeys.contains(item);
-    }
-
-    public List<String> blacklistedItemKeys() {
-        return blacklistedItemKeys;
-    }
-
-    public boolean copySettingsToOtherMiners() {
-        return copySettingsToOtherMiners;
-    }
-
-    public void setCopySettingToOtherMiners(boolean newValue) {
-        this.copySettingsToOtherMiners = newValue;
+    public static boolean shouldVoidOre(@Nonnull AutomatedFacility outpost, String oreKey, int rollPercent) {
+        return rollPercent < outpost.minerVoidChancePercent(oreKey);
     }
 
     @Override

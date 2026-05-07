@@ -1,17 +1,16 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import net.minecraft.entity.player.EntityPlayerMP;
+import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
-import cpw.mods.fml.common.network.simpleimpl.IMessage;
-import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
-import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -22,10 +21,13 @@ import io.netty.buffer.ByteBuf;
  * The server validates that the sending player belongs to the outpost's team
  * before applying the change.
  */
-public final class LogisticsConfigUpdatePacket implements IMessage {
+public final class LogisticsConfigUpdatePacket {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private CelestialAsset.ID assetId;
     private String resourceKey;
+    private ItemStackWrapper resource;
     private int minReserve;
     private int orderSize;
     private boolean isImportEnabled;
@@ -38,6 +40,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         LogisticsResourceConfig config) {
         this.assetId = assetId;
         this.resourceKey = resource.toKey();
+        this.resource = resource;
         this.minReserve = config.minReserve();
         this.orderSize = config.orderSize();
         this.isImportEnabled = config.isImportEnabled();
@@ -49,6 +52,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
         packet.assetId = assetId;
         packet.resourceKey = resource.toKey();
+        packet.resource = resource;
         packet.minReserve = 0;
         packet.orderSize = 1;
         packet.isImportEnabled = false;
@@ -57,7 +61,6 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         return packet;
     }
 
-    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeString(buf, resourceKey);
@@ -68,7 +71,6 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         buf.writeBoolean(removeEntry);
     }
 
-    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         resourceKey = PacketUtil.readString(buf);
@@ -79,58 +81,41 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         removeEntry = buf.readBoolean();
     }
 
-    public static final class Handler implements IMessageHandler<LogisticsConfigUpdatePacket, IMessage> {
+    public AssetSyncPacket apply(UUID teamId) {
+        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+            LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
+            return null;
+        }
 
-        @Override
-        public IMessage onMessage(LogisticsConfigUpdatePacket packet, MessageContext ctx) {
-            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (player == null) return null;
+        if (!removeEntry && orderSize <= 0) {
+            LOG.warn("[Logistics] LogisticsConfigUpdate rejected: orderSize must be >0");
+            return null;
+        }
+        if (!removeEntry && minReserve < 0) {
+            LOG.warn("[Logistics] LogisticsConfigUpdate rejected: minReserve must be >=0");
+            return null;
+        }
 
-            // SimpleNetworkWrapper guarantees onMessage runs on the main server thread
-            // for SERVER-bound packets, so direct mutation is safe (same as DestinationSetPacket).
-            String playerName = player.getGameProfile()
-                .getName();
-            AutomatedFacility state = CelestialAssetStore.findAsset(packet.assetId) instanceof AutomatedFacility o ? o
-                : null;
-            if (state == null) {
-                Galaxia.LOG.warn(
-                    "[Logistics] LogisticsConfigUpdate: unknown assetId {} from player {}",
-                    packet.assetId,
-                    playerName);
-                return null;
-            }
-
-            if (!packet.removeEntry && packet.orderSize <= 0) {
-                Galaxia.LOG
-                    .warn("[Logistics] LogisticsConfigUpdate rejected: orderSize must be > 0 (player {})", playerName);
-                return null;
-            }
-            if (!packet.removeEntry && packet.minReserve < 0) {
-                Galaxia.LOG.warn(
-                    "[Logistics] LogisticsConfigUpdate rejected: minReserve must be >= 0 (player {})",
-                    playerName);
-                return null;
-            }
-
-            ItemStackWrapper resource = ItemStackWrapper.fromKey(packet.resourceKey);
-            if (packet.removeEntry) {
-                state.logisticsConfig.reset(resource);
-                return AssetSyncPacket.logisticsConfigRemoved(packet.assetId, packet.resourceKey);
-            } else {
-                LogisticsResourceConfig config = new LogisticsResourceConfig(
-                    packet.minReserve,
-                    packet.orderSize,
-                    packet.isImportEnabled,
-                    packet.isSupplyEnabled);
-                state.logisticsConfig.set(resource, config);
-                return AssetSyncPacket.logisticsConfigUpdated(
-                    packet.assetId,
-                    packet.resourceKey,
-                    config.minReserve(),
-                    config.orderSize(),
-                    config.isImportEnabled(),
-                    config.isSupplyEnabled());
-            }
+        ItemStackWrapper resource = this.resource != null ? this.resource : ItemStackWrapper.fromKey(resourceKey);
+        if (resource == null) return null;
+        if (removeEntry) {
+            state.logisticsConfig.reset(resource);
+            return AssetSyncPacket.logisticsConfigRemoved(assetId, resourceKey);
+        } else {
+            LogisticsResourceConfig config = new LogisticsResourceConfig(
+                minReserve,
+                orderSize,
+                isImportEnabled,
+                isSupplyEnabled);
+            state.logisticsConfig.set(resource, config);
+            return AssetSyncPacket.logisticsConfigUpdated(
+                assetId,
+                resourceKey,
+                config.minReserve(),
+                config.orderSize(),
+                config.isImportEnabled(),
+                config.isSupplyEnabled());
         }
     }
 }

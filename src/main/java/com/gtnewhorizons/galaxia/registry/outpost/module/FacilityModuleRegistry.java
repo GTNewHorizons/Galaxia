@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -39,11 +38,11 @@ public class FacilityModuleRegistry {
             20,
             Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleMiner::generateOre,
-            () -> new ModuleMiner(FacilityModuleKind.MINER, new ArrayList<>(), false));
+            () -> new ModuleMiner(FacilityModuleKind.MINER));
         register(
             FacilityModuleKind.HAMMER,
             1000L,
-            10L,
+            0L,
             20,
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L),
             ModuleHammer::prepareToFire,
@@ -52,8 +51,7 @@ public class FacilityModuleRegistry {
                 AllowShootingConfig.ALWAYS,
                 OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
                 false,
-                true,
-                false,
+                HammerVariant.BASE,
                 64));
         register(
             FacilityModuleKind.STORAGE,
@@ -87,6 +85,57 @@ public class FacilityModuleRegistry {
             Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L),
             (instance, outpost) -> {},
             ModuleMaintenanceBay::new);
+
+        if (FacilityModuleKind.MACERATOR.isAvailable()) {
+            register(
+                FacilityModuleKind.MACERATOR,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleMacerator::processRecipe,
+                ModuleMacerator::new);
+            register(
+                FacilityModuleKind.CENTRIFUGE,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleCentrifuge::processRecipe,
+                ModuleCentrifuge::new);
+            register(
+                FacilityModuleKind.ELECTROLYZER,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleElectrolyzer::processRecipe,
+                ModuleElectrolyzer::new);
+            register(
+                FacilityModuleKind.CHEMICAL_REACTOR,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleChemicalReactor::processRecipe,
+                ModuleChemicalReactor::new);
+            register(
+                FacilityModuleKind.ASSEMBLER,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleAssembler::processRecipe,
+                ModuleAssembler::new);
+            register(
+                FacilityModuleKind.DISTILLERY,
+                2000L,
+                32L,
+                20,
+                Map.of(new ItemStack(Items.iron_ingot), 8L),
+                ModuleDistillery::processRecipe,
+                ModuleDistillery::new);
+        }
     }
 
     public static void register(FacilityModuleKind kind, long baseEnergyCapacity, long powerDrawPerClick,

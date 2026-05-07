@@ -4,17 +4,22 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraftforge.event.world.WorldEvent;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -40,12 +45,19 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -53,6 +65,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import sun.misc.Unsafe;
 
 public final class FacilityPersistenceManager {
 
@@ -343,6 +356,7 @@ public final class FacilityPersistenceManager {
         out.energyStored = state.getEnergyStored();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
+        out.minerVoidChances = new LinkedHashMap<>(state.minerVoidChances());
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -362,14 +376,55 @@ public final class FacilityPersistenceManager {
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
             JsonObject moduleData = new JsonObject();
-            if (m.component() instanceof ModuleMiner miner) {
-                moduleData.add("blacklistedItemKeys", PURE_GSON.toJsonTree(miner.blacklistedItemKeys()));
-                moduleData.addProperty("copySettingsToOtherMiners", miner.copySettingsToOtherMiners());
-            } else if (m.component() instanceof ModuleHammer hammer) {
+            if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
                 moduleData.add("routePriority", PURE_GSON.toJsonTree(hammer.routePriority()));
-                moduleData.addProperty("planetaryHandling", hammer.planetaryHandling());
-                moduleData.addProperty("crossPlanetaryCapability", hammer.crossPlanetaryCapability);
+                moduleData.addProperty(
+                    "variant",
+                    hammer.variant()
+                        .name());
+            } else if (m.component() instanceof IRecipeModule recipeModule) {
+                RecipeConfig rc = recipeModule.getRecipeConfig();
+                if (rc != null) {
+                    moduleData.addProperty(
+                        "recipeMode",
+                        rc.mode()
+                            .name());
+                    moduleData.addProperty(
+                        "recipeNotDoablePolicy",
+                        rc.notDoablePolicy()
+                            .name());
+                    moduleData.addProperty("recipeOrderCursor", rc.orderCursor() & 0xFF);
+                    moduleData.addProperty("recipeOrderRemaining", rc.orderRemaining() & 0xFF);
+                    com.google.gson.JsonArray slotsArray = new com.google.gson.JsonArray();
+                    for (int i = 0; i < RecipeSlotList.MAX_RECIPE_SLOTS; i++) {
+                        RecipeSlot slot = rc.slots()
+                            .getOrNull(i);
+                        if (slot == null) continue;
+                        com.google.gson.JsonObject slotObj = new com.google.gson.JsonObject();
+                        slotObj.addProperty(
+                            "recipeMapOrdinal",
+                            slot.recipe()
+                                .recipeMapOrdinal() & 0xFF);
+                        slotObj.addProperty(
+                            "recipeIndex",
+                            slot.recipe()
+                                .recipeIndex());
+                        slotObj.addProperty(
+                            "contentHash",
+                            slot.recipe()
+                                .contentHash());
+                        writeRecipeSnapshot(slotObj, slot.recipe());
+                        slotObj.addProperty("enabled", slot.enabled());
+                        slotObj.addProperty("inputGuard", slot.inputGuard());
+                        slotObj.addProperty("outputGuard", slot.outputGuard());
+                        slotObj.addProperty("priority", slot.priority() & 0xFF);
+                        slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
+                        slotObj.addProperty("slotIndex", i);
+                        slotsArray.add(slotObj);
+                    }
+                    moduleData.add("recipeSlots", slotsArray);
+                }
             }
             mj.data = moduleData;
             mj.consumedResources = new LinkedHashMap<>();
@@ -392,6 +447,7 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 e.getValue());
         }
+        out.fluidBuffer = new LinkedHashMap<>(state.inventory.fluidSnapshot());
         out.logisticsConfig = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -447,27 +503,17 @@ public final class FacilityPersistenceManager {
         state.setEnergyStored(json.energyStored);
         state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
-
-        List<PendingTierDowngrade> pendingDowngrades = new ArrayList<>();
+        state.setMinerVoidChances(
+            Objects.requireNonNull(json.minerVoidChances, "[PERSIST] Facility missing minerVoidChances"));
 
         int moduleDecodedCount = 0;
-        int moduleSkippedCount = 0;
         if (json.modules != null) {
             for (ModuleJson mj : json.modules) {
                 String rawKind = mj.kind;
                 FacilityModuleKind kind = safeValueOf(FacilityModuleKind.class, rawKind);
                 if (kind == null) {
-                    if ("BIG_HAMMER".equals(rawKind)) {
-                        kind = FacilityModuleKind.HAMMER;
-                        LOG.info("[PERSIST] LOAD DECODE: migrated BIG_HAMMER module {} -> HAMMER", mj.moduleId);
-                    } else {
-                        moduleSkippedCount++;
-                        LOG.warn(
-                            "[PERSIST] LOAD DECODE: skipping module {} with unknown kind '{}'",
-                            mj.moduleId,
-                            rawKind);
-                        continue;
-                    }
+                    throw new IllegalStateException(
+                        "[PERSIST] Module " + mj.moduleId + " has unknown kind: '" + rawKind + "'");
                 }
                 ModuleInstance.ID moduleId = ModuleInstance.ID.from(mj.moduleId);
                 if (moduleId == null && mj.moduleId != null) {
@@ -475,10 +521,8 @@ public final class FacilityPersistenceManager {
                         "[PERSIST] Module from JSON has malformed ID: '" + mj.moduleId + "' of kind " + rawKind);
                 }
                 if (moduleId == null) {
-                    LOG.error(
-                        "[PERSIST] Module of kind {} has null/missing moduleId in JSON — generating new ID",
-                        rawKind);
-                    moduleId = ModuleInstance.ID.create();
+                    throw new IllegalStateException(
+                        "[PERSIST] Module of kind " + rawKind + " has null/missing moduleId");
                 }
                 ModuleShape shape = PacketUtil.enumFromByte(mj.shape, ModuleShape.class);
                 if (shape == null) {
@@ -490,16 +534,10 @@ public final class FacilityPersistenceManager {
                     throw new IllegalStateException(
                         "[PERSIST] Module " + moduleId + " has invalid tier ordinal: " + mj.tier);
                 }
-                ModuleTier originalTier = tier;
                 if (!kind.allowedTiers()
                     .contains(tier)) {
-                    LOG.info(
-                        "[PERSIST] LOAD DECODE: module {} kind={} tier {} not allowed, downgrading to {}",
-                        mj.moduleId,
-                        kind,
-                        tier,
-                        kind.defaultTier());
-                    tier = kind.defaultTier();
+                    throw new IllegalStateException(
+                        "[PERSIST] Module " + moduleId + " kind=" + kind + " has unsupported tier: " + tier);
                 }
                 ModuleInstance module = FacilityModuleRegistry.create(moduleId, kind, null, shape, tier);
                 if (module == null || module.component() == null) {
@@ -517,65 +555,47 @@ public final class FacilityPersistenceManager {
                         .dx() : ModuleInstance.NULL_ANCHOR_LOG_VALUE),
                     (module.anchorOrNull() != null ? (int) module.anchorOrNull()
                         .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE));
-                if (originalTier != tier) {
-                    pendingDowngrades.add(new PendingTierDowngrade(module, kind, originalTier, tier));
-                }
-
-                JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : new JsonObject();
+                JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : null;
 
                 switch (kind) {
                     case HAMMER -> {
-                        AllowShootingConfig config = AllowShootingConfig.ALWAYS;
-                        OrbitalTransferPlanner.RoutePriority routePriority = OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF;
-                        boolean planetaryHandling = true;
-                        boolean crossPlanetaryCapability = false;
-                        if (data.has("config")) {
-                            config = PURE_GSON.fromJson(data.get("config"), AllowShootingConfig.class);
-                        }
-                        if (data.has("routePriority")) {
-                            routePriority = PURE_GSON
-                                .fromJson(data.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class);
-                        }
-                        if (data.has("planetaryHandling")) {
-                            planetaryHandling = data.get("planetaryHandling")
-                                .getAsBoolean();
-                        }
-                        if (data.has("crossPlanetaryCapability")) {
-                            crossPlanetaryCapability = data.get("crossPlanetaryCapability")
-                                .getAsBoolean();
-                        }
-                        module.setComponent(
-                            new ModuleHammer(
-                                kind,
-                                config,
-                                routePriority,
-                                false,
-                                planetaryHandling,
-                                crossPlanetaryCapability,
-                                64));
+                        JsonObject hammerData = Objects.requireNonNull(data, "[PERSIST] Hammer module missing data");
+                        AllowShootingConfig config = Objects.requireNonNull(
+                            PURE_GSON.fromJson(hammerData.get("config"), AllowShootingConfig.class),
+                            "[PERSIST] Hammer module missing config");
+                        OrbitalTransferPlanner.RoutePriority routePriority = Objects.requireNonNull(
+                            PURE_GSON
+                                .fromJson(hammerData.get("routePriority"), OrbitalTransferPlanner.RoutePriority.class),
+                            "[PERSIST] Hammer module missing routePriority");
+                        HammerVariant variant = Objects.requireNonNull(
+                            PURE_GSON.fromJson(hammerData.get("variant"), HammerVariant.class),
+                            "[PERSIST] Hammer module missing variant");
+                        ModuleHammer.requireTier(variant, tier);
+                        module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
                     }
                     case MINER -> {
-                        List<String> blacklist = new ArrayList<>();
-                        boolean copySettings = false;
-                        if (data.has("blacklistedItemKeys")) {
-                            blacklist = PURE_GSON.fromJson(
-                                data.get("blacklistedItemKeys"),
-                                new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
+                        if (data != null && !data.entrySet()
+                            .isEmpty()) {
+                            throw new IllegalStateException(
+                                "[PERSIST] Miner module " + moduleId + " has obsolete data");
                         }
-                        if (data.has("copySettingsToOtherMiners")) {
-                            copySettings = data.get("copySettingsToOtherMiners")
-                                .getAsBoolean();
-                        }
-                        module.setComponent(new ModuleMiner(kind, blacklist, copySettings));
                     }
                     case POWER -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
+                    case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
+                        if (data.has("recipeMode")) {
+                            RecipeConfig rc = decodeRecipeConfig(data);
+                            if (rc != null && module.component() instanceof IRecipeModule rm) {
+                                rm.setRecipeConfig(rc);
+                            }
+                        }
+                    }
                 }
 
-                Buildable.Status moduleStatus = safeValueOf(Buildable.Status.class, mj.status);
-                if (moduleStatus != null) {
-                    module.updateStatus(moduleStatus);
-                }
+                Buildable.Status moduleStatus = Objects.requireNonNull(
+                    safeValueOf(Buildable.Status.class, mj.status),
+                    "[PERSIST] Module " + moduleId + " has invalid status: " + mj.status);
+                module.updateStatus(moduleStatus);
                 module.setTicks(mj.cooldownTicks);
                 module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
@@ -597,10 +617,7 @@ public final class FacilityPersistenceManager {
                 moduleDecodedCount++;
             }
         }
-        LOG.info(
-            "[PERSIST] LOAD DECODE: finished decoding modules: {} decoded, {} skipped",
-            moduleDecodedCount,
-            moduleSkippedCount);
+        LOG.info("[PERSIST] LOAD DECODE: finished decoding modules: {} decoded", moduleDecodedCount);
 
         if (json.buffer != null) {
             Map<ItemStackWrapper, Long> bufferSnapshot = new LinkedHashMap<>();
@@ -611,6 +628,9 @@ public final class FacilityPersistenceManager {
                 }
             }
             state.inventory.loadFromSnapshot(bufferSnapshot);
+        }
+        if (json.fluidBuffer != null) {
+            state.inventory.loadFluidSnapshot(json.fluidBuffer);
         }
 
         if (json.logisticsConfig != null) {
@@ -724,17 +744,6 @@ public final class FacilityPersistenceManager {
                 json.layoutTiles != null ? json.layoutTiles.size() : 0);
         }
 
-        // Emit deferred tier-downgrade WARN logs
-        for (PendingTierDowngrade p : pendingDowngrades) {
-            StationTileCoord anchor = p.module.anchorOrNull();
-            LOG.warn(
-                "[PERSIST] Module {} at {} had unsupported tier {}; downgraded to {}",
-                p.kind,
-                anchor != null ? anchor : p.module.id,
-                p.oldTier,
-                p.newTier);
-        }
-
         LOG.info(
             "[PERSIST] LOAD DECODE END: facility {} has {} module(s), layout has {} tile(s)",
             state.assetId,
@@ -789,8 +798,10 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         long energyStored;
         short settingsGroupsNextId;
+        Map<String, Integer> minerVoidChances = new LinkedHashMap<>();
         List<ModuleJson> modules;
         Map<String, Long> buffer;
+        Map<String, Long> fluidBuffer;
         Map<String, LogisticsConfigJson> logisticsConfig;
         List<StationTileJson> layoutTiles;
     }
@@ -828,9 +839,6 @@ public final class FacilityPersistenceManager {
         boolean isSupplyEnabled;
     }
 
-    private record PendingTierDowngrade(ModuleInstance module, FacilityModuleKind kind, ModuleTier oldTier,
-        ModuleTier newTier) {}
-
     static final class TaskJson {
 
         String taskId;
@@ -844,5 +852,237 @@ public final class FacilityPersistenceManager {
         String toBodyId;
         double departureOrbitalTime;
         double tofOrbitalSeconds;
+    }
+
+    private static void writeRecipeSnapshot(JsonObject slotObj, RecipeSnapshot snapshot) {
+        slotObj.addProperty("duration", snapshot.duration());
+        slotObj.addProperty("eut", snapshot.eut());
+        writeItemStacks(slotObj, "inputs", snapshot.inputs());
+        writeItemStacks(slotObj, "outputs", snapshot.outputs());
+        writeIntArray(slotObj, "outputChances", snapshot.outputChances());
+        writeFluidStacks(slotObj, "fluidInputs", snapshot.fluidInputs());
+        writeFluidStacks(slotObj, "fluidOutputs", snapshot.fluidOutputs());
+        writeIntArray(slotObj, "fluidOutputChances", snapshot.fluidOutputChances());
+    }
+
+    private static RecipeSnapshot readRecipeSnapshot(JsonObject slotObj, byte recipeMapOrdinal, int recipeIndex,
+        long contentHash) {
+        if (!slotObj.has("duration") && !slotObj.has("eut")
+            && !slotObj.has("inputs")
+            && !slotObj.has("outputs")
+            && !slotObj.has("outputChances")
+            && !slotObj.has("fluidInputs")
+            && !slotObj.has("fluidOutputs")
+            && !slotObj.has("fluidOutputChances")) {
+            return RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
+        }
+        int duration = slotObj.has("duration") ? slotObj.get("duration")
+            .getAsInt() : 0;
+        int eut = slotObj.has("eut") ? slotObj.get("eut")
+            .getAsInt() : 0;
+        return new RecipeSnapshot(
+            recipeMapOrdinal,
+            recipeIndex,
+            contentHash,
+            readItemStacks(slotObj, "inputs"),
+            readItemStacks(slotObj, "outputs"),
+            readFluidStacks(slotObj, "fluidInputs"),
+            readFluidStacks(slotObj, "fluidOutputs"),
+            readIntArray(slotObj, "outputChances"),
+            readIntArray(slotObj, "fluidOutputChances"),
+            duration,
+            eut);
+    }
+
+    private static void writeItemStacks(JsonObject target, String key, ItemStack[] stacks) {
+        if (stacks == null) return;
+        com.google.gson.JsonArray array = new com.google.gson.JsonArray();
+        for (ItemStack stack : stacks) {
+            ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
+            if (wrapper == null) {
+                array.add(com.google.gson.JsonNull.INSTANCE);
+                continue;
+            }
+            JsonObject obj = new JsonObject();
+            obj.addProperty("key", wrapper.toKey());
+            obj.addProperty("amount", stack.stackSize);
+            array.add(obj);
+        }
+        target.add(key, array);
+    }
+
+    private static ItemStack[] readItemStacks(JsonObject source, String key) {
+        if (!source.has(key)) return null;
+        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        ItemStack[] stacks = new ItemStack[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            JsonElement element = array.get(i);
+            if (element == null || element.isJsonNull()) continue;
+            JsonObject obj = element.getAsJsonObject();
+            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(
+                obj.get("key")
+                    .getAsString());
+            if (wrapper == null) continue;
+            int amount = obj.has("amount") ? obj.get("amount")
+                .getAsInt() : 1;
+            stacks[i] = wrapper.toStack(amount);
+        }
+        return stacks;
+    }
+
+    private static void writeIntArray(JsonObject target, String key, int[] values) {
+        if (values == null) return;
+        com.google.gson.JsonArray array = new com.google.gson.JsonArray();
+        for (int value : values) {
+            array.add(new com.google.gson.JsonPrimitive(value));
+        }
+        target.add(key, array);
+    }
+
+    private static int[] readIntArray(JsonObject source, String key) {
+        if (!source.has(key)) return null;
+        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        int[] values = new int[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            JsonElement element = array.get(i);
+            values[i] = element != null && !element.isJsonNull() ? element.getAsInt() : 0;
+        }
+        return values;
+    }
+
+    private static void writeFluidStacks(JsonObject target, String key, FluidStack[] stacks) {
+        if (stacks == null) return;
+        com.google.gson.JsonArray array = new com.google.gson.JsonArray();
+        for (FluidStack stack : stacks) {
+            String fluidName = fluidName(stack);
+            if (fluidName == null) {
+                array.add(com.google.gson.JsonNull.INSTANCE);
+                continue;
+            }
+            JsonObject obj = new JsonObject();
+            obj.addProperty("fluid", fluidName);
+            obj.addProperty("amount", stack.amount);
+            array.add(obj);
+        }
+        target.add(key, array);
+    }
+
+    private static FluidStack[] readFluidStacks(JsonObject source, String key) {
+        if (!source.has(key)) return null;
+        com.google.gson.JsonArray array = source.getAsJsonArray(key);
+        FluidStack[] stacks = new FluidStack[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            JsonElement element = array.get(i);
+            if (element == null || element.isJsonNull()) continue;
+            JsonObject obj = element.getAsJsonObject();
+            Fluid fluid = resolveFluid(
+                obj.get("fluid")
+                    .getAsString());
+            if (fluid == null) continue;
+            int amount = obj.has("amount") ? obj.get("amount")
+                .getAsInt() : 0;
+            stacks[i] = createFluidStack(fluid, amount);
+        }
+        return stacks;
+    }
+
+    private static String fluidName(FluidStack stack) {
+        if (stack == null) return null;
+        Fluid fluid = fluidType(stack);
+        return fluid != null ? fluid.getName() : null;
+    }
+
+    private static Fluid resolveFluid(String name) {
+        try {
+            Fluid fluid = FluidRegistry.getFluid(name);
+            if (fluid != null) return fluid;
+        } catch (Throwable ignored) {}
+        return name != null && !name.isEmpty() ? new Fluid(name) : null;
+    }
+
+    private static FluidStack createFluidStack(Fluid fluid, int amount) {
+        try {
+            FluidStack stack = new FluidStack(fluid, amount);
+            if (fluidType(stack) != null) return stack;
+        } catch (Throwable ignored) {
+            // Fall through to the reflective path below.
+        }
+        try {
+            Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            Unsafe unsafe = (Unsafe) unsafeField.get(null);
+            FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
+            Field fluidField = FluidStack.class.getDeclaredField("fluid");
+            fluidField.setAccessible(true);
+            fluidField.set(stack, fluid);
+            stack.amount = amount;
+            return stack;
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+    }
+
+    private static Fluid fluidType(FluidStack stack) {
+        try {
+            return stack.getFluid();
+        } catch (RuntimeException ignored) {
+            try {
+                Field field = FluidStack.class.getDeclaredField("fluid");
+                field.setAccessible(true);
+                return (Fluid) field.get(stack);
+            } catch (ReflectiveOperationException e) {
+                return null;
+            }
+        }
+    }
+
+    private static RecipeConfig decodeRecipeConfig(JsonObject data) {
+        try {
+            RecipeSchedulerMode mode = RecipeSchedulerMode.valueOf(
+                data.get("recipeMode")
+                    .getAsString());
+            NotDoablePolicy policy = NotDoablePolicy.valueOf(
+                data.get("recipeNotDoablePolicy")
+                    .getAsString());
+            byte orderCursor = data.get("recipeOrderCursor")
+                .getAsByte();
+            byte orderRemaining = data.get("recipeOrderRemaining")
+                .getAsByte();
+            RecipeSlotList slots = new RecipeSlotList();
+
+            if (data.has("recipeSlots")) {
+                com.google.gson.JsonArray slotsArray = data.getAsJsonArray("recipeSlots");
+                for (int i = 0; i < slotsArray.size(); i++) {
+                    JsonObject slotObj = slotsArray.get(i)
+                        .getAsJsonObject();
+                    byte recipeMapOrdinal = slotObj.get("recipeMapOrdinal")
+                        .getAsByte();
+                    int recipeIndex = slotObj.get("recipeIndex")
+                        .getAsInt();
+                    long contentHash = slotObj.get("contentHash")
+                        .getAsLong();
+                    boolean enabled = slotObj.get("enabled")
+                        .getAsBoolean();
+                    int inputGuard = slotObj.get("inputGuard")
+                        .getAsInt();
+                    int outputGuard = slotObj.get("outputGuard")
+                        .getAsInt();
+                    byte priority = slotObj.get("priority")
+                        .getAsByte();
+                    byte orderSize = slotObj.get("orderSize")
+                        .getAsByte();
+                    RecipeSnapshot ref = readRecipeSnapshot(slotObj, recipeMapOrdinal, recipeIndex, contentHash);
+                    RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
+                    int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
+                        .getAsInt() : i;
+                    slots.setOrAppend(slotIndex, slot);
+                }
+            }
+
+            return new RecipeConfig(slots, mode, policy, orderCursor, orderRemaining);
+        } catch (Exception e) {
+            LOG.warn("[PERSIST] Failed to decode RecipeConfig: {}", e.getMessage());
+            return null;
+        }
     }
 }
