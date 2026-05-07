@@ -530,15 +530,6 @@ public final class AssetModuleUpdatePacket {
         HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund,
         boolean creative) {
         ModuleHammer.requireTier(targetVariant, targetTier);
-        ModuleOperationState existingOperation = module.operationOrNull();
-        if (existingOperation != null && !existingOperation.phase()
-            .isTerminal()) {
-            LOG.warn(
-                "Rejected hammer upgrade for module {} because operation {} is active",
-                module.id,
-                existingOperation.phase());
-            return false;
-        }
         ModuleOperationTargetSpec target = new ModuleOperationTargetSpec(
             ModuleOperationKind.UPGRADE_REBUILD,
             module.kind(),
@@ -563,6 +554,15 @@ public final class AssetModuleUpdatePacket {
             }
             state.applyCreativeModuleOperation(module, plan);
             return true;
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            LOG.warn(
+                "Rejected hammer upgrade for module {} because operation {} is active",
+                module.id,
+                existingOperation.phase());
+            return false;
         }
         module.setOperation(ModuleOperationState.waiting(plan));
         return true;

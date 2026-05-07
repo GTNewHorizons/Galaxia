@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.item.Item;
@@ -427,6 +428,45 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyHammerUpgradePlanInCreativeReplacesEmptyWaitingOperation() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE)));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, false, false));
+
+        packet.apply(TEAM, true);
+
+        assertEquals(ModuleTier.ZPM, module.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) module.component()).variant());
+        assertNull(module.operationOrNull());
+    }
+
+    @Test
+    void applyHammerUpgradePlanInCreativeRejectsOperationWithStoredItems() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.restore(
+                hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE),
+                ModuleOperationPhase.WAITING_FOR_MATERIALS,
+                0,
+                Map.of("minecraft:iron_ingot:0", 1L),
+                Map.of()));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, false, false));
+
+        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM, true));
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(HammerVariant.BASE, ((ModuleHammer) module.component()).variant());
+    }
+
+    @Test
     void applyHammerPhysicalChangeIgnoresActiveOperationRequest() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
@@ -666,6 +706,24 @@ final class AssetModuleUpdatePacketTest {
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;
+    }
+
+    private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,
+        HammerVariant targetVariant) {
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        return new ModuleOperationPlan(
+            new ModuleOperationTargetSpec(
+                ModuleOperationKind.UPGRADE_REBUILD,
+                module.kind(),
+                module.tier(),
+                hammer.variant()
+                    .name(),
+                module.kind(),
+                targetTier,
+                targetVariant.name()),
+            200,
+            80,
+            false);
     }
 
     private static AutomatedFacility addMinerFacilityToServer() {

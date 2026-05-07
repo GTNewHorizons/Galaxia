@@ -274,8 +274,13 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState existingOperation = module.operationOrNull();
         if (existingOperation != null && !existingOperation.phase()
             .isTerminal()) {
-            throw new IllegalStateException(
-                "Module " + module.id + " already has active operation " + existingOperation.phase());
+            if (!existingOperation.depositedResources()
+                .isEmpty()
+                || !existingOperation.refundBuffer()
+                    .isEmpty()) {
+                throw new IllegalStateException(
+                    "Creative operation cannot replace active operation with stored items for module " + module.id);
+            }
         }
         applyOperationTarget(module, plan.targetSpec());
         module.clearOperation();
