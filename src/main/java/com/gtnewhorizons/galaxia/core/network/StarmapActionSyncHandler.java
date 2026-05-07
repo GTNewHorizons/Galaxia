@@ -10,7 +10,6 @@ import net.minecraft.network.PacketBuffer;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -150,37 +149,37 @@ public final class StarmapActionSyncHandler extends SyncHandler {
             case REQUEST_CREATE_ASSET -> {
                 AssetCreatePacket packet = new AssetCreatePacket();
                 packet.fromBytes(buf);
-                syncPacket(playerMp, packet.apply(teamId));
+                syncPacket(packet.apply(teamId));
             }
             case REQUEST_UPDATE_ASSET -> {
                 AssetUpdatePacket packet = new AssetUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(playerMp, packet.apply(teamId));
+                syncPacket(packet.apply(teamId));
             }
             case REQUEST_BUILD_MODULE -> {
                 AssetBuildModulePacket packet = new AssetBuildModulePacket();
                 packet.fromBytes(buf);
-                syncPacket(playerMp, packet.apply(teamId, creative));
+                syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_MODULE_UPDATE -> {
                 AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(playerMp, packet.apply(teamId, creative));
+                syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_INVENTORY_UPDATE -> {
                 AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(playerMp, packet.apply(teamId, creative));
+                syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_LOGISTICS_CONFIG -> {
                 LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(playerMp, packet.apply(teamId));
+                syncPacket(packet.apply(teamId));
             }
         }
     }
 
-    private void syncPacket(EntityPlayerMP player, AssetSyncPacket packet) {
-        if (packet != null) Galaxia.GALAXIA_NETWORK.sendTo(packet, player);
+    private void syncPacket(AssetSyncPacket packet) {
+        if (packet != null) syncToClient(RESPONSE_SYNC, packet::toBytes);
     }
 }

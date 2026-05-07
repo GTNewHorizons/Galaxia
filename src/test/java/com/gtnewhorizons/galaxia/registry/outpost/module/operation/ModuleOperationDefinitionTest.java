@@ -23,7 +23,7 @@ final class ModuleOperationDefinitionTest {
             ModuleOperationKind.UPGRADE_REBUILD,
             120,
             75,
-            ModuleOperationCostResolver.fixed(Map.of(new ItemStack(new Item()), 4L)));
+            Map.of(new ItemStack(new Item()), 4L));
         ModuleOperationTargetSpec target = hammerTarget();
 
         ModuleOperationPlan plan = definition.createPlan(target, true);
@@ -41,7 +41,7 @@ final class ModuleOperationDefinitionTest {
             ModuleOperationKind.UPGRADE_REBUILD,
             120,
             80,
-            ModuleOperationCostResolver.fixed(Map.of(stack, 6L)));
+            Map.of(stack, 6L));
         stack.stackSize = 32;
 
         Map<ItemStack, Long> cost = definition.materialCost(hammerTarget());
@@ -63,21 +63,21 @@ final class ModuleOperationDefinitionTest {
     void malformedDefinitionOrCostCrashes() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleOperationDefinition(
-                null,
-                120,
-                80,
-                ModuleOperationCostResolver.fixed(Map.of(new ItemStack(new Item()), 4L))));
+            () -> new ModuleOperationDefinition(null, 120, 80, Map.of(new ItemStack(new Item()), 4L)));
         assertThrows(
             IllegalArgumentException.class,
             () -> new ModuleOperationDefinition(
                 ModuleOperationKind.UPGRADE_REBUILD,
                 0,
                 80,
-                ModuleOperationCostResolver.fixed(Map.of(new ItemStack(new Item()), 4L))));
+                Map.of(new ItemStack(new Item()), 4L)));
         assertThrows(
             IllegalArgumentException.class,
-            () -> ModuleOperationCostResolver.fixed(Map.of(new ItemStack(new Item()), 0L)));
+            () -> new ModuleOperationDefinition(
+                ModuleOperationKind.UPGRADE_REBUILD,
+                120,
+                80,
+                Map.of(new ItemStack(new Item()), 0L)));
     }
 
     private static ModuleOperationTargetSpec hammerTarget() {

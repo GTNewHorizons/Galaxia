@@ -12,7 +12,6 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationCostResolver;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -222,7 +221,7 @@ public class FacilityModuleRegistry {
                 ModuleOperationKind.UPGRADE_REBUILD,
                 DEFAULT_OPERATION_BUILD_TICKS,
                 DEFAULT_OPERATION_COMPLETION_REFUND_PERCENT,
-                ModuleOperationCostResolver.fixed(constructionCost)));
+                constructionCost));
         return definitions;
     }
 

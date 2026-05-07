@@ -4,16 +4,18 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 public final class ModuleOperationState {
 
-    private final ModuleOperationPlan plan;
-    private final ModuleOperationPhase phase;
-    private final int elapsedBuildTicks;
-    private final Map<String, Long> depositedResources;
-    private final Map<String, Long> refundBuffer;
+    private ModuleOperationPlan plan;
+    private ModuleOperationPhase phase;
+    private int elapsedBuildTicks;
+    private Map<String, Long> depositedResources;
+    private Map<String, Long> refundBuffer;
 
-    private ModuleOperationState(ModuleOperationPlan plan, ModuleOperationPhase phase, int elapsedBuildTicks,
-        Map<String, Long> depositedResources, Map<String, Long> refundBuffer) {
+    private ModuleOperationState(@Nonnull ModuleOperationPlan plan, @Nonnull ModuleOperationPhase phase,
+        int elapsedBuildTicks, @Nonnull Map<String, Long> depositedResources, @Nonnull Map<String, Long> refundBuffer) {
         if (plan == null) {
             throw new IllegalArgumentException("plan must not be null");
         }
@@ -31,12 +33,12 @@ public final class ModuleOperationState {
         validatePhaseDataConsistency();
     }
 
-    public static ModuleOperationState waiting(ModuleOperationPlan plan) {
+    public static ModuleOperationState waiting(@Nonnull ModuleOperationPlan plan) {
         return new ModuleOperationState(plan, ModuleOperationPhase.WAITING_FOR_MATERIALS, 0, Map.of(), Map.of());
     }
 
-    public static ModuleOperationState restore(ModuleOperationPlan plan, ModuleOperationPhase phase,
-        int elapsedBuildTicks, Map<String, Long> depositedResources, Map<String, Long> refundBuffer) {
+    public static ModuleOperationState restore(@Nonnull ModuleOperationPlan plan, @Nonnull ModuleOperationPhase phase,
+        int elapsedBuildTicks, @Nonnull Map<String, Long> depositedResources, @Nonnull Map<String, Long> refundBuffer) {
         return new ModuleOperationState(plan, phase, elapsedBuildTicks, depositedResources, refundBuffer);
     }
 
@@ -64,27 +66,31 @@ public final class ModuleOperationState {
         return plan.reserveItems();
     }
 
-    public ModuleOperationState withDepositedResources(Map<String, Long> updatedDeposits) {
-        return new ModuleOperationState(plan, phase, elapsedBuildTicks, updatedDeposits, refundBuffer);
+    public ModuleOperationState withDepositedResources(@Nonnull Map<String, Long> updatedDeposits) {
+        this.depositedResources = sanitizeItemAmounts(updatedDeposits, "depositedResources");
+        validatePhaseDataConsistency();
+        return this;
     }
 
     public ModuleOperationState beginBuilding() {
         if (phase != ModuleOperationPhase.WAITING_FOR_MATERIALS) {
             throw new IllegalStateException("beginBuilding requires WAITING_FOR_MATERIALS phase, got " + phase);
         }
-        return new ModuleOperationState(plan, ModuleOperationPhase.BUILDING, 0, depositedResources, refundBuffer);
+        this.phase = ModuleOperationPhase.BUILDING;
+        this.elapsedBuildTicks = 0;
+        validatePhaseDataConsistency();
+        return this;
     }
 
-    public ModuleOperationState refundAfterCompletion(Map<String, Long> completionRefund) {
+    public ModuleOperationState refundAfterCompletion(@Nonnull Map<String, Long> completionRefund) {
         if (phase != ModuleOperationPhase.COMPLETE) {
             throw new IllegalStateException("refundAfterCompletion requires COMPLETE phase, got " + phase);
         }
-        return new ModuleOperationState(
-            plan,
-            ModuleOperationPhase.REFUNDING,
-            elapsedBuildTicks,
-            Map.of(),
-            completionRefund);
+        this.phase = ModuleOperationPhase.REFUNDING;
+        this.depositedResources = Map.of();
+        this.refundBuffer = sanitizeItemAmounts(completionRefund, "refundBuffer");
+        validatePhaseDataConsistency();
+        return this;
     }
 
     public ModuleOperationState tickBuilding() {
@@ -92,15 +98,13 @@ public final class ModuleOperationState {
             throw new IllegalStateException("tickBuilding requires BUILDING phase, got " + phase);
         }
         int nextElapsed = elapsedBuildTicks + 1;
-        if (nextElapsed < plan.buildTicks()) {
-            return new ModuleOperationState(
-                plan,
-                ModuleOperationPhase.BUILDING,
-                nextElapsed,
-                depositedResources,
-                refundBuffer);
+        this.elapsedBuildTicks = nextElapsed;
+        if (nextElapsed >= plan.buildTicks()) {
+            this.phase = ModuleOperationPhase.COMPLETE;
+            this.refundBuffer = Map.of();
         }
-        return new ModuleOperationState(plan, ModuleOperationPhase.COMPLETE, nextElapsed, depositedResources, Map.of());
+        validatePhaseDataConsistency();
+        return this;
     }
 
     public ModuleOperationState cancel() {
@@ -109,26 +113,26 @@ public final class ModuleOperationState {
                 "cancel is only allowed from WAITING_FOR_MATERIALS or BUILDING, got " + phase);
         }
         if (depositedResources.isEmpty()) {
-            return new ModuleOperationState(
-                plan,
-                ModuleOperationPhase.CANCELLED,
-                elapsedBuildTicks,
-                depositedResources,
-                Map.of());
+            this.phase = ModuleOperationPhase.CANCELLED;
+            this.refundBuffer = Map.of();
+            validatePhaseDataConsistency();
+            return this;
         }
-        return new ModuleOperationState(
-            plan,
-            ModuleOperationPhase.REFUNDING,
-            elapsedBuildTicks,
-            depositedResources,
-            depositedResources);
+        this.phase = ModuleOperationPhase.REFUNDING;
+        this.refundBuffer = depositedResources;
+        validatePhaseDataConsistency();
+        return this;
     }
 
     public ModuleOperationState finishRefunding() {
         if (phase != ModuleOperationPhase.REFUNDING) {
             throw new IllegalStateException("finishRefunding requires REFUNDING phase, got " + phase);
         }
-        return new ModuleOperationState(plan, ModuleOperationPhase.CANCELLED, elapsedBuildTicks, Map.of(), Map.of());
+        this.phase = ModuleOperationPhase.CANCELLED;
+        this.depositedResources = Map.of();
+        this.refundBuffer = Map.of();
+        validatePhaseDataConsistency();
+        return this;
     }
 
     private void validatePhaseDataConsistency() {

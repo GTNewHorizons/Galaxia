@@ -207,47 +207,53 @@ public final class AutomatedFacility extends CelestialAsset {
         }
     }
 
-    public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStack, Long> materialCost) {
+    public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
-        List<OperationMaterial> requested = materialCostToMaterials(materialCost);
-        for (OperationMaterial material : requested) {
-            if (inventory.getAmount(material.item()) < material.amount()) return false;
+        Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            if (inventory.getAmount(material.getKey()) < material.getValue()) return false;
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
-        for (OperationMaterial material : requested) {
-            if (!inventory.tryConsume(material.item(), material.amount())) {
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            if (!inventory.tryConsume(material.getKey(), material.getValue())) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
-                        + material.itemKey());
+                        + material.getKey()
+                            .toKey());
             }
-            deposited.merge(material.itemKey(), material.amount(), Long::sum);
+            deposited.merge(
+                material.getKey()
+                    .toKey(),
+                material.getValue(),
+                Long::sum);
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
         markModuleDirty(module.id);
         return true;
     }
 
-    public boolean tryReserveAvailableOperationMaterials(ModuleInstance module, Map<ItemStack, Long> materialCost) {
+    public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
+        Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
-        List<OperationMaterial> requested = materialCostToMaterials(materialCost);
+        Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         boolean changed = false;
-        for (OperationMaterial material : requested) {
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            String itemKey = material.getKey()
+                .toKey();
             long alreadyDeposited = operation.depositedResources()
-                .getOrDefault(material.itemKey(), 0L);
-            long remaining = material.amount() - alreadyDeposited;
+                .getOrDefault(itemKey, 0L);
+            long remaining = material.getValue() - alreadyDeposited;
             if (remaining <= 0L) continue;
-            long available = inventory.getAmount(material.item());
+            long available = inventory.getAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (!inventory.tryConsume(material.item(), reserved)) {
+            if (!inventory.tryConsume(material.getKey(), reserved)) {
                 throw new IllegalStateException(
-                    "Operation partial reservation became inconsistent for module " + module.id
-                        + ", item="
-                        + material.itemKey());
+                    "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
-            deposited.merge(material.itemKey(), reserved, Long::sum);
+            deposited.merge(itemKey, reserved, Long::sum);
             changed = true;
         }
         if (changed) {
@@ -398,25 +404,42 @@ public final class AutomatedFacility extends CelestialAsset {
         return operation;
     }
 
-    private List<OperationMaterial> materialCostToMaterials(Map<ItemStack, Long> materialCost) {
+    private Map<ItemStackWrapper, Long> requireMaterialCost(Map<ItemStackWrapper, Long> materialCost) {
         if (materialCost == null) {
             throw new IllegalArgumentException("Operation material cost must not be null");
         }
-        List<OperationMaterial> materials = new ArrayList<>();
-        for (Map.Entry<ItemStack, Long> entry : materialCost.entrySet()) {
-            ItemStack stack = entry.getKey();
+        for (Map.Entry<ItemStackWrapper, Long> entry : materialCost.entrySet()) {
+            ItemStackWrapper item = entry.getKey();
             Long amount = entry.getValue();
-            ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
-            if (wrapper == null) {
+            if (item == null) {
+                throw new IllegalArgumentException("Operation material cost contains null item");
+            }
+            if (amount == null || amount <= 0L) {
+                throw new IllegalArgumentException(
+                    "Operation material cost amount must be > 0 for " + item.toKey() + ", got " + amount);
+            }
+        }
+        return materialCost;
+    }
+
+    private Map<ItemStackWrapper, Long> materialCostToWrappers(Map<ItemStack, Long> materialCost) {
+        if (materialCost == null) {
+            throw new IllegalArgumentException("Operation material cost must not be null");
+        }
+        Map<ItemStackWrapper, Long> wrapped = new java.util.LinkedHashMap<>();
+        for (Map.Entry<ItemStack, Long> entry : materialCost.entrySet()) {
+            ItemStackWrapper item = ItemStackWrapper.of(entry.getKey());
+            Long amount = entry.getValue();
+            if (item == null) {
                 throw new IllegalArgumentException("Operation material cost contains null/unkeyable stack");
             }
             if (amount == null || amount <= 0L) {
                 throw new IllegalArgumentException(
-                    "Operation material cost amount must be > 0 for " + wrapper.toKey() + ", got " + amount);
+                    "Operation material cost amount must be > 0 for " + item.toKey() + ", got " + amount);
             }
-            materials.add(new OperationMaterial(wrapper.toKey(), wrapper, amount));
+            wrapped.merge(item, amount, Long::sum);
         }
-        return materials;
+        return wrapped;
     }
 
     private ItemStackWrapper requireItemKey(String itemKey, ModuleInstance module) {
@@ -434,8 +457,6 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         return merged;
     }
-
-    private record OperationMaterial(String itemKey, ItemStackWrapper item, long amount) {}
 
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);
@@ -550,9 +571,10 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationDefinition definition = operationDefinition(
             operation.plan()
                 .targetSpec());
-        Map<ItemStack, Long> materialCost = definition.materialCost(
-            operation.plan()
-                .targetSpec());
+        Map<ItemStackWrapper, Long> materialCost = materialCostToWrappers(
+            definition.materialCost(
+                operation.plan()
+                    .targetSpec()));
         boolean hasFullCost = operation.reserveItems() ? tryReserveAvailableOperationMaterials(module, materialCost)
             : tryReserveOperationMaterials(module, materialCost);
         if (!hasFullCost) {
@@ -723,10 +745,15 @@ public final class AutomatedFacility extends CelestialAsset {
             .operationDefinition(target.operationKind());
     }
 
-    private static boolean operationHasFullDeposit(ModuleOperationState operation, List<OperationMaterial> requested) {
-        for (OperationMaterial material : requested) {
+    private static boolean operationHasFullDeposit(ModuleOperationState operation,
+        Map<ItemStackWrapper, Long> requested) {
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
             if (operation.depositedResources()
-                .getOrDefault(material.itemKey(), 0L) < material.amount()) {
+                .getOrDefault(
+                    material.getKey()
+                        .toKey(),
+                    0L)
+                < material.getValue()) {
                 return false;
             }
         }

@@ -52,7 +52,7 @@ final class AutomatedFacilityOperationTest {
         facility.inventory.add(key, 8L);
         module.setOperation(ModuleOperationState.waiting(plan()));
 
-        assertTrue(facility.tryReserveOperationMaterials(module, Map.of(material, 5L)));
+        assertTrue(facility.tryReserveOperationMaterials(module, Map.of(key, 5L)));
 
         assertEquals(3L, facility.inventory.getAmount(key));
         assertEquals(
@@ -72,7 +72,7 @@ final class AutomatedFacilityOperationTest {
         facility.inventory.add(key, 2L);
         module.setOperation(ModuleOperationState.waiting(plan()));
 
-        assertFalse(facility.tryReserveOperationMaterials(module, Map.of(material, 5L)));
+        assertFalse(facility.tryReserveOperationMaterials(module, Map.of(key, 5L)));
 
         assertEquals(2L, facility.inventory.getAmount(key));
         assertTrue(
@@ -91,7 +91,7 @@ final class AutomatedFacilityOperationTest {
         facility.inventory.add(key, 2L);
         module.setOperation(ModuleOperationState.waiting(plan()));
 
-        assertFalse(facility.tryReserveAvailableOperationMaterials(module, Map.of(material, 5L)));
+        assertFalse(facility.tryReserveAvailableOperationMaterials(module, Map.of(key, 5L)));
 
         assertEquals(0L, facility.inventory.getAmount(key));
         assertEquals(
@@ -102,7 +102,7 @@ final class AutomatedFacilityOperationTest {
 
         facility.inventory.add(key, 3L);
 
-        assertTrue(facility.tryReserveAvailableOperationMaterials(module, Map.of(material, 5L)));
+        assertTrue(facility.tryReserveAvailableOperationMaterials(module, Map.of(key, 5L)));
         assertEquals(
             5L,
             module.operationOrNull()
@@ -119,7 +119,7 @@ final class AutomatedFacilityOperationTest {
         ItemStackWrapper key = ItemStackWrapper.of(material);
         facility.inventory.add(key, 8L);
         module.setOperation(ModuleOperationState.waiting(plan()));
-        facility.tryReserveOperationMaterials(module, Map.of(material, 5L));
+        facility.tryReserveOperationMaterials(module, Map.of(key, 5L));
 
         facility.cancelModuleOperation(module);
 
@@ -144,7 +144,7 @@ final class AutomatedFacilityOperationTest {
         ItemStackWrapper key = ItemStackWrapper.of(material);
         facility.inventory.add(key, 8L);
         module.setOperation(ModuleOperationState.waiting(plan()));
-        facility.tryReserveOperationMaterials(module, Map.of(material, 5L));
+        facility.tryReserveOperationMaterials(module, Map.of(key, 5L));
         facility.cancelModuleOperation(module);
 
         assertThrows(IllegalStateException.class, () -> facility.flushModuleOperationRefund(module));
@@ -158,7 +158,7 @@ final class AutomatedFacilityOperationTest {
 
         assertThrows(
             IllegalStateException.class,
-            () -> facility.tryReserveOperationMaterials(module, Map.of(material(), 1L)));
+            () -> facility.tryReserveOperationMaterials(module, Map.of(ItemStackWrapper.of(material()), 1L)));
 
         module.setOperation(
             ModuleOperationState.waiting(plan())
@@ -166,7 +166,7 @@ final class AutomatedFacilityOperationTest {
 
         assertThrows(
             IllegalStateException.class,
-            () -> facility.tryReserveOperationMaterials(module, Map.of(material(), 1L)));
+            () -> facility.tryReserveOperationMaterials(module, Map.of(ItemStackWrapper.of(material()), 1L)));
     }
 
     @Test

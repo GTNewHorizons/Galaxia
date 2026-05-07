@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationCostResolver;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
@@ -55,7 +54,7 @@ final class FacilityModuleRegistryTest {
                 ModuleOperationKind.UPGRADE_REBUILD,
                 40,
                 50,
-                ModuleOperationCostResolver.fixed(Map.of(new ItemStack(new Item()), 2L))));
+                Map.of(new ItemStack(new Item()), 2L)));
 
         FacilityModuleRegistry.Definition registryDefinition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.MAINTENANCE_BAY,
