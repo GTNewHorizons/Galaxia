@@ -22,7 +22,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     private int mCheckTimer = 0;
-    private boolean updated = false;
+    private boolean updated = true;
 
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;

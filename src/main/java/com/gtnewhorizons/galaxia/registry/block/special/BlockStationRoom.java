@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -15,7 +16,7 @@ import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
 
-public class BlockStationRoom extends Block implements ITileEntityProvider {
+public class BlockStationRoom extends BlockUpdatable implements ITileEntityProvider {
 
     public BlockStationRoom() {
         super(Material.iron);

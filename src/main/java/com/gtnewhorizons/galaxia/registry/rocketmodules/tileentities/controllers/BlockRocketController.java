@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.controller
 
 import java.util.function.Supplier;
 
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -22,7 +23,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 /**
  * Abstract block class for handling controllers of multiblocks relating to launching a rocket
  */
-public abstract class BlockRocketController extends Block {
+public abstract class BlockRocketController extends BlockUpdatable {
 
     @SideOnly(Side.CLIENT)
     protected IIcon frontIconOff;
