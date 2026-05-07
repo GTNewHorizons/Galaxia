@@ -528,7 +528,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
                                 .tooltipAutoUpdate(true)
                                 .syncHandler(
                                     new InteractionSyncHandler().setOnMousePressed(
-                                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); }))))
+                                        md -> {
+                                            if (md.mouseButton == 0 && !worldObj.isRemote && isRocketValid())
+                                                enterRocket(data);
+                                        }))))
                 // Schematic Page
                 .addPage(
                     new ParentWidget<>().size(240, 160)
