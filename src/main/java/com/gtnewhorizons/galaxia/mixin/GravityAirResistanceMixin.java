@@ -8,8 +8,9 @@ import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaEffectAPI;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
+import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 
 /**
  * Mixin to deal with gravity and air resistance
@@ -20,6 +21,19 @@ public abstract class GravityAirResistanceMixin {
     private static final float VANILLA_FRICTION = 0.91F;
     private float galaxia$currentFriction = VANILLA_FRICTION;
 
+    private int galaxia$cachedDim = Integer.MIN_VALUE;
+    private DimensionDef galaxia$cachedDef;
+
+    private DimensionDef galaxia$getDef(EntityLivingBase self) {
+        if (self.worldObj == null) return null;
+        int dim = self.dimension;
+        if (dim != galaxia$cachedDim) {
+            galaxia$cachedDim = dim;
+            galaxia$cachedDef = SolarSystemRegistry.getById(dim);
+        }
+        return galaxia$cachedDef;
+    }
+
     /**
      * Modifies the fall rate of entities based on gravity of the dimension
      *
@@ -29,7 +43,9 @@ public abstract class GravityAirResistanceMixin {
     @ModifyConstant(method = "moveEntityWithHeading", constant = @Constant(doubleValue = 0.08D))
     private double galaxia$modifyGravity(double original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
-        return original * GalaxiaAPI.getGravity(self);
+        DimensionDef def = galaxia$getDef(self);
+        if (def == null) return original;
+        return original * def.gravity();
     }
 
     /**
@@ -41,8 +57,9 @@ public abstract class GravityAirResistanceMixin {
     @ModifyConstant(method = "moveEntityWithHeading", constant = @Constant(doubleValue = 0.9800000190734863D))
     private double galaxia$removeAirResistance(double original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
-        double res = GalaxiaAPI.getAirResistance(self);
-        return Math.pow(original, Math.sqrt(res));
+        DimensionDef def = galaxia$getDef(self);
+        if (def == null) return original;
+        return Math.pow(original, Math.sqrt(def.airResistance()));
     }
 
     /**
@@ -56,8 +73,12 @@ public abstract class GravityAirResistanceMixin {
     @ModifyConstant(method = "moveEntityWithHeading", constant = @Constant(floatValue = 0.91F))
     private float galaxia$removeResistance(float original) {
         EntityLivingBase self = (EntityLivingBase) (Object) this;
-        double res = GalaxiaAPI.getAirResistance(self);
-        double exponent = Math.sqrt(res) * (GalaxiaAPI.cancelSpeed(self) ? 0.0 : 1.0);
+        DimensionDef def = galaxia$getDef(self);
+        if (def == null) {
+            this.galaxia$currentFriction = original;
+            return original;
+        }
+        double exponent = Math.sqrt(def.airResistance()) * (def.removeSpeedCancelation() ? 0.0 : 1.0);
         float newFriction = (float) Math.pow(original * GalaxiaEffectAPI.getSpeedMultiplier(self), exponent);
         this.galaxia$currentFriction = newFriction;
         return newFriction;

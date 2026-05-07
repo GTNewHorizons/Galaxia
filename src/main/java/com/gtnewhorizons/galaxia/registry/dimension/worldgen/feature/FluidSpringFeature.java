@@ -16,8 +16,7 @@ public class FluidSpringFeature extends Feature {
     @Override
     public void generateFeature(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
         boolean validCeiling = false;
-        Block ceilingBlock = ChunkBoundedAccess.getBlockOr(world, x, y + 1, z, null);
-        if (ceilingBlock == null) return;
+        Block ceilingBlock = ChunkBoundedAccess.getBlock(world, x, y + 1, z);
         for (Block surfaceRequirement : surfaceRequirements) {
             if (surfaceRequirement == ceilingBlock) {
                 validCeiling = true;
@@ -27,14 +26,14 @@ public class FluidSpringFeature extends Feature {
         if (!validCeiling) {
             return;
         }
-        boolean exposedSide = ChunkBoundedAccess.isAirBlockOr(world, x + 1, y, z, false);
-        if (ChunkBoundedAccess.isAirBlockOr(world, x - 1, y, z, false)) {
+        boolean exposedSide = ChunkBoundedAccess.isAirBlock(world, x + 1, y, z);
+        if (ChunkBoundedAccess.isAirBlock(world, x - 1, y, z)) {
             exposedSide = true;
         }
-        if (ChunkBoundedAccess.isAirBlockOr(world, x, y, z + 1, false)) {
+        if (ChunkBoundedAccess.isAirBlock(world, x, y, z + 1)) {
             exposedSide = true;
         }
-        if (ChunkBoundedAccess.isAirBlockOr(world, x, y, z - 1, false)) {
+        if (ChunkBoundedAccess.isAirBlock(world, x, y, z - 1)) {
             exposedSide = true;
         }
         if (!exposedSide) {

@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature;
 
 import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 
 public final class ChunkBoundedAccess {
 
@@ -12,13 +15,19 @@ public final class ChunkBoundedAccess {
             .chunkExists(x >> 4, z >> 4);
     }
 
-    public static Block getBlockOr(World world, int x, int y, int z, Block fallback) {
-        if (!isLoaded(world, x, z)) return fallback;
-        return world.getBlock(x, y, z);
+    public static Block getBlock(World world, int x, int y, int z) {
+        if (isLoaded(world, x, z)) return world.getBlock(x, y, z);
+        ChunkProviderGalaxiaPlanet provider = ChunkProviderGalaxiaPlanet.of(world);
+        if (provider != null) return provider.heightOracle()
+            .getPredictedBlock(x, y, z);
+        return Blocks.stone;
     }
 
-    public static boolean isAirBlockOr(World world, int x, int y, int z, boolean fallback) {
-        if (!isLoaded(world, x, z)) return fallback;
-        return world.isAirBlock(x, y, z);
+    public static boolean isAirBlock(World world, int x, int y, int z) {
+        if (isLoaded(world, x, z)) return world.isAirBlock(x, y, z);
+        ChunkProviderGalaxiaPlanet provider = ChunkProviderGalaxiaPlanet.of(world);
+        if (provider != null) return provider.heightOracle()
+            .isAir(x, y, z);
+        return false;
     }
 }

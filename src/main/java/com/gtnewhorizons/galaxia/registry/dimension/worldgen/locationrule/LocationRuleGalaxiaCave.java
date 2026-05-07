@@ -35,7 +35,7 @@ public class LocationRuleGalaxiaCave extends LocationRuleGalaxiaSurface {
         if (super.stopGeneration(world, random, x, y, z)) {
             return true;
         }
-        return !ChunkBoundedAccess.isAirBlockOr(world, x, y, z, false);
+        return !ChunkBoundedAccess.isAirBlock(world, x, y, z);
     }
 
     public int getFrequency() {

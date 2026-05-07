@@ -37,8 +37,7 @@ public class LocationRuleGalaxiaWall extends LocationRuleGalaxiaBase {
         if (random.nextInt(rarity) > 0) {
             return true;
         }
-        net.minecraft.block.Block surfaceBlock = ChunkBoundedAccess.getBlockOr(world, x, y, z, null);
-        if (surfaceBlock == null) return true;
+        Block surfaceBlock = ChunkBoundedAccess.getBlock(world, x, y, z);
         for (Block surfaceRequirement : wallRequirements) {
             if (surfaceBlock == surfaceRequirement) {
                 return false;

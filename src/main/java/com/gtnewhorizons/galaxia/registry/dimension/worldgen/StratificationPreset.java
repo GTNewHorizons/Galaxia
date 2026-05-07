@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
+import java.util.Arrays;
+
 import net.minecraft.block.Block;
 
 public class StratificationPreset {
@@ -10,6 +12,7 @@ public class StratificationPreset {
 
     public StratificationPreset(Block defaultBlock) {
         this.defaultBlock = defaultBlock;
+        Arrays.fill(this.strataMap, defaultBlock);
     }
 
     public StratificationPreset freeze() {
@@ -30,10 +33,6 @@ public class StratificationPreset {
     }
 
     public Block getStrataBlock(int height) {
-        if (height < 0 || height >= strataMap.length) {
-            return defaultBlock;
-        }
-        Block strataBlock = strataMap[height];
-        return strataBlock != null ? strataBlock : defaultBlock;
+        return strataMap[height];
     }
 }

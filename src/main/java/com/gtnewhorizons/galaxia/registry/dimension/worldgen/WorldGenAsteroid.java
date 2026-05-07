@@ -217,7 +217,13 @@ public class WorldGenAsteroid extends WorldGenerator {
         int cx = x >> 4;
         int cz = z >> 4;
         if (!world.getChunkProvider()
-            .chunkExists(cx, cz)) return;
+            .chunkExists(cx, cz)) {
+            ChunkProviderGalaxiaPlanet provider = ChunkProviderGalaxiaPlanet.of(world);
+            if (provider != null) {
+                provider.queueDeferredWrite(cx, cz, x & 15, y, z & 15, block, meta);
+            }
+            return;
+        }
 
         Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
