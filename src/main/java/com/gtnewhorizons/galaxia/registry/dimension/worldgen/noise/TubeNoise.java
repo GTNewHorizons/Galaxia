@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.LinearFunction2D;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.LinearFunction3D;
 
 import java.util.Random;
 
@@ -10,13 +11,14 @@ public class TubeNoise {
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
     private static final byte MINIMUM_TUBE_LENGTH = 100;
-    private static final byte DEVIATION_MARGIN = 4;
-    private static final short Z_SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
-    private static final byte INCLINATION_MULTIPLIER = 8;
+    private static final short DEVIATION_MARGIN = 16;
+    private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
+    private static final byte HORIZONTAL_INCLINATION_MULTIPLIER = 16;
+    private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
 
     private final Random xRandom = new Random();
     private final Random zRandom = new Random();
-    private final LinearFunction2D linearFunction = new LinearFunction2D();
+    private final LinearFunction3D linearFunction = new LinearFunction3D();
 
     private boolean cached = false;
     private long seed;
@@ -35,15 +37,14 @@ public class TubeNoise {
         seed = random.nextLong();
     }
 
-    public boolean isIntersectingTube(int x, int z) {
+    public boolean isIntersectingTube(int x, int y, int z) {
         x = Math.abs(x);
         z = Math.abs(z);
         x += quadrantX << ADDITIONAL_BITSHIFT;
         z += quadrantZ << ADDITIONAL_BITSHIFT;
         if (x > xEndPoint) return false;
         if (x < xStartPoint) return false;
-        float deviation = Math.abs(z - linearFunction.getLocalY(x));
-        return deviation < DEVIATION_MARGIN;
+        return linearFunction.getDeviation(x, y, z) < DEVIATION_MARGIN;
     }
 
     public boolean isInDifferentChunk(int chunkX, int chunkZ) {
@@ -62,10 +63,25 @@ public class TubeNoise {
         zRandom.setSeed(seed + zQuadrant);
         xEndPoint = xRandom.nextInt(COORDINATE_BOUND) + 1;
         xStartPoint = xRandom.nextInt(Math.max(1, xEndPoint - MINIMUM_TUBE_LENGTH));
-        float inclination = xRandom.nextFloat() * INCLINATION_MULTIPLIER;
+        float zInclination = xRandom.nextFloat() * HORIZONTAL_INCLINATION_MULTIPLIER;
         if (xRandom.nextBoolean()) {
-            inclination = -inclination;
+            zInclination = -zInclination;
         }
-        linearFunction.setFunction(zRandom.nextInt(COORDINATE_BOUND) - Z_SHIFT_MARGIN, inclination);
+        float xyInclination = xRandom.nextFloat() * VERTICAL_INCLINATION_MULTIPLIER;
+        if (xRandom.nextBoolean()) {
+            xyInclination = -xyInclination;
+        }
+        float zyInclination = zRandom.nextFloat() * VERTICAL_INCLINATION_MULTIPLIER;
+        if (zRandom.nextBoolean()) {
+            zyInclination = -zyInclination;
+        }
+        linearFunction.setFunction(
+            zRandom.nextInt(COORDINATE_BOUND) - SHIFT_MARGIN,
+            xRandom.nextInt(ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 3),
+            zRandom.nextInt(ChunkProviderGalaxiaPlanet.HEIGHT_LIMIT >> 3),
+            zInclination,
+            xyInclination,
+            zyInclination
+        );
     }
 }

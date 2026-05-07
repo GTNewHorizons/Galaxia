@@ -299,10 +299,10 @@ public class Moon extends BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(PlanetBlocks.MOON_BASALT)
+            .topBlock(Blocks.glass)
             .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
+                new StratificationPreset(Blocks.glass).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(Blocks.stained_glass, 1, 32))
             .caveShape(new CaveShapeTubes())
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(

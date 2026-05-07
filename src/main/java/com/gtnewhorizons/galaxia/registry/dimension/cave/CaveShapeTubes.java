@@ -31,6 +31,6 @@ public class CaveShapeTubes implements CaveShape {
 
     @Override
     public boolean generateCave(int localX, int localY, int localZ, int height) {
-        return caveNoise.isIntersectingTube(localX, localZ);
+        return caveNoise.isIntersectingTube(localX, localY, localZ);
     }
 }

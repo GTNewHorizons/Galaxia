@@ -34,7 +34,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
-    static final int HEIGHT_LIMIT = 256;
+    public static final int HEIGHT_LIMIT = 256;
     private static final double ALLOWED_DIVERGENCE = 0.25;
     private static final StratificationPreset DEFAULT_STONE_FILLER = new StratificationPreset(Blocks.stone).freeze();
 
