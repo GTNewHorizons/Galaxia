@@ -57,6 +57,11 @@ import cpw.mods.fml.common.Loader;
 public final class GalaxiaAPI {
 
     /**
+     * The List of Blocks, which can conduct Machine Block Updates
+     */
+    public static final Map<Block, Integer> sMachineIDs = new ConcurrentHashMap<>();
+
+    /**
      * Gets the gravity on the planet, or returns 1 if failed
      *
      * @param e The entity to check effects on
@@ -438,7 +443,7 @@ public final class GalaxiaAPI {
             if (id != null) {
                 if (id == -1) // for all-meta registrations, also with meta > 32
                     return true;
-                return (id & B[blockMetadata]) != 0;
+                return (id & (1 << blockMetadata)) != 0;
             }
         }
         return false;
