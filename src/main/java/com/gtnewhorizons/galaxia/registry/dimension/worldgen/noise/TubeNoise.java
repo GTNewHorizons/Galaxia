@@ -36,13 +36,7 @@ public class TubeNoise {
         x = Math.abs(x);
         z = Math.abs(z);
         x += quadrantX << ADDITIONAL_BITSHIFT;
-        x += quadrantZ << ADDITIONAL_BITSHIFT;
-//        System.out.println("Local x: " + x);
-//        System.out.println("Local z: " + z);
-//        System.out.println("x start point: " + xStartPoint);
-//        System.out.println("x end point: " + xEndPoint);
-//        System.out.println("z start point: " + zStartPoint);
-//        System.out.println("z end point: " + zEndPoint);
+        z += quadrantZ << ADDITIONAL_BITSHIFT;
         if (x > xEndPoint) return false;
         if (x < xStartPoint) return false;
         if (z > zEndPoint) return false;
@@ -50,7 +44,6 @@ public class TubeNoise {
         float functionInclination = (float) (zEndPoint - zStartPoint) / (xEndPoint - xStartPoint);
         float coordinateInclination = (float) (zEndPoint - z) / (xEndPoint - x);
         float deviation = Math.abs(functionInclination - coordinateInclination);
-//        System.out.println("Deviation: " + deviation);
         return deviation < DEVIATION_MARGIN;
     }
 
