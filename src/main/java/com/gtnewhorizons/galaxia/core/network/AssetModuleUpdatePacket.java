@@ -536,10 +536,9 @@ public final class AssetModuleUpdatePacket {
             .getTierData(module.tier());
         ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
             .getTierData(targetTier);
-        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
-            targetData.constructionCost());
-        Map<ItemStackWrapper, Long> completionRefundCost = FacilityModuleRegistry.operationCost(
-            sourceData.constructionCost());
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(targetData.constructionCost());
+        Map<ItemStackWrapper, Long> completionRefundCost = FacilityModuleRegistry
+            .operationCost(sourceData.constructionCost());
         ModuleOperationPlan plan = new ModuleOperationPlan(
             new HammerModuleOperation(targetTier, targetVariant.name()),
             sourceData.buildTicks(),
@@ -609,8 +608,7 @@ public final class AssetModuleUpdatePacket {
         }
         ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
             .getTierData(module.tier());
-        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
-            sourceData.constructionCost());
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(sourceData.constructionCost());
         module.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
