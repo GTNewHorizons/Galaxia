@@ -45,6 +45,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private static final int BUTTON_H = 16;
     private static final int ACTION_X = 10;
     private static final int ACTION_Y = 40;
+    private static final int ACTION_SECONDARY_Y = ACTION_Y + BUTTON_H + 4;
     private static final int ACTION_BUTTON_WIDTH = 70;
     private static final int CHARGE_BAR_TOP_OFFSET = 2;
     private static final int CHARGE_BAR_HEIGHT = 8;
@@ -59,8 +60,12 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         this.map = map;
         this.configController = configController;
         child(
-            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerBlacklistConfig)
+            createPanelButton(() -> "Blacklist", this::hasMinerSelected, this::openMinerBlacklistConfig)
                 .pos(ACTION_X, ACTION_Y)
+                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
+        child(
+            createPanelButton(() -> "Focus", this::hasMinerSelected, this::openMinerFocusConfig)
+                .pos(ACTION_X, ACTION_SECONDARY_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
             createPanelButton(() -> "Configure", this::hasHammerSelected, this::openHammerConfig)
@@ -345,6 +350,12 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleMiner)) return;
         configController.openMinerBlacklist(selected.moduleIndex);
+    }
+
+    private void openMinerFocusConfig() {
+        if (!(selectedModule() instanceof SelectedModule selected)) return;
+        if (!(selected.module.component() instanceof ModuleMiner)) return;
+        configController.openMinerFocus(selected.moduleIndex);
     }
 
     private void openRecipeInput() {
