@@ -61,6 +61,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         CelestialAsset.ID assetId = pendingAssetId;
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationVisionLayer visionLayer = pendingVisionLayer;
+        StationTilePickerController tilePickerController = new StationTilePickerController();
         ModuleConfigModalController configController = new ModuleConfigModalController(
             panel,
             assetId,
@@ -74,7 +75,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             PADDING,
             PADDING,
             visionLayer,
-            (mouseX, mouseY) -> configController.isOpen() && configController.containsMouse(mouseX, mouseY));
+            (mouseX, mouseY) -> configController.isOpen() && configController.containsMouse(mouseX, mouseY),
+            tilePickerController);
 
         panel.child(
             new StationScreenBackground().left(0)
@@ -87,15 +89,20 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .widthRel(1f)
                 .heightRel(1f));
         panel.child(
-            new StationSidePanelWidget(assetId, map).left(PADDING)
+            new StationSidePanelWidget(assetId, map, tilePickerController).left(PADDING)
                 .top(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.55f, -PADDING * 2));
         panel.child(
-            new ModuleDetailPanel(map, configController).left(PADDING)
+            new ModuleDetailPanel(map, configController, tilePickerController).left(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));
+        panel.child(
+            new StationTilePickerControlsWidget(tilePickerController).left(PADDING)
+                .top(PADDING)
+                .width(StationTilePickerControlsWidget.WIDTH)
+                .height(StationTilePickerControlsWidget.HEIGHT));
         panel.child(
             new ModalInputBlocker(configController).left(0)
                 .top(0)

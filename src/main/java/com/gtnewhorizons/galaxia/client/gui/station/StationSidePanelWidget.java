@@ -34,6 +34,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
+    private final @Nullable StationTilePickerController tilePickerController;
     private @Nullable StationTileCoord armedDestroySelection;
     private @Nullable StationTileCoord cachedDestroySelection;
     private @Nullable StationLayout cachedDestroyLayout;
@@ -43,8 +44,14 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private int cachedDestroyModuleIndex = -1;
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map) {
+        this(assetId, map, null);
+    }
+
+    public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
+        @Nullable StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.map = map;
+        this.tilePickerController = tilePickerController;
         child(
             createDestroyButton().pos(DESTROY_BUTTON_X, DESTROY_BUTTON_Y)
                 .size(DESTROY_BUTTON_WIDTH, DESTROY_BUTTON_HEIGHT));
@@ -66,6 +73,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     @Override
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+        if (isPickerActive()) return;
         int x = 0;
         int y = 0;
         int width = getArea().width;
@@ -209,7 +217,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private boolean canDestroySelected() {
-        return selectedModuleIndex() >= 0;
+        return !isPickerActive() && selectedModuleIndex() >= 0;
     }
 
     private int selectedModuleIndex() {
@@ -279,5 +287,9 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
+    }
+
+    private boolean isPickerActive() {
+        return tilePickerController != null && tilePickerController.isActive();
     }
 }

@@ -54,10 +54,17 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
     private final ModuleConfigModalController configController;
+    private final @Nullable StationTilePickerController tilePickerController;
 
     public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController) {
+        this(map, configController, null);
+    }
+
+    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController,
+        @Nullable StationTilePickerController tilePickerController) {
         this.map = map;
         this.configController = configController;
+        this.tilePickerController = tilePickerController;
         child(
             createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerConfig)
                 .pos(ACTION_X, ACTION_Y)
@@ -74,12 +81,13 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
     @Override
     public boolean canHoverThrough() {
-        return false;
+        return isPickerActive();
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+        if (isPickerActive()) return;
         StationTileCoord selected = map.selection();
         if (selected == null) return;
 
@@ -321,16 +329,19 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     }
 
     private boolean hasHammerSelected() {
+        if (isPickerActive()) return false;
         return selectedModule() instanceof SelectedModule selected
             && selected.module.component() instanceof ModuleHammer;
     }
 
     private boolean hasMinerSelected() {
+        if (isPickerActive()) return false;
         return selectedModule() instanceof SelectedModule selected
             && selected.module.component() instanceof ModuleMiner;
     }
 
     private boolean hasRecipeModuleSelected() {
+        if (isPickerActive()) return false;
         return selectedModule() instanceof SelectedModule selected
             && selected.module.component() instanceof IRecipeModule;
     }
@@ -381,6 +392,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private @Nullable AutomatedFacility resolveFacility() {
         CelestialAsset.ID id = map.assetId();
         return id != null && CelestialClient.getByAssetId(id) instanceof AutomatedFacility f ? f : null;
+    }
+
+    private boolean isPickerActive() {
+        return tilePickerController != null && tilePickerController.isActive();
     }
 
     private record SelectedModule(AutomatedFacility facility, ModuleInstance module, int moduleIndex) {}
