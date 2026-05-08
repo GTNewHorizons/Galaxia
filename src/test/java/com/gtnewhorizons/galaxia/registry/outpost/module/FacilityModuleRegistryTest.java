@@ -75,8 +75,10 @@ final class FacilityModuleRegistryTest {
         assertEquals(32L, data.powerDrawEuPerTick());
         assertEquals(10, data.cooldownTicks());
         assertEquals(4096L, data.capacity());
-        assertEquals(2L, data.constructionCost()
-            .get(material));
+        assertEquals(
+            2L,
+            data.constructionCost()
+                .get(material));
         assertEquals(200, data.buildTicks());
         assertEquals(80, data.completionRefundPercent());
     }
@@ -95,8 +97,10 @@ final class FacilityModuleRegistryTest {
             .refundPercent(50)
             .build();
 
-        assertEquals(600, data.variantCooldowns()
-            .get("BIG"));
+        assertEquals(
+            600,
+            data.variantCooldowns()
+                .get("BIG"));
         assertEquals(40, data.buildTicks());
         assertEquals(50, data.completionRefundPercent());
     }

@@ -352,7 +352,8 @@ public class FacilityModuleRegistry {
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .cost(cost)
-                    .build()) != null) {
+                    .build())
+                != null) {
                 throw new IllegalArgumentException("Duplicate tier entry: " + tier);
             }
             return this;
@@ -368,7 +369,8 @@ public class FacilityModuleRegistry {
                     .cooldown(cooldown)
                     .capacity(capacity)
                     .cost(cost)
-                    .build()) != null) {
+                    .build())
+                != null) {
                 throw new IllegalArgumentException("Duplicate tier entry: " + tier);
             }
             return this;
@@ -384,7 +386,8 @@ public class FacilityModuleRegistry {
                     .cooldown(cooldown)
                     .variantCooldowns(variantCooldowns)
                     .cost(cost)
-                    .build()) != null) {
+                    .build())
+                != null) {
                 throw new IllegalArgumentException("Duplicate tier entry: " + tier);
             }
             return this;
