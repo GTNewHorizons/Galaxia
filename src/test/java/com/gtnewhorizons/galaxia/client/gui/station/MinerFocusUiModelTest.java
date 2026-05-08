@@ -57,6 +57,22 @@ final class MinerFocusUiModelTest {
     }
 
     @Test
+    void oreCanBeSetWhileModuleHasBuildInProgress() {
+        ModuleInstance module = minerModule();
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.I, null, 0);
+        module.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), null),
+                    2,
+                    java.util.Map.of(),
+                    false)));
+
+        assertTrue(MinerFocusUiModel.canSetOre(module, "ore:iron"));
+    }
+
+    @Test
     void selectedOreClickClearsTarget() {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();

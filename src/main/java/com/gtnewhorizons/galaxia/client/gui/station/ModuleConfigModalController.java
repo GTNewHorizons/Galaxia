@@ -16,8 +16,7 @@ final class ModuleConfigModalController {
         HAMMER,
         HAMMER_UPGRADE,
         LOGISTICS,
-        MINER_BLACKLIST,
-        MINER_FOCUS
+        MINER_BLACKLIST
     }
 
     private final ModularPanel host;
@@ -29,7 +28,6 @@ final class ModuleConfigModalController {
     private Kind kind = Kind.NONE;
     private ModuleInstance.ID moduleId;
     private int minerBlacklistPage;
-    private int minerFocusPage;
     private boolean minerSettingsGroupMenuOpen;
     private boolean moduleOperationCancelArmed;
     private HammerVariant hammerUpgradeVariant = HammerVariant.BASE;
@@ -51,7 +49,6 @@ final class ModuleConfigModalController {
         this.kind = Kind.HAMMER;
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
-        this.minerFocusPage = 0;
         this.minerSettingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
@@ -107,7 +104,6 @@ final class ModuleConfigModalController {
         this.kind = Kind.MINER_BLACKLIST;
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
-        this.minerFocusPage = 0;
         this.minerSettingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
@@ -120,24 +116,6 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
-    void openMinerFocus(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        close();
-        this.kind = Kind.MINER_FOCUS;
-        this.moduleId = targetModuleId;
-        this.minerFocusPage = 0;
-        this.moduleOperationCancelArmed = false;
-
-        MinerFocusConfigModalWidget widget = new MinerFocusConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(MinerFocusConfigModalWidget.WIDTH)
-            .height(MinerFocusConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
-    }
-
     void close() {
         if (modal != null) {
             host.remove(modal);
@@ -146,7 +124,6 @@ final class ModuleConfigModalController {
         this.kind = Kind.NONE;
         this.moduleId = null;
         this.minerBlacklistPage = 0;
-        this.minerFocusPage = 0;
         this.minerSettingsGroupMenuOpen = false;
         this.hammerUpgradeVariant = HammerVariant.BASE;
         this.hammerUpgradeTier = ModuleTier.EV;
@@ -183,7 +160,6 @@ final class ModuleConfigModalController {
             case HAMMER_UPGRADE -> retargetHammerUpgrade(module);
             case LOGISTICS -> retargetLogistics(module);
             case MINER_BLACKLIST -> retargetMinerBlacklist(module);
-            case MINER_FOCUS -> retargetMinerFocus(module);
             case NONE -> {}
         }
     }
@@ -198,10 +174,6 @@ final class ModuleConfigModalController {
 
     boolean isMinerBlacklistOpen() {
         return kind == Kind.MINER_BLACKLIST;
-    }
-
-    boolean isMinerFocusOpen() {
-        return kind == Kind.MINER_FOCUS;
     }
 
     boolean isLogisticsOpen() {
@@ -223,14 +195,6 @@ final class ModuleConfigModalController {
 
     void setMinerBlacklistPage(int minerBlacklistPage) {
         this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
-    }
-
-    int minerFocusPage() {
-        return minerFocusPage;
-    }
-
-    void setMinerFocusPage(int minerFocusPage) {
-        this.minerFocusPage = Math.max(0, minerFocusPage);
     }
 
     boolean isMinerSettingsGroupMenuOpen() {
@@ -334,13 +298,4 @@ final class ModuleConfigModalController {
         moduleOperationCancelArmed = false;
     }
 
-    private void retargetMinerFocus(ModuleInstance module) {
-        if (!(module.component() instanceof ModuleMiner)) {
-            close();
-            return;
-        }
-        moduleId = module.id;
-        minerFocusPage = 0;
-        moduleOperationCancelArmed = false;
-    }
 }

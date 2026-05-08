@@ -21,8 +21,7 @@ final class MinerFocusUiModel {
         ModuleMiner miner = miner(module);
         return miner != null && oreKey != null
             && !oreKey.isBlank()
-            && miner.focusTier() != MinerFocusTier.NONE
-            && !hasActiveOperation(module);
+            && miner.focusTier() != MinerFocusTier.NONE;
     }
 
     static @Nullable String oreTargetForClick(@Nullable ModuleInstance module, @Nullable String oreKey) {
