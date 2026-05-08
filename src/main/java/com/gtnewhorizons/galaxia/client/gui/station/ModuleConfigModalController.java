@@ -29,6 +29,7 @@ final class ModuleConfigModalController {
     private ModuleInstance.ID moduleId;
     private int minerBlacklistPage;
     private boolean minerSettingsGroupMenuOpen;
+    private boolean moduleOperationCancelArmed;
     private HammerVariant hammerUpgradeVariant = HammerVariant.BASE;
     private ModuleTier hammerUpgradeTier = ModuleTier.EV;
     private boolean hammerUpgradeReserveItems;
@@ -49,6 +50,7 @@ final class ModuleConfigModalController {
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
+        this.moduleOperationCancelArmed = false;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
         widget.left(x)
@@ -103,6 +105,7 @@ final class ModuleConfigModalController {
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
+        this.moduleOperationCancelArmed = false;
 
         MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this);
         widget.left(x)
@@ -126,6 +129,7 @@ final class ModuleConfigModalController {
         this.hammerUpgradeTier = ModuleTier.EV;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
+        this.moduleOperationCancelArmed = false;
     }
 
     boolean isOpen() {
@@ -205,6 +209,18 @@ final class ModuleConfigModalController {
         minerSettingsGroupMenuOpen = false;
     }
 
+    boolean isModuleOperationCancelArmed() {
+        return moduleOperationCancelArmed;
+    }
+
+    void armModuleOperationCancel() {
+        moduleOperationCancelArmed = true;
+    }
+
+    void clearModuleOperationCancel() {
+        moduleOperationCancelArmed = false;
+    }
+
     HammerVariant hammerUpgradeVariant() {
         return hammerUpgradeVariant;
     }
@@ -250,6 +266,7 @@ final class ModuleConfigModalController {
             return;
         }
         moduleId = module.id;
+        moduleOperationCancelArmed = false;
     }
 
     private void retargetHammerUpgrade(ModuleInstance module) {
@@ -262,10 +279,12 @@ final class ModuleConfigModalController {
         hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(hammer.variant(), module.tier());
         hammerUpgradeReserveItems = false;
         hammerUpgradeVoidRefund = false;
+        moduleOperationCancelArmed = false;
     }
 
     private void retargetLogistics(ModuleInstance module) {
         moduleId = module.id;
+        moduleOperationCancelArmed = false;
     }
 
     private void retargetMinerBlacklist(ModuleInstance module) {
@@ -276,5 +295,6 @@ final class ModuleConfigModalController {
         moduleId = module.id;
         minerBlacklistPage = 0;
         minerSettingsGroupMenuOpen = false;
+        moduleOperationCancelArmed = false;
     }
 }

@@ -34,6 +34,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
@@ -362,6 +363,30 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyNonHammerTierCreatesPhysicalOperationWithoutMutatingTier() {
+        AutomatedFacility facility = addModuleFacilityToServer(FacilityModuleKind.STORAGE, ModuleTier.HV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.EV);
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.HV, module.tier());
+        assertNotNull(module.operationOrNull());
+        assertTrue(
+            module.operationOrNull()
+                .plan()
+                .spec() instanceof ModuleTierOperation);
+        assertEquals(
+            ModuleTier.EV,
+            module.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
     void applyHammerUpgradePlanCreatesSingleTargetSpecWithReserveFlag() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
@@ -648,12 +673,16 @@ final class AssetModuleUpdatePacketTest {
     }
 
     private static AutomatedFacility addHammerFacilityToServer(ModuleTier tier) {
+        return addModuleFacilityToServer(FacilityModuleKind.HAMMER, tier);
+    }
+
+    private static AutomatedFacility addModuleFacilityToServer(FacilityModuleKind kind, ModuleTier tier) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.HAMMER.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;

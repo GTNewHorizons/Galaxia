@@ -53,6 +53,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleO
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -341,6 +342,38 @@ final class FacilityPersistenceManagerTest {
             37,
             decodedOperation.plan()
                 .buildTicks());
+    }
+
+    @Test
+    void moduleTierOperationRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance module = station.modules()
+            .get(1);
+        module.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 37, Map.of(), false)));
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleOperationState decodedOperation = decoded.modules()
+            .get(1)
+            .operationOrNull();
+        assertNotNull(decodedOperation);
+        assertTrue(
+            decodedOperation.plan()
+                .spec() instanceof ModuleTierOperation);
+        assertEquals(
+            ModuleTier.IV,
+            decodedOperation.plan()
+                .spec()
+                .targetTier());
     }
 
     @Test

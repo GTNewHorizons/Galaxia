@@ -60,6 +60,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -385,7 +386,7 @@ public final class FacilityPersistenceManager {
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
-            mj.moduleOperation = encodeModuleOperation(m.operationOrNull());
+            mj.moduleOperation = encodeModuleOperation(m.kind(), m.operationOrNull());
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
@@ -1117,7 +1118,7 @@ public final class FacilityPersistenceManager {
         }
     }
 
-    private static ModuleOperationJson encodeModuleOperation(ModuleOperationState operation) {
+    private static ModuleOperationJson encodeModuleOperation(FacilityModuleKind moduleKind, ModuleOperationState operation) {
         if (operation == null) return null;
         ModuleOperationJson json = new ModuleOperationJson();
         ModuleOperationPlan plan = operation.plan();
@@ -1136,6 +1137,11 @@ public final class FacilityPersistenceManager {
                 .name();
             json.targetFocusTierKey = minerSpec.targetFocusTierKey();
             json.targetFocusOreKey = minerSpec.targetFocusOreKey();
+        } else if (plan.spec() instanceof ModuleTierOperation tierSpec) {
+            json.specType = "MODULE_TIER";
+            json.targetModuleKind = moduleKind.name();
+            json.targetTier = tierSpec.targetTier()
+                .name();
         }
         json.buildTicks = plan.buildTicks();
         json.completionRefundPercent = plan.completionRefundPercent();
@@ -1174,6 +1180,11 @@ public final class FacilityPersistenceManager {
             spec = new HammerModuleOperation(targetTier, json.targetVariantKey);
         } else if ("MINER_FOCUS".equals(json.specType)) {
             spec = new MinerFocusOperation(targetTier, json.targetFocusTierKey, json.targetFocusOreKey);
+        } else if ("MODULE_TIER".equals(json.specType)) {
+            if (regKind == null) {
+                throw new IllegalStateException("[PERSIST] Module " + moduleId + " tier operation is missing target kind");
+            }
+            spec = new ModuleTierOperation(targetTier);
         } else {
             throw new IllegalStateException(
                 "[PERSIST] Module " + moduleId + " has unknown spec type: " + json.specType);

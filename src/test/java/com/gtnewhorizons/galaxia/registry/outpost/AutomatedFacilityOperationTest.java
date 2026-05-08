@@ -31,6 +31,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -252,6 +253,22 @@ final class AutomatedFacilityOperationTest {
         assertEquals(0, miner.focusAlignmentProgress());
     }
 
+    @Test
+    void tickCompletesGenericTierOperation() {
+        AutomatedFacility facility = facilityWithStorage();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.waiting(tierOperationPlan(2, ModuleTier.EV))
+                .beginBuilding());
+
+        facility.tick();
+        facility.tick();
+
+        assertNull(module.operationOrNull());
+        assertEquals(ModuleTier.EV, module.tier());
+    }
+
     private static AutomatedFacility facilityWithHammer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -272,6 +289,18 @@ final class AutomatedFacilityOperationTest {
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = FacilityModuleKind.MINER
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        facility.addModule(module);
+        return facility;
+    }
+
+    private static AutomatedFacility facilityWithStorage() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance module = FacilityModuleKind.STORAGE
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         facility.addModule(module);
         return facility;
     }
@@ -307,6 +336,10 @@ final class AutomatedFacilityOperationTest {
             Map.of(),
             false,
             true);
+    }
+
+    private static ModuleOperationPlan tierOperationPlan(int buildTicks, ModuleTier targetTier) {
+        return new ModuleOperationPlan(new ModuleTierOperation(targetTier), buildTicks, Map.of(), false, true);
     }
 
     private static ItemStack material() {

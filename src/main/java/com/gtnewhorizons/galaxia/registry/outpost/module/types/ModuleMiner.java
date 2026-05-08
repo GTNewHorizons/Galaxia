@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 
 public final class ModuleMiner implements IModuleComponent, IParallelModule {
 
@@ -96,6 +97,10 @@ public final class ModuleMiner implements IModuleComponent, IParallelModule {
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
+        if (spec instanceof ModuleTierOperation tierSpec) {
+            module.setTier(tierSpec.targetTier());
+            return;
+        }
         if (!(spec instanceof MinerFocusOperation minerSpec)) {
             throw new IllegalStateException(
                 "MINER cannot handle " + spec.getClass()

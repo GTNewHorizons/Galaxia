@@ -35,6 +35,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleO
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -501,9 +502,7 @@ public final class AssetModuleUpdatePacket {
                 if (module.component() instanceof ModuleHammer hammer) {
                     planHammerUpgrade(state, module, hammer, hammer.variant(), tier, creative);
                 } else {
-                    module.setTier(tier);
-                    state.layoutCache()
-                        .applyMutation(MutationKind.SET_TIER, module.kind(), module);
+                    planModuleTierUpgrade(state, module, tier, creative);
                 }
             }
             case SET_PRIORITY -> {
@@ -560,6 +559,43 @@ public final class AssetModuleUpdatePacket {
             .isTerminal()) {
             LOG.warn(
                 "Rejected hammer upgrade for module {} because operation {} is active",
+                module.id,
+                existingOperation.phase());
+            return false;
+        }
+        module.setOperation(ModuleOperationState.waiting(plan));
+        return true;
+    }
+
+    private static boolean planModuleTierUpgrade(AutomatedFacility state, ModuleInstance module, ModuleTier targetTier,
+        boolean creative) {
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
+        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(targetTier);
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(targetData.constructionCost());
+        Map<ItemStackWrapper, Long> completionRefundCost = FacilityModuleRegistry
+            .operationCost(sourceData.constructionCost());
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new ModuleTierOperation(targetTier),
+            sourceData.buildTicks(),
+            cost,
+            completionRefundCost,
+            sourceData.completionRefundPercent(),
+            false,
+            false);
+        if (creative) {
+            if (state == null) {
+                throw new IllegalStateException("Creative tier upgrade requires facility state for module " + module.id);
+            }
+            state.applyCreativeModuleOperation(module, plan);
+            return true;
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            LOG.warn(
+                "Rejected tier upgrade for module {} because operation {} is active",
                 module.id,
                 existingOperation.phase());
             return false;
