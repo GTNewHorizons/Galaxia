@@ -240,11 +240,18 @@ public final class CelestialClient {
                 .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems, voidCompletionRefund));
     }
 
-    public static void planMinerFocus(ID assetId, int moduleIndex, MinerFocusTier focusTier, String oreKey) {
+    public static void planMinerFocusTier(ID assetId, int moduleIndex, MinerFocusTier focusTier) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.minerFocusPlan(assetId, moduleIndex, module.id, focusTier, oreKey));
+            module -> AssetModuleUpdatePacket.minerFocusTierPlan(assetId, moduleIndex, module.id, focusTier));
+    }
+
+    public static void setMinerFocusOre(ID assetId, int moduleIndex, String oreKey) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerFocusOre(assetId, moduleIndex, module.id, oreKey));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

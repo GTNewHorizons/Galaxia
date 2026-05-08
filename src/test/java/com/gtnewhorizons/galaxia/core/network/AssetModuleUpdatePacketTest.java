@@ -36,6 +36,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -526,15 +527,21 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyMinerFocusPlanCreatesPhysicalOperation() {
+    void applyMinerFocusTierPlanCreatesPhysicalOperationWithoutChangingOreImmediately() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
+
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.minerFocusPlan(facility.assetId, 0, module.id, MinerFocusTier.II, "ore:iron"));
+            AssetModuleUpdatePacket.minerFocusTierPlan(facility.assetId, 0, module.id, MinerFocusTier.II));
 
         packet.apply(TEAM);
 
+        assertEquals(MinerFocusTier.I, miner.focusTier());
+        assertEquals("ore:iron", miner.focusOreKeyOrNull());
+        assertEquals(1200, miner.focusAlignmentProgress());
         assertNotNull(module.operationOrNull());
         assertEquals(
             ModuleOperationPhase.WAITING_FOR_MATERIALS,
@@ -550,6 +557,24 @@ final class AssetModuleUpdatePacketTest {
             ((MinerFocusOperation) module.operationOrNull()
                 .plan()
                 .spec()).targetFocusOreKey());
+    }
+
+    @Test
+    void applyMinerFocusOreUpdatesRuntimeConfigAndResetsAlignment() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerFocusOre(facility.assetId, 0, module.id, "ore:gold"));
+
+        packet.apply(TEAM);
+
+        assertNull(module.operationOrNull());
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertEquals("ore:gold", miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
     }
 
     @Test

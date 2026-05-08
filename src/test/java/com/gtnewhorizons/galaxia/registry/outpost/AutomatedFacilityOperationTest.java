@@ -235,11 +235,12 @@ final class AutomatedFacilityOperationTest {
     }
 
     @Test
-    void tickCompletesMinerFocusOperationAndResetsAlignment() {
+    void tickCompletesMinerFocusTierOperationAndResetsAlignment() {
         AutomatedFacility facility = facilityWithMiner();
         ModuleInstance module = facility.modules()
             .get(0);
         ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
         module.setOperation(
             ModuleOperationState.waiting(minerFocusPlan(2))
                 .beginBuilding());
@@ -250,6 +251,31 @@ final class AutomatedFacilityOperationTest {
         assertNull(module.operationOrNull());
         assertEquals(MinerFocusTier.II, miner.focusTier());
         assertEquals("ore:iron", miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
+    }
+
+    @Test
+    void tickCompletesMinerFocusTierOperationWithoutSelectedOre() {
+        AutomatedFacility facility = facilityWithMiner();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+        module.setOperation(
+            ModuleOperationState
+                .waiting(new ModuleOperationPlan(
+                    new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), null),
+                    2,
+                    Map.of(),
+                    false,
+                    true))
+                .beginBuilding());
+
+        facility.tick();
+        facility.tick();
+
+        assertNull(module.operationOrNull());
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertNull(miner.focusOreKeyOrNull());
         assertEquals(0, miner.focusAlignmentProgress());
     }
 

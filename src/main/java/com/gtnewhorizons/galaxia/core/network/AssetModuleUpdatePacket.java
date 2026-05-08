@@ -159,13 +159,19 @@ public final class AssetModuleUpdatePacket {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket minerFocusPlan(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, MinerFocusTier focusTier, String oreKey) {
+    public static AssetModuleUpdatePacket minerFocusTierPlan(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, MinerFocusTier focusTier) {
         if (focusTier == null) {
             throw new IllegalArgumentException("focusTier must not be null");
         }
-        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_MINER_FOCUS);
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_MINER_FOCUS_TIER);
         pkt.bytePayload = (byte) focusTier.ordinal();
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket minerFocusOre(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, String oreKey) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_MINER_FOCUS_ORE);
         pkt.stringPayload = oreKey == null ? "" : oreKey;
         return pkt;
     }
@@ -240,7 +246,8 @@ public final class AssetModuleUpdatePacket {
         SET_ALLOW_SHOOTING_THRESHOLD,
         SET_HAMMER_VARIANT,
         PLAN_HAMMER_UPGRADE,
-        PLAN_MINER_FOCUS,
+        PLAN_MINER_FOCUS_TIER,
+        SET_MINER_FOCUS_ORE,
         SET_ROUTE_PRIORITY,
         SET_TIER,
         SET_PRIORITY,
@@ -273,10 +280,8 @@ public final class AssetModuleUpdatePacket {
                     PacketUtil.writeString(buf, stringPayload);
                     buf.writeByte(bytePayload);
                 }
-                case PLAN_MINER_FOCUS -> {
-                    buf.writeByte(bytePayload);
-                    PacketUtil.writeString(buf, stringPayload);
-                }
+                case PLAN_MINER_FOCUS_TIER -> buf.writeByte(bytePayload);
+                case SET_MINER_FOCUS_ORE -> PacketUtil.writeString(buf, stringPayload);
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
                 case PLAN_HAMMER_UPGRADE -> {
                     if (rawPayload == null || rawPayload.length != HAMMER_UPGRADE_PAYLOAD_BYTES) {
@@ -331,10 +336,8 @@ public final class AssetModuleUpdatePacket {
                     throw new IllegalStateException("invalid miner blacklist flag: " + bytePayload);
                 }
             }
-            case PLAN_MINER_FOCUS -> {
-                bytePayload = buf.readByte();
-                stringPayload = PacketUtil.readString(buf);
-            }
+            case PLAN_MINER_FOCUS_TIER -> bytePayload = buf.readByte();
+            case SET_MINER_FOCUS_ORE -> stringPayload = PacketUtil.readString(buf);
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
             case PLAN_HAMMER_UPGRADE -> {
                 if (buf.readableBytes() < HAMMER_UPGRADE_PAYLOAD_BYTES) {
@@ -482,7 +485,8 @@ public final class AssetModuleUpdatePacket {
                 planHammerUpgrade(state, module, hammer, variant, tier, creative);
             }
             case PLAN_HAMMER_UPGRADE -> handleHammerUpgradePlan(packet, state, module, creative);
-            case PLAN_MINER_FOCUS -> handleMinerFocusPlan(packet, module);
+            case PLAN_MINER_FOCUS_TIER -> handleMinerFocusTierPlan(packet, state, module, creative);
+            case SET_MINER_FOCUS_ORE -> handleMinerFocusOre(packet, module);
             case SET_ROUTE_PRIORITY -> {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
                     throw new IllegalStateException("SET_ROUTE_PRIORITY sent to non-hammer module " + module.id);
@@ -623,18 +627,31 @@ public final class AssetModuleUpdatePacket {
         planHammerUpgrade(state, module, hammer, variant, tier, reserveItems, voidCompletionRefund, creative);
     }
 
-    private static void handleMinerFocusPlan(AssetModuleUpdatePacket packet, ModuleInstance module) {
+    private static void handleMinerFocusTierPlan(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module, boolean creative) {
         if (!(module.component() instanceof ModuleMiner miner)) {
-            throw new IllegalStateException("PLAN_MINER_FOCUS sent to non-miner module " + module.id);
+            throw new IllegalStateException("PLAN_MINER_FOCUS_TIER sent to non-miner module " + module.id);
         }
         MinerFocusTier targetTier = PacketUtil
             .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), MinerFocusTier.class);
         if (targetTier == null) {
-            throw new IllegalStateException("PLAN_MINER_FOCUS invalid tier for module " + module.id);
+            throw new IllegalStateException("PLAN_MINER_FOCUS_TIER invalid tier for module " + module.id);
         }
-        String targetOreKey = targetTier == MinerFocusTier.NONE ? null : packet.stringPayload;
-        if (targetTier != MinerFocusTier.NONE && (targetOreKey == null || targetOreKey.isBlank())) {
-            throw new IllegalStateException("PLAN_MINER_FOCUS missing target ore for module " + module.id);
+        String targetOreKey = targetTier == MinerFocusTier.NONE ? null : miner.focusOreKeyOrNull();
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(sourceData.constructionCost());
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new MinerFocusOperation(module.tier(), targetTier.name(), targetOreKey),
+            sourceData.buildTicks(),
+            cost,
+            cost,
+            sourceData.completionRefundPercent(),
+            false,
+            false);
+        if (creative) {
+            state.applyCreativeModuleOperation(module, plan);
+            return;
         }
         ModuleOperationState existingOperation = module.operationOrNull();
         if (existingOperation != null && !existingOperation.phase()
@@ -642,19 +659,16 @@ public final class AssetModuleUpdatePacket {
             throw new IllegalStateException(
                 "Module " + module.id + " already has active operation " + existingOperation.phase());
         }
-        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
-            .getTierData(module.tier());
-        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(sourceData.constructionCost());
-        module.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(
-                    new MinerFocusOperation(module.tier(), targetTier.name(), targetOreKey),
-                    sourceData.buildTicks(),
-                    cost,
-                    cost,
-                    sourceData.completionRefundPercent(),
-                    false,
-                    false)));
+        module.setOperation(ModuleOperationState.waiting(plan));
+    }
+
+    private static void handleMinerFocusOre(AssetModuleUpdatePacket packet, ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner miner)) {
+            throw new IllegalStateException("SET_MINER_FOCUS_ORE sent to non-miner module " + module.id);
+        }
+        String targetOreKey = packet.stringPayload == null || packet.stringPayload.isBlank() ? null
+            : packet.stringPayload;
+        miner.setFocusOre(targetOreKey);
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
