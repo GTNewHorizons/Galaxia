@@ -240,6 +240,23 @@ public final class CelestialClient {
                 .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems, voidCompletionRefund));
     }
 
+    public static void planModuleUpgradeTargets(ID assetId, int moduleIndex, ModuleTier tier,
+        @Nullable HammerVariant variant, boolean reserveItems, boolean voidCompletionRefund,
+        List<StationTileCoord> targetCoords) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.moduleUpgradeTargets(
+                assetId,
+                moduleIndex,
+                module.id,
+                tier,
+                variant,
+                reserveItems,
+                voidCompletionRefund,
+                targetCoords));
+    }
+
     public static void planMinerFocusTier(ID assetId, int moduleIndex, MinerFocusTier focusTier) {
         sendModuleUpdate(
             assetId,

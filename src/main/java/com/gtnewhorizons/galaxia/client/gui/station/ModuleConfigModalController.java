@@ -79,7 +79,7 @@ final class ModuleConfigModalController {
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
 
-        HammerUpgradeModalWidget widget = new HammerUpgradeModalWidget(assetId, this);
+        HammerUpgradeModalWidget widget = new HammerUpgradeModalWidget(assetId, this, tilePickerController);
         widget.left(x)
             .top(y)
             .width(HammerUpgradeModalWidget.WIDTH)

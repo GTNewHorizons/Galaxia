@@ -1,0 +1,101 @@
+package com.gtnewhorizons.galaxia.client.gui.station;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Map;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+
+final class ModuleUpgradePickerModelTest {
+
+    @BeforeAll
+    static void initRegistries() {
+        CelestialRegistry.freezeAndBake();
+        FacilityModuleRegistry.init();
+    }
+
+    @Test
+    void hammerTargetMustBeDifferentInactiveHammerThatChangesSpec() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.HAMMER, ModuleTier.EV);
+
+        assertFalse(
+            ModuleUpgradePickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                test.source().anchor()));
+        assertTrue(
+            ModuleUpgradePickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                test.target().anchor()));
+        assertFalse(
+            ModuleUpgradePickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                ModuleTier.EV,
+                HammerVariant.BASE,
+                test.target().anchor()));
+    }
+
+    @Test
+    void activeBuildTargetIsNotCompatible() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.STORAGE, ModuleTier.HV);
+        test.target()
+            .setOperation(
+                ModuleOperationState.waiting(
+                    new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.EV), 1, Map.of(), false)));
+
+        assertFalse(
+            ModuleUpgradePickerModel
+                .isCompatibleTarget(test.facility(), test.source(), ModuleTier.EV, null, test.target().anchor()));
+    }
+
+    @Test
+    void normalizeTargetReturnsModuleAnchor() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.STORAGE, ModuleTier.HV);
+
+        assertEquals(
+            test.target().anchor(),
+            ModuleUpgradePickerModel.normalizeTarget(test.facility(), test.target().anchor()));
+    }
+
+    private static TestFacility twoModuleFacility(FacilityModuleKind kind, ModuleTier tier) {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance source = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        ModuleInstance target = kind.create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, tier);
+        facility.addModule(source);
+        facility.addModule(target);
+        facility.stationLayout()
+            .place(source);
+        facility.stationLayout()
+            .place(target);
+        return new TestFacility(facility, source, target);
+    }
+
+    private record TestFacility(AutomatedFacility facility, ModuleInstance source, ModuleInstance target) {}
+}

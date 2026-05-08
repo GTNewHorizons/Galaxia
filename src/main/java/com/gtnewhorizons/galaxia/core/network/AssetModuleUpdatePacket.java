@@ -62,6 +62,10 @@ public final class AssetModuleUpdatePacket {
     private static final int HAMMER_UPGRADE_PAYLOAD_BYTES = 4;
     private static final int MAX_TILE_PICKER_TARGETS = 256;
     private static final int MAX_TILE_COORD_PAYLOAD_BYTES = Integer.BYTES + MAX_TILE_PICKER_TARGETS * Integer.BYTES * 2;
+    private static final int MODULE_UPGRADE_TARGET_HEADER_BYTES = 4;
+    private static final int MAX_MODULE_UPGRADE_TARGET_PAYLOAD_BYTES = MODULE_UPGRADE_TARGET_HEADER_BYTES
+        + MAX_TILE_COORD_PAYLOAD_BYTES;
+    private static final int NO_HAMMER_VARIANT = 255;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
@@ -205,6 +209,43 @@ public final class AssetModuleUpdatePacket {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket moduleUpgradeTargets(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ModuleTier targetTier, @Nullable HammerVariant targetHammerVariant,
+        boolean reserveItems, boolean voidCompletionRefund, List<StationTileCoord> targetCoords) {
+        Objects.requireNonNull(targetTier, "targetTier");
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_MODULE_UPGRADE_TARGETS);
+        byte[] targetPayload = encodeTileCoordPayload(targetCoords);
+        ByteBuf payloadBuf = Unpooled.buffer(MODULE_UPGRADE_TARGET_HEADER_BYTES + targetPayload.length);
+        payloadBuf.writeByte(targetTier.ordinal());
+        payloadBuf.writeByte(targetHammerVariant == null ? NO_HAMMER_VARIANT : targetHammerVariant.ordinal());
+        payloadBuf.writeBoolean(reserveItems);
+        payloadBuf.writeBoolean(voidCompletionRefund);
+        payloadBuf.writeBytes(targetPayload);
+        pkt.rawPayload = new byte[payloadBuf.writerIndex()];
+        payloadBuf.readBytes(pkt.rawPayload);
+        return pkt;
+    }
+
+    private static byte[] encodeTileCoordPayload(List<StationTileCoord> targetCoords) {
+        Objects.requireNonNull(targetCoords, "targetCoords");
+        if (targetCoords.isEmpty()) {
+            throw new IllegalArgumentException("tile target list must not be empty");
+        }
+        if (targetCoords.size() > MAX_TILE_PICKER_TARGETS) {
+            throw new IllegalArgumentException("too many tile targets: " + targetCoords.size());
+        }
+        ByteBuf payloadBuf = Unpooled.buffer(Integer.BYTES + targetCoords.size() * Integer.BYTES * 2);
+        payloadBuf.writeInt(targetCoords.size());
+        for (StationTileCoord coord : targetCoords) {
+            Objects.requireNonNull(coord, "target coord");
+            payloadBuf.writeInt(coord.dx());
+            payloadBuf.writeInt(coord.dy());
+        }
+        byte[] payload = new byte[payloadBuf.writerIndex()];
+        payloadBuf.readBytes(payload);
+        return payload;
+    }
+
     static List<StationTileCoord> decodeTileCoordPayload(byte[] payload) {
         if (payload == null || payload.length < Integer.BYTES || payload.length > MAX_TILE_COORD_PAYLOAD_BYTES) {
             throw new IllegalArgumentException("invalid tile coord payload length: " + (payload == null ? 0 : payload.length));
@@ -222,6 +263,35 @@ public final class AssetModuleUpdatePacket {
             coords.add(StationTileCoord.of(payloadBuf.readInt(), payloadBuf.readInt()));
         }
         return coords;
+    }
+
+    private static ModuleUpgradeTargetsPayload decodeModuleUpgradeTargetsPayload(byte[] payload) {
+        if (payload == null || payload.length < MODULE_UPGRADE_TARGET_HEADER_BYTES + Integer.BYTES
+            || payload.length > MAX_MODULE_UPGRADE_TARGET_PAYLOAD_BYTES) {
+            throw new IllegalArgumentException(
+                "invalid module upgrade target payload length: " + (payload == null ? 0 : payload.length));
+        }
+        ByteBuf payloadBuf = Unpooled.wrappedBuffer(payload);
+        ModuleTier targetTier = PacketUtil.enumFromByte(payloadBuf.readUnsignedByte(), ModuleTier.class);
+        if (targetTier == null) {
+            throw new IllegalArgumentException("invalid module upgrade target tier");
+        }
+        int variantOrdinal = payloadBuf.readUnsignedByte();
+        HammerVariant targetHammerVariant = variantOrdinal == NO_HAMMER_VARIANT ? null
+            : PacketUtil.enumFromByte(variantOrdinal, HammerVariant.class);
+        if (variantOrdinal != NO_HAMMER_VARIANT && targetHammerVariant == null) {
+            throw new IllegalArgumentException("invalid module upgrade hammer variant: " + variantOrdinal);
+        }
+        boolean reserveItems = payloadBuf.readBoolean();
+        boolean voidCompletionRefund = payloadBuf.readBoolean();
+        byte[] coordPayload = new byte[payloadBuf.readableBytes()];
+        payloadBuf.readBytes(coordPayload);
+        return new ModuleUpgradeTargetsPayload(
+            targetTier,
+            targetHammerVariant,
+            reserveItems,
+            voidCompletionRefund,
+            decodeTileCoordPayload(coordPayload));
     }
 
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
@@ -304,6 +374,7 @@ public final class AssetModuleUpdatePacket {
         CREATE_SETTINGS_GROUP,
         CANCEL_MODULE_OPERATION,
         COPY_MINER_SETTINGS,
+        PLAN_MODULE_UPGRADE_TARGETS,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT
@@ -342,7 +413,7 @@ public final class AssetModuleUpdatePacket {
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
                 case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
                 case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
-                case COPY_MINER_SETTINGS -> {
+                case COPY_MINER_SETTINGS, PLAN_MODULE_UPGRADE_TARGETS -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
                         buf.writeBytes(rawPayload);
@@ -421,6 +492,15 @@ public final class AssetModuleUpdatePacket {
                 rawPayload = new byte[len];
                 buf.readBytes(rawPayload);
                 decodeTileCoordPayload(rawPayload);
+            }
+            case PLAN_MODULE_UPGRADE_TARGETS -> {
+                int len = buf.readInt();
+                if (len <= 0 || len > MAX_MODULE_UPGRADE_TARGET_PAYLOAD_BYTES || len > buf.readableBytes()) {
+                    throw new IllegalArgumentException("invalid module upgrade target payload length: " + len);
+                }
+                rawPayload = new byte[len];
+                buf.readBytes(rawPayload);
+                decodeModuleUpgradeTargetsPayload(rawPayload);
             }
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
@@ -501,7 +581,8 @@ public final class AssetModuleUpdatePacket {
         }
         if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP
-            || getConfigAction() == ConfigAction.COPY_MINER_SETTINGS)) {
+            || getConfigAction() == ConfigAction.COPY_MINER_SETTINGS
+            || getConfigAction() == ConfigAction.PLAN_MODULE_UPGRADE_TARGETS)) {
             return AssetSyncPacket.fullSync(state)
                 .withSyncRevision(state.getSyncRevision());
         }
@@ -590,6 +671,7 @@ public final class AssetModuleUpdatePacket {
             case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
             case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
             case COPY_MINER_SETTINGS -> handleCopyMinerSettings(packet, state, module);
+            case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
     }
@@ -758,6 +840,79 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
+    private static void handleModuleUpgradeTargets(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance source) {
+        ModuleUpgradeTargetsPayload payload = decodeModuleUpgradeTargetsPayload(packet.rawPayload);
+        StationLayout layout = state.stationLayout();
+        if (layout == null) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS requires a station layout for " + state.assetId);
+        }
+        for (StationTileCoord targetCoord : payload.targetCoords()) {
+            ModuleInstance target = layout.moduleAt(targetCoord);
+            if (target == null) {
+                throw new IllegalStateException(
+                    "PLAN_MODULE_UPGRADE_TARGETS target tile is empty: " + targetCoord.dx() + "," + targetCoord.dy());
+            }
+            if (source.id.equals(target.id)) {
+                throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target must be different from source");
+            }
+            ModuleOperationState existingOperation = target.operationOrNull();
+            if (existingOperation != null && !existingOperation.phase()
+                .isTerminal()) {
+                throw new IllegalStateException("Module " + target.id + " already has active build " + existingOperation.phase());
+            }
+            if (source.component() instanceof ModuleHammer) {
+                handleHammerUpgradeTarget(state, source, target, payload);
+            } else {
+                handleGenericUpgradeTarget(state, source, target, payload);
+            }
+        }
+    }
+
+    private static void handleHammerUpgradeTarget(AutomatedFacility state, ModuleInstance source, ModuleInstance target,
+        ModuleUpgradeTargetsPayload payload) {
+        if (!(target.component() instanceof ModuleHammer targetHammer)) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS hammer source cannot target " + target.kind());
+        }
+        if (payload.targetHammerVariant() == null) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS missing hammer variant");
+        }
+        if (source.kind() != target.kind()) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target kind mismatch: " + target.kind());
+        }
+        if (targetHammer.variant() == payload.targetHammerVariant() && target.tier() == payload.targetTier()) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target already matches requested hammer spec");
+        }
+        planHammerUpgrade(
+            state,
+            target,
+            targetHammer,
+            payload.targetHammerVariant(),
+            payload.targetTier(),
+            payload.reserveItems(),
+            payload.voidCompletionRefund(),
+            false);
+    }
+
+    private static void handleGenericUpgradeTarget(AutomatedFacility state, ModuleInstance source, ModuleInstance target,
+        ModuleUpgradeTargetsPayload payload) {
+        if (payload.targetHammerVariant() != null) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS non-hammer target cannot use hammer variant");
+        }
+        if (source.kind() != target.kind()) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target kind mismatch: " + target.kind());
+        }
+        if (!target.kind()
+            .allowedTiers()
+            .contains(payload.targetTier())) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS rejected tier " + payload.targetTier());
+        }
+        if (target.tier() == payload.targetTier()) {
+            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target already has requested tier");
+        }
+        planModuleTierUpgrade(state, target, payload.targetTier(), false);
+    }
+
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) return;
@@ -841,6 +996,9 @@ public final class AssetModuleUpdatePacket {
         if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, slot)) return;
         state.markModuleDirty(module.id);
     }
+
+    private record ModuleUpgradeTargetsPayload(ModuleTier targetTier, @Nullable HammerVariant targetHammerVariant,
+        boolean reserveItems, boolean voidCompletionRefund, List<StationTileCoord> targetCoords) {}
 
     static boolean applyRecipeSlotMutation(RecipeSlotList slots, ConfigAction action, int slotIndex,
         @Nullable RecipeSlot slot) {

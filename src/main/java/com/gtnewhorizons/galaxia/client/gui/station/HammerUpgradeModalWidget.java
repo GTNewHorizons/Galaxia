@@ -10,6 +10,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -34,16 +35,21 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
     private static final int RESERVE_BUTTON_WIDTH = 84;
     private static final int VOID_BUTTON_WIDTH = 98;
     private static final int CONFIRM_BUTTON_WIDTH = 72;
+    private static final int MULTIPLE_BUTTON_X = 88;
+    private static final int MULTIPLE_BUTTON_WIDTH = 78;
     private static final int BACK_BUTTON_WIDTH = 54;
     private static final int COLUMN_GAP = 4;
     private static final int BODY_WIDTH = WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2;
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private final StationTilePickerController tilePickerController;
 
-    HammerUpgradeModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
+    HammerUpgradeModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
+        StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.controller = controller;
+        this.tilePickerController = tilePickerController;
         int x = ModuleConfigModalSupport.PANEL_PADDING;
         child(
             ModuleConfigModalSupport
@@ -84,6 +90,10 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             ModuleConfigModalSupport.button(this::canConfirm, "Confirm", this::confirm)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_TOP)
                 .size(CONFIRM_BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::canConfirmMultiple, "Multiple...", this::startMultiplePicker)
+                .pos(MULTIPLE_BUTTON_X, FOOTER_TOP)
+                .size(MULTIPLE_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(this::canUseControls, "Back", this::back)
                 .pos(WIDTH - ModuleConfigModalSupport.PANEL_PADDING - BACK_BUTTON_WIDTH, FOOTER_TOP)
@@ -233,6 +243,36 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
             controller.hammerUpgradeReserveItems(),
             controller.hammerUpgradeVoidRefund());
         controller.close();
+    }
+
+    private boolean canConfirmMultiple() {
+        return tilePickerController != null && canConfirm();
+    }
+
+    private void startMultiplePicker() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance source = selectedModule();
+        int sourceModuleIndex = controller.moduleIndex();
+        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        ModuleTier targetTier = controller.hammerUpgradeTier();
+        HammerVariant targetVariant = controller.hammerUpgradeVariant();
+        boolean reserveItems = controller.hammerUpgradeReserveItems();
+        boolean voidCompletionRefund = controller.hammerUpgradeVoidRefund();
+        controller.close();
+        tilePickerController.start(
+            "Upgrade modules",
+            "Upgrade",
+            coord -> ModuleUpgradePickerModel
+                .isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
+            coord -> ModuleUpgradePickerModel.normalizeTarget(facility, coord),
+            targets -> CelestialClient.planModuleUpgradeTargets(
+                assetId,
+                sourceModuleIndex,
+                targetTier,
+                targetVariant,
+                reserveItems,
+                voidCompletionRefund,
+                targets));
     }
 
     private void back() {
