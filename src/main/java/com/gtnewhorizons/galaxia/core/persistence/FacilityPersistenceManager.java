@@ -1217,7 +1217,9 @@ public final class FacilityPersistenceManager {
             ItemStackWrapper item = ItemStackWrapper.fromKey(entry.getKey());
             if (item == null) {
                 throw new IllegalStateException(
-                    "[PERSIST] Module " + moduleId + " operation " + fieldName
+                    "[PERSIST] Module " + moduleId
+                        + " operation "
+                        + fieldName
                         + " contains unresolvable item: "
                         + entry.getKey());
             }

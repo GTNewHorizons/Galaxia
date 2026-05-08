@@ -197,8 +197,7 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStackWrapper material = ItemStackWrapper.of(material());
         module.setOperation(
-            ModuleOperationState.waiting(
-                hammerUpgradePlan(2, false, material))
+            ModuleOperationState.waiting(hammerUpgradePlan(2, false, material))
                 .beginBuilding());
 
         facility.tick();
@@ -220,8 +219,7 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStackWrapper material = ItemStackWrapper.of(material());
         module.setOperation(
-            ModuleOperationState.waiting(
-                hammerUpgradePlan(2, false, material))
+            ModuleOperationState.waiting(hammerUpgradePlan(2, false, material))
                 .beginBuilding());
 
         facility.tick();

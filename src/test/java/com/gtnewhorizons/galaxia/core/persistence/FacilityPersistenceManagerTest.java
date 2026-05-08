@@ -292,12 +292,13 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance hammer = station.modules()
             .get(0);
         hammer.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(
-                    new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
-                    37,
-                    Map.of(),
-                    false))
+            ModuleOperationState
+                .waiting(
+                    new ModuleOperationPlan(
+                        new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
+                        37,
+                        Map.of(),
+                        false))
                 .beginBuilding()
                 .tickBuilding());
 
