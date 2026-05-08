@@ -48,6 +48,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int BUTTON_GAP = 5;
     private static final int BUTTON_TEXT_PADDING = 7;
     private static final int TEXT_BASELINE_OFFSET = 1;
+    private static final int MULTIPLE_BUTTON_WIDTH = 72;
+    private static final int BUTTON_COLUMN_GAP = 4;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
@@ -98,8 +100,14 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             if (!kind.isAllowedOn(facility.kind)) continue;
             panel.child(
-                createKindButton(kind).pos(PANEL_PADDING, y)
-                    .size(PANEL_WIDTH - PANEL_PADDING * 2, BUTTON_HEIGHT));
+                createKindButton(kind, false).pos(PANEL_PADDING, y)
+                    .size(
+                        PANEL_WIDTH - PANEL_PADDING * 2 - MULTIPLE_BUTTON_WIDTH - BUTTON_COLUMN_GAP,
+                        BUTTON_HEIGHT));
+            panel.child(
+                createKindButton(kind, true)
+                    .pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_BUTTON_WIDTH, y)
+                    .size(MULTIPLE_BUTTON_WIDTH, BUTTON_HEIGHT));
             y += BUTTON_HEIGHT + BUTTON_GAP;
         }
         return panel;
@@ -111,7 +119,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
     }
 
-    private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
+    private ButtonWidget<?> createKindButton(FacilityModuleKind kind, boolean multiple) {
         return new ButtonWidget<>()
             .background(
                 drawable(
@@ -131,24 +139,39 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         h,
                         EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
                         EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
+            .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, multiple, x, y, w, h)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 CelestialAsset.ID assetId = pendingAssetId;
                 StationTileCoord coord = pendingCoord;
-                if (assetId != null && coord != null) {
+                if (assetId != null && multiple) {
+                    StationManagementScreen.openBuildPicker(assetId, kind, pendingInstantBuild);
+                } else if (assetId != null && coord != null) {
                     CelestialClient.createModule(assetId, kind, pendingInstantBuild, coord);
+                    StationManagementScreen.open(assetId, pendingInstantBuild);
+                } else if (assetId != null) {
+                    StationManagementScreen.open(assetId, pendingInstantBuild);
+                } else {
+                    Minecraft.getMinecraft()
+                        .displayGuiScreen(null);
                 }
-                if (assetId != null) StationManagementScreen.open(assetId, pendingInstantBuild);
-                else Minecraft.getMinecraft()
-                    .displayGuiScreen(null);
                 clearPending();
                 return true;
             });
     }
 
-    private static void drawKindButton(FacilityModuleKind kind, int x, int y, int width, int height) {
+    private static void drawKindButton(FacilityModuleKind kind, boolean multiple, int x, int y, int width, int height) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        if (multiple) {
+            String label = fr.trimStringToWidth("Multiple", width - BUTTON_TEXT_PADDING * 2);
+            int textY = y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET;
+            fr.drawStringWithShadow(
+                label,
+                x + (width - fr.getStringWidth(label)) / 2,
+                textY,
+                EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+            return;
+        }
         String label = kind.getDisplayName();
         int textY = y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET;
         fr.drawStringWithShadow(

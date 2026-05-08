@@ -16,6 +16,9 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -32,6 +35,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile boolean pendingCreativeBuildMode;
     private static volatile StationVisionLayer pendingVisionLayer = StationVisionLayer.BASE;
+    private static volatile @Nullable BuildPickerRequest pendingBuildPickerRequest;
 
     public static void open(CelestialAsset.ID assetId) {
         open(assetId, false);
@@ -41,6 +45,11 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         pendingAssetId = assetId;
         pendingCreativeBuildMode = creativeBuildMode;
         FACTORY.openClient();
+    }
+
+    static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {
+        pendingBuildPickerRequest = new BuildPickerRequest(assetId, kind, creativeBuildMode);
+        open(assetId, creativeBuildMode);
     }
 
     public static @Nullable CelestialAsset.ID pendingAssetId() {
@@ -109,7 +118,26 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .top(0)
                 .widthRel(1f)
                 .heightRel(1f));
+        startPendingBuildPicker(assetId, tilePickerController);
         return panel;
+    }
+
+    private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationTilePickerController controller) {
+        BuildPickerRequest request = pendingBuildPickerRequest;
+        if (request == null || assetId == null || !assetId.equals(request.assetId())) return;
+        pendingBuildPickerRequest = null;
+        if (!(com.gtnewhorizons.galaxia.client.CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility)) {
+            return;
+        }
+        FacilityModuleKind kind = request.kind();
+        controller.start(
+            "Build " + kind.getDisplayName(),
+            "Build",
+            coord -> ModuleBuildPickerModel
+                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord),
+            coord -> coord,
+            targets -> com.gtnewhorizons.galaxia.client.CelestialClient
+                .createModules(assetId, kind, request.creativeBuildMode(), targets));
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {
@@ -172,4 +200,6 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 || !controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
         }
     }
+
+    private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {}
 }

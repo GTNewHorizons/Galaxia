@@ -128,6 +128,20 @@ public final class CelestialClient {
             tileCoord);
     }
 
+    public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
+        List<StationTileCoord> tileCoords) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return;
+        if (!kind.isAllowedOn(state.kind)) return;
+        StarmapActionSyncHandler.sendBuildModules(
+            assetId,
+            kind,
+            ModuleShape.SINGLE,
+            kind.defaultTier(),
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
     public static boolean destroyAsset(ID assetId) {
         return StarmapActionSyncHandler.sendDestroyAsset(assetId);
     }

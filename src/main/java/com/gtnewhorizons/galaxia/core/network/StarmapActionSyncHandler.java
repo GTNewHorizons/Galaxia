@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -65,9 +66,15 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     @SideOnly(Side.CLIENT)
     public static boolean sendBuildModule(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, boolean instantBuild, StationTileCoord coord) {
+        return sendBuildModules(assetId, kind, shape, tier, instantBuild, coord == null ? null : List.of(coord));
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static boolean sendBuildModules(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
+        ModuleTier tier, boolean instantBuild, List<StationTileCoord> coords) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        AssetBuildModulePacket packet = AssetBuildModulePacket.create(assetId, kind, shape, tier, instantBuild, coord);
+        AssetBuildModulePacket packet = AssetBuildModulePacket.createMany(assetId, kind, shape, tier, instantBuild, coords);
         handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
         return true;
     }
