@@ -80,9 +80,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         HammerVariant variant = hammer.variant();
         ModuleTier tier = module.tier();
         int cooldown = module.cooldownTicks();
-        int chargeTicks = Math.max(1, cooldown - 20);
-        long shotEnergy = variant.shotEnergyEu();
-        long chargeRate = Math.ceilDiv(shotEnergy, chargeTicks);
+        long bufferCapacity = hammer.energyCapacity();
+        long chargeRate = hammer.chargeRate(module);
 
         int lineY = y;
         lineY = ModuleConfigModalSupport.drawLine(
@@ -91,19 +90,23 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = ModuleConfigModalSupport.drawLine(
-            "Shot: " + ModuleConfigModalSupport.formatEu(shotEnergy)
+            "Buffer: " + ModuleConfigModalSupport.formatEu(hammer.energyStored())
+                + "/"
+                + ModuleConfigModalSupport.formatEu(bufferCapacity)
                 + " EU  Rate: "
                 + ModuleConfigModalSupport.formatEu(chargeRate)
                 + " EU/t",
             x,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        lineY = ModuleConfigModalSupport
-            .drawLine("Charge: " + (chargeTicks / 20) + "s", x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY = ModuleConfigModalSupport.drawLine(
+            "Minimum shot: " + ModuleConfigModalSupport.formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU) + " EU",
+            x,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
         int barY = lineY + BAR_TOP_OFFSET;
-        int chargeProgress = Math.min(Math.max(module.ticks(), 0), chargeTicks);
-        int fillW = (int) ((long) BAR_WIDTH * chargeProgress / chargeTicks);
+        int fillW = (int) (BAR_WIDTH * hammer.energyStored() / Math.max(1L, bufferCapacity));
         Gui.drawRect(x, barY, x + BAR_WIDTH, barY + BAR_HEIGHT, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
         Gui.drawRect(
             x,

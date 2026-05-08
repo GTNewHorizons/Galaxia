@@ -453,6 +453,7 @@ public final class AssetSyncPacket implements IMessage {
                         .threshold());
                 PacketUtil.writeEnum(buf, h.routePriority());
                 PacketUtil.writeEnum(buf, h.variant());
+                buf.writeLong(h.energyStored());
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}
@@ -489,8 +490,9 @@ public final class AssetSyncPacket implements IMessage {
                 OrbitalTransferPlanner.RoutePriority routePriority = PacketUtil
                     .readEnum(buf, OrbitalTransferPlanner.RoutePriority.class);
                 HammerVariant variant = PacketUtil.readEnum(buf, HammerVariant.class);
+                long energyStored = buf.readLong();
                 ModuleHammer.requireTier(variant, tier);
-                module.setComponent(new ModuleHammer(kind, cfg, routePriority, false, variant, 64));
+                module.setComponent(new ModuleHammer(kind, cfg, routePriority, variant, 64, energyStored));
             }
             case POWER -> {}
             case STORAGE, TANK, BATTERY -> {}

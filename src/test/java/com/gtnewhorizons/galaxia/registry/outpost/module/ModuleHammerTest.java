@@ -25,7 +25,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void chargeBarFinishesOneSecondBeforeShot() {
+    void chargeRateFillsPrivateBufferByCooldownEnd() {
         FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(FacilityModuleKind.HAMMER);
         for (var entry : new Object[][] { { HammerVariant.BASE, ModuleTier.EV, 60 * 20, 500_000L },
             { HammerVariant.BIG, ModuleTier.LuV, 60 * 20, 8_000_000L } }) {
@@ -47,7 +47,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void hammerConsumesShotEnergyOnlyWhenCooldownCompletes() {
+    void hammerChargesPrivateBufferFromStationEachTick() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
@@ -58,17 +58,61 @@ final class ModuleHammerTest {
         module.updateStatus(Buildable.Status.OPERATIONAL);
         ModuleHammer hammer = (ModuleHammer) module.component();
         outpost.setEnergyStored(500_000L);
-
-        for (int i = 0; i < 60 * 20 - 1; i++) {
-            module.tick(outpost);
-        }
-
-        assertEquals(500_000L, outpost.getEnergyStored());
-        assertFalse(hammer.canFire());
+        long chargeRate = Math.ceilDiv(hammer.energyCapacity(), Math.max(1, module.cooldownTicks() - 20));
 
         module.tick(outpost);
 
-        assertEquals(0L, outpost.getEnergyStored());
+        assertEquals(500_000L - chargeRate, outpost.getEnergyStored());
+        assertEquals(chargeRate, hammer.energyStored());
+        assertFalse(hammer.canFire());
+    }
+
+    @Test
+    void hammerCanSpendPartialBufferOnRouteCost() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+
+        hammer.setEnergyStored(100_000L);
+
+        assertTrue(hammer.trySpendShotEnergy(ModuleHammer.shotEnergyCost(7.25)));
+        assertEquals(27_500L, hammer.energyStored());
+        assertFalse(hammer.trySpendShotEnergy(ModuleHammer.shotEnergyCost(3)));
+        assertEquals(27_500L, hammer.energyStored());
+    }
+
+    @Test
+    void hammerCannotFireRouteAbovePrivateBufferCapacity() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+
+        hammer.setEnergyStored(hammer.energyCapacity());
+
+        assertFalse(hammer.trySpendShotEnergy(hammer.energyCapacity() + 1));
+        assertEquals(hammer.energyCapacity(), hammer.energyStored());
+    }
+
+    @Test
+    void fullBufferAllowsMinimumPackageShot() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+
+        hammer.setEnergyStored(ModuleHammer.MIN_SHOT_ENERGY_EU);
+
         assertTrue(hammer.canFire());
     }
 

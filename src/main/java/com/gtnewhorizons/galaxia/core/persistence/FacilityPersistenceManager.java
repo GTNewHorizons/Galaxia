@@ -394,6 +394,7 @@ public final class FacilityPersistenceManager {
                     "variant",
                     hammer.variant()
                         .name());
+                moduleData.addProperty("energyStored", hammer.energyStored());
             } else if (m.component() instanceof ModuleMiner miner) {
                 moduleData.addProperty(
                     "focusTier",
@@ -600,8 +601,11 @@ public final class FacilityPersistenceManager {
                         HammerVariant variant = Objects.requireNonNull(
                             PURE_GSON.fromJson(hammerData.get("variant"), HammerVariant.class),
                             "[PERSIST] Hammer module missing variant");
+                        long energyStored = Objects
+                            .requireNonNull(hammerData.get("energyStored"), "[PERSIST] Hammer module missing energyStored")
+                            .getAsLong();
                         ModuleHammer.requireTier(variant, tier);
-                        module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
+                        module.setComponent(new ModuleHammer(kind, config, routePriority, variant, 64, energyStored));
                     }
                     case MINER -> {
                         if (!(module.component() instanceof ModuleMiner miner)) {

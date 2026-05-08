@@ -216,9 +216,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         HammerVariant variant = hammer.variant();
         ModuleTier tier = module.tier();
         int cooldown = module.cooldownTicks();
-        int chargeTicks = Math.max(1, cooldown - 20);
-        long shotEnergy = variant.shotEnergyEu();
-        long chargeRate = Math.ceilDiv(shotEnergy, chargeTicks);
+        long bufferCapacity = hammer.energyCapacity();
+        long chargeRate = hammer.chargeRate(module);
         lineY = drawLine("Hammer", panelX, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         lineY = drawLine(
             "Variant: " + hammer.variant()
@@ -230,12 +229,20 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Shot: " + formatEu(shotEnergy) + " EU  Rate: " + formatEu(chargeRate) + " EU/t",
+            "Buffer: " + formatEu(hammer.energyStored())
+                + "/"
+                + formatEu(bufferCapacity)
+                + " EU  Rate: "
+                + formatEu(chargeRate)
+                + " EU/t",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Cooldown: " + (cooldown / 20) + "s  Charge: " + (chargeTicks / 20) + "s",
+            "Cooldown: " + (cooldown / 20)
+                + "s  Minimum shot: "
+                + formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU)
+                + " EU",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
@@ -268,8 +275,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int barY = lineY + CHARGE_BAR_TOP_OFFSET;
         int barW = panelW;
         int barH = CHARGE_BAR_HEIGHT;
-        int chargeProgress = Math.min(Math.max(module.ticks(), 0), chargeTicks);
-        int fillW = (int) ((long) barW * chargeProgress / chargeTicks);
+        int fillW = (int) (barW * hammer.energyStored() / Math.max(1L, bufferCapacity));
         Gui.drawRect(barX, barY, barX + barW, barY + barH, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
         Gui.drawRect(
             barX,

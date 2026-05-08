@@ -16,6 +16,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperat
 
 public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
+    public static final long EU_PER_DV = 10_000L;
+    public static final long MIN_SHOT_ENERGY_EU = EU_PER_DV;
+
     private static final ModuleTier[] BASE_TIERS = { ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV };
     private static final ModuleTier[] BIG_TIERS = { ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV };
 
@@ -25,7 +28,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     private final int maxBatchSize;
     private OrbitalTransferPlanner.RoutePriority routePriority;
-    private boolean canFire;
+    private long energyStored;
 
     private HammerVariant variant;
     private AllowShootingConfig config;
@@ -33,18 +36,29 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     public ModuleHammer(@Nonnull FacilityModuleKind kind, @Nonnull AllowShootingConfig config,
         @Nonnull OrbitalTransferPlanner.RoutePriority routePriority, boolean canFire, @Nonnull HammerVariant variant,
         int maxBatchSize) {
+        this(kind, config, routePriority, variant, maxBatchSize, 0L);
+    }
+
+    public ModuleHammer(@Nonnull FacilityModuleKind kind, @Nonnull AllowShootingConfig config,
+        @Nonnull OrbitalTransferPlanner.RoutePriority routePriority, @Nonnull HammerVariant variant, int maxBatchSize,
+        long energyStored) {
         this.kind = kind;
         this.config = config;
         this.routePriority = routePriority;
-        this.canFire = canFire;
         this.variant = variant;
         this.maxBatchSize = maxBatchSize;
+        setEnergyStored(energyStored);
     }
 
     public static void prepareToFire(ModuleInstance instance, AutomatedFacility outpost) {
-        ModuleHammer hammer = (ModuleHammer) instance.component();
-        if (!outpost.tryConsumeEnergy(hammer.variant.shotEnergyEu())) return;
-        hammer.canFire = true;
+        // HAMMER charge is handled every operational tick. The registry behavior remains as the cooldown hook.
+    }
+
+    public static long shotEnergyCost(double totalDv) {
+        if (!Double.isFinite(totalDv) || totalDv < 0.0) {
+            throw new IllegalArgumentException("Invalid hammer shot totalDv: " + totalDv);
+        }
+        return Math.max(MIN_SHOT_ENERGY_EU, (long) Math.ceil(totalDv * EU_PER_DV));
     }
 
     public static ModuleTier tierForVariantSwitch(@Nonnull HammerVariant targetVariant,
@@ -74,7 +88,13 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         ModuleTier targetTier = hammerSpec.targetTier();
         requireTier(targetVariant, targetTier);
         this.variant = targetVariant;
+        setEnergyStored(energyStored);
         module.setTier(targetTier);
+    }
+
+    @Override
+    public void tickOperational(ModuleInstance module, AutomatedFacility outpost) {
+        chargeFrom(outpost, chargeRate(module));
     }
 
     public AllowShootingConfig config() {
@@ -90,11 +110,44 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     }
 
     public boolean canFire() {
-        return canFire;
+        return energyStored >= MIN_SHOT_ENERGY_EU;
     }
 
-    public void fire() {
-        canFire = false;
+    public long energyStored() {
+        return energyStored;
+    }
+
+    public void setEnergyStored(long energyStored) {
+        this.energyStored = Math.clamp(energyStored, 0L, energyCapacity());
+    }
+
+    public long energyCapacity() {
+        return variant.shotEnergyEu();
+    }
+
+    public long chargeRate(ModuleInstance module) {
+        return Math.ceilDiv(energyCapacity(), Math.max(1, module.cooldownTicks() - 20));
+    }
+
+    public boolean canSpendShotEnergy(long amount) {
+        return amount >= 0L && amount <= energyCapacity() && energyStored >= amount;
+    }
+
+    public boolean trySpendShotEnergy(long amount) {
+        if (!canSpendShotEnergy(amount)) return false;
+        energyStored -= amount;
+        return true;
+    }
+
+    private void chargeFrom(AutomatedFacility outpost, long amount) {
+        long missing = energyCapacity() - energyStored;
+        if (amount <= 0L || missing <= 0L) return;
+        long drawn = Math.min(Math.min(amount, missing), outpost.getEnergyStored());
+        if (drawn <= 0L) return;
+        if (!outpost.tryConsumeEnergy(drawn)) {
+            throw new IllegalStateException("HAMMER charge became inconsistent: requested " + drawn + " EU");
+        }
+        energyStored += drawn;
     }
 
     public HammerVariant variant() {
@@ -111,6 +164,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public void setVariant(@Nonnull HammerVariant variant) {
         this.variant = variant;
+        setEnergyStored(energyStored);
     }
 
     private static IllegalStateException invalidTier(HammerVariant variant, ModuleTier tier) {

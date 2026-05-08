@@ -186,6 +186,29 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void hammerEnergyBufferRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleHammer hammer = (ModuleHammer) station.modules()
+            .get(0)
+            .component();
+        hammer.setEnergyStored(234_567L);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
+            .get(0)
+            .component();
+        assertEquals(234_567L, decodedHammer.energyStored());
+    }
+
+    @Test
     void minerSettingsGroupRoundTripsThroughPersistence() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();

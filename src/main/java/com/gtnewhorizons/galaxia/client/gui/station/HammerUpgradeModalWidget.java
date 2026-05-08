@@ -251,7 +251,7 @@ final class HammerUpgradeModalWidget extends ParentWidget<HammerUpgradeModalWidg
 
     private int drawVariantLine(int lineY, HammerVariant variant) {
         return ModuleConfigModalSupport.drawTrimmedLine(
-            variant.name() + "  Shot " + ModuleConfigModalSupport.formatEu(variant.shotEnergyEu()) + " EU",
+            variant.name() + "  Buffer " + ModuleConfigModalSupport.formatEu(variant.shotEnergyEu()) + " EU",
             ModuleConfigModalSupport.PANEL_PADDING + 8,
             lineY,
             BODY_WIDTH,

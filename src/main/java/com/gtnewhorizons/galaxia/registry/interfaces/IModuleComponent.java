@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 
 public interface IModuleComponent {
+
+    default void tickOperational(ModuleInstance module, AutomatedFacility outpost) {}
 
     default void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
         throw new IllegalStateException(

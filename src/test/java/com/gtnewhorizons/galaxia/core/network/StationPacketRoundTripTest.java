@@ -99,7 +99,9 @@ final class StationPacketRoundTripTest {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
         hammerModule.setTier(com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier.LuV);
-        ((ModuleHammer) hammerModule.component()).setVariant(HammerVariant.BIG);
+        ModuleHammer serverHammer = (ModuleHammer) hammerModule.component();
+        serverHammer.setVariant(HammerVariant.BIG);
+        serverHammer.setEnergyStored(123_456L);
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
@@ -108,6 +110,7 @@ final class StationPacketRoundTripTest {
             .get(0)
             .component();
         assertEquals(HammerVariant.BIG, clientHammer.variant());
+        assertEquals(123_456L, clientHammer.energyStored());
     }
 
     @Test

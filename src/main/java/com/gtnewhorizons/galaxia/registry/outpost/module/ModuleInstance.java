@@ -57,6 +57,7 @@ public class ModuleInstance implements Buildable {
         }
 
         this.ticks += 1;
+        this.component.tickOperational(this, outpost);
         if (this.ticks >= this.cooldownTicks()) {
             this.definition.applyBehavior()
                 .accept(this, outpost);
