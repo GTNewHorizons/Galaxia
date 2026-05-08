@@ -58,12 +58,12 @@ public class FacilityModuleRegistry {
     public static void init() {
         register(
             FacilityModuleKind.POWER,
-            new ModuleTierData(
-                1500L,
-                -ModulePower.EU_TICK,
-                1,
-                null,
-                Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L)),
+            ModuleTierData.builder()
+                .addedEnergyCapacity(1500L)
+                .powerDraw(-ModulePower.EU_TICK)
+                .cooldown(1)
+                .cost(Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L))
+                .build(),
             ModulePower::doNothing,
             ModulePower::new);
         register(
@@ -220,12 +220,12 @@ public class FacilityModuleRegistry {
             ModuleBattery::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
-            new ModuleTierData(
-                500L,
-                0L,
-                100,
-                null,
-                Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L)),
+            ModuleTierData.builder()
+                .addedEnergyCapacity(500L)
+                .powerDraw(0L)
+                .cooldown(100)
+                .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
+                .build(),
             (instance, outpost) -> {},
             ModuleMaintenanceBay::new);
 
@@ -345,7 +345,14 @@ public class FacilityModuleRegistry {
         private final EnumMap<ModuleTier, ModuleTierData> map = new EnumMap<>(ModuleTier.class);
 
         public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, Map<ItemStack, Long> cost) {
-            if (map.put(tier, new ModuleTierData(energy, power, cooldown, null, cost)) != null) {
+            if (map.put(
+                tier,
+                ModuleTierData.builder()
+                    .addedEnergyCapacity(energy)
+                    .powerDraw(power)
+                    .cooldown(cooldown)
+                    .cost(cost)
+                    .build()) != null) {
                 throw new IllegalArgumentException("Duplicate tier entry: " + tier);
             }
             return this;
@@ -353,7 +360,15 @@ public class FacilityModuleRegistry {
 
         public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, long capacity,
             Map<ItemStack, Long> cost) {
-            if (map.put(tier, new ModuleTierData(energy, power, cooldown, capacity, cost)) != null) {
+            if (map.put(
+                tier,
+                ModuleTierData.builder()
+                    .addedEnergyCapacity(energy)
+                    .powerDraw(power)
+                    .cooldown(cooldown)
+                    .capacity(capacity)
+                    .cost(cost)
+                    .build()) != null) {
                 throw new IllegalArgumentException("Duplicate tier entry: " + tier);
             }
             return this;
@@ -361,8 +376,15 @@ public class FacilityModuleRegistry {
 
         public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown,
             Map<String, Integer> variantCooldowns, Map<ItemStack, Long> cost) {
-            if (map.put(tier, new ModuleTierData(energy, power, cooldown, null, variantCooldowns, cost, 200, 80))
-                != null) {
+            if (map.put(
+                tier,
+                ModuleTierData.builder()
+                    .addedEnergyCapacity(energy)
+                    .powerDraw(power)
+                    .cooldown(cooldown)
+                    .variantCooldowns(variantCooldowns)
+                    .cost(cost)
+                    .build()) != null) {
                 throw new IllegalArgumentException("Duplicate tier entry: " + tier);
             }
             return this;

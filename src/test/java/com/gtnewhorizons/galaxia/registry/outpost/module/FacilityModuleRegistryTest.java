@@ -60,6 +60,48 @@ final class FacilityModuleRegistryTest {
     }
 
     @Test
+    void tierDataBuilderUsesNamedFieldsWithDefaults() {
+        ItemStack material = new ItemStack(new Item());
+
+        ModuleTierData data = ModuleTierData.builder()
+            .addedEnergyCapacity(1000L)
+            .powerDraw(32L)
+            .cooldown(10)
+            .capacity(4096L)
+            .cost(Map.of(material, 2L))
+            .build();
+
+        assertEquals(1000L, data.baseEnergyCapacity());
+        assertEquals(32L, data.powerDrawEuPerTick());
+        assertEquals(10, data.cooldownTicks());
+        assertEquals(4096L, data.capacity());
+        assertEquals(2L, data.constructionCost()
+            .get(material));
+        assertEquals(200, data.buildTicks());
+        assertEquals(80, data.completionRefundPercent());
+    }
+
+    @Test
+    void tierDataBuilderCarriesVariantCooldownsAndOperationSettings() {
+        ItemStack material = new ItemStack(new Item());
+
+        ModuleTierData data = ModuleTierData.builder()
+            .addedEnergyCapacity(2000L)
+            .powerDraw(64L)
+            .cooldown(20)
+            .variantCooldowns(Map.of("BIG", 600))
+            .cost(Map.of(material, 4L))
+            .buildTicks(40)
+            .refundPercent(50)
+            .build();
+
+        assertEquals(600, data.variantCooldowns()
+            .get("BIG"));
+        assertEquals(40, data.buildTicks());
+        assertEquals(50, data.completionRefundPercent());
+    }
+
+    @Test
     void tierDataIsAccessible() {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(FacilityModuleKind.STORAGE);
         ModuleTierData hvData = definition.getTierData(ModuleTier.HV);
