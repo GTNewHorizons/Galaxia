@@ -2,10 +2,12 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import net.minecraft.item.Item;
@@ -189,6 +191,51 @@ final class AutomatedFacilityOperationTest {
     }
 
     @Test
+    void completedHammerUpgradeRefundUsesReplacedTierCost() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStackWrapper material = ItemStackWrapper.of(material());
+        module.setOperation(
+            ModuleOperationState.waiting(
+                hammerUpgradePlan(2, false, material))
+                .beginBuilding());
+
+        facility.tick();
+        facility.tick();
+
+        ModuleOperationState operation = module.operationOrNull();
+        assertNotNull(operation);
+        assertEquals(ModuleOperationPhase.REFUNDING, operation.phase());
+        assertEquals(
+            6L,
+            operation.refundBuffer()
+                .get(material.toKey()));
+    }
+
+    @Test
+    void completedHammerUpgradeRefundUsesPlanBuildTicks() throws Exception {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStackWrapper material = ItemStackWrapper.of(material());
+        module.setOperation(
+            ModuleOperationState.waiting(
+                hammerUpgradePlan(2, false, material))
+                .beginBuilding());
+
+        facility.tick();
+        facility.tick();
+
+        ModuleOperationState operation = module.operationOrNull();
+        assertNotNull(operation);
+        Method isCompletionRefund = AutomatedFacility.class
+            .getDeclaredMethod("isCompletionRefund", ModuleOperationState.class);
+        isCompletionRefund.setAccessible(true);
+        assertTrue((boolean) isCompletionRefund.invoke(null, operation));
+    }
+
+    @Test
     void tickCompletesMinerFocusOperationAndResetsAlignment() {
         AutomatedFacility facility = facilityWithMiner();
         ModuleInstance module = facility.modules()
@@ -240,10 +287,17 @@ final class AutomatedFacilityOperationTest {
     }
 
     private static ModuleOperationPlan hammerUpgradePlan(int buildTicks, boolean voidCompletionRefund) {
+        return hammerUpgradePlan(buildTicks, voidCompletionRefund, ItemStackWrapper.of(material()));
+    }
+
+    private static ModuleOperationPlan hammerUpgradePlan(int buildTicks, boolean voidCompletionRefund,
+        ItemStackWrapper material) {
         return new ModuleOperationPlan(
             new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
             buildTicks,
-            Map.of(ItemStackWrapper.of(material()), 1L),
+            Map.of(material, 128L),
+            Map.of(material, 8L),
+            80,
             false,
             voidCompletionRefund);
     }

@@ -294,7 +294,7 @@ public final class AutomatedFacility extends CelestialAsset {
             .entrySet()) {
             inventory.add(requireItemKey(entry.getKey(), module), entry.getValue());
         }
-        if (isCompletionRefund(module, operation)) {
+        if (isCompletionRefund(operation)) {
             module.clearOperation();
         } else {
             module.setOperation(operation.finishRefunding());
@@ -578,21 +578,20 @@ public final class AutomatedFacility extends CelestialAsset {
             .voidCompletionRefund()) {
             return Map.of();
         }
-        FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(module.kind());
-        int refundPercent = def.getTierData(module.tier())
+        int refundPercent = operation.plan()
             .completionRefundPercent();
         if (refundPercent <= 0) return Map.of();
         Map<String, Long> refund = new java.util.LinkedHashMap<>();
-        for (Map.Entry<ItemStack, Long> entry : def.getTierData(module.tier())
-            .constructionCost()
+        for (Map.Entry<ItemStackWrapper, Long> entry : operation.plan()
+            .completionRefundCost()
             .entrySet()) {
             long amount = entry.getValue() * refundPercent / 100L;
             if (amount <= 0L) continue;
-            ItemStackWrapper wrapper = ItemStackWrapper.of(entry.getKey());
-            if (wrapper == null) {
-                throw new IllegalStateException("Operation completion refund contains unkeyable stack");
-            }
-            refund.merge(wrapper.toKey(), amount, Long::sum);
+            refund.merge(
+                entry.getKey()
+                    .toKey(),
+                amount,
+                Long::sum);
         }
         return refund;
     }
@@ -612,10 +611,8 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    private boolean isCompletionRefund(ModuleInstance module, ModuleOperationState operation) {
-        int buildTicks = FacilityModuleRegistry.get(module.kind())
-            .getTierData(module.tier())
+    private static boolean isCompletionRefund(ModuleOperationState operation) {
+        return operation.elapsedBuildTicks() >= operation.plan()
             .buildTicks();
-        return operation.elapsedBuildTicks() >= buildTicks;
     }
 }

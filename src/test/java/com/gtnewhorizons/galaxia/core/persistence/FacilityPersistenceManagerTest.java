@@ -286,6 +286,40 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
+    void moduleOperationRoundTripPreservesPlannedBuildTicks() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance hammer = station.modules()
+            .get(0);
+        hammer.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new HammerModuleOperation(ModuleTier.LuV, HammerVariant.BIG.name()),
+                    37,
+                    Map.of(),
+                    false))
+                .beginBuilding()
+                .tickBuilding());
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleOperationState decodedOperation = decoded.modules()
+            .get(0)
+            .operationOrNull();
+        assertNotNull(decodedOperation);
+        assertEquals(
+            37,
+            decodedOperation.plan()
+                .buildTicks());
+    }
+
+    @Test
     void malformedModuleOperationCrashesOnLoad() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = createStationWithFullLayout();

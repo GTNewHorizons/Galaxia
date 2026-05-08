@@ -9,11 +9,17 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public record ModuleOperationPlan(@Nonnull IModuleOperation spec, int buildTicks,
-    @Nonnull Map<ItemStackWrapper, Long> materialCost, boolean reserveItems, boolean voidCompletionRefund) {
+    @Nonnull Map<ItemStackWrapper, Long> materialCost, @Nonnull Map<ItemStackWrapper, Long> completionRefundCost,
+    int completionRefundPercent, boolean reserveItems, boolean voidCompletionRefund) {
 
     public ModuleOperationPlan(@Nonnull IModuleOperation spec, int buildTicks,
         @Nonnull Map<ItemStackWrapper, Long> materialCost, boolean reserveItems) {
-        this(spec, buildTicks, materialCost, reserveItems, false);
+        this(spec, buildTicks, materialCost, Map.of(), 0, reserveItems, false);
+    }
+
+    public ModuleOperationPlan(@Nonnull IModuleOperation spec, int buildTicks,
+        @Nonnull Map<ItemStackWrapper, Long> materialCost, boolean reserveItems, boolean voidCompletionRefund) {
+        this(spec, buildTicks, materialCost, Map.of(), 0, reserveItems, voidCompletionRefund);
     }
 
     public ModuleOperationPlan {
@@ -23,12 +29,17 @@ public record ModuleOperationPlan(@Nonnull IModuleOperation spec, int buildTicks
         if (buildTicks <= 0) {
             throw new IllegalArgumentException("buildTicks must be > 0, got " + buildTicks);
         }
-        materialCost = sanitizeCost(materialCost);
+        if (completionRefundPercent < 0 || completionRefundPercent > 100) {
+            throw new IllegalArgumentException(
+                "completionRefundPercent must be in [0,100], got " + completionRefundPercent);
+        }
+        materialCost = sanitizeCost(materialCost, "materialCost");
+        completionRefundCost = sanitizeCost(completionRefundCost, "completionRefundCost");
     }
 
-    private static Map<ItemStackWrapper, Long> sanitizeCost(Map<ItemStackWrapper, Long> rawCost) {
+    private static Map<ItemStackWrapper, Long> sanitizeCost(Map<ItemStackWrapper, Long> rawCost, String fieldName) {
         if (rawCost == null) {
-            throw new IllegalArgumentException("materialCost must not be null");
+            throw new IllegalArgumentException(fieldName + " must not be null");
         }
         if (rawCost.isEmpty()) return Map.of();
         Map<ItemStackWrapper, Long> sanitized = new LinkedHashMap<>();
@@ -36,10 +47,10 @@ public record ModuleOperationPlan(@Nonnull IModuleOperation spec, int buildTicks
             ItemStackWrapper item = entry.getKey();
             Long amount = entry.getValue();
             if (item == null) {
-                throw new IllegalArgumentException("materialCost contains null item");
+                throw new IllegalArgumentException(fieldName + " contains null item");
             }
             if (amount == null || amount <= 0L) {
-                throw new IllegalArgumentException("materialCost amount must be > 0 for " + item + ", got " + amount);
+                throw new IllegalArgumentException(fieldName + " amount must be > 0 for " + item + ", got " + amount);
             }
             sanitized.put(item, amount);
         }

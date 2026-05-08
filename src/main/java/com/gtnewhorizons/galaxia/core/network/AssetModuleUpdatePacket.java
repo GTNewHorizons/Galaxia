@@ -30,6 +30,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
@@ -531,17 +532,20 @@ public final class AssetModuleUpdatePacket {
         HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund,
         boolean creative) {
         ModuleHammer.requireTier(targetVariant, targetTier);
-        int buildTicks = FacilityModuleRegistry.get(module.kind())
-            .getTierData(module.tier())
-            .buildTicks();
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
+        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(targetTier);
         Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
-            FacilityModuleRegistry.get(module.kind())
-                .getTierData(targetTier)
-                .constructionCost());
+            targetData.constructionCost());
+        Map<ItemStackWrapper, Long> completionRefundCost = FacilityModuleRegistry.operationCost(
+            sourceData.constructionCost());
         ModuleOperationPlan plan = new ModuleOperationPlan(
             new HammerModuleOperation(targetTier, targetVariant.name()),
-            buildTicks,
+            sourceData.buildTicks(),
             cost,
+            completionRefundCost,
+            sourceData.completionRefundPercent(),
             reserveItems,
             voidCompletionRefund);
         if (creative) {
@@ -603,19 +607,19 @@ public final class AssetModuleUpdatePacket {
             throw new IllegalStateException(
                 "Module " + module.id + " already has active operation " + existingOperation.phase());
         }
-        int buildTicks = FacilityModuleRegistry.get(module.kind())
-            .getTierData(module.tier())
-            .buildTicks();
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
         Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
-            FacilityModuleRegistry.get(module.kind())
-                .getTierData(module.tier())
-                .constructionCost());
+            sourceData.constructionCost());
         module.setOperation(
             ModuleOperationState.waiting(
                 new ModuleOperationPlan(
                     new MinerFocusOperation(module.tier(), targetTier.name(), targetOreKey),
-                    buildTicks,
+                    sourceData.buildTicks(),
                     cost,
+                    cost,
+                    sourceData.completionRefundPercent(),
+                    false,
                     false)));
     }
 

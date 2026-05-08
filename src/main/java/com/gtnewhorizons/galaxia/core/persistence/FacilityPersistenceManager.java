@@ -898,9 +898,12 @@ public final class FacilityPersistenceManager {
         String targetVariantKey;
         String targetFocusTierKey;
         String targetFocusOreKey;
+        int buildTicks;
+        int completionRefundPercent;
         boolean reserveItems;
         boolean voidCompletionRefund;
         int elapsedBuildTicks;
+        Map<String, Long> completionRefundCost;
         Map<String, Long> depositedResources;
         Map<String, Long> refundBuffer;
     }
@@ -1130,6 +1133,9 @@ public final class FacilityPersistenceManager {
             json.targetFocusTierKey = minerSpec.targetFocusTierKey();
             json.targetFocusOreKey = minerSpec.targetFocusOreKey();
         }
+        json.buildTicks = plan.buildTicks();
+        json.completionRefundPercent = plan.completionRefundPercent();
+        json.completionRefundCost = encodeOperationCost(plan.completionRefundCost());
         json.reserveItems = plan.reserveItems();
         json.voidCompletionRefund = plan.voidCompletionRefund();
         json.elapsedBuildTicks = operation.elapsedBuildTicks();
@@ -1155,9 +1161,10 @@ public final class FacilityPersistenceManager {
             json.targetTier,
             "[PERSIST] Module " + moduleId + " has invalid target tier: " + json.targetTier);
         FacilityModuleKind kindForLookup = regKind != null ? regKind : FacilityModuleKind.HAMMER;
-        int buildTicks = FacilityModuleRegistry.get(kindForLookup)
-            .getTierData(targetTier)
-            .buildTicks();
+        if (json.buildTicks <= 0) {
+            throw new IllegalStateException(
+                "[PERSIST] Module " + moduleId + " operation has invalid buildTicks: " + json.buildTicks);
+        }
         IModuleOperation spec;
         if ("HAMMER".equals(json.specType)) {
             spec = new HammerModuleOperation(targetTier, json.targetVariantKey);
@@ -1174,8 +1181,10 @@ public final class FacilityPersistenceManager {
             : Map.of();
         ModuleOperationPlan plan = new ModuleOperationPlan(
             spec,
-            buildTicks,
+            json.buildTicks,
             cost,
+            requireOperationCost(json.completionRefundCost, "completionRefundCost", moduleId),
+            json.completionRefundPercent,
             json.reserveItems,
             json.voidCompletionRefund);
         return ModuleOperationState.restore(
@@ -1184,6 +1193,37 @@ public final class FacilityPersistenceManager {
             json.elapsedBuildTicks,
             requireOperationAmounts(json.depositedResources, "depositedResources", moduleId),
             requireOperationAmounts(json.refundBuffer, "refundBuffer", moduleId));
+    }
+
+    private static Map<String, Long> encodeOperationCost(Map<ItemStackWrapper, Long> cost) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> entry : cost.entrySet()) {
+            encoded.merge(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue(),
+                Long::sum);
+        }
+        return encoded;
+    }
+
+    private static Map<ItemStackWrapper, Long> requireOperationCost(Map<String, Long> amounts, String fieldName,
+        ModuleInstance.ID moduleId) {
+        if (amounts == null) {
+            throw new IllegalStateException("[PERSIST] Module " + moduleId + " operation missing " + fieldName);
+        }
+        Map<ItemStackWrapper, Long> cost = new LinkedHashMap<>();
+        for (Map.Entry<String, Long> entry : amounts.entrySet()) {
+            ItemStackWrapper item = ItemStackWrapper.fromKey(entry.getKey());
+            if (item == null) {
+                throw new IllegalStateException(
+                    "[PERSIST] Module " + moduleId + " operation " + fieldName
+                        + " contains unresolvable item: "
+                        + entry.getKey());
+            }
+            cost.merge(item, entry.getValue(), Long::sum);
+        }
+        return cost;
     }
 
     private static Map<String, Long> requireOperationAmounts(Map<String, Long> amounts, String fieldName,
