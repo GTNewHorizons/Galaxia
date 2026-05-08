@@ -134,7 +134,12 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     private void cancelOperation() {
         if (!hasCancellableOperation()) return;
+        if (!controller.isModuleOperationCancelArmed()) {
+            controller.armModuleOperationCancel();
+            return;
+        }
         CelestialClient.cancelModuleOperation(assetId, controller.moduleIndex());
+        controller.clearModuleOperationCancel();
     }
 
     private boolean canUsePrimaryButton() {
@@ -142,7 +147,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     }
 
     private String primaryButtonLabel() {
-        return hasCancellableOperation() ? "Cancel" : "Upgrade";
+        if (!hasCancellableOperation()) return "Upgrade";
+        return controller.isModuleOperationCancelArmed() ? "Confirm" : "Cancel";
     }
 
     private void primaryButtonAction() {
@@ -170,7 +176,10 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
                 .isTerminal();
     }
 
-    private static String operationLabel(ModuleInstance module) {
+    private String operationLabel(ModuleInstance module) {
+        if (hasCancellableOperation() && controller.isModuleOperationCancelArmed()) {
+            return "Click Confirm to cancel operation";
+        }
         return switch (module.operationOrNull()
             .phase()) {
             case WAITING_FOR_MATERIALS -> "Module is waiting for materials";
