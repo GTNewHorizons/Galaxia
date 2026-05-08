@@ -23,6 +23,7 @@ final class ModuleConfigModalController {
     private final CelestialAsset.ID assetId;
     private final int x;
     private final int y;
+    private final StationTilePickerController tilePickerController;
 
     private ParentWidget<?> modal;
     private Kind kind = Kind.NONE;
@@ -36,10 +37,16 @@ final class ModuleConfigModalController {
     private boolean hammerUpgradeVoidRefund;
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
+        this(host, assetId, x, y, null);
+    }
+
+    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
+        StationTilePickerController tilePickerController) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
+        this.tilePickerController = tilePickerController;
     }
 
     void openHammer(int moduleIndex) {
@@ -107,7 +114,7 @@ final class ModuleConfigModalController {
         this.minerSettingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
-        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this);
+        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this, tilePickerController);
         widget.left(x)
             .top(y)
             .width(MinerBlacklistConfigModalWidget.WIDTH)

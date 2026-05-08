@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -578,6 +579,73 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void copyMinerSettingsPayload_roundTripsTargetTiles() {
+        AssetModuleUpdatePacket decoded = roundTrip(
+            AssetModuleUpdatePacket.copyMinerSettings(
+                ASSET_ID,
+                0,
+                MODULE_ID,
+                List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1))));
+
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MINER_SETTINGS, decoded.getConfigAction());
+        assertEquals(
+            List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1)),
+            AssetModuleUpdatePacket.decodeTileCoordPayload(decoded.getRawPayload()));
+    }
+
+    @Test
+    void applyCopyMinerSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
+        AutomatedFacility facility = addTwoMinerFacilityToServer();
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        ModuleMiner targetMiner = (ModuleMiner) target.component();
+        sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+        targetMiner.setFocus(MinerFocusTier.I, "ore:gold", 900);
+        facility.setMinerOreBlacklisted(source, "ore:copper", true);
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.copyMinerSettings(
+                facility.assetId,
+                0,
+                source.id,
+                List.of(target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertEquals(source.groupId(), target.groupId());
+        assertTrue(facility.isMinerOreBlacklisted(target, "ore:copper"));
+        assertEquals(MinerFocusTier.I, targetMiner.focusTier());
+        assertEquals("ore:iron", targetMiner.focusOreKeyOrNull());
+        assertEquals(0, targetMiner.focusAlignmentProgress());
+    }
+
+    @Test
+    void applyCopyMinerSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
+        AutomatedFacility facility = addTwoMinerFacilityToServer();
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        ModuleMiner targetMiner = (ModuleMiner) target.component();
+        sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
+        targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.copyMinerSettings(
+                facility.assetId,
+                0,
+                source.id,
+                List.of(target.anchor())));
+
+        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
+        assertNull(targetMiner.focusOreKeyOrNull());
+    }
+
+    @Test
     void applyCreateMinerSettingsGroupCopiesCurrentMinerBlacklist() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
@@ -738,6 +806,26 @@ final class AssetModuleUpdatePacketTest {
         ModuleInstance module = FacilityModuleKind.MINER
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static AutomatedFacility addTwoMinerFacilityToServer() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance source = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance target = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        facility.addModule(source);
+        facility.addModule(target);
+        facility.stationLayout()
+            .place(source);
+        facility.stationLayout()
+            .place(target);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;
     }

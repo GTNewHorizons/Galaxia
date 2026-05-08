@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -43,8 +45,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 public final class AssetModuleUpdatePacket {
 
@@ -55,6 +60,8 @@ public final class AssetModuleUpdatePacket {
     private static final int MAX_RECIPE_PAYLOAD_BYTES = 4096;
     private static final int MAX_RECIPE_STACKS = 64;
     private static final int HAMMER_UPGRADE_PAYLOAD_BYTES = 4;
+    private static final int MAX_TILE_PICKER_TARGETS = 256;
+    private static final int MAX_TILE_COORD_PAYLOAD_BYTES = Integer.BYTES + MAX_TILE_PICKER_TARGETS * Integer.BYTES * 2;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
@@ -176,6 +183,47 @@ public final class AssetModuleUpdatePacket {
         return pkt;
     }
 
+    public static AssetModuleUpdatePacket copyMinerSettings(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, List<StationTileCoord> targetCoords) {
+        Objects.requireNonNull(targetCoords, "targetCoords");
+        if (targetCoords.isEmpty()) {
+            throw new IllegalArgumentException("copy miner settings target list must not be empty");
+        }
+        if (targetCoords.size() > MAX_TILE_PICKER_TARGETS) {
+            throw new IllegalArgumentException("too many copy miner settings targets: " + targetCoords.size());
+        }
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.COPY_MINER_SETTINGS);
+        ByteBuf payloadBuf = Unpooled.buffer(Integer.BYTES + targetCoords.size() * Integer.BYTES * 2);
+        payloadBuf.writeInt(targetCoords.size());
+        for (StationTileCoord coord : targetCoords) {
+            Objects.requireNonNull(coord, "target coord");
+            payloadBuf.writeInt(coord.dx());
+            payloadBuf.writeInt(coord.dy());
+        }
+        pkt.rawPayload = new byte[payloadBuf.writerIndex()];
+        payloadBuf.readBytes(pkt.rawPayload);
+        return pkt;
+    }
+
+    static List<StationTileCoord> decodeTileCoordPayload(byte[] payload) {
+        if (payload == null || payload.length < Integer.BYTES || payload.length > MAX_TILE_COORD_PAYLOAD_BYTES) {
+            throw new IllegalArgumentException("invalid tile coord payload length: " + (payload == null ? 0 : payload.length));
+        }
+        ByteBuf payloadBuf = Unpooled.wrappedBuffer(payload);
+        int count = payloadBuf.readInt();
+        if (count <= 0 || count > MAX_TILE_PICKER_TARGETS) {
+            throw new IllegalArgumentException("invalid tile coord payload target count: " + count);
+        }
+        if (payloadBuf.readableBytes() != count * Integer.BYTES * 2) {
+            throw new IllegalArgumentException("malformed tile coord payload for target count: " + count);
+        }
+        List<StationTileCoord> coords = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            coords.add(StationTileCoord.of(payloadBuf.readInt(), payloadBuf.readInt()));
+        }
+        return coords;
+    }
+
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, RecipeSlot slot) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
@@ -255,6 +303,7 @@ public final class AssetModuleUpdatePacket {
         SET_SETTINGS_GROUP,
         CREATE_SETTINGS_GROUP,
         CANCEL_MODULE_OPERATION,
+        COPY_MINER_SETTINGS,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT
@@ -293,6 +342,14 @@ public final class AssetModuleUpdatePacket {
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
                 case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
                 case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
+                case COPY_MINER_SETTINGS -> {
+                    if (rawPayload != null) {
+                        buf.writeInt(rawPayload.length);
+                        buf.writeBytes(rawPayload);
+                    } else {
+                        buf.writeInt(0);
+                    }
+                }
                 case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
@@ -356,6 +413,15 @@ public final class AssetModuleUpdatePacket {
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
             case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
             case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
+            case COPY_MINER_SETTINGS -> {
+                int len = buf.readInt();
+                if (len <= 0 || len > MAX_TILE_COORD_PAYLOAD_BYTES || len > buf.readableBytes()) {
+                    throw new IllegalArgumentException("invalid tile coord payload length: " + len);
+                }
+                rawPayload = new byte[len];
+                buf.readBytes(rawPayload);
+                decodeTileCoordPayload(rawPayload);
+            }
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
@@ -434,7 +500,8 @@ public final class AssetModuleUpdatePacket {
                 .withSyncRevision(state.getSyncRevision());
         }
         if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
-            || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP)) {
+            || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP
+            || getConfigAction() == ConfigAction.COPY_MINER_SETTINGS)) {
             return AssetSyncPacket.fullSync(state)
                 .withSyncRevision(state.getSyncRevision());
         }
@@ -522,6 +589,7 @@ public final class AssetModuleUpdatePacket {
             case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, packet.shortPayload);
             case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
             case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
+            case COPY_MINER_SETTINGS -> handleCopyMinerSettings(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
     }
@@ -669,6 +737,25 @@ public final class AssetModuleUpdatePacket {
         String targetOreKey = packet.stringPayload == null || packet.stringPayload.isBlank() ? null
             : packet.stringPayload;
         miner.setFocusOre(targetOreKey);
+    }
+
+    private static void handleCopyMinerSettings(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance source) {
+        if (!(source.component() instanceof ModuleMiner)) {
+            throw new IllegalStateException("COPY_MINER_SETTINGS sent to non-miner module " + source.id);
+        }
+        StationLayout layout = state.stationLayout();
+        if (layout == null) {
+            throw new IllegalStateException("COPY_MINER_SETTINGS requires a station layout for " + state.assetId);
+        }
+        for (StationTileCoord targetCoord : decodeTileCoordPayload(packet.rawPayload)) {
+            ModuleInstance target = layout.moduleAt(targetCoord);
+            if (target == null) {
+                throw new IllegalStateException(
+                    "COPY_MINER_SETTINGS target tile is empty: " + targetCoord.dx() + "," + targetCoord.dy());
+            }
+            state.copyMinerRuntimeSettings(source, target);
+        }
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

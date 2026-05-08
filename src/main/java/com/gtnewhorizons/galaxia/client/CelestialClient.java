@@ -254,6 +254,13 @@ public final class CelestialClient {
             module -> AssetModuleUpdatePacket.minerFocusOre(assetId, moduleIndex, module.id, oreKey));
     }
 
+    public static void copyMinerSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.copyMinerSettings(assetId, moduleIndex, module.id, targetCoords));
+    }
+
     private static void sendModuleUpdate(ID assetId, int moduleIndex,
         Function<ModuleInstance, AssetModuleUpdatePacket> packetFactory) {
         ModuleInstance module = resolveModule(assetId, moduleIndex);

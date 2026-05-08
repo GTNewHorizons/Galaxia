@@ -54,6 +54,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int PAGE_BUTTON_Y = ROW_Y - 20;
     private static final int FOOTER_Y = HEIGHT - 28;
     private static final int FOOTER_BUTTON_HEIGHT = 20;
+    private static final int COPY_SETTINGS_BUTTON_WIDTH = 104;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int ROW_ICON_X = ModuleConfigModalSupport.PANEL_PADDING;
     private static final int ROW_ICON_Y_OFFSET = 1;
@@ -68,10 +69,13 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private final StationTilePickerController tilePickerController;
 
-    MinerBlacklistConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
+    MinerBlacklistConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
+        StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.controller = controller;
+        this.tilePickerController = tilePickerController;
         MinerFocusTier[] focusTiers = MinerFocusTier.values();
         for (int i = 0; i < focusTiers.length; i++) {
             MinerFocusTier tier = focusTiers[i];
@@ -127,6 +131,10 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
                     .pos(ROW_CHECKBOX_X, rowY + ROW_CHECKBOX_Y_OFFSET)
                     .size(ROW_CHECKBOX_SIZE, ROW_CHECKBOX_SIZE));
         }
+        child(
+            ModuleConfigModalSupport.button(this::canCopySettings, "Copy Settings...", this::startCopySettingsPicker)
+                .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
+                .size(COPY_SETTINGS_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(() -> controller.isMinerBlacklistOpen(), "Close", controller::close)
                 .pos(PAGE_NEXT_BUTTON_X, FOOTER_Y)
@@ -276,6 +284,31 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         if (module.groupId() != option.groupId()) {
             CelestialClient.updateMinerSettingsGroup(assetId, controller.moduleIndex(), option.groupId());
         }
+    }
+
+    private boolean canCopySettings() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance module = selectedModule();
+        return tilePickerController != null && controller.isMinerBlacklistOpen()
+            && !controller.isMinerSettingsGroupMenuOpen()
+            && facility != null
+            && facility.stationLayout() != null
+            && module != null
+            && module.component() instanceof ModuleMiner;
+    }
+
+    private void startCopySettingsPicker() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance source = selectedModule();
+        int sourceModuleIndex = controller.moduleIndex();
+        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        controller.close();
+        tilePickerController.start(
+            "Copy miner settings",
+            "Copy",
+            coord -> MinerSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
+            coord -> MinerSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            targets -> CelestialClient.copyMinerSettings(assetId, sourceModuleIndex, targets));
     }
 
     private boolean canUseRow(int rowIndex) {

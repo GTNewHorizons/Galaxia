@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -196,6 +197,29 @@ public final class AutomatedFacility extends CelestialAsset {
         if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
             markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
         }
+    }
+
+    public void copyMinerRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
+            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
+        }
+        if (!(target.component() instanceof ModuleMiner targetMiner)) {
+            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
+        }
+        if (source.id.equals(target.id)) {
+            throw new IllegalStateException("Miner settings copy target must be different from source: " + source.id);
+        }
+        if (source.groupId() == 0) {
+            throw new IllegalStateException("Miner settings copy source has no settings group: " + source.id);
+        }
+        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
+        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
+            throw new IllegalStateException(
+                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
+        }
+        assignSettingsGroup(target, source.groupId());
+        targetMiner.setFocusOre(sourceFocusOreKey);
+        markModuleDirty(target.id);
     }
 
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
