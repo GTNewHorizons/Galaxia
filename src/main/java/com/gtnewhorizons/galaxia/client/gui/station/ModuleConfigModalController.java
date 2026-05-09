@@ -276,7 +276,12 @@ final class ModuleConfigModalController {
             close();
             return;
         }
+        boolean sameModule = module.id.equals(moduleId);
         moduleId = module.id;
+        if (sameModule) {
+            moduleUpgradeSelection = ModuleUpgradeUiModel.normalize(module, moduleUpgradeSelection);
+            return;
+        }
         moduleUpgradeSelection = ModuleUpgradeUiModel.defaultSelection(module);
         hammerUpgradeReserveItems = false;
         hammerUpgradeVoidRefund = false;
