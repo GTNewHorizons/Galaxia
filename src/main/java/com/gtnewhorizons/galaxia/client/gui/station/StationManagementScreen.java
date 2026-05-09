@@ -109,8 +109,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));
         panel.child(
-            new StationTilePickerControlsWidget(tilePickerController).left(PADDING)
-                .top(PADDING)
+            new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                .top(PADDING * 2)
                 .width(StationTilePickerControlsWidget.WIDTH)
                 .height(StationTilePickerControlsWidget.HEIGHT));
         panel.child(
@@ -132,7 +132,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         FacilityModuleKind kind = request.kind();
         controller.start(
             "Build " + kind.getDisplayName(),
-            "Build",
+            "Confirm",
             coord -> ModuleBuildPickerModel
                 .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord),
             coord -> coord,

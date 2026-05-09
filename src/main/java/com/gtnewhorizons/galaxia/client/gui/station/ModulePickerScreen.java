@@ -48,17 +48,20 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int BUTTON_GAP = 5;
     private static final int BUTTON_TEXT_PADDING = 7;
     private static final int TEXT_BASELINE_OFFSET = 1;
-    private static final int MULTIPLE_BUTTON_WIDTH = 72;
-    private static final int BUTTON_COLUMN_GAP = 4;
+    private static final int MULTIPLE_TOGGLE_WIDTH = 58;
+    private static final int MULTIPLE_TOGGLE_HEIGHT = 14;
+    private static final int CHECKBOX_SIZE = 10;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
     private static volatile boolean pendingInstantBuild;
+    private static volatile boolean pendingMultipleBuild;
 
     public static void open(CelestialAsset.ID assetId, StationTileCoord coord, boolean instantBuild) {
         pendingAssetId = assetId;
         pendingCoord = coord;
         pendingInstantBuild = instantBuild;
+        pendingMultipleBuild = false;
         FACTORY.openClient();
     }
 
@@ -86,6 +89,10 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             new TextWidget<>(IKey.str("Build module")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
                 .pos(PANEL_PADDING, PANEL_PADDING));
+        panel.child(
+            createMultipleToggle()
+                .pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_TOGGLE_WIDTH, PANEL_PADDING - 1)
+                .size(MULTIPLE_TOGGLE_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
 
         AutomatedFacility facility = resolveFacility();
         if (facility == null || pendingCoord == null) {
@@ -100,14 +107,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             if (!kind.isAllowedOn(facility.kind)) continue;
             panel.child(
-                createKindButton(kind, false).pos(PANEL_PADDING, y)
-                    .size(
-                        PANEL_WIDTH - PANEL_PADDING * 2 - MULTIPLE_BUTTON_WIDTH - BUTTON_COLUMN_GAP,
-                        BUTTON_HEIGHT));
-            panel.child(
-                createKindButton(kind, true)
-                    .pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_BUTTON_WIDTH, y)
-                    .size(MULTIPLE_BUTTON_WIDTH, BUTTON_HEIGHT));
+                createKindButton(kind).pos(PANEL_PADDING, y)
+                    .size(PANEL_WIDTH - PANEL_PADDING * 2, BUTTON_HEIGHT));
             y += BUTTON_HEIGHT + BUTTON_GAP;
         }
         return panel;
@@ -119,7 +120,23 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
     }
 
-    private ButtonWidget<?> createKindButton(FacilityModuleKind kind, boolean multiple) {
+    private ButtonWidget<?> createMultipleToggle() {
+        return new ButtonWidget<>()
+            .background(
+                drawable(
+                    (ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
+            .hoverBackground(
+                drawable(
+                    (ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
+            .onMouseTapped(mouseButton -> {
+                if (mouseButton != 0) return false;
+                pendingMultipleBuild = !pendingMultipleBuild;
+                return true;
+            })
+            .tooltipDynamic(t -> t.addLine("Build on multiple compatible tiles"));
+    }
+
+    private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
         return new ButtonWidget<>()
             .background(
                 drawable(
@@ -139,12 +156,12 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                         h,
                         EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(),
                         EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
-            .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, multiple, x, y, w, h)))
+            .overlay(drawable((ctx, x, y, w, h) -> drawKindButton(kind, x, y, w, h)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 CelestialAsset.ID assetId = pendingAssetId;
                 StationTileCoord coord = pendingCoord;
-                if (assetId != null && multiple) {
+                if (assetId != null && pendingMultipleBuild) {
                     StationManagementScreen.openBuildPicker(assetId, kind, pendingInstantBuild);
                 } else if (assetId != null && coord != null) {
                     CelestialClient.createModule(assetId, kind, pendingInstantBuild, coord);
@@ -160,18 +177,34 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             });
     }
 
-    private static void drawKindButton(FacilityModuleKind kind, boolean multiple, int x, int y, int width, int height) {
+    private static void drawMultipleToggle(int x, int y, int width, int height, boolean hovered) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        if (multiple) {
-            String label = fr.trimStringToWidth("Multiple", width - BUTTON_TEXT_PADDING * 2);
-            int textY = y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET;
+        int boxY = y + (height - CHECKBOX_SIZE) / 2;
+        BorderedRect.draw(
+            x,
+            boxY,
+            CHECKBOX_SIZE,
+            CHECKBOX_SIZE,
+            hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
+                : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+            EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+        if (pendingMultipleBuild) {
             fr.drawStringWithShadow(
-                label,
-                x + (width - fr.getStringWidth(label)) / 2,
-                textY,
+                "X",
+                x + 2,
+                boxY + 1,
                 EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            return;
         }
+        String label = fr.trimStringToWidth("Multiple", width - CHECKBOX_SIZE - 4);
+        fr.drawStringWithShadow(
+            label,
+            x + CHECKBOX_SIZE + 4,
+            y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+    }
+
+    private static void drawKindButton(FacilityModuleKind kind, int x, int y, int width, int height) {
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         String label = kind.getDisplayName();
         int textY = y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET;
         fr.drawStringWithShadow(
@@ -195,6 +228,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingAssetId = null;
         pendingCoord = null;
         pendingInstantBuild = false;
+        pendingMultipleBuild = false;
     }
 
     private IDrawable drawable(DrawableCommand cmd) {
