@@ -33,10 +33,10 @@ final class ModuleUpgradePickerModelTest {
     }
 
     @Test
-    void hammerTargetMustBeDifferentInactiveHammerThatChangesSpec() {
+    void hammerTargetMustBeInactiveHammerThatChangesSpec() {
         TestFacility test = twoModuleFacility(FacilityModuleKind.HAMMER, ModuleTier.EV);
 
-        assertFalse(
+        assertTrue(
             ModuleUpgradePickerModel.isCompatibleTarget(
                 test.facility(),
                 test.source(),
@@ -60,6 +60,30 @@ final class ModuleUpgradePickerModelTest {
                 HammerVariant.BASE,
                 test.target()
                     .anchor()));
+    }
+
+    @Test
+    void confirmedTargetsCanIncludeSourceModule() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.HAMMER, ModuleTier.EV);
+
+        List<StationTileCoord> targets = ModuleUpgradePickerModel.confirmedTargets(
+            test.facility(),
+            test.source(),
+            ModuleTier.LuV,
+            HammerVariant.BIG,
+            List.of(
+                test.source()
+                    .anchor(),
+                test.target()
+                    .anchor()));
+
+        assertEquals(
+            List.of(
+                test.source()
+                    .anchor(),
+                test.target()
+                    .anchor()),
+            targets);
     }
 
     @Test

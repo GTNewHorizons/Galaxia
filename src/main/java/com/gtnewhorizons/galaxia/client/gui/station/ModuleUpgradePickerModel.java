@@ -34,7 +34,7 @@ final class ModuleUpgradePickerModel {
         StationLayout layout = facility.stationLayout();
         if (layout == null) return false;
         ModuleInstance target = layout.moduleAt(coord);
-        if (target == null || source.id.equals(target.id)) return false;
+        if (target == null) return false;
         if (source.kind() != target.kind()) return false;
         ModuleOperationState operation = target.operationOrNull();
         if (operation != null && !operation.phase()

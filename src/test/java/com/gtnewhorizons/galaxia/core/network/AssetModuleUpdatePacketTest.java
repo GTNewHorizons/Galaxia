@@ -712,6 +712,70 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyModuleUpgradeTargetsCanIncludeSourceModule() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(source.anchor(), target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertNotNull(source.operationOrNull());
+        assertNotNull(target.operationOrNull());
+        assertEquals(
+            ModuleTier.LuV,
+            source.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            ModuleTier.LuV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsUsesCreativeModeForAllTargets() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(source.anchor(), target.anchor())));
+
+        packet.apply(TEAM, true);
+
+        assertEquals(ModuleTier.LuV, source.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) source.component()).variant());
+        assertNull(source.operationOrNull());
+        assertEquals(ModuleTier.LuV, target.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) target.component()).variant());
+        assertNull(target.operationOrNull());
+    }
+
+    @Test
     void applyModuleUpgradeTargetsMarksTargetDirtyForImmediateSync() {
         AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleInstance source = facility.modules()

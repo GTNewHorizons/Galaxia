@@ -674,7 +674,7 @@ public final class AssetModuleUpdatePacket {
             case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
             case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
             case COPY_MINER_SETTINGS -> handleCopyMinerSettings(packet, state, module);
-            case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module);
+            case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module, creative);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
     }
@@ -845,7 +845,7 @@ public final class AssetModuleUpdatePacket {
     }
 
     private static void handleModuleUpgradeTargets(AssetModuleUpdatePacket packet, AutomatedFacility state,
-        ModuleInstance source) {
+        ModuleInstance source, boolean creative) {
         ModuleUpgradeTargetsPayload payload = decodeModuleUpgradeTargetsPayload(packet.rawPayload);
         StationLayout layout = state.stationLayout();
         if (layout == null) {
@@ -859,12 +859,9 @@ public final class AssetModuleUpdatePacket {
                 throw new IllegalStateException(
                     "PLAN_MODULE_UPGRADE_TARGETS target tile is empty: " + targetCoord.dx() + "," + targetCoord.dy());
             }
-            if (source.id.equals(target.id)) {
-                throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target must be different from source");
-            }
             if (!plannedTargets.add(target.id)) continue;
             ModuleOperationState existingOperation = target.operationOrNull();
-            if (existingOperation != null && !existingOperation.phase()
+            if (!creative && existingOperation != null && !existingOperation.phase()
                 .isTerminal()) {
                 LOG.warn(
                     "Skipped module upgrade target {} because build {} is active",
@@ -873,15 +870,15 @@ public final class AssetModuleUpdatePacket {
                 continue;
             }
             if (source.component() instanceof ModuleHammer) {
-                handleHammerUpgradeTarget(state, source, target, payload);
+                handleHammerUpgradeTarget(state, source, target, payload, creative);
             } else {
-                handleGenericUpgradeTarget(state, source, target, payload);
+                handleGenericUpgradeTarget(state, source, target, payload, creative);
             }
         }
     }
 
     private static void handleHammerUpgradeTarget(AutomatedFacility state, ModuleInstance source, ModuleInstance target,
-        ModuleUpgradeTargetsPayload payload) {
+        ModuleUpgradeTargetsPayload payload, boolean creative) {
         if (!(target.component() instanceof ModuleHammer targetHammer)) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS hammer source cannot target " + target.kind());
         }
@@ -902,13 +899,13 @@ public final class AssetModuleUpdatePacket {
             payload.targetTier(),
             payload.reserveItems(),
             payload.voidCompletionRefund(),
-            false)) {
+            creative) && !creative) {
             state.markModuleDirty(target.id);
         }
     }
 
     private static void handleGenericUpgradeTarget(AutomatedFacility state, ModuleInstance source,
-        ModuleInstance target, ModuleUpgradeTargetsPayload payload) {
+        ModuleInstance target, ModuleUpgradeTargetsPayload payload, boolean creative) {
         if (payload.targetHammerVariant() != null) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS non-hammer target cannot use hammer variant");
         }
@@ -923,7 +920,7 @@ public final class AssetModuleUpdatePacket {
         if (target.tier() == payload.targetTier()) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target already has requested tier");
         }
-        if (planModuleTierUpgrade(state, target, payload.targetTier(), false)) {
+        if (planModuleTierUpgrade(state, target, payload.targetTier(), creative) && !creative) {
             state.markModuleDirty(target.id);
         }
     }
