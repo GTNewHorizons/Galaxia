@@ -69,4 +69,31 @@ final class StationTilePickerControllerTest {
         assertFalse(controller.isActive());
         assertFalse(controller.canConfirm());
     }
+
+    @Test
+    void prunesSelectionAfterDeselectedTargetDisconnectsOthers() {
+        StationTilePickerController controller = new StationTilePickerController();
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(2, 0);
+        StationTileCoord third = StationTileCoord.of(3, 0);
+
+        controller.start(
+            "Build",
+            "Confirm",
+            (coord, selected) -> true,
+            coord -> coord,
+            targets -> {},
+            targets -> targets.contains(first) ? targets : List.of());
+
+        assertTrue(controller.toggle(first));
+        assertTrue(controller.toggle(second));
+        assertTrue(controller.toggle(third));
+        assertEquals(3, controller.selectedCount());
+
+        assertTrue(controller.toggle(first));
+
+        assertEquals(0, controller.selectedCount());
+        assertFalse(controller.isSelected(second));
+        assertFalse(controller.isSelected(third));
+    }
 }

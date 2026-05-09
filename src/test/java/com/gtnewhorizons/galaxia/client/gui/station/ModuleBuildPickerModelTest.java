@@ -109,4 +109,23 @@ final class ModuleBuildPickerModelTest {
                 first,
                 List.of(first)));
     }
+
+    @Test
+    void disconnectedBuildTargetsArePrunedAfterSelectionChanges() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(2, 0);
+        StationTileCoord third = StationTileCoord.of(3, 0);
+
+        assertEquals(
+            List.of(first, second, third),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, second, third)));
+        assertEquals(List.of(), ModuleBuildPickerModel.connectedTargets(facility, List.of(second, third)));
+        assertEquals(List.of(first), ModuleBuildPickerModel.connectedTargets(facility, List.of(first, third)));
+    }
 }

@@ -1,6 +1,10 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.Collection;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -34,6 +38,32 @@ final class ModuleBuildPickerModel {
         return ModuleFootprint.validate(facility.stationLayout(), coord, shape) == ShapeValidation.OK;
     }
 
+    static List<StationTileCoord> connectedTargets(AutomatedFacility facility, Collection<StationTileCoord> targets) {
+        if (facility == null || targets == null || targets.isEmpty() || !facility.hasStationLayout()
+            || facility.stationLayout() == null) {
+            return List.of();
+        }
+        Set<StationTileCoord> selected = new HashSet<>(targets);
+        Set<StationTileCoord> connected = new HashSet<>();
+        boolean changed;
+        do {
+            changed = false;
+            for (StationTileCoord target : selected) {
+                if (target == null || connected.contains(target)) continue;
+                if (hasBuiltOrthogonalNeighbour(facility, target) || hasPendingOrthogonalNeighbour(connected, target)) {
+                    connected.add(target);
+                    changed = true;
+                }
+            }
+        } while (changed);
+
+        List<StationTileCoord> result = new ArrayList<>();
+        for (StationTileCoord target : targets) {
+            if (connected.contains(target)) result.add(target);
+        }
+        return List.copyOf(result);
+    }
+
     private static boolean isCompatibleSingleTarget(AutomatedFacility facility, StationTileCoord coord,
         Collection<StationTileCoord> pendingTargets) {
         if (facility.stationLayout()
@@ -50,5 +80,19 @@ final class ModuleBuildPickerModel {
             if (coord.isOrthogonallyAdjacent(pending)) return true;
         }
         return false;
+    }
+
+    private static boolean hasBuiltOrthogonalNeighbour(AutomatedFacility facility, StationTileCoord coord) {
+        return isBuilt(facility, coord.dx() - 1, coord.dy())
+            || isBuilt(facility, coord.dx() + 1, coord.dy())
+            || isBuilt(facility, coord.dx(), coord.dy() - 1)
+            || isBuilt(facility, coord.dx(), coord.dy() + 1);
+    }
+
+    private static boolean isBuilt(AutomatedFacility facility, int dx, int dy) {
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
+        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
+        return facility.stationLayout()
+            .isOccupied(StationTileCoord.of(dx, dy));
     }
 }

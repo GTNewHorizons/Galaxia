@@ -18,6 +18,7 @@ final class StationTilePickerController {
     private String confirmLabel = "Confirm";
     private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
+    private UnaryOperator<List<StationTileCoord>> selectionPruner = targets -> targets;
     private Consumer<List<StationTileCoord>> confirmHandler = selected -> {};
     private final Set<StationTileCoord> selected = new LinkedHashSet<>();
     private boolean active;
@@ -34,11 +35,18 @@ final class StationTilePickerController {
 
     void start(String title, String confirmLabel, BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler) {
+        start(title, confirmLabel, compatibility, normalizer, confirmHandler, targets -> targets);
+    }
+
+    void start(String title, String confirmLabel, BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility,
+        UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler,
+        UnaryOperator<List<StationTileCoord>> selectionPruner) {
         this.title = title == null ? "" : title;
         this.confirmLabel = confirmLabel == null || confirmLabel.isBlank() ? "Confirm" : confirmLabel;
         this.compatibility = compatibility == null ? (coord, selected) -> false : compatibility;
         this.normalizer = normalizer == null ? coord -> coord : normalizer;
         this.confirmHandler = confirmHandler == null ? selected -> {} : confirmHandler;
+        this.selectionPruner = selectionPruner == null ? targets -> targets : selectionPruner;
         selected.clear();
         active = true;
     }
@@ -85,6 +93,7 @@ final class StationTilePickerController {
             if (!isCompatible(coord)) return false;
             selected.add(normalized);
         }
+        pruneSelection();
         return true;
     }
 
@@ -111,6 +120,15 @@ final class StationTilePickerController {
         confirmLabel = "Confirm";
         compatibility = (coord, selected) -> false;
         normalizer = coord -> coord;
+        selectionPruner = targets -> targets;
         confirmHandler = selected -> {};
+    }
+
+    private void pruneSelection() {
+        List<StationTileCoord> current = new ArrayList<>(selected);
+        List<StationTileCoord> pruned = selectionPruner.apply(Collections.unmodifiableList(current));
+        selected.clear();
+        if (pruned == null) return;
+        selected.addAll(pruned);
     }
 }
