@@ -369,21 +369,13 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private String effectLine(ModuleInstance module) {
         if (module.component() instanceof ModuleHammer) {
+            HammerVariant targetVariant = ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection());
             ModuleTierData data = FacilityModuleRegistry.get(module.kind())
                 .getTierData(ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection()));
-            int cooldown = data.variantCooldowns() != null && data.variantCooldowns()
-                .containsKey(
-                    ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection())
-                        .name()) ? data.variantCooldowns()
-                            .get(
-                                ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection())
-                                    .name())
-                            : data.cooldownTicks();
-            return "Effect: cooldown " + cooldown / 20
+            int chargeTicks = ModuleHammer.chargeTicks(targetVariant, data);
+            return "Effect: charge " + chargeTicks / 20
                 + "s, buffer "
-                + ModuleConfigModalSupport.formatEu(
-                    ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection())
-                        .shotEnergyEu())
+                + ModuleConfigModalSupport.formatEu(targetVariant.shotEnergyEu())
                 + " EU";
         }
         if (module.component() instanceof ModuleMiner miner) {

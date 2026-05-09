@@ -103,6 +103,7 @@ public class FacilityModuleRegistry {
                         ModuleTier.EV,
                         1000L,
                         0L,
+                        ModuleHammer.CHARGE_STEP_TICKS,
                         1200,
                         Map.of(HammerVariant.BASE.name(), 1200),
                         Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L))
@@ -110,6 +111,7 @@ public class FacilityModuleRegistry {
                         ModuleTier.IV,
                         4000L,
                         0L,
+                        ModuleHammer.CHARGE_STEP_TICKS,
                         900,
                         Map.of(HammerVariant.BASE.name(), 900),
                         Map.of(new ItemStack(Items.iron_ingot), 32L, new ItemStack(Items.gold_ingot), 256L))
@@ -117,6 +119,7 @@ public class FacilityModuleRegistry {
                         ModuleTier.LuV,
                         16000L,
                         0L,
+                        ModuleHammer.CHARGE_STEP_TICKS,
                         600,
                         Map.of(HammerVariant.BASE.name(), 600, HammerVariant.BIG.name(), 1200),
                         Map.of(new ItemStack(Items.iron_ingot), 128L, new ItemStack(Items.gold_ingot), 1024L))
@@ -124,6 +127,7 @@ public class FacilityModuleRegistry {
                         ModuleTier.ZPM,
                         64000L,
                         0L,
+                        ModuleHammer.CHARGE_STEP_TICKS,
                         900,
                         Map.of(HammerVariant.BIG.name(), 900),
                         Map.of(new ItemStack(Items.iron_ingot), 512L, new ItemStack(Items.gold_ingot), 4096L))
@@ -131,13 +135,14 @@ public class FacilityModuleRegistry {
                         ModuleTier.UV,
                         256000L,
                         0L,
+                        ModuleHammer.CHARGE_STEP_TICKS,
                         600,
                         Map.of(HammerVariant.BIG.name(), 600),
                         Map.of(new ItemStack(Items.iron_ingot), 2048L, new ItemStack(Items.gold_ingot), 16384L))
                     .build())
             .configButton()
             .upgradeButton()
-            .behavior(ModuleHammer::prepareToFire)
+            .behavior(ModuleHammer::charge)
             .factory(
                 () -> new ModuleHammer(
                     FacilityModuleKind.HAMMER,
@@ -412,6 +417,24 @@ public class FacilityModuleRegistry {
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .variantCooldowns(variantCooldowns)
+                    .cost(cost)
+                    .build())
+                != null) {
+                throw new IllegalArgumentException("Duplicate tier entry: " + tier);
+            }
+            return this;
+        }
+
+        public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, int chargeTicks,
+            Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> cost) {
+            if (map.put(
+                tier,
+                ModuleTierData.builder()
+                    .addedEnergyCapacity(energy)
+                    .powerDraw(power)
+                    .cooldown(cooldown)
+                    .chargeTicks(chargeTicks)
+                    .variantChargeTicks(variantChargeTicks)
                     .cost(cost)
                     .build())
                 != null) {

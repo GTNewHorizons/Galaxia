@@ -7,13 +7,17 @@ import javax.annotation.Nullable;
 import net.minecraft.item.ItemStack;
 
 public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks,
-    @Nullable Long capacity, @Nullable Map<String, Integer> variantCooldowns, Map<ItemStack, Long> constructionCost,
-    int buildTicks, int completionRefundPercent) {
+    @Nullable Long capacity, @Nullable Map<String, Integer> variantCooldowns, @Nullable Integer chargeTicks,
+    @Nullable Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> constructionCost, int buildTicks,
+    int completionRefundPercent) {
 
     public ModuleTierData {
         constructionCost = Map.copyOf(constructionCost);
         if (variantCooldowns != null) {
             variantCooldowns = Map.copyOf(variantCooldowns);
+        }
+        if (variantChargeTicks != null) {
+            variantChargeTicks = Map.copyOf(variantChargeTicks);
         }
         if (buildTicks <= 0) {
             throw new IllegalArgumentException("buildTicks must be > 0, got " + buildTicks);
@@ -26,7 +30,33 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
 
     public ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
         Map<ItemStack, Long> constructionCost) {
-        this(baseEnergyCapacity, powerDrawEuPerTick, cooldownTicks, capacity, null, constructionCost, 200, 80);
+        this(
+            baseEnergyCapacity,
+            powerDrawEuPerTick,
+            cooldownTicks,
+            capacity,
+            null,
+            null,
+            null,
+            constructionCost,
+            200,
+            80);
+    }
+
+    public ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
+        @Nullable Map<String, Integer> variantCooldowns, Map<ItemStack, Long> constructionCost, int buildTicks,
+        int completionRefundPercent) {
+        this(
+            baseEnergyCapacity,
+            powerDrawEuPerTick,
+            cooldownTicks,
+            capacity,
+            variantCooldowns,
+            null,
+            null,
+            constructionCost,
+            buildTicks,
+            completionRefundPercent);
     }
 
     public static Builder builder() {
@@ -44,6 +74,8 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
         private Integer cooldown;
         private Long capacity;
         private Map<String, Integer> variantCooldowns;
+        private Integer chargeTicks;
+        private Map<String, Integer> variantChargeTicks;
         private Map<ItemStack, Long> cost;
         private int buildTicks = 200;
         private int refundPercent = 80;
@@ -75,6 +107,16 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
             return this;
         }
 
+        public Builder chargeTicks(int chargeTicks) {
+            this.chargeTicks = chargeTicks;
+            return this;
+        }
+
+        public Builder variantChargeTicks(Map<String, Integer> variantChargeTicks) {
+            this.variantChargeTicks = variantChargeTicks;
+            return this;
+        }
+
         public Builder cost(Map<ItemStack, Long> cost) {
             this.cost = cost;
             return this;
@@ -97,6 +139,8 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
                 require(cooldown, "cooldown"),
                 capacity,
                 variantCooldowns,
+                chargeTicks,
+                variantChargeTicks,
                 require(cost, "cost"),
                 buildTicks,
                 refundPercent);

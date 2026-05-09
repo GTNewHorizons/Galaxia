@@ -180,7 +180,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int lineY = y;
         HammerVariant variant = hammer.variant();
         ModuleTier tier = module.tier();
-        int cooldown = module.cooldownTicks();
+        int chargeTicks = hammer.chargeTicks(module);
         long bufferCapacity = hammer.energyCapacity();
         long chargeRate = hammer.chargeRate(module);
         lineY = drawLine("Hammer", panelX, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
@@ -204,7 +204,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Cooldown: " + (cooldown / 20) + "s  Minimum shot: " + formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU) + " EU",
+            "Charge: " + (chargeTicks / 20) + "s  Minimum shot: " + formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU) + " EU",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());

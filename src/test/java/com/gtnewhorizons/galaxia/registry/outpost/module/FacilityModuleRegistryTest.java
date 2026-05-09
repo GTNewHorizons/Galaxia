@@ -93,6 +93,8 @@ final class FacilityModuleRegistryTest {
             .powerDraw(64L)
             .cooldown(20)
             .variantCooldowns(Map.of("BIG", 600))
+            .chargeTicks(400)
+            .variantChargeTicks(Map.of("BIG", 800))
             .cost(Map.of(material, 4L))
             .buildTicks(40)
             .refundPercent(50)
@@ -101,6 +103,11 @@ final class FacilityModuleRegistryTest {
         assertEquals(
             600,
             data.variantCooldowns()
+                .get("BIG"));
+        assertEquals(400, data.chargeTicks());
+        assertEquals(
+            800,
+            data.variantChargeTicks()
                 .get("BIG"));
         assertEquals(40, data.buildTicks());
         assertEquals(50, data.completionRefundPercent());

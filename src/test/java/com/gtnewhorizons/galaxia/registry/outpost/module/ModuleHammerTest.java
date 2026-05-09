@@ -25,7 +25,7 @@ final class ModuleHammerTest {
     }
 
     @Test
-    void chargeRateFillsPrivateBufferByCooldownEnd() {
+    void chargeRateFillsPrivateBufferByChargeEnd() {
         FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(FacilityModuleKind.HAMMER);
         for (var entry : new Object[][] { { HammerVariant.BASE, ModuleTier.EV, 60 * 20, 500_000L },
             { HammerVariant.BIG, ModuleTier.LuV, 60 * 20, 8_000_000L } }) {
@@ -35,19 +35,16 @@ final class ModuleHammerTest {
             long expectedEnergy = (long) entry[3];
 
             ModuleTierData data = def.getTierData(tier);
-            int cooldown = data.variantCooldowns() != null && data.variantCooldowns()
-                .containsKey(variant.name()) ? data.variantCooldowns()
-                    .get(variant.name()) : data.cooldownTicks();
-            int chargeTicks = Math.max(1, cooldown - 20);
-            long chargeRate = Math.ceilDiv(expectedEnergy, chargeTicks);
+            int chargeTicks = ModuleHammer.chargeTicks(variant, data);
+            long chargeRate = Math.ceilDiv(expectedEnergy, Math.max(1, chargeTicks - ModuleHammer.CHARGE_STEP_TICKS));
 
-            assertEquals(expectedCooldown - 20, chargeTicks);
-            assertTrue(chargeRate * 1180L >= expectedEnergy);
+            assertEquals(expectedCooldown, chargeTicks);
+            assertTrue(chargeRate * (chargeTicks - ModuleHammer.CHARGE_STEP_TICKS) >= expectedEnergy);
         }
     }
 
     @Test
-    void hammerChargesPrivateBufferFromStationEachTick() {
+    void hammerChargesPrivateBufferFromStationOnApplyBehaviorInterval() {
         AutomatedFacility outpost = createOutpost();
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
@@ -58,13 +55,41 @@ final class ModuleHammerTest {
         module.updateStatus(Buildable.Status.OPERATIONAL);
         ModuleHammer hammer = (ModuleHammer) module.component();
         outpost.setEnergyStored(500_000L);
-        long chargeRate = Math.ceilDiv(hammer.energyCapacity(), Math.max(1, module.cooldownTicks() - 20));
+        long chargeAmount = hammer.chargeRate(module) * module.cooldownTicks();
+
+        for (int i = 0; i < module.cooldownTicks(); i++) {
+            module.tick(outpost);
+        }
+
+        assertEquals(ModuleHammer.CHARGE_STEP_TICKS, module.cooldownTicks());
+        assertEquals(1200, hammer.chargeTicks(module));
+        assertEquals(500_000L - chargeAmount, outpost.getEnergyStored());
+        assertEquals(chargeAmount, hammer.energyStored());
+        assertFalse(hammer.canFire());
+    }
+
+    @Test
+    void hammerChargesPrivateBufferOnApplyBehaviorInterval() {
+        AutomatedFacility outpost = createOutpost();
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        outpost.setEnergyStored(500_000L);
 
         module.tick(outpost);
 
-        assertEquals(500_000L - chargeRate, outpost.getEnergyStored());
-        assertEquals(chargeRate, hammer.energyStored());
-        assertFalse(hammer.canFire());
+        assertEquals(0L, hammer.energyStored());
+        for (int i = 1; i < module.cooldownTicks(); i++) {
+            module.tick(outpost);
+        }
+
+        assertEquals(20, module.cooldownTicks());
+        assertEquals(hammer.chargeRate(module) * module.cooldownTicks(), hammer.energyStored());
     }
 
     @Test

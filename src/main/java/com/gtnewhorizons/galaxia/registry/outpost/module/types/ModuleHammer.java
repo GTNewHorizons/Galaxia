@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 
@@ -18,7 +19,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public static final long EU_PER_DV = 10_000L;
     public static final long MIN_SHOT_ENERGY_EU = EU_PER_DV;
-    private static final int CHARGE_SYNC_INTERVAL_TICKS = 20;
+    public static final int CHARGE_STEP_TICKS = 20;
 
     private static final ModuleTier[] BASE_TIERS = { ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV };
     private static final ModuleTier[] BIG_TIERS = { ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV };
@@ -51,8 +52,12 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         setEnergyStored(energyStored);
     }
 
-    public static void prepareToFire(ModuleInstance instance, AutomatedFacility outpost) {
-        // HAMMER charge is handled every operational tick. The registry behavior remains as the cooldown hook.
+    public static void charge(ModuleInstance instance, AutomatedFacility outpost) {
+        ModuleHammer hammer = (ModuleHammer) instance.component();
+        long charge = hammer.chargeRate(instance) * Math.max(1, instance.cooldownTicks());
+        if (hammer.chargeFrom(outpost, charge)) {
+            outpost.markModuleDirty(instance.id);
+        }
     }
 
     public static long shotEnergyCost(double totalDv) {
@@ -78,6 +83,16 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         if (!supportsTier(variant, tier)) throw invalidTier(variant, tier);
     }
 
+    public static int chargeTicks(@Nonnull HammerVariant variant, @Nonnull ModuleTierData data) {
+        if (data.variantChargeTicks() != null) {
+            Integer override = data.variantChargeTicks()
+                .get(variant.name());
+            if (override != null) return override;
+        }
+        if (data.chargeTicks() != null) return data.chargeTicks();
+        return data.cooldownTicks();
+    }
+
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
         if (!(spec instanceof HammerModuleOperation hammerSpec)) {
@@ -91,15 +106,6 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         this.variant = targetVariant;
         setEnergyStored(energyStored);
         module.setTier(targetTier);
-    }
-
-    @Override
-    public void tickOperational(ModuleInstance module, AutomatedFacility outpost) {
-        if (chargeFrom(outpost, chargeRate(module))) {
-            if (module.ticks() % CHARGE_SYNC_INTERVAL_TICKS == 0 || energyStored == energyCapacity()) {
-                outpost.markModuleDirty(module.id);
-            }
-        }
     }
 
     public AllowShootingConfig config() {
@@ -130,8 +136,15 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         return variant.shotEnergyEu();
     }
 
+    public int chargeTicks(ModuleInstance module) {
+        return chargeTicks(
+            variant,
+            module.allTierData()
+                .get(module.tier()));
+    }
+
     public long chargeRate(ModuleInstance module) {
-        return Math.ceilDiv(energyCapacity(), Math.max(1, module.cooldownTicks() - 20));
+        return Math.ceilDiv(energyCapacity(), Math.max(1, chargeTicks(module) - CHARGE_STEP_TICKS));
     }
 
     public boolean canSpendShotEnergy(long amount) {
