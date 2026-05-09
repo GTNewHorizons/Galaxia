@@ -18,6 +18,15 @@ public class CaveShapeTubes implements CaveShape {
     private final double[] sizeModifiers = new double[CHUNK_AREA];
     private final int[] horizontalModifiers = new int[CHUNK_AREA];
     private final int[] verticalModifiers = new int[CHUNK_AREA];
+    private final byte baseTubeDiameter;
+    private final byte varyingTubeDiameter;
+    private final short tubeLength;
+
+    public CaveShapeTubes(byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength) {
+        this.baseTubeDiameter = baseTubeDiameter;
+        this.varyingTubeDiameter = varyingTubeDiameter;
+        this.tubeLength = tubeLength;
+    }
 
     @Override
     public void prepareCaveShape(Random random) {
@@ -35,7 +44,7 @@ public class CaveShapeTubes implements CaveShape {
 
     @Override
     public void prepareCaveCache(int chunkX, int chunkZ) {
-        caveNoise.updateCache(chunkX, chunkZ);
+        caveNoise.updateCache(chunkX, chunkZ, baseTubeDiameter, varyingTubeDiameter, tubeLength);
         double[] rawModifiers = sizeNoise.generateNoiseOctaves(
             new double[CHUNK_AREA],
             chunkZ * CHUNK_WIDTH,

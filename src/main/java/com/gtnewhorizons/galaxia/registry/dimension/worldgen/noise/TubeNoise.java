@@ -10,9 +10,6 @@ public class TubeNoise {
     private static final byte ADDITIONAL_BITSHIFT = 4;
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
     private static final short COORDINATE_BOUND = 2 << TOTAL_BITSHIFT;
-    private static final byte MINIMUM_TUBE_LENGTH = 100;
-    private static final short DEVIATION_MARGIN = 16;
-    private static final byte DEVIATION_VARIATION = 4;
     private static final short SHIFT_MARGIN = 2 << (TOTAL_BITSHIFT - 1);
     private static final float VERTICAL_INCLINATION_MULTIPLIER = 0.5F;
     private static final byte TUBE_COUNT = 32;
@@ -67,7 +64,7 @@ public class TubeNoise {
         return chunkX != cacheChunkX || chunkZ != cacheChunkZ;
     }
 
-    public void updateCache(int chunkX, int chunkZ) {
+    public void updateCache(int chunkX, int chunkZ, byte baseTubeDiameter, byte varyingTubeDiameter, short tubeLength) {
         int xQuadrant = chunkX >> ADDITIONAL_BITSHIFT;
         int zQuadrant = chunkZ >> ADDITIONAL_BITSHIFT;
         quadrantX = chunkX - (xQuadrant << ADDITIONAL_BITSHIFT);
@@ -99,8 +96,8 @@ public class TubeNoise {
                 zyInclination
             );
             xEndPoints[i] = xRandom.nextInt(COORDINATE_BOUND) + 1;
-            xStartPoints[i] = xRandom.nextInt(Math.max(1, xEndPoints[i] - MINIMUM_TUBE_LENGTH));
-            deviationMargins[i] = (short) (DEVIATION_MARGIN + xRandom.nextInt(DEVIATION_MARGIN) * zRandom.nextInt(DEVIATION_VARIATION + 1));
+            xStartPoints[i] = xRandom.nextInt(Math.max(1, xEndPoints[i] - tubeLength));
+            deviationMargins[i] = (short) (baseTubeDiameter + xRandom.nextInt(baseTubeDiameter) * zRandom.nextInt(varyingTubeDiameter + 1));
         }
     }
 }

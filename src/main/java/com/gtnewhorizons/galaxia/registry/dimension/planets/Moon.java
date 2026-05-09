@@ -303,7 +303,7 @@ public class Moon extends BasePlanet {
             .fillerBlocks(
                 new StratificationPreset(Blocks.glass).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(Blocks.stained_glass, 1, 32))
-            .caveShape(new CaveShapeTubes())
+            .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
                     32,
