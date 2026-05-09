@@ -13,10 +13,16 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
+import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -30,11 +36,17 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static final int DESTROY_BUTTON_Y = 150;
     private static final int DESTROY_BUTTON_WIDTH = 92;
     private static final int DESTROY_BUTTON_HEIGHT = 20;
+    private static final int ACTION_BUTTON_START_Y = DESTROY_BUTTON_Y + DESTROY_BUTTON_HEIGHT + 8;
+    private static final int ACTION_BUTTON_WIDTH = 92;
+    private static final int ACTION_BUTTON_HEIGHT = 20;
+    private static final int ACTION_BUTTON_COLUMN_GAP = 8;
+    private static final int ACTION_BUTTON_ROW_GAP = 6;
     private static final int BUTTON_TEXT_BASELINE_OFFSET = 1;
 
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
     private final @Nullable StationTilePickerController tilePickerController;
+    private final @Nullable ModuleConfigModalController configController;
     private @Nullable StationTileCoord armedDestroySelection;
     private @Nullable StationTileCoord cachedDestroySelection;
     private @Nullable StationLayout cachedDestroyLayout;
@@ -44,17 +56,33 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private int cachedDestroyModuleIndex = -1;
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map) {
-        this(assetId, map, null);
+        this(assetId, map, null, null);
     }
 
     public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
         @Nullable StationTilePickerController tilePickerController) {
+        this(assetId, map, tilePickerController, null);
+    }
+
+    public StationSidePanelWidget(@Nullable CelestialAsset.ID assetId, StationMapWidget map,
+        @Nullable StationTilePickerController tilePickerController,
+        @Nullable ModuleConfigModalController configController) {
         this.assetId = assetId;
         this.map = map;
         this.tilePickerController = tilePickerController;
+        this.configController = configController;
         child(
             createDestroyButton().pos(DESTROY_BUTTON_X, DESTROY_BUTTON_Y)
                 .size(DESTROY_BUTTON_WIDTH, DESTROY_BUTTON_HEIGHT));
+        for (int slot = 0; slot < ModulePanelAction.values().length; slot++) {
+            ModulePanelActionLayout.Cell cell = ModulePanelActionLayout.cellForIndex(slot);
+            int actionX = DESTROY_BUTTON_X + cell.column() * (ACTION_BUTTON_WIDTH + ACTION_BUTTON_COLUMN_GAP);
+            int actionY = ACTION_BUTTON_START_Y + cell.row() * (ACTION_BUTTON_HEIGHT + ACTION_BUTTON_ROW_GAP);
+            int actionSlot = slot;
+            child(
+                createModuleActionButton(actionSlot).pos(actionX, actionY)
+                    .size(ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT));
+        }
     }
 
     @Override
@@ -224,8 +252,112 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             });
     }
 
+    private ButtonWidget<?> createModuleActionButton(int slot) {
+        return new ButtonWidget<>()
+            .background(
+                drawable(
+                    (ctx, x, y, w, h) -> {
+                        if (isPickerActive()) return;
+                        ModulePanelAction action = actionAtSlot(slot);
+                        if (action == null) return;
+                        drawActionButtonBackground(x, y, w, h, true, false);
+                    }))
+            .hoverBackground(
+                drawable(
+                    (ctx, x, y, w, h) -> {
+                        if (isPickerActive()) return;
+                        ModulePanelAction action = actionAtSlot(slot);
+                        if (action == null) return;
+                        drawActionButtonBackground(x, y, w, h, true, true);
+                    }))
+            .overlay(drawable((ctx, x, y, w, h) -> {
+                if (isPickerActive()) return;
+                ModulePanelAction action = actionAtSlot(slot);
+                if (action == null) return;
+                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+                String label = fr.trimStringToWidth(action.label(), w - 4);
+                int textWidth = fr.getStringWidth(label);
+                fr.drawStringWithShadow(
+                    label,
+                    x + (w - textWidth) / 2,
+                    y + (h - fr.FONT_HEIGHT) / 2 + BUTTON_TEXT_BASELINE_OFFSET,
+                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+            }))
+            .onMousePressed(mouseButton -> {
+                if (isPickerActive() || mouseButton != 0) return false;
+                ModulePanelAction action = actionAtSlot(slot);
+                if (action == null) return true;
+                runModuleAction(action);
+                return true;
+            })
+            .setEnabledIf(w -> !isPickerActive() && actionAtSlot(slot) != null);
+    }
+
+    private void drawActionButtonBackground(int x, int y, int w, int h, boolean enabled, boolean hovered) {
+        if (!enabled) return;
+        BorderedRect.draw(
+            x,
+            y,
+            w,
+            h,
+            hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
+                : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+            EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+    }
+
+    private @Nullable ModulePanelAction actionAtSlot(int slot) {
+        if (slot < 0) return null;
+        ModuleInstance module = selectedModule();
+        if (module == null) return null;
+        FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(module.kind());
+        if (definition == null || slot >= definition.panelActions()
+            .size()) {
+            return null;
+        }
+        return definition.panelActions()
+            .get(slot);
+    }
+
+    private void runModuleAction(ModulePanelAction action) {
+        if (configController == null) return;
+        ModuleInstance module = selectedModule();
+        int moduleIndex = selectedModuleIndex();
+        if (module == null || moduleIndex < 0) return;
+        switch (action) {
+            case CONFIG -> openModuleConfig(module, moduleIndex);
+            case UPGRADE -> openModuleUpgrade(module, moduleIndex);
+        }
+    }
+
+    private void openModuleConfig(ModuleInstance module, int moduleIndex) {
+        if (module.component() instanceof ModuleMiner) {
+            configController.openMinerBlacklist(moduleIndex);
+        } else if (module.component() instanceof ModuleHammer) {
+            configController.openHammer(moduleIndex);
+        } else if (module.component() instanceof IRecipeModule) {
+            RecipeInputScreen.open(assetId, moduleIndex, module);
+        }
+    }
+
+    private void openModuleUpgrade(ModuleInstance module, int moduleIndex) {
+        if (module.component() instanceof ModuleMiner) {
+            configController.openMinerFocusUpgrade(moduleIndex);
+        }
+    }
+
     private boolean canDestroySelected() {
         return !isPickerActive() && selectedModuleIndex() >= 0;
+    }
+
+    private @Nullable ModuleInstance selectedModule() {
+        AutomatedFacility facility = resolveFacility(assetId);
+        int moduleIndex = selectedModuleIndex();
+        if (facility == null || moduleIndex < 0 || moduleIndex >= facility.modules()
+            .size()) {
+            return null;
+        }
+        return facility.modules()
+            .get(moduleIndex);
     }
 
     private int selectedModuleIndex() {

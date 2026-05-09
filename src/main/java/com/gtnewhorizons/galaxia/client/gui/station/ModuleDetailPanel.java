@@ -3,8 +3,6 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -15,13 +13,11 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -42,11 +38,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
     private static final int CONTENT_PADDING = 10;
     private static final int SECTION_GAP = 4;
-    private static final int BUTTON_H = 16;
-    private static final int ACTION_X = 10;
-    private static final int ACTION_Y = 40;
-    private static final int ACTION_BUTTON_WIDTH = 70;
-    private static final int ACTION_BUTTON_GAP = 6;
     private static final int CHARGE_BAR_TOP_OFFSET = 2;
     private static final int CHARGE_BAR_HEIGHT = 8;
     private static final int CHARGE_BAR_BOTTOM_GAP = 3;
@@ -54,7 +45,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private final StationMapWidget map;
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
-    private final ModuleConfigModalController configController;
     private final @Nullable StationTilePickerController tilePickerController;
 
     public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController) {
@@ -64,16 +54,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController,
         @Nullable StationTilePickerController tilePickerController) {
         this.map = map;
-        this.configController = configController;
         this.tilePickerController = tilePickerController;
-        child(
-            createPanelButton(() -> "Configure", this::hasConfigurableSelected, this::openSelectedConfig)
-                .pos(ACTION_X, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
-        child(
-            createPanelButton(() -> "Upgrade", this::hasMinerSelected, this::openMinerFocusUpgrade)
-                .pos(ACTION_X + ACTION_BUTTON_WIDTH + ACTION_BUTTON_GAP, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
     }
 
     @Override
@@ -186,8 +167,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             }
         }
 
-        lineY = Math.max(lineY, ACTION_Y + BUTTON_H + SECTION_GAP);
-
         if (module.component() instanceof ModuleHammer hammer) {
             lineY += SECTION_GAP;
             lineY = drawHammerOverview(module, hammer, x, lineY, width);
@@ -289,70 +268,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             barY + barH,
             EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
         return barY + barH + CHARGE_BAR_BOTTOM_GAP;
-    }
-
-    private ButtonWidget<?> createPanelButton(Supplier<String> labelSupplier, BooleanSupplier enabledSupplier,
-        Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
-            .hoverBackground(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
-                if (!enabledSupplier.getAsBoolean()) return;
-                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-                String label = fr.trimStringToWidth(labelSupplier.get(), w - 4);
-                int color = EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor();
-                int textW = fr.getStringWidth(label);
-                fr.drawStringWithShadow(label, x + (w - textW) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
-            }))
-            .onMousePressed(mouseButton -> {
-                if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
-                onClick.run();
-                return true;
-            });
-    }
-
-    private static void drawButtonBackground(int x, int y, int w, int h, boolean enabled, boolean hovered) {
-        if (!enabled) return;
-        BorderedRect.draw(
-            x,
-            y,
-            w,
-            h,
-            hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
-                : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-            EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-    }
-
-    private boolean hasMinerSelected() {
-        if (isPickerActive()) return false;
-        return selectedModule() instanceof SelectedModule selected
-            && selected.module.component() instanceof ModuleMiner;
-    }
-
-    private boolean hasConfigurableSelected() {
-        if (isPickerActive()) return false;
-        return selectedModule() instanceof SelectedModule selected && (selected.module.component() instanceof ModuleMiner
-            || selected.module.component() instanceof ModuleHammer
-            || selected.module.component() instanceof IRecipeModule);
-    }
-
-    private void openSelectedConfig() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (selected.module.component() instanceof ModuleMiner) {
-            configController.openMinerBlacklist(selected.moduleIndex);
-        } else if (selected.module.component() instanceof ModuleHammer) {
-            configController.openHammer(selected.moduleIndex);
-        } else if (selected.module.component() instanceof IRecipeModule) {
-            RecipeInputScreen.open(map.assetId(), selected.moduleIndex, selected.module);
-        }
-    }
-
-    private void openMinerFocusUpgrade() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof ModuleMiner)) return;
-        configController.openMinerFocusUpgrade(selected.moduleIndex);
     }
 
     private @Nullable SelectedModule selectedModule() {

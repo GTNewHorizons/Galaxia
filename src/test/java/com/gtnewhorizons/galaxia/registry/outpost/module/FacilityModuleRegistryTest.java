@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.item.Item;
@@ -117,5 +118,21 @@ final class FacilityModuleRegistryTest {
         ModuleTierData ivData = definition.getTierData(ModuleTier.IV);
         assertEquals(16384L, ivData.capacity());
         assertEquals(8000L, ivData.baseEnergyCapacity());
+    }
+
+    @Test
+    void moduleDefinitionsExposeRegisteredPanelActions() {
+        assertEquals(
+            List.of(ModulePanelAction.CONFIG, ModulePanelAction.UPGRADE),
+            FacilityModuleRegistry.get(FacilityModuleKind.MINER)
+                .panelActions());
+        assertEquals(
+            List.of(ModulePanelAction.CONFIG),
+            FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
+                .panelActions());
+        assertEquals(
+            List.of(),
+            FacilityModuleRegistry.get(FacilityModuleKind.POWER)
+                .panelActions());
     }
 }
