@@ -136,6 +136,7 @@ public class FacilityModuleRegistry {
                     Map.of(new ItemStack(Items.iron_ingot), 2048L, new ItemStack(Items.gold_ingot), 16384L))
                     .build())
             .configButton()
+            .upgradeButton()
             .behavior(ModuleHammer::prepareToFire)
             .factory(() -> new ModuleHammer(
                 FacilityModuleKind.HAMMER,

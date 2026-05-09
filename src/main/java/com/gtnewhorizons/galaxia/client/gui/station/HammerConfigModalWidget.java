@@ -5,7 +5,6 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -23,8 +22,6 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
     private static final int BAR_WIDTH = WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2;
     private static final int FOOTER_Y = HEIGHT - 28;
     private static final int FOOTER_BUTTON_HEIGHT = 20;
-    private static final int UPGRADE_BUTTON_WIDTH = 70;
-    private static final int ITEMS_BUTTON_X = 86;
     private static final int ITEMS_BUTTON_WIDTH = 54;
     private static final int CLOSE_BUTTON_X = WIDTH - 62;
     private static final int CLOSE_BUTTON_WIDTH = 54;
@@ -39,13 +36,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         this.assetId = assetId;
         this.controller = controller;
         child(
-            ModuleConfigModalSupport
-                .button(this::canUsePrimaryButton, this::primaryButtonLabel, this::primaryButtonAction)
-                .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
-                .size(UPGRADE_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
-        child(
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Items", this::openLogistics)
-                .pos(ITEMS_BUTTON_X, FOOTER_Y)
+                .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
                 .size(ITEMS_BUTTON_WIDTH, FOOTER_BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(controller::isHammerOpen, "Close", controller::close)
@@ -121,50 +113,9 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
         }
     }
 
-    private void openUpgrade() {
-        ModuleInstance module = selectedModule();
-        if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
-        controller.openHammerUpgrade(controller.moduleIndex(), hammer.variant(), module.tier());
-    }
-
     private void openLogistics() {
         if (selectedModule() == null) return;
         controller.openLogistics(controller.moduleIndex());
-    }
-
-    private void cancelOperation() {
-        if (!hasCancellableOperation()) return;
-        if (!controller.isModuleOperationCancelArmed()) {
-            controller.armModuleOperationCancel();
-            return;
-        }
-        CelestialClient.cancelModuleOperation(assetId, controller.moduleIndex());
-        controller.clearModuleOperationCancel();
-    }
-
-    private boolean canUsePrimaryButton() {
-        return canOpenUpgrade() || hasCancellableOperation();
-    }
-
-    private String primaryButtonLabel() {
-        if (!hasCancellableOperation()) return "Upgrade";
-        return controller.isModuleOperationCancelArmed() ? "Confirm" : "Cancel";
-    }
-
-    private void primaryButtonAction() {
-        if (hasCancellableOperation()) {
-            cancelOperation();
-        } else {
-            openUpgrade();
-        }
-    }
-
-    private boolean canOpenUpgrade() {
-        ModuleInstance module = selectedModule();
-        return controller.isHammerOpen() && module != null
-            && (module.operationOrNull() == null || module.operationOrNull()
-                .phase()
-                .isTerminal());
     }
 
     private boolean hasCancellableOperation() {

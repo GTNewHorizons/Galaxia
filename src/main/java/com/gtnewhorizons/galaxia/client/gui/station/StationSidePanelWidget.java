@@ -342,9 +342,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private void openModuleUpgrade(ModuleInstance module, int moduleIndex) {
-        if (module.component() instanceof ModuleMiner) {
-            configController.openMinerFocusUpgrade(moduleIndex);
-        }
+        if (ModuleUpgradeUiModel.supports(module)) configController.openUpgrade(moduleIndex);
     }
 
     private boolean canDestroySelected() {

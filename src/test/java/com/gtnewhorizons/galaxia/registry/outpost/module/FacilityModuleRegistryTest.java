@@ -127,7 +127,7 @@ final class FacilityModuleRegistryTest {
             FacilityModuleRegistry.get(FacilityModuleKind.MINER)
                 .panelActions());
         assertEquals(
-            List.of(ModulePanelAction.CONFIG),
+            List.of(ModulePanelAction.CONFIG, ModulePanelAction.UPGRADE),
             FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
                 .panelActions());
         assertEquals(

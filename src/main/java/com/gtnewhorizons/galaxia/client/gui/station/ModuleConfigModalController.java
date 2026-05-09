@@ -4,7 +4,6 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
@@ -15,10 +14,9 @@ final class ModuleConfigModalController {
     enum Kind {
         NONE,
         HAMMER,
-        HAMMER_UPGRADE,
+        MODULE_UPGRADE,
         LOGISTICS,
-        MINER_BLACKLIST,
-        MINER_FOCUS_UPGRADE
+        MINER_BLACKLIST
     }
 
     private final ModularPanel host;
@@ -33,11 +31,9 @@ final class ModuleConfigModalController {
     private int minerBlacklistPage;
     private boolean minerSettingsGroupMenuOpen;
     private boolean moduleOperationCancelArmed;
-    private HammerVariant hammerUpgradeVariant = HammerVariant.BASE;
-    private ModuleTier hammerUpgradeTier = ModuleTier.EV;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
-    private MinerFocusTier minerFocusUpgradeTier = MinerFocusTier.I;
+    private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this(host, assetId, x, y, null);
@@ -71,22 +67,22 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
-    void openHammerUpgrade(int moduleIndex, HammerVariant variant, ModuleTier tier) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
+    void openUpgrade(int moduleIndex) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+        if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
         close();
-        this.kind = Kind.HAMMER_UPGRADE;
-        this.moduleId = targetModuleId;
-        this.hammerUpgradeVariant = variant;
-        this.hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(variant, tier);
+        this.kind = Kind.MODULE_UPGRADE;
+        this.moduleId = module.id;
+        this.moduleUpgradeSelection = ModuleUpgradeUiModel.defaultSelection(module);
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
+        this.moduleOperationCancelArmed = false;
 
-        HammerUpgradeModalWidget widget = new HammerUpgradeModalWidget(assetId, this, tilePickerController);
+        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, tilePickerController);
         widget.left(x)
             .top(y)
-            .width(HammerUpgradeModalWidget.WIDTH)
-            .height(HammerUpgradeModalWidget.HEIGHT);
+            .width(ModuleUpgradeModalWidget.WIDTH)
+            .height(ModuleUpgradeModalWidget.HEIGHT);
         this.modal = widget;
         host.child(widget);
     }
@@ -126,25 +122,6 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
-    void openMinerFocusUpgrade(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        close();
-        this.kind = Kind.MINER_FOCUS_UPGRADE;
-        this.moduleId = targetModuleId;
-        this.moduleOperationCancelArmed = false;
-        this.minerFocusUpgradeTier = MinerFocusUiModel.defaultUpgradeTarget(
-            ModuleConfigModalSupport.module(assetId, targetModuleId));
-
-        MinerFocusUpgradeModalWidget widget = new MinerFocusUpgradeModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(MinerFocusUpgradeModalWidget.WIDTH)
-            .height(MinerFocusUpgradeModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
-    }
-
     void close() {
         if (modal != null) {
             host.remove(modal);
@@ -154,11 +131,9 @@ final class ModuleConfigModalController {
         this.moduleId = null;
         this.minerBlacklistPage = 0;
         this.minerSettingsGroupMenuOpen = false;
-        this.hammerUpgradeVariant = HammerVariant.BASE;
-        this.hammerUpgradeTier = ModuleTier.EV;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
-        this.minerFocusUpgradeTier = MinerFocusTier.I;
+        this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
     }
 
@@ -187,10 +162,9 @@ final class ModuleConfigModalController {
         }
         switch (kind) {
             case HAMMER -> retargetHammer(module);
-            case HAMMER_UPGRADE -> retargetHammerUpgrade(module);
+            case MODULE_UPGRADE -> retargetModuleUpgrade(module);
             case LOGISTICS -> retargetLogistics(module);
             case MINER_BLACKLIST -> retargetMinerBlacklist(module);
-            case MINER_FOCUS_UPGRADE -> retargetMinerFocusUpgrade(module);
             case NONE -> {}
         }
     }
@@ -199,16 +173,12 @@ final class ModuleConfigModalController {
         return kind == Kind.HAMMER;
     }
 
-    boolean isHammerUpgradeOpen() {
-        return kind == Kind.HAMMER_UPGRADE;
+    boolean isModuleUpgradeOpen() {
+        return kind == Kind.MODULE_UPGRADE;
     }
 
     boolean isMinerBlacklistOpen() {
         return kind == Kind.MINER_BLACKLIST;
-    }
-
-    boolean isMinerFocusUpgradeOpen() {
-        return kind == Kind.MINER_FOCUS_UPGRADE;
     }
 
     boolean isLogisticsOpen() {
@@ -256,24 +226,6 @@ final class ModuleConfigModalController {
         moduleOperationCancelArmed = false;
     }
 
-    HammerVariant hammerUpgradeVariant() {
-        return hammerUpgradeVariant;
-    }
-
-    void setHammerUpgradeVariant(HammerVariant hammerUpgradeVariant) {
-        this.hammerUpgradeVariant = hammerUpgradeVariant;
-        this.hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(hammerUpgradeVariant, hammerUpgradeTier);
-    }
-
-    ModuleTier hammerUpgradeTier() {
-        return hammerUpgradeTier;
-    }
-
-    void setHammerUpgradeTier(ModuleTier hammerUpgradeTier) {
-        ModuleHammer.requireTier(hammerUpgradeVariant, hammerUpgradeTier);
-        this.hammerUpgradeTier = hammerUpgradeTier;
-    }
-
     boolean hammerUpgradeReserveItems() {
         return hammerUpgradeReserveItems;
     }
@@ -290,13 +242,14 @@ final class ModuleConfigModalController {
         hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
     }
 
-    MinerFocusTier minerFocusUpgradeTier() {
-        return minerFocusUpgradeTier;
+    ModuleUpgradeSelection moduleUpgradeSelection() {
+        return moduleUpgradeSelection;
     }
 
-    void setMinerFocusUpgradeTier(MinerFocusTier minerFocusUpgradeTier) {
-        if (minerFocusUpgradeTier == null || minerFocusUpgradeTier == MinerFocusTier.NONE) return;
-        this.minerFocusUpgradeTier = minerFocusUpgradeTier;
+    void selectModuleUpgradeOption(String groupId, String optionId) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
+        if (module == null) return;
+        moduleUpgradeSelection = ModuleUpgradeUiModel.selectOption(module, moduleUpgradeSelection, groupId, optionId);
     }
 
     private ModuleInstance.ID resolveModuleId(int moduleIndex) {
@@ -310,25 +263,23 @@ final class ModuleConfigModalController {
             return;
         }
         moduleId = module.id;
-        minerFocusUpgradeTier = MinerFocusUiModel.defaultUpgradeTarget(module);
-        moduleOperationCancelArmed = false;
-    }
-
-    private void retargetHammerUpgrade(ModuleInstance module) {
-        if (!(module.component() instanceof ModuleHammer hammer)) {
-            close();
-            return;
-        }
-        moduleId = module.id;
-        hammerUpgradeVariant = hammer.variant();
-        hammerUpgradeTier = ModuleHammer.tierForVariantSwitch(hammer.variant(), module.tier());
-        hammerUpgradeReserveItems = false;
-        hammerUpgradeVoidRefund = false;
         moduleOperationCancelArmed = false;
     }
 
     private void retargetLogistics(ModuleInstance module) {
         moduleId = module.id;
+        moduleOperationCancelArmed = false;
+    }
+
+    private void retargetModuleUpgrade(ModuleInstance module) {
+        if (!ModuleUpgradeUiModel.supports(module)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
+        moduleUpgradeSelection = ModuleUpgradeUiModel.defaultSelection(module);
+        hammerUpgradeReserveItems = false;
+        hammerUpgradeVoidRefund = false;
         moduleOperationCancelArmed = false;
     }
 
@@ -340,15 +291,6 @@ final class ModuleConfigModalController {
         moduleId = module.id;
         minerBlacklistPage = 0;
         minerSettingsGroupMenuOpen = false;
-        moduleOperationCancelArmed = false;
-    }
-
-    private void retargetMinerFocusUpgrade(ModuleInstance module) {
-        if (!(module.component() instanceof ModuleMiner)) {
-            close();
-            return;
-        }
-        moduleId = module.id;
         moduleOperationCancelArmed = false;
     }
 
