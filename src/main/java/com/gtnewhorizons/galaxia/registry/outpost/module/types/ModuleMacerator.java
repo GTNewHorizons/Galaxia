@@ -1,15 +1,22 @@
-package com.gtnewhorizons.galaxia.registry.outpost.module;
+package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.WeakHashMap;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ProductionModuleHelper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
-public class ModuleAssembler implements ModuleComponent, IParallelModule, IRecipeModule {
+public class ModuleMacerator implements IModuleComponent, IParallelModule, IRecipeModule {
 
     private byte parallel = 1;
     private RecipeConfig recipeConfig;
@@ -29,7 +36,12 @@ public class ModuleAssembler implements ModuleComponent, IParallelModule, IRecip
 
     @Override
     public String getRecipeMapName() {
-        return "gt.recipe.assembler";
+        return "gt.recipe.macerator";
+    }
+
+    @Override
+    public List<String> getAdditionalNeiTransferIdents() {
+        return Collections.singletonList("gt.recipe.category.macerator_recycling");
     }
 
     @Override
@@ -43,7 +55,7 @@ public class ModuleAssembler implements ModuleComponent, IParallelModule, IRecip
     }
 
     public static void processRecipe(ModuleInstance instance, AutomatedFacility outpost) {
-        ModuleAssembler m = (ModuleAssembler) instance.component();
+        ModuleMacerator m = (ModuleMacerator) instance.component();
         ProductionModuleHelper.execute(instance, outpost, m, m.random, m.inputWrapperCache, m.outputWrapperCache);
     }
 }

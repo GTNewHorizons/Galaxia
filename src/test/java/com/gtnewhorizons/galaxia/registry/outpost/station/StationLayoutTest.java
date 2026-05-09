@@ -56,7 +56,8 @@ final class StationLayoutTest {
         ModuleInstance removed = FacilityModuleRegistry
             .create(ModuleInstance.ID.create(), FacilityModuleKind.POWER, null, ModuleShape.SINGLE, ModuleTier.NONE);
         ModuleInstance retained = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, null, ModuleShape.SINGLE, ModuleTier.NONE);
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, null, ModuleShape.SINGLE, ModuleTier.EV);
+        retained.initAnchor(StationTileCoord.of(0, 1));
         station.addModule(removed);
         station.addModule(retained);
         StationTileCoord removedCoord = StationTileCoord.of(1, 0);
@@ -75,7 +76,7 @@ final class StationLayoutTest {
                 .size());
 
         ModuleInstance rebuilt = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.SINGLE, ModuleTier.NONE);
+            .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, null, ModuleShape.SINGLE, ModuleTier.EV);
         StationTileCoord rebuiltCoord = StationTileCoord.of(-1, 0);
         station.addModule(rebuilt);
         layout.place(rebuiltCoord, new PlacedTile(rebuilt, StationTileState.UNDER_CONSTRUCTION));

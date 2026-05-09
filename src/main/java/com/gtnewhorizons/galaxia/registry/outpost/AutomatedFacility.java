@@ -3,15 +3,12 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.logging.log4j.LogManager;
@@ -23,9 +20,18 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
 public final class AutomatedFacility extends CelestialAsset {
@@ -47,13 +53,11 @@ public final class AutomatedFacility extends CelestialAsset {
     private final LayoutCacheBundle layoutCache;
 
     private final SettingsGroupRegistry settingsGroups;
-    private final Map<String, Integer> minerVoidChancePercentByOre;
 
     private long energyStored;
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
@@ -74,7 +78,6 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
-        this.minerVoidChancePercentByOre = new LinkedHashMap<>();
         this.energyStored = 0;
     }
 
@@ -112,6 +115,9 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
+        if (module.component() instanceof ModuleMiner && module.groupId() == 0) {
+            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new MinerSettings()));
+        }
         dirtyModuleIds.add(module.id);
         bumpSyncRevision();
         LOG.debug(
@@ -130,6 +136,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void removeModule(int index) {
         ModuleInstance removed = modules.remove(index);
         if (removed != null) {
+            detachFromSettingsGroup(removed);
             dirtyRemovedIds.add(removed.id);
             dirtyModuleIds.remove(removed.id);
             bumpSyncRevision();
@@ -166,50 +173,242 @@ public final class AutomatedFacility extends CelestialAsset {
         return modules;
     }
 
-    public Map<String, Integer> minerVoidChances() {
-        return Collections.unmodifiableMap(minerVoidChancePercentByOre);
+    public MinerSettings minerSettings(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner)) {
+            throw new IllegalStateException("Miner settings requested for non-miner module " + module.id);
+        }
+        if (module.groupId() == 0) {
+            throw new IllegalStateException("Miner module " + module.id + " has no settings group");
+        }
+        SettingsGroup group = settingsGroups.require(module.groupId(), FacilityModuleKind.MINER);
+        if (!(group.settings() instanceof MinerSettings settings)) {
+            throw new IllegalStateException(
+                "Miner settings group " + module.groupId() + " has non-miner settings for module " + module.id);
+        }
+        return settings;
     }
 
-    public int minerVoidChancePercent(String oreKey) {
-        return minerVoidChancePercentByOre.getOrDefault(requireOreKey(oreKey), 0);
+    public boolean isMinerOreBlacklisted(ModuleInstance module, String oreKey) {
+        return minerSettings(module).isOreBlacklisted(oreKey);
     }
 
-    public void setMinerVoidChancePercent(String oreKey, int percent) {
-        String key = requireOreKey(oreKey);
-        percent = clampMinerVoidChancePercent(percent);
-        Integer oldValue = minerVoidChancePercentByOre.get(key);
-        Integer newValue = percent == 0 ? null : percent;
-        if (newValue == null) {
-            minerVoidChancePercentByOre.remove(key);
+    public void setMinerOreBlacklisted(ModuleInstance module, String oreKey, boolean blacklisted) {
+        if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
+            markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
+        }
+    }
+
+    public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
+        ModuleOperationState operation = requireWaitingOperation(module);
+        Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            if (inventory.getAmount(material.getKey()) < material.getValue()) return false;
+        }
+        Map<String, Long> deposited = new java.util.LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            if (!inventory.tryConsume(material.getKey(), material.getValue())) {
+                throw new IllegalStateException(
+                    "Operation material reservation became inconsistent for module " + module.id
+                        + ", item="
+                        + material.getKey()
+                            .toKey());
+            }
+            deposited.merge(
+                material.getKey()
+                    .toKey(),
+                material.getValue(),
+                Long::sum);
+        }
+        module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
+        markModuleDirty(module.id);
+        return true;
+    }
+
+    public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
+        Map<ItemStackWrapper, Long> materialCost) {
+        ModuleOperationState operation = requireWaitingOperation(module);
+        Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
+        Map<String, Long> deposited = new java.util.LinkedHashMap<>();
+        boolean changed = false;
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            String itemKey = material.getKey()
+                .toKey();
+            long alreadyDeposited = operation.depositedResources()
+                .getOrDefault(itemKey, 0L);
+            long remaining = material.getValue() - alreadyDeposited;
+            if (remaining <= 0L) continue;
+            long available = inventory.getAmount(material.getKey());
+            long reserved = Math.min(available, remaining);
+            if (reserved <= 0L) continue;
+            if (!inventory.tryConsume(material.getKey(), reserved)) {
+                throw new IllegalStateException(
+                    "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
+            }
+            deposited.merge(itemKey, reserved, Long::sum);
+            changed = true;
+        }
+        if (changed) {
+            module.setOperation(
+                operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
+            markModuleDirty(module.id);
+        }
+        return operationHasFullDeposit(requireOperation(module), requested);
+    }
+
+    public void cancelModuleOperation(ModuleInstance module) {
+        ModuleOperationState operation = requireOperation(module);
+        module.setOperation(operation.cancel());
+        markModuleDirty(module.id);
+    }
+
+    public void applyCreativeModuleOperation(ModuleInstance module, ModuleOperationPlan plan) {
+        if (module == null) {
+            throw new IllegalArgumentException("applyCreativeModuleOperation: module must not be null");
+        }
+        if (plan == null) {
+            throw new IllegalArgumentException("applyCreativeModuleOperation: plan must not be null for " + module.id);
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            if (!existingOperation.depositedResources()
+                .isEmpty()
+                || !existingOperation.refundBuffer()
+                    .isEmpty()) {
+                throw new IllegalStateException(
+                    "Creative operation cannot replace active operation with stored items for module " + module.id);
+            }
+        }
+        applyOperationTarget(module, plan);
+        module.clearOperation();
+        markModuleDirty(module.id);
+    }
+
+    public boolean flushModuleOperationRefund(ModuleInstance module) {
+        ModuleOperationState operation = requireOperation(module);
+        if (operation.phase() != ModuleOperationPhase.REFUNDING) return false;
+        for (Map.Entry<String, Long> entry : operation.refundBuffer()
+            .entrySet()) {
+            inventory.add(requireItemKey(entry.getKey(), module), entry.getValue());
+        }
+        if (isCompletionRefund(operation)) {
+            module.clearOperation();
         } else {
-            minerVoidChancePercentByOre.put(key, newValue);
+            module.setOperation(operation.finishRefunding());
         }
-        if (!Objects.equals(oldValue, newValue)) {
-            dirtyMinerVoidChanceOreKeys.add(key);
-            bumpSyncRevision();
+        markModuleDirty(module.id);
+        return true;
+    }
+
+    public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
+        ModuleSettings settings = copySettings(module);
+        detachFromSettingsGroup(module);
+        SettingsGroup group = settingsGroups.create(module.kind(), displayName, settings);
+        attachToSettingsGroup(module, group);
+        return group;
+    }
+
+    public void assignSettingsGroup(ModuleInstance module, short groupId) {
+        if (module.groupId() == groupId) return;
+        if (groupId == 0) {
+            leaveSettingsGroup(module);
+            return;
+        }
+        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        detachFromSettingsGroup(module);
+        attachToSettingsGroup(module, group);
+    }
+
+    public void leaveSettingsGroup(ModuleInstance module) {
+        ModuleSettings settings = copySettings(module);
+        detachFromSettingsGroup(module);
+        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
+        markModuleDirty(module.id);
+    }
+
+    private ModuleSettings copySettings(ModuleInstance module) {
+        if (module.component() instanceof ModuleMiner) {
+            return minerSettings(module).copy();
+        }
+        throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+    }
+
+    private void attachToSettingsGroup(ModuleInstance module, SettingsGroup group) {
+        settingsGroups.require(group.id(), module.kind());
+        settingsGroups.addMember(group.id(), module.anchor());
+        module.setGroupId(group.id());
+        markModuleDirty(module.id);
+    }
+
+    private void detachFromSettingsGroup(ModuleInstance module) {
+        if (module.groupId() == 0) return;
+        short oldGroupId = module.groupId();
+        settingsGroups.removeMember(oldGroupId, module.anchor());
+        module.setGroupId((short) 0);
+    }
+
+    private void markSettingsGroupMembersDirty(SettingsGroup group) {
+        for (StationTileCoord coord : group.members()) {
+            for (ModuleInstance module : modules) {
+                if (coord.equals(module.anchorOrNull())) {
+                    markModuleDirty(module.id);
+                }
+            }
         }
     }
 
-    public void setMinerVoidChances(@Nonnull Map<String, Integer> chances) {
-        minerVoidChancePercentByOre.clear();
-        for (Map.Entry<String, Integer> entry : chances.entrySet()) {
-            String key = requireOreKey(entry.getKey());
-            if (entry.getValue() == null) throw new IllegalArgumentException("Chance has to be present");
-            int percent = requireMinerVoidChancePercent(entry.getValue());
-            if (percent != 0) minerVoidChancePercentByOre.put(key, percent);
+    private ModuleOperationState requireWaitingOperation(ModuleInstance module) {
+        ModuleOperationState operation = requireOperation(module);
+        if (operation.phase() != ModuleOperationPhase.WAITING_FOR_MATERIALS) {
+            throw new IllegalStateException(
+                "Module " + module.id + " operation must be WAITING_FOR_MATERIALS, got " + operation.phase());
         }
-        dirtyMinerVoidChanceOreKeys.clear();
+        return operation;
     }
 
-    private static int requireMinerVoidChancePercent(int percent) {
-        if (percent < 0 || percent > 100) {
-            throw new IllegalArgumentException("Miner void chance percent out of range: " + percent);
+    private ModuleOperationState requireOperation(ModuleInstance module) {
+        if (module == null) {
+            throw new IllegalArgumentException("Module operation requested for null module");
         }
-        return percent;
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation == null) {
+            throw new IllegalStateException("Module " + module.id + " has no active operation");
+        }
+        return operation;
     }
 
-    public static int clampMinerVoidChancePercent(int percent) {
-        return Math.clamp(percent, 0, 100);
+    private Map<ItemStackWrapper, Long> requireMaterialCost(Map<ItemStackWrapper, Long> materialCost) {
+        if (materialCost == null) {
+            throw new IllegalArgumentException("Operation material cost must not be null");
+        }
+        for (Map.Entry<ItemStackWrapper, Long> entry : materialCost.entrySet()) {
+            ItemStackWrapper item = entry.getKey();
+            Long amount = entry.getValue();
+            if (item == null) {
+                throw new IllegalArgumentException("Operation material cost contains null item");
+            }
+            if (amount == null || amount <= 0L) {
+                throw new IllegalArgumentException(
+                    "Operation material cost amount must be > 0 for " + item.toKey() + ", got " + amount);
+            }
+        }
+        return materialCost;
+    }
+
+    private ItemStackWrapper requireItemKey(String itemKey, ModuleInstance module) {
+        ItemStackWrapper item = ItemStackWrapper.fromKey(itemKey);
+        if (item == null) {
+            throw new IllegalStateException("Module " + module.id + " operation has unresolvable item key " + itemKey);
+        }
+        return item;
+    }
+
+    private static Map<String, Long> mergeAmounts(Map<String, Long> base, Map<String, Long> added) {
+        Map<String, Long> merged = new java.util.LinkedHashMap<>(base);
+        for (Map.Entry<String, Long> entry : added.entrySet()) {
+            merged.merge(entry.getKey(), entry.getValue(), Long::sum);
+        }
+        return merged;
     }
 
     public void markModuleDirty(ModuleInstance.ID id) {
@@ -218,7 +417,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyMinerVoidChanceOreKeys.isEmpty();
+        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
@@ -242,15 +441,6 @@ public final class AutomatedFacility extends CelestialAsset {
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
-        return result;
-    }
-
-    public Map<String, Integer> drainDirtyMinerVoidChances() {
-        Map<String, Integer> result = new LinkedHashMap<>();
-        for (String oreKey : dirtyMinerVoidChanceOreKeys) {
-            result.put(oreKey, minerVoidChancePercent(oreKey));
-        }
-        dirtyMinerVoidChanceOreKeys.clear();
         return result;
     }
 
@@ -289,11 +479,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return false;
     }
 
-    private static String requireOreKey(@Nonnull String oreKey) {
-        if (oreKey.isEmpty()) throw new IllegalArgumentException("oreKey cannot be empty");
-        return oreKey;
-    }
-
     @Override
     public WarningPriority warningPriority() {
         if (!isOperational()) return WarningPriority.NONE;
@@ -306,9 +491,125 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void tick() {
         for (ModuleInstance module : modules) {
-            module.tick(this);
+            boolean moduleTickBlocked = tickModuleOperation(module);
+            if (!moduleTickBlocked) {
+                module.tick(this);
+            }
         }
 
         LogisticStore.updateSignalsForFacility(this);
+    }
+
+    private boolean tickModuleOperation(ModuleInstance module) {
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation == null) return false;
+        return switch (operation.phase()) {
+            case WAITING_FOR_MATERIALS -> tryBeginModuleOperation(module, operation);
+            case BUILDING -> {
+                tickBuildingOperation(module, operation);
+                yield true;
+            }
+            case REFUNDING -> {
+                flushModuleOperationRefund(module);
+                yield true;
+            }
+            case COMPLETE -> {
+                applyCompletedModuleOperation(module, operation);
+                yield false;
+            }
+            case CANCELLED -> {
+                module.clearOperation();
+                markModuleDirty(module.id);
+                yield false;
+            }
+        };
+    }
+
+    private boolean tryBeginModuleOperation(ModuleInstance module, ModuleOperationState operation) {
+        Map<ItemStackWrapper, Long> materialCost = operation.plan()
+            .materialCost();
+        boolean hasFullCost = operation.reserveItems() ? tryReserveAvailableOperationMaterials(module, materialCost)
+            : tryReserveOperationMaterials(module, materialCost);
+        if (!hasFullCost) {
+            return false;
+        }
+        module.setOperation(
+            module.operationOrNull()
+                .beginBuilding());
+        markModuleDirty(module.id);
+        return true;
+    }
+
+    private void tickBuildingOperation(ModuleInstance module, ModuleOperationState operation) {
+        ModuleOperationState next = operation.tickBuilding();
+        module.setOperation(next);
+        markModuleDirty(module.id);
+        if (next.phase() == ModuleOperationPhase.COMPLETE) {
+            applyCompletedModuleOperation(module, next);
+        }
+    }
+
+    private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
+        ModuleOperationPlan plan = operation.plan();
+        applyOperationTarget(module, plan);
+        Map<String, Long> completionRefund = completionRefund(module, operation);
+        if (completionRefund.isEmpty()) {
+            module.clearOperation();
+        } else {
+            module.setOperation(operation.refundAfterCompletion(completionRefund));
+        }
+        markModuleDirty(module.id);
+    }
+
+    private void applyOperationTarget(ModuleInstance module, ModuleOperationPlan plan) {
+        ModuleTier oldTier = module.tier();
+        module.component()
+            .applyOperationTarget(plan.spec(), module);
+        if (module.tier() != oldTier) {
+            layoutCache.applyMutation(MutationKind.SET_TIER, module.kind(), module);
+        }
+    }
+
+    private Map<String, Long> completionRefund(ModuleInstance module, ModuleOperationState operation) {
+        if (operation.plan()
+            .voidCompletionRefund()) {
+            return Map.of();
+        }
+        int refundPercent = operation.plan()
+            .completionRefundPercent();
+        if (refundPercent <= 0) return Map.of();
+        Map<String, Long> refund = new java.util.LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> entry : operation.plan()
+            .completionRefundCost()
+            .entrySet()) {
+            long amount = entry.getValue() * refundPercent / 100L;
+            if (amount <= 0L) continue;
+            refund.merge(
+                entry.getKey()
+                    .toKey(),
+                amount,
+                Long::sum);
+        }
+        return refund;
+    }
+
+    private static boolean operationHasFullDeposit(ModuleOperationState operation,
+        Map<ItemStackWrapper, Long> requested) {
+        for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
+            if (operation.depositedResources()
+                .getOrDefault(
+                    material.getKey()
+                        .toKey(),
+                    0L)
+                < material.getValue()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isCompletionRefund(ModuleOperationState operation) {
+        return operation.elapsedBuildTicks() >= operation.plan()
+            .buildTicks();
     }
 }

@@ -1,8 +1,11 @@
-package com.gtnewhorizons.galaxia.registry.outpost.module;
+package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
-public class ModulePower implements ModuleComponent, IParallelModule {
+public class ModulePower implements IModuleComponent, IParallelModule {
 
     public static int EU_TICK = 2048;
 

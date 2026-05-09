@@ -1,12 +1,20 @@
-package com.gtnewhorizons.galaxia.registry.outpost.module;
+package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 
-public final class ModuleHammer implements ModuleComponent, IParallelModule {
+public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     private static final ModuleTier[] BASE_TIERS = { ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV };
     private static final ModuleTier[] BIG_TIERS = { ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV };
@@ -35,50 +43,8 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
 
     public static void prepareToFire(ModuleInstance instance, AutomatedFacility outpost) {
         ModuleHammer hammer = (ModuleHammer) instance.component();
-        if (!outpost.tryConsumeEnergy(shotEnergyEu(hammer.variant))) return;
+        if (!outpost.tryConsumeEnergy(hammer.variant.shotEnergyEu())) return;
         hammer.canFire = true;
-    }
-
-    public static int cooldownTicks(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
-        return switch (variant) {
-            case BASE -> switch (tier) {
-                    case EV -> 60 * 20;
-                    case IV -> 45 * 20;
-                    case LuV -> 30 * 20;
-                    default -> throw invalidTier(variant, tier);
-                };
-            case BIG -> switch (tier) {
-                    case LuV -> 60 * 20;
-                    case ZPM -> 45 * 20;
-                    case UV -> 30 * 20;
-                    default -> throw invalidTier(variant, tier);
-                };
-        };
-    }
-
-    public static long shotEnergyEu(@Nonnull HammerVariant variant) {
-        return switch (variant) {
-            case BASE -> 500_000L;
-            case BIG -> 8_000_000L;
-        };
-    }
-
-    public static int chargeTicks(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
-        return Math.max(1, cooldownTicks(variant, tier) - 20);
-    }
-
-    public static long chargeRateEuPerTick(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
-        long energy = shotEnergyEu(variant);
-        int chargeTicks = chargeTicks(variant, tier);
-        return Math.ceilDiv(energy, chargeTicks);
-    }
-
-    public static ModuleTier nextTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier current) {
-        ModuleTier[] values = tiersFor(variant);
-        for (int i = 0; i < values.length; i++) {
-            if (values[i] == current) return values[(i + 1) % values.length];
-        }
-        throw invalidTier(variant, current);
     }
 
     public static ModuleTier tierForVariantSwitch(@Nonnull HammerVariant targetVariant,
@@ -87,16 +53,28 @@ public final class ModuleHammer implements ModuleComponent, IParallelModule {
     }
 
     public static boolean supportsTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
-        try {
-            cooldownTicks(variant, tier);
-            return true;
-        } catch (IllegalStateException ignored) {
-            return false;
+        for (ModuleTier t : tiersFor(variant)) {
+            if (t == tier) return true;
         }
+        return false;
     }
 
     public static void requireTier(@Nonnull HammerVariant variant, @Nonnull ModuleTier tier) {
-        cooldownTicks(variant, tier);
+        if (!supportsTier(variant, tier)) throw invalidTier(variant, tier);
+    }
+
+    @Override
+    public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
+        if (!(spec instanceof HammerModuleOperation hammerSpec)) {
+            throw new IllegalStateException(
+                "HAMMER cannot handle " + spec.getClass()
+                    .getSimpleName());
+        }
+        HammerVariant targetVariant = HammerVariant.valueOf(hammerSpec.targetVariantKey());
+        ModuleTier targetTier = hammerSpec.targetTier();
+        requireTier(targetVariant, targetTier);
+        this.variant = targetVariant;
+        module.setTier(targetTier);
     }
 
     public AllowShootingConfig config() {

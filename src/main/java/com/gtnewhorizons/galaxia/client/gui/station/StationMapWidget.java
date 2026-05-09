@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -31,10 +32,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private final CelestialAsset.ID assetId;
     private final @Nullable Consumer<StationTileCoord> expansionSlotClickHandler;
+    private final @Nullable Consumer<PlacedTile> moduleSelectionHandler;
     private final int contentLeft;
     private final int contentRightPadding;
     private final int contentVerticalPadding;
     private final StationVisionLayer visionLayer;
+    private final BiPredicate<Integer, Integer> inputBlocked;
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
@@ -55,18 +58,30 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     private static final int CLICK_DRAG_THRESHOLD = 3;
 
     public StationMapWidget(CelestialAsset.ID assetId) {
-        this(assetId, null);
+        this(assetId, null, null);
     }
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler) {
-        this(assetId, expansionSlotClickHandler, 0, 0, 0);
+        this(assetId, expansionSlotClickHandler, null);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler) {
+        this(assetId, expansionSlotClickHandler, moduleSelectionHandler, 0, 0, 0);
     }
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         int contentLeft, int contentRightPadding, int contentVerticalPadding) {
+        this(assetId, expansionSlotClickHandler, null, contentLeft, contentRightPadding, contentVerticalPadding);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding) {
         this(
             assetId,
             expansionSlotClickHandler,
+            moduleSelectionHandler,
             contentLeft,
             contentRightPadding,
             contentVerticalPadding,
@@ -75,12 +90,41 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         int contentLeft, int contentRightPadding, int contentVerticalPadding, StationVisionLayer visionLayer) {
+        this(
+            assetId,
+            expansionSlotClickHandler,
+            null,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            visionLayer);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding, StationVisionLayer visionLayer) {
+        this(
+            assetId,
+            expansionSlotClickHandler,
+            moduleSelectionHandler,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            visionLayer,
+            (mouseX, mouseY) -> false);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding, StationVisionLayer visionLayer, BiPredicate<Integer, Integer> inputBlocked) {
         this.assetId = assetId;
         this.expansionSlotClickHandler = expansionSlotClickHandler;
+        this.moduleSelectionHandler = moduleSelectionHandler;
         this.contentLeft = contentLeft;
         this.contentRightPadding = contentRightPadding;
         this.contentVerticalPadding = contentVerticalPadding;
         this.visionLayer = visionLayer;
+        this.inputBlocked = inputBlocked;
     }
 
     public @Nullable CelestialAsset.ID assetId() {
@@ -102,6 +146,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         listenersRegistered = true;
         listenGuiAction((IGuiAction.MousePressed) button -> {
             if (button != 0) return false;
+            if (isInputBlocked()) {
+                clearPressState();
+                return false;
+            }
             AutomatedFacility facility = resolveFacility();
             if (facility == null) return false;
             pressMouseX = toLocalMouseX(getContext().getMouseX());
@@ -122,11 +170,19 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             return true;
         });
         listenGuiAction((IGuiAction.MouseDrag) (mouseButton, time) -> {
+            if (isInputBlocked()) {
+                clearPressState();
+                return false;
+            }
             if (mouseButton != 0 || !pressInMapContent) return false;
             updateManualDragging();
             return true;
         });
         listenGuiAction((IGuiAction.MouseReleased) mouseButton -> {
+            if (isInputBlocked()) {
+                clearPressState();
+                return false;
+            }
             if (mouseButton != 0 || !pressInMapContent) return false;
             boolean wasDragging = dragging;
             pressInMapContent = false;
@@ -146,6 +202,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             if (hit == null || !hit.equals(pressedTile)) return false;
             boolean occupied = layout.isOccupied(hit);
             selected = hit;
+            if (occupied && moduleSelectionHandler != null) {
+                PlacedTile tile = layout.get(hit);
+                if (tile != null) moduleSelectionHandler.accept(tile);
+            }
             if (!occupied && expansionSlotClickHandler != null) expansionSlotClickHandler.accept(hit);
             pressedTile = null;
             return true;
@@ -248,6 +308,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     }
 
     private void updateHover(StationLayout layout) {
+        if (isInputBlocked()) {
+            hovered = null;
+            return;
+        }
         int localX = toLocalMouseX(getContext().getMouseX());
         int localY = toLocalMouseY(getContext().getMouseY());
         hovered = hitTest(layout, localX, localY);
@@ -319,5 +383,15 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private int toLocalMouseY(int mouseY) {
         return mouseY - getArea().ry;
+    }
+
+    private boolean isInputBlocked() {
+        return inputBlocked.test(getContext().getMouseX(), getContext().getMouseY());
+    }
+
+    private void clearPressState() {
+        pressInMapContent = false;
+        dragging = false;
+        pressedTile = null;
     }
 }

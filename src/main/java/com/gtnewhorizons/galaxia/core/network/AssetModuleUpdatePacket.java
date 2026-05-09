@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
@@ -20,14 +21,22 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
@@ -44,6 +53,7 @@ public final class AssetModuleUpdatePacket {
     private static final int CONFIG_TYPE = 1;
     private static final int MAX_RECIPE_PAYLOAD_BYTES = 4096;
     private static final int MAX_RECIPE_STACKS = 64;
+    private static final int HAMMER_UPGRADE_PAYLOAD_BYTES = 4;
 
     private CelestialAsset.ID assetId;
     private int moduleIndex;
@@ -54,6 +64,7 @@ public final class AssetModuleUpdatePacket {
 
     private String stringPayload;
     private byte bytePayload;
+    private short shortPayload;
     private double doublePayload;
     private byte[] rawPayload;
 
@@ -110,11 +121,51 @@ public final class AssetModuleUpdatePacket {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket minerVoidPercent(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, String oreKey, int percent) {
-        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_MINER_VOID_PERCENT);
+    public static AssetModuleUpdatePacket minerOreBlacklisted(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, String oreKey, boolean blacklisted) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_MINER_ORE_BLACKLISTED);
         pkt.stringPayload = Objects.requireNonNull(oreKey, "oreKey");
-        pkt.bytePayload = (byte) AutomatedFacility.clampMinerVoidChancePercent(percent);
+        pkt.bytePayload = (byte) (blacklisted ? 1 : 0);
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket minerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, short groupId) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_SETTINGS_GROUP);
+        pkt.shortPayload = groupId;
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId) {
+        return config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
+    }
+
+    public static AssetModuleUpdatePacket cancelModuleOperation(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId) {
+        return config(assetId, moduleIndex, moduleId, ConfigAction.CANCEL_MODULE_OPERATION);
+    }
+
+    public static AssetModuleUpdatePacket hammerUpgradePlan(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, HammerVariant variant, ModuleTier tier, boolean reserveItems,
+        boolean voidCompletionRefund) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_HAMMER_UPGRADE);
+        pkt.rawPayload = new byte[] { (byte) Objects.requireNonNull(variant, "variant")
+            .ordinal(),
+            (byte) Objects.requireNonNull(tier, "tier")
+                .ordinal(),
+            (byte) (reserveItems ? 1 : 0), (byte) (voidCompletionRefund ? 1 : 0) };
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket minerFocusPlan(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, MinerFocusTier focusTier, String oreKey) {
+        if (focusTier == null) {
+            throw new IllegalArgumentException("focusTier must not be null");
+        }
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.PLAN_MINER_FOCUS);
+        pkt.bytePayload = (byte) focusTier.ordinal();
+        pkt.stringPayload = oreKey == null ? "" : oreKey;
         return pkt;
     }
 
@@ -183,14 +234,19 @@ public final class AssetModuleUpdatePacket {
     }
 
     public enum ConfigAction {
-        SET_MINER_VOID_PERCENT,
+        SET_MINER_ORE_BLACKLISTED,
         SET_ALLOW_SHOOTING_MODE,
         SET_ALLOW_SHOOTING_THRESHOLD,
         SET_HAMMER_VARIANT,
+        PLAN_HAMMER_UPGRADE,
+        PLAN_MINER_FOCUS,
         SET_ROUTE_PRIORITY,
         SET_TIER,
         SET_PRIORITY,
         SET_ENABLED,
+        SET_SETTINGS_GROUP,
+        CREATE_SETTINGS_GROUP,
+        CANCEL_MODULE_OPERATION,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
         REMOVE_RECIPE_SLOT
@@ -212,13 +268,25 @@ public final class AssetModuleUpdatePacket {
 
         if (type == CONFIG_TYPE && configAction != null) {
             switch (configAction) {
-                case SET_MINER_VOID_PERCENT -> {
+                case SET_MINER_ORE_BLACKLISTED -> {
                     PacketUtil.writeString(buf, stringPayload);
                     buf.writeByte(bytePayload);
                 }
+                case PLAN_MINER_FOCUS -> {
+                    buf.writeByte(bytePayload);
+                    PacketUtil.writeString(buf, stringPayload);
+                }
                 case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
+                case PLAN_HAMMER_UPGRADE -> {
+                    if (rawPayload == null || rawPayload.length != HAMMER_UPGRADE_PAYLOAD_BYTES) {
+                        throw new IllegalArgumentException("invalid hammer upgrade payload");
+                    }
+                    buf.writeBytes(rawPayload);
+                }
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
+                case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
+                case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
                 case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
@@ -255,13 +323,35 @@ public final class AssetModuleUpdatePacket {
         }
 
         switch (configAction) {
-            case SET_MINER_VOID_PERCENT -> {
+            case SET_MINER_ORE_BLACKLISTED -> {
                 stringPayload = PacketUtil.readString(buf);
                 bytePayload = buf.readByte();
+                if (bytePayload != 0 && bytePayload != 1) {
+                    throw new IllegalStateException("invalid miner blacklist flag: " + bytePayload);
+                }
+            }
+            case PLAN_MINER_FOCUS -> {
+                bytePayload = buf.readByte();
+                stringPayload = PacketUtil.readString(buf);
             }
             case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
+            case PLAN_HAMMER_UPGRADE -> {
+                if (buf.readableBytes() < HAMMER_UPGRADE_PAYLOAD_BYTES) {
+                    throw new IllegalArgumentException("missing hammer upgrade payload");
+                }
+                rawPayload = new byte[HAMMER_UPGRADE_PAYLOAD_BYTES];
+                buf.readBytes(rawPayload);
+                if (rawPayload[2] != 0 && rawPayload[2] != 1) {
+                    throw new IllegalStateException("invalid hammer upgrade reserve flag: " + rawPayload[2]);
+                }
+                if (rawPayload[3] != 0 && rawPayload[3] != 1) {
+                    throw new IllegalStateException("invalid hammer upgrade void refund flag: " + rawPayload[3]);
+                }
+            }
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
+            case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
+            case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
@@ -302,6 +392,10 @@ public final class AssetModuleUpdatePacket {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
+        return apply(teamId, false);
+    }
+
+    public AssetSyncPacket apply(UUID teamId, boolean creative) {
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (!(asset instanceof AutomatedFacility state)) return null;
         if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) return null;
@@ -317,7 +411,7 @@ public final class AssetModuleUpdatePacket {
 
         switch (type) {
             case ACTION_TYPE -> handleAction(this, state, module);
-            case CONFIG_TYPE -> handleConfig(this, state, module);
+            case CONFIG_TYPE -> handleConfig(this, state, module, creative);
             default -> {
                 return null;
             }
@@ -327,9 +421,17 @@ public final class AssetModuleUpdatePacket {
             return AssetSyncPacket.moduleRemoved(assetId, moduleIndex, module.id)
                 .withSyncRevision(state.getSyncRevision());
         }
-        if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_VOID_PERCENT) {
-            String oreKey = getStringPayload();
-            return AssetSyncPacket.minerVoidConfigUpdated(assetId, oreKey, state.minerVoidChancePercent(oreKey))
+        if (type == CONFIG_TYPE && getConfigAction() == ConfigAction.SET_MINER_ORE_BLACKLISTED
+            && module.groupId() != 0) {
+            return AssetSyncPacket.settingsGroupUpdated(
+                assetId,
+                state.settingsGroups()
+                    .require(module.groupId(), module.kind()))
+                .withSyncRevision(state.getSyncRevision());
+        }
+        if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
+            || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP)) {
+            return AssetSyncPacket.fullSync(state)
                 .withSyncRevision(state.getSyncRevision());
         }
         state.markModuleDirty(module.id);
@@ -349,9 +451,10 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
-    private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module) {
+    private static void handleConfig(AssetModuleUpdatePacket packet, AutomatedFacility state, ModuleInstance module,
+        boolean creative) {
         switch (packet.getConfigAction()) {
-            case SET_MINER_VOID_PERCENT -> handleMinerVoidPercent(packet, state, module);
+            case SET_MINER_ORE_BLACKLISTED -> handleMinerOreBlacklisted(packet, state, module);
             case SET_ALLOW_SHOOTING_MODE -> handleHammerConfig(module, h -> {
                 AllowShootingConfig.Mode mode = Objects
                     .requireNonNull(packet.getEnumPayload(AllowShootingConfig.Mode.class), "allow shooting mode");
@@ -370,11 +473,15 @@ public final class AssetModuleUpdatePacket {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
                     throw new IllegalStateException("SET_HAMMER_VARIANT sent to non-hammer module " + module.id);
                 }
-                HammerVariant variant = Objects
-                    .requireNonNull(packet.getEnumPayload(HammerVariant.class), "hammer variant");
-                ModuleHammer.requireTier(variant, module.tier());
-                hammer.setVariant(variant);
+                HammerVariant variant = packet.getEnumPayload(HammerVariant.class);
+                if (variant == null) {
+                    throw new IllegalStateException("SET_HAMMER_VARIANT missing variant for module " + module.id);
+                }
+                ModuleTier tier = ModuleHammer.tierForVariantSwitch(variant, module.tier());
+                planHammerUpgrade(state, module, hammer, variant, tier, creative);
             }
+            case PLAN_HAMMER_UPGRADE -> handleHammerUpgradePlan(packet, state, module, creative);
+            case PLAN_MINER_FOCUS -> handleMinerFocusPlan(packet, module);
             case SET_ROUTE_PRIORITY -> {
                 if (!(module.component() instanceof ModuleHammer hammer)) {
                     throw new IllegalStateException("SET_ROUTE_PRIORITY sent to non-hammer module " + module.id);
@@ -392,11 +499,12 @@ public final class AssetModuleUpdatePacket {
                         "rejected tier " + tier + " for " + module.kind() + " on " + packet.assetId);
                 }
                 if (module.component() instanceof ModuleHammer hammer) {
-                    ModuleHammer.requireTier(hammer.variant(), tier);
+                    planHammerUpgrade(state, module, hammer, hammer.variant(), tier, creative);
+                } else {
+                    module.setTier(tier);
+                    state.layoutCache()
+                        .applyMutation(MutationKind.SET_TIER, module.kind(), module);
                 }
-                module.setTier(tier);
-                state.layoutCache()
-                    .applyMutation(MutationKind.SET_TIER, module.kind(), module);
             }
             case SET_PRIORITY -> {
                 ModulePriority priority = PacketUtil
@@ -408,8 +516,109 @@ public final class AssetModuleUpdatePacket {
                 state.layoutCache()
                     .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
             }
+            case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, packet.shortPayload);
+            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
+            case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
         }
+    }
+
+    private static boolean planHammerUpgrade(AutomatedFacility state, ModuleInstance module, ModuleHammer hammer,
+        HammerVariant targetVariant, ModuleTier targetTier, boolean creative) {
+        return planHammerUpgrade(state, module, hammer, targetVariant, targetTier, false, false, creative);
+    }
+
+    private static boolean planHammerUpgrade(AutomatedFacility state, ModuleInstance module, ModuleHammer hammer,
+        HammerVariant targetVariant, ModuleTier targetTier, boolean reserveItems, boolean voidCompletionRefund,
+        boolean creative) {
+        ModuleHammer.requireTier(targetVariant, targetTier);
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
+        ModuleTierData targetData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(targetTier);
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(targetData.constructionCost());
+        Map<ItemStackWrapper, Long> completionRefundCost = FacilityModuleRegistry
+            .operationCost(sourceData.constructionCost());
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            new HammerModuleOperation(targetTier, targetVariant.name()),
+            sourceData.buildTicks(),
+            cost,
+            completionRefundCost,
+            sourceData.completionRefundPercent(),
+            reserveItems,
+            voidCompletionRefund);
+        if (creative) {
+            if (state == null) {
+                throw new IllegalStateException(
+                    "Creative hammer upgrade requires facility state for module " + module.id);
+            }
+            state.applyCreativeModuleOperation(module, plan);
+            return true;
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            LOG.warn(
+                "Rejected hammer upgrade for module {} because operation {} is active",
+                module.id,
+                existingOperation.phase());
+            return false;
+        }
+        module.setOperation(ModuleOperationState.waiting(plan));
+        return true;
+    }
+
+    private static void handleHammerUpgradePlan(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module, boolean creative) {
+        if (!(module.component() instanceof ModuleHammer hammer)) {
+            throw new IllegalStateException("PLAN_HAMMER_UPGRADE sent to non-hammer module " + module.id);
+        }
+        if (packet.rawPayload == null || packet.rawPayload.length != HAMMER_UPGRADE_PAYLOAD_BYTES) {
+            throw new IllegalStateException("PLAN_HAMMER_UPGRADE malformed payload for module " + module.id);
+        }
+        HammerVariant variant = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.rawPayload[0]), HammerVariant.class);
+        ModuleTier tier = PacketUtil.enumFromByte(Byte.toUnsignedInt(packet.rawPayload[1]), ModuleTier.class);
+        if (variant == null || tier == null) {
+            throw new IllegalStateException(
+                "PLAN_HAMMER_UPGRADE invalid target for module " + module.id + ": " + variant + "/" + tier);
+        }
+        boolean reserveItems = packet.rawPayload[2] == 1;
+        boolean voidCompletionRefund = packet.rawPayload[3] == 1;
+        planHammerUpgrade(state, module, hammer, variant, tier, reserveItems, voidCompletionRefund, creative);
+    }
+
+    private static void handleMinerFocusPlan(AssetModuleUpdatePacket packet, ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner miner)) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS sent to non-miner module " + module.id);
+        }
+        MinerFocusTier targetTier = PacketUtil
+            .enumFromByte(Byte.toUnsignedInt(packet.bytePayload), MinerFocusTier.class);
+        if (targetTier == null) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS invalid tier for module " + module.id);
+        }
+        String targetOreKey = targetTier == MinerFocusTier.NONE ? null : packet.stringPayload;
+        if (targetTier != MinerFocusTier.NONE && (targetOreKey == null || targetOreKey.isBlank())) {
+            throw new IllegalStateException("PLAN_MINER_FOCUS missing target ore for module " + module.id);
+        }
+        ModuleOperationState existingOperation = module.operationOrNull();
+        if (existingOperation != null && !existingOperation.phase()
+            .isTerminal()) {
+            throw new IllegalStateException(
+                "Module " + module.id + " already has active operation " + existingOperation.phase());
+        }
+        ModuleTierData sourceData = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier());
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(sourceData.constructionCost());
+        module.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(
+                    new MinerFocusOperation(module.tier(), targetTier.name(), targetOreKey),
+                    sourceData.buildTicks(),
+                    cost,
+                    cost,
+                    sourceData.completionRefundPercent(),
+                    false,
+                    false)));
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
@@ -522,14 +731,12 @@ public final class AssetModuleUpdatePacket {
         };
     }
 
-    private static void handleMinerVoidPercent(AssetModuleUpdatePacket packet, AutomatedFacility state,
+    private static void handleMinerOreBlacklisted(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof ModuleMiner)) {
-            throw new IllegalStateException("SET_MINER_VOID_PERCENT sent to non-miner module " + module.id);
+            throw new IllegalStateException("SET_MINER_ORE_BLACKLISTED sent to non-miner module " + module.id);
         }
-        state.setMinerVoidChancePercent(
-            packet.getStringPayload(),
-            AutomatedFacility.clampMinerVoidChancePercent(Byte.toUnsignedInt(packet.bytePayload)));
+        state.setMinerOreBlacklisted(module, packet.getStringPayload(), packet.getBooleanPayload());
     }
 
     private static void handleHammerConfig(ModuleInstance module,

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
@@ -20,8 +21,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -110,14 +111,41 @@ final class StationPacketRoundTripTest {
     }
 
     @Test
-    void fullSyncRoundTripPreservesMinerVoidChances() {
+    void fullSyncRoundTripPreservesMinerBlacklist() {
         AutomatedFacility server = createFacility();
-        server.setMinerVoidChancePercent("ore:iron", 35);
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
 
-        assertEquals(35, client.minerVoidChancePercent("ore:iron"));
+        assertTrue(
+            client.isMinerOreBlacklisted(
+                client.modules()
+                    .get(0),
+                "ore:iron"));
+    }
+
+    @Test
+    void fullSyncRoundTripPreservesMinerSettingsGroup() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
+        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
+            .id();
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleInstance clientMiner = client.modules()
+            .get(0);
+        assertEquals(groupId, clientMiner.groupId());
+        assertEquals(
+            "Shared miners",
+            client.settingsGroups()
+                .require(groupId)
+                .displayName());
+        assertTrue(client.isMinerOreBlacklisted(clientMiner, "ore:iron"));
     }
 
     @Test
@@ -191,6 +219,32 @@ final class StationPacketRoundTripTest {
 
     // ── Helpers ──
 
+    @Test
+    void moduleUpdatedDeltaRefreshesLayoutTileOnClient() {
+        AutomatedFacility server = buildFacilityWithModules(1);
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        StationTileCoord anchor = StationTileCoord.of(1, 0);
+        ModuleInstance module = server.modules()
+            .get(0);
+        module.updateStatus(Buildable.Status.DISABLED);
+
+        AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
+        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+
+        ModuleInstance updatedModule = client.modules()
+            .get(0);
+        PlacedTile tile = client.stationLayout()
+            .snapshot()
+            .get(anchor);
+        assertSame(updatedModule, tile.module(), "layout tile must point at the updated module instance");
+        assertEquals(
+            StationTileState.OCCUPIED_DISABLED,
+            tile.state(),
+            "layout tile state must match updated module status");
+    }
+
     private static AssetSyncPacket roundTrip(AssetSyncPacket pkt) {
         var buf = Unpooled.buffer();
         pkt.toBytes(buf);
@@ -233,6 +287,8 @@ final class StationPacketRoundTripTest {
 
     private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {
         client.clearModules();
+        client.settingsGroups()
+            .clear();
         client.inventory.clear();
         client.logisticsConfig.clear();
         StationLayout layout = client.stationLayout();

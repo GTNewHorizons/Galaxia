@@ -11,9 +11,9 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-final class MinerVoidOptions {
+final class MinerBlacklistOptions {
 
-    private MinerVoidOptions() {}
+    private MinerBlacklistOptions() {}
 
     static List<Entry> forFacility(AutomatedFacility facility) {
         return GalaxiaCelestialAPI.get(facility.celestialObjectId)

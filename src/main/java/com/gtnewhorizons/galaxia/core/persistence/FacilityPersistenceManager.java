@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
@@ -27,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
@@ -48,10 +50,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -63,6 +73,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -81,6 +94,7 @@ public final class FacilityPersistenceManager {
 
     public FacilityPersistenceManager() {
         gson = new GsonBuilder().setPrettyPrinting()
+            .serializeNulls()
             .create();
     }
 
@@ -142,48 +156,38 @@ public final class FacilityPersistenceManager {
             Type listType = new TypeToken<List<AssetJson>>() {}.getType();
             list = gson.fromJson(reader, listType);
         } catch (IOException | JsonParseException e) {
-            LOG.error("[PERSIST] LOAD FAILED: read error {}: {}", file, e.getMessage());
-            return;
+            throw new IllegalStateException("[PERSIST] LOAD FAILED: read error " + file + ": " + e.getMessage(), e);
         }
         if (list == null) {
-            LOG.warn("[PERSIST] LOAD: asset registry {} contained no asset list", file);
-            return;
+            throw new IllegalStateException(
+                "[PERSIST] LOAD FAILED: asset registry " + file + " contained no asset list");
         }
 
         LOG.info("[PERSIST] LOAD: found {} asset(s) in JSON", list.size());
         int loadedCount = 0;
-        int skippedCount = 0;
         for (AssetJson json : list) {
-            try {
-                CelestialAsset asset = decodeAsset(json);
-                if (asset == null) {
-                    skippedCount++;
-                    LOG.warn("[PERSIST] LOAD: skipping malformed asset entry in {}", file);
-                    continue;
-                }
-                UUID teamId = UUID.fromString(json.teamId);
-                int moduleCount = (json.facility != null && json.facility.modules != null)
-                    ? json.facility.modules.size()
-                    : 0;
-                int tileCount = (json.facility != null && json.facility.layoutTiles != null)
-                    ? json.facility.layoutTiles.size()
-                    : 0;
-                LOG.info(
-                    "[PERSIST] LOAD: decoding asset {} kind={} status={} with {} module(s), {} layout tile(s)",
-                    json.assetId,
-                    json.kind,
-                    json.status,
-                    moduleCount,
-                    tileCount);
-                decodeFacilityState(asset, json.facility);
-                CelestialAssetStore.add(teamId, asset);
-                loadedCount++;
-            } catch (RuntimeException e) {
-                skippedCount++;
-                LOG.error("[PERSIST] LOAD FAILED: skipping asset entry {}: {}", json.assetId, e.getMessage());
+            CelestialAsset asset = decodeAsset(json);
+            if (asset == null) {
+                throw new IllegalStateException("[PERSIST] LOAD FAILED: malformed asset entry in " + file);
             }
+            UUID teamId = UUID.fromString(json.teamId);
+            int moduleCount = (json.facility != null && json.facility.modules != null) ? json.facility.modules.size()
+                : 0;
+            int tileCount = (json.facility != null && json.facility.layoutTiles != null)
+                ? json.facility.layoutTiles.size()
+                : 0;
+            LOG.info(
+                "[PERSIST] LOAD: decoding asset {} kind={} status={} with {} module(s), {} layout tile(s)",
+                json.assetId,
+                json.kind,
+                json.status,
+                moduleCount,
+                tileCount);
+            decodeFacilityState(asset, json.facility);
+            CelestialAssetStore.add(teamId, asset);
+            loadedCount++;
         }
-        LOG.info("[PERSIST] LOAD END: {} asset(s) loaded, {} skipped", loadedCount, skippedCount);
+        LOG.info("[PERSIST] LOAD END: {} asset(s) loaded", loadedCount);
     }
 
     private static <T extends Enum<T>> T safeValueOf(Class<T> cls, String name) {
@@ -356,7 +360,13 @@ public final class FacilityPersistenceManager {
         out.energyStored = state.getEnergyStored();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
-        out.minerVoidChances = new LinkedHashMap<>(state.minerVoidChances());
+        out.settingsGroups = new ArrayList<>();
+        state.settingsGroups()
+            .groups()
+            .values()
+            .stream()
+            .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
+            .forEach(group -> out.settingsGroups.add(encodeSettingsGroup(group)));
         out.modules = new ArrayList<>();
         int moduleCount = 0;
         for (ModuleInstance m : state.modules()) {
@@ -375,6 +385,7 @@ public final class FacilityPersistenceManager {
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
+            mj.moduleOperation = encodeModuleOperation(m.operationOrNull());
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
@@ -383,6 +394,15 @@ public final class FacilityPersistenceManager {
                     "variant",
                     hammer.variant()
                         .name());
+            } else if (m.component() instanceof ModuleMiner miner) {
+                moduleData.addProperty(
+                    "focusTier",
+                    miner.focusTier()
+                        .name());
+                String focusOreKey = miner.focusOreKeyOrNull();
+                moduleData
+                    .add("focusOreKey", focusOreKey == null ? JsonNull.INSTANCE : PURE_GSON.toJsonTree(focusOreKey));
+                moduleData.addProperty("focusAlignmentProgress", miner.focusAlignmentProgress());
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
@@ -502,9 +522,18 @@ public final class FacilityPersistenceManager {
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.settingsGroups()
+            .clear();
+        state.settingsGroups()
             .setNextGroupId(json.settingsGroupsNextId);
-        state.setMinerVoidChances(
-            Objects.requireNonNull(json.minerVoidChances, "[PERSIST] Facility missing minerVoidChances"));
+        List<SettingsGroupJson> settingsGroups = Objects
+            .requireNonNull(json.settingsGroups, "[PERSIST] Facility missing settingsGroups");
+        for (SettingsGroupJson groupJson : settingsGroups) {
+            FacilityModuleKind groupKind = Objects.requireNonNull(
+                safeValueOf(FacilityModuleKind.class, groupJson.kind),
+                "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
+            state.settingsGroups()
+                .restore(groupJson.id, groupKind, groupJson.displayName, decodeSettingsGroupSettings(groupJson));
+        }
 
         int moduleDecodedCount = 0;
         if (json.modules != null) {
@@ -556,6 +585,7 @@ public final class FacilityPersistenceManager {
                     (module.anchorOrNull() != null ? (int) module.anchorOrNull()
                         .dy() : ModuleInstance.NULL_ANCHOR_LOG_VALUE));
                 JsonObject data = mj.data != null ? mj.data.getAsJsonObject() : null;
+                module.setGroupId(mj.groupId);
 
                 switch (kind) {
                     case HAMMER -> {
@@ -574,11 +604,15 @@ public final class FacilityPersistenceManager {
                         module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
                     }
                     case MINER -> {
-                        if (data != null && !data.entrySet()
-                            .isEmpty()) {
+                        if (!(module.component() instanceof ModuleMiner miner)) {
                             throw new IllegalStateException(
-                                "[PERSIST] Miner module " + moduleId + " has obsolete data");
+                                "[PERSIST] Miner module " + moduleId + " has non-miner data");
                         }
+                        if (module.groupId() == 0) {
+                            throw new IllegalStateException(
+                                "[PERSIST] Miner module " + moduleId + " malformed: has no settings group");
+                        }
+                        decodeMinerSettings(module, miner, data);
                     }
                     case POWER -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
@@ -599,7 +633,6 @@ public final class FacilityPersistenceManager {
                 module.setTicks(mj.cooldownTicks);
                 module.setPriorityOverride(PacketUtil.enumFromByte(mj.priorityOverride, ModulePriority.class));
                 module.setEnabled(mj.enabled);
-                module.setGroupId(mj.groupId);
                 if (module.component() instanceof IParallelModule pm) {
                     pm.setParallel(mj.parallel);
                 }
@@ -613,6 +646,7 @@ public final class FacilityPersistenceManager {
                         }
                     }
                 }
+                module.setOperation(decodeModuleOperation(mj.moduleOperation, module.id));
                 state.addModule(module);
                 moduleDecodedCount++;
             }
@@ -744,6 +778,21 @@ public final class FacilityPersistenceManager {
                 json.layoutTiles != null ? json.layoutTiles.size() : 0);
         }
 
+        for (ModuleInstance module : state.modules()) {
+            if (module.groupId() != 0) {
+                state.settingsGroups()
+                    .addMember(module.groupId(), module.anchor());
+            }
+        }
+        for (SettingsGroup group : state.settingsGroups()
+            .groups()
+            .values()) {
+            if (group.members()
+                .isEmpty()) {
+                throw new IllegalStateException("[PERSIST] Settings group " + group.id() + " has no member modules");
+            }
+        }
+
         LOG.info(
             "[PERSIST] LOAD DECODE END: facility {} has {} module(s), layout has {} tile(s)",
             state.assetId,
@@ -798,7 +847,7 @@ public final class FacilityPersistenceManager {
         String planetaryAnchorBodyId;
         long energyStored;
         short settingsGroupsNextId;
-        Map<String, Integer> minerVoidChances = new LinkedHashMap<>();
+        List<SettingsGroupJson> settingsGroups;
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
@@ -812,6 +861,14 @@ public final class FacilityPersistenceManager {
         int dy;
         String state;
         String moduleId;
+    }
+
+    static final class SettingsGroupJson {
+
+        short id;
+        String kind;
+        String displayName;
+        JsonObject data;
     }
 
     static final class ModuleJson {
@@ -829,6 +886,26 @@ public final class FacilityPersistenceManager {
         byte parallel;
         JsonElement data;
         Map<String, Long> consumedResources;
+        ModuleOperationJson moduleOperation;
+    }
+
+    static final class ModuleOperationJson {
+
+        String specType;
+        String phase;
+        String targetModuleKind;
+        String targetTier;
+        String targetVariantKey;
+        String targetFocusTierKey;
+        String targetFocusOreKey;
+        int buildTicks;
+        int completionRefundPercent;
+        boolean reserveItems;
+        boolean voidCompletionRefund;
+        int elapsedBuildTicks;
+        Map<String, Long> completionRefundCost;
+        Map<String, Long> depositedResources;
+        Map<String, Long> refundBuffer;
     }
 
     static final class LogisticsConfigJson {
@@ -1034,6 +1111,211 @@ public final class FacilityPersistenceManager {
                 return null;
             }
         }
+    }
+
+    private static ModuleOperationJson encodeModuleOperation(ModuleOperationState operation) {
+        if (operation == null) return null;
+        ModuleOperationJson json = new ModuleOperationJson();
+        ModuleOperationPlan plan = operation.plan();
+        json.phase = operation.phase()
+            .name();
+        if (plan.spec() instanceof HammerModuleOperation hammerSpec) {
+            json.specType = "HAMMER";
+            json.targetModuleKind = FacilityModuleKind.HAMMER.name();
+            json.targetTier = hammerSpec.targetTier()
+                .name();
+            json.targetVariantKey = hammerSpec.targetVariantKey();
+        } else if (plan.spec() instanceof MinerFocusOperation minerSpec) {
+            json.specType = "MINER_FOCUS";
+            json.targetModuleKind = FacilityModuleKind.MINER.name();
+            json.targetTier = minerSpec.targetTier()
+                .name();
+            json.targetFocusTierKey = minerSpec.targetFocusTierKey();
+            json.targetFocusOreKey = minerSpec.targetFocusOreKey();
+        }
+        json.buildTicks = plan.buildTicks();
+        json.completionRefundPercent = plan.completionRefundPercent();
+        json.completionRefundCost = encodeOperationCost(plan.completionRefundCost());
+        json.reserveItems = plan.reserveItems();
+        json.voidCompletionRefund = plan.voidCompletionRefund();
+        json.elapsedBuildTicks = operation.elapsedBuildTicks();
+        json.depositedResources = new LinkedHashMap<>(operation.depositedResources());
+        json.refundBuffer = new LinkedHashMap<>(operation.refundBuffer());
+        return json;
+    }
+
+    private static ModuleOperationState decodeModuleOperation(ModuleOperationJson json, ModuleInstance.ID moduleId) {
+        if (json == null) return null;
+        ModuleOperationPhase phase = requireEnum(
+            ModuleOperationPhase.class,
+            json.phase,
+            "[PERSIST] Module " + moduleId + " has invalid operation phase: " + json.phase);
+        FacilityModuleKind regKind = json.targetModuleKind != null
+            ? requireOptionalEnum(
+                FacilityModuleKind.class,
+                json.targetModuleKind,
+                "[PERSIST] Module " + moduleId + " has invalid target kind: " + json.targetModuleKind)
+            : null;
+        ModuleTier targetTier = requireEnum(
+            ModuleTier.class,
+            json.targetTier,
+            "[PERSIST] Module " + moduleId + " has invalid target tier: " + json.targetTier);
+        FacilityModuleKind kindForLookup = regKind != null ? regKind : FacilityModuleKind.HAMMER;
+        if (json.buildTicks <= 0) {
+            throw new IllegalStateException(
+                "[PERSIST] Module " + moduleId + " operation has invalid buildTicks: " + json.buildTicks);
+        }
+        IModuleOperation spec;
+        if ("HAMMER".equals(json.specType)) {
+            spec = new HammerModuleOperation(targetTier, json.targetVariantKey);
+        } else if ("MINER_FOCUS".equals(json.specType)) {
+            spec = new MinerFocusOperation(targetTier, json.targetFocusTierKey, json.targetFocusOreKey);
+        } else {
+            throw new IllegalStateException(
+                "[PERSIST] Module " + moduleId + " has unknown spec type: " + json.specType);
+        }
+        Map<ItemStackWrapper, Long> cost = regKind != null ? FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(regKind)
+                .getTierData(targetTier)
+                .constructionCost())
+            : Map.of();
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            spec,
+            json.buildTicks,
+            cost,
+            requireOperationCost(json.completionRefundCost, "completionRefundCost", moduleId),
+            json.completionRefundPercent,
+            json.reserveItems,
+            json.voidCompletionRefund);
+        return ModuleOperationState.restore(
+            plan,
+            phase,
+            json.elapsedBuildTicks,
+            requireOperationAmounts(json.depositedResources, "depositedResources", moduleId),
+            requireOperationAmounts(json.refundBuffer, "refundBuffer", moduleId));
+    }
+
+    private static Map<String, Long> encodeOperationCost(Map<ItemStackWrapper, Long> cost) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> entry : cost.entrySet()) {
+            encoded.merge(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue(),
+                Long::sum);
+        }
+        return encoded;
+    }
+
+    private static Map<ItemStackWrapper, Long> requireOperationCost(Map<String, Long> amounts, String fieldName,
+        ModuleInstance.ID moduleId) {
+        if (amounts == null) {
+            throw new IllegalStateException("[PERSIST] Module " + moduleId + " operation missing " + fieldName);
+        }
+        Map<ItemStackWrapper, Long> cost = new LinkedHashMap<>();
+        for (Map.Entry<String, Long> entry : amounts.entrySet()) {
+            ItemStackWrapper item = ItemStackWrapper.fromKey(entry.getKey());
+            if (item == null) {
+                throw new IllegalStateException(
+                    "[PERSIST] Module " + moduleId
+                        + " operation "
+                        + fieldName
+                        + " contains unresolvable item: "
+                        + entry.getKey());
+            }
+            cost.merge(item, entry.getValue(), Long::sum);
+        }
+        return cost;
+    }
+
+    private static Map<String, Long> requireOperationAmounts(Map<String, Long> amounts, String fieldName,
+        ModuleInstance.ID moduleId) {
+        if (amounts == null) {
+            throw new IllegalStateException("[PERSIST] Module " + moduleId + " operation missing " + fieldName);
+        }
+        return amounts;
+    }
+
+    private static <T extends Enum<T>> T requireEnum(Class<T> cls, String name, String message) {
+        T value = safeValueOf(cls, name);
+        if (value == null) throw new IllegalStateException(message);
+        return value;
+    }
+
+    private static <T extends Enum<T>> T requireOptionalEnum(Class<T> cls, String name, String message) {
+        if (name == null) return null;
+        T value = safeValueOf(cls, name);
+        if (value == null) throw new IllegalStateException(message);
+        return value;
+    }
+
+    private static SettingsGroupJson encodeSettingsGroup(SettingsGroup group) {
+        SettingsGroupJson json = new SettingsGroupJson();
+        json.id = group.id();
+        json.kind = group.kind()
+            .name();
+        json.displayName = group.displayName();
+        json.data = encodeSettingsGroupSettings(group.settings());
+        return json;
+    }
+
+    private static JsonObject encodeSettingsGroupSettings(ModuleSettings settings) {
+        JsonObject data = new JsonObject();
+        if (settings instanceof MinerSettings minerSettings) {
+            data.add("minerSettings", PURE_GSON.toJsonTree(minerSettings));
+            return data;
+        }
+        throw new IllegalStateException("[PERSIST] Unsupported settings group payload " + settings);
+    }
+
+    private static ModuleSettings decodeSettingsGroupSettings(SettingsGroupJson groupJson) {
+        JsonObject data = Objects
+            .requireNonNull(groupJson.data, "[PERSIST] Settings group " + groupJson.id + " missing data");
+        FacilityModuleKind kind = Objects.requireNonNull(
+            safeValueOf(FacilityModuleKind.class, groupJson.kind),
+            "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
+        if (kind == FacilityModuleKind.MINER) {
+            if (data.entrySet()
+                .size() != 1 || !data.has("minerSettings")) {
+                throw new IllegalStateException(
+                    "[PERSIST] Miner settings group " + groupJson.id + " has malformed data");
+            }
+            JsonObject settingsData = data.getAsJsonObject("minerSettings");
+            JsonElement keysElement = Objects.requireNonNull(
+                settingsData.get("blacklistedOreKeys"),
+                "[PERSIST] Miner settings group " + groupJson.id + " missing blacklistedOreKeys");
+            Type keySetType = new TypeToken<Set<String>>() {}.getType();
+            Set<String> keys = Objects.requireNonNull(
+                PURE_GSON.fromJson(keysElement, keySetType),
+                "[PERSIST] Miner settings group " + groupJson.id + " has null blacklistedOreKeys");
+            return new MinerSettings(keys);
+        }
+        throw new IllegalStateException("[PERSIST] Unsupported settings group kind " + kind);
+    }
+
+    private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {
+        JsonObject minerData = Objects.requireNonNull(data, "[PERSIST] Miner module " + module.id + " missing data");
+        if (minerData.entrySet()
+            .size() != 3 || !minerData.has("focusTier")
+            || !minerData.has("focusOreKey")
+            || !minerData.has("focusAlignmentProgress")) {
+            throw new IllegalStateException("[PERSIST] Miner module " + module.id + " has malformed settings data");
+        }
+        decodeMinerFocus(module, miner, minerData);
+    }
+
+    private static void decodeMinerFocus(ModuleInstance module, ModuleMiner miner, JsonObject minerData) {
+        MinerFocusTier focusTier = requireEnum(
+            MinerFocusTier.class,
+            minerData.get("focusTier")
+                .getAsString(),
+            "[PERSIST] Miner module " + module.id + " has invalid focus tier");
+        JsonElement focusOreElement = minerData.get("focusOreKey");
+        String focusOreKey = focusOreElement == null || focusOreElement.isJsonNull() ? null
+            : focusOreElement.getAsString();
+        int focusAlignmentProgress = minerData.get("focusAlignmentProgress")
+            .getAsInt();
+        miner.setFocus(focusTier, focusOreKey, focusAlignmentProgress);
     }
 
     private static RecipeConfig decodeRecipeConfig(JsonObject data) {

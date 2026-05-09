@@ -164,7 +164,7 @@ public final class StarmapActionSyncHandler extends SyncHandler {
             case REQUEST_MODULE_UPDATE -> {
                 AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId));
+                syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_INVENTORY_UPDATE -> {
                 AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();

@@ -23,14 +23,15 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -58,7 +59,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         this.map = map;
         this.configController = configController;
         child(
-            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerVoidConfig)
+            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerBlacklistConfig)
                 .pos(ACTION_X, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
@@ -122,8 +123,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         StationTileCoord modAnchor = module.anchor();
         if (module.kind()
             .isCapacityModule()) {
-            if (module.component() instanceof ICapacityModule icm) {
-                long baseCapacity = icm.baseCapacityForTier(module.tier());
+            {
+                long baseCapacity = module.baseCapacity();
                 int neighborCount = StationLayout.countOrthogonalNeighbors(layout, modAnchor, module.kind());
                 long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
                 long clusterTotal = 0;
@@ -214,10 +215,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int lineY = y;
         HammerVariant variant = hammer.variant();
         ModuleTier tier = module.tier();
-        int cooldown = ModuleHammer.cooldownTicks(variant, tier);
-        int chargeTicks = ModuleHammer.chargeTicks(variant, tier);
-        long shotEnergy = ModuleHammer.shotEnergyEu(variant);
-        long chargeRate = ModuleHammer.chargeRateEuPerTick(variant, tier);
+        int cooldown = module.cooldownTicks();
+        int chargeTicks = Math.max(1, cooldown - 20);
+        long shotEnergy = variant.shotEnergyEu();
+        long chargeRate = Math.ceilDiv(shotEnergy, chargeTicks);
         lineY = drawLine("Hammer", panelX, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         lineY = drawLine(
             "Variant: " + hammer.variant()
@@ -238,6 +239,30 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        if (module.operationOrNull() != null && !module.operationOrNull()
+            .phase()
+            .isTerminal()) {
+            lineY = drawLine(
+                "Operation: " + module.operationOrNull()
+                    .phase()
+                    .name(),
+                panelX,
+                lineY,
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            IModuleOperation activeSpec = module.operationOrNull()
+                .plan()
+                .spec();
+            if (activeSpec instanceof HammerModuleOperation hammerSpec) {
+                lineY = drawLine(
+                    "Target: " + hammerSpec.targetVariantKey()
+                        + " "
+                        + hammerSpec.targetTier()
+                            .name(),
+                    panelX,
+                    lineY,
+                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            }
+        }
 
         int barX = panelX;
         int barY = lineY + CHARGE_BAR_TOP_OFFSET;
@@ -310,10 +335,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         configController.openHammer(selected.moduleIndex);
     }
 
-    private void openMinerVoidConfig() {
+    private void openMinerBlacklistConfig() {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleMiner)) return;
-        configController.openMinerVoid(selected.moduleIndex);
+        configController.openMinerBlacklist(selected.moduleIndex);
     }
 
     private void openRecipeInput() {

@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.relauncher.Side;
@@ -157,7 +158,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
 
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
-        String stats = (definition == null ? 0L : definition.powerDrawEuPerTick()) + " EU/t";
+        ModuleTierData data = definition == null ? null : definition.getTierData(kind.defaultTier());
+        String stats = (data == null ? 0L : data.powerDrawEuPerTick()) + " EU/t";
         int statsWidth = fr.getStringWidth(stats);
         fr.drawStringWithShadow(
             stats,

@@ -49,8 +49,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
@@ -594,6 +595,7 @@ public final class AssetManagementSystem {
         private boolean lastOutpostStatePresent = false;
         private int lastOutpostSyncRevision = -1;
         private int deferredOutpostSyncRevision = -1;
+        private int lastAssetListSignature = 0;
 
         private int modalLeft, modalTop, modalRight, modalBottom;
         private int scrollLeft, scrollTop, scrollRight, scrollBottom;
@@ -664,6 +666,7 @@ public final class AssetManagementSystem {
                 lastContentVersion = -1;
                 lastOutpostStatePresent = false;
                 lastOutpostSyncRevision = -1;
+                lastAssetListSignature = 0;
                 setEnabled(false);
                 size(0, 0);
                 return;
@@ -706,6 +709,16 @@ public final class AssetManagementSystem {
                 lastOutpostStatePresent = false;
                 lastOutpostSyncRevision = -1;
                 deferredOutpostSyncRevision = -1;
+            }
+
+            if (shouldShowPanel()) {
+                int assetListSignature = computeAssetListSignature(state.assetManagementBody);
+                if (assetListSignature != lastAssetListSignature) {
+                    lastAssetListSignature = assetListSignature;
+                    markContentDirty();
+                }
+            } else {
+                lastAssetListSignature = 0;
             }
 
             // Consume item picker result — works even if the starmap was closed and reopened
@@ -753,6 +766,25 @@ public final class AssetManagementSystem {
                 refreshMainPanelContent();
                 lastContentVersion = contentVersion;
             }
+        }
+
+        private int computeAssetListSignature(CelestialObject body) {
+            if (body == null) return 0;
+
+            List<CelestialAsset> assets = new ArrayList<>(CelestialClient.getState(body.id()));
+            assets.sort(Comparator.comparing(asset -> asset.assetId.toString()));
+
+            int result = 1;
+            for (CelestialAsset asset : assets) {
+                result = 31 * result + asset.assetId.hashCode();
+                result = 31 * result + asset.kind.hashCode();
+                result = 31 * result + asset.status()
+                    .hashCode();
+                result = 31 * result + asset.displayName()
+                    .hashCode();
+                result = 31 * result + asset.getSyncRevision();
+            }
+            return result;
         }
 
         @Override
@@ -2099,17 +2131,19 @@ public final class AssetManagementSystem {
 
         private String buildModuleStats(FacilityModuleKind kind) {
             FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
-            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-def.powerDrawEuPerTick()) + " EU/t"
-                : "Consumes " + def.powerDrawEuPerTick() + " EU/t";
+            ModuleTierData data = def.getTierData(kind.defaultTier());
+            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
+                : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
             String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
-            return powerLine + " | Cap " + def.baseEnergyCapacity() + " EU | " + restrictionLine;
+            return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;
         }
 
         private String buildModuleCost(FacilityModuleKind kind) {
             FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
+            ModuleTierData data = def.getTierData(kind.defaultTier());
             StringBuilder sb = new StringBuilder("Cost: ");
             boolean first = true;
-            for (Map.Entry<ItemStack, Long> entry : def.constructionCost()
+            for (Map.Entry<ItemStack, Long> entry : data.constructionCost()
                 .entrySet()) {
                 ItemStack stack = entry.getKey();
                 if (!first) sb.append(", ");

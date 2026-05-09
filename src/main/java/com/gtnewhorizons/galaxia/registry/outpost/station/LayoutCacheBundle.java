@@ -12,7 +12,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
@@ -285,8 +284,9 @@ public final class LayoutCacheBundle {
     }
 
     private static long effectiveCapacityOf(ModuleInstance module, StationLayout layout) {
-        if (!(module.component() instanceof ICapacityModule icm)) return 0L;
-        long base = icm.baseCapacityForTier(module.tier());
+        if (!module.kind()
+            .isCapacityModule()) return 0L;
+        long base = module.baseCapacity();
         int neighbors = StationLayout.countOrthogonalNeighbors(layout, module.anchor(), module.kind());
         return Math.round(base * (1.0 + 0.5 * neighbors));
     }
