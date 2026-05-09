@@ -34,13 +34,15 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static final int SECTION_GAP = 8;
     private static final int DESTROY_BUTTON_X = 10;
     private static final int DESTROY_BUTTON_Y = 150;
-    private static final int DESTROY_BUTTON_WIDTH = 92;
-    private static final int DESTROY_BUTTON_HEIGHT = 20;
-    private static final int ACTION_BUTTON_START_Y = DESTROY_BUTTON_Y + DESTROY_BUTTON_HEIGHT + 8;
-    private static final int ACTION_BUTTON_WIDTH = 92;
+    private static final int ACTION_BUTTON_WIDTH = 88;
     private static final int ACTION_BUTTON_HEIGHT = 20;
     private static final int ACTION_BUTTON_COLUMN_GAP = 8;
     private static final int ACTION_BUTTON_ROW_GAP = 6;
+    private static final int ACTION_GRID_WIDTH = ACTION_BUTTON_WIDTH * ModulePanelActionLayout.COLUMNS
+        + ACTION_BUTTON_COLUMN_GAP;
+    private static final int DESTROY_BUTTON_WIDTH = ACTION_GRID_WIDTH;
+    private static final int DESTROY_BUTTON_HEIGHT = 20;
+    private static final int ACTION_BUTTON_START_Y = DESTROY_BUTTON_Y + DESTROY_BUTTON_HEIGHT + 8;
     private static final int BUTTON_TEXT_BASELINE_OFFSET = 1;
 
     private final @Nullable CelestialAsset.ID assetId;
