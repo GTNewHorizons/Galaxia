@@ -204,7 +204,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Charge: " + (chargeTicks / 20) + "s  Minimum shot: " + formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU) + " EU",
+            "Charge: " + (chargeTicks / 20) + "s  Energy per dV: " + formatEu(ModuleHammer.EU_PER_DV) + " EU",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
