@@ -47,7 +47,7 @@ public class TubeNoise {
         seed = random.nextLong();
     }
 
-    public boolean isIntersectingTube(int x, int y, int z) {
+    public boolean isIntersectingTube(int x, int y, int z, double sizeModifier) {
         x = Math.abs(x);
         z = Math.abs(z);
         x += quadrantX << ADDITIONAL_BITSHIFT;
@@ -56,7 +56,7 @@ public class TubeNoise {
             if (x > xEndPoints[i]) continue;
             if (x < xStartPoints[i]) continue;
             float deviation = linearFunctions[i].getDeviation(x, y, z);
-            if (deviation * deviation < deviationMargins[i]) {
+            if (deviation * deviation < deviationMargins[i] * sizeModifier) {
                 return true;
             }
         }
