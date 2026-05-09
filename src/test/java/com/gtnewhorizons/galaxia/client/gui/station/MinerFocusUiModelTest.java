@@ -73,7 +73,7 @@ final class MinerFocusUiModelTest {
 
         miner.setFocus(MinerFocusTier.III, null, 0);
         assertEquals(MinerFocusTier.III, MinerFocusUiModel.defaultUpgradeTarget(module));
-        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
     }
 
     @Test

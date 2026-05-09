@@ -107,6 +107,29 @@ final class ModuleUpgradeUiModelTest {
         ModuleInstance module = minerModule();
 
         assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.I));
+        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
+        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.III));
+    }
+
+    @Test
+    void minerFocusCanUpgradeOneStepOrDowngradeToAnyLowerTier() {
+        ModuleInstance module = minerModule();
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.NONE));
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.I));
+        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.III));
+    }
+
+    @Test
+    void minerFocusCannotSkipUpgradeTiers() {
+        ModuleInstance module = minerModule();
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
+
+        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.III));
     }
 
     private static ModuleInstance hammerModule() {
