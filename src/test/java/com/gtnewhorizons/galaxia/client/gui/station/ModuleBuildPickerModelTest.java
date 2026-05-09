@@ -86,12 +86,8 @@ final class ModuleBuildPickerModelTest {
         StationTileCoord chained = StationTileCoord.of(2, 0);
 
         assertFalse(
-            ModuleBuildPickerModel.isCompatibleTarget(
-                facility,
-                FacilityModuleKind.STORAGE,
-                ModuleShape.SINGLE,
-                ModuleTier.HV,
-                chained));
+            ModuleBuildPickerModel
+                .isCompatibleTarget(facility, FacilityModuleKind.STORAGE, ModuleShape.SINGLE, ModuleTier.HV, chained));
         assertTrue(
             ModuleBuildPickerModel.isCompatibleTarget(
                 facility,

@@ -355,8 +355,8 @@ final class FacilityPersistenceManagerTest {
         ModuleInstance module = station.modules()
             .get(1);
         module.setOperation(
-            ModuleOperationState.waiting(
-                new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 37, Map.of(), false)));
+            ModuleOperationState
+                .waiting(new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 37, Map.of(), false)));
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(

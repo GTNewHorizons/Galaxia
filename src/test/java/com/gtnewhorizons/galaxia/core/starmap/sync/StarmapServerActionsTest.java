@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
 
 import net.minecraft.item.Item;
 
@@ -140,12 +140,16 @@ final class StarmapServerActionsTest {
             2,
             facility.modules()
                 .size());
-        assertEquals(first, facility.modules()
-            .get(0)
-            .anchor());
-        assertEquals(second, facility.modules()
-            .get(1)
-            .anchor());
+        assertEquals(
+            first,
+            facility.modules()
+                .get(0)
+                .anchor());
+        assertEquals(
+            second,
+            facility.modules()
+                .get(1)
+                .anchor());
     }
 
     @Test
@@ -175,12 +179,16 @@ final class StarmapServerActionsTest {
             2,
             facility.modules()
                 .size());
-        assertEquals(first, facility.modules()
-            .get(0)
-            .anchor());
-        assertEquals(chained, facility.modules()
-            .get(1)
-            .anchor());
+        assertEquals(
+            first,
+            facility.modules()
+                .get(0)
+                .anchor());
+        assertEquals(
+            chained,
+            facility.modules()
+                .get(1)
+                .anchor());
     }
 
     @Test

@@ -32,8 +32,12 @@ final class MinerSettingsCopyPickerModelTest {
         TestFacility test = twoMinerFacility();
 
         assertEquals(
-            test.target().anchor(),
-            MinerSettingsCopyPickerModel.normalizeTarget(test.facility(), test.target().anchor()));
+            test.target()
+                .anchor(),
+            MinerSettingsCopyPickerModel.normalizeTarget(
+                test.facility(),
+                test.target()
+                    .anchor()));
     }
 
     @Test
@@ -47,17 +51,26 @@ final class MinerSettingsCopyPickerModelTest {
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
 
         assertFalse(
-            MinerSettingsCopyPickerModel
-                .isCompatibleTarget(test.facility(), test.source(), test.source().anchor()));
+            MinerSettingsCopyPickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                test.source()
+                    .anchor()));
         assertFalse(
-            MinerSettingsCopyPickerModel
-                .isCompatibleTarget(test.facility(), test.source(), test.target().anchor()));
+            MinerSettingsCopyPickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                test.target()
+                    .anchor()));
 
         targetMiner.setFocus(MinerFocusTier.I, null, 0);
 
         assertTrue(
-            MinerSettingsCopyPickerModel
-                .isCompatibleTarget(test.facility(), test.source(), test.target().anchor()));
+            MinerSettingsCopyPickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                test.target()
+                    .anchor()));
     }
 
     private static TestFacility twoMinerFacility() {

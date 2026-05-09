@@ -90,8 +90,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 .shadow(true)
                 .pos(PANEL_PADDING, PANEL_PADDING));
         panel.child(
-            createMultipleToggle()
-                .pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_TOGGLE_WIDTH, PANEL_PADDING - 1)
+            createMultipleToggle().pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_TOGGLE_WIDTH, PANEL_PADDING - 1)
                 .size(MULTIPLE_TOGGLE_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
 
         AutomatedFacility facility = resolveFacility();
@@ -121,13 +120,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createMultipleToggle() {
-        return new ButtonWidget<>()
-            .background(
-                drawable(
-                    (ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
-            .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
+        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
+            .hoverBackground(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
             .onMouseTapped(mouseButton -> {
                 if (mouseButton != 0) return false;
                 pendingMultipleBuild = !pendingMultipleBuild;
@@ -189,11 +183,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
             EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
         if (pendingMultipleBuild) {
-            fr.drawStringWithShadow(
-                "X",
-                x + 2,
-                boxY + 1,
-                EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+            fr.drawStringWithShadow("X", x + 2, boxY + 1, EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
         }
         String label = fr.trimStringToWidth("Multiple", width - CHECKBOX_SIZE - 4);
         fr.drawStringWithShadow(

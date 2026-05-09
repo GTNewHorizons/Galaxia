@@ -250,7 +250,8 @@ public final class AssetModuleUpdatePacket {
 
     static List<StationTileCoord> decodeTileCoordPayload(byte[] payload) {
         if (payload == null || payload.length < Integer.BYTES || payload.length > MAX_TILE_COORD_PAYLOAD_BYTES) {
-            throw new IllegalArgumentException("invalid tile coord payload length: " + (payload == null ? 0 : payload.length));
+            throw new IllegalArgumentException(
+                "invalid tile coord payload length: " + (payload == null ? 0 : payload.length));
         }
         ByteBuf payloadBuf = Unpooled.wrappedBuffer(payload);
         int count = payloadBuf.readInt();
@@ -742,7 +743,8 @@ public final class AssetModuleUpdatePacket {
             false);
         if (creative) {
             if (state == null) {
-                throw new IllegalStateException("Creative tier upgrade requires facility state for module " + module.id);
+                throw new IllegalStateException(
+                    "Creative tier upgrade requires facility state for module " + module.id);
             }
             state.applyCreativeModuleOperation(module, plan);
             return true;
@@ -847,7 +849,8 @@ public final class AssetModuleUpdatePacket {
         ModuleUpgradeTargetsPayload payload = decodeModuleUpgradeTargetsPayload(packet.rawPayload);
         StationLayout layout = state.stationLayout();
         if (layout == null) {
-            throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS requires a station layout for " + state.assetId);
+            throw new IllegalStateException(
+                "PLAN_MODULE_UPGRADE_TARGETS requires a station layout for " + state.assetId);
         }
         Set<ModuleInstance.ID> plannedTargets = new HashSet<>();
         for (StationTileCoord targetCoord : payload.targetCoords()) {
@@ -902,8 +905,8 @@ public final class AssetModuleUpdatePacket {
             false);
     }
 
-    private static void handleGenericUpgradeTarget(AutomatedFacility state, ModuleInstance source, ModuleInstance target,
-        ModuleUpgradeTargetsPayload payload) {
+    private static void handleGenericUpgradeTarget(AutomatedFacility state, ModuleInstance source,
+        ModuleInstance target, ModuleUpgradeTargetsPayload payload) {
         if (payload.targetHammerVariant() != null) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS non-hammer target cannot use hammer variant");
         }

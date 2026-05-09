@@ -42,21 +42,24 @@ final class ModuleUpgradePickerModelTest {
                 test.source(),
                 ModuleTier.LuV,
                 HammerVariant.BIG,
-                test.source().anchor()));
+                test.source()
+                    .anchor()));
         assertTrue(
             ModuleUpgradePickerModel.isCompatibleTarget(
                 test.facility(),
                 test.source(),
                 ModuleTier.LuV,
                 HammerVariant.BIG,
-                test.target().anchor()));
+                test.target()
+                    .anchor()));
         assertFalse(
             ModuleUpgradePickerModel.isCompatibleTarget(
                 test.facility(),
                 test.source(),
                 ModuleTier.EV,
                 HammerVariant.BASE,
-                test.target().anchor()));
+                test.target()
+                    .anchor()));
     }
 
     @Test
@@ -64,12 +67,17 @@ final class ModuleUpgradePickerModelTest {
         TestFacility test = twoModuleFacility(FacilityModuleKind.STORAGE, ModuleTier.HV);
         test.target()
             .setOperation(
-                ModuleOperationState.waiting(
-                    new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.EV), 1, Map.of(), false)));
+                ModuleOperationState
+                    .waiting(new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.EV), 1, Map.of(), false)));
 
         assertFalse(
-            ModuleUpgradePickerModel
-                .isCompatibleTarget(test.facility(), test.source(), ModuleTier.EV, null, test.target().anchor()));
+            ModuleUpgradePickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                ModuleTier.EV,
+                null,
+                test.target()
+                    .anchor()));
     }
 
     @Test
@@ -77,8 +85,12 @@ final class ModuleUpgradePickerModelTest {
         TestFacility test = twoModuleFacility(FacilityModuleKind.STORAGE, ModuleTier.HV);
 
         assertEquals(
-            test.target().anchor(),
-            ModuleUpgradePickerModel.normalizeTarget(test.facility(), test.target().anchor()));
+            test.target()
+                .anchor(),
+            ModuleUpgradePickerModel.normalizeTarget(
+                test.facility(),
+                test.target()
+                    .anchor()));
     }
 
     @Test
@@ -87,18 +99,27 @@ final class ModuleUpgradePickerModelTest {
         StationTileCoord duplicateAnchor = StationTileCoord.of(3, 0);
         test.facility()
             .stationLayout()
-            .place(duplicateAnchor, new com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile(
-                test.target(),
-                com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState.OCCUPIED_OPERATIONAL));
+            .place(
+                duplicateAnchor,
+                new com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile(
+                    test.target(),
+                    com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState.OCCUPIED_OPERATIONAL));
 
         List<StationTileCoord> targets = ModuleUpgradePickerModel.confirmedTargets(
             test.facility(),
             test.source(),
             ModuleTier.LuV,
             HammerVariant.BIG,
-            List.of(test.target().anchor(), duplicateAnchor));
+            List.of(
+                test.target()
+                    .anchor(),
+                duplicateAnchor));
 
-        assertEquals(List.of(test.target().anchor()), targets);
+        assertEquals(
+            List.of(
+                test.target()
+                    .anchor()),
+            targets);
     }
 
     @Test
@@ -106,8 +127,8 @@ final class ModuleUpgradePickerModelTest {
         TestFacility test = twoModuleFacility(FacilityModuleKind.HAMMER, ModuleTier.EV);
         test.target()
             .setOperation(
-                ModuleOperationState.waiting(
-                    new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 1, Map.of(), false)));
+                ModuleOperationState
+                    .waiting(new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 1, Map.of(), false)));
 
         assertEquals(
             List.of(),
@@ -116,7 +137,9 @@ final class ModuleUpgradePickerModelTest {
                 test.source(),
                 ModuleTier.LuV,
                 HammerVariant.BIG,
-                List.of(test.target().anchor())));
+                List.of(
+                    test.target()
+                        .anchor())));
     }
 
     private static TestFacility twoModuleFacility(FacilityModuleKind kind, ModuleTier tier) {

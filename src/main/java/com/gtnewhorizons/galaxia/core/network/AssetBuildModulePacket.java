@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import java.util.UUID;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -12,12 +12,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleFootprint;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ShapeValidation;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
@@ -41,8 +38,8 @@ public final class AssetBuildModulePacket {
         return createMany(assetId, kind, shape, tier, instantBuild, tileCoord == null ? null : List.of(tileCoord));
     }
 
-    public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
-        ModuleTier tier, boolean instantBuild, List<StationTileCoord> tileCoords) {
+    public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
+        ModuleShape shape, ModuleTier tier, boolean instantBuild, List<StationTileCoord> tileCoords) {
         if (tileCoords != null && tileCoords.size() > MAX_BUILD_TARGETS) {
             throw new IllegalArgumentException("too many module build targets: " + tileCoords.size());
         }
@@ -185,8 +182,8 @@ public final class AssetBuildModulePacket {
             || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() + 1);
     }
 
-    private static boolean containsKnown(Set<StationTileCoord> originalTiles, Set<StationTileCoord> plannedTiles, int dx,
-        int dy) {
+    private static boolean containsKnown(Set<StationTileCoord> originalTiles, Set<StationTileCoord> plannedTiles,
+        int dx, int dy) {
         if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
         if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
         StationTileCoord coord = StationTileCoord.of(dx, dy);

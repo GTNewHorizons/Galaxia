@@ -100,19 +100,24 @@ final class ModuleMinerTest {
         facility.assignSettingsGroup(miner, (short) 0);
         facility.assignSettingsGroup(miner, (short) 0);
 
-        assertTrue(facility.settingsGroups()
-            .groups()
-            .containsKey(originalGroupId));
-        assertTrue(facility.settingsGroups()
-            .require(originalGroupId)
-            .members()
-            .contains(miner.anchor()));
-        assertFalse(facility.settingsGroups()
-            .require(originalGroupId)
-            .isJoinable());
-        assertEquals(1, facility.settingsGroups()
-            .groups()
-            .size());
+        assertTrue(
+            facility.settingsGroups()
+                .groups()
+                .containsKey(originalGroupId));
+        assertTrue(
+            facility.settingsGroups()
+                .require(originalGroupId)
+                .members()
+                .contains(miner.anchor()));
+        assertFalse(
+            facility.settingsGroups()
+                .require(originalGroupId)
+                .isJoinable());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
     }
 
     @Test
@@ -129,9 +134,11 @@ final class ModuleMinerTest {
 
         assertEquals(originalGroupId, miner.groupId());
         assertFalse(group.isJoinable());
-        assertEquals(1, facility.settingsGroups()
-            .groups()
-            .size());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
     }
 
     @Test
@@ -145,9 +152,11 @@ final class ModuleMinerTest {
 
         assertTrue(group.isJoinable());
         assertEquals(originalGroupId, group.id());
-        assertEquals(1, facility.settingsGroups()
-            .groups()
-            .size());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
     }
 
     @Test
@@ -165,9 +174,10 @@ final class ModuleMinerTest {
 
         assertEquals(sourceGroupId, source.groupId());
         assertEquals(targetGroupId, target.groupId());
-        assertFalse(facility.settingsGroups()
-            .require(target.groupId())
-            .isJoinable());
+        assertFalse(
+            facility.settingsGroups()
+                .require(target.groupId())
+                .isJoinable());
         assertTrue(facility.isMinerOreBlacklisted(target, "ore:iron"));
     }
 

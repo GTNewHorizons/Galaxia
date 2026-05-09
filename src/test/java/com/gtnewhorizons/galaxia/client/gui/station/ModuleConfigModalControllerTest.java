@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -43,7 +42,11 @@ final class ModuleConfigModalControllerTest {
 
     @Test
     void moduleOperationCancelConfirmationCanBeArmedAndCleared() {
-        ModuleConfigModalController controller = new ModuleConfigModalController(null, CelestialAsset.ID.create(), 0, 0);
+        ModuleConfigModalController controller = new ModuleConfigModalController(
+            null,
+            CelestialAsset.ID.create(),
+            0,
+            0);
 
         assertFalse(controller.isModuleOperationCancelArmed());
 

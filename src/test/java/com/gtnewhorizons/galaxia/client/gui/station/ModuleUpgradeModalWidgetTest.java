@@ -27,8 +27,9 @@ final class ModuleUpgradeModalWidgetTest {
         ModuleUpgradeModalWidget.ControlRect lastOptionRow = ModuleUpgradeModalWidget.optionRectForTest(6);
         ModuleUpgradeModalWidget.ControlRect reserve = ModuleUpgradeModalWidget.controlRectsForTest()
             .stream()
-            .filter(rect -> rect.name()
-                .equals("reserve"))
+            .filter(
+                rect -> rect.name()
+                    .equals("reserve"))
             .findFirst()
             .orElseThrow();
 

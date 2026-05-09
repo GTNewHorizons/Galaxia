@@ -27,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -223,10 +222,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Cooldown: " + (cooldown / 20)
-                + "s  Minimum shot: "
-                + formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU)
-                + " EU",
+            "Cooldown: " + (cooldown / 20) + "s  Minimum shot: " + formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU) + " EU",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());

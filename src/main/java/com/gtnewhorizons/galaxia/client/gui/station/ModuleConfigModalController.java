@@ -33,7 +33,8 @@ final class ModuleConfigModalController {
     private boolean moduleOperationCancelArmed;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
-    private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
+    private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
+        .hammer(HammerVariant.BASE, ModuleTier.EV);
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this(host, assetId, x, y, null);
@@ -113,7 +114,10 @@ final class ModuleConfigModalController {
         this.minerSettingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
-        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this, tilePickerController);
+        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
+            assetId,
+            this,
+            tilePickerController);
         widget.left(x)
             .top(y)
             .width(MinerBlacklistConfigModalWidget.WIDTH)

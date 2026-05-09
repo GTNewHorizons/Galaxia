@@ -192,8 +192,9 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             int rowY = ROW_Y + i * ROW_HEIGHT;
             renderItemIcon(option.displayStack(), ROW_ICON_X, rowY + ROW_ICON_Y_OFFSET);
             String name = Minecraft.getMinecraft().fontRenderer.trimStringToWidth(option.displayName(), ROW_NAME_WIDTH);
-            int color = MinerFocusUiModel.isFocusedOre(module, option.key()) ? EnumColors.MAP_COLOR_TEXT_WARNING
-                .getColor() : EnumColors.MAP_COLOR_TEXT_BODY.getColor();
+            int color = MinerFocusUiModel.isFocusedOre(module, option.key())
+                ? EnumColors.MAP_COLOR_TEXT_WARNING.getColor()
+                : EnumColors.MAP_COLOR_TEXT_BODY.getColor();
             Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(name, ROW_NAME_X, rowY + 5, color);
         }
         if (controller.isMinerSettingsGroupMenuOpen()) {

@@ -608,7 +608,9 @@ public final class FacilityPersistenceManager {
                             PURE_GSON.fromJson(hammerData.get("variant"), HammerVariant.class),
                             "[PERSIST] Hammer module missing variant");
                         long energyStored = Objects
-                            .requireNonNull(hammerData.get("energyStored"), "[PERSIST] Hammer module missing energyStored")
+                            .requireNonNull(
+                                hammerData.get("energyStored"),
+                                "[PERSIST] Hammer module missing energyStored")
                             .getAsLong();
                         ModuleHammer.requireTier(variant, tier);
                         module.setComponent(new ModuleHammer(kind, config, routePriority, variant, 64, energyStored));
@@ -1124,7 +1126,8 @@ public final class FacilityPersistenceManager {
         }
     }
 
-    private static ModuleOperationJson encodeModuleOperation(FacilityModuleKind moduleKind, ModuleOperationState operation) {
+    private static ModuleOperationJson encodeModuleOperation(FacilityModuleKind moduleKind,
+        ModuleOperationState operation) {
         if (operation == null) return null;
         ModuleOperationJson json = new ModuleOperationJson();
         ModuleOperationPlan plan = operation.plan();
@@ -1188,7 +1191,8 @@ public final class FacilityPersistenceManager {
             spec = new MinerFocusOperation(targetTier, json.targetFocusTierKey, json.targetFocusOreKey);
         } else if ("MODULE_TIER".equals(json.specType)) {
             if (regKind == null) {
-                throw new IllegalStateException("[PERSIST] Module " + moduleId + " tier operation is missing target kind");
+                throw new IllegalStateException(
+                    "[PERSIST] Module " + moduleId + " tier operation is missing target kind");
             }
             spec = new ModuleTierOperation(targetTier);
         } else {

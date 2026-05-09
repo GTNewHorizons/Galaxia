@@ -196,35 +196,30 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private ButtonWidget<?> createDestroyButton() {
-        return new ButtonWidget<>()
-            .background(
-                drawable(
-                    (ctx, x, y, w, h) -> {
-                        if (isPickerActive()) return;
-                        BorderedRect.draw(
-                            x,
-                            y,
-                            w,
-                            h,
-                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_DEFAULT.getColor()
-                                : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
-                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
-                                : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
-                    }))
-            .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> {
-                        if (isPickerActive()) return;
-                        BorderedRect.draw(
-                            x,
-                            y,
-                            w,
-                            h,
-                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_HOVERED.getColor()
-                                : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
-                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
-                                : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
-                    }))
+        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> {
+            if (isPickerActive()) return;
+            BorderedRect.draw(
+                x,
+                y,
+                w,
+                h,
+                canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_DEFAULT.getColor()
+                    : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
+                canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
+                    : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
+        }))
+            .hoverBackground(drawable((ctx, x, y, w, h) -> {
+                if (isPickerActive()) return;
+                BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_HOVERED.getColor()
+                        : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
+                    canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
+                        : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
+            }))
             .overlay(drawable((ctx, x, y, w, h) -> {
                 if (isPickerActive()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
@@ -255,23 +250,18 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     }
 
     private ButtonWidget<?> createModuleActionButton(int slot) {
-        return new ButtonWidget<>()
-            .background(
-                drawable(
-                    (ctx, x, y, w, h) -> {
-                        if (isPickerActive()) return;
-                        ModulePanelAction action = actionAtSlot(slot);
-                        if (action == null) return;
-                        drawActionButtonBackground(x, y, w, h, true, false);
-                    }))
-            .hoverBackground(
-                drawable(
-                    (ctx, x, y, w, h) -> {
-                        if (isPickerActive()) return;
-                        ModulePanelAction action = actionAtSlot(slot);
-                        if (action == null) return;
-                        drawActionButtonBackground(x, y, w, h, true, true);
-                    }))
+        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> {
+            if (isPickerActive()) return;
+            ModulePanelAction action = actionAtSlot(slot);
+            if (action == null) return;
+            drawActionButtonBackground(x, y, w, h, true, false);
+        }))
+            .hoverBackground(drawable((ctx, x, y, w, h) -> {
+                if (isPickerActive()) return;
+                ModulePanelAction action = actionAtSlot(slot);
+                if (action == null) return;
+                drawActionButtonBackground(x, y, w, h, true, true);
+            }))
             .overlay(drawable((ctx, x, y, w, h) -> {
                 if (isPickerActive()) return;
                 ModulePanelAction action = actionAtSlot(slot);
@@ -352,8 +342,9 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private @Nullable ModuleInstance selectedModule() {
         AutomatedFacility facility = resolveFacility(assetId);
         int moduleIndex = selectedModuleIndex();
-        if (facility == null || moduleIndex < 0 || moduleIndex >= facility.modules()
-            .size()) {
+        if (facility == null || moduleIndex < 0
+            || moduleIndex >= facility.modules()
+                .size()) {
             return null;
         }
         return facility.modules()

@@ -129,7 +129,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         BuildPickerRequest request = pendingBuildPickerRequest;
         if (request == null || assetId == null || !assetId.equals(request.assetId())) return;
         pendingBuildPickerRequest = null;
-        if (!(com.gtnewhorizons.galaxia.client.CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility)) {
+        if (!(com.gtnewhorizons.galaxia.client.CelestialClient
+            .getByAssetId(assetId) instanceof AutomatedFacility facility)) {
             return;
         }
         FacilityModuleKind kind = request.kind();

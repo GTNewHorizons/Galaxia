@@ -262,12 +262,13 @@ final class AutomatedFacilityOperationTest {
         ModuleMiner miner = (ModuleMiner) module.component();
         module.setOperation(
             ModuleOperationState
-                .waiting(new ModuleOperationPlan(
-                    new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), null),
-                    2,
-                    Map.of(),
-                    false,
-                    true))
+                .waiting(
+                    new ModuleOperationPlan(
+                        new MinerFocusOperation(ModuleTier.EV, MinerFocusTier.II.name(), null),
+                        2,
+                        Map.of(),
+                        false,
+                        true))
                 .beginBuilding());
 
         facility.tick();

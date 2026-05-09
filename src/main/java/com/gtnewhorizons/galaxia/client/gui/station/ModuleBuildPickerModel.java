@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +39,9 @@ final class ModuleBuildPickerModel {
     }
 
     static List<StationTileCoord> connectedTargets(AutomatedFacility facility, Collection<StationTileCoord> targets) {
-        if (facility == null || targets == null || targets.isEmpty() || !facility.hasStationLayout()
+        if (facility == null || targets == null
+            || targets.isEmpty()
+            || !facility.hasStationLayout()
             || facility.stationLayout() == null) {
             return List.of();
         }
@@ -83,8 +85,7 @@ final class ModuleBuildPickerModel {
     }
 
     private static boolean hasBuiltOrthogonalNeighbour(AutomatedFacility facility, StationTileCoord coord) {
-        return isBuilt(facility, coord.dx() - 1, coord.dy())
-            || isBuilt(facility, coord.dx() + 1, coord.dy())
+        return isBuilt(facility, coord.dx() - 1, coord.dy()) || isBuilt(facility, coord.dx() + 1, coord.dy())
             || isBuilt(facility, coord.dx(), coord.dy() - 1)
             || isBuilt(facility, coord.dx(), coord.dy() + 1);
     }

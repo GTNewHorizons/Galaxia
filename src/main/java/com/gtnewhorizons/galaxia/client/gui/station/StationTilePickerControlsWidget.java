@@ -51,16 +51,9 @@ final class StationTilePickerControlsWidget extends ParentWidget<StationTilePick
             HEIGHT,
             EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
             EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
-        ModuleConfigModalSupport.drawTrimmedLine(
-            controller.title(),
-            10,
-            9,
-            WIDTH - 20,
-            EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-        ModuleConfigModalSupport.drawLine(
-            "Selected: " + controller.selectedCount(),
-            10,
-            24,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        ModuleConfigModalSupport
+            .drawTrimmedLine(controller.title(), 10, 9, WIDTH - 20, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Selected: " + controller.selectedCount(), 10, 24, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 }

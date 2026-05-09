@@ -74,7 +74,8 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         ModuleTier tier, boolean instantBuild, List<StationTileCoord> coords) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        AssetBuildModulePacket packet = AssetBuildModulePacket.createMany(assetId, kind, shape, tier, instantBuild, coords);
+        AssetBuildModulePacket packet = AssetBuildModulePacket
+            .createMany(assetId, kind, shape, tier, instantBuild, coords);
         handler.syncToServer(REQUEST_BUILD_MODULE, packet::toBytes);
         return true;
     }

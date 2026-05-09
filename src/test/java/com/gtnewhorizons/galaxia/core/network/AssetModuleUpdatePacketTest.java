@@ -556,8 +556,8 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(
             "ore:iron",
             ((MinerFocusOperation) module.operationOrNull()
-                  .plan()
-                  .spec()).targetFocusOreKey());
+                .plan()
+                .spec()).targetFocusOreKey());
     }
 
     @Test
@@ -634,11 +634,7 @@ final class AssetModuleUpdatePacketTest {
         facility.createSettingsGroupForModule(source, "Shared miners");
 
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(
-                facility.assetId,
-                0,
-                source.id,
-                List.of(target.anchor())));
+            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         packet.apply(TEAM);
 
@@ -661,11 +657,7 @@ final class AssetModuleUpdatePacketTest {
         sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(
-                facility.assetId,
-                0,
-                source.id,
-                List.of(target.anchor())));
+            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
         assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
@@ -695,14 +687,17 @@ final class AssetModuleUpdatePacketTest {
         assertNull(source.operationOrNull());
         assertEquals(ModuleTier.EV, target.tier());
         assertNotNull(target.operationOrNull());
-        assertTrue(target.operationOrNull()
-            .reserveItems());
-        assertTrue(target.operationOrNull()
-            .plan()
-            .voidCompletionRefund());
-        assertTrue(target.operationOrNull()
-            .plan()
-            .spec() instanceof HammerModuleOperation);
+        assertTrue(
+            target.operationOrNull()
+                .reserveItems());
+        assertTrue(
+            target.operationOrNull()
+                .plan()
+                .voidCompletionRefund());
+        assertTrue(
+            target.operationOrNull()
+                .plan()
+                .spec() instanceof HammerModuleOperation);
         assertEquals(
             ModuleTier.LuV,
             target.operationOrNull()
@@ -723,7 +718,8 @@ final class AssetModuleUpdatePacketTest {
             .get(0);
         ModuleInstance target = facility.modules()
             .get(1);
-        target.setOperation(ModuleOperationState.waiting(hammerOperationPlan(target, ModuleTier.IV, HammerVariant.BASE)));
+        target
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(target, ModuleTier.IV, HammerVariant.BASE)));
         AssetModuleUpdatePacket packet = roundTrip(
             AssetModuleUpdatePacket.moduleUpgradeTargets(
                 facility.assetId,

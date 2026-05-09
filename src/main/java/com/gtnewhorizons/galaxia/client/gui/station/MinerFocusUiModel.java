@@ -31,9 +31,7 @@ final class MinerFocusUiModel {
 
     static boolean canSetOre(@Nullable ModuleInstance module, @Nullable String oreKey) {
         ModuleMiner miner = miner(module);
-        return miner != null && oreKey != null
-            && !oreKey.isBlank()
-            && miner.focusTier() != MinerFocusTier.NONE;
+        return miner != null && oreKey != null && !oreKey.isBlank() && miner.focusTier() != MinerFocusTier.NONE;
     }
 
     static boolean canShowOreFocus(@Nullable ModuleInstance module) {
@@ -59,9 +57,10 @@ final class MinerFocusUiModel {
     }
 
     static boolean hasActiveOperation(@Nullable ModuleInstance module) {
-        return module != null && module.operationOrNull() != null && !module.operationOrNull()
-            .phase()
-            .isTerminal();
+        return module != null && module.operationOrNull() != null
+            && !module.operationOrNull()
+                .phase()
+                .isTerminal();
     }
 
     private static @Nullable ModuleMiner miner(@Nullable ModuleInstance module) {
