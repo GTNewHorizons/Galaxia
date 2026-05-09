@@ -1,9 +1,11 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -14,7 +16,7 @@ final class StationTilePickerController {
 
     private String title = "";
     private String confirmLabel = "Confirm";
-    private Predicate<StationTileCoord> compatibility = coord -> false;
+    private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
     private Consumer<List<StationTileCoord>> confirmHandler = selected -> {};
     private final Set<StationTileCoord> selected = new LinkedHashSet<>();
@@ -22,9 +24,19 @@ final class StationTilePickerController {
 
     void start(String title, String confirmLabel, Predicate<StationTileCoord> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler) {
+        start(
+            title,
+            confirmLabel,
+            (coord, selected) -> compatibility != null && compatibility.test(coord),
+            normalizer,
+            confirmHandler);
+    }
+
+    void start(String title, String confirmLabel, BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility,
+        UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler) {
         this.title = title == null ? "" : title;
         this.confirmLabel = confirmLabel == null || confirmLabel.isBlank() ? "Confirm" : confirmLabel;
-        this.compatibility = compatibility == null ? coord -> false : compatibility;
+        this.compatibility = compatibility == null ? (coord, selected) -> false : compatibility;
         this.normalizer = normalizer == null ? coord -> coord : normalizer;
         this.confirmHandler = confirmHandler == null ? selected -> {} : confirmHandler;
         selected.clear();
@@ -54,7 +66,8 @@ final class StationTilePickerController {
     boolean isCompatible(StationTileCoord coord) {
         if (!active || coord == null) return false;
         StationTileCoord normalized = normalizer.apply(coord);
-        return normalized != null && compatibility.test(normalized);
+        return normalized != null
+            && (selected.contains(normalized) || compatibility.test(normalized, Collections.unmodifiableSet(selected)));
     }
 
     boolean isSelected(StationTileCoord coord) {
@@ -64,14 +77,19 @@ final class StationTilePickerController {
     }
 
     boolean toggle(StationTileCoord coord) {
-        if (!isCompatible(coord)) return false;
         StationTileCoord normalized = normalizer.apply(coord);
+        if (normalized == null) return false;
         if (selected.contains(normalized)) {
             selected.remove(normalized);
         } else {
+            if (!isCompatible(coord)) return false;
             selected.add(normalized);
         }
         return true;
+    }
+
+    Set<StationTileCoord> selectedTargets() {
+        return Collections.unmodifiableSet(selected);
     }
 
     void confirm() {
@@ -91,7 +109,7 @@ final class StationTilePickerController {
         selected.clear();
         title = "";
         confirmLabel = "Confirm";
-        compatibility = coord -> false;
+        compatibility = (coord, selected) -> false;
         normalizer = coord -> coord;
         confirmHandler = selected -> {};
     }

@@ -346,6 +346,9 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         if (!isPickerActive()) return;
         Set<StationTileCoord> candidates = new LinkedHashSet<>(occupiedTiles);
         candidates.addAll(expansionSlots);
+        for (StationTileCoord selectedTarget : tilePickerController.selectedTargets()) {
+            addOrthogonalCandidates(candidates, selectedTarget);
+        }
         for (StationTileCoord coord : candidates) {
             if (!tilePickerController.isCompatible(coord)) continue;
             int x = tileLocalX(coord);
@@ -407,7 +410,21 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         if (coord == null) return null;
         if (layout.isOccupied(coord)) return coord;
         if (StationPlacementValidator.validate(layout, coord) == StationPlacementValidator.Result.OK) return coord;
+        if (isPickerActive() && tilePickerController.isCompatible(coord)) return coord;
         return null;
+    }
+
+    private static void addOrthogonalCandidates(Set<StationTileCoord> candidates, StationTileCoord coord) {
+        addCandidate(candidates, coord.dx() - 1, coord.dy());
+        addCandidate(candidates, coord.dx() + 1, coord.dy());
+        addCandidate(candidates, coord.dx(), coord.dy() - 1);
+        addCandidate(candidates, coord.dx(), coord.dy() + 1);
+    }
+
+    private static void addCandidate(Set<StationTileCoord> candidates, int dx, int dy) {
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return;
+        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return;
+        candidates.add(StationTileCoord.of(dx, dy));
     }
 
     private int tileLocalX(StationTileCoord coord) {

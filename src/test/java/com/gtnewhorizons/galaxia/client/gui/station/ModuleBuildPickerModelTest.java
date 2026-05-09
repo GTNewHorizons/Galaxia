@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -70,5 +72,41 @@ final class ModuleBuildPickerModelTest {
                 ModuleShape.SINGLE,
                 ModuleTier.HV,
                 StationTileCoord.of(1, 0)));
+    }
+
+    @Test
+    void selectedBuildTargetsUnlockAdjacentTiles() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord chained = StationTileCoord.of(2, 0);
+
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                chained));
+        assertTrue(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                chained,
+                List.of(first)));
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                first,
+                List.of(first)));
     }
 }

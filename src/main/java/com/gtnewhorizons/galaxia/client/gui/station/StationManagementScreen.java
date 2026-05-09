@@ -136,8 +136,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         controller.start(
             "Build " + kind.getDisplayName(),
             "Confirm",
-            coord -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord),
+            (coord, selected) -> ModuleBuildPickerModel
+                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord, selected),
             coord -> coord,
             targets -> com.gtnewhorizons.galaxia.client.CelestialClient
                 .createModules(assetId, kind, request.creativeBuildMode(), targets));
