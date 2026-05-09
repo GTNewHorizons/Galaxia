@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -123,6 +124,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     }
 
     private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationTilePickerController controller) {
+        if (FMLCommonHandler.instance()
+            .getEffectiveSide() != Side.CLIENT) return;
         BuildPickerRequest request = pendingBuildPickerRequest;
         if (request == null || assetId == null || !assetId.equals(request.assetId())) return;
         pendingBuildPickerRequest = null;
