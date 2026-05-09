@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -19,5 +20,18 @@ final class ModuleUpgradeModalWidgetTest {
                 assertFalse(left.overlaps(right), left.name() + " overlaps " + right.name());
             }
         }
+    }
+
+    @Test
+    void hammerOptionGridAndFlagsHaveVisibleGap() {
+        ModuleUpgradeModalWidget.ControlRect lastOptionRow = ModuleUpgradeModalWidget.optionRectForTest(6);
+        ModuleUpgradeModalWidget.ControlRect reserve = ModuleUpgradeModalWidget.controlRectsForTest()
+            .stream()
+            .filter(rect -> rect.name()
+                .equals("reserve"))
+            .findFirst()
+            .orElseThrow();
+
+        assertTrue(reserve.y() - lastOptionRow.bottom() >= ModuleUpgradeModalWidget.CONTROL_GAP_FOR_TEST);
     }
 }

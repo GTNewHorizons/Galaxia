@@ -116,6 +116,25 @@ final class ModuleMinerTest {
     }
 
     @Test
+    void noGroupOnSingletonPublicGroupPrivatizesInsteadOfCreatingNewGroup() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        SettingsGroup group = facility.settingsGroups()
+            .require(miner.groupId());
+        group.setJoinable(true);
+        short originalGroupId = miner.groupId();
+
+        facility.assignSettingsGroup(miner, (short) 0);
+
+        assertEquals(originalGroupId, miner.groupId());
+        assertFalse(group.isJoinable());
+        assertEquals(1, facility.settingsGroups()
+            .groups()
+            .size());
+    }
+
+    @Test
     void createGroupPublishesCurrentPrivateSettingsGroup() {
         AutomatedFacility facility = createFacility();
         ModuleInstance miner = createMiner();

@@ -103,6 +103,29 @@ final class ModuleUpgradeUiModelTest {
     }
 
     @Test
+    void minerFocusOptionsExposeDisabledNoneWhenFocusIsNotInstalled() {
+        ModuleInstance module = minerModule();
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.minerFocus(MinerFocusTier.I);
+
+        ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
+            .stream()
+            .filter(candidate -> candidate.id()
+                .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .findFirst()
+            .orElseThrow();
+
+        ModuleUpgradeOption none = group.options()
+            .stream()
+            .filter(option -> option.id()
+                .equals(MinerFocusTier.NONE.name()))
+            .findFirst()
+            .orElseThrow();
+
+        assertFalse(none.enabled());
+        assertFalse(none.selected());
+    }
+
+    @Test
     void minerFocusCanBeInstalledFromNone() {
         ModuleInstance module = minerModule();
 

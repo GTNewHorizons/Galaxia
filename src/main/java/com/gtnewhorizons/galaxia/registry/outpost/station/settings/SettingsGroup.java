@@ -64,6 +64,14 @@ public final class SettingsGroup {
         this.displayName = validatedDisplayName(displayName);
     }
 
+    public boolean hasDefaultPrivateDisplayName() {
+        return displayName.equals(defaultPrivateDisplayName());
+    }
+
+    public String defaultJoinableDisplayName() {
+        return kind.name() + " Group #" + id;
+    }
+
     public Set<StationTileCoord> members() {
         return Collections.unmodifiableSet(members);
     }
@@ -104,6 +112,10 @@ public final class SettingsGroup {
     }
 
     private String defaultDisplayName() {
+        return joinable ? defaultJoinableDisplayName() : defaultPrivateDisplayName();
+    }
+
+    private String defaultPrivateDisplayName() {
         return kind.name() + " #" + id;
     }
 

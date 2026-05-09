@@ -31,7 +31,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidget> {
 
     static final int WIDTH = 390;
-    static final int HEIGHT = 260;
+    static final int HEIGHT = 284;
 
     private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + 10;
     private static final int OPTION_TOP = 118;
@@ -42,8 +42,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private static final int OPTION_COLUMN_GAP = 4;
     private static final int OPTION_ROW_GAP = 4;
     private static final int CONTROL_GAP = 8;
-    private static final int FLAG_TOP = HEIGHT - 58;
-    private static final int FOOTER_TOP = HEIGHT - 30;
+    static final int CONTROL_GAP_FOR_TEST = CONTROL_GAP;
+    private static final int FLAG_TOP = 214;
+    private static final int FOOTER_TOP = HEIGHT - 32;
     private static final int BUTTON_HEIGHT = 20;
     private static final int CONFIRM_BUTTON_WIDTH = 72;
     private static final int MULTIPLE_BUTTON_WIDTH = 78;
@@ -486,7 +487,22 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 BUTTON_HEIGHT));
     }
 
+    static ControlRect optionRectForTest(int slot) {
+        int col = slot % OPTION_COLUMNS;
+        int row = slot / OPTION_COLUMNS;
+        return new ControlRect(
+            "option" + slot,
+            ModuleConfigModalSupport.PANEL_PADDING + col * (OPTION_BUTTON_WIDTH + OPTION_COLUMN_GAP),
+            OPTION_TOP + row * (OPTION_BUTTON_HEIGHT + OPTION_ROW_GAP),
+            OPTION_BUTTON_WIDTH,
+            OPTION_BUTTON_HEIGHT);
+    }
+
     record ControlRect(String name, int x, int y, int width, int height) {
+
+        int bottom() {
+            return y + height;
+        }
 
         boolean overlaps(ControlRect other) {
             return x < other.x + other.width && x + width > other.x && y < other.y + other.height

@@ -119,16 +119,13 @@ final class ModuleUpgradeUiModel {
 
     private static List<ModuleUpgradeGroup> minerGroups(ModuleInstance module, ModuleUpgradeSelection selection) {
         MinerFocusTier selectedTier = minerFocusTier(selection);
-        ModuleMiner miner = module.component() instanceof ModuleMiner selectedMiner ? selectedMiner : null;
         List<ModuleUpgradeOption> tiers = new ArrayList<>();
-        if (miner != null && miner.focusTier() != MinerFocusTier.NONE) {
-            tiers.add(
-                new ModuleUpgradeOption(
-                    MinerFocusTier.NONE.name(),
-                    "None",
-                    selectedTier == MinerFocusTier.NONE,
-                    MinerFocusUiModel.canPlanTier(module, MinerFocusTier.NONE)));
-        }
+        tiers.add(
+            new ModuleUpgradeOption(
+                MinerFocusTier.NONE.name(),
+                "None",
+                selectedTier == MinerFocusTier.NONE,
+                MinerFocusUiModel.canPlanTier(module, MinerFocusTier.NONE)));
         for (MinerFocusTier tier : new MinerFocusTier[] { MinerFocusTier.I, MinerFocusTier.II, MinerFocusTier.III }) {
             boolean enabled = MinerFocusUiModel.canPlanTier(module, tier);
             tiers.add(new ModuleUpgradeOption(tier.name(), tier.name(), tier == selectedTier, enabled));

@@ -331,7 +331,11 @@ public final class AutomatedFacility extends CelestialAsset {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (current.members()
                 .size() == 1) {
-                current.setDisplayName(displayName == null ? current.displayName() : displayName);
+                if (displayName != null) {
+                    current.setDisplayName(displayName);
+                } else if (current.hasDefaultPrivateDisplayName()) {
+                    current.setDisplayName(current.defaultJoinableDisplayName());
+                }
                 current.setJoinable(true);
                 markModuleDirty(module.id);
                 return current;
@@ -361,8 +365,9 @@ public final class AutomatedFacility extends CelestialAsset {
     public void leaveSettingsGroup(ModuleInstance module) {
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
-            if (!current.isJoinable() && current.members()
+            if (current.members()
                 .size() == 1) {
+                current.setJoinable(false);
                 markModuleDirty(module.id);
                 return;
             }

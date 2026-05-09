@@ -1,15 +1,11 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import net.minecraft.client.gui.Gui;
-
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget> {
@@ -19,15 +15,11 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
 
     private static final int BODY_TOP_OFFSET = 10;
     private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + BODY_TOP_OFFSET;
-    private static final int BAR_WIDTH = WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2;
     private static final int FOOTER_Y = HEIGHT - 28;
     private static final int FOOTER_BUTTON_HEIGHT = 20;
     private static final int ITEMS_BUTTON_WIDTH = 54;
     private static final int CLOSE_BUTTON_X = WIDTH - 62;
     private static final int CLOSE_BUTTON_WIDTH = 54;
-    private static final int BAR_TOP_OFFSET = 2;
-    private static final int BAR_HEIGHT = 8;
-    private static final int OPERATION_TEXT_OFFSET = 5;
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
@@ -63,53 +55,12 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
-        drawSummary(module, hammer);
-    }
-
-    private void drawSummary(ModuleInstance module, ModuleHammer hammer) {
-        int x = ModuleConfigModalSupport.PANEL_PADDING;
-        int y = BODY_TOP;
-        HammerVariant variant = hammer.variant();
-        ModuleTier tier = module.tier();
-        int cooldown = module.cooldownTicks();
-        long bufferCapacity = hammer.energyCapacity();
-        long chargeRate = hammer.chargeRate(module);
-
-        int lineY = y;
-        lineY = ModuleConfigModalSupport.drawLine(
-            "Variant: " + variant.name() + "  Tier: " + tier.name(),
-            x,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        lineY = ModuleConfigModalSupport.drawLine(
-            "Buffer: " + ModuleConfigModalSupport.formatEu(hammer.energyStored())
-                + "/"
-                + ModuleConfigModalSupport.formatEu(bufferCapacity)
-                + " EU  Rate: "
-                + ModuleConfigModalSupport.formatEu(chargeRate)
-                + " EU/t",
-            x,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        lineY = ModuleConfigModalSupport.drawLine(
-            "Minimum shot: " + ModuleConfigModalSupport.formatEu(ModuleHammer.MIN_SHOT_ENERGY_EU) + " EU",
-            x,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-
-        int barY = lineY + BAR_TOP_OFFSET;
-        int fillW = (int) (BAR_WIDTH * hammer.energyStored() / Math.max(1L, bufferCapacity));
-        Gui.drawRect(x, barY, x + BAR_WIDTH, barY + BAR_HEIGHT, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
-        Gui.drawRect(
-            x,
-            barY,
-            x + fillW,
-            barY + BAR_HEIGHT,
-            EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
         if (module.operationOrNull() != null) {
-            int operationY = barY + BAR_HEIGHT + OPERATION_TEXT_OFFSET;
-            ModuleConfigModalSupport
-                .drawLine(operationLabel(module), x, operationY, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            ModuleConfigModalSupport.drawLine(
+                operationLabel(module),
+                ModuleConfigModalSupport.PANEL_PADDING,
+                BODY_TOP,
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
         }
     }
 
