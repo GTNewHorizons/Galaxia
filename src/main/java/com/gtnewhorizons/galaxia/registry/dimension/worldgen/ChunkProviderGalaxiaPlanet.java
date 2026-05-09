@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -13,8 +14,10 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraft.world.gen.NoiseGeneratorOctaves;
 
+import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
@@ -22,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.Locati
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaWall;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
@@ -49,6 +53,55 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
 
     private final double[][] caveCache = new double[CHUNK_AREA][HEIGHT_LIMIT];
 
+    private final Block[] surfaceReplacementMap = new Block[CHUNK_AREA];
+    private final BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
+    private final Reference2IntOpenHashMap<BiomeGenBase> biomeIdxOf = new Reference2IntOpenHashMap<>();
+    private final List<BiomeGenBase> biomeList = new ArrayList<>();
+    private final BiomeGenBase[] localBiomesBuf = new BiomeGenBase[4];
+    private final double[] localContribBuf = new double[4];
+    private final double[] heightMapBuf = new double[CHUNK_AREA];
+
+    private final HeightOracle heightOracle = new HeightOracle(this);
+
+    private final Long2ObjectOpenHashMap<List<DeferredWrite>> deferredWrites = new Long2ObjectOpenHashMap<>();
+
+    public record DeferredWrite(int localX, int localY, int localZ, Block block, int meta) {}
+
+    public HeightOracle heightOracle() {
+        return heightOracle;
+    }
+
+    public static ChunkProviderGalaxiaPlanet of(World world) {
+        if (world == null) return null;
+        IChunkProvider cp = world.getChunkProvider();
+        if (cp instanceof ChunkProviderServer cps
+            && cps.currentChunkProvider instanceof ChunkProviderGalaxiaPlanet inner) {
+            return inner;
+        }
+        return null;
+    }
+
+    public void queueDeferredWrite(int cx, int cz, int localX, int localY, int localZ, Block block, int meta) {
+        long key = ((long) cx << 32) | (cz & 0xFFFFFFFFL);
+        deferredWrites.computeIfAbsent(key, k -> new ArrayList<>())
+            .add(new DeferredWrite(localX, localY, localZ, block, meta));
+    }
+
+    private void drainDeferredWrites(int cx, int cz, ExtendedBlockStorage[] storage) {
+        long key = ((long) cx << 32) | (cz & 0xFFFFFFFFL);
+        List<DeferredWrite> writes = deferredWrites.remove(key);
+        if (writes == null) return;
+        for (DeferredWrite w : writes) {
+            if (w.localY < 0 || w.localY > 255) continue;
+            int sy = w.localY >> 4;
+            if (storage[sy] == null) {
+                storage[sy] = new ExtendedBlockStorage(sy << 4, !worldObj.provider.hasNoSky);
+            }
+            storage[sy].func_150818_a(w.localX, w.localY & 15, w.localZ, w.block);
+            storage[sy].setExtBlockMetadata(w.localX, w.localY & 15, w.localZ, w.meta);
+        }
+    }
+
     /**
      * Constructor to initialize the world and noise/random generators
      *
@@ -59,7 +112,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         this.dimension = dimension;
         this.worldObj = world;
 
-        this.rand = new Random(world.getSeed());
+        this.rand = new StdLCG(world.getSeed());
         this.baseNoise = new NoiseGeneratorOctaves(rand, 4);
         this.caveNoise = new NoiseGeneratorOctaves(rand, 4);
         this.crackNoise = new NoiseGeneratorOctaves(rand, 2);
@@ -89,100 +142,13 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             System.out.println("Time for preparing cave generation: " + (preparationTime - startTime));
         }
 
-        // Get local biomes
-        double[] heightMap = generateBaseHeightmap();
-        Block[] surfaceReplacementMap = new Block[CHUNK_AREA];
-        int biomeCount = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager()).getBiomeCount();
-        BiomeGenBase[] chunkBiomes = new BiomeGenBase[CHUNK_AREA];
-        double[][] biomeContrib = new double[biomeCount][];
-        List<BiomeGenBase> biomeList = new ArrayList<>();
-        final Reference2IntOpenHashMap<BiomeGenBase> biomeIdxOf = new Reference2IntOpenHashMap<>();
-        biomeIdxOf.defaultReturnValue(-1);
-        // Between 0 and 1, smooth range between biome (0 is not smoothed, vertical
-        // cliffs, 1 is indistinguishable
-        // between biomes)
-        for (int x = 0; x < CHUNK_WIDTH; x++) {
-            for (int z = 0; z < CHUNK_WIDTH; z++) {
-                // Get relevant data for biome blending
-                BiomeGenBase[] blockBiomes = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager())
-                    .getLocalBiomes(chunkX * CHUNK_WIDTH + x, chunkZ * CHUNK_WIDTH + z);
-                double[] blockContrib = ((WorldChunkManagerSpace) worldObj.getWorldChunkManager())
-                    .getLocalBiomeSignificance(ALLOWED_DIVERGENCE);
-                // Smoothing
-                double sum = 0;
-                int contribSize = blockContrib.length;
-                for (int i = 0; i < contribSize; i++) {
-                    final double originalContrib = blockContrib[i];
-                    final double squaredContrib = originalContrib * originalContrib;
-                    blockContrib[i] = -1 * (squaredContrib * originalContrib * 2) + squaredContrib * 3;
-                    sum += blockContrib[i];
-                }
-                // Renormalizing
-                for (int i = 0; i < contribSize; i++) {
-                    blockContrib[i] /= sum;
-                }
-                // Reorganize block contributions into biome order
-                double maxContrib = 0;
-                for (int i = 0; i < contribSize; i++) {
-                    final BiomeGenBase biome = blockBiomes[i];
-                    int idx = biomeIdxOf.getInt(biome);
-                    if (idx < 0) {
-                        idx = biomeList.size();
-                        biomeList.add(biome);
-                        biomeIdxOf.put(biome, idx);
-                        biomeContrib[idx] = new double[CHUNK_AREA];
-                    }
-                    if (blockContrib[i] > maxContrib) {
-                        maxContrib = blockContrib[i];
-                        chunkBiomes[x + (z << 4)] = biome;
-                    }
-                    biomeContrib[idx][x + (z << 4)] += blockContrib[i];
-                }
-            }
-        }
-        long blendingTime = 0;
-        if (showDebug) {
-            blendingTime = System.nanoTime();
-            System.out.println("Time for blending biomes: " + (blendingTime - preparationTime));
-        }
-
-        // Calculate terrain features
-        for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
-            BiomeGenBase currentBiome = biomeList.get(biomeIndex);
-            if (currentBiome instanceof BiomeGenSpace spaceBiome) {
-                double[] terrainRelevance = biomeContrib[biomeIndex];
-                TerrainConfiguration terrain = spaceBiome.getTerrain();
-                for (TerrainFeature f : terrain.getMacroFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(
-                        f,
-                        heightMap,
-                        surfaceReplacementMap,
-                        chunkX,
-                        chunkZ,
-                        rand,
-                        terrainRelevance,
-                        dimension);
-                }
-                for (TerrainFeature f : terrain.getMesoFeatures()) {
-                    TerrainFeatureApplier.applyToHeightmap(
-                        f,
-                        heightMap,
-                        surfaceReplacementMap,
-                        chunkX,
-                        chunkZ,
-                        rand,
-                        terrainRelevance,
-                        dimension);
-                }
-            }
-        }
-        for (int i = 0; i < CHUNK_AREA; i++) {
-            heightMap[i] = Math.clamp(heightMap[i], 1, HEIGHT_LIMIT);
-        }
+        // Get local biomes + compute heightmap (shared with HeightOracle)
+        double[] heightMap = heightMapBuf;
+        computeChunkData(chunkX, chunkZ, heightMap, surfaceReplacementMap, chunkBiomes);
         long terrainFeatureTime = 0;
         if (showDebug) {
             terrainFeatureTime = System.nanoTime();
-            System.out.println("Time for applying terrain features: " + (terrainFeatureTime - blendingTime));
+            System.out.println("Time for biome blending + terrain features: " + (terrainFeatureTime - preparationTime));
         }
 
         // Generate blocks
@@ -330,6 +296,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             blockGenerationTime = System.nanoTime();
             System.out.println("Time for generating blocks: " + (blockGenerationTime - terrainFeatureTime));
         }
+        drainDeferredWrites(chunkX, chunkZ, storage);
         chunk.generateSkylightMap();
         if (showDebug) {
             long lightGenerationTime = System.nanoTime();
@@ -337,6 +304,74 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
             System.out.println("-------- END CHUNK GENERATION --------");
         }
         return chunk;
+    }
+
+    void computeChunkData(int cx, int cz, double[] outHeightMap, Block[] outSurfaceBlocks, BiomeGenBase[] outBiomes) {
+        Arrays.fill(outHeightMap, 8.0);
+        Arrays.fill(outSurfaceBlocks, null);
+        Arrays.fill(outBiomes, null);
+        biomeIdxOf.clear();
+        biomeIdxOf.defaultReturnValue(-1);
+        biomeList.clear();
+
+        WorldChunkManagerSpace wcm = (WorldChunkManagerSpace) worldObj.getWorldChunkManager();
+        int biomeCount = wcm.getBiomeCount();
+        double[][] biomeContrib = new double[biomeCount][];
+        BiomeGenBase[] blockBiomes = localBiomesBuf;
+        double[] blockContrib = localContribBuf;
+
+        for (int x = 0; x < CHUNK_WIDTH; x++) {
+            for (int z = 0; z < CHUNK_WIDTH; z++) {
+                wcm.getLocalBiomes(cx * CHUNK_WIDTH + x, cz * CHUNK_WIDTH + z, blockBiomes);
+                wcm.getLocalBiomeSignificance(ALLOWED_DIVERGENCE, blockContrib);
+                double sum = 0;
+                int contribSize = blockContrib.length;
+                for (int i = 0; i < contribSize; i++) {
+                    final double originalContrib = blockContrib[i];
+                    final double squaredContrib = originalContrib * originalContrib;
+                    blockContrib[i] = -1 * (squaredContrib * originalContrib * 2) + squaredContrib * 3;
+                    sum += blockContrib[i];
+                }
+                for (int i = 0; i < contribSize; i++) {
+                    blockContrib[i] /= sum;
+                }
+                double maxContrib = 0;
+                for (int i = 0; i < contribSize; i++) {
+                    final BiomeGenBase biome = blockBiomes[i];
+                    int idx = biomeIdxOf.getInt(biome);
+                    if (idx < 0) {
+                        idx = biomeList.size();
+                        biomeList.add(biome);
+                        biomeIdxOf.put(biome, idx);
+                        biomeContrib[idx] = new double[CHUNK_AREA];
+                    }
+                    if (blockContrib[i] > maxContrib) {
+                        maxContrib = blockContrib[i];
+                        outBiomes[x + (z << 4)] = biome;
+                    }
+                    biomeContrib[idx][x + (z << 4)] += blockContrib[i];
+                }
+            }
+        }
+
+        for (int biomeIndex = 0; biomeIndex < biomeList.size(); biomeIndex++) {
+            BiomeGenBase currentBiome = biomeList.get(biomeIndex);
+            if (currentBiome instanceof BiomeGenSpace spaceBiome) {
+                double[] terrainRelevance = biomeContrib[biomeIndex];
+                TerrainConfiguration terrain = spaceBiome.getTerrain();
+                for (TerrainFeature f : terrain.getMacroFeatures()) {
+                    TerrainFeatureApplier
+                        .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, rand, terrainRelevance, dimension);
+                }
+                for (TerrainFeature f : terrain.getMesoFeatures()) {
+                    TerrainFeatureApplier
+                        .applyToHeightmap(f, outHeightMap, outSurfaceBlocks, cx, cz, rand, terrainRelevance, dimension);
+                }
+            }
+        }
+        for (int i = 0; i < CHUNK_AREA; i++) {
+            outHeightMap[i] = Math.clamp(outHeightMap[i], 1, HEIGHT_LIMIT);
+        }
     }
 
     private void prepareCaveCache(int chunkX, int chunkZ) {
@@ -433,16 +468,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         return noise < crackThickness ? crackBlock : mainBlock;
     }
 
-    private double[] generateBaseHeightmap() {
-        double[] hm = new double[CHUNK_AREA];
-        for (int x = 0; x < CHUNK_WIDTH; x++) {
-            for (int z = 0; z < CHUNK_WIDTH; z++) {
-                hm[z + (x << 4)] = 8;
-            }
-        }
-        return hm;
-    }
-
     /**
      * Loads a chunk based on world coordinates
      *
@@ -488,7 +513,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     localX += this.rand.nextInt(CHUNK_WIDTH);
                     localZ += this.rand.nextInt(CHUNK_WIDTH);
                 }
-                int localY = worldObj.getHeightValue(x, z);
+                int localY = heightOracle.getColumnHeight(localX, localZ);
                 feature.generate(worldObj, rand, localX, localY, localZ);
                 feature.getFeature()
                     .drainUpdateCoordinatesTo(updateCoordinates);
@@ -505,7 +530,8 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                         localZ += this.rand.nextInt(CHUNK_WIDTH);
                     }
                     int localY = rand.nextInt(
-                        Math.min(worldObj.getHeightValue(x, z), maximumHeight - minimumHeight) + 1) + minimumHeight;
+                        Math.min(heightOracle.getColumnHeight(localX, localZ), maximumHeight - minimumHeight) + 1)
+                        + minimumHeight;
                     feature.generate(worldObj, rand, localX, localY, localZ);
                 }
                 feature.getFeature()
@@ -521,7 +547,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                 }
                 int minimumHeight = feature.getMinimumHeight();
                 int localY = minimumHeight;
-                int localHeight = worldObj.getHeightValue(x, z);
+                int localHeight = heightOracle.getColumnHeight(localX, localZ);
                 if (localY > localHeight) {
                     continue;
                 }

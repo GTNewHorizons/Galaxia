@@ -5,6 +5,7 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.ChunkBoundedAccess;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.Feature;
 
 /**
@@ -34,7 +35,7 @@ public class LocationRuleGalaxiaCave extends LocationRuleGalaxiaSurface {
         if (super.stopGeneration(world, random, x, y, z)) {
             return true;
         }
-        return !world.isAirBlock(x, y, z);
+        return !ChunkBoundedAccess.isAirBlock(world, x, y, z);
     }
 
     public int getFrequency() {

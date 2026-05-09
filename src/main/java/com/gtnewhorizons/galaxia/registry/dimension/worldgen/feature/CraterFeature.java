@@ -22,22 +22,28 @@ public class CraterFeature extends Feature {
         int heightOffset = radius / 2;
 
         for (int localX = -radius; localX <= radius; localX++) {
+            int wx = x + localX;
             for (int localZ = -radius; localZ <= radius; localZ++) {
+                int wz = z + localZ;
                 double rimDistance = localX * localX + localZ * localZ;
-                for (int rimY = -10; rimY <= 10; rimY++) {
-                    if (rimDistance >= squaredCraterRadius - random.nextInt(96)
-                        && rimDistance < squaredCraterRadius + random.nextInt(64)
-                        && !world.isAirBlock(x + localX, y + rimY + heightOffset, z + localZ)
-                        && world.isAirBlock(x + localX, y + rimY + heightOffset + 1, z + localZ)) {
-                        setBlockFast(world, x + localX, y + rimY + heightOffset + 1, z + localZ, tektite, 0);
-                        break;
+                double rimLo = squaredCraterRadius - random.nextInt(96);
+                double rimHi = squaredCraterRadius + random.nextInt(64);
+                if (rimDistance >= rimLo && rimDistance < rimHi) {
+                    boolean prevAir = ChunkBoundedAccess.isAirBlock(world, wx, y - 10 + heightOffset, wz);
+                    for (int rimY = -10; rimY <= 10; rimY++) {
+                        boolean aboveAir = ChunkBoundedAccess.isAirBlock(world, wx, y + rimY + heightOffset + 1, wz);
+                        if (!prevAir && aboveAir) {
+                            setBlockFast(world, wx, y + rimY + heightOffset + 1, wz, tektite, 0);
+                            break;
+                        }
+                        prevAir = aboveAir;
                     }
                 }
                 for (int localY = -radius; localY <= radius; localY++) {
-                    if (world.isAirBlock(x + localX, y + localY + heightOffset, z + localZ)) continue;
+                    int wy = y + localY + heightOffset;
+                    if (ChunkBoundedAccess.isAirBlock(world, wx, wy, wz)) continue;
                     double squaredDistance = rimDistance + localY * localY;
                     if (squaredDistance < squaredCraterRadius * (1.0 - random.nextDouble() * 0.1)) {
-                        int wx = localX + x, wy = localY + y + heightOffset, wz = localZ + z;
                         setBlockFast(world, wx, wy, wz, Blocks.air, 0);
                     }
                 }

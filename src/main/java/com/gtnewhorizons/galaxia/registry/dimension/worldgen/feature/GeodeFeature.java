@@ -30,7 +30,7 @@ public class GeodeFeature extends Feature {
                         continue;
                     }
                     int combinedZ = z + zOffset;
-                    if (world.isAirBlock(combinedX, combinedY, combinedZ)) {
+                    if (ChunkBoundedAccess.isAirBlock(world, combinedX, combinedY, combinedZ)) {
                         continue;
                     }
                     int radiusDifference = squaredSize - squaredRadius;
