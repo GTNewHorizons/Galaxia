@@ -14,7 +14,21 @@ final class MinerFocusUiModel {
 
     static boolean canPlanTier(@Nullable ModuleInstance module, @Nullable MinerFocusTier targetTier) {
         ModuleMiner miner = miner(module);
-        return miner != null && targetTier != null && miner.focusTier() != targetTier && !hasActiveOperation(module);
+        return miner != null && targetTier != null
+            && targetTier != MinerFocusTier.NONE
+            && targetTier.ordinal() > miner.focusTier()
+                .ordinal()
+            && !hasActiveOperation(module);
+    }
+
+    static MinerFocusTier defaultUpgradeTarget(@Nullable ModuleInstance module) {
+        ModuleMiner miner = miner(module);
+        if (miner == null) return MinerFocusTier.I;
+        return switch (miner.focusTier()) {
+            case NONE -> MinerFocusTier.I;
+            case I -> MinerFocusTier.II;
+            case II, III -> MinerFocusTier.III;
+        };
     }
 
     static boolean canSetOre(@Nullable ModuleInstance module, @Nullable String oreKey) {

@@ -59,6 +59,24 @@ final class MinerFocusUiModelTest {
     }
 
     @Test
+    void defaultUpgradeTargetAdvancesUntilMaxFocusTier() {
+        ModuleInstance module = minerModule();
+        ModuleMiner miner = (ModuleMiner) module.component();
+
+        assertEquals(MinerFocusTier.I, MinerFocusUiModel.defaultUpgradeTarget(module));
+
+        miner.setFocus(MinerFocusTier.I, null, 0);
+        assertEquals(MinerFocusTier.II, MinerFocusUiModel.defaultUpgradeTarget(module));
+
+        miner.setFocus(MinerFocusTier.II, null, 0);
+        assertEquals(MinerFocusTier.III, MinerFocusUiModel.defaultUpgradeTarget(module));
+
+        miner.setFocus(MinerFocusTier.III, null, 0);
+        assertEquals(MinerFocusTier.III, MinerFocusUiModel.defaultUpgradeTarget(module));
+        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
+    }
+
+    @Test
     void oreCanBeSetWhileModuleHasBuildInProgress() {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();

@@ -4,6 +4,7 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
@@ -36,6 +37,7 @@ final class ModuleConfigModalController {
     private ModuleTier hammerUpgradeTier = ModuleTier.EV;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
+    private MinerFocusTier minerFocusUpgradeTier = MinerFocusTier.I;
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
         this(host, assetId, x, y, null);
@@ -131,6 +133,8 @@ final class ModuleConfigModalController {
         this.kind = Kind.MINER_FOCUS_UPGRADE;
         this.moduleId = targetModuleId;
         this.moduleOperationCancelArmed = false;
+        this.minerFocusUpgradeTier = MinerFocusUiModel.defaultUpgradeTarget(
+            ModuleConfigModalSupport.module(assetId, targetModuleId));
 
         MinerFocusUpgradeModalWidget widget = new MinerFocusUpgradeModalWidget(assetId, this);
         widget.left(x)
@@ -154,6 +158,7 @@ final class ModuleConfigModalController {
         this.hammerUpgradeTier = ModuleTier.EV;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
+        this.minerFocusUpgradeTier = MinerFocusTier.I;
         this.moduleOperationCancelArmed = false;
     }
 
@@ -285,6 +290,15 @@ final class ModuleConfigModalController {
         hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
     }
 
+    MinerFocusTier minerFocusUpgradeTier() {
+        return minerFocusUpgradeTier;
+    }
+
+    void setMinerFocusUpgradeTier(MinerFocusTier minerFocusUpgradeTier) {
+        if (minerFocusUpgradeTier == null || minerFocusUpgradeTier == MinerFocusTier.NONE) return;
+        this.minerFocusUpgradeTier = minerFocusUpgradeTier;
+    }
+
     private ModuleInstance.ID resolveModuleId(int moduleIndex) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         return module == null ? null : module.id;
@@ -296,6 +310,7 @@ final class ModuleConfigModalController {
             return;
         }
         moduleId = module.id;
+        minerFocusUpgradeTier = MinerFocusUiModel.defaultUpgradeTarget(module);
         moduleOperationCancelArmed = false;
     }
 

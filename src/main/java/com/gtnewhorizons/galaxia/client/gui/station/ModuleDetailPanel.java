@@ -71,7 +71,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 .pos(ACTION_X, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
-            createPanelButton(() -> "Focus", this::hasMinerSelected, this::openMinerFocusUpgrade)
+            createPanelButton(() -> "Upgrade", this::hasMinerSelected, this::openMinerFocusUpgrade)
                 .pos(ACTION_X + ACTION_BUTTON_WIDTH + ACTION_BUTTON_GAP, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
     }
