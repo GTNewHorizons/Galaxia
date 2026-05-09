@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -28,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleO
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -112,30 +110,14 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 long baseCapacity = module.baseCapacity();
                 int neighborCount = StationLayout.countOrthogonalNeighbors(layout, modAnchor, module.kind());
                 long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
-                long clusterTotal = 0;
-                if (facilityId != null) {
-                    List<CapacityCluster> clusters = GalaxiaAPI.getCapacityClusters(facilityId, module.kind());
-                    for (CapacityCluster cluster : clusters) {
-                        if (cluster.members()
-                            .contains(modAnchor)) {
-                            clusterTotal = cluster.effectiveCapacity();
-                            break;
-                        }
-                    }
-                }
                 lineY += SECTION_GAP;
                 lineY = drawLine(
-                    "Base capacity: " + baseCapacity,
+                    "Base: " + baseCapacity,
                     x + CONTENT_PADDING,
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
                 lineY = drawLine(
-                    "Neighbors: " + neighborCount,
-                    x + CONTENT_PADDING,
-                    lineY,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-                lineY = drawLine(
-                    "Capacity: " + effectiveCapacity + " / " + clusterTotal,
+                    "Capacity: " + effectiveCapacity,
                     x + CONTENT_PADDING,
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor());
