@@ -12,8 +12,10 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -74,7 +76,44 @@ final class ModuleUpgradeUiModelTest {
         assertTrue(zpm.selected());
     }
 
+    @Test
+    void minerFocusOptionsExposeNoneWhenFocusIsInstalled() {
+        ModuleInstance module = minerModule();
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.minerFocus(MinerFocusTier.NONE);
+
+        ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
+            .stream()
+            .filter(candidate -> candidate.id()
+                .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .findFirst()
+            .orElseThrow();
+
+        ModuleUpgradeOption none = group.options()
+            .stream()
+            .filter(option -> option.id()
+                .equals(MinerFocusTier.NONE.name()))
+            .findFirst()
+            .orElseThrow();
+
+        assertTrue(none.enabled());
+        assertTrue(none.selected());
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.NONE));
+    }
+
+    @Test
+    void minerFocusCanBeInstalledFromNone() {
+        ModuleInstance module = minerModule();
+
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.I));
+    }
+
     private static ModuleInstance hammerModule() {
         return FacilityModuleKind.HAMMER.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.IV);
+    }
+
+    private static ModuleInstance minerModule() {
+        return FacilityModuleKind.MINER.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
     }
 }

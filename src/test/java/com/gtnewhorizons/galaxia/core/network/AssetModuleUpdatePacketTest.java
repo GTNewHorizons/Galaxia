@@ -556,6 +556,32 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(
             "ore:iron",
             ((MinerFocusOperation) module.operationOrNull()
+                  .plan()
+                  .spec()).targetFocusOreKey());
+    }
+
+    @Test
+    void applyMinerFocusTierPlanInstallsFocusFromNone() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerFocusTierPlan(facility.assetId, 0, module.id, MinerFocusTier.I));
+
+        packet.apply(TEAM);
+
+        assertEquals(MinerFocusTier.NONE, miner.focusTier());
+        assertNull(miner.focusOreKeyOrNull());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            "I",
+            ((MinerFocusOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetFocusTierKey());
+        assertNull(
+            ((MinerFocusOperation) module.operationOrNull()
                 .plan()
                 .spec()).targetFocusOreKey());
     }

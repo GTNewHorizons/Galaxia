@@ -41,6 +41,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private static final int OPTION_BUTTON_HEIGHT = 18;
     private static final int OPTION_COLUMN_GAP = 4;
     private static final int OPTION_ROW_GAP = 4;
+    private static final int CONTROL_GAP = 8;
     private static final int FLAG_TOP = HEIGHT - 58;
     private static final int FOOTER_TOP = HEIGHT - 30;
     private static final int BUTTON_HEIGHT = 20;
@@ -78,7 +79,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         child(
             ModuleConfigModalSupport
                 .button(this::canUseHammerFlags, this::voidLabel, controller::toggleHammerUpgradeVoidRefund)
-                .pos(96, FLAG_TOP)
+                .pos(ModuleConfigModalSupport.PANEL_PADDING + 84 + CONTROL_GAP, FLAG_TOP)
                 .size(98, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(this::canConfirm, "Confirm", this::confirm)
@@ -86,11 +87,14 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 .size(CONFIRM_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(this::canConfirmMultiple, "Multiple...", this::startMultiplePicker)
-                .pos(86, FOOTER_TOP)
+                .pos(ModuleConfigModalSupport.PANEL_PADDING + CONFIRM_BUTTON_WIDTH + CONTROL_GAP, FOOTER_TOP)
                 .size(MULTIPLE_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(this::hasCancellableBuild, this::cancelLabel, this::cancelBuild)
-                .pos(170, FOOTER_TOP)
+                .pos(
+                    ModuleConfigModalSupport.PANEL_PADDING + CONFIRM_BUTTON_WIDTH + CONTROL_GAP + MULTIPLE_BUTTON_WIDTH
+                        + CONTROL_GAP,
+                    FOOTER_TOP)
                 .size(CANCEL_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(controller::isModuleUpgradeOpen, "Back", controller::close)
@@ -454,6 +458,40 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private static String focusTierLabel(MinerFocusTier tier) {
         return tier == MinerFocusTier.NONE ? "None" : tier.name();
+    }
+
+    static List<ControlRect> controlRectsForTest() {
+        int left = ModuleConfigModalSupport.PANEL_PADDING;
+        return List.of(
+            new ControlRect("reserve", left, FLAG_TOP, 84, BUTTON_HEIGHT),
+            new ControlRect("voidRefund", left + 84 + CONTROL_GAP, FLAG_TOP, 98, BUTTON_HEIGHT),
+            new ControlRect("confirm", left, FOOTER_TOP, CONFIRM_BUTTON_WIDTH, BUTTON_HEIGHT),
+            new ControlRect(
+                "multiple",
+                left + CONFIRM_BUTTON_WIDTH + CONTROL_GAP,
+                FOOTER_TOP,
+                MULTIPLE_BUTTON_WIDTH,
+                BUTTON_HEIGHT),
+            new ControlRect(
+                "cancel",
+                left + CONFIRM_BUTTON_WIDTH + CONTROL_GAP + MULTIPLE_BUTTON_WIDTH + CONTROL_GAP,
+                FOOTER_TOP,
+                CANCEL_BUTTON_WIDTH,
+                BUTTON_HEIGHT),
+            new ControlRect(
+                "back",
+                WIDTH - ModuleConfigModalSupport.PANEL_PADDING - BACK_BUTTON_WIDTH,
+                FOOTER_TOP,
+                BACK_BUTTON_WIDTH,
+                BUTTON_HEIGHT));
+    }
+
+    record ControlRect(String name, int x, int y, int width, int height) {
+
+        boolean overlaps(ControlRect other) {
+            return x < other.x + other.width && x + width > other.x && y < other.y + other.height
+                && y + height > other.y;
+        }
     }
 
     private record OptionRef(ModuleUpgradeGroup group, ModuleUpgradeOption option) {}
