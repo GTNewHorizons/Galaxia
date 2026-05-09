@@ -68,6 +68,34 @@ final class ModuleHammerTest {
     }
 
     @Test
+    void hammerChargeMarksModuleDirtyPeriodicallyForClientSync() {
+        AutomatedFacility outpost = createOutpost();
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        outpost.addModule(module);
+        outpost.drainDirtyModules();
+        outpost.setEnergyStored(500_000L);
+
+        module.tick(outpost);
+
+        assertFalse(outpost.isDirty());
+        for (int i = 1; i < 20; i++) {
+            module.tick(outpost);
+        }
+
+        assertTrue(outpost.isDirty());
+        assertEquals(
+            module.id,
+            outpost.drainDirtyModules()
+                .get(0).id);
+    }
+
+    @Test
     void hammerCanSpendPartialBufferOnRouteCost() {
         ModuleInstance module = FacilityModuleRegistry.create(
             ModuleInstance.ID.create(),
@@ -83,6 +111,29 @@ final class ModuleHammerTest {
         assertEquals(27_500L, hammer.energyStored());
         assertFalse(hammer.trySpendShotEnergy(ModuleHammer.shotEnergyCost(3)));
         assertEquals(27_500L, hammer.energyStored());
+    }
+
+    @Test
+    void hammerShotSpendMarksModuleDirtyImmediately() {
+        AutomatedFacility outpost = createOutpost();
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        outpost.addModule(module);
+        outpost.drainDirtyModules();
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        hammer.setEnergyStored(100_000L);
+
+        assertTrue(hammer.trySpendShotEnergy(module, outpost, ModuleHammer.shotEnergyCost(7.25)));
+
+        assertTrue(outpost.isDirty());
+        assertEquals(
+            module.id,
+            outpost.drainDirtyModules()
+                .get(0).id);
     }
 
     @Test

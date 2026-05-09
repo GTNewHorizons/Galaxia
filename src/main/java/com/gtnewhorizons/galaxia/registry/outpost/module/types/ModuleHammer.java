@@ -18,6 +18,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     public static final long EU_PER_DV = 10_000L;
     public static final long MIN_SHOT_ENERGY_EU = EU_PER_DV;
+    private static final int CHARGE_SYNC_INTERVAL_TICKS = 20;
 
     private static final ModuleTier[] BASE_TIERS = { ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV };
     private static final ModuleTier[] BIG_TIERS = { ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV };
@@ -94,7 +95,11 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
 
     @Override
     public void tickOperational(ModuleInstance module, AutomatedFacility outpost) {
-        chargeFrom(outpost, chargeRate(module));
+        if (chargeFrom(outpost, chargeRate(module))) {
+            if (module.ticks() % CHARGE_SYNC_INTERVAL_TICKS == 0 || energyStored == energyCapacity()) {
+                outpost.markModuleDirty(module.id);
+            }
+        }
     }
 
     public AllowShootingConfig config() {
@@ -139,15 +144,22 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         return true;
     }
 
-    private void chargeFrom(AutomatedFacility outpost, long amount) {
+    public boolean trySpendShotEnergy(ModuleInstance module, AutomatedFacility outpost, long amount) {
+        if (!trySpendShotEnergy(amount)) return false;
+        outpost.markModuleDirty(module.id);
+        return true;
+    }
+
+    private boolean chargeFrom(AutomatedFacility outpost, long amount) {
         long missing = energyCapacity() - energyStored;
-        if (amount <= 0L || missing <= 0L) return;
+        if (amount <= 0L || missing <= 0L) return false;
         long drawn = Math.min(Math.min(amount, missing), outpost.getEnergyStored());
-        if (drawn <= 0L) return;
+        if (drawn <= 0L) return false;
         if (!outpost.tryConsumeEnergy(drawn)) {
             throw new IllegalStateException("HAMMER charge became inconsistent: requested " + drawn + " EU");
         }
         energyStored += drawn;
+        return true;
     }
 
     public HammerVariant variant() {

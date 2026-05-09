@@ -148,8 +148,8 @@ public class CelestialEventHandler {
                     .filter(
                         m -> m.component() instanceof ModuleHammer h && h.canFire()
                             && (shareAnchor || h.variant() == HammerVariant.BIG))
-                    .map(m -> (ModuleHammer) m.component())
-                    .anyMatch(hammer -> {
+                    .anyMatch(m -> {
+                        ModuleHammer hammer = (ModuleHammer) m.component();
                         LogisticSignal.Scope deliveryScope = LogisticSignal.Scope.PLANETARY;
                         int travelTime = 1;
                         double osu = 0;
@@ -187,7 +187,7 @@ public class CelestialEventHandler {
                         if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0) return false;
                         if (!hammer.canSpendShotEnergy(shotEnergy)) return false;
                         if (!supplier.inventory.tryConsume(resource, sendAmount)) return false;
-                        if (!hammer.trySpendShotEnergy(shotEnergy)) {
+                        if (!hammer.trySpendShotEnergy(m, supplier, shotEnergy)) {
                             throw new IllegalStateException("HAMMER shot energy became inconsistent");
                         }
 
