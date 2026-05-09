@@ -1,9 +1,11 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -847,6 +849,7 @@ public final class AssetModuleUpdatePacket {
         if (layout == null) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS requires a station layout for " + state.assetId);
         }
+        Set<ModuleInstance.ID> plannedTargets = new HashSet<>();
         for (StationTileCoord targetCoord : payload.targetCoords()) {
             ModuleInstance target = layout.moduleAt(targetCoord);
             if (target == null) {
@@ -856,10 +859,15 @@ public final class AssetModuleUpdatePacket {
             if (source.id.equals(target.id)) {
                 throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target must be different from source");
             }
+            if (!plannedTargets.add(target.id)) continue;
             ModuleOperationState existingOperation = target.operationOrNull();
             if (existingOperation != null && !existingOperation.phase()
                 .isTerminal()) {
-                throw new IllegalStateException("Module " + target.id + " already has active build " + existingOperation.phase());
+                LOG.warn(
+                    "Skipped module upgrade target {} because build {} is active",
+                    target.id,
+                    existingOperation.phase());
+                continue;
             }
             if (source.component() instanceof ModuleHammer) {
                 handleHammerUpgradeTarget(state, source, target, payload);

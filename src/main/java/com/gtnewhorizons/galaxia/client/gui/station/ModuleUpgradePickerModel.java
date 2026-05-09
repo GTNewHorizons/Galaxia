@@ -1,5 +1,10 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -49,5 +54,23 @@ final class ModuleUpgradePickerModel {
             return false;
         }
         return target.tier() != targetTier;
+    }
+
+    static List<StationTileCoord> confirmedTargets(AutomatedFacility facility, ModuleInstance source,
+        ModuleTier targetTier, @Nullable HammerVariant targetHammerVariant, List<StationTileCoord> selectedCoords) {
+        List<StationTileCoord> targets = new ArrayList<>();
+        if (facility == null || source == null || selectedCoords == null || selectedCoords.isEmpty()) return targets;
+        StationLayout layout = facility.stationLayout();
+        if (layout == null) return targets;
+
+        Set<ModuleInstance.ID> seenModules = new HashSet<>();
+        for (StationTileCoord coord : selectedCoords) {
+            if (coord == null) continue;
+            ModuleInstance target = layout.moduleAt(coord);
+            if (target == null || !seenModules.add(target.id)) continue;
+            if (!isCompatibleTarget(facility, source, targetTier, targetHammerVariant, coord)) continue;
+            targets.add(target.anchor());
+        }
+        return targets;
     }
 }

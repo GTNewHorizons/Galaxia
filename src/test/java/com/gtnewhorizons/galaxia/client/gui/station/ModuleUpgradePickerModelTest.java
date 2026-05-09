@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -78,6 +79,44 @@ final class ModuleUpgradePickerModelTest {
         assertEquals(
             test.target().anchor(),
             ModuleUpgradePickerModel.normalizeTarget(test.facility(), test.target().anchor()));
+    }
+
+    @Test
+    void confirmedTargetsDeduplicateByModuleId() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        StationTileCoord duplicateAnchor = StationTileCoord.of(3, 0);
+        test.facility()
+            .stationLayout()
+            .place(duplicateAnchor, new com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile(
+                test.target(),
+                com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState.OCCUPIED_OPERATIONAL));
+
+        List<StationTileCoord> targets = ModuleUpgradePickerModel.confirmedTargets(
+            test.facility(),
+            test.source(),
+            ModuleTier.LuV,
+            HammerVariant.BIG,
+            List.of(test.target().anchor(), duplicateAnchor));
+
+        assertEquals(List.of(test.target().anchor()), targets);
+    }
+
+    @Test
+    void confirmedTargetsSkipTargetsThatBecameActiveBeforeConfirm() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        test.target()
+            .setOperation(
+                ModuleOperationState.waiting(
+                    new ModuleOperationPlan(new ModuleTierOperation(ModuleTier.IV), 1, Map.of(), false)));
+
+        assertEquals(
+            List.of(),
+            ModuleUpgradePickerModel.confirmedTargets(
+                test.facility(),
+                test.source(),
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                List.of(test.target().anchor())));
     }
 
     private static TestFacility twoModuleFacility(FacilityModuleKind kind, ModuleTier tier) {

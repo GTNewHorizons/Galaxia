@@ -16,10 +16,7 @@ final class MinerFocusUiModel {
         ModuleMiner miner = miner(module);
         if (miner == null || targetTier == null || hasActiveOperation(module)) return false;
         MinerFocusTier currentTier = miner.focusTier();
-        if (targetTier == currentTier) return false;
-        if (targetTier == MinerFocusTier.NONE) return currentTier != MinerFocusTier.NONE;
-        if (targetTier.ordinal() < currentTier.ordinal()) return true;
-        return targetTier.ordinal() == currentTier.ordinal() + 1;
+        return targetTier != currentTier;
     }
 
     static MinerFocusTier defaultUpgradeTarget(@Nullable ModuleInstance module) {

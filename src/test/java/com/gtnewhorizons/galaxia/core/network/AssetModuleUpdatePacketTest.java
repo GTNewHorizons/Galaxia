@@ -717,7 +717,7 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyModuleUpgradeTargetsRejectsTargetWithActiveBuild() {
+    void applyModuleUpgradeTargetsSkipsTargetWithActiveBuild() {
         AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleInstance source = facility.modules()
             .get(0);
@@ -735,13 +735,46 @@ final class AssetModuleUpdatePacketTest {
                 false,
                 List.of(target.anchor())));
 
-        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        packet.apply(TEAM);
         assertEquals(
             ModuleTier.IV,
             target.operationOrNull()
                 .plan()
                 .spec()
                 .targetTier());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsDeduplicatesSelectedTargets() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(target.anchor(), target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertEquals(
+            ModuleTier.LuV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            "BIG",
+            ((HammerModuleOperation) target.operationOrNull()
+                .plan()
+                .spec()).targetVariantKey());
     }
 
     @Test

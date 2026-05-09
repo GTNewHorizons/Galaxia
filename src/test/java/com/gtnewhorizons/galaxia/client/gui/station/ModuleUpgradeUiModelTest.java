@@ -126,16 +126,16 @@ final class ModuleUpgradeUiModelTest {
     }
 
     @Test
-    void minerFocusCanBeInstalledFromNone() {
+    void minerFocusCanBeChangedFromNoneToAnyTier() {
         ModuleInstance module = minerModule();
 
         assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.I));
-        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
-        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.III));
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.II));
+        assertTrue(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.III));
     }
 
     @Test
-    void minerFocusCanUpgradeOneStepOrDowngradeToAnyLowerTier() {
+    void minerFocusCanBeChangedToAnyOtherTier() {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();
         miner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
@@ -147,12 +147,47 @@ final class ModuleUpgradeUiModelTest {
     }
 
     @Test
-    void minerFocusCannotSkipUpgradeTiers() {
+    void minerFocusOptionsDisableOnlyCurrentTier() {
         ModuleInstance module = minerModule();
         ModuleMiner miner = (ModuleMiner) module.component();
         miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
+        ModuleUpgradeSelection selection = ModuleUpgradeSelection.minerFocus(MinerFocusTier.III);
 
-        assertFalse(MinerFocusUiModel.canPlanTier(module, MinerFocusTier.III));
+        ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
+            .stream()
+            .filter(candidate -> candidate.id()
+                .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .findFirst()
+            .orElseThrow();
+
+        assertTrue(group.options()
+            .stream()
+            .filter(option -> option.id()
+                .equals(MinerFocusTier.NONE.name()))
+            .findFirst()
+            .orElseThrow()
+            .enabled());
+        assertFalse(group.options()
+            .stream()
+            .filter(option -> option.id()
+                .equals(MinerFocusTier.I.name()))
+            .findFirst()
+            .orElseThrow()
+            .enabled());
+        assertTrue(group.options()
+            .stream()
+            .filter(option -> option.id()
+                .equals(MinerFocusTier.II.name()))
+            .findFirst()
+            .orElseThrow()
+            .enabled());
+        assertTrue(group.options()
+            .stream()
+            .filter(option -> option.id()
+                .equals(MinerFocusTier.III.name()))
+            .findFirst()
+            .orElseThrow()
+            .enabled());
     }
 
     private static ModuleInstance hammerModule() {

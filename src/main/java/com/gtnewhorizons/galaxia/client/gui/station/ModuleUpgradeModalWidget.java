@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidget> {
 
@@ -289,14 +290,19 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             coord -> ModuleUpgradePickerModel
                 .isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
             coord -> ModuleUpgradePickerModel.normalizeTarget(facility, coord),
-            targets -> CelestialClient.planModuleUpgradeTargets(
-                assetId,
-                sourceModuleIndex,
-                targetTier,
-                targetVariant,
-                reserveItems,
-                voidCompletionRefund,
-                targets));
+            targets -> {
+                List<StationTileCoord> confirmedTargets = ModuleUpgradePickerModel
+                    .confirmedTargets(facility, source, targetTier, targetVariant, targets);
+                if (confirmedTargets.isEmpty()) return;
+                CelestialClient.planModuleUpgradeTargets(
+                    assetId,
+                    sourceModuleIndex,
+                    targetTier,
+                    targetVariant,
+                    reserveItems,
+                    voidCompletionRefund,
+                    confirmedTargets);
+            });
     }
 
     private boolean targetChanged(ModuleInstance module) {
