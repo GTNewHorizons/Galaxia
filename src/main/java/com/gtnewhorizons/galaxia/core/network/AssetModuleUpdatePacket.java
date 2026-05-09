@@ -861,8 +861,9 @@ public final class AssetModuleUpdatePacket {
             }
             if (!plannedTargets.add(target.id)) continue;
             ModuleOperationState existingOperation = target.operationOrNull();
-            if (!creative && existingOperation != null && !existingOperation.phase()
-                .isTerminal()) {
+            if (!creative && existingOperation != null
+                && !existingOperation.phase()
+                    .isTerminal()) {
                 LOG.warn(
                     "Skipped module upgrade target {} because build {} is active",
                     target.id,
