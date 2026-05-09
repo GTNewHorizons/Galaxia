@@ -50,10 +50,12 @@ final class MinerFocusUiModelTest {
         ModuleMiner miner = (ModuleMiner) module.component();
 
         assertFalse(MinerFocusUiModel.canSetOre(module, "ore:iron"));
+        assertFalse(MinerFocusUiModel.canShowOreFocus(module));
 
         miner.setFocus(MinerFocusTier.I, null, 0);
 
         assertTrue(MinerFocusUiModel.canSetOre(module, "ore:iron"));
+        assertTrue(MinerFocusUiModel.canShowOreFocus(module));
     }
 
     @Test

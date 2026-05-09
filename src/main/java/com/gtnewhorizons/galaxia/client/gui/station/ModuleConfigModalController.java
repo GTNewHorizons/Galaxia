@@ -16,7 +16,8 @@ final class ModuleConfigModalController {
         HAMMER,
         HAMMER_UPGRADE,
         LOGISTICS,
-        MINER_BLACKLIST
+        MINER_BLACKLIST,
+        MINER_FOCUS_UPGRADE
     }
 
     private final ModularPanel host;
@@ -123,6 +124,23 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
+    void openMinerFocusUpgrade(int moduleIndex) {
+        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
+        if (targetModuleId == null) return;
+        close();
+        this.kind = Kind.MINER_FOCUS_UPGRADE;
+        this.moduleId = targetModuleId;
+        this.moduleOperationCancelArmed = false;
+
+        MinerFocusUpgradeModalWidget widget = new MinerFocusUpgradeModalWidget(assetId, this);
+        widget.left(x)
+            .top(y)
+            .width(MinerFocusUpgradeModalWidget.WIDTH)
+            .height(MinerFocusUpgradeModalWidget.HEIGHT);
+        this.modal = widget;
+        host.child(widget);
+    }
+
     void close() {
         if (modal != null) {
             host.remove(modal);
@@ -167,6 +185,7 @@ final class ModuleConfigModalController {
             case HAMMER_UPGRADE -> retargetHammerUpgrade(module);
             case LOGISTICS -> retargetLogistics(module);
             case MINER_BLACKLIST -> retargetMinerBlacklist(module);
+            case MINER_FOCUS_UPGRADE -> retargetMinerFocusUpgrade(module);
             case NONE -> {}
         }
     }
@@ -181,6 +200,10 @@ final class ModuleConfigModalController {
 
     boolean isMinerBlacklistOpen() {
         return kind == Kind.MINER_BLACKLIST;
+    }
+
+    boolean isMinerFocusUpgradeOpen() {
+        return kind == Kind.MINER_FOCUS_UPGRADE;
     }
 
     boolean isLogisticsOpen() {
@@ -302,6 +325,15 @@ final class ModuleConfigModalController {
         moduleId = module.id;
         minerBlacklistPage = 0;
         minerSettingsGroupMenuOpen = false;
+        moduleOperationCancelArmed = false;
+    }
+
+    private void retargetMinerFocusUpgrade(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleMiner)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
         moduleOperationCancelArmed = false;
     }
 

@@ -169,27 +169,34 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         return new ButtonWidget<>()
             .background(
                 drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_DEFAULT.getColor()
-                            : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
-                        canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
-                            : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor())))
+                    (ctx, x, y, w, h) -> {
+                        if (isPickerActive()) return;
+                        BorderedRect.draw(
+                            x,
+                            y,
+                            w,
+                            h,
+                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_DEFAULT.getColor()
+                                : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
+                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
+                                : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
+                    }))
             .hoverBackground(
                 drawable(
-                    (ctx, x, y, w, h) -> BorderedRect.draw(
-                        x,
-                        y,
-                        w,
-                        h,
-                        canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_HOVERED.getColor()
-                            : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
-                        canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
-                            : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor())))
+                    (ctx, x, y, w, h) -> {
+                        if (isPickerActive()) return;
+                        BorderedRect.draw(
+                            x,
+                            y,
+                            w,
+                            h,
+                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_HOVERED.getColor()
+                                : EnumColors.MAP_COLOR_BTN_DISABLED.getColor(),
+                            canDestroySelected() ? EnumColors.MAP_COLOR_BTN_DESTROY_BORDER.getColor()
+                                : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
+                    }))
             .overlay(drawable((ctx, x, y, w, h) -> {
+                if (isPickerActive()) return;
                 FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
                 String label = armedDestroySelection != null && armedDestroySelection.equals(map.selection())
                     ? "Confirm"
@@ -204,6 +211,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
                     color);
             }))
             .onMousePressed(mouseButton -> {
+                if (isPickerActive()) return false;
                 if (mouseButton != 0 || !canDestroySelected()) return true;
                 StationTileCoord selected = map.selection();
                 if (!selected.equals(armedDestroySelection)) {

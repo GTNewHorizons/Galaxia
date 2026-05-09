@@ -46,6 +46,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private static final int ACTION_X = 10;
     private static final int ACTION_Y = 40;
     private static final int ACTION_BUTTON_WIDTH = 70;
+    private static final int ACTION_BUTTON_GAP = 6;
     private static final int CHARGE_BAR_TOP_OFFSET = 2;
     private static final int CHARGE_BAR_HEIGHT = 8;
     private static final int CHARGE_BAR_BOTTOM_GAP = 3;
@@ -68,6 +69,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         child(
             createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerConfig)
                 .pos(ACTION_X, ACTION_Y)
+                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
+        child(
+            createPanelButton(() -> "Focus", this::hasMinerSelected, this::openMinerFocusUpgrade)
+                .pos(ACTION_X + ACTION_BUTTON_WIDTH + ACTION_BUTTON_GAP, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
             createPanelButton(() -> "Configure", this::hasHammerSelected, this::openHammerConfig)
@@ -356,6 +361,12 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleMiner)) return;
         configController.openMinerBlacklist(selected.moduleIndex);
+    }
+
+    private void openMinerFocusUpgrade() {
+        if (!(selectedModule() instanceof SelectedModule selected)) return;
+        if (!(selected.module.component() instanceof ModuleMiner)) return;
+        configController.openMinerFocusUpgrade(selected.moduleIndex);
     }
 
     private void openRecipeInput() {
