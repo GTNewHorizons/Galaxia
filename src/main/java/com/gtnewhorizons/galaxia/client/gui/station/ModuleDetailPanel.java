@@ -67,20 +67,12 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         this.configController = configController;
         this.tilePickerController = tilePickerController;
         child(
-            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerConfig)
+            createPanelButton(() -> "Configure", this::hasConfigurableSelected, this::openSelectedConfig)
                 .pos(ACTION_X, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
         child(
             createPanelButton(() -> "Focus", this::hasMinerSelected, this::openMinerFocusUpgrade)
                 .pos(ACTION_X + ACTION_BUTTON_WIDTH + ACTION_BUTTON_GAP, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
-        child(
-            createPanelButton(() -> "Configure", this::hasHammerSelected, this::openHammerConfig)
-                .pos(ACTION_X, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
-        child(
-            createPanelButton(() -> "Configure", this::hasRecipeModuleSelected, this::openRecipeInput)
-                .pos(ACTION_X, ACTION_Y)
                 .size(ACTION_BUTTON_WIDTH, BUTTON_H));
     }
 
@@ -333,46 +325,34 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
     }
 
-    private boolean hasHammerSelected() {
-        if (isPickerActive()) return false;
-        return selectedModule() instanceof SelectedModule selected
-            && selected.module.component() instanceof ModuleHammer;
-    }
-
     private boolean hasMinerSelected() {
         if (isPickerActive()) return false;
         return selectedModule() instanceof SelectedModule selected
             && selected.module.component() instanceof ModuleMiner;
     }
 
-    private boolean hasRecipeModuleSelected() {
+    private boolean hasConfigurableSelected() {
         if (isPickerActive()) return false;
-        return selectedModule() instanceof SelectedModule selected
-            && selected.module.component() instanceof IRecipeModule;
+        return selectedModule() instanceof SelectedModule selected && (selected.module.component() instanceof ModuleMiner
+            || selected.module.component() instanceof ModuleHammer
+            || selected.module.component() instanceof IRecipeModule);
     }
 
-    private void openHammerConfig() {
+    private void openSelectedConfig() {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof ModuleHammer)) return;
-        configController.openHammer(selected.moduleIndex);
-    }
-
-    private void openMinerConfig() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof ModuleMiner)) return;
-        configController.openMinerBlacklist(selected.moduleIndex);
+        if (selected.module.component() instanceof ModuleMiner) {
+            configController.openMinerBlacklist(selected.moduleIndex);
+        } else if (selected.module.component() instanceof ModuleHammer) {
+            configController.openHammer(selected.moduleIndex);
+        } else if (selected.module.component() instanceof IRecipeModule) {
+            RecipeInputScreen.open(map.assetId(), selected.moduleIndex, selected.module);
+        }
     }
 
     private void openMinerFocusUpgrade() {
         if (!(selectedModule() instanceof SelectedModule selected)) return;
         if (!(selected.module.component() instanceof ModuleMiner)) return;
         configController.openMinerFocusUpgrade(selected.moduleIndex);
-    }
-
-    private void openRecipeInput() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof IRecipeModule)) return;
-        RecipeInputScreen.open(map.assetId(), selected.moduleIndex, selected.module);
     }
 
     private @Nullable SelectedModule selectedModule() {
