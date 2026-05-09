@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 
-public class ModuleStorage implements IModuleComponent, IParallelModule {
+public class ModuleStorage extends TieredModuleComponent implements IParallelModule {
 
     private byte parallel = 1;
 

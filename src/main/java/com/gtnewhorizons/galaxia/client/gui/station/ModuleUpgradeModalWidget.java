@@ -51,6 +51,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private static final int MULTIPLE_BUTTON_WIDTH = 78;
     private static final int CANCEL_BUTTON_WIDTH = 72;
     private static final int BACK_BUTTON_WIDTH = 54;
+    private static final int RESERVE_BUTTON_WIDTH = 84;
+    private static final int VOID_REFUND_BUTTON_WIDTH = 98;
     private static final int BODY_WIDTH = WIDTH - ModuleConfigModalSupport.PANEL_PADDING * 2;
 
     private final CelestialAsset.ID assetId;
@@ -77,12 +79,12 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             ModuleConfigModalSupport
                 .button(this::canUseHammerFlags, this::reserveLabel, controller::toggleHammerUpgradeReserveItems)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FLAG_TOP)
-                .size(84, BUTTON_HEIGHT));
+                .size(RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport
                 .button(this::canUseHammerFlags, this::voidLabel, controller::toggleHammerUpgradeVoidRefund)
-                .pos(ModuleConfigModalSupport.PANEL_PADDING + 84 + CONTROL_GAP, FLAG_TOP)
-                .size(98, BUTTON_HEIGHT));
+                .pos(ModuleConfigModalSupport.PANEL_PADDING + RESERVE_BUTTON_WIDTH + CONTROL_GAP, FLAG_TOP)
+                .size(VOID_REFUND_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport.button(this::canConfirm, "Confirm", this::confirm)
                 .pos(ModuleConfigModalSupport.PANEL_PADDING, FOOTER_TOP)
@@ -490,8 +492,13 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     static List<ControlRect> controlRectsForTest() {
         int left = ModuleConfigModalSupport.PANEL_PADDING;
         return List.of(
-            new ControlRect("reserve", left, FLAG_TOP, 84, BUTTON_HEIGHT),
-            new ControlRect("voidRefund", left + 84 + CONTROL_GAP, FLAG_TOP, 98, BUTTON_HEIGHT),
+            new ControlRect("reserve", left, FLAG_TOP, RESERVE_BUTTON_WIDTH, BUTTON_HEIGHT),
+            new ControlRect(
+                "voidRefund",
+                left + RESERVE_BUTTON_WIDTH + CONTROL_GAP,
+                FLAG_TOP,
+                VOID_REFUND_BUTTON_WIDTH,
+                BUTTON_HEIGHT),
             new ControlRect("confirm", left, FOOTER_TOP, CONFIRM_BUTTON_WIDTH, BUTTON_HEIGHT),
             new ControlRect(
                 "multiple",

@@ -9,7 +9,7 @@ import javax.annotation.Nonnull;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -20,7 +20,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperat
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 
-public final class ModuleMiner implements IModuleComponent, IParallelModule {
+public final class ModuleMiner extends TieredModuleComponent implements IParallelModule {
 
     public final FacilityModuleKind kind;
 
@@ -98,8 +98,8 @@ public final class ModuleMiner implements IModuleComponent, IParallelModule {
 
     @Override
     public void applyOperationTarget(IModuleOperation spec, ModuleInstance module) {
-        if (spec instanceof ModuleTierOperation tierSpec) {
-            module.setTier(tierSpec.targetTier());
+        if (spec instanceof ModuleTierOperation) {
+            super.applyOperationTarget(spec, module);
             return;
         }
         if (!(spec instanceof MinerFocusOperation minerSpec)) {

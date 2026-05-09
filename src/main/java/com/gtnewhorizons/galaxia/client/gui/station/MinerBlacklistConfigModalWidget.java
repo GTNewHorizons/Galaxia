@@ -55,6 +55,8 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
     private static final int ROW_NAME_WIDTH = 170;
     private static final int ROW_FOCUS_BUTTON_X = 210;
     private static final int ROW_FOCUS_BUTTON_WIDTH = 54;
+    private static final int ROW_FOCUS_BUTTON_HEIGHT = 14;
+    private static final int ROW_FOCUS_BUTTON_Y_OFFSET = 2;
     private static final int ROW_CHECKBOX_X = WIDTH - 34;
     private static final int ROW_CHECKBOX_SIZE = 14;
     private static final int ROW_CHECKBOX_Y_OFFSET = 2;
@@ -102,8 +104,8 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
                         () -> canUseFocusRow(rowIndex),
                         () -> focusButtonLabel(rowIndex),
                         () -> toggleFocusOre(rowIndex))
-                    .pos(ROW_FOCUS_BUTTON_X, rowY + 2)
-                    .size(ROW_FOCUS_BUTTON_WIDTH, 14));
+                    .pos(ROW_FOCUS_BUTTON_X, rowY + ROW_FOCUS_BUTTON_Y_OFFSET)
+                    .size(ROW_FOCUS_BUTTON_WIDTH, ROW_FOCUS_BUTTON_HEIGHT));
             child(
                 ModuleConfigModalSupport
                     .checkbox(
