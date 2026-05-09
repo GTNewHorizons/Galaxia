@@ -137,7 +137,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         long terrainFeatureTime = 0;
         if (showDebug) {
             terrainFeatureTime = System.nanoTime();
-            System.out.println("Time for biome blending + terrain features: " + (terrainFeatureTime - preparationTime));
+            System.out.println("Time for biome blending + terrain features: " + (terrainFeatureTime - startTime));
         }
 
         // Generate blocks
@@ -372,64 +372,6 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
         for (int i = 0; i < CHUNK_AREA; i++) {
             outHeightMap[i] = Math.clamp(outHeightMap[i], 1, HEIGHT_LIMIT);
         }
-    }
-
-    private void prepareCaveCache(int chunkX, int chunkZ) {
-        double[] horizontalLayer = caveNoise.generateNoiseOctaves(
-            new double[CHUNK_AREA],
-            chunkZ * CHUNK_WIDTH,
-            chunkX * CHUNK_WIDTH,
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-            HORIZONTAL_CAVE_STRETCH,
-            HORIZONTAL_CAVE_STRETCH,
-            0);
-        for (int i = 0; i < horizontalLayer.length; i++) {
-            double noise = horizontalLayer[i];
-            noise += 8;
-            noise /= 16;
-            caveCache[i][0] = noise;
-        }
-        double[] verticalSlice = caveNoise.generateNoiseOctaves(
-            new double[HEIGHT_LIMIT],
-            chunkZ,
-            chunkX,
-            HEIGHT_LIMIT,
-            1,
-            VERTICAL_CAVE_STRETCH,
-            VERTICAL_CAVE_STRETCH,
-            0);
-        for (int i = 0; i < verticalSlice.length; i++) {
-            double noise = verticalSlice[i];
-            noise += 8;
-            noise /= 16;
-            verticalSlice[i] = noise;
-        }
-        for (int i = 0; i < caveCache.length; i++) {
-            double baseNoise = caveCache[i][0];
-            for (int j = 1; j < verticalSlice.length; j++) {
-                caveCache[i][j] = (baseNoise + verticalSlice[j]) / 2;
-            }
-        }
-    }
-
-    private boolean generateCave(int localX, int localY, int localZ, int height) {
-        if (localY >= HEIGHT_LIMIT) {
-            return false;
-        }
-        double localNoise = caveCache[localX + localZ * CHUNK_WIDTH][localY];
-        double boundTightening;
-        int ceilingDistance = height - localY;
-        if (ceilingDistance > 0 && ceilingDistance < CHUNK_WIDTH) {
-            boundTightening = 0.75 / ceilingDistance;
-        } else if (localY > 4) {
-            boundTightening = 0;
-        } else {
-            boundTightening = (double) 1 / (Math.max(localY - 1, 1));
-        }
-        double lowerBound = 0.45;
-        double upperBound = 0.5 - 0.05 * boundTightening;
-        return localNoise < upperBound && localNoise > lowerBound;
     }
 
     private Block getSurfaceBlock(List<Block> blocks, int x, int z) {
