@@ -167,7 +167,7 @@ public final class AssetBuildModulePacket {
             boolean hasAdjacent = false;
             for (StationTileCoord coord : footprint) {
                 if (originalTiles.contains(coord) || plannedTiles.contains(coord)) return false;
-                if (!hasAdjacent && hasOriginalOccupiedNeighbour(originalTiles, coord)) hasAdjacent = true;
+                if (!hasAdjacent && hasKnownOccupiedNeighbour(originalTiles, plannedTiles, coord)) hasAdjacent = true;
             }
             if (!hasAdjacent) return false;
             for (StationTileCoord coord : footprint) {
@@ -177,16 +177,19 @@ public final class AssetBuildModulePacket {
         return true;
     }
 
-    private static boolean hasOriginalOccupiedNeighbour(Set<StationTileCoord> originalTiles, StationTileCoord coord) {
-        return containsOriginal(originalTiles, coord.dx() - 1, coord.dy())
-            || containsOriginal(originalTiles, coord.dx() + 1, coord.dy())
-            || containsOriginal(originalTiles, coord.dx(), coord.dy() - 1)
-            || containsOriginal(originalTiles, coord.dx(), coord.dy() + 1);
+    private static boolean hasKnownOccupiedNeighbour(Set<StationTileCoord> originalTiles,
+        Set<StationTileCoord> plannedTiles, StationTileCoord coord) {
+        return containsKnown(originalTiles, plannedTiles, coord.dx() - 1, coord.dy())
+            || containsKnown(originalTiles, plannedTiles, coord.dx() + 1, coord.dy())
+            || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() - 1)
+            || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() + 1);
     }
 
-    private static boolean containsOriginal(Set<StationTileCoord> originalTiles, int dx, int dy) {
+    private static boolean containsKnown(Set<StationTileCoord> originalTiles, Set<StationTileCoord> plannedTiles, int dx,
+        int dy) {
         if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
         if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
-        return originalTiles.contains(StationTileCoord.of(dx, dy));
+        StationTileCoord coord = StationTileCoord.of(dx, dy);
+        return originalTiles.contains(coord) || plannedTiles.contains(coord);
     }
 }
