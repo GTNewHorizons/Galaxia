@@ -2,8 +2,11 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -20,8 +23,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -97,8 +104,10 @@ final class StationPacketRoundTripTest {
     void fullSyncRoundTripPreservesHammerVariant() {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
-        hammerModule.setTier(com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier.LuV);
-        ((ModuleHammer) hammerModule.component()).setVariant(HammerVariant.BIG);
+        hammerModule.setTier(ModuleTier.LuV);
+        ModuleHammer serverHammer = (ModuleHammer) hammerModule.component();
+        serverHammer.setVariant(HammerVariant.BIG);
+        serverHammer.setEnergyStored(123_456L);
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
@@ -107,17 +116,78 @@ final class StationPacketRoundTripTest {
             .get(0)
             .component();
         assertEquals(HammerVariant.BIG, clientHammer.variant());
+        assertEquals(123_456L, clientHammer.energyStored());
     }
 
     @Test
-    void fullSyncRoundTripPreservesMinerVoidChances() {
+    void fullSyncRoundTripPreservesModuleOperation() {
         AutomatedFacility server = createFacility();
-        server.setMinerVoidChancePercent("ore:iron", 35);
+        ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
+        hammerModule.setOperation(
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(new HammerModuleOperation(ModuleTier.LuV, "BIG"), 200, Map.of(), true)));
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
 
-        assertEquals(35, client.minerVoidChancePercent("ore:iron"));
+        ModuleInstance clientModule = client.modules()
+            .get(0);
+        assertNotNull(clientModule.operationOrNull());
+        assertEquals(
+            ModuleTier.LuV,
+            clientModule.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void fullSyncRoundTripPreservesMinerBlacklist() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        assertTrue(
+            client.isMinerOreBlacklisted(
+                client.modules()
+                    .get(0),
+                "ore:iron"));
+        assertFalse(
+            client.settingsGroups()
+                .require(
+                    client.modules()
+                        .get(0)
+                        .groupId())
+                .isJoinable());
+    }
+
+    @Test
+    void fullSyncRoundTripPreservesMinerSettingsGroup() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance miner = buildModule(server, FacilityModuleKind.MINER, StationTileCoord.of(1, 0));
+        server.setMinerOreBlacklisted(miner, "ore:iron", true);
+        short groupId = server.createSettingsGroupForModule(miner, "Shared miners")
+            .id();
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleInstance clientMiner = client.modules()
+            .get(0);
+        assertEquals(groupId, clientMiner.groupId());
+        assertEquals(
+            "Shared miners",
+            client.settingsGroups()
+                .require(groupId)
+                .displayName());
+        assertTrue(
+            client.settingsGroups()
+                .require(groupId)
+                .isJoinable());
+        assertTrue(client.isMinerOreBlacklisted(clientMiner, "ore:iron"));
     }
 
     @Test
@@ -191,6 +261,32 @@ final class StationPacketRoundTripTest {
 
     // ── Helpers ──
 
+    @Test
+    void moduleUpdatedDeltaRefreshesLayoutTileOnClient() {
+        AutomatedFacility server = buildFacilityWithModules(1);
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        StationTileCoord anchor = StationTileCoord.of(1, 0);
+        ModuleInstance module = server.modules()
+            .get(0);
+        module.updateStatus(Buildable.Status.DISABLED);
+
+        AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
+        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+
+        ModuleInstance updatedModule = client.modules()
+            .get(0);
+        PlacedTile tile = client.stationLayout()
+            .snapshot()
+            .get(anchor);
+        assertSame(updatedModule, tile.module(), "layout tile must point at the updated module instance");
+        assertEquals(
+            StationTileState.OCCUPIED_DISABLED,
+            tile.state(),
+            "layout tile state must match updated module status");
+    }
+
     private static AssetSyncPacket roundTrip(AssetSyncPacket pkt) {
         var buf = Unpooled.buffer();
         pkt.toBytes(buf);
@@ -233,6 +329,8 @@ final class StationPacketRoundTripTest {
 
     private static void applyFullSyncFromPacket(AutomatedFacility client, AssetSyncPacket packet) {
         client.clearModules();
+        client.settingsGroups()
+            .clear();
         client.inventory.clear();
         client.logisticsConfig.clear();
         StationLayout layout = client.stationLayout();

@@ -17,15 +17,15 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
-final class ProductionModuleHelper {
+public final class ProductionModuleHelper {
 
     private static final ItemStackWrapper[] EMPTY_WRAPPERS = new ItemStackWrapper[0];
     private static final int GUARANTEED_OUTPUT_CHANCE = 10_000;
 
     private ProductionModuleHelper() {}
 
-    static void execute(ModuleInstance instance, AutomatedFacility outpost, IRecipeModule recipeModule, Random random,
-        Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
+    public static void execute(ModuleInstance instance, AutomatedFacility outpost, IRecipeModule recipeModule,
+        Random random, Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
         Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache) {
         RecipeConfig config = recipeModule.getRecipeConfig();
         if (config == null) return;

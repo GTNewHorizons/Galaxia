@@ -1,5 +1,9 @@
 package com.gtnewhorizons.galaxia.core.network;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -8,12 +12,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleFootprint;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ShapeValidation;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationPlacementValidator;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
@@ -21,24 +22,34 @@ import io.netty.buffer.ByteBuf;
 
 public final class AssetBuildModulePacket {
 
+    private static final int MAX_BUILD_TARGETS = 256;
+
     private CelestialAsset.ID assetId;
     private FacilityModuleKind moduleKind;
     private ModuleShape shape;
     private ModuleTier tier;
     private boolean instantBuild;
-    private StationTileCoord tileCoord;
+    private List<StationTileCoord> tileCoords;
 
     public AssetBuildModulePacket() {}
 
     public static AssetBuildModulePacket create(CelestialAsset.ID assetId, FacilityModuleKind kind, ModuleShape shape,
         ModuleTier tier, boolean instantBuild, StationTileCoord tileCoord) {
+        return createMany(assetId, kind, shape, tier, instantBuild, tileCoord == null ? null : List.of(tileCoord));
+    }
+
+    public static AssetBuildModulePacket createMany(CelestialAsset.ID assetId, FacilityModuleKind kind,
+        ModuleShape shape, ModuleTier tier, boolean instantBuild, List<StationTileCoord> tileCoords) {
+        if (tileCoords != null && tileCoords.size() > MAX_BUILD_TARGETS) {
+            throw new IllegalArgumentException("too many module build targets: " + tileCoords.size());
+        }
         AssetBuildModulePacket pkt = new AssetBuildModulePacket();
         pkt.assetId = assetId;
         pkt.moduleKind = kind;
         pkt.shape = shape;
         pkt.tier = tier;
         pkt.instantBuild = instantBuild;
-        pkt.tileCoord = tileCoord;
+        pkt.tileCoords = tileCoords == null ? null : List.copyOf(tileCoords);
         return pkt;
     }
 
@@ -48,9 +59,14 @@ public final class AssetBuildModulePacket {
         PacketUtil.writeEnum(buf, shape);
         PacketUtil.writeEnum(buf, tier);
         buf.writeBoolean(instantBuild);
-        boolean hasTile = tileCoord != null;
-        buf.writeBoolean(hasTile);
-        if (hasTile) PacketUtil.writeStationTileCoord(buf, tileCoord);
+        if (tileCoords == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(tileCoords.size());
+        for (StationTileCoord coord : tileCoords) {
+            PacketUtil.writeStationTileCoord(buf, coord);
+        }
     }
 
     public void fromBytes(ByteBuf buf) {
@@ -59,7 +75,18 @@ public final class AssetBuildModulePacket {
         shape = PacketUtil.readEnum(buf, ModuleShape.class);
         tier = PacketUtil.readEnum(buf, ModuleTier.class);
         instantBuild = buf.readBoolean();
-        tileCoord = buf.readBoolean() ? PacketUtil.readStationTileCoord(buf) : null;
+        int targetCount = buf.readInt();
+        if (targetCount < 0) {
+            tileCoords = null;
+        } else {
+            if (targetCount > MAX_BUILD_TARGETS) {
+                throw new IllegalArgumentException("too many module build targets: " + targetCount);
+            }
+            tileCoords = new ArrayList<>(targetCount);
+            for (int i = 0; i < targetCount; i++) {
+                tileCoords.add(PacketUtil.readStationTileCoord(buf));
+            }
+        }
     }
 
     public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {
@@ -87,40 +114,79 @@ public final class AssetBuildModulePacket {
             return null;
         }
 
-        StationTileCoord anchor = tileCoord;
-        if (anchor != null) {
-            if (!facility.hasStationLayout()) return null;
+        List<StationTileCoord> anchors = tileCoords;
+        if (anchors == null) {
+            anchors = List.of(StationTileCoord.CORE);
+        }
+        if (anchors.isEmpty()) return null;
+        if (anchors.stream()
+            .anyMatch(coord -> coord == null)) {
+            return null;
+        }
+        if (!validateAllTargets(facility, anchors)) {
+            return null;
+        }
 
-            if (shape != ModuleShape.SINGLE) {
-                ShapeValidation footprintResult = ModuleFootprint.validate(facility.stationLayout(), anchor, shape);
-                if (footprintResult != ShapeValidation.OK) return null;
-            } else {
-                StationPlacementValidator.Result placementResult = StationPlacementValidator
-                    .validate(facility.stationLayout(), anchor);
-                if (placementResult != StationPlacementValidator.Result.OK) {
-                    return null;
+        boolean shouldInstantBuild = instantBuild && creativePlayer;
+        for (StationTileCoord anchor : anchors) {
+            ModuleInstance module = moduleKind.create(anchor, shape, tier);
+            if (shouldInstantBuild) module.completeConstruction();
+
+            facility.addModule(module);
+            facility.layoutCache()
+                .applyMutation(MutationKind.PLACE, moduleKind, module);
+
+            if (facility.hasStationLayout() && module.anchorOrNull() != null) {
+                StationTileState initialState = StationTileState.fromModuleStatus(module.status());
+                for (StationTileCoord coord : module.shape()
+                    .tiles(module.anchor())) {
+                    facility.stationLayout()
+                        .place(coord, new PlacedTile(module, initialState));
                 }
             }
         }
 
-        ModuleInstance module = moduleKind.create(anchor != null ? anchor : StationTileCoord.CORE, shape, tier);
+        return AssetSyncPacket.fullSync(facility);
+    }
 
-        boolean shouldInstantBuild = instantBuild && creativePlayer;
-        if (shouldInstantBuild) module.completeConstruction();
-
-        facility.addModule(module);
-        facility.layoutCache()
-            .applyMutation(MutationKind.PLACE, moduleKind, module);
-
-        if (facility.hasStationLayout() && module.anchorOrNull() != null) {
-            StationTileState initialState = StationTileState.fromModuleStatus(module.status());
-            for (StationTileCoord coord : module.shape()
-                .tiles(module.anchor())) {
-                facility.stationLayout()
-                    .place(coord, new PlacedTile(module, initialState));
+    private boolean validateAllTargets(AutomatedFacility facility, List<StationTileCoord> anchors) {
+        if (anchors.size() == 1 && StationTileCoord.CORE.equals(anchors.get(0)) && !facility.hasStationLayout()) {
+            return true;
+        }
+        if (!facility.hasStationLayout()) return false;
+        Set<StationTileCoord> plannedTiles = new HashSet<>();
+        Set<StationTileCoord> originalTiles = facility.stationLayout()
+            .snapshot()
+            .keySet();
+        for (StationTileCoord anchor : anchors) {
+            if (!shape.fitsAt(anchor)) return false;
+            StationTileCoord[] footprint = shape.tiles(anchor);
+            boolean hasAdjacent = false;
+            for (StationTileCoord coord : footprint) {
+                if (originalTiles.contains(coord) || plannedTiles.contains(coord)) return false;
+                if (!hasAdjacent && hasKnownOccupiedNeighbour(originalTiles, plannedTiles, coord)) hasAdjacent = true;
+            }
+            if (!hasAdjacent) return false;
+            for (StationTileCoord coord : footprint) {
+                plannedTiles.add(coord);
             }
         }
+        return true;
+    }
 
-        return AssetSyncPacket.fullSync(facility);
+    private static boolean hasKnownOccupiedNeighbour(Set<StationTileCoord> originalTiles,
+        Set<StationTileCoord> plannedTiles, StationTileCoord coord) {
+        return containsKnown(originalTiles, plannedTiles, coord.dx() - 1, coord.dy())
+            || containsKnown(originalTiles, plannedTiles, coord.dx() + 1, coord.dy())
+            || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() - 1)
+            || containsKnown(originalTiles, plannedTiles, coord.dx(), coord.dy() + 1);
+    }
+
+    private static boolean containsKnown(Set<StationTileCoord> originalTiles, Set<StationTileCoord> plannedTiles,
+        int dx, int dy) {
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return false;
+        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return false;
+        StationTileCoord coord = StationTileCoord.of(dx, dy);
+        return originalTiles.contains(coord) || plannedTiles.contains(coord);
     }
 }

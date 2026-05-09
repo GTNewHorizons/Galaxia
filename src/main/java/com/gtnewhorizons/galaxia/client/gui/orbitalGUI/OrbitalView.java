@@ -946,7 +946,10 @@ public class OrbitalView {
                 root,
                 () -> this.viewRoot,
                 () -> this.assetsPanelOpen,
-                body -> assetActionController.openAssetManagement(assetUiState, body));
+                body -> {
+                    assetActionController.openAssetManagement(assetUiState, body);
+                    assetManagementWidget.markStructureDirty();
+                });
         }
 
         public OrbitalMapWidget withInitialLayer(CelestialObject layerRoot) {

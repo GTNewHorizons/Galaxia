@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.item.Item;
@@ -110,6 +111,110 @@ final class StarmapServerActionsTest {
             facility.modules()
                 .get(0)
                 .anchor());
+    }
+
+    @Test
+    void buildModulesAddsMultipleModulesAndReturnsImmediateFullSync() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord second = StationTileCoord.of(0, 1);
+
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
+            .createMany(
+                facility.assetId,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                true,
+                List.of(first, second));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "batch build must immediately echo sync data for the open GUI");
+        assertEquals(
+            2,
+            facility.modules()
+                .size());
+        assertEquals(
+            first,
+            facility.modules()
+                .get(0)
+                .anchor());
+        assertEquals(
+            second,
+            facility.modules()
+                .get(1)
+                .anchor());
+    }
+
+    @Test
+    void buildModulesAllowsTargetsChainedByEarlierTargets() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord chained = StationTileCoord.of(2, 0);
+
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
+            .createMany(
+                facility.assetId,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                true,
+                List.of(first, chained));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "batch build should allow targets adjacent to earlier targets in the same batch");
+        assertEquals(
+            2,
+            facility.modules()
+                .size());
+        assertEquals(
+            first,
+            facility.modules()
+                .get(0)
+                .anchor());
+        assertEquals(
+            chained,
+            facility.modules()
+                .get(1)
+                .anchor());
+    }
+
+    @Test
+    void buildModulesRejectsWholeBatchWhenAnyTargetIsInvalid() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+
+        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
+            .createMany(
+                facility.assetId,
+                FacilityModuleKind.STORAGE,
+                ModuleShape.SINGLE,
+                ModuleTier.HV,
+                true,
+                List.of(StationTileCoord.of(1, 0), StationTileCoord.of(5, 5)));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNull(result);
+        assertTrue(
+            facility.modules()
+                .isEmpty());
     }
 
     @Test

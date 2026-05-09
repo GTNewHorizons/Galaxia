@@ -27,14 +27,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
 public class CelestialEventHandler {
-
-    public static final long EU_PER_ITEM_PER_DV = 100L;
 
     // TODO: Is there a centralized way to get ticks?
     private int syncCooldownTicks;
@@ -150,8 +148,8 @@ public class CelestialEventHandler {
                     .filter(
                         m -> m.component() instanceof ModuleHammer h && h.canFire()
                             && (shareAnchor || h.variant() == HammerVariant.BIG))
-                    .map(m -> (ModuleHammer) m.component())
-                    .anyMatch(hammer -> {
+                    .anyMatch(m -> {
+                        ModuleHammer hammer = (ModuleHammer) m.component();
                         LogisticSignal.Scope deliveryScope = LogisticSignal.Scope.PLANETARY;
                         int travelTime = 1;
                         double osu = 0;
@@ -161,6 +159,7 @@ public class CelestialEventHandler {
                         if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0) return false;
 
                         double departureDv = 1;
+                        double shotDv = 1;
                         if (!supplier.celestialObjectId.equals(requester.celestialObjectId)) {
                             deliveryScope = LogisticSignal.Scope.SYSTEM;
                             CelestialObject srcBody = GalaxiaCelestialAPI
@@ -176,21 +175,21 @@ public class CelestialEventHandler {
                             if (route == null) return false;
 
                             departureDv = route.departureDv();
+                            shotDv = route.totalDv();
                             travelTime = route.tofTicks();
                             osu = route.tofOsu();
                             if (!hammer.config()
                                 .allows(departureDv, route.tofSeconds())) return false;
                         }
 
-                        final long euPerItem = Math.max(1L, (long) Math.ceil(departureDv * EU_PER_ITEM_PER_DV));
-                        final long affordableAmount = Math.min(supplier.getEnergyStored() / euPerItem, sendAmount);
-                        final long euRequired = sendAmount * euPerItem;
+                        final long shotEnergy = ModuleHammer.shotEnergyCost(shotDv);
 
                         if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0) return false;
-                        if (!supplier.tryConsumeEnergy(euRequired)) return false;
-                        if (!supplier.inventory.tryConsume(resource, affordableAmount)) return false;
-
-                        hammer.fire();
+                        if (!hammer.canSpendShotEnergy(shotEnergy)) return false;
+                        if (!supplier.inventory.tryConsume(resource, sendAmount)) return false;
+                        if (!hammer.trySpendShotEnergy(m, supplier, shotEnergy)) {
+                            throw new IllegalStateException("HAMMER shot energy became inconsistent");
+                        }
 
                         LogisticsDelivery task = LogisticsDelivery.createWithTrajectory(
                             supplier.assetId,

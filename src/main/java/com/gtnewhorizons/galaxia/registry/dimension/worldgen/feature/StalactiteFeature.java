@@ -14,11 +14,11 @@ public class StalactiteFeature extends Feature {
     }
 
     private void placeStalactite(World world, Random random, int x, int y, int z, Block[] surfaceRequirements) {
-        if (!world.isAirBlock(x, y, z)) {
+        if (!ChunkBoundedAccess.isAirBlock(world, x, y, z)) {
             return;
         }
         boolean validSurface = false;
-        Block block = world.getBlock(x, y - 1, z);
+        Block block = ChunkBoundedAccess.getBlock(world, x, y - 1, z);
         for (Block surfaceRequirement : surfaceRequirements) {
             if (block == surfaceRequirement) {
                 validSurface = true;
@@ -30,7 +30,7 @@ public class StalactiteFeature extends Feature {
         }
         int height = random.nextInt(8) + 1;
         for (int yOffset = 0; yOffset < height; yOffset++) {
-            if (!world.isAirBlock(x, y + yOffset, z)) {
+            if (!ChunkBoundedAccess.isAirBlock(world, x, y + yOffset, z)) {
                 break;
             }
             setBlockFast(world, x, y + yOffset, z, stalactiteBlock, 0);

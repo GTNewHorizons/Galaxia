@@ -8,9 +8,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.ICapacityModule;
+import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class CapacityClusterBuilder {
@@ -75,7 +74,7 @@ public final class CapacityClusterBuilder {
                             + kind
                             + " — layout invariant violated: forEachAnchor yielded a coord with no module");
                 }
-                ModuleComponent comp = mi.component();
+                IModuleComponent comp = mi.component();
                 if (comp == null) {
                     throw new IllegalStateException(
                         "CapacityClusterBuilder: null component for module " + mi.kind()
@@ -85,17 +84,7 @@ public final class CapacityClusterBuilder {
                             + memberCoord
                             + " — capacity module was created without a component");
                 }
-                if (!(comp instanceof ICapacityModule)) {
-                    throw new IllegalStateException(
-                        "CapacityClusterBuilder: component of " + mi.kind()
-                            + " (id="
-                            + mi.id
-                            + ") at "
-                            + memberCoord
-                            + " does not implement ICapacityModule despite kind.isCapacityModule()==true");
-                }
-                ICapacityModule icm = (ICapacityModule) comp;
-                long baseCap = icm.baseCapacityForTier(mi.tier());
+                long baseCap = mi.baseCapacity();
                 int neighborCount = StationLayout.countOrthogonalNeighbors(layout, memberCoord, kind);
                 totalEffective += Math.round(baseCap * (1.0 + 0.5 * neighborCount));
             }

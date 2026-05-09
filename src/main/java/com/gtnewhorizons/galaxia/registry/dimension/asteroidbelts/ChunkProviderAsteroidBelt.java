@@ -11,6 +11,7 @@ import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 
+import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.WorldGenAsteroid;
 
 /**
@@ -24,7 +25,7 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
 
     public ChunkProviderAsteroidBelt(World world, long seed, WorldGenAsteroid[] asteroids) {
         this.worldObj = world;
-        this.rand = new Random(seed);
+        this.rand = new StdLCG(seed);
         this.asteroids = asteroids;
     }
 

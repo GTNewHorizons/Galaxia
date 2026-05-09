@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.item.Item;
@@ -20,12 +22,22 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
@@ -281,10 +293,24 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyHammerVariantRejectsTierMismatch() {
+    void hammerUpgradePlanPayload_roundTripsTargetAndReserveFlag() {
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .hammerUpgradePlan(ASSET_ID, 0, MODULE_ID, HammerVariant.BIG, ModuleTier.ZPM, true, true);
+
+        AssetModuleUpdatePacket decoded = roundTrip(packet);
+
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.PLAN_HAMMER_UPGRADE, decoded.getConfigAction());
+        assertArrayEquals(
+            new byte[] { (byte) HammerVariant.BIG.ordinal(), (byte) ModuleTier.ZPM.ordinal(), 1, 1 },
+            decoded.getRawPayload());
+    }
+
+    @Test
+    void applyHammerVariantPlansRebuildWithoutMutatingModule() {
         AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
         ModuleInstance module = facility.modules()
             .get(0);
+        ModuleHammer hammer = (ModuleHammer) module.component();
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket.config(
             facility.assetId,
             0,
@@ -292,20 +318,640 @@ final class AssetModuleUpdatePacketTest {
             AssetModuleUpdatePacket.ConfigAction.SET_HAMMER_VARIANT,
             HammerVariant.BIG);
 
-        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(HammerVariant.BASE, hammer.variant());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleOperationPhase.WAITING_FOR_MATERIALS,
+            module.operationOrNull()
+                .phase());
+        assertTrue(
+            module.operationOrNull()
+                .plan()
+                .spec() instanceof HammerModuleOperation);
+        assertEquals(
+            ModuleTier.LuV,
+            module.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            "BIG",
+            ((HammerModuleOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetVariantKey());
     }
 
     @Test
-    void applyMinerVoidPercentClampsPlayerInput() {
+    void applyHammerTierPlansRebuildWithoutMutatingTier() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.IV);
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleTier.IV,
+            module.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyNonHammerTierCreatesPhysicalOperationWithoutMutatingTier() {
+        AutomatedFacility facility = addModuleFacilityToServer(FacilityModuleKind.STORAGE, ModuleTier.HV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.EV);
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.HV, module.tier());
+        assertNotNull(module.operationOrNull());
+        assertTrue(
+            module.operationOrNull()
+                .plan()
+                .spec() instanceof ModuleTierOperation);
+        assertEquals(
+            ModuleTier.EV,
+            module.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyHammerUpgradePlanCreatesSingleTargetSpecWithReserveFlag() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, true, true));
+
+        packet.apply(TEAM);
+
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(HammerVariant.BASE, ((ModuleHammer) module.component()).variant());
+        assertNotNull(module.operationOrNull());
+        assertTrue(
+            module.operationOrNull()
+                .reserveItems());
+        assertTrue(
+            module.operationOrNull()
+                .plan()
+                .voidCompletionRefund());
+        assertEquals(
+            ModuleTier.ZPM,
+            module.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            "BIG",
+            ((HammerModuleOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetVariantKey());
+    }
+
+    @Test
+    void applyHammerUpgradePlanInCreativeAppliesTargetImmediately() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, false, false));
+
+        packet.apply(TEAM, true);
+
+        assertEquals(ModuleTier.ZPM, module.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) module.component()).variant());
+        assertNull(module.operationOrNull());
+    }
+
+    @Test
+    void applyHammerUpgradePlanInCreativeReplacesEmptyWaitingOperation() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE)));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, false, false));
+
+        packet.apply(TEAM, true);
+
+        assertEquals(ModuleTier.ZPM, module.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) module.component()).variant());
+        assertNull(module.operationOrNull());
+    }
+
+    @Test
+    void applyHammerUpgradePlanInCreativeRejectsOperationWithStoredItems() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.restore(
+                hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE),
+                ModuleOperationPhase.WAITING_FOR_MATERIALS,
+                0,
+                Map.of("minecraft:iron_ingot:0", 1L),
+                Map.of()));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket
+                .hammerUpgradePlan(facility.assetId, 0, module.id, HammerVariant.BIG, ModuleTier.ZPM, false, false));
+
+        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM, true));
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(HammerVariant.BASE, ((ModuleHammer) module.component()).variant());
+    }
+
+    @Test
+    void applyHammerPhysicalChangeIgnoresActiveOperationRequest() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE)));
+        AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
+            .config(facility.assetId, 0, module.id, AssetModuleUpdatePacket.ConfigAction.SET_TIER, ModuleTier.LuV);
+
+        assertDoesNotThrow(() -> packet.apply(TEAM));
+        assertEquals(
+            ModuleTier.IV,
+            module.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyCancelModuleOperationCancelsActiveOperation() {
+        AutomatedFacility facility = addHammerFacilityToServer(ModuleTier.EV);
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(module, ModuleTier.IV, HammerVariant.BASE)));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.cancelModuleOperation(facility.assetId, 0, module.id));
+
+        packet.apply(TEAM);
+
+        assertEquals(
+            ModuleOperationPhase.CANCELLED,
+            module.operationOrNull()
+                .phase());
+    }
+
+    @Test
+    void applyMinerBlacklistUpdatesOreState() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         AssetModuleUpdatePacket packet = AssetModuleUpdatePacket
-            .minerVoidPercent(facility.assetId, 0, module.id, "ore:iron", 150);
+            .minerOreBlacklisted(facility.assetId, 0, module.id, "ore:iron", true);
 
         packet.apply(TEAM);
 
-        assertEquals(100, facility.minerVoidChancePercent("ore:iron"));
+        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+    }
+
+    @Test
+    void applyMinerFocusTierPlanCreatesPhysicalOperationWithoutChangingOreImmediately() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.I, "ore:iron", 1200);
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerFocusTierPlan(facility.assetId, 0, module.id, MinerFocusTier.II));
+
+        packet.apply(TEAM);
+
+        assertEquals(MinerFocusTier.I, miner.focusTier());
+        assertEquals("ore:iron", miner.focusOreKeyOrNull());
+        assertEquals(1200, miner.focusAlignmentProgress());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleOperationPhase.WAITING_FOR_MATERIALS,
+            module.operationOrNull()
+                .phase());
+        assertEquals(
+            "II",
+            ((MinerFocusOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetFocusTierKey());
+        assertEquals(
+            "ore:iron",
+            ((MinerFocusOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetFocusOreKey());
+    }
+
+    @Test
+    void applyMinerFocusTierPlanInstallsFocusFromNone() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerFocusTierPlan(facility.assetId, 0, module.id, MinerFocusTier.I));
+
+        packet.apply(TEAM);
+
+        assertEquals(MinerFocusTier.NONE, miner.focusTier());
+        assertNull(miner.focusOreKeyOrNull());
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            "I",
+            ((MinerFocusOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetFocusTierKey());
+        assertNull(
+            ((MinerFocusOperation) module.operationOrNull()
+                .plan()
+                .spec()).targetFocusOreKey());
+    }
+
+    @Test
+    void applyMinerFocusOreUpdatesRuntimeConfigAndResetsAlignment() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ModuleMiner miner = (ModuleMiner) module.component();
+        miner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerFocusOre(facility.assetId, 0, module.id, "ore:gold"));
+
+        packet.apply(TEAM);
+
+        assertNull(module.operationOrNull());
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertEquals("ore:gold", miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
+    }
+
+    @Test
+    void copyMinerSettingsPayload_roundTripsTargetTiles() {
+        AssetModuleUpdatePacket decoded = roundTrip(
+            AssetModuleUpdatePacket.copyMinerSettings(
+                ASSET_ID,
+                0,
+                MODULE_ID,
+                List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1))));
+
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MINER_SETTINGS, decoded.getConfigAction());
+        assertEquals(
+            List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1)),
+            AssetModuleUpdatePacket.decodeTileCoordPayload(decoded.getRawPayload()));
+    }
+
+    @Test
+    void applyCopyMinerSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
+        AutomatedFacility facility = addTwoMinerFacilityToServer();
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        ModuleMiner targetMiner = (ModuleMiner) target.component();
+        sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
+        targetMiner.setFocus(MinerFocusTier.I, "ore:gold", 900);
+        facility.setMinerOreBlacklisted(source, "ore:copper", true);
+        facility.createSettingsGroupForModule(source, "Shared miners");
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertEquals(source.groupId(), target.groupId());
+        assertTrue(facility.isMinerOreBlacklisted(target, "ore:copper"));
+        assertEquals(MinerFocusTier.I, targetMiner.focusTier());
+        assertEquals("ore:iron", targetMiner.focusOreKeyOrNull());
+        assertEquals(0, targetMiner.focusAlignmentProgress());
+    }
+
+    @Test
+    void applyCopyMinerSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
+        AutomatedFacility facility = addTwoMinerFacilityToServer();
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        ModuleMiner sourceMiner = (ModuleMiner) source.component();
+        ModuleMiner targetMiner = (ModuleMiner) target.component();
+        sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
+        targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+
+        assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
+        assertNull(targetMiner.focusOreKeyOrNull());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsPlansHammerUpgradeForSelectedTargetsOnly() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                true,
+                true,
+                List.of(target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertNull(source.operationOrNull());
+        assertEquals(ModuleTier.EV, target.tier());
+        assertNotNull(target.operationOrNull());
+        assertTrue(
+            target.operationOrNull()
+                .reserveItems());
+        assertTrue(
+            target.operationOrNull()
+                .plan()
+                .voidCompletionRefund());
+        assertTrue(
+            target.operationOrNull()
+                .plan()
+                .spec() instanceof HammerModuleOperation);
+        assertEquals(
+            ModuleTier.LuV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            "BIG",
+            ((HammerModuleOperation) target.operationOrNull()
+                .plan()
+                .spec()).targetVariantKey());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsCanIncludeSourceModule() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(source.anchor(), target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertNotNull(source.operationOrNull());
+        assertNotNull(target.operationOrNull());
+        assertEquals(
+            ModuleTier.LuV,
+            source.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            ModuleTier.LuV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsUsesCreativeModeForAllTargets() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(source.anchor(), target.anchor())));
+
+        packet.apply(TEAM, true);
+
+        assertEquals(ModuleTier.LuV, source.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) source.component()).variant());
+        assertNull(source.operationOrNull());
+        assertEquals(ModuleTier.LuV, target.tier());
+        assertEquals(HammerVariant.BIG, ((ModuleHammer) target.component()).variant());
+        assertNull(target.operationOrNull());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsMarksTargetDirtyForImmediateSync() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(target.anchor())));
+        int revisionBefore = facility.getSyncRevision();
+
+        AssetSyncPacket sync = packet.apply(TEAM);
+
+        assertNotNull(target.operationOrNull());
+        assertNotNull(sync);
+        assertTrue(facility.getSyncRevision() > revisionBefore);
+        assertEquals(facility.getSyncRevision(), sync.syncRevision());
+        ModuleInstance syncedTarget = roundTrip(sync).fullSyncDeltas()
+            .stream()
+            .filter(delta -> delta.syncType() == AssetSyncPacket.MODULE_ADDED)
+            .map(AssetSyncPacket::moduleData)
+            .filter(module -> module.id.equals(target.id))
+            .findFirst()
+            .orElseThrow();
+        assertNotNull(syncedTarget.operationOrNull());
+        assertEquals(
+            ModuleTier.LuV,
+            syncedTarget.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsSkipsTargetWithActiveBuild() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        target
+            .setOperation(ModuleOperationState.waiting(hammerOperationPlan(target, ModuleTier.IV, HammerVariant.BASE)));
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(target.anchor())));
+
+        packet.apply(TEAM);
+        assertEquals(
+            ModuleTier.IV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsDeduplicatesSelectedTargets() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(target.anchor(), target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertEquals(
+            ModuleTier.LuV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+        assertEquals(
+            "BIG",
+            ((HammerModuleOperation) target.operationOrNull()
+                .plan()
+                .spec()).targetVariantKey());
+    }
+
+    @Test
+    void applyModuleUpgradeTargetsPlansGenericTierUpgradeForNonHammerTargets() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.STORAGE, ModuleTier.HV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.EV,
+                null,
+                false,
+                false,
+                List.of(target.anchor())));
+
+        packet.apply(TEAM);
+
+        assertNull(source.operationOrNull());
+        assertEquals(ModuleTier.HV, target.tier());
+        assertNotNull(target.operationOrNull());
+        assertTrue(
+            target.operationOrNull()
+                .plan()
+                .spec() instanceof ModuleTierOperation);
+        assertEquals(
+            ModuleTier.EV,
+            target.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
+    void applyCreateMinerSettingsGroupCopiesCurrentMinerBlacklist() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        facility.setMinerOreBlacklisted(module, "ore:iron", true);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.createMinerSettingsGroup(facility.assetId, 0, module.id));
+
+        packet.apply(TEAM);
+
+        assertNotEquals(0, module.groupId());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
+        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+    }
+
+    @Test
+    void applyMinerSettingsGroupZeroLeavesGroupWithCopiedSettings() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        facility.setMinerOreBlacklisted(module, "ore:iron", true);
+        facility.createSettingsGroupForModule(module, null);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.minerSettingsGroup(facility.assetId, 0, module.id, (short) 0));
+
+        packet.apply(TEAM);
+
+        assertNotEquals(0, module.groupId());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
+        assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
     }
 
     @Test
@@ -388,15 +1034,35 @@ final class AssetModuleUpdatePacketTest {
     }
 
     private static AutomatedFacility addHammerFacilityToServer(ModuleTier tier) {
+        return addModuleFacilityToServer(FacilityModuleKind.HAMMER, tier);
+    }
+
+    private static AutomatedFacility addModuleFacilityToServer(FacilityModuleKind kind, ModuleTier tier) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.HAMMER.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;
+    }
+
+    private static ModuleOperationPlan hammerOperationPlan(ModuleInstance module, ModuleTier targetTier,
+        HammerVariant targetVariant) {
+        int buildTicks = FacilityModuleRegistry.get(module.kind())
+            .getTierData(module.tier())
+            .buildTicks();
+        Map<ItemStackWrapper, Long> cost = FacilityModuleRegistry.operationCost(
+            FacilityModuleRegistry.get(module.kind())
+                .getTierData(targetTier)
+                .constructionCost());
+        return new ModuleOperationPlan(
+            new HammerModuleOperation(targetTier, targetVariant.name()),
+            buildTicks,
+            cost,
+            false);
     }
 
     private static AutomatedFacility addMinerFacilityToServer() {
@@ -410,6 +1076,44 @@ final class AssetModuleUpdatePacketTest {
         facility.addModule(module);
         CelestialAssetStore.SERVER.addInternal(TEAM, facility);
         return facility;
+    }
+
+    private static AutomatedFacility addTwoMinerFacilityToServer() {
+        return addTwoModuleFacilityToServer(FacilityModuleKind.MINER, ModuleTier.EV);
+    }
+
+    private static AutomatedFacility addTwoModuleFacilityToServer(FacilityModuleKind kind, ModuleTier tier) {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance source = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
+        ModuleInstance target = kind.create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, tier);
+        facility.addModule(source);
+        facility.addModule(target);
+        facility.stationLayout()
+            .place(source);
+        facility.stationLayout()
+            .place(target);
+        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        return facility;
+    }
+
+    private static AssetModuleUpdatePacket roundTrip(AssetModuleUpdatePacket packet) {
+        ByteBuf buf = Unpooled.buffer();
+        packet.toBytes(buf);
+        AssetModuleUpdatePacket decoded = new AssetModuleUpdatePacket();
+        decoded.fromBytes(buf);
+        return decoded;
+    }
+
+    private static AssetSyncPacket roundTrip(AssetSyncPacket packet) {
+        ByteBuf buf = Unpooled.buffer();
+        packet.toBytes(buf);
+        AssetSyncPacket decoded = new AssetSyncPacket();
+        decoded.fromBytes(buf);
+        return decoded;
     }
 
     private static AssetModuleUpdatePacket decodeRecipePayload(CelestialAsset.ID assetId, ModuleInstance.ID moduleId,

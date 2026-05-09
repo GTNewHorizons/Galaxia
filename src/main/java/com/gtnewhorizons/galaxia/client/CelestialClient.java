@@ -28,7 +28,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -125,6 +128,20 @@ public final class CelestialClient {
             tileCoord);
     }
 
+    public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
+        List<StationTileCoord> tileCoords) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return;
+        if (!kind.isAllowedOn(state.kind)) return;
+        StarmapActionSyncHandler.sendBuildModules(
+            assetId,
+            kind,
+            ModuleShape.SINGLE,
+            kind.defaultTier(),
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
     public static boolean destroyAsset(ID assetId) {
         return StarmapActionSyncHandler.sendDestroyAsset(assetId);
     }
@@ -199,11 +216,80 @@ public final class CelestialClient {
                 .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
     }
 
-    public static void updateMinerVoidPercent(ID assetId, int moduleIndex, String oreKey, int percent) {
+    public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.minerVoidPercent(assetId, moduleIndex, module.id, oreKey, percent));
+            module -> AssetModuleUpdatePacket
+                .minerOreBlacklisted(assetId, moduleIndex, module.id, oreKey, blacklisted));
+    }
+
+    public static void updateMinerSettingsGroup(ID assetId, int moduleIndex, short groupId) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerSettingsGroup(assetId, moduleIndex, module.id, groupId));
+    }
+
+    public static void createMinerSettingsGroup(ID assetId, int moduleIndex) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.createMinerSettingsGroup(assetId, moduleIndex, module.id));
+    }
+
+    public static void cancelModuleOperation(ID assetId, int moduleIndex) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.cancelModuleOperation(assetId, moduleIndex, module.id));
+    }
+
+    public static void planHammerUpgrade(ID assetId, int moduleIndex, HammerVariant variant, ModuleTier tier,
+        boolean reserveItems, boolean voidCompletionRefund) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket
+                .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems, voidCompletionRefund));
+    }
+
+    public static void planModuleUpgradeTargets(ID assetId, int moduleIndex, ModuleTier tier,
+        @Nullable HammerVariant variant, boolean reserveItems, boolean voidCompletionRefund,
+        List<StationTileCoord> targetCoords) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.moduleUpgradeTargets(
+                assetId,
+                moduleIndex,
+                module.id,
+                tier,
+                variant,
+                reserveItems,
+                voidCompletionRefund,
+                targetCoords));
+    }
+
+    public static void planMinerFocusTier(ID assetId, int moduleIndex, MinerFocusTier focusTier) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerFocusTierPlan(assetId, moduleIndex, module.id, focusTier));
+    }
+
+    public static void setMinerFocusOre(ID assetId, int moduleIndex, String oreKey) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerFocusOre(assetId, moduleIndex, module.id, oreKey));
+    }
+
+    public static void copyMinerSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.copyMinerSettings(assetId, moduleIndex, module.id, targetCoords));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

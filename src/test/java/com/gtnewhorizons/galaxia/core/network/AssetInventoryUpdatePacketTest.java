@@ -55,6 +55,18 @@ final class AssetInventoryUpdatePacketTest {
         assertEquals(0, facility.inventory.getAmount(resource));
     }
 
+    @Test
+    void applyBumpsSyncRevisionForInventoryDelta() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
+
+        AssetSyncPacket sync = packet.apply(TEAM, true);
+
+        assertEquals(1, facility.getSyncRevision());
+        assertEquals(1, sync.syncRevision());
+    }
+
     private static AutomatedFacility addFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
