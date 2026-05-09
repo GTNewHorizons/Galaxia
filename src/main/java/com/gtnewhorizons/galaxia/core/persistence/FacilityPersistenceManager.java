@@ -534,7 +534,12 @@ public final class FacilityPersistenceManager {
                 safeValueOf(FacilityModuleKind.class, groupJson.kind),
                 "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
             state.settingsGroups()
-                .restore(groupJson.id, groupKind, groupJson.displayName, decodeSettingsGroupSettings(groupJson));
+                .restore(
+                    groupJson.id,
+                    groupKind,
+                    groupJson.displayName,
+                    groupJson.joinable,
+                    decodeSettingsGroupSettings(groupJson));
         }
 
         int moduleDecodedCount = 0;
@@ -873,6 +878,7 @@ public final class FacilityPersistenceManager {
         short id;
         String kind;
         String displayName;
+        boolean joinable;
         JsonObject data;
     }
 
@@ -1270,6 +1276,7 @@ public final class FacilityPersistenceManager {
         json.kind = group.kind()
             .name();
         json.displayName = group.displayName();
+        json.joinable = group.isJoinable();
         json.data = encodeSettingsGroupSettings(group.settings());
         return json;
     }

@@ -92,6 +92,7 @@ public final class AssetSyncPacket implements IMessage {
     private short settingsGroupId;
     private FacilityModuleKind settingsGroupKind;
     private String settingsGroupName;
+    private boolean settingsGroupJoinable;
     private MinerSettings minerSettings;
 
     public AssetSyncPacket() {}
@@ -238,6 +239,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.settingsGroupId = group.id();
         pkt.settingsGroupKind = group.kind();
         pkt.settingsGroupName = group.displayName();
+        pkt.settingsGroupJoinable = group.isJoinable();
         if (group.settings() instanceof MinerSettings settings) {
             pkt.minerSettings = settings.copy();
         } else {
@@ -386,6 +388,7 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeShort(settingsGroupId);
                 PacketUtil.writeEnum(buf, settingsGroupKind);
                 PacketUtil.writeString(buf, settingsGroupName);
+                buf.writeBoolean(settingsGroupJoinable);
                 writeMinerSettingsPayload(buf, minerSettings);
             }
         }
@@ -420,6 +423,7 @@ public final class AssetSyncPacket implements IMessage {
                 settingsGroupId = buf.readShort();
                 settingsGroupKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
                 settingsGroupName = PacketUtil.readString(buf);
+                settingsGroupJoinable = buf.readBoolean();
                 minerSettings = readMinerSettingsPayload(buf, "settingsGroup=" + settingsGroupId);
             }
         }
@@ -734,6 +738,7 @@ public final class AssetSyncPacket implements IMessage {
                     packet.settingsGroupId,
                     packet.settingsGroupKind,
                     packet.settingsGroupName,
+                    packet.settingsGroupJoinable,
                     packet.minerSettings.copy());
         }
     }
@@ -861,6 +866,7 @@ public final class AssetSyncPacket implements IMessage {
                         packet.settingsGroupId,
                         packet.settingsGroupKind,
                         packet.settingsGroupName,
+                        packet.settingsGroupJoinable,
                         packet.minerSettings.copy());
             }
         }

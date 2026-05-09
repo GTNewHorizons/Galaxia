@@ -631,6 +631,7 @@ final class AssetModuleUpdatePacketTest {
         sourceMiner.setFocus(MinerFocusTier.II, "ore:iron", 1200);
         targetMiner.setFocus(MinerFocusTier.I, "ore:gold", 900);
         facility.setMinerOreBlacklisted(source, "ore:copper", true);
+        facility.createSettingsGroupForModule(source, "Shared miners");
 
         AssetModuleUpdatePacket packet = roundTrip(
             AssetModuleUpdatePacket.copyMinerSettings(

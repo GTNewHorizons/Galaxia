@@ -127,6 +127,13 @@ final class StationPacketRoundTripTest {
                 client.modules()
                     .get(0),
                 "ore:iron"));
+        assertFalse(
+            client.settingsGroups()
+                .require(
+                    client.modules()
+                        .get(0)
+                        .groupId())
+                .isJoinable());
     }
 
     @Test
@@ -148,6 +155,10 @@ final class StationPacketRoundTripTest {
             client.settingsGroups()
                 .require(groupId)
                 .displayName());
+        assertTrue(
+            client.settingsGroups()
+                .require(groupId)
+                .isJoinable());
         assertTrue(client.isMinerOreBlacklisted(clientMiner, "ore:iron"));
     }
 

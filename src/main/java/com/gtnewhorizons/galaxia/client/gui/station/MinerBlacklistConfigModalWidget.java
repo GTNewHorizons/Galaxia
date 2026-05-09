@@ -358,7 +358,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         if (module.groupId() == 0) return "No Group";
         SettingsGroup group = facility.settingsGroups()
             .get(module.groupId());
-        if (group == null) return "No Group";
+        if (group == null || !group.isJoinable()) return "No Group";
         return group.displayName();
     }
 
@@ -383,7 +383,7 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
             .groups()
             .values()
             .stream()
-            .filter(group -> group.kind() == FacilityModuleKind.MINER)
+            .filter(group -> group.kind() == FacilityModuleKind.MINER && group.isJoinable())
             .sorted(Comparator.comparing(SettingsGroup::displayName, String.CASE_INSENSITIVE_ORDER))
             .forEach(group -> options.add(new GroupOption(group.displayName(), group.id(), GroupOptionAction.SELECT)));
         return options;

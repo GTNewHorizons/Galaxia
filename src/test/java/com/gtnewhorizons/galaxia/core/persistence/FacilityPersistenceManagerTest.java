@@ -258,6 +258,10 @@ final class FacilityPersistenceManagerTest {
             decoded.settingsGroups()
                 .require(groupId)
                 .displayName());
+        assertTrue(
+            decoded.settingsGroups()
+                .require(groupId)
+                .isJoinable());
     }
 
     @Test

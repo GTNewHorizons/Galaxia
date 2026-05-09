@@ -12,14 +12,20 @@ public final class SettingsGroup {
     private final short id;
     private final FacilityModuleKind kind;
     private final Set<StationTileCoord> members;
+    private boolean joinable;
     private String displayName;
     private ModuleSettings settings;
 
     public SettingsGroup(short id, FacilityModuleKind kind, ModuleSettings settings) {
-        this(id, kind, null, settings);
+        this(id, kind, null, false, settings);
     }
 
     public SettingsGroup(short id, FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        this(id, kind, displayName, true, settings);
+    }
+
+    public SettingsGroup(short id, FacilityModuleKind kind, String displayName, boolean joinable,
+        ModuleSettings settings) {
         if (id <= 0) {
             throw new IllegalArgumentException("SettingsGroup: id must be > 0, got " + id);
         }
@@ -29,6 +35,7 @@ public final class SettingsGroup {
         this.id = id;
         this.kind = kind;
         this.members = new HashSet<>();
+        this.joinable = joinable;
         this.displayName = displayName == null ? defaultDisplayName() : validatedDisplayName(displayName);
         setSettings(settings);
     }
@@ -39,6 +46,14 @@ public final class SettingsGroup {
 
     public FacilityModuleKind kind() {
         return kind;
+    }
+
+    public boolean isJoinable() {
+        return joinable;
+    }
+
+    public void setJoinable(boolean joinable) {
+        this.joinable = joinable;
     }
 
     public String displayName() {

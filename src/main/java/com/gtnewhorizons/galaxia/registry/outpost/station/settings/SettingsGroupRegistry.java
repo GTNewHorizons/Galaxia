@@ -38,10 +38,15 @@ public final class SettingsGroupRegistry {
     }
 
     public SettingsGroup create(FacilityModuleKind kind, ModuleSettings settings) {
-        return create(kind, null, settings);
+        return create(kind, null, false, settings);
     }
 
     public SettingsGroup create(FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        return create(kind, displayName, true, settings);
+    }
+
+    public SettingsGroup create(FacilityModuleKind kind, String displayName, boolean joinable,
+        ModuleSettings settings) {
         if (kind == null) {
             throw new IllegalArgumentException("SettingsGroupRegistry.create: kind must not be null");
         }
@@ -56,12 +61,17 @@ public final class SettingsGroupRegistry {
             throw new IllegalStateException("SettingsGroup ID space exhausted");
         }
         short id = nextGroupId++;
-        SettingsGroup group = new SettingsGroup(id, kind, displayName, settings);
+        SettingsGroup group = new SettingsGroup(id, kind, displayName, joinable, settings);
         groups.put(id, group);
         return group;
     }
 
     public SettingsGroup restore(short id, FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        return restore(id, kind, displayName, true, settings);
+    }
+
+    public SettingsGroup restore(short id, FacilityModuleKind kind, String displayName, boolean joinable,
+        ModuleSettings settings) {
         if (groups.containsKey(id)) {
             throw new IllegalStateException("SettingsGroupRegistry.restore: duplicate groupId=" + id);
         }
@@ -69,12 +79,17 @@ public final class SettingsGroupRegistry {
             throw new IllegalStateException(
                 "SettingsGroupRegistry.restore: groupId=" + id + " is not below nextGroupId=" + nextGroupId);
         }
-        SettingsGroup group = new SettingsGroup(id, kind, displayName, settings);
+        SettingsGroup group = new SettingsGroup(id, kind, displayName, joinable, settings);
         groups.put(id, group);
         return group;
     }
 
     public SettingsGroup sync(short id, FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        return sync(id, kind, displayName, true, settings);
+    }
+
+    public SettingsGroup sync(short id, FacilityModuleKind kind, String displayName, boolean joinable,
+        ModuleSettings settings) {
         SettingsGroup existing = groups.get(id);
         if (existing != null) {
             if (existing.kind() != kind) {
@@ -86,10 +101,11 @@ public final class SettingsGroupRegistry {
                         + kind);
             }
             existing.setDisplayName(displayName);
+            existing.setJoinable(joinable);
             existing.setSettings(settings);
             return existing;
         }
-        SettingsGroup group = new SettingsGroup(id, kind, displayName, settings);
+        SettingsGroup group = new SettingsGroup(id, kind, displayName, joinable, settings);
         groups.put(id, group);
         if (id >= nextGroupId) {
             if (id == Short.MAX_VALUE) {
