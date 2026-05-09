@@ -12,12 +12,15 @@ public class CaveShapeTubes implements CaveShape {
 
     private static TubeNoise caveNoise;
     private static NoiseGeneratorOctaves sizeNoise;
+    private static NoiseGeneratorOctaves distortion;
 
     private final double[] sizeModifiers = new double[CHUNK_AREA];
+    private final int[] coordinateModifiers = new int[CHUNK_AREA];
 
     @Override
     public void prepareCaveShape(Random random) {
         sizeNoise = new NoiseGeneratorOctaves(random, 4);
+        distortion = new NoiseGeneratorOctaves(random, 4);
         caveNoise = new TubeNoise();
         caveNoise.setSeed(random);
     }
@@ -46,6 +49,18 @@ public class CaveShapeTubes implements CaveShape {
             noise += 0.25;
             sizeModifiers[i] = noise;
         }
+        double[] rawXModifiers = distortion.generateNoiseOctaves(
+            new double[CHUNK_AREA],
+            chunkZ * CHUNK_WIDTH,
+            chunkX * CHUNK_WIDTH,
+            CHUNK_WIDTH,
+            CHUNK_WIDTH,
+            HORIZONTAL_CAVE_STRETCH,
+            HORIZONTAL_CAVE_STRETCH,
+            0);
+        for (int i = 0; i < rawXModifiers.length; i++) {
+            coordinateModifiers[i] = (int) rawXModifiers[i];
+        }
     }
 
     @Override
@@ -55,6 +70,8 @@ public class CaveShapeTubes implements CaveShape {
 
     @Override
     public boolean generateCave(int localX, int localY, int localZ, int height) {
-        return caveNoise.isIntersectingTube(localX, localY, localZ, sizeModifiers[localX + (localZ << 4)]);
+        return caveNoise.isIntersectingTube(
+            localX + coordinateModifiers[localX], localY, localZ + coordinateModifiers[localZ << 4],
+            sizeModifiers[localX + (localZ << 4)]);
     }
 }
