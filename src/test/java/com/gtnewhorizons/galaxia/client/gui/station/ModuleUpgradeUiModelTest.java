@@ -40,8 +40,11 @@ final class ModuleUpgradeUiModelTest {
     void hammerSelectionNormalizesTierWhenVariantChanges() {
         ModuleUpgradeSelection selection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.IV);
 
-        ModuleUpgradeSelection normalized = ModuleUpgradeUiModel
-            .selectOption(hammerModule(), selection, ModuleUpgradeUiModel.GROUP_HAMMER_VARIANT, HammerVariant.BIG.name());
+        ModuleUpgradeSelection normalized = ModuleUpgradeUiModel.selectOption(
+            hammerModule(),
+            selection,
+            ModuleUpgradeUiModel.GROUP_HAMMER_VARIANT,
+            HammerVariant.BIG.name());
 
         assertEquals(HammerVariant.BIG.name(), normalized.get(ModuleUpgradeUiModel.GROUP_HAMMER_VARIANT));
         assertEquals(ModuleTier.LuV.name(), normalized.get(ModuleUpgradeUiModel.GROUP_HAMMER_TIER));
@@ -53,21 +56,24 @@ final class ModuleUpgradeUiModelTest {
 
         ModuleUpgradeGroup tierGroup = ModuleUpgradeUiModel.groups(hammerModule(), selection)
             .stream()
-            .filter(group -> group.id()
-                .equals(ModuleUpgradeUiModel.GROUP_HAMMER_TIER))
+            .filter(
+                group -> group.id()
+                    .equals(ModuleUpgradeUiModel.GROUP_HAMMER_TIER))
             .findFirst()
             .orElseThrow();
 
         ModuleUpgradeOption ev = tierGroup.options()
             .stream()
-            .filter(option -> option.id()
-                .equals(ModuleTier.EV.name()))
+            .filter(
+                option -> option.id()
+                    .equals(ModuleTier.EV.name()))
             .findFirst()
             .orElseThrow();
         ModuleUpgradeOption zpm = tierGroup.options()
             .stream()
-            .filter(option -> option.id()
-                .equals(ModuleTier.ZPM.name()))
+            .filter(
+                option -> option.id()
+                    .equals(ModuleTier.ZPM.name()))
             .findFirst()
             .orElseThrow();
 
@@ -85,15 +91,17 @@ final class ModuleUpgradeUiModelTest {
 
         ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
             .stream()
-            .filter(candidate -> candidate.id()
-                .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .filter(
+                candidate -> candidate.id()
+                    .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
             .findFirst()
             .orElseThrow();
 
         ModuleUpgradeOption none = group.options()
             .stream()
-            .filter(option -> option.id()
-                .equals(MinerFocusTier.NONE.name()))
+            .filter(
+                option -> option.id()
+                    .equals(MinerFocusTier.NONE.name()))
             .findFirst()
             .orElseThrow();
 
@@ -109,15 +117,17 @@ final class ModuleUpgradeUiModelTest {
 
         ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
             .stream()
-            .filter(candidate -> candidate.id()
-                .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .filter(
+                candidate -> candidate.id()
+                    .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
             .findFirst()
             .orElseThrow();
 
         ModuleUpgradeOption none = group.options()
             .stream()
-            .filter(option -> option.id()
-                .equals(MinerFocusTier.NONE.name()))
+            .filter(
+                option -> option.id()
+                    .equals(MinerFocusTier.NONE.name()))
             .findFirst()
             .orElseThrow();
 
@@ -155,39 +165,48 @@ final class ModuleUpgradeUiModelTest {
 
         ModuleUpgradeGroup group = ModuleUpgradeUiModel.groups(module, selection)
             .stream()
-            .filter(candidate -> candidate.id()
-                .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
+            .filter(
+                candidate -> candidate.id()
+                    .equals(ModuleUpgradeUiModel.GROUP_MINER_FOCUS_TIER))
             .findFirst()
             .orElseThrow();
 
-        assertTrue(group.options()
-            .stream()
-            .filter(option -> option.id()
-                .equals(MinerFocusTier.NONE.name()))
-            .findFirst()
-            .orElseThrow()
-            .enabled());
-        assertFalse(group.options()
-            .stream()
-            .filter(option -> option.id()
-                .equals(MinerFocusTier.I.name()))
-            .findFirst()
-            .orElseThrow()
-            .enabled());
-        assertTrue(group.options()
-            .stream()
-            .filter(option -> option.id()
-                .equals(MinerFocusTier.II.name()))
-            .findFirst()
-            .orElseThrow()
-            .enabled());
-        assertTrue(group.options()
-            .stream()
-            .filter(option -> option.id()
-                .equals(MinerFocusTier.III.name()))
-            .findFirst()
-            .orElseThrow()
-            .enabled());
+        assertTrue(
+            group.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(MinerFocusTier.NONE.name()))
+                .findFirst()
+                .orElseThrow()
+                .enabled());
+        assertFalse(
+            group.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(MinerFocusTier.I.name()))
+                .findFirst()
+                .orElseThrow()
+                .enabled());
+        assertTrue(
+            group.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(MinerFocusTier.II.name()))
+                .findFirst()
+                .orElseThrow()
+                .enabled());
+        assertTrue(
+            group.options()
+                .stream()
+                .filter(
+                    option -> option.id()
+                        .equals(MinerFocusTier.III.name()))
+                .findFirst()
+                .orElseThrow()
+                .enabled());
     }
 
     private static ModuleInstance hammerModule() {

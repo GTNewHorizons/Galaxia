@@ -589,8 +589,9 @@ public final class AssetSyncPacket implements IMessage {
             PacketUtil.writeEnum(buf, tierSpec.targetTier());
             return;
         }
-        throw new IllegalStateException("Unsupported module operation spec: " + spec.getClass()
-            .getName());
+        throw new IllegalStateException(
+            "Unsupported module operation spec: " + spec.getClass()
+                .getName());
     }
 
     private static IModuleOperation readOperationSpec(ByteBuf buf) {
@@ -611,8 +612,10 @@ public final class AssetSyncPacket implements IMessage {
     private static void writeItemAmountMap(ByteBuf buf, Map<ItemStackWrapper, Long> amounts) {
         buf.writeInt(amounts.size());
         for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(buf, entry.getKey()
-                .toKey());
+            PacketUtil.writeString(
+                buf,
+                entry.getKey()
+                    .toKey());
             buf.writeLong(entry.getValue());
         }
     }

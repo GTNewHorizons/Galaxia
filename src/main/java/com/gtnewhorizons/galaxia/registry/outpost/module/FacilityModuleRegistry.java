@@ -72,24 +72,24 @@ public class FacilityModuleRegistry {
         builder(FacilityModuleKind.MINER)
             .tiers(
                 new TierMapBuilder()
-                .add(
-                    ModuleTier.EV,
-                    2000L,
-                    128L,
-                    20,
-                    Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L))
-                .add(
-                    ModuleTier.IV,
-                    8000L,
-                    512L,
-                    20,
-                    Map.of(new ItemStack(Items.diamond), 32L, new ItemStack(Items.gold_ingot), 256L))
-                .add(
-                    ModuleTier.LuV,
-                    32000L,
-                    2048L,
-                    20,
-                    Map.of(new ItemStack(Items.diamond), 128L, new ItemStack(Items.gold_ingot), 1024L))
+                    .add(
+                        ModuleTier.EV,
+                        2000L,
+                        128L,
+                        20,
+                        Map.of(new ItemStack(Items.diamond), 8L, new ItemStack(Items.gold_ingot), 64L))
+                    .add(
+                        ModuleTier.IV,
+                        8000L,
+                        512L,
+                        20,
+                        Map.of(new ItemStack(Items.diamond), 32L, new ItemStack(Items.gold_ingot), 256L))
+                    .add(
+                        ModuleTier.LuV,
+                        32000L,
+                        2048L,
+                        20,
+                        Map.of(new ItemStack(Items.diamond), 128L, new ItemStack(Items.gold_ingot), 1024L))
                     .build())
             .configButton()
             .upgradeButton()
@@ -99,52 +99,53 @@ public class FacilityModuleRegistry {
         builder(FacilityModuleKind.HAMMER)
             .tiers(
                 new TierMapBuilder()
-                .add(
-                    ModuleTier.EV,
-                    1000L,
-                    0L,
-                    1200,
-                    Map.of(HammerVariant.BASE.name(), 1200),
-                    Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L))
-                .add(
-                    ModuleTier.IV,
-                    4000L,
-                    0L,
-                    900,
-                    Map.of(HammerVariant.BASE.name(), 900),
-                    Map.of(new ItemStack(Items.iron_ingot), 32L, new ItemStack(Items.gold_ingot), 256L))
-                .add(
-                    ModuleTier.LuV,
-                    16000L,
-                    0L,
-                    600,
-                    Map.of(HammerVariant.BASE.name(), 600, HammerVariant.BIG.name(), 1200),
-                    Map.of(new ItemStack(Items.iron_ingot), 128L, new ItemStack(Items.gold_ingot), 1024L))
-                .add(
-                    ModuleTier.ZPM,
-                    64000L,
-                    0L,
-                    900,
-                    Map.of(HammerVariant.BIG.name(), 900),
-                    Map.of(new ItemStack(Items.iron_ingot), 512L, new ItemStack(Items.gold_ingot), 4096L))
-                .add(
-                    ModuleTier.UV,
-                    256000L,
-                    0L,
-                    600,
-                    Map.of(HammerVariant.BIG.name(), 600),
-                    Map.of(new ItemStack(Items.iron_ingot), 2048L, new ItemStack(Items.gold_ingot), 16384L))
+                    .add(
+                        ModuleTier.EV,
+                        1000L,
+                        0L,
+                        1200,
+                        Map.of(HammerVariant.BASE.name(), 1200),
+                        Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 64L))
+                    .add(
+                        ModuleTier.IV,
+                        4000L,
+                        0L,
+                        900,
+                        Map.of(HammerVariant.BASE.name(), 900),
+                        Map.of(new ItemStack(Items.iron_ingot), 32L, new ItemStack(Items.gold_ingot), 256L))
+                    .add(
+                        ModuleTier.LuV,
+                        16000L,
+                        0L,
+                        600,
+                        Map.of(HammerVariant.BASE.name(), 600, HammerVariant.BIG.name(), 1200),
+                        Map.of(new ItemStack(Items.iron_ingot), 128L, new ItemStack(Items.gold_ingot), 1024L))
+                    .add(
+                        ModuleTier.ZPM,
+                        64000L,
+                        0L,
+                        900,
+                        Map.of(HammerVariant.BIG.name(), 900),
+                        Map.of(new ItemStack(Items.iron_ingot), 512L, new ItemStack(Items.gold_ingot), 4096L))
+                    .add(
+                        ModuleTier.UV,
+                        256000L,
+                        0L,
+                        600,
+                        Map.of(HammerVariant.BIG.name(), 600),
+                        Map.of(new ItemStack(Items.iron_ingot), 2048L, new ItemStack(Items.gold_ingot), 16384L))
                     .build())
             .configButton()
             .upgradeButton()
             .behavior(ModuleHammer::prepareToFire)
-            .factory(() -> new ModuleHammer(
-                FacilityModuleKind.HAMMER,
-                AllowShootingConfig.ALWAYS,
-                OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
-                false,
-                HammerVariant.BASE,
-                64))
+            .factory(
+                () -> new ModuleHammer(
+                    FacilityModuleKind.HAMMER,
+                    AllowShootingConfig.ALWAYS,
+                    OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF,
+                    false,
+                    HammerVariant.BASE,
+                    64))
             .register();
         register(
             FacilityModuleKind.STORAGE,
@@ -240,55 +241,61 @@ public class FacilityModuleRegistry {
 
         if (FacilityModuleKind.MACERATOR.isAvailable()) {
             builder(FacilityModuleKind.MACERATOR)
-                .tiers(new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
-                    .build())
+                .tiers(
+                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                        .build())
                 .configButton()
                 .behavior(ModuleMacerator::processRecipe)
                 .factory(ModuleMacerator::new)
                 .register();
             builder(FacilityModuleKind.CENTRIFUGE)
-                .tiers(new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
-                    .build())
+                .tiers(
+                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                        .build())
                 .configButton()
                 .behavior(ModuleCentrifuge::processRecipe)
                 .factory(ModuleCentrifuge::new)
                 .register();
             builder(FacilityModuleKind.ELECTROLYZER)
-                .tiers(new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
-                    .build())
+                .tiers(
+                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                        .build())
                 .configButton()
                 .behavior(ModuleElectrolyzer::processRecipe)
                 .factory(ModuleElectrolyzer::new)
                 .register();
             builder(FacilityModuleKind.CHEMICAL_REACTOR)
-                .tiers(new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
-                    .build())
+                .tiers(
+                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                        .build())
                 .configButton()
                 .behavior(ModuleChemicalReactor::processRecipe)
                 .factory(ModuleChemicalReactor::new)
                 .register();
             builder(FacilityModuleKind.ASSEMBLER)
-                .tiers(new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
-                    .build())
+                .tiers(
+                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                        .build())
                 .configButton()
                 .behavior(ModuleAssembler::processRecipe)
                 .factory(ModuleAssembler::new)
                 .register();
             builder(FacilityModuleKind.DISTILLERY)
-                .tiers(new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
-                    .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
-                    .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
-                    .build())
+                .tiers(
+                    new TierMapBuilder().add(ModuleTier.HV, 2000L, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+                        .add(ModuleTier.EV, 8000L, 128L, 20, Map.of(new ItemStack(Items.iron_ingot), 32L))
+                        .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
+                        .build())
                 .configButton()
                 .behavior(ModuleDistillery::processRecipe)
                 .factory(ModuleDistillery::new)
@@ -298,7 +305,8 @@ public class FacilityModuleRegistry {
 
     public static void register(FacilityModuleKind kind, ModuleTierData data,
         BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        DEFINITIONS.put(kind, new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of()));
+        DEFINITIONS
+            .put(kind, new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of()));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,

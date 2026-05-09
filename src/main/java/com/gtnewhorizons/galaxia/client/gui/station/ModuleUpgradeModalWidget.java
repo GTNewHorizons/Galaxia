@@ -94,7 +94,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         child(
             ModuleConfigModalSupport.button(this::hasCancellableBuild, this::cancelLabel, this::cancelBuild)
                 .pos(
-                    ModuleConfigModalSupport.PANEL_PADDING + CONFIRM_BUTTON_WIDTH + CONTROL_GAP + MULTIPLE_BUTTON_WIDTH
+                    ModuleConfigModalSupport.PANEL_PADDING + CONFIRM_BUTTON_WIDTH
+                        + CONTROL_GAP
+                        + MULTIPLE_BUTTON_WIDTH
                         + CONTROL_GAP,
                     FOOTER_TOP)
                 .size(CANCEL_BUTTON_WIDTH, BUTTON_HEIGHT));
@@ -132,17 +134,21 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private void drawPlan(ModuleInstance module) {
         int x = ModuleConfigModalSupport.PANEL_PADDING;
         int lineY = BODY_TOP;
-        lineY = ModuleConfigModalSupport.drawLine(currentLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY = ModuleConfigModalSupport
+            .drawLine(currentLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = ModuleConfigModalSupport
             .drawLine(targetLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        lineY = ModuleConfigModalSupport.drawLine(effectLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY = ModuleConfigModalSupport
+            .drawLine(effectLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY += 3;
         if (!targetChanged(module)) {
-            ModuleConfigModalSupport.drawLine("No upgrade selected", x, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            ModuleConfigModalSupport
+                .drawLine("No upgrade selected", x, lineY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             drawGroupLabels(module);
             return;
         }
-        lineY = ModuleConfigModalSupport.drawLine(buildLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lineY = ModuleConfigModalSupport
+            .drawLine(buildLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = ModuleConfigModalSupport.drawLine("Cost:", x, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         drawCost(module, lineY);
         drawGroupLabels(module);
@@ -151,8 +157,10 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private void drawActiveBuild(ModuleInstance module) {
         int x = ModuleConfigModalSupport.PANEL_PADDING;
         int lineY = BODY_TOP;
-        lineY = ModuleConfigModalSupport.drawLine(currentLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        ModuleConfigModalSupport.drawLine(operationLabel(module), x, lineY, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+        lineY = ModuleConfigModalSupport
+            .drawLine(currentLine(module), x, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        ModuleConfigModalSupport
+            .drawLine(operationLabel(module), x, lineY, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
     }
 
     private void drawGroupLabels(ModuleInstance module) {
@@ -172,18 +180,18 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private ButtonWidget<?> createOptionButton(int slot) {
         return new ButtonWidget<>()
             .background(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), false)))
+                ModuleConfigModalSupport
+                    .drawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), false)))
             .hoverBackground(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), true)))
+                ModuleConfigModalSupport
+                    .drawable((ctx, x, y, w, h) -> drawOptionButton(x, y, w, h, optionRef(slot), true)))
             .overlay(
-                ModuleConfigModalSupport.drawable(
-                    (ctx, x, y, w, h) -> drawOptionLabel(x, y, w, h, optionRef(slot))))
+                ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawOptionLabel(x, y, w, h, optionRef(slot))))
             .onMousePressed(mouseButton -> {
                 OptionRef ref = optionRef(slot);
-                if (mouseButton != 0 || ref == null || !ref.option()
-                    .enabled()
+                if (mouseButton != 0 || ref == null
+                    || !ref.option()
+                        .enabled()
                     || ModuleUpgradeUiModel.hasActiveBuild(selectedModule())) return true;
                 controller.selectModuleUpgradeOption(
                     ref.group()
@@ -198,10 +206,11 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private void drawOptionButton(int x, int y, int w, int h, @Nullable OptionRef ref, boolean hovered) {
         if (ref == null) return;
         boolean enabled = ref.option()
-            .enabled()
-            && !ModuleUpgradeUiModel.hasActiveBuild(selectedModule());
-        int bg = enabled ? (hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
-            : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor()) : EnumColors.MAP_COLOR_BTN_DISABLED.getColor();
+            .enabled() && !ModuleUpgradeUiModel.hasActiveBuild(selectedModule());
+        int bg = enabled
+            ? (hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
+                : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor())
+            : EnumColors.MAP_COLOR_BTN_DISABLED.getColor();
         int border = enabled ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
             : EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor();
         BorderedRect.draw(x, y, w, h, bg, border);
@@ -211,14 +220,20 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         if (ref == null) return;
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         String label = ref.option()
-            .selected() ? "* " + ref.option()
-                .label() : ref.option()
+            .selected()
+                ? "* " + ref.option()
+                    .label()
+                : ref.option()
                     .label();
         String trimmed = fr.trimStringToWidth(label, w - 4);
         int color = ref.option()
             .enabled() ? EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
                 : EnumColors.MAP_COLOR_TEXT_BTN_DISABLED.getColor();
-        fr.drawStringWithShadow(trimmed, x + (w - fr.getStringWidth(trimmed)) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
+        fr.drawStringWithShadow(
+            trimmed,
+            x + (w - fr.getStringWidth(trimmed)) / 2,
+            y + (h - fr.FONT_HEIGHT) / 2 + 1,
+            color);
     }
 
     private @Nullable OptionRef optionRef(int slot) {
@@ -245,12 +260,15 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
 
     private boolean canConfirmMultiple() {
         ModuleInstance module = selectedModule();
-        return tilePickerController != null && module != null && module.component() instanceof ModuleHammer && canConfirm();
+        return tilePickerController != null && module != null
+            && module.component() instanceof ModuleHammer
+            && canConfirm();
     }
 
     private boolean canUseHammerFlags() {
         ModuleInstance module = selectedModule();
-        return module != null && module.component() instanceof ModuleHammer && !ModuleUpgradeUiModel.hasActiveBuild(module);
+        return module != null && module.component() instanceof ModuleHammer
+            && !ModuleUpgradeUiModel.hasActiveBuild(module);
     }
 
     private void confirm() {
@@ -277,7 +295,9 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance source = selectedModule();
         int sourceModuleIndex = controller.moduleIndex();
-        if (facility == null || source == null || tilePickerController == null || !(source.component() instanceof ModuleHammer)
+        if (facility == null || source == null
+            || tilePickerController == null
+            || !(source.component() instanceof ModuleHammer)
             || sourceModuleIndex < 0) return;
         ModuleTier targetTier = ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection());
         HammerVariant targetVariant = ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection());
@@ -287,8 +307,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         tilePickerController.start(
             "Upgrade modules",
             "Upgrade",
-            coord -> ModuleUpgradePickerModel
-                .isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
+            coord -> ModuleUpgradePickerModel.isCompatibleTarget(facility, source, targetTier, targetVariant, coord),
             coord -> ModuleUpgradePickerModel.normalizeTarget(facility, coord),
             targets -> {
                 List<StationTileCoord> confirmedTargets = ModuleUpgradePickerModel
@@ -311,7 +330,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                 || module.tier() != ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection());
         }
         if (module.component() instanceof ModuleMiner) {
-            return MinerFocusUiModel.canPlanTier(module, ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
+            return MinerFocusUiModel
+                .canPlanTier(module, ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
         }
         return false;
     }
@@ -339,7 +359,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
                     .name();
         }
         if (module.component() instanceof ModuleMiner) {
-            return "Target focus tier: " + focusTierLabel(ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
+            return "Target focus tier: "
+                + focusTierLabel(ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection()));
         }
         return "Target: -";
     }
@@ -349,22 +370,24 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             ModuleTierData data = FacilityModuleRegistry.get(module.kind())
                 .getTierData(ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection()));
             int cooldown = data.variantCooldowns() != null && data.variantCooldowns()
-                .containsKey(ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection()).name())
-                    ? data.variantCooldowns()
-                        .get(ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection()).name())
-                    : data.cooldownTicks();
+                .containsKey(
+                    ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection())
+                        .name()) ? data.variantCooldowns()
+                            .get(
+                                ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection())
+                                    .name())
+                            : data.cooldownTicks();
             return "Effect: cooldown " + cooldown / 20
                 + "s, buffer "
-                + ModuleConfigModalSupport.formatEu(ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection()).shotEnergyEu())
+                + ModuleConfigModalSupport.formatEu(
+                    ModuleUpgradeUiModel.hammerVariant(controller.moduleUpgradeSelection())
+                        .shotEnergyEu())
                 + " EU";
         }
         if (module.component() instanceof ModuleMiner miner) {
             MinerFocusTier target = ModuleUpgradeUiModel.minerFocusTier(controller.moduleUpgradeSelection());
             return "Effect: focus bonus " + miner.focusTier()
-                .bonusPercent()
-                + "% -> "
-                + target.bonusPercent()
-                + "%";
+                .bonusPercent() + "% -> " + target.bonusPercent() + "%";
         }
         return "Effect: -";
     }
@@ -372,10 +395,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
     private String buildLine(ModuleInstance module) {
         ModuleTierData data = FacilityModuleRegistry.get(module.kind())
             .getTierData(module.tier());
-        return "Build: " + data.buildTicks()
-            + " ticks ("
-            + data.buildTicks() / 20
-            + "s)";
+        return "Build: " + data.buildTicks() + " ticks (" + data.buildTicks() / 20 + "s)";
     }
 
     private void drawCost(ModuleInstance module, int lineY) {
@@ -511,7 +531,8 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
         }
 
         boolean overlaps(ControlRect other) {
-            return x < other.x + other.width && x + width > other.x && y < other.y + other.height
+            return x < other.x + other.width && x + width > other.x
+                && y < other.y + other.height
                 && y + height > other.y;
         }
     }

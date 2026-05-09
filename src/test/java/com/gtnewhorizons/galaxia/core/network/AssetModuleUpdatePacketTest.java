@@ -736,8 +736,7 @@ final class AssetModuleUpdatePacketTest {
         assertNotNull(sync);
         assertTrue(facility.getSyncRevision() > revisionBefore);
         assertEquals(facility.getSyncRevision(), sync.syncRevision());
-        ModuleInstance syncedTarget = roundTrip(sync)
-            .fullSyncDeltas()
+        ModuleInstance syncedTarget = roundTrip(sync).fullSyncDeltas()
             .stream()
             .filter(delta -> delta.syncType() == AssetSyncPacket.MODULE_ADDED)
             .map(AssetSyncPacket::moduleData)

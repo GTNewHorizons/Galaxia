@@ -124,8 +124,8 @@ final class StationPacketRoundTripTest {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
         hammerModule.setOperation(
-            ModuleOperationState
-                .waiting(new ModuleOperationPlan(new HammerModuleOperation(ModuleTier.LuV, "BIG"), 200, Map.of(), true)));
+            ModuleOperationState.waiting(
+                new ModuleOperationPlan(new HammerModuleOperation(ModuleTier.LuV, "BIG"), 200, Map.of(), true)));
 
         AutomatedFacility client = createFacility();
         applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));

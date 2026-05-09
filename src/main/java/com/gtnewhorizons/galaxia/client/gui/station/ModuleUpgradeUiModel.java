@@ -21,7 +21,8 @@ final class ModuleUpgradeUiModel {
     private ModuleUpgradeUiModel() {}
 
     static boolean supports(@Nullable ModuleInstance module) {
-        return module != null && (module.component() instanceof ModuleHammer || module.component() instanceof ModuleMiner);
+        return module != null
+            && (module.component() instanceof ModuleHammer || module.component() instanceof ModuleMiner);
     }
 
     static ModuleUpgradeSelection defaultSelection(ModuleInstance module) {
@@ -94,9 +95,10 @@ final class ModuleUpgradeUiModel {
     }
 
     static boolean hasActiveBuild(@Nullable ModuleInstance module) {
-        return module != null && module.operationOrNull() != null && !module.operationOrNull()
-            .phase()
-            .isTerminal();
+        return module != null && module.operationOrNull() != null
+            && !module.operationOrNull()
+                .phase()
+                .isTerminal();
     }
 
     private static List<ModuleUpgradeGroup> hammerGroups(ModuleUpgradeSelection selection) {
