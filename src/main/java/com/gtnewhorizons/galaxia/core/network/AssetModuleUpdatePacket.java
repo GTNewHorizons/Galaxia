@@ -894,7 +894,7 @@ public final class AssetModuleUpdatePacket {
         if (targetHammer.variant() == payload.targetHammerVariant() && target.tier() == payload.targetTier()) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target already matches requested hammer spec");
         }
-        planHammerUpgrade(
+        if (planHammerUpgrade(
             state,
             target,
             targetHammer,
@@ -902,7 +902,9 @@ public final class AssetModuleUpdatePacket {
             payload.targetTier(),
             payload.reserveItems(),
             payload.voidCompletionRefund(),
-            false);
+            false)) {
+            state.markModuleDirty(target.id);
+        }
     }
 
     private static void handleGenericUpgradeTarget(AutomatedFacility state, ModuleInstance source,
@@ -921,7 +923,9 @@ public final class AssetModuleUpdatePacket {
         if (target.tier() == payload.targetTier()) {
             throw new IllegalStateException("PLAN_MODULE_UPGRADE_TARGETS target already has requested tier");
         }
-        planModuleTierUpgrade(state, target, payload.targetTier(), false);
+        if (planModuleTierUpgrade(state, target, payload.targetTier(), false)) {
+            state.markModuleDirty(target.id);
+        }
     }
 
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,

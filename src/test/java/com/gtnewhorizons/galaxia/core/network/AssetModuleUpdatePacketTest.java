@@ -712,6 +712,48 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
+    void applyModuleUpgradeTargetsMarksTargetDirtyForImmediateSync() {
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.moduleUpgradeTargets(
+                facility.assetId,
+                0,
+                source.id,
+                ModuleTier.LuV,
+                HammerVariant.BIG,
+                false,
+                false,
+                List.of(target.anchor())));
+        int revisionBefore = facility.getSyncRevision();
+
+        AssetSyncPacket sync = packet.apply(TEAM);
+
+        assertNotNull(target.operationOrNull());
+        assertNotNull(sync);
+        assertTrue(facility.getSyncRevision() > revisionBefore);
+        assertEquals(facility.getSyncRevision(), sync.syncRevision());
+        ModuleInstance syncedTarget = roundTrip(sync)
+            .fullSyncDeltas()
+            .stream()
+            .filter(delta -> delta.syncType() == AssetSyncPacket.MODULE_ADDED)
+            .map(AssetSyncPacket::moduleData)
+            .filter(module -> module.id.equals(target.id))
+            .findFirst()
+            .orElseThrow();
+        assertNotNull(syncedTarget.operationOrNull());
+        assertEquals(
+            ModuleTier.LuV,
+            syncedTarget.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
+    }
+
+    @Test
     void applyModuleUpgradeTargetsSkipsTargetWithActiveBuild() {
         AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.HAMMER, ModuleTier.EV);
         ModuleInstance source = facility.modules()
@@ -999,6 +1041,14 @@ final class AssetModuleUpdatePacketTest {
         ByteBuf buf = Unpooled.buffer();
         packet.toBytes(buf);
         AssetModuleUpdatePacket decoded = new AssetModuleUpdatePacket();
+        decoded.fromBytes(buf);
+        return decoded;
+    }
+
+    private static AssetSyncPacket roundTrip(AssetSyncPacket packet) {
+        ByteBuf buf = Unpooled.buffer();
+        packet.toBytes(buf);
+        AssetSyncPacket decoded = new AssetSyncPacket();
         decoded.fromBytes(buf);
         return decoded;
     }

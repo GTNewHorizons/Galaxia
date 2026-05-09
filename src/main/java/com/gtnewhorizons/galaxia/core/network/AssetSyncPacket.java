@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +26,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -60,6 +68,11 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
     public static final byte SETTINGS_GROUP_UPDATED = 11;
+
+    private static final int MAX_OPERATION_MAP_ENTRIES = 256;
+    private static final byte OPERATION_SPEC_TIER = 1;
+    private static final byte OPERATION_SPEC_HAMMER = 2;
+    private static final byte OPERATION_SPEC_MINER_FOCUS = 3;
 
     private CelestialAsset.ID assetId;
     private byte syncType;
@@ -466,6 +479,7 @@ public final class AssetSyncPacket implements IMessage {
                 module);
             default -> {}
         }
+        writeModuleOperation(buf, module.operationOrNull());
     }
 
     private static ModuleInstance readModule(ByteBuf buf) {
@@ -506,11 +520,139 @@ public final class AssetSyncPacket implements IMessage {
             default -> {}
         }
 
+        module.setOperation(readModuleOperation(buf));
         if (module.component() instanceof IParallelModule pm) {
             pm.setParallel(parallel);
         }
         module.updateStatus(status);
         return module;
+    }
+
+    private static void writeModuleOperation(ByteBuf buf, ModuleOperationState operation) {
+        buf.writeBoolean(operation != null);
+        if (operation == null) return;
+        ModuleOperationPlan plan = operation.plan();
+        writeOperationSpec(buf, plan.spec());
+        PacketUtil.writeEnum(buf, operation.phase());
+        buf.writeInt(operation.elapsedBuildTicks());
+        buf.writeInt(plan.buildTicks());
+        writeItemAmountMap(buf, plan.materialCost());
+        writeItemAmountMap(buf, plan.completionRefundCost());
+        buf.writeInt(plan.completionRefundPercent());
+        buf.writeBoolean(plan.reserveItems());
+        buf.writeBoolean(plan.voidCompletionRefund());
+        writeStringAmountMap(buf, operation.depositedResources());
+        writeStringAmountMap(buf, operation.refundBuffer());
+    }
+
+    private static ModuleOperationState readModuleOperation(ByteBuf buf) {
+        if (!buf.readBoolean()) return null;
+        IModuleOperation spec = readOperationSpec(buf);
+        ModuleOperationPhase phase = PacketUtil.readEnum(buf, ModuleOperationPhase.class);
+        int elapsedBuildTicks = buf.readInt();
+        int buildTicks = buf.readInt();
+        Map<ItemStackWrapper, Long> materialCost = readItemAmountMap(buf);
+        Map<ItemStackWrapper, Long> completionRefundCost = readItemAmountMap(buf);
+        int completionRefundPercent = buf.readInt();
+        boolean reserveItems = buf.readBoolean();
+        boolean voidCompletionRefund = buf.readBoolean();
+        Map<String, Long> depositedResources = readStringAmountMap(buf);
+        Map<String, Long> refundBuffer = readStringAmountMap(buf);
+        ModuleOperationPlan plan = new ModuleOperationPlan(
+            spec,
+            buildTicks,
+            materialCost,
+            completionRefundCost,
+            completionRefundPercent,
+            reserveItems,
+            voidCompletionRefund);
+        return ModuleOperationState.restore(plan, phase, elapsedBuildTicks, depositedResources, refundBuffer);
+    }
+
+    private static void writeOperationSpec(ByteBuf buf, IModuleOperation spec) {
+        if (spec instanceof HammerModuleOperation hammerSpec) {
+            buf.writeByte(OPERATION_SPEC_HAMMER);
+            PacketUtil.writeEnum(buf, hammerSpec.targetTier());
+            PacketUtil.writeString(buf, hammerSpec.targetVariantKey());
+            return;
+        }
+        if (spec instanceof MinerFocusOperation minerSpec) {
+            buf.writeByte(OPERATION_SPEC_MINER_FOCUS);
+            PacketUtil.writeEnum(buf, minerSpec.targetTier());
+            PacketUtil.writeString(buf, minerSpec.targetFocusTierKey());
+            buf.writeBoolean(minerSpec.targetFocusOreKey() != null);
+            if (minerSpec.targetFocusOreKey() != null) PacketUtil.writeString(buf, minerSpec.targetFocusOreKey());
+            return;
+        }
+        if (spec instanceof ModuleTierOperation tierSpec) {
+            buf.writeByte(OPERATION_SPEC_TIER);
+            PacketUtil.writeEnum(buf, tierSpec.targetTier());
+            return;
+        }
+        throw new IllegalStateException("Unsupported module operation spec: " + spec.getClass()
+            .getName());
+    }
+
+    private static IModuleOperation readOperationSpec(ByteBuf buf) {
+        int type = buf.readUnsignedByte();
+        ModuleTier targetTier = PacketUtil.readEnum(buf, ModuleTier.class);
+        return switch (type) {
+            case OPERATION_SPEC_HAMMER -> new HammerModuleOperation(targetTier, PacketUtil.readString(buf));
+            case OPERATION_SPEC_MINER_FOCUS -> {
+                String focusTierKey = PacketUtil.readString(buf);
+                String focusOreKey = buf.readBoolean() ? PacketUtil.readString(buf) : null;
+                yield new MinerFocusOperation(targetTier, focusTierKey, focusOreKey);
+            }
+            case OPERATION_SPEC_TIER -> new ModuleTierOperation(targetTier);
+            default -> throw new IllegalStateException("Unknown module operation spec type: " + type);
+        };
+    }
+
+    private static void writeItemAmountMap(ByteBuf buf, Map<ItemStackWrapper, Long> amounts) {
+        buf.writeInt(amounts.size());
+        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
+            PacketUtil.writeString(buf, entry.getKey()
+                .toKey());
+            buf.writeLong(entry.getValue());
+        }
+    }
+
+    private static Map<ItemStackWrapper, Long> readItemAmountMap(ByteBuf buf) {
+        int size = readOperationMapSize(buf);
+        Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
+        for (int i = 0; i < size; i++) {
+            ItemStackWrapper item = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
+            long amount = buf.readLong();
+            if (item != null && amount > 0L) amounts.put(item, amount);
+        }
+        return amounts;
+    }
+
+    private static void writeStringAmountMap(ByteBuf buf, Map<String, Long> amounts) {
+        buf.writeInt(amounts.size());
+        for (Map.Entry<String, Long> entry : amounts.entrySet()) {
+            PacketUtil.writeString(buf, entry.getKey());
+            buf.writeLong(entry.getValue());
+        }
+    }
+
+    private static Map<String, Long> readStringAmountMap(ByteBuf buf) {
+        int size = readOperationMapSize(buf);
+        Map<String, Long> amounts = new LinkedHashMap<>();
+        for (int i = 0; i < size; i++) {
+            String key = PacketUtil.readString(buf);
+            long amount = buf.readLong();
+            if (!key.isBlank() && amount > 0L) amounts.put(key, amount);
+        }
+        return amounts;
+    }
+
+    private static int readOperationMapSize(ByteBuf buf) {
+        int size = buf.readInt();
+        if (size < 0 || size > MAX_OPERATION_MAP_ENTRIES) {
+            throw new IllegalStateException("Invalid module operation map size: " + size);
+        }
+        return size;
     }
 
     private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {

@@ -2,9 +2,11 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +24,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -98,7 +104,7 @@ final class StationPacketRoundTripTest {
     void fullSyncRoundTripPreservesHammerVariant() {
         AutomatedFacility server = createFacility();
         ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
-        hammerModule.setTier(com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier.LuV);
+        hammerModule.setTier(ModuleTier.LuV);
         ModuleHammer serverHammer = (ModuleHammer) hammerModule.component();
         serverHammer.setVariant(HammerVariant.BIG);
         serverHammer.setEnergyStored(123_456L);
@@ -111,6 +117,28 @@ final class StationPacketRoundTripTest {
             .component();
         assertEquals(HammerVariant.BIG, clientHammer.variant());
         assertEquals(123_456L, clientHammer.energyStored());
+    }
+
+    @Test
+    void fullSyncRoundTripPreservesModuleOperation() {
+        AutomatedFacility server = createFacility();
+        ModuleInstance hammerModule = buildModule(server, FacilityModuleKind.HAMMER, StationTileCoord.of(1, 0));
+        hammerModule.setOperation(
+            ModuleOperationState
+                .waiting(new ModuleOperationPlan(new HammerModuleOperation(ModuleTier.LuV, "BIG"), 200, Map.of(), true)));
+
+        AutomatedFacility client = createFacility();
+        applyFullSyncFromPacket(client, roundTrip(AssetSyncPacket.fullSync(server)));
+
+        ModuleInstance clientModule = client.modules()
+            .get(0);
+        assertNotNull(clientModule.operationOrNull());
+        assertEquals(
+            ModuleTier.LuV,
+            clientModule.operationOrNull()
+                .plan()
+                .spec()
+                .targetTier());
     }
 
     @Test
