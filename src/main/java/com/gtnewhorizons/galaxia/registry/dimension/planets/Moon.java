@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
-import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -14,6 +12,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
@@ -299,10 +299,10 @@ public class Moon extends BasePlanet {
             .height(0.1F, 0.11F)
             .temperature(0.4F)
             .rainfall(0.99F)
-            .topBlock(Blocks.glass)
+            .topBlock(PlanetBlocks.MOON_BASALT)
             .fillerBlocks(
-                new StratificationPreset(Blocks.glass).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(Blocks.stained_glass, 1, 32))
+                new StratificationPreset(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
+                    .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
             .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(

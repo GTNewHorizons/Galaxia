@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.cave;
 import java.util.Random;
 
 public interface CaveShape {
+
     void prepareCaveShape(Random random);
 
     boolean preparedCaveShape();

@@ -1,10 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
 import java.util.Random;
 
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
 public class CaveShapeCracks implements CaveShape {
+
     private static final int CHUNK_WIDTH = 16;
     private static final int HEIGHT_LIMIT = 256;
     private static final double HORIZONTAL_CAVE_STRETCH = 0.1;

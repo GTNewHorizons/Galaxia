@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise;
 
+import java.util.Random;
+
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.math.LinearFunction3D;
 
-import java.util.Random;
-
 public class TubeNoise {
+
     private static final byte CHUNK_BITSHIFT = 4;
     private static final byte ADDITIONAL_BITSHIFT = 4;
     private static final byte TOTAL_BITSHIFT = CHUNK_BITSHIFT + ADDITIONAL_BITSHIFT;
@@ -93,11 +94,11 @@ public class TubeNoise {
                 zRandom.nextInt(TUBE_HEIGHT_VARIATION) + BASE_TUBE_HEIGHT,
                 zInclination,
                 xyInclination,
-                zyInclination
-            );
+                zyInclination);
             xEndPoints[i] = xRandom.nextInt(COORDINATE_BOUND) + 1;
             xStartPoints[i] = xRandom.nextInt(Math.max(1, xEndPoints[i] - tubeLength));
-            deviationMargins[i] = (short) (baseTubeDiameter + xRandom.nextInt(baseTubeDiameter) * zRandom.nextInt(varyingTubeDiameter + 1));
+            deviationMargins[i] = (short) (baseTubeDiameter
+                + xRandom.nextInt(baseTubeDiameter) * zRandom.nextInt(varyingTubeDiameter + 1));
         }
     }
 }

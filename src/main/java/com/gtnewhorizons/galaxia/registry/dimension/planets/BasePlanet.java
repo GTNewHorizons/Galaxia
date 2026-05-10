@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -11,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
@@ -86,7 +86,7 @@ public abstract class BasePlanet {
     public abstract DimensionEnum getPlanetEnum();
 
     protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain,
-                                              CaveShape caveShape) {
+        CaveShape caveShape) {
         return createBiome(name, block, 0, terrain, caveShape);
     }
 

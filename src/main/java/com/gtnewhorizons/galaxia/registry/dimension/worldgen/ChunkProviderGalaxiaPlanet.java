@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
@@ -21,6 +20,7 @@ import net.minecraft.world.gen.NoiseGeneratorOctaves;
 import com.gtnewhorizon.gtnhlib.util.StdLCG;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenSpace;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldChunkManagerSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaSurface;
@@ -269,7 +269,7 @@ public class ChunkProviderGalaxiaPlanet implements IChunkProvider {
                     if (caveShape != null
                         && (block == fillerBlocks.getStrataBlock(y) || block == topBlock || block == snowBlock)
                         && caveShape.generateCave(localX, y, localZ, height)) {
-                        block = Blocks.brick_block;
+                        block = Blocks.air;
                     }
                     long caveGenerationTime = 0;
                     if (showDebug) {

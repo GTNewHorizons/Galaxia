@@ -1,11 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.dimension.cave;
 
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.TubeNoise;
-import net.minecraft.world.gen.NoiseGeneratorOctaves;
-
 import java.util.Random;
 
+import net.minecraft.world.gen.NoiseGeneratorOctaves;
+
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.noise.TubeNoise;
+
 public class CaveShapeTubes implements CaveShape {
+
     private static final int CHUNK_AREA = 256;
     private static final int CHUNK_WIDTH = 16;
     private static final double HORIZONTAL_CAVE_STRETCH = 0.1;
