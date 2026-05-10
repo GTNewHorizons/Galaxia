@@ -43,7 +43,22 @@ import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 
 /**
- * API underpinning planetary mechanics
+ * Primary Galaxia API providing access to planetary mechanics, player status, and equipment queries.
+ * <p>
+ * This API allows external mods to:
+ * <ul>
+ *   <li>Query planetary properties (gravity, air resistance, effects)</li>
+ *   <li>Check player equipment and status (oxygen, temperature, protection)</li>
+ *   <li>Access celestial asset data</li>
+ *   <li>Work with facility dimensions</li>
+ * </ul>
+ * 
+ * All methods are safe to call from any thread and handle null inputs gracefully.
+ * Most checks return sensible defaults if called outside Galaxia dimensions.
+ * 
+ * @see GalaxiaCelestialAPI for celestial object queries
+ * @see ZeroGMovementAPI for zero-gravity movement handling
+ * @see GalaxiaEffectAPI for effect-specific queries
  */
 public final class GalaxiaAPI {
 
@@ -144,6 +159,14 @@ public final class GalaxiaAPI {
         return (float) (temp - acceptableMinTemp) / (acceptableMaxTemp - acceptableMinTemp);
     }
 
+    /**
+     * Queries whether a player has an oxygen tank equipped.
+     * Checks all configured oxygen tank slots in the player's baubles inventory.
+     * 
+     * @param player the player to check
+     * @return true if at least one oxygen tank is present and equipped, false otherwise
+     * @throws NullPointerException if player is null
+     */
     public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {
         var baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return false;

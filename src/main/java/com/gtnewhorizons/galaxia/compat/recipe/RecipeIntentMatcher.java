@@ -80,26 +80,14 @@ public final class RecipeIntentMatcher {
 
     private static boolean hasAnyHardSlot(ItemStack[] itemInputs, ItemStack[] itemOutputs, FluidStack[] fluidInputs,
         FluidStack[] fluidOutputs) {
-        return hasAnyItem(itemInputs) || hasAnyItem(itemOutputs)
-            || hasAnyFluid(fluidInputs)
-            || hasAnyFluid(fluidOutputs);
+        return RecipeValidationUtils.hasAnyComponent(itemInputs, itemOutputs, fluidInputs, fluidOutputs);
     }
 
-    private static boolean hasAnyItem(ItemStack[] stacks) {
-        if (stacks == null) return false;
-        for (ItemStack stack : stacks) if (stack != null) return true;
-        return false;
-    }
-
-    private static boolean hasAnyFluid(FluidStack[] stacks) {
-        if (stacks == null) return false;
-        for (FluidStack stack : stacks) if (stack != null) return true;
-        return false;
-    }
+    // Removed: hasAnyItem and hasAnyFluid - use RecipeValidationUtils instead
 
     private static boolean matchesItems(ItemStack[] hardSlots, ItemStack[] recipeStacks) {
-        if (hardSlots == null) return true;
-        boolean[] used = recipeStacks != null ? new boolean[recipeStacks.length] : new boolean[0];
+        if (RecipeValidationUtils.isNullOrEmpty(hardSlots)) return true;
+        boolean[] used = new boolean[RecipeValidationUtils.getLength(recipeStacks)];
         for (ItemStack hard : hardSlots) {
             if (hard == null) continue;
             int matchIndex = findMatchingItem(hard, recipeStacks, used);
@@ -128,8 +116,8 @@ public final class RecipeIntentMatcher {
     }
 
     private static boolean matchesFluids(FluidStack[] hardSlots, FluidStack[] recipeStacks) {
-        if (hardSlots == null) return true;
-        boolean[] used = recipeStacks != null ? new boolean[recipeStacks.length] : new boolean[0];
+        if (RecipeValidationUtils.isNullOrEmpty(hardSlots)) return true;
+        boolean[] used = new boolean[RecipeValidationUtils.getLength(recipeStacks)];
         for (FluidStack hard : hardSlots) {
             if (hard == null) continue;
             int matchIndex = findMatchingFluid(hard, recipeStacks, used);
