@@ -2126,14 +2126,25 @@ public class OrbitalView {
             double arrivalDisplayTime = mapServerOrbitalTimeToDisplay(
                 delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalSeconds());
             double displayedTof = Math.max(1e-6, arrivalDisplayTime - departureDisplayTime);
-            InterplanetaryTransferJob base = transferSupport.createTransferJob(
-                root,
-                sourceBody,
-                destinationBody,
-                TransferPackageKind.HAMMER.displayName(),
-                summary,
-                departureDisplayTime,
-                displayedTof);
+            OrbitalTransferPlanner.TransferRoute route = delivery.data.transferRoute();
+            InterplanetaryTransferJob base = route != null && route.hasTrajectoryGeometry()
+                ? transferSupport.createTransferJob(
+                    root,
+                    sourceBody,
+                    destinationBody,
+                    TransferPackageKind.HAMMER.displayName(),
+                    summary,
+                    departureDisplayTime,
+                    displayedTof,
+                    route)
+                : transferSupport.createTransferJob(
+                    root,
+                    sourceBody,
+                    destinationBody,
+                    TransferPackageKind.HAMMER.displayName(),
+                    summary,
+                    departureDisplayTime,
+                    displayedTof);
             if (base == null) return null;
 
             return new InterplanetaryTransferJob(

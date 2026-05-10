@@ -23,8 +23,8 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.orbital.LambertTransfer;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 // ---------------------------------------------------------------------------
 // Package-level records
@@ -247,24 +247,7 @@ public final class InterplanetaryTransferSystem {
      */
     static int sampleTransferArcInto(double ax, double ay, double rx1, double ry1, double vx1, double vy1, double tof,
         double mu, double[] outXs, double[] outYs, int n) {
-        if (outXs == null || outYs == null) return 0;
-        int sampleCount = Math.max(2, Math.min(n, Math.min(outXs.length, outYs.length)));
-        if (sampleCount <= 0) return 0;
-        OrbitalMechanics.OrbitalState state = new OrbitalMechanics.OrbitalState(rx1, ry1, vx1, vy1);
-        double segmentDt = tof / (sampleCount - 1);
-        outXs[0] = ax + state.x();
-        outYs[0] = ay + state.y();
-        for (int i = 1; i < sampleCount; i++) {
-            int substeps = trajectoryIntegrationSubsteps(state, mu, segmentDt);
-            double integrationDt = segmentDt / substeps;
-            for (int step = 0; step < substeps; step++) {
-                state = OrbitalMechanics.propagateTwoBodyState(state, mu, integrationDt);
-                if (state == null) return i;
-            }
-            outXs[i] = ax + state.x();
-            outYs[i] = ay + state.y();
-        }
-        return sampleCount;
+        return OrbitalTransferPlanner.sampleTransferArcInto(ax, ay, rx1, ry1, vx1, vy1, tof, mu, outXs, outYs, n);
     }
 
     private static int trajectoryIntegrationSubsteps(OrbitalMechanics.OrbitalState state, double mu, double segmentDt) {
@@ -658,71 +641,46 @@ public final class InterplanetaryTransferSystem {
             if (star == null || star != destStar) return null;
 
             double tof = Math.max(1.0, duration);
-            double mu = Math.max(1e-6, star.mu());
+            OrbitalTransferPlanner.TransferRoute route = OrbitalTransferPlanner
+                .computeFixedRoute(root, star, sourceBody, destinationBody, departureTime, tof);
+            return createTransferJob(
+                root,
+                sourceBody,
+                destinationBody,
+                transferName,
+                inventorySummary,
+                departureTime,
+                tof,
+                route);
+        }
 
-            OrbitalMechanics.OrbitalState starAtDep = OrbitalMechanics.resolveWorldState(root, star, departureTime);
-            OrbitalMechanics.OrbitalState srcState = OrbitalMechanics
-                .resolveWorldState(root, sourceBody, departureTime);
-            OrbitalMechanics.OrbitalState dstState = OrbitalMechanics
-                .resolveWorldState(root, destinationBody, departureTime + tof);
-            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics
-                .resolveWorldState(root, star, departureTime + tof);
-            if (starAtDep == null || srcState == null || dstState == null || starAtArr == null) return null;
-
-            double r1x = srcState.x() - starAtDep.x();
-            double r1y = srcState.y() - starAtDep.y();
-            double r2x = dstState.x() - starAtArr.x();
-            double r2y = dstState.y() - starAtArr.y();
-            double vsrcX = srcState.vx() - starAtDep.vx();
-            double vsrcY = srcState.vy() - starAtDep.vy();
-            double vdstX = dstState.vx() - starAtArr.vx();
-            double vdstY = dstState.vy() - starAtArr.vy();
-            double minPeriapsis = Math.max(0.05, star.spriteSize() * 0.5);
-
-            LambertTransfer.Solution prograde = LambertTransfer.between(r1x, r1y, r2x, r2y)
-                .mu(mu)
-                .timeOfFlight(tof)
-                .minPeriapsis(minPeriapsis)
-                .prograde(true)
-                .evaluateAgainst(vsrcX, vsrcY, vdstX, vdstY);
-            LambertTransfer.Solution retrograde = LambertTransfer.between(r1x, r1y, r2x, r2y)
-                .mu(mu)
-                .timeOfFlight(tof)
-                .minPeriapsis(minPeriapsis)
-                .prograde(false)
-                .evaluateAgainst(vsrcX, vsrcY, vdstX, vdstY);
-            LambertTransfer.Solution sol = prograde.valid()
-                && (!retrograde.valid() || prograde.totalDv() <= retrograde.totalDv()) ? prograde : retrograde;
-
-            double[] trajectoryXs;
-            double[] trajectoryYs;
-            int trajectoryPointCount;
-            if (sol.valid()) {
-                trajectoryXs = new double[TRAJECTORY_SAMPLES];
-                trajectoryYs = new double[TRAJECTORY_SAMPLES];
-                trajectoryPointCount = sampleTransferArcInto(
-                    starAtDep.x(),
-                    starAtDep.y(),
-                    r1x,
-                    r1y,
-                    sol.dvx1(),
-                    sol.dvy1(),
-                    tof,
-                    mu,
-                    trajectoryXs,
-                    trajectoryYs,
-                    TRAJECTORY_SAMPLES);
-            } else {
-                // Fallback: linear interpolation
-                trajectoryXs = new double[TRAJECTORY_SAMPLES];
-                trajectoryYs = new double[TRAJECTORY_SAMPLES];
-                trajectoryPointCount = TRAJECTORY_SAMPLES;
-                for (int i = 0; i < TRAJECTORY_SAMPLES; i++) {
-                    double frac = i / (double) (TRAJECTORY_SAMPLES - 1);
-                    trajectoryXs[i] = srcState.x() + (dstState.x() - srcState.x()) * frac;
-                    trajectoryYs[i] = srcState.y() + (dstState.y() - srcState.y()) * frac;
-                }
+        InterplanetaryTransferJob createTransferJob(CelestialObject root, CelestialObject sourceBody,
+            CelestialObject destinationBody, String transferName, String inventorySummary, double departureTime,
+            double displayDuration, OrbitalTransferPlanner.TransferRoute route) {
+            if (root == null || sourceBody == null
+                || destinationBody == null
+                || route == null
+                || !route.hasTrajectoryGeometry()) {
+                return null;
             }
+            CelestialObject attractor = GalaxiaCelestialAPI.findBodyById(root, route.attractorBodyId());
+            if (attractor == null) return null;
+
+            double[] trajectoryXs = new double[TRAJECTORY_SAMPLES];
+            double[] trajectoryYs = new double[TRAJECTORY_SAMPLES];
+            int trajectoryPointCount = sampleTransferArcInto(
+                route.anchorX(),
+                route.anchorY(),
+                route.r1x(),
+                route.r1y(),
+                route.departureVelocityX(),
+                route.departureVelocityY(),
+                route.tofOsu(),
+                Math.max(1e-6, attractor.mu()),
+                trajectoryXs,
+                trajectoryYs,
+                TRAJECTORY_SAMPLES);
+            if (trajectoryPointCount < 2) return null;
 
             String id = sourceBody.id() + "->" + destinationBody.id() + "@" + Math.round(departureTime * 1000.0);
             String inv = (inventorySummary == null || inventorySummary.isEmpty()) ? "Empty" : inventorySummary;
@@ -733,9 +691,9 @@ public final class InterplanetaryTransferSystem {
                 root,
                 sourceBody,
                 destinationBody,
-                star,
+                attractor,
                 departureTime,
-                departureTime + tof,
+                departureTime + Math.max(1e-6, displayDuration),
                 trajectoryXs,
                 trajectoryYs,
                 trajectoryPointCount,

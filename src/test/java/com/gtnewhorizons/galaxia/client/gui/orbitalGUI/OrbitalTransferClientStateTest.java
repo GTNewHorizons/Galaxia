@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -108,6 +109,20 @@ final class OrbitalTransferClientStateTest {
         }
 
         fail("Expected at least one fixed-time default transfer where the cheapest Lambert branch is retrograde");
+    }
+
+    @Test
+    void fixedTransferDoesNotRenderLinearFallbackWhenLambertIsInvalid() {
+        CelestialRegistry.freezeAndBake();
+        CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
+        InterplanetaryTransferSystem.OrbitalTransferSupport support = new InterplanetaryTransferSystem.OrbitalTransferSupport();
+        CelestialObject source = GalaxiaCelestialAPI.get(CelestialObjectId.EGORA)
+            .orElseThrow();
+
+        InterplanetaryTransferJob rendered = support
+            .createTransferJob(root, source, source, "Package", "Cargo", 8850.0, 10.0);
+
+        assertNull(rendered);
     }
 
     @Test

@@ -187,6 +187,7 @@ public class CelestialEventHandler {
 
                         double departureDv = 1;
                         double shotDv = 1;
+                        OrbitalTransferPlanner.TransferRoute route = null;
                         if (!sameBody) {
                             deliveryScope = LogisticSignal.Scope.SYSTEM;
                             CelestialObject srcBody = GalaxiaCelestialAPI
@@ -198,7 +199,6 @@ public class CelestialEventHandler {
 
                             if (srcBody == null || dstBody == null || attractor == null) return false;
                             UUID supplierTeam = CelestialAssetStore.getTeamId(supplier.assetId);
-                            OrbitalTransferPlanner.TransferRoute route;
                             hammer.markRouteProbeAttempted();
                             long routeStartNanos = System.nanoTime();
                             try {
@@ -243,7 +243,8 @@ public class CelestialEventHandler {
                             supplier.celestialObjectId,
                             requester.celestialObjectId,
                             orbitalTime,
-                            osu);
+                            osu,
+                            route);
 
                         LogisticStore.addDelivery(task);
                         return true;

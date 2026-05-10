@@ -6,6 +6,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -23,7 +24,7 @@ public class LogisticsDelivery {
 
     public record Data(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId, ItemStackWrapper resourceId,
         long amount, LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
-        double departureOrbitalTime, double tofOrbitalSeconds) {}
+        double departureOrbitalTime, double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {}
 
     public static LogisticsDelivery create(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope) {
@@ -43,13 +44,32 @@ public class LogisticsDelivery {
             fromBody,
             toBody,
             0,
-            0);
+            0,
+            null);
     }
 
     public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
         ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
         CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime,
         double tofOrbitalSeconds) {
+        return createWithTrajectory(
+            fromAssetId,
+            toAssetId,
+            resourceId,
+            amount,
+            deliveryTicks,
+            scope,
+            fromBodyId,
+            toBodyId,
+            departureOrbitalTime,
+            tofOrbitalSeconds,
+            null);
+    }
+
+    public static LogisticsDelivery createWithTrajectory(CelestialAsset.ID fromAssetId, CelestialAsset.ID toAssetId,
+        ItemStackWrapper resourceId, long amount, int deliveryTicks, LogisticSignal.Scope scope,
+        CelestialObjectId fromBodyId, CelestialObjectId toBodyId, double departureOrbitalTime, double tofOrbitalSeconds,
+        OrbitalTransferPlanner.TransferRoute transferRoute) {
         return createWithTrajectory(
             ID.create(),
             fromAssetId,
@@ -61,13 +81,33 @@ public class LogisticsDelivery {
             fromBodyId,
             toBodyId,
             departureOrbitalTime,
-            tofOrbitalSeconds);
+            tofOrbitalSeconds,
+            transferRoute);
     }
 
     public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
         CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
         LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
         double departureOrbitalTime, double tofOrbitalSeconds) {
+        return createWithTrajectory(
+            id,
+            fromAssetId,
+            toAssetId,
+            resourceId,
+            amount,
+            deliveryTicks,
+            scope,
+            fromBodyId,
+            toBodyId,
+            departureOrbitalTime,
+            tofOrbitalSeconds,
+            null);
+    }
+
+    public static LogisticsDelivery createWithTrajectory(ID id, CelestialAsset.ID fromAssetId,
+        CelestialAsset.ID toAssetId, ItemStackWrapper resourceId, long amount, int deliveryTicks,
+        LogisticSignal.Scope scope, CelestialObjectId fromBodyId, CelestialObjectId toBodyId,
+        double departureOrbitalTime, double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute transferRoute) {
         return new LogisticsDelivery(
             id,
             new Data(
@@ -79,7 +119,8 @@ public class LogisticsDelivery {
                 fromBodyId,
                 toBodyId,
                 departureOrbitalTime,
-                tofOrbitalSeconds),
+                tofOrbitalSeconds,
+                transferRoute),
             deliveryTicks);
     }
 
@@ -100,7 +141,8 @@ public class LogisticsDelivery {
                 data.fromBodyId,
                 data.toBodyId,
                 data.departureOrbitalTime,
-                data.tofOrbitalSeconds),
+                data.tofOrbitalSeconds,
+                data.transferRoute),
             remainingTicks);
     }
 

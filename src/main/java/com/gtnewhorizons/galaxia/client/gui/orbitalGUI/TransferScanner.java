@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.LambertTransfer;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 public final class TransferScanner {
 
@@ -178,12 +179,8 @@ public final class TransferScanner {
             double vdstX = dstState.vx() - attractorAtArr.vx();
             double vdstY = dstState.vy() - attractorAtArr.vy();
 
-            double crossZ = r1x0 * r2y - r1y0 * r2x;
-            double r1mag = Math.hypot(r1x0, r1y0);
-            double r2mag = Math.hypot(r2x, r2y);
-            double sinDth = Math.abs(crossZ) / Math.max(1e-20, r1mag * r2mag);
             if (profiler != null) profiler.addGeometryNanos(System.nanoTime() - geometryStartNanos);
-            if (sinDth < 1e-3) continue;
+            if (OrbitalTransferPlanner.isDegenerateTransferGeometry(r1x0, r1y0, r2x, r2y)) continue;
 
             long lambertStartNanos = System.nanoTime();
             LambertTransfer.Solution progSol = LambertTransfer.between(r1x0, r1y0, r2x, r2y)
@@ -204,14 +201,11 @@ public final class TransferScanner {
                 profiler.incrementLambertPairCount();
             }
 
-            LambertTransfer.Solution bestSol;
-            if (progSol.valid() && (!retSol.valid() || progSol.totalDv() <= retSol.totalDv())) {
-                bestSol = progSol;
-            } else if (retSol.valid()) {
-                bestSol = retSol;
-            } else {
-                continue;
-            }
+            boolean preferPrograde = OrbitalTransferPlanner
+                .preferredProgradeForTransfer(r1x0, r1y0, vsrcX0, vsrcY0, r2x, r2y);
+            LambertTransfer.Solution bestSol = OrbitalTransferPlanner
+                .chooseLowerDvSolution(progSol, retSol, preferPrograde);
+            if (bestSol == null || !bestSol.valid()) continue;
 
             ScanResult current = new ScanResult(
                 tof,
