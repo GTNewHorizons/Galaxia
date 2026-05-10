@@ -42,7 +42,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
 
         // First look for empty slots
-        for (int i : Galaxia.reactionControlSystemSlot) {
+        for (int i : Galaxia.rcsSlot) {
             if (!baubles.isItemValidForSlot(i, stack)) continue;
 
             ItemStack inSlot = baubles.getStackInSlot(i);
@@ -57,7 +57,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         }
 
         // No slots found - Look for potential swap
-        for (int i : Galaxia.reactionControlSystemSlot) {
+        for (int i : Galaxia.rcsSlot) {
             if (!baubles.isItemValidForSlot(i, stack)) continue;
             ItemStack inSlot = baubles.getStackInSlot(i);
             boolean added = player.inventory.addItemStackToInventory(inSlot.copy());

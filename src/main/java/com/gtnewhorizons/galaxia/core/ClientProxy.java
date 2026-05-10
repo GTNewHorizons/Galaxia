@@ -1,9 +1,11 @@
 package com.gtnewhorizons.galaxia.core;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
+
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
-import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
@@ -34,23 +36,12 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.Tile
 import codechicken.nei.api.API;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
-import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
 public class ClientProxy extends CommonProxy {
-
-    private void FMLBusRegister(Object obj) {
-        FMLCommonHandler.instance()
-            .bus()
-            .register(obj);
-    }
-
-    private void ForgeBusRegister(Object obj) {
-        MinecraftForge.EVENT_BUS.register(obj);
-    }
 
     @Override
     public void preInit(FMLPreInitializationEvent event) {

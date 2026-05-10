@@ -15,7 +15,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.StatCollector;
+import net.minecraftforge.common.MinecraftForge;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
@@ -39,6 +39,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import baubles.api.BaublesApi;
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Loader;
 
 /**
  * API underpinning planetary mechanics
@@ -190,7 +192,7 @@ public final class GalaxiaAPI {
         var baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return;
 
-        for (int slot : Galaxia.reactionControlSystemSlot) {
+        for (int slot : Galaxia.rcsSlot) {
             var stack = baubles.getStackInSlot(slot);
             if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
                 provider.setEnabled(enabled);
@@ -248,7 +250,7 @@ public final class GalaxiaAPI {
         var baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return false;
 
-        for (int slot : Galaxia.reactionControlSystemSlot) {
+        for (int slot : Galaxia.rcsSlot) {
             var stack = baubles.getStackInSlot(slot);
             if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
                 return provider.isEnabled();
@@ -359,11 +361,31 @@ public final class GalaxiaAPI {
         return new ResourceLocation(Galaxia.MODID, location);
     }
 
-    public static String translate(String key) {
-        return StatCollector.translateToLocal(key);
+    /**
+     * Static shortcut to FML bus registration
+     *
+     * @param obj object to register
+     */
+    public static void FMLBusRegister(Object obj) {
+        FMLCommonHandler.instance()
+            .bus()
+            .register(obj);
     }
 
-    public static String format(String key, Object... objects) {
-        return StatCollector.translateToLocalFormatted(key, objects);
+    /**
+     * Static shortcut to forge bus registration
+     *
+     * @param obj object to register
+     */
+    public static void ForgeBusRegister(Object obj) {
+        MinecraftForge.EVENT_BUS.register(obj);
     }
+
+    /**
+     * Checks if gt is loaded (who would guess)
+     */
+    public static boolean isGregTechLoaded() {
+        return Loader.isModLoaded("gregtech");
+    }
+
 }
