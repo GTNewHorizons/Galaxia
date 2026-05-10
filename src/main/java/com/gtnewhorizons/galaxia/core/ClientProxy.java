@@ -42,47 +42,67 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
 public class ClientProxy extends CommonProxy {
 
+    private void FMLBusRegister(Object obj) {
+        FMLCommonHandler.instance()
+            .bus()
+            .register(obj);
+    }
+
+    private void ForgeBusRegister(Object obj) {
+        MinecraftForge.EVENT_BUS.register(obj);
+    }
+
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
-
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new KeyHandler());
+        FMLBusRegister(new KeyHandler());
     }
 
     @Override
     public void init(FMLInitializationEvent event) {
         super.init(event);
+        // GUI init
         GalaxiaSkyBootstrap.clientInit();
         ItemPickerScreen.FACTORY.init();
         ModulePickerScreen.FACTORY.init();
         StationManagementScreen.FACTORY.init();
-        MinecraftForge.EVENT_BUS.register(new GalaxiaOverlayHandler());
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new SkyUpdateHandler());
+
+        // StructureLib hook
         IMCForNEI.IMCSender();
 
+        // Handlers
+        ForgeBusRegister(new GalaxiaOverlayHandler());
+        ForgeBusRegister(new GantryPlacementPreviewHandler());
+        FMLBusRegister(new SkyUpdateHandler());
+
+        // Keys
+        GalaxiaKeyBinds.init();
+
+        // TESR
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityRocketTrophy.class, new RocketTrophyRenderer());
-        RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGantry.class, new GantryRenderer());
+
+        // Entities
+        RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
+
+        // Items
         MinecraftForgeClient
             .registerItemRenderer(Item.getItemFromBlock(GalaxiaBlocksEnum.GANTRY.get()), new GantryItemRenderer());
-        MinecraftForge.EVENT_BUS.register(new GantryPlacementPreviewHandler());
         MinecraftForgeClient
             .registerItemRenderer(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem(), new RocketSchematicItemRenderer());
 
-        GalaxiaKeyBinds.init();
     }
 
     @Override
     public void postInit(FMLPostInitializationEvent event) {
         super.postInit(event);
 
+        // Hide Logo Item
         API.hideItem(new ItemStack(GalaxiaItemList.GALAXIA_LOGO.getItem()));
+
+        // StructureLib registering
         GalaxiaMultiblockHandler.register(new TileEntitySilo());
         GalaxiaMultiblockHandler.register(new TileEntityModuleAssembler());
 
