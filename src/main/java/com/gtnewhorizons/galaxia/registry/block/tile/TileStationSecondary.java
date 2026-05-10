@@ -4,6 +4,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import net.minecraft.nbt.NBTTagCompound;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
@@ -36,6 +37,14 @@ public abstract class TileStationSecondary<T extends TileStationBase<T>> extends
         }
 
         return false;
+    }
+
+    public int getVolume() {
+        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?> def){
+            return def.getVolume();
+        }
+
+        return 0;
     }
 
     @Override

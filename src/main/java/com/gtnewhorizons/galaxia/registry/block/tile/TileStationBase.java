@@ -37,6 +37,20 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
         super();
     }
 
+    protected void clearBroken(List<BlockPos> controllers) {
+        for (int i = controllers.size() - 1; i > 0; i--) {
+            BlockPos pos = controllers.get(i);
+            if (pos == null) {
+                controllers.remove(i);
+                continue;
+            }
+            GalaxiaMultiblockBase<?> secondary = pos.getTE(worldObj);
+            if (secondary == null) {
+                controllers.remove(i);
+            }
+        }
+    }
+
     @Override
     public Block getControllerBlock() {
         return GalaxiaBlocksEnum.STATION_CONTROLLER.get();

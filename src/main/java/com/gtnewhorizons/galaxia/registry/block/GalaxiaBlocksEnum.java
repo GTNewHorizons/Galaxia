@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
 import net.minecraft.block.Block;
 import net.minecraft.tileentity.TileEntity;
 
@@ -9,11 +11,13 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
@@ -43,11 +47,13 @@ public enum GalaxiaBlocksEnum {
     AIRLOCK_CONTROLLER(new BlockAirlockController(), TileEntityAirlock.class, "airlock_controller"),
     STATION_CONTROLLER(new BlockStationController(), TileStationController.class, "station_controller"),
     STATION_ROOM(new BlockStationRoom(), TileStationRoom.class, "station_room"),
+    STATION_DOCK(new BlockStationDock(), TileStationDock.class, "station_dock"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "tenebrae_fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),
     GANTRY_TERMINAL(new BlockGantryTerminal(), TileEntityGantryTerminal.class, "gantry_terminal"),
     ROCKET_TROPHY(new BlockRocketTrophy(), TileEntityRocketTrophy.class, "rocket_trophy"),
+    HAMMER_TARGET(new BlockHammerTarget(), TileHammerTarget.class, "hammer_target"),
 
     // NON-TE
     SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),

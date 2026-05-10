@@ -39,23 +39,14 @@ public final class AutomatedFacility extends CelestialAsset {
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
     public final CelestialObjectId systemId;
-
     public final CelestialObjectId planetaryAnchorBodyId;
-
-    private final List<ModuleInstance> modules;
-
     public final AutomatedFacilityInventory inventory;
 
-    public final LogisticsConfiguration logisticsConfig;
-
+    private final List<ModuleInstance> modules;
     private final StationLayout layout;
-
     private final LayoutCacheBundle layoutCache;
-
     private final SettingsGroupRegistry settingsGroups;
-
     private long energyStored;
-
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
@@ -74,7 +65,6 @@ public final class AutomatedFacility extends CelestialAsset {
             .id();
         this.modules = new ArrayList<>();
         this.inventory = new AutomatedFacilityInventory();
-        this.logisticsConfig = new LogisticsConfiguration();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();

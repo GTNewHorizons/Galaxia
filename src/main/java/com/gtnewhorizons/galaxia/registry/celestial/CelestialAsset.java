@@ -15,6 +15,7 @@ import net.minecraft.util.StatCollector;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
@@ -70,6 +71,8 @@ public abstract class CelestialAsset implements Buildable {
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private boolean dirty = true;
 
+    public final LogisticsConfiguration logisticsConfig;
+
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
     }
@@ -104,6 +107,7 @@ public abstract class CelestialAsset implements Buildable {
         this.requiredResources = defaultRequirements(kind);
         this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
         this.syncRevision = 0;
+        this.logisticsConfig = new LogisticsConfiguration();
     }
 
     public Map<ItemStack, Long> requiredResources() {

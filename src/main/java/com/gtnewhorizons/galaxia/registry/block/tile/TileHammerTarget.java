@@ -1,0 +1,106 @@
+package com.gtnewhorizons.galaxia.registry.block.tile;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
+import com.cleanroommc.modularui.widgets.TextWidget;
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+import net.minecraft.tileentity.TileEntityChest;
+
+import com.cleanroommc.modularui.api.IGuiHolder;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureDefinition;
+import com.gtnewhorizon.structurelib.structure.StructureUtility;
+import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
+
+public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> implements IGuiHolder<PosGuiData> {
+
+    private final static String STRUCTURE_PIECE_MAIN = "main";
+    private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
+        .<TileHammerTarget>builder()
+        // spotless:off
+        .addShape(STRUCTURE_PIECE_MAIN, StructureUtility.transpose(new String[][] {
+            { "  T  ", "     ", "T   T", "     ", "  T  " },
+            { "  T  ", "     ", "T   T", "     ", "  T  " },
+            { "  C  ", "     ", "C   C", "     ", "  C  " },
+            { " CCC ", "C   C", "C   C", "C   C", " CCC " },
+            { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " }
+        }))
+        // spotless:on
+        .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0))
+        .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((target, te) -> {
+            if (te instanceof TileEntityChest chest) {
+                target.inventory.add(chest);
+                return true;
+            }
+            return false;
+        }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
+        .build();
+
+    private final List<TileEntityChest> inventory = new ArrayList<>();
+    private BlockPos stationController;
+
+    public void setStationController(BlockPos pos) {
+        this.stationController = pos;
+    }
+
+    @Override
+    public IStructureDefinition<TileHammerTarget> getStructureDefinition() {
+        return STRUCTURE_DEFINITION;
+    }
+
+    @Override
+    protected int getControllerOffsetX() {
+        return 2;
+    }
+
+    @Override
+    protected int getControllerOffsetY() {
+        return 4;
+    }
+
+    @Override
+    protected int getControllerOffsetZ() {
+        return 0;
+    }
+
+    @Override
+    public Block getControllerBlock() {
+        return GalaxiaBlocksEnum.HAMMER_TARGET.get();
+    }
+
+    @Override
+    public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
+        if (!worldObj.isRemote) {
+            markStructureDirty();
+        }
+
+        BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
+        syncManager.syncValue("structureValid", 0, structureValidSync);
+
+        return new ModularPanel("galaxia:station_room").size(210, 130)
+            .child(
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
+                    .asWidget()
+                    .pos(8, 8))
+            .child(new TextWidget<>(IKey.dynamic(() -> {
+                boolean valid = structureValidSync.getBoolValue();
+                String structure = StatCollector.translateToLocal("galaxia.gui.station_room.structure");
+                String status = StatCollector
+                    .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
+                EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
+                return structure + ": " + color + status + EnumChatFormatting.RESET;
+            })).pos(10, 30));
+    }
+}

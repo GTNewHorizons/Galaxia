@@ -42,21 +42,22 @@ public class TileStationController extends TileStationBase<TileStationController
 
     public final ArbitraryShapeDefinition<TileStationController> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStationController>builder()
-        .withSearchRadius(16)
         .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
         .addElements(
             BASE_VALID_BLOCKS.stream()
                 .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((_, tileEntity) -> {
+        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((stationController, tileEntity) -> {
             if (tileEntity instanceof TileEntityAirlock airlock) {
                 if (!airlock.isStructureValid()) return false;
 
-                registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                stationController.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
                 return true;
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+        .withSearchRadius(16)
+        .enclosed()
         .build();
 
     @Override
@@ -109,13 +110,12 @@ public class TileStationController extends TileStationBase<TileStationController
         secondaries.clear();
     }
 
-    @Override
     public int getVolume() {
-        int own = ArbitraryShapeTile.super.getVolume();
-        clearBrokenSecondaries();
+        int own = STRUCTURE_DEFINITION.getVolume();
+        clearBroken(secondaries);
         return secondaries.stream()
             .map(pos -> (TileStationRoom) pos.getTE(worldObj))
-            .mapToInt(ArbitraryShapeTile::getVolume)
+            .mapToInt(TileStationSecondary::getVolume)
             .sum() + own;
     }
 
@@ -152,7 +152,7 @@ public class TileStationController extends TileStationBase<TileStationController
     public boolean hasOxygen(int x, int y, int z) {
         if (isInside(x, y, z)) return isOxygenated();
 
-        clearBrokenSecondaries();
+        clearBroken(secondaries);
         for (BlockPos pos : secondaries) {
             TileStationSecondary<?> secondary = pos.getTE(worldObj);
             if (secondary.isInside(x, y, z)) return secondary.isOxygenated();
@@ -161,30 +161,16 @@ public class TileStationController extends TileStationBase<TileStationController
         return false;
     }
 
-    private void clearBrokenSecondaries() {
-        for (int i = secondaries.size() - 1; i > 0; i--) {
-            BlockPos pos = secondaries.get(i);
-            if (pos == null) {
-                secondaries.remove(i);
-                continue;
-            }
-            TileStationSecondary<?> secondary = pos.getTE(worldObj);
-            if (secondary == null) {
-                secondaries.remove(i);
-            }
-        }
-    }
-
     @Override
     public void tick() {
         super.tick();
 
-        clearBrokenSecondaries();
+        clearBroken(secondaries);
         for (BlockPos pos : secondaries) {
-            TileStationRoom monitor = pos.getTE(worldObj);
-            if (monitor == null) continue;
+            TileStationSecondary<?> secondary = pos.getTE(worldObj);
+            if (secondary == null) continue;
 
-            monitor.tick();
+            secondary.tick();
         }
     }
 
