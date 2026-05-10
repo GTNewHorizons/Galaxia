@@ -35,18 +35,17 @@
  */
 dependencies {
     api("com.github.GTNewHorizons:StructureLib:1.4.34:dev")
-    api("com.github.GTNewHorizons:NotEnoughItems:2.8.93-GTNH:dev")
-    api("com.github.GTNewHorizons:GTNHLib:0.9.54:dev")
-    api("com.github.GTNewHorizons:NotEnoughIds:2.1.11:dev")
-    api("com.github.GTNewHorizons:ModularUI2:2.3.58-1.7.10:dev")
-    api("com.github.GTNewHorizons:waila:1.19.23:dev")
+    api("com.github.GTNewHorizons:NotEnoughItems:2.8.97-GTNH:dev")
+    api("com.github.GTNewHorizons:GTNHLib:0.9.65:dev")
+    api("com.github.GTNewHorizons:ModularUI2:2.3.61-1.7.10:dev")
+    api("com.github.GTNewHorizons:waila:1.19.25:dev")
 
-    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.129:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.136:dev")
 
     compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
-    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.466:dev")
-    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.19:dev') { transitive = false }
+    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.504:dev")
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.22:dev') { transitive = false }
     devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
 
     devOnlyNonPublishable('com.github.GTNewHorizons:BlockRenderer6343:1.4.13:dev'){transitive=false}
@@ -61,7 +60,7 @@ dependencies {
     //devOnlyNonPublishable('com.github.GTNewHorizons:worldedit-gtnh:v0.0.9')
 
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:DuraDisplay:1.4.2:dev")
-    api("com.github.GTNewHorizons:Baubles-Expanded:2.2.13-GTNH:dev")
+    api("com.github.GTNewHorizons:Baubles-Expanded:2.2.14-GTNH:dev")
 
     // Speeds up mod identification and loading in dev
     runtimeOnlyNonPublishable(rfg.deobf("com.github.GTNewHorizons:CoreTweaks:0.3.4.2-GTNH"))
