@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
@@ -28,12 +29,12 @@ public class BiomeGenSpace extends BiomeGenBase {
     private final List<LocationRuleGalaxiaSurface> surfaceFeatures;
     private final List<LocationRuleGalaxiaCave> caveFeatures;
     private final List<LocationRuleGalaxiaWall> wallFeatures;
-    private final boolean generateCaves;
     private final int surfaceThickness;
     private final Block oceanCrackBlock;
     private final float oceanCrackThickness;
     private final int oceanCrackComplexity;
     private final StratificationPreset fillerBlocks;
+    private final CaveShape caveShape;
 
     /**
      * Creates a biome generator and configures it based on the provided builder
@@ -59,6 +60,7 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.oceanFiller = b.oceanFiller;
         this.oceanSurface = b.oceanSurface;
         this.seabed = b.seabed;
+        this.caveShape = b.caveShape;
 
         this.spawnableCaveCreatureList = b.mobsCave;
         this.spawnableCreatureList = b.mobsGeneral;
@@ -68,7 +70,6 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.surfaceFeatures = b.surfaceFeatures;
         this.caveFeatures = b.caveFeatures;
         this.wallFeatures = b.wallFeatures;
-        this.generateCaves = b.generateCaves;
         this.surfaceThickness = b.surfaceThickness;
         this.oceanCrackThickness = b.oceanCrackThickness;
         this.oceanCrackBlock = b.oceanCrackBlock;
@@ -78,6 +79,10 @@ public class BiomeGenSpace extends BiomeGenBase {
         this.terrain = b.terrain != null ? b.terrain
             : TerrainConfiguration.builder()
                 .build();
+    }
+
+    public CaveShape getCaveShape() {
+        return caveShape;
     }
 
     public StratificationPreset getFillerBlocks() {
@@ -179,10 +184,6 @@ public class BiomeGenSpace extends BiomeGenBase {
 
     public List<LocationRuleGalaxiaWall> getWallFeatures() {
         return wallFeatures;
-    }
-
-    public boolean generateCaves() {
-        return generateCaves;
     }
 
     public Block getOceanCrackBlock() {

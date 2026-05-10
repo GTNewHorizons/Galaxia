@@ -10,6 +10,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
@@ -62,6 +64,7 @@ public class Mars extends BasePlanet {
      */
     @Override
     protected void configureProvider(WorldProviderBuilder builder) {
+        CaveShape marsCaves = new CaveShapeCracks();
         builder.sky(true)
             .fog(0.15f, 0.1f, 0.3f)
             .biome(
@@ -76,7 +79,7 @@ public class Mars extends BasePlanet {
                         .width(1.5)
                         .endFeature()
                         .build(),
-                    true,
+                    marsCaves,
                     PlanetBlocks.MARS_REGOLITH),
                 0,
                 0)
@@ -92,7 +95,7 @@ public class Mars extends BasePlanet {
                         .width(2)
                         .endFeature()
                         .build(),
-                    false,
+                    null,
                     PlanetBlocks.MARS_REGOLITH),
                 0,
                 1)
@@ -112,7 +115,7 @@ public class Mars extends BasePlanet {
                         .width(2)
                         .endFeature()
                         .build(),
-                    true,
+                    marsCaves,
                     PlanetBlocks.MARS_REGOLITH),
                 1,
                 0)
@@ -128,7 +131,7 @@ public class Mars extends BasePlanet {
                         .width(0.5)
                         .endFeature()
                         .build(),
-                    false,
+                    null,
                     PlanetBlocks.MARS_RHYOLITE),
                 1,
                 1)
@@ -136,7 +139,7 @@ public class Mars extends BasePlanet {
             .build();
     }
 
-    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain, boolean generateCaves,
+    protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain, CaveShape caveShape,
         Block surfaceBlock) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .temperature(0.4F)
@@ -147,7 +150,7 @@ public class Mars extends BasePlanet {
                     .addStrataLayer(PlanetBlocks.MARS_ANORTHOSITE, 1, 32))
             .snowBlock(PlanetBlocks.MARS_SNOW, 144)
             .terrain(terrain)
-            .generateCaves(generateCaves)
+            .caveShape(caveShape)
             .build();
     }
 }
