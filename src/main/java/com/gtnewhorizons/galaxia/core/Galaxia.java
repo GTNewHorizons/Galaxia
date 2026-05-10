@@ -56,7 +56,7 @@ public final class Galaxia {
     public static int[] sporeFilterSlots;
     public static int[] thermalSlot;
     public static int[] witherSlots;
-    public static int[] reactionControlSystemSlot;
+    public static int[] rcsSlot;
 
     @SidedProxy(clientSide = "com.gtnewhorizons.galaxia.core.ClientProxy", serverSide = "com.gtnewhorizons.galaxia.core.CommonProxy")
     public static CommonProxy proxy;
