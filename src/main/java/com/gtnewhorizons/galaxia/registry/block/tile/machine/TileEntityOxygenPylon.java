@@ -15,7 +15,6 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.gtnewhorizons.galaxia.api.IOxygenHandler;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
@@ -25,7 +24,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import baubles.api.BaublesApi;
 import cpw.mods.fml.common.network.NetworkRegistry;
 
-public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements IOxygenHandler {
+public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine {
 
     protected FluidTank oxygenTank;
 

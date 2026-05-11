@@ -70,9 +70,7 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
             ItemStack stack = slots[i];
             if (stack == null || !(stack.getItem() instanceof ItemOxygenTank tankItem)) continue;
 
-            int current = tankItem.getCurrentOxygen(stack);
-            int max = tankItem.getMaxOxygen();
-            int space = max - current;
+            int space = tankItem.getMaxOxygen() - tankItem.getCurrentOxygen(stack);
             if (space <= 0) continue;
 
             int fill = Math.min(remaining, space);
@@ -110,7 +108,6 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
         }
     }
 
-    // IInventory methods (без изменений, кроме markDirty)
     @Override
     public int getSizeInventory() {
         return SLOT_COUNT;
