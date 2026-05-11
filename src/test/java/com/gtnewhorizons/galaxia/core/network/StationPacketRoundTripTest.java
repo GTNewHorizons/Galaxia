@@ -365,7 +365,7 @@ final class StationPacketRoundTripTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 

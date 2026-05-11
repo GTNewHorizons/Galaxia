@@ -1057,7 +1057,7 @@ final class AssetModuleUpdatePacketTest {
         ModuleInstance module = FacilityModuleKind.MACERATOR
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
         facility.addModule(module);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 
@@ -1080,7 +1080,7 @@ final class AssetModuleUpdatePacketTest {
             Buildable.Status.OPERATIONAL);
         ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, tier);
         facility.addModule(module);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 
@@ -1109,7 +1109,7 @@ final class AssetModuleUpdatePacketTest {
         ModuleInstance module = FacilityModuleKind.MINER
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 
@@ -1131,7 +1131,7 @@ final class AssetModuleUpdatePacketTest {
             .place(source);
         facility.stationLayout()
             .place(target);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 

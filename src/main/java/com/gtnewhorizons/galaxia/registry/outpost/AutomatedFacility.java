@@ -63,6 +63,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Map<ItemStackWrapper, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
+    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
@@ -136,6 +137,8 @@ public final class AutomatedFacility extends CelestialAsset {
             module.shape(),
             module.status(),
             modules.size());
+
+        markDirty();
     }
 
     public void removeModule(int index) {
@@ -147,6 +150,7 @@ public final class AutomatedFacility extends CelestialAsset {
             bumpSyncRevision();
             if (layout != null) layout.removeTileForModule(removed.id);
             layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
+            markDirty();
         }
     }
 
@@ -167,6 +171,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void clearModules() {
         modules.clear();
+        markDirty();
     }
 
     public Stream<ModuleInstance> allOperationalModules() {
@@ -553,16 +558,21 @@ public final class AutomatedFacility extends CelestialAsset {
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);
         bumpSyncRevision();
+        markDirty();
     }
 
+    @Override
     public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty() || !dirtyInventoryDeltas.isEmpty();
+        return super.isDirty() || !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty()
+            || !dirtyInventoryDeltas.isEmpty();
     }
 
+    @Override
     public boolean needsFullSyncFor(UUID playerId) {
         return !syncedPlayerIds.contains(playerId);
     }
 
+    @Override
     public void markSyncedFor(UUID playerId) {
         syncedPlayerIds.add(playerId);
     }

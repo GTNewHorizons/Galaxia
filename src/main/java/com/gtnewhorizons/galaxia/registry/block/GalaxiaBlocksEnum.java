@@ -5,13 +5,17 @@ import net.minecraft.tileentity.TileEntity;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceAir;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStation;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockStationModuleController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationModuleController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
@@ -36,7 +40,9 @@ public enum GalaxiaBlocksEnum {
 
     // TE
     SILO_CONTROLLER(new BlockSilo(), TileEntitySilo.class, "silo_controller"),
-    MODULE_CONTROLLER(new BlockStationModuleController(), TileStationModuleController.class, "module_controller"),
+    AIRLOCK_CONTROLLER(new BlockAirlockController(), TileEntityAirlock.class, "airlock_controller"),
+    STATION_CONTROLLER(new BlockStationController(), TileStationController.class, "station_controller"),
+    STATION_ROOM(new BlockStationRoom(), TileStationRoom.class, "station_room"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "tenebrae_fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),
@@ -44,9 +50,8 @@ public enum GalaxiaBlocksEnum {
     ROCKET_TROPHY(new BlockRocketTrophy(), TileEntityRocketTrophy.class, "rocket_trophy"),
 
     // NON-TE
-    SPACE_STATION_BLOCK(new BlockSpaceStation(), "space_station_block"),
     SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),
-    SPACE_AIR(new BlockSpaceAir(), "space_air"),
+    AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
 
     // MISC
     BLOCK_OF_PYRITE(new BlockConfigurable("resource/block_of_pyrite")),
@@ -63,9 +68,13 @@ public enum GalaxiaBlocksEnum {
             .opaque()),
     RUSTY_PANEL(new BlockConfigurable("rusty_panel")),
     RUSTY_SHEETMETAL(new BlockConfigurable("rusty_sheetmetal")),
-    SPACE_STATION_PANEL(new BlockConfigurable("space_station/space_station_panel")),
+    SPACE_STATION_PANEL(new BlockConfigurable("space_station/space_station_panel")
+        .opaque()),
     RESEARCH_OUTPOST_CASING(new BlockConfigurable("machine/research_outpost_casing")),
     LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
+    AIRLOCK_CASING(new BlockAirlockCasing()),
+    SPACE_STATION_BLOCK(new BlockConfigurable("space_station/space_station_block")
+        .opaque()),
 
     ; // leave trailing semicolon
 

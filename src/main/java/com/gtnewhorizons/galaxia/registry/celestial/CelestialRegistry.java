@@ -251,8 +251,33 @@ public final class CelestialRegistry {
                         .metadata("sizeClass", "minor")));
 
         register(
+            CelestialObjectId.OVERWORLD,
+            builder -> builder.parent(CelestialObjectId.VAEL)
+                .objectClass(CelestialObject.Class.PLANET)
+                .circularOrbit(0.45 * earthRadiusToAU, 0.00022, seededPhase("vitris"))
+                .texture(EnumTextures.ICON_EGORA.get())
+                .spriteSize(0.18)
+                .properties(
+                    b -> b.withGravity(1, 2400.0)
+                        .visitable(false)
+                        .canCreateStation(true)
+                        .canCreateOutpost(true)
+                        .temperature(288)
+                        .radiation(0.00)
+                        .oreProfile("undefined")
+                        .gtOreVeinIds("ore.mix.lapis", "ore.mix.iron", "ore.mix.redstone")
+                        .metadata("surface", "undefined")
+                        .metadata("status", "placeholder_homeworld")
+                        .ores(
+                            Blocks.coal_ore,
+                            Blocks.iron_ore,
+                            Blocks.gold_ore,
+                            Blocks.redstone_ore,
+                            Blocks.diamond_ore)));
+
+        register(
             DimensionEnum.OVERWORLD_ORBIT,
-            builder -> builder.parent(CelestialObjectId.MARS)
+            builder -> builder.parent(CelestialObjectId.OVERWORLD)
                 .objectClass(CelestialObject.Class.STATION)
                 .circularOrbit(0.04 * earthRadiusToAU, 0.00260, seededPhase("overworld_orbit"))
                 .texture(EnumTextures.ICON_EGORA.get())

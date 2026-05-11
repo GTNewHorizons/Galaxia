@@ -60,13 +60,9 @@ public abstract class BlockRocketController extends Block {
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
         int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        ForgeDirection dir = switch (f) {
-            case 0 -> ForgeDirection.NORTH;
-            case 1 -> ForgeDirection.EAST;
-            case 2 -> ForgeDirection.SOUTH;
-            case 3 -> ForgeDirection.WEST;
-            default -> ForgeDirection.NORTH;
-        };
+        ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
+            ForgeDirection.WEST };
+        ForgeDirection dir = dirs[f];
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof IRocketControllerTE rte) rte.setPlacedFacing(dir);
     }

@@ -104,4 +104,8 @@ public interface Buildable {
     default boolean isManageable() {
         return status() == Status.OPERATIONAL;
     }
+
+    default void disable() {
+        updateStatus(Status.DISABLED);
+    }
 }

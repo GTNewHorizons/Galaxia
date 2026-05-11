@@ -268,4 +268,11 @@ public final class GalaxiaCelestialAPI {
             .getTotalWorldTime();
         return totalWorldTime * OrbitalTransferPlanner.OSU_PER_TICK;
     }
+
+    public static CelestialObjectId getObjectFromDimension(int dimension) {
+        DimensionEnum galaxiaDim = DimensionEnum.fromId(dimension);
+        if (galaxiaDim == null) return CelestialObjectId.INVALID;
+
+        return CelestialObjectId.fromDimension(galaxiaDim);
+    }
 }

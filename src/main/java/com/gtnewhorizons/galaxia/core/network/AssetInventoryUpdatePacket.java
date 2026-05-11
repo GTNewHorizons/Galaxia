@@ -2,17 +2,23 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.UUID;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-public final class AssetInventoryUpdatePacket {
+public final class AssetInventoryUpdatePacket implements IMessage {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
@@ -55,6 +61,7 @@ public final class AssetInventoryUpdatePacket {
         return pkt;
     }
 
+    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeString(buf, resourceKey);
@@ -62,11 +69,23 @@ public final class AssetInventoryUpdatePacket {
         buf.writeBoolean(creativeOnly);
     }
 
+    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         resourceKey = PacketUtil.readString(buf);
         delta = buf.readLong();
         creativeOnly = buf.readBoolean();
+    }
+
+    public static class Handler implements IMessageHandler<AssetInventoryUpdatePacket, IMessage> {
+
+        @Override
+        public IMessage onMessage(AssetInventoryUpdatePacket message, MessageContext ctx) {
+            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            UUID teamId = TempTeamCompat.getTeam(player);
+            boolean creative = player.capabilities.isCreativeMode;
+            return message.apply(teamId, creative);
+        }
     }
 
     public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {

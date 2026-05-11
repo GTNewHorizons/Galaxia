@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.core.starmap.sync;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,7 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.core.network.AssetCreatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
@@ -57,25 +56,8 @@ final class StarmapServerActionsTest {
     }
 
     @Test
-    void createAssetAddsToServerStoreAndReturnsImmediateFullSync() {
-        AssetCreatePacket packet = AssetCreatePacket.create(
-            CelestialObjectId.MARS,
-            "Mars Automated Station",
-            CelestialAsset.Kind.AUTOMATED_STATION,
-            Buildable.Status.OPERATIONAL);
-
-        AssetSyncPacket result = packet.apply(TEAM);
-
-        assertNotNull(result, "create must immediately echo sync data for the open GUI");
-        CelestialAsset created = CelestialAssetStore.SERVER.allAssetsInternal()
-            .get(0);
-        assertInstanceOf(AutomatedFacility.class, created);
-        assertEquals("Mars Automated Station", created.displayName());
-    }
-
-    @Test
     void buildModuleRejectsMissingServerAsset() {
-        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = new com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket();
+        AssetBuildModulePacket packet = new AssetBuildModulePacket();
         // Don't set assetId - will be null, should fail
 
         AssetSyncPacket result = packet.apply(TEAM, false);
@@ -93,7 +75,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         StationTileCoord coord = StationTileCoord.of(1, 0);
 
         com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
@@ -120,7 +102,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         StationTileCoord first = StationTileCoord.of(1, 0);
         StationTileCoord second = StationTileCoord.of(0, 1);
 
@@ -159,7 +141,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         StationTileCoord first = StationTileCoord.of(1, 0);
         StationTileCoord chained = StationTileCoord.of(2, 0);
 
@@ -198,7 +180,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
 
         com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
             .createMany(
@@ -304,7 +286,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 

@@ -116,7 +116,7 @@ final class ModuleConfigModalControllerTest {
     }
 
     private static ModuleConfigModalController controllerFor(AutomatedFacility facility) {
-        CelestialAssetStore.CLIENT.addInternal(TEAM_ID, facility);
+        CelestialAssetStore.CLIENT.registerAssetInternal(TEAM_ID, facility);
         return new ModuleConfigModalController(
             ModularPanel.defaultPanel("test_module_config_modal_controller", 800, 600),
             facility.assetId,

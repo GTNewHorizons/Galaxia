@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -18,9 +21,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-public final class AssetBuildModulePacket {
+public final class AssetBuildModulePacket implements IMessage {
 
     private static final int MAX_BUILD_TARGETS = 256;
 
@@ -53,6 +59,7 @@ public final class AssetBuildModulePacket {
         return pkt;
     }
 
+    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeEnum(buf, moduleKind);
@@ -69,6 +76,7 @@ public final class AssetBuildModulePacket {
         }
     }
 
+    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         moduleKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
@@ -86,6 +94,17 @@ public final class AssetBuildModulePacket {
             for (int i = 0; i < targetCount; i++) {
                 tileCoords.add(PacketUtil.readStationTileCoord(buf));
             }
+        }
+    }
+
+    public static class Handler implements IMessageHandler<AssetBuildModulePacket, IMessage> {
+
+        @Override
+        public IMessage onMessage(AssetBuildModulePacket message, MessageContext ctx) {
+            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            UUID teamId = TempTeamCompat.getTeam(player);
+            boolean creative = player.capabilities.isCreativeMode;
+            return message.apply(teamId, creative);
         }
     }
 

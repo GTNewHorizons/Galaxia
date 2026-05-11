@@ -42,6 +42,8 @@ final class AutomatedFacilityDeltaSyncTest {
     void markSyncedPreventsFullSync() {
         AutomatedFacility facility = createFacility();
         facility.markSyncedFor(PLAYER_A);
+        facility.clean();
+
         assertFalse(facility.needsFullSyncFor(PLAYER_A));
         assertTrue(facility.needsFullSyncFor(PLAYER_B), "Player B should still need full sync");
     }
@@ -50,11 +52,13 @@ final class AutomatedFacilityDeltaSyncTest {
     void addModuleMarksDirty() {
         AutomatedFacility facility = createFacility();
         facility.markSyncedFor(PLAYER_A);
+        facility.clean();
 
         ModuleInstance module = addModule(facility, FacilityModuleKind.STORAGE);
         assertTrue(facility.isDirty());
 
         List<ModuleInstance> dirty = facility.drainDirtyModules();
+        facility.clean();
         assertEquals(1, dirty.size());
         assertEquals(module.id, dirty.get(0).id);
 
@@ -65,6 +69,7 @@ final class AutomatedFacilityDeltaSyncTest {
     void removeModuleMarksDirty() {
         AutomatedFacility facility = createFacility();
         facility.markSyncedFor(PLAYER_A);
+        facility.clean();
 
         ModuleInstance module = addModule(facility, FacilityModuleKind.STORAGE);
         facility.drainDirtyModules(); // clear add dirtiness
@@ -73,6 +78,7 @@ final class AutomatedFacilityDeltaSyncTest {
         assertTrue(facility.isDirty());
 
         List<ModuleInstance.ID> removed = facility.drainRemovedIds();
+        facility.clean();
         assertEquals(1, removed.size());
         assertEquals(module.id, removed.get(0));
 
@@ -83,6 +89,7 @@ final class AutomatedFacilityDeltaSyncTest {
     void multipleAddsAccumulate() {
         AutomatedFacility facility = createFacility();
         facility.markSyncedFor(PLAYER_A);
+        facility.clean();
 
         ModuleInstance a = addModule(facility, FacilityModuleKind.STORAGE);
         ModuleInstance b = addModule(facility, FacilityModuleKind.TANK);
@@ -90,6 +97,7 @@ final class AutomatedFacilityDeltaSyncTest {
 
         assertTrue(facility.isDirty());
         List<ModuleInstance> dirty = facility.drainDirtyModules();
+        facility.clean();
         assertEquals(3, dirty.size());
         assertFalse(facility.isDirty());
     }
@@ -150,6 +158,8 @@ final class AutomatedFacilityDeltaSyncTest {
         List<ModuleInstance> dirty = facility.drainDirtyModules();
         assertEquals(1, dirty.size());
         assertEquals(a.id, dirty.get(0).id);
+
+        facility.clean();
 
         assertFalse(facility.isDirty());
     }

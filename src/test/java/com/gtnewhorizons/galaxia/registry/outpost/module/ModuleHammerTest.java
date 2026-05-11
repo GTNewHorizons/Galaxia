@@ -105,6 +105,7 @@ final class ModuleHammerTest {
         outpost.addModule(module);
         outpost.drainDirtyModules();
         outpost.setEnergyStored(500_000L);
+        outpost.clean();
 
         module.tick(outpost);
 

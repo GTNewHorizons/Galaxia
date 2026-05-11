@@ -129,6 +129,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
         .build();
 
+    public TileEntitySilo() {
+        super();
+    }
+
     /**
      * Gets the structure definition of the Silo multi
      *
@@ -252,13 +256,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             valid = false;
         }
 
-        if (valid != structureValid) {
-            structureValid = valid;
-            if (valid) onStructureFormed();
-            else onStructureDisformed();
-            markDirty();
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
         return valid;
     }
 
@@ -981,7 +978,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         hasAssembler = nbt.getBoolean("hasAssembler");
 
         if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
-        placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
+        if (nbt.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
 
     }
 

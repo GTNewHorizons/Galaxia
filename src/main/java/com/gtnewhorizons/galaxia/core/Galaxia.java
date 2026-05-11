@@ -7,9 +7,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.Tags;
+import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetCreateRequestPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
+import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
@@ -101,6 +107,18 @@ public final class Galaxia {
                 Side.SERVER);
         GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++, Side.SERVER);
         GALAXIA_NETWORK.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++, Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(AssetUpdatePacket.Handler.class, AssetUpdatePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetBuildModulePacket.Handler.class, AssetBuildModulePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetCreateRequestPacket.Handler.class, AssetCreateRequestPacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetModuleUpdatePacket.Handler.class, AssetModuleUpdatePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetInventoryUpdatePacket.Handler.class, AssetInventoryUpdatePacket.class, id++,
+                Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
+                Side.SERVER);
         GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
                 Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(ProfilerSyncPacket.Handler.class, ProfilerSyncPacket.class, id++,

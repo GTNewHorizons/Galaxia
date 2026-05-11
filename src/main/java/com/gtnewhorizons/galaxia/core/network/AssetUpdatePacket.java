@@ -2,16 +2,22 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.UUID;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-public final class AssetUpdatePacket {
+public final class AssetUpdatePacket implements IMessage {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
@@ -44,6 +50,7 @@ public final class AssetUpdatePacket {
         return pkt;
     }
 
+    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeEnum(buf, action);
@@ -52,11 +59,22 @@ public final class AssetUpdatePacket {
         }
     }
 
+    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         action = PacketUtil.readEnum(buf, Action.class);
         if (action == Action.RENAME_ASSET) {
             displayName = PacketUtil.readString(buf);
+        }
+    }
+
+    public static class Handler implements IMessageHandler<AssetUpdatePacket, IMessage> {
+
+        @Override
+        public IMessage onMessage(AssetUpdatePacket message, MessageContext ctx) {
+            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            UUID teamId = TempTeamCompat.getTeam(player);
+            return message.apply(teamId);
         }
     }
 
@@ -88,7 +106,7 @@ public final class AssetUpdatePacket {
             case REQUEST_FULL_SYNC -> {
                 AutomatedFacility state = asset instanceof AutomatedFacility o ? o : null;
                 if (state == null && asset.status() == CelestialAsset.Status.OPERATIONAL) {
-                    CelestialAssetStore.add(teamId, asset);
+                    CelestialAssetStore.registerAsset(teamId, asset);
                     LOG.info("[Outpost] Auto-created state for outpost {} (team {})", assetId, teamId);
                     state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
                 }

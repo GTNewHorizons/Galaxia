@@ -74,6 +74,10 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
             StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
         .build();
 
+    public TileEntityModuleAssembler() {
+        super();
+    }
+
     /**
      * Gets the structure definition of this multiblock
      *
@@ -167,13 +171,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
             valid = false;
         }
 
-        if (valid != structureValid) {
-            structureValid = valid;
-            if (valid) onStructureFormed();
-            else onStructureDisformed();
-            markDirty();
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
         return valid;
     }
 
@@ -342,7 +339,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         }
     }
 
-    private ForgeDirection placedFacing = ForgeDirection.NORTH; // default
+    private ForgeDirection placedFacing = ForgeDirection.NORTH;
 
     @Override
     public ForgeDirection getPlacedFacing() {
@@ -372,7 +369,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         for (String key : mapNbt.func_150296_c()) {
             moduleMap.put(Integer.parseInt(key), mapNbt.getInteger(key));
         }
-        placedFacing = ForgeDirection.getOrientation(tag.getInteger("placedFacing"));
+        if (tag.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(tag.getInteger("placedFacing"));
     }
 
     @Override

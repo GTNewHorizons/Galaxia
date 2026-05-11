@@ -37,6 +37,7 @@ galaxia.celestial.moon=Moon
 galaxia.celestial.frozen_belt=Frozen Belt
 galaxia.celestial.ambergris_fragment=Ambergris Fragment
 galaxia.celestial.overworld_orbit=Overworld Orbit
+galaxia.celestial.overworld=Overworld
 
 #### Blocks
 # Blocks - "Moon"
@@ -110,6 +111,11 @@ tile.space_station_block.name=Space Insulation Block
 tile.space_station_glass.name=Space glass
 tile.space_station_panel.name=Space Station Panel
 
+# Blocks - "Space Station Airlock"
+tile.airlock_controller.name=AirLock Controller
+tile.airlock_door.name=AirLock Door
+tile.airlock_casing.name=AirLock Casing
+
 # Blocks - "Miscellaneous / Resource blocks"
 tile.bleeding_obsidian.name=Bleeding Obsidian
 tile.block_of_cheese.name=Block of Cheese
@@ -133,6 +139,8 @@ tile.tenebrae_lava.name=Tenebrae Lava
 
 # Blocks - "Tile Entities"
 tile.module_controller.name=Station Module Controller
+tile.station_controller.name=Station Controller
+tile.station_room.name=Station Room
 tile.silo_controller.name=Rocket Silo
 tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
@@ -253,6 +261,24 @@ galaxia.gui.rocket_trophy.scale=Scale
 
 # Elements - GUI - "Module Assembler"
 galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
+
+# Elements - GUI - "Station Controller"
+galaxia.gui.station_controller.title=Station Controller
+galaxia.gui.station_controller.oxygen=Oxygen
+galaxia.gui.station_controller.structure=Structure
+galaxia.gui.station_controller.refresh=Refresh
+
+# Elements - GUI - "Station Monitor"
+galaxia.gui.station_monitor.title=Station Monitor
+galaxia.gui.station_monitor.structure=Structure
+galaxia.gui.station_monitor.oxygen=Oxygen
+galaxia.gui.station_monitor.refresh=Refresh
+
+# Elements - GUI - "Station Status"
+galaxia.gui.status_valid=Valid
+galaxia.gui.status_invalid=Invalid
+galaxia.gui.status_yes=Yes
+galaxia.gui.status_no=No
 
 # Elements - "Tooltip"
 galaxia.tooltip.oxygen_mask.desc=Allows the use of oxygen tanks to breathe in low oxygen environments
@@ -450,3 +476,4 @@ galaxia.system_asset.tooltip.body=Body: %s
 galaxia.system_asset.tooltip.status=Status: %s
 galaxia.system_asset.tooltip.warning=Warning: %s
 galaxia.system_asset.tooltip.construction=Construction: %d%%
+

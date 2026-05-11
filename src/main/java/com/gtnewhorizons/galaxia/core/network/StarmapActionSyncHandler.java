@@ -13,7 +13,7 @@ import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -54,11 +54,15 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean sendCreateAsset(CelestialObjectId bodyId, String displayName, CelestialAsset.Kind kind,
-        Buildable.Status status) {
+    public static boolean sendRegisterAsset(CelestialObjectId bodyId, CelestialAsset asset) {
         StarmapActionSyncHandler handler = activeClientHandler;
         if (handler == null || !handler.isValid()) return false;
-        AssetCreatePacket packet = AssetCreatePacket.create(bodyId, displayName, kind, status);
+        AssetCreateRequestPacket packet = switch (asset.kind) {
+            case STATION -> AssetCreateRequestPacket
+                .createStation(bodyId, asset.displayName(), ((Station) asset).getController());
+            case AUTOMATED_OUTPOST, AUTOMATED_STATION -> AssetCreateRequestPacket
+                .createFacility(bodyId, asset.displayName(), asset.kind, asset.isOperational());
+        };
         handler.syncToServer(REQUEST_CREATE_ASSET, packet::toBytes);
         return true;
     }
@@ -155,7 +159,7 @@ public final class StarmapActionSyncHandler extends SyncHandler {
 
         switch (id) {
             case REQUEST_CREATE_ASSET -> {
-                AssetCreatePacket packet = new AssetCreatePacket();
+                AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));
             }
