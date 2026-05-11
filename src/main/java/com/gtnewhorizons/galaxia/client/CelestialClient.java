@@ -121,6 +121,20 @@ public final class CelestialClient {
             tileCoord);
     }
 
+    public static void createModules(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled,
+        List<StationTileCoord> tileCoords) {
+        AutomatedFacility state = getByAssetId(assetId) instanceof AutomatedFacility o ? o : null;
+        if (state == null) return;
+        if (!kind.isAllowedOn(state.kind)) return;
+        StarmapActionSyncHandler.sendBuildModules(
+            assetId,
+            kind,
+            ModuleShape.SINGLE,
+            kind.defaultTier(),
+            creativeBuildModeEnabled,
+            tileCoords);
+    }
+
     public static boolean destroyAsset(ID assetId) {
         return StarmapActionSyncHandler.sendDestroyAsset(assetId);
     }
@@ -233,11 +247,42 @@ public final class CelestialClient {
                 .hammerUpgradePlan(assetId, moduleIndex, module.id, variant, tier, reserveItems, voidCompletionRefund));
     }
 
-    public static void planMinerFocus(ID assetId, int moduleIndex, MinerFocusTier focusTier, String oreKey) {
+    public static void planModuleUpgradeTargets(ID assetId, int moduleIndex, ModuleTier tier,
+        @Nullable HammerVariant variant, boolean reserveItems, boolean voidCompletionRefund,
+        List<StationTileCoord> targetCoords) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.minerFocusPlan(assetId, moduleIndex, module.id, focusTier, oreKey));
+            module -> AssetModuleUpdatePacket.moduleUpgradeTargets(
+                assetId,
+                moduleIndex,
+                module.id,
+                tier,
+                variant,
+                reserveItems,
+                voidCompletionRefund,
+                targetCoords));
+    }
+
+    public static void planMinerFocusTier(ID assetId, int moduleIndex, MinerFocusTier focusTier) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerFocusTierPlan(assetId, moduleIndex, module.id, focusTier));
+    }
+
+    public static void setMinerFocusOre(ID assetId, int moduleIndex, String oreKey) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.minerFocusOre(assetId, moduleIndex, module.id, oreKey));
+    }
+
+    public static void copyMinerSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket.copyMinerSettings(assetId, moduleIndex, module.id, targetCoords));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

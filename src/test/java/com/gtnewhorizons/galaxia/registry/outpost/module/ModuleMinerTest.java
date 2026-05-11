@@ -1,6 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -30,6 +33,11 @@ final class ModuleMinerTest {
         ModuleInstance miner = createMiner();
         facility.addModule(miner);
 
+        assertNotEquals(0, miner.groupId());
+        assertFalse(
+            facility.settingsGroups()
+                .require(miner.groupId())
+                .isJoinable());
         assertFalse(facility.isMinerOreBlacklisted(miner, "ore:iron"));
 
         facility.setMinerOreBlacklisted(miner, "ore:iron", true);
@@ -80,6 +88,108 @@ final class ModuleMinerTest {
 
         assertTrue(facility.isMinerOreBlacklisted(second, "ore:copper"));
         assertFalse(facility.isMinerOreBlacklisted(second, "ore:gold"));
+    }
+
+    @Test
+    void noGroupKeepsExistingPrivateSettingsGroup() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        short originalGroupId = miner.groupId();
+
+        facility.assignSettingsGroup(miner, (short) 0);
+        facility.assignSettingsGroup(miner, (short) 0);
+
+        assertTrue(
+            facility.settingsGroups()
+                .groups()
+                .containsKey(originalGroupId));
+        assertTrue(
+            facility.settingsGroups()
+                .require(originalGroupId)
+                .members()
+                .contains(miner.anchor()));
+        assertFalse(
+            facility.settingsGroups()
+                .require(originalGroupId)
+                .isJoinable());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
+    }
+
+    @Test
+    void noGroupOnSingletonPublicGroupPrivatizesInsteadOfCreatingNewGroup() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        SettingsGroup group = facility.settingsGroups()
+            .require(miner.groupId());
+        group.setJoinable(true);
+        short originalGroupId = miner.groupId();
+
+        facility.assignSettingsGroup(miner, (short) 0);
+
+        assertEquals(originalGroupId, miner.groupId());
+        assertFalse(group.isJoinable());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
+    }
+
+    @Test
+    void createGroupPublishesCurrentPrivateSettingsGroup() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        short originalGroupId = miner.groupId();
+
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+
+        assertTrue(group.isJoinable());
+        assertEquals(originalGroupId, group.id());
+        assertEquals(
+            1,
+            facility.settingsGroups()
+                .groups()
+                .size());
+    }
+
+    @Test
+    void copySettingsFromPrivateGroupDoesNotJoinTargetToSourceGroup() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
+        ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
+        facility.addModule(source);
+        facility.addModule(target);
+        short sourceGroupId = source.groupId();
+        short targetGroupId = target.groupId();
+        facility.setMinerOreBlacklisted(source, "ore:iron", true);
+
+        facility.copyMinerRuntimeSettings(source, target);
+
+        assertEquals(sourceGroupId, source.groupId());
+        assertEquals(targetGroupId, target.groupId());
+        assertFalse(
+            facility.settingsGroups()
+                .require(target.groupId())
+                .isJoinable());
+        assertTrue(facility.isMinerOreBlacklisted(target, "ore:iron"));
+    }
+
+    @Test
+    void privateSettingsGroupCannotBeJoinedDirectly() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance source = createMiner(StationTileCoord.of(1, 0));
+        ModuleInstance target = createMiner(StationTileCoord.of(2, 0));
+        facility.addModule(source);
+        facility.addModule(target);
+
+        assertThrows(IllegalStateException.class, () -> facility.assignSettingsGroup(target, source.groupId()));
     }
 
     private static AutomatedFacility createFacility() {

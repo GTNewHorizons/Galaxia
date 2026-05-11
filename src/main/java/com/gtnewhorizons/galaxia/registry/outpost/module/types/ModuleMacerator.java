@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.WeakHashMap;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
@@ -16,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ProductionModuleHelper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
-public class ModuleMacerator implements IModuleComponent, IParallelModule, IRecipeModule {
+public class ModuleMacerator extends TieredModuleComponent implements IParallelModule, IRecipeModule {
 
     private byte parallel = 1;
     private RecipeConfig recipeConfig;

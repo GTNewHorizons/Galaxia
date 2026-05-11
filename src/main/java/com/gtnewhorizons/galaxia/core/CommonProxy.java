@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.core;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask.BAUBLE_TYPE_OXYGEN_MASK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank.BAUBLE_TYPE_OXYGEN_TANK;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield.BAUBLE_TYPE_PROTECTION_SHIELD;
@@ -8,9 +11,6 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.B
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
-import net.minecraftforge.common.MinecraftForge;
-
-import com.gtnewhorizons.galaxia.compat.GregTechCompat;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
@@ -28,7 +28,6 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRo
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 
 import baubles.api.expanded.BaubleExpandedSlots;
-import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
@@ -44,26 +43,22 @@ public class CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         SolarSystemRegistry.registerAll();
 
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new DimensionEventHandler());
+        // FML bus registering
+        FMLBusRegister(new DimensionEventHandler());
+        FMLBusRegister(new CelestialEventHandler());
+        FMLBusRegister(new ServerTickTaskQueue());
 
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new ServerTickTaskQueue());
+        // Forge bus registering
+        ForgeBusRegister(new FacilityPersistenceManager());
 
-        FacilityPersistenceManager outpostPersistence = new FacilityPersistenceManager();
-        MinecraftForge.EVENT_BUS.register(outpostPersistence);
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new CelestialEventHandler());
-
+        // Registration
         GalaxiaItemList.registerAll();
         GalaxiaBlocksEnum.registerBlocks();
         PlanetBlocks.init();
         GalaxiaEffects.init();
-        boolean gt5 = GregTechCompat.isGregTechLoaded();
-        FacilityModuleKind.setGt5Available(gt5);
+
+        // Facility setup
+        FacilityModuleKind.setGt5Available(isGregTechLoaded());
         FacilityModuleRegistry.init();
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
@@ -87,8 +82,7 @@ public class CommonProxy {
         Galaxia.sporeFilterSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_SPORE_FILTER);
         Galaxia.thermalSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_THERMAL_PROTECTION);
         Galaxia.witherSlots = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_WITHER_PROTECTION);
-        Galaxia.reactionControlSystemSlot = BaubleExpandedSlots
-            .getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
+        Galaxia.rcsSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
 
         CelestialRegistry.freezeAndBake();
     }

@@ -12,6 +12,8 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeTubes;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.SkyBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
@@ -244,7 +246,7 @@ public class Moon extends BasePlanet {
             .fillerBlocks(
                 new StratificationPreset(PlanetBlocks.MOON_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(PlanetBlocks.MOON_ANORTHOSITE, 1, 32))
-            .generateCaves(true)
+            .caveShape(new CaveShapeCracks())
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
                     8,
@@ -301,7 +303,7 @@ public class Moon extends BasePlanet {
             .fillerBlocks(
                 new StratificationPreset(PlanetBlocks.MOON_BASALT).addStrataLayer(Blocks.bedrock, 0, 0)
                     .addStrataLayer(PlanetBlocks.MOON_GABBRO, 1, 32))
-            .generateCaves(false)
+            .caveShape(new CaveShapeTubes((byte) 16, (byte) 4, (short) 100))
             .surfaceFeature(
                 new LocationRuleGalaxiaSurface(
                     32,

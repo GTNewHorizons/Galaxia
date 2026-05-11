@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -201,6 +202,31 @@ public final class AutomatedFacility extends CelestialAsset {
         }
     }
 
+    public void copyMinerRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
+            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
+        }
+        if (!(target.component() instanceof ModuleMiner targetMiner)) {
+            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
+        }
+        if (source.id.equals(target.id)) {
+            throw new IllegalStateException("Miner settings copy target must be different from source: " + source.id);
+        }
+        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), FacilityModuleKind.MINER);
+        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
+        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
+            throw new IllegalStateException(
+                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
+        }
+        if (sourceGroup.isJoinable()) {
+            assignSettingsGroup(target, sourceGroup.id());
+        } else {
+            setPrivateMinerSettings(target, ((MinerSettings) sourceGroup.settings()).copy());
+        }
+        targetMiner.setFocusOre(sourceFocusOreKey);
+        markModuleDirty(target.id);
+    }
+
     public boolean tryReserveOperationMaterials(ModuleInstance module, Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
@@ -304,9 +330,23 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
+        if (module.groupId() != 0) {
+            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            if (current.members()
+                .size() == 1) {
+                if (displayName != null) {
+                    current.setDisplayName(displayName);
+                } else if (current.hasDefaultPrivateDisplayName()) {
+                    current.setDisplayName(current.defaultJoinableDisplayName());
+                }
+                current.setJoinable(true);
+                markModuleDirty(module.id);
+                return current;
+            }
+        }
         ModuleSettings settings = copySettings(module);
         detachFromSettingsGroup(module);
-        SettingsGroup group = settingsGroups.create(module.kind(), displayName, settings);
+        SettingsGroup group = settingsGroups.create(module.kind(), displayName, true, settings);
         attachToSettingsGroup(module, group);
         return group;
     }
@@ -318,15 +358,41 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        if (!group.isJoinable()) {
+            throw new IllegalStateException("Settings group " + groupId + " is private and cannot be joined");
+        }
         detachFromSettingsGroup(module);
         attachToSettingsGroup(module, group);
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {
+        if (module.groupId() != 0) {
+            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            if (current.members()
+                .size() == 1) {
+                current.setJoinable(false);
+                markModuleDirty(module.id);
+                return;
+            }
+        }
         ModuleSettings settings = copySettings(module);
         detachFromSettingsGroup(module);
         attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
         markModuleDirty(module.id);
+    }
+
+    private void setPrivateMinerSettings(ModuleInstance module, MinerSettings settings) {
+        if (module.groupId() != 0) {
+            SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
+            if (!current.isJoinable() && current.members()
+                .size() == 1) {
+                current.setSettings(settings);
+                markModuleDirty(module.id);
+                return;
+            }
+        }
+        detachFromSettingsGroup(module);
+        attachToSettingsGroup(module, settingsGroups.create(FacilityModuleKind.MINER, settings));
     }
 
     private ModuleSettings copySettings(ModuleInstance module) {

@@ -62,6 +62,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -400,7 +401,7 @@ public final class FacilityPersistenceManager {
             mj.groupId = m.groupId();
             mj.shape = PacketUtil.enumOrdinal(m.shape());
             mj.parallel = m.component() instanceof IParallelModule pm ? pm.getParallel() : 1;
-            mj.moduleOperation = encodeModuleOperation(m.operationOrNull());
+            mj.moduleOperation = encodeModuleOperation(m.kind(), m.operationOrNull());
             JsonObject moduleData = new JsonObject();
             if (m.component() instanceof ModuleHammer hammer) {
                 moduleData.add("config", PURE_GSON.toJsonTree(hammer.config()));
@@ -409,6 +410,7 @@ public final class FacilityPersistenceManager {
                     "variant",
                     hammer.variant()
                         .name());
+                moduleData.addProperty("energyStored", hammer.energyStored());
             } else if (m.component() instanceof ModuleMiner miner) {
                 moduleData.addProperty(
                     "focusTier",
@@ -547,7 +549,12 @@ public final class FacilityPersistenceManager {
                 safeValueOf(FacilityModuleKind.class, groupJson.kind),
                 "[PERSIST] Settings group " + groupJson.id + " has invalid kind: " + groupJson.kind);
             state.settingsGroups()
-                .restore(groupJson.id, groupKind, groupJson.displayName, decodeSettingsGroupSettings(groupJson));
+                .restore(
+                    groupJson.id,
+                    groupKind,
+                    groupJson.displayName,
+                    groupJson.joinable,
+                    decodeSettingsGroupSettings(groupJson));
         }
 
         int moduleDecodedCount = 0;
@@ -615,8 +622,13 @@ public final class FacilityPersistenceManager {
                         HammerVariant variant = Objects.requireNonNull(
                             PURE_GSON.fromJson(hammerData.get("variant"), HammerVariant.class),
                             "[PERSIST] Hammer module missing variant");
+                        long energyStored = Objects
+                            .requireNonNull(
+                                hammerData.get("energyStored"),
+                                "[PERSIST] Hammer module missing energyStored")
+                            .getAsLong();
                         ModuleHammer.requireTier(variant, tier);
-                        module.setComponent(new ModuleHammer(kind, config, routePriority, false, variant, 64));
+                        module.setComponent(new ModuleHammer(kind, config, routePriority, variant, 64, energyStored));
                     }
                     case MINER -> {
                         if (!(module.component() instanceof ModuleMiner miner)) {
@@ -886,6 +898,7 @@ public final class FacilityPersistenceManager {
         short id;
         String kind;
         String displayName;
+        boolean joinable;
         JsonObject data;
     }
 
@@ -1131,7 +1144,8 @@ public final class FacilityPersistenceManager {
         }
     }
 
-    private static ModuleOperationJson encodeModuleOperation(ModuleOperationState operation) {
+    private static ModuleOperationJson encodeModuleOperation(FacilityModuleKind moduleKind,
+        ModuleOperationState operation) {
         if (operation == null) return null;
         ModuleOperationJson json = new ModuleOperationJson();
         ModuleOperationPlan plan = operation.plan();
@@ -1150,6 +1164,11 @@ public final class FacilityPersistenceManager {
                 .name();
             json.targetFocusTierKey = minerSpec.targetFocusTierKey();
             json.targetFocusOreKey = minerSpec.targetFocusOreKey();
+        } else if (plan.spec() instanceof ModuleTierOperation tierSpec) {
+            json.specType = "MODULE_TIER";
+            json.targetModuleKind = moduleKind.name();
+            json.targetTier = tierSpec.targetTier()
+                .name();
         }
         json.buildTicks = plan.buildTicks();
         json.completionRefundPercent = plan.completionRefundPercent();
@@ -1188,6 +1207,12 @@ public final class FacilityPersistenceManager {
             spec = new HammerModuleOperation(targetTier, json.targetVariantKey);
         } else if ("MINER_FOCUS".equals(json.specType)) {
             spec = new MinerFocusOperation(targetTier, json.targetFocusTierKey, json.targetFocusOreKey);
+        } else if ("MODULE_TIER".equals(json.specType)) {
+            if (regKind == null) {
+                throw new IllegalStateException(
+                    "[PERSIST] Module " + moduleId + " tier operation is missing target kind");
+            }
+            spec = new ModuleTierOperation(targetTier);
         } else {
             throw new IllegalStateException(
                 "[PERSIST] Module " + moduleId + " has unknown spec type: " + json.specType);
@@ -1273,6 +1298,7 @@ public final class FacilityPersistenceManager {
         json.kind = group.kind()
             .name();
         json.displayName = group.displayName();
+        json.joinable = group.isJoinable();
         json.data = encodeSettingsGroupSettings(group.settings());
         return json;
     }

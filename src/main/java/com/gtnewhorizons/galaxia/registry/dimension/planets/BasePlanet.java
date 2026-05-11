@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderSpace;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
@@ -85,8 +86,8 @@ public abstract class BasePlanet {
     public abstract DimensionEnum getPlanetEnum();
 
     protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain,
-        boolean generateCaves) {
-        return createBiome(name, block, 0, terrain, generateCaves);
+        CaveShape caveShape) {
+        return createBiome(name, block, 0, terrain, caveShape);
     }
 
     protected static BiomeGenBase createBiome(String name, Block block, TerrainConfiguration terrain) {
@@ -94,11 +95,11 @@ public abstract class BasePlanet {
     }
 
     protected static BiomeGenBase createBiome(String name, Block block, int meta, TerrainConfiguration terrain) {
-        return createBiome(name, block, meta, terrain, false);
+        return createBiome(name, block, meta, terrain, null);
     }
 
     protected static BiomeGenBase createBiome(String name, Block block, int meta, TerrainConfiguration terrain,
-        boolean generateCaves) {
+        CaveShape caveShape) {
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .height(0.1F, 0.11F)
             .temperature(0.4F)
@@ -107,7 +108,7 @@ public abstract class BasePlanet {
             .fillerBlocks(new StratificationPreset(Blocks.brick_block).addStrataLayer(Blocks.bedrock, 0, 0))
             .snowBlock(PlanetBlocks.MARS_SNOW, 144)
             .terrain(terrain)
-            .generateCaves(generateCaves)
+            .caveShape(caveShape)
             .ocean(Blocks.glass, PlanetBlocks.MARS_REGOLITH, 64, Blocks.obsidian, 32)
             .build();
     }

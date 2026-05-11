@@ -57,8 +57,8 @@ public class CrystalClusterFeature extends Feature {
                         zOffset += zTilt;
                         zStraightnessIterator = 0;
                     }
-                    if (!world.isAirBlock(combinedX, combinedY, combinedZ)
-                        && world.getBlock(combinedX, combinedY, combinedZ) != crystalBlock) {
+                    if (!ChunkBoundedAccess.isAirBlock(world, combinedX, combinedY, combinedZ)
+                        && ChunkBoundedAccess.getBlock(world, combinedX, combinedY, combinedZ) != crystalBlock) {
                         break;
                     }
                     setBlockFast(world, combinedX, combinedY, combinedZ, crystalBlock, 0);

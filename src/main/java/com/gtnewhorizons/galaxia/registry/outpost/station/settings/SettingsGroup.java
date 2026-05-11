@@ -12,14 +12,20 @@ public final class SettingsGroup {
     private final short id;
     private final FacilityModuleKind kind;
     private final Set<StationTileCoord> members;
+    private boolean joinable;
     private String displayName;
     private ModuleSettings settings;
 
     public SettingsGroup(short id, FacilityModuleKind kind, ModuleSettings settings) {
-        this(id, kind, null, settings);
+        this(id, kind, null, false, settings);
     }
 
     public SettingsGroup(short id, FacilityModuleKind kind, String displayName, ModuleSettings settings) {
+        this(id, kind, displayName, true, settings);
+    }
+
+    public SettingsGroup(short id, FacilityModuleKind kind, String displayName, boolean joinable,
+        ModuleSettings settings) {
         if (id <= 0) {
             throw new IllegalArgumentException("SettingsGroup: id must be > 0, got " + id);
         }
@@ -29,6 +35,7 @@ public final class SettingsGroup {
         this.id = id;
         this.kind = kind;
         this.members = new HashSet<>();
+        this.joinable = joinable;
         this.displayName = displayName == null ? defaultDisplayName() : validatedDisplayName(displayName);
         setSettings(settings);
     }
@@ -41,12 +48,28 @@ public final class SettingsGroup {
         return kind;
     }
 
+    public boolean isJoinable() {
+        return joinable;
+    }
+
+    public void setJoinable(boolean joinable) {
+        this.joinable = joinable;
+    }
+
     public String displayName() {
         return displayName;
     }
 
     public void setDisplayName(String displayName) {
         this.displayName = validatedDisplayName(displayName);
+    }
+
+    public boolean hasDefaultPrivateDisplayName() {
+        return displayName.equals(defaultPrivateDisplayName());
+    }
+
+    public String defaultJoinableDisplayName() {
+        return kind.name() + " Group #" + id;
     }
 
     public Set<StationTileCoord> members() {
@@ -89,6 +112,10 @@ public final class SettingsGroup {
     }
 
     private String defaultDisplayName() {
+        return joinable ? defaultJoinableDisplayName() : defaultPrivateDisplayName();
+    }
+
+    private String defaultPrivateDisplayName() {
         return kind.name() + " #" + id;
     }
 

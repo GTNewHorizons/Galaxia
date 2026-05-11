@@ -9,6 +9,7 @@ import net.minecraft.world.biome.BiomeGenBase.FlowerEntry;
 import net.minecraft.world.biome.BiomeGenBase.Height;
 import net.minecraft.world.biome.BiomeGenBase.SpawnListEntry;
 
+import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.locationrule.LocationRuleGalaxiaCave;
@@ -40,13 +41,13 @@ public class BiomeGenBuilder {
     List<LocationRuleGalaxiaCave> caveFeatures = new ArrayList<>();
     List<LocationRuleGalaxiaWall> wallFeatures = new ArrayList<>();
     List<Block> topBlockMetas = new ArrayList<>();
-    boolean generateCaves = false;
     int surfaceThickness = 1;
     boolean enableRain = false;
     Block oceanCrackBlock;
     float oceanCrackThickness;
     int oceanCrackComplexity;
     StratificationPreset fillerBlocks;
+    CaveShape caveShape;
 
     List<FlowerEntry> flowers = List.of();
     List<SpawnListEntry> mobsWater = List.of();
@@ -190,8 +191,8 @@ public class BiomeGenBuilder {
         return this;
     }
 
-    public BiomeGenBuilder generateCaves(boolean generateCaves) {
-        this.generateCaves = generateCaves;
+    public BiomeGenBuilder caveShape(CaveShape caveShape) {
+        this.caveShape = caveShape;
         return this;
     }
 

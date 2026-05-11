@@ -1,10 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -15,13 +12,11 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -31,9 +26,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -42,10 +35,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
     private static final int CONTENT_PADDING = 10;
     private static final int SECTION_GAP = 4;
-    private static final int BUTTON_H = 16;
-    private static final int ACTION_X = 10;
-    private static final int ACTION_Y = 40;
-    private static final int ACTION_BUTTON_WIDTH = 70;
     private static final int CHARGE_BAR_TOP_OFFSET = 2;
     private static final int CHARGE_BAR_HEIGHT = 8;
     private static final int CHARGE_BAR_BOTTOM_GAP = 3;
@@ -53,33 +42,27 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private final StationMapWidget map;
     private StationTileCoord lastCoveredAnchor;
     private boolean lastCoveredResult;
-    private final ModuleConfigModalController configController;
+    private final @Nullable StationTilePickerController tilePickerController;
 
     public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController) {
+        this(map, configController, null);
+    }
+
+    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController,
+        @Nullable StationTilePickerController tilePickerController) {
         this.map = map;
-        this.configController = configController;
-        child(
-            createPanelButton(() -> "Configure", this::hasMinerSelected, this::openMinerBlacklistConfig)
-                .pos(ACTION_X, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
-        child(
-            createPanelButton(() -> "Configure", this::hasHammerSelected, this::openHammerConfig)
-                .pos(ACTION_X, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
-        child(
-            createPanelButton(() -> "Configure", this::hasRecipeModuleSelected, this::openRecipeInput)
-                .pos(ACTION_X, ACTION_Y)
-                .size(ACTION_BUTTON_WIDTH, BUTTON_H));
+        this.tilePickerController = tilePickerController;
     }
 
     @Override
     public boolean canHoverThrough() {
-        return false;
+        return isPickerActive();
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+        if (isPickerActive()) return;
         StationTileCoord selected = map.selection();
         if (selected == null) return;
 
@@ -127,30 +110,14 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 long baseCapacity = module.baseCapacity();
                 int neighborCount = StationLayout.countOrthogonalNeighbors(layout, modAnchor, module.kind());
                 long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
-                long clusterTotal = 0;
-                if (facilityId != null) {
-                    List<CapacityCluster> clusters = GalaxiaAPI.getCapacityClusters(facilityId, module.kind());
-                    for (CapacityCluster cluster : clusters) {
-                        if (cluster.members()
-                            .contains(modAnchor)) {
-                            clusterTotal = cluster.effectiveCapacity();
-                            break;
-                        }
-                    }
-                }
                 lineY += SECTION_GAP;
                 lineY = drawLine(
-                    "Base capacity: " + baseCapacity,
+                    "Base: " + baseCapacity,
                     x + CONTENT_PADDING,
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
                 lineY = drawLine(
-                    "Neighbors: " + neighborCount,
-                    x + CONTENT_PADDING,
-                    lineY,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-                lineY = drawLine(
-                    "Capacity: " + effectiveCapacity + " / " + clusterTotal,
+                    "Capacity: " + effectiveCapacity,
                     x + CONTENT_PADDING,
                     lineY,
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor());
@@ -180,8 +147,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                     EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
             }
         }
-
-        lineY = Math.max(lineY, ACTION_Y + BUTTON_H + SECTION_GAP);
 
         if (module.component() instanceof ModuleHammer hammer) {
             lineY += SECTION_GAP;
@@ -215,10 +180,9 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int lineY = y;
         HammerVariant variant = hammer.variant();
         ModuleTier tier = module.tier();
-        int cooldown = module.cooldownTicks();
-        int chargeTicks = Math.max(1, cooldown - 20);
-        long shotEnergy = variant.shotEnergyEu();
-        long chargeRate = Math.ceilDiv(shotEnergy, chargeTicks);
+        int chargeTicks = hammer.chargeTicks(module);
+        long bufferCapacity = hammer.energyCapacity();
+        long chargeRate = hammer.chargeRate(module);
         lineY = drawLine("Hammer", panelX, lineY, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         lineY = drawLine(
             "Variant: " + hammer.variant()
@@ -230,12 +194,17 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Shot: " + formatEu(shotEnergy) + " EU  Rate: " + formatEu(chargeRate) + " EU/t",
+            "Buffer: " + formatEu(hammer.energyStored())
+                + "/"
+                + formatEu(bufferCapacity)
+                + " EU  Rate: "
+                + formatEu(chargeRate)
+                + " EU/t",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lineY = drawLine(
-            "Cooldown: " + (cooldown / 20) + "s  Charge: " + (chargeTicks / 20) + "s",
+            "Charge: " + (chargeTicks / 20) + "s  Energy per dV: " + formatEu(ModuleHammer.EU_PER_DV) + " EU",
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
@@ -268,8 +237,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         int barY = lineY + CHARGE_BAR_TOP_OFFSET;
         int barW = panelW;
         int barH = CHARGE_BAR_HEIGHT;
-        int chargeProgress = Math.min(Math.max(module.ticks(), 0), chargeTicks);
-        int fillW = (int) ((long) barW * chargeProgress / chargeTicks);
+        int fillW = (int) (barW * hammer.energyStored() / Math.max(1L, bufferCapacity));
         Gui.drawRect(barX, barY, barX + barW, barY + barH, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
         Gui.drawRect(
             barX,
@@ -278,73 +246,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             barY + barH,
             EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
         return barY + barH + CHARGE_BAR_BOTTOM_GAP;
-    }
-
-    private ButtonWidget<?> createPanelButton(Supplier<String> labelSupplier, BooleanSupplier enabledSupplier,
-        Runnable onClick) {
-        return new ButtonWidget<>()
-            .background(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
-            .hoverBackground(
-                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
-            .overlay(drawable((ctx, x, y, w, h) -> {
-                if (!enabledSupplier.getAsBoolean()) return;
-                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-                String label = fr.trimStringToWidth(labelSupplier.get(), w - 4);
-                int color = EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor();
-                int textW = fr.getStringWidth(label);
-                fr.drawStringWithShadow(label, x + (w - textW) / 2, y + (h - fr.FONT_HEIGHT) / 2 + 1, color);
-            }))
-            .onMousePressed(mouseButton -> {
-                if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
-                onClick.run();
-                return true;
-            });
-    }
-
-    private static void drawButtonBackground(int x, int y, int w, int h, boolean enabled, boolean hovered) {
-        if (!enabled) return;
-        BorderedRect.draw(
-            x,
-            y,
-            w,
-            h,
-            hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
-                : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-            EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-    }
-
-    private boolean hasHammerSelected() {
-        return selectedModule() instanceof SelectedModule selected
-            && selected.module.component() instanceof ModuleHammer;
-    }
-
-    private boolean hasMinerSelected() {
-        return selectedModule() instanceof SelectedModule selected
-            && selected.module.component() instanceof ModuleMiner;
-    }
-
-    private boolean hasRecipeModuleSelected() {
-        return selectedModule() instanceof SelectedModule selected
-            && selected.module.component() instanceof IRecipeModule;
-    }
-
-    private void openHammerConfig() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof ModuleHammer)) return;
-        configController.openHammer(selected.moduleIndex);
-    }
-
-    private void openMinerBlacklistConfig() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof ModuleMiner)) return;
-        configController.openMinerBlacklist(selected.moduleIndex);
-    }
-
-    private void openRecipeInput() {
-        if (!(selectedModule() instanceof SelectedModule selected)) return;
-        if (!(selected.module.component() instanceof IRecipeModule)) return;
-        RecipeInputScreen.open(map.assetId(), selected.moduleIndex, selected.module);
     }
 
     private @Nullable SelectedModule selectedModule() {
@@ -375,6 +276,10 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private @Nullable AutomatedFacility resolveFacility() {
         CelestialAsset.ID id = map.assetId();
         return id != null && CelestialClient.getByAssetId(id) instanceof AutomatedFacility f ? f : null;
+    }
+
+    private boolean isPickerActive() {
+        return tilePickerController != null && tilePickerController.isActive();
     }
 
     private record SelectedModule(AutomatedFacility facility, ModuleInstance module, int moduleIndex) {}

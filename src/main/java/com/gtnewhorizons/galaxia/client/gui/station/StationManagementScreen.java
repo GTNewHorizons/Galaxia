@@ -16,7 +16,11 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -32,6 +36,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile boolean pendingCreativeBuildMode;
     private static volatile StationVisionLayer pendingVisionLayer = StationVisionLayer.BASE;
+    private static volatile @Nullable BuildPickerRequest pendingBuildPickerRequest;
 
     public static void open(CelestialAsset.ID assetId) {
         open(assetId, false);
@@ -41,6 +46,11 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         pendingAssetId = assetId;
         pendingCreativeBuildMode = creativeBuildMode;
         FACTORY.openClient();
+    }
+
+    static void openBuildPicker(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {
+        pendingBuildPickerRequest = new BuildPickerRequest(assetId, kind, creativeBuildMode);
+        open(assetId, creativeBuildMode);
     }
 
     public static @Nullable CelestialAsset.ID pendingAssetId() {
@@ -61,11 +71,13 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         CelestialAsset.ID assetId = pendingAssetId;
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationVisionLayer visionLayer = pendingVisionLayer;
+        StationTilePickerController tilePickerController = new StationTilePickerController();
         ModuleConfigModalController configController = new ModuleConfigModalController(
             panel,
             assetId,
             LEFT_PANEL_WIDTH + PADDING * 2,
-            PADDING * 2);
+            PADDING * 2,
+            tilePickerController);
         StationMapWidget map = new StationMapWidget(
             assetId,
             coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -74,7 +86,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             PADDING,
             PADDING,
             visionLayer,
-            (mouseX, mouseY) -> configController.isOpen() && configController.containsMouse(mouseX, mouseY));
+            (mouseX, mouseY) -> configController.isOpen() && configController.containsMouse(mouseX, mouseY),
+            tilePickerController);
 
         panel.child(
             new StationScreenBackground().left(0)
@@ -87,21 +100,49 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .widthRel(1f)
                 .heightRel(1f));
         panel.child(
-            new StationSidePanelWidget(assetId, map).left(PADDING)
+            new StationSidePanelWidget(assetId, map, tilePickerController, configController).left(PADDING)
                 .top(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.55f, -PADDING * 2));
         panel.child(
-            new ModuleDetailPanel(map, configController).left(PADDING)
+            new ModuleDetailPanel(map, configController, tilePickerController).left(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));
+        panel.child(
+            new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                .top(PADDING * 2)
+                .width(StationTilePickerControlsWidget.WIDTH)
+                .height(StationTilePickerControlsWidget.HEIGHT));
         panel.child(
             new ModalInputBlocker(configController).left(0)
                 .top(0)
                 .widthRel(1f)
                 .heightRel(1f));
+        startPendingBuildPicker(assetId, tilePickerController);
         return panel;
+    }
+
+    private static void startPendingBuildPicker(CelestialAsset.ID assetId, StationTilePickerController controller) {
+        if (FMLCommonHandler.instance()
+            .getEffectiveSide() != Side.CLIENT) return;
+        BuildPickerRequest request = pendingBuildPickerRequest;
+        if (request == null || assetId == null || !assetId.equals(request.assetId())) return;
+        pendingBuildPickerRequest = null;
+        if (!(com.gtnewhorizons.galaxia.client.CelestialClient
+            .getByAssetId(assetId) instanceof AutomatedFacility facility)) {
+            return;
+        }
+        FacilityModuleKind kind = request.kind();
+        controller.start(
+            "Build " + kind.getDisplayName(),
+            "Confirm",
+            (coord, selected) -> ModuleBuildPickerModel
+                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord, selected),
+            coord -> coord,
+            targets -> com.gtnewhorizons.galaxia.client.CelestialClient
+                .createModules(assetId, kind, request.creativeBuildMode(), targets),
+            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets));
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {
@@ -164,4 +205,6 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 || !controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
         }
     }
+
+    private record BuildPickerRequest(CelestialAsset.ID assetId, FacilityModuleKind kind, boolean creativeBuildMode) {}
 }

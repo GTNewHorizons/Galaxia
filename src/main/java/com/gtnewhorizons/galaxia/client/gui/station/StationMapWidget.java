@@ -38,6 +38,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     private final int contentVerticalPadding;
     private final StationVisionLayer visionLayer;
     private final BiPredicate<Integer, Integer> inputBlocked;
+    private final @Nullable StationTilePickerController tilePickerController;
 
     private @Nullable StationTileCoord selected;
     private @Nullable StationTileCoord hovered;
@@ -117,6 +118,22 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
         @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
         int contentVerticalPadding, StationVisionLayer visionLayer, BiPredicate<Integer, Integer> inputBlocked) {
+        this(
+            assetId,
+            expansionSlotClickHandler,
+            moduleSelectionHandler,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            visionLayer,
+            inputBlocked,
+            null);
+    }
+
+    public StationMapWidget(CelestialAsset.ID assetId, @Nullable Consumer<StationTileCoord> expansionSlotClickHandler,
+        @Nullable Consumer<PlacedTile> moduleSelectionHandler, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding, StationVisionLayer visionLayer, BiPredicate<Integer, Integer> inputBlocked,
+        @Nullable StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.expansionSlotClickHandler = expansionSlotClickHandler;
         this.moduleSelectionHandler = moduleSelectionHandler;
@@ -125,6 +142,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         this.contentVerticalPadding = contentVerticalPadding;
         this.visionLayer = visionLayer;
         this.inputBlocked = inputBlocked;
+        this.tilePickerController = tilePickerController;
     }
 
     public @Nullable CelestialAsset.ID assetId() {
@@ -200,6 +218,11 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
                 toLocalMouseX(getContext().getMouseX()),
                 toLocalMouseY(getContext().getMouseY()));
             if (hit == null || !hit.equals(pressedTile)) return false;
+            if (isPickerActive()) {
+                tilePickerController.toggle(hit);
+                pressedTile = null;
+                return true;
+            }
             boolean occupied = layout.isOccupied(hit);
             selected = hit;
             if (occupied && moduleSelectionHandler != null) {
@@ -263,6 +286,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
 
+        drawPickerOverlay(tiles.keySet());
+
         StationTileCoord hov = hovered;
         if (hov != null && (tiles.containsKey(hov) || expansionSlots.contains(hov))) {
             int hx = tileLocalX(hov);
@@ -271,7 +296,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         }
 
         StationTileCoord sel = selected;
-        if (sel != null && (tiles.containsKey(sel) || expansionSlots.contains(sel))) {
+        if (!isPickerActive() && sel != null && (tiles.containsKey(sel) || expansionSlots.contains(sel))) {
             int sx = tileLocalX(sel);
             int sy = tileLocalY(sel);
             StationTileRenderer.drawSelectionOverlay(sx, sy, StationMapViewport.TILE_SIZE);
@@ -315,6 +340,25 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         int localX = toLocalMouseX(getContext().getMouseX());
         int localY = toLocalMouseY(getContext().getMouseY());
         hovered = hitTest(layout, localX, localY);
+    }
+
+    private void drawPickerOverlay(Set<StationTileCoord> occupiedTiles) {
+        if (!isPickerActive()) return;
+        Set<StationTileCoord> candidates = new LinkedHashSet<>(occupiedTiles);
+        candidates.addAll(expansionSlots);
+        for (StationTileCoord selectedTarget : tilePickerController.selectedTargets()) {
+            addOrthogonalCandidates(candidates, selectedTarget);
+        }
+        for (StationTileCoord coord : candidates) {
+            if (!tilePickerController.isCompatible(coord)) continue;
+            int x = tileLocalX(coord);
+            int y = tileLocalY(coord);
+            if (tilePickerController.isSelected(coord)) {
+                StationTileRenderer.drawPickerSelectedOverlay(x, y, StationMapViewport.TILE_SIZE);
+            } else {
+                StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
+            }
+        }
     }
 
     private void updateManualDragging() {
@@ -366,7 +410,21 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         if (coord == null) return null;
         if (layout.isOccupied(coord)) return coord;
         if (StationPlacementValidator.validate(layout, coord) == StationPlacementValidator.Result.OK) return coord;
+        if (isPickerActive() && tilePickerController.isCompatible(coord)) return coord;
         return null;
+    }
+
+    private static void addOrthogonalCandidates(Set<StationTileCoord> candidates, StationTileCoord coord) {
+        addCandidate(candidates, coord.dx() - 1, coord.dy());
+        addCandidate(candidates, coord.dx() + 1, coord.dy());
+        addCandidate(candidates, coord.dx(), coord.dy() - 1);
+        addCandidate(candidates, coord.dx(), coord.dy() + 1);
+    }
+
+    private static void addCandidate(Set<StationTileCoord> candidates, int dx, int dy) {
+        if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return;
+        if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return;
+        candidates.add(StationTileCoord.of(dx, dy));
     }
 
     private int tileLocalX(StationTileCoord coord) {
@@ -387,6 +445,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
     private boolean isInputBlocked() {
         return inputBlocked.test(getContext().getMouseX(), getContext().getMouseY());
+    }
+
+    private boolean isPickerActive() {
+        return tilePickerController != null && tilePickerController.isActive();
     }
 
     private void clearPressState() {

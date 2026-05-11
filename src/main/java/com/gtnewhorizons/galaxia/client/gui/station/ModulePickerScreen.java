@@ -48,15 +48,20 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static final int BUTTON_GAP = 5;
     private static final int BUTTON_TEXT_PADDING = 7;
     private static final int TEXT_BASELINE_OFFSET = 1;
+    private static final int MULTIPLE_TOGGLE_WIDTH = 58;
+    private static final int MULTIPLE_TOGGLE_HEIGHT = 14;
+    private static final int CHECKBOX_SIZE = 10;
 
     private static volatile @Nullable CelestialAsset.ID pendingAssetId;
     private static volatile @Nullable StationTileCoord pendingCoord;
     private static volatile boolean pendingInstantBuild;
+    private static volatile boolean pendingMultipleBuild;
 
     public static void open(CelestialAsset.ID assetId, StationTileCoord coord, boolean instantBuild) {
         pendingAssetId = assetId;
         pendingCoord = coord;
         pendingInstantBuild = instantBuild;
+        pendingMultipleBuild = false;
         FACTORY.openClient();
     }
 
@@ -84,6 +89,9 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             new TextWidget<>(IKey.str("Build module")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
                 .pos(PANEL_PADDING, PANEL_PADDING));
+        panel.child(
+            createMultipleToggle().pos(PANEL_WIDTH - PANEL_PADDING - MULTIPLE_TOGGLE_WIDTH, PANEL_PADDING - 1)
+                .size(MULTIPLE_TOGGLE_WIDTH, MULTIPLE_TOGGLE_HEIGHT));
 
         AutomatedFacility facility = resolveFacility();
         if (facility == null || pendingCoord == null) {
@@ -111,6 +119,17 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         return CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility facility ? facility : null;
     }
 
+    private ButtonWidget<?> createMultipleToggle() {
+        return new ButtonWidget<>().background(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, false)))
+            .hoverBackground(drawable((ctx, x, y, w, h) -> drawMultipleToggle(x, y, w, h, true)))
+            .onMouseTapped(mouseButton -> {
+                if (mouseButton != 0) return false;
+                pendingMultipleBuild = !pendingMultipleBuild;
+                return true;
+            })
+            .tooltipDynamic(t -> t.addLine("Build on multiple compatible tiles"));
+    }
+
     private ButtonWidget<?> createKindButton(FacilityModuleKind kind) {
         return new ButtonWidget<>()
             .background(
@@ -136,15 +155,42 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 if (mouseButton != 0) return false;
                 CelestialAsset.ID assetId = pendingAssetId;
                 StationTileCoord coord = pendingCoord;
-                if (assetId != null && coord != null) {
+                if (assetId != null && pendingMultipleBuild) {
+                    StationManagementScreen.openBuildPicker(assetId, kind, pendingInstantBuild);
+                } else if (assetId != null && coord != null) {
                     CelestialClient.createModule(assetId, kind, pendingInstantBuild, coord);
+                    StationManagementScreen.open(assetId, pendingInstantBuild);
+                } else if (assetId != null) {
+                    StationManagementScreen.open(assetId, pendingInstantBuild);
+                } else {
+                    Minecraft.getMinecraft()
+                        .displayGuiScreen(null);
                 }
-                if (assetId != null) StationManagementScreen.open(assetId, pendingInstantBuild);
-                else Minecraft.getMinecraft()
-                    .displayGuiScreen(null);
                 clearPending();
                 return true;
             });
+    }
+
+    private static void drawMultipleToggle(int x, int y, int width, int height, boolean hovered) {
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int boxY = y + (height - CHECKBOX_SIZE) / 2;
+        BorderedRect.draw(
+            x,
+            boxY,
+            CHECKBOX_SIZE,
+            CHECKBOX_SIZE,
+            hovered ? EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()
+                : EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+            EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+        if (pendingMultipleBuild) {
+            fr.drawStringWithShadow("X", x + 2, boxY + 1, EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+        }
+        String label = fr.trimStringToWidth("Multiple", width - CHECKBOX_SIZE - 4);
+        fr.drawStringWithShadow(
+            label,
+            x + CHECKBOX_SIZE + 4,
+            y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     private static void drawKindButton(FacilityModuleKind kind, int x, int y, int width, int height) {
@@ -172,6 +218,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         pendingAssetId = null;
         pendingCoord = null;
         pendingInstantBuild = false;
+        pendingMultipleBuild = false;
     }
 
     private IDrawable drawable(DrawableCommand cmd) {
