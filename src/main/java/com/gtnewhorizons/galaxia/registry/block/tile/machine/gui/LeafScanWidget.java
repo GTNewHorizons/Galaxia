@@ -25,7 +25,7 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
 
-        GRID_TEX.draw(context, getArea(), WidgetTheme.getDefault().getTheme());
+        GRID_TEX.draw(context, getArea(), widgetTheme.getTheme());
 
         int radius = 4;
         for (int dx = -radius; dx <= radius; dx++) {

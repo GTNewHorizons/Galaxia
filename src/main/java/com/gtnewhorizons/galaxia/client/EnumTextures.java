@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import net.minecraft.util.ResourceLocation;
 
 import com.cleanroommc.modularui.drawable.UITexture;
@@ -70,7 +71,7 @@ public enum EnumTextures {
 
     EnumTextures(String location) {
         this.texture = LocationGalaxia(location);
-        this.uiTexture = UITexture.fullImage(location);
+        this.uiTexture = UITexture.fullImage(Galaxia.MODID, location);
     }
 
     public ResourceLocation get() {

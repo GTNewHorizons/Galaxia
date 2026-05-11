@@ -24,7 +24,7 @@ public class PlayerRadarWidget extends Widget<PlayerRadarWidget> {
     @Override
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
-        EnumTextures.MARS.getImage().draw(context, getArea(), WidgetTheme.getDefault().getTheme());
+        EnumTextures.MARS.getImage().draw(context, getArea(), widgetTheme.getTheme());
 
         List<EntityPlayer> players = tile.getWorldObj().getEntitiesWithinAABB(
             EntityPlayer.class, tile.getRangeAABB());
