@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
@@ -9,6 +11,8 @@ import java.util.Map;
 import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
 
 final class AutomatedFacilityInventoryTest {
 
@@ -41,6 +45,40 @@ final class AutomatedFacilityInventoryTest {
 
         assertEquals(0L, inventory.totalItems());
         assertEquals(0L, trackedTotalItems(inventory));
+    }
+
+    @Test
+    void recipeBoundsAreCheckedAgainstPostOperationInventoryAmounts() {
+        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
+        ItemStackWrapper input = resource();
+        ItemStackWrapper output = resource();
+        inventory.add(input, 40);
+        inventory.add(output, 990);
+
+        RecipeSlotBounds bounds = RecipeSlotBounds.empty()
+            .withInputItemLowerBound(input, 32)
+            .withOutputItemUpperBound(output, 1000);
+
+        assertTrue(inventory.keepsItemLowerBoundsAfterConsume(Map.of(input, 8L), bounds));
+        assertFalse(inventory.keepsItemLowerBoundsAfterConsume(Map.of(input, 9L), bounds));
+        assertTrue(inventory.acceptsItemUpperBoundsAfterInsert(Map.of(output, 10L), bounds));
+        assertFalse(inventory.acceptsItemUpperBoundsAfterInsert(Map.of(output, 11L), bounds));
+    }
+
+    @Test
+    void recipeFluidBoundsAreCheckedAgainstPostOperationInventoryAmounts() {
+        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
+        inventory.addFluid("input", 1000);
+        inventory.addFluid("output", 900);
+
+        RecipeSlotBounds bounds = RecipeSlotBounds.empty()
+            .withInputFluidLowerBound("input", 800)
+            .withOutputFluidUpperBound("output", 1000);
+
+        assertTrue(inventory.keepsFluidLowerBoundsAfterConsume(Map.of("input", 200L), bounds));
+        assertFalse(inventory.keepsFluidLowerBoundsAfterConsume(Map.of("input", 201L), bounds));
+        assertTrue(inventory.acceptsFluidUpperBoundsAfterInsert(Map.of("output", 100L), bounds));
+        assertFalse(inventory.acceptsFluidUpperBoundsAfterInsert(Map.of("output", 101L), bounds));
     }
 
     private static ItemStackWrapper resource() {

@@ -6,6 +6,8 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
+
 /**
  * Virtual item inventory for an automated outpost.
  * All amounts are stored in RAM; persisted to JSON on WorldEvent.Save.
@@ -76,6 +78,24 @@ public final class AutomatedFacilityInventory {
         return totalItemAmount;
     }
 
+    public boolean keepsItemLowerBoundsAfterConsume(Map<ItemStackWrapper, Long> consumed, RecipeSlotBounds bounds) {
+        for (Map.Entry<ItemStackWrapper, Long> entry : consumed.entrySet()) {
+            if (getAmount(entry.getKey()) - entry.getValue() < bounds.inputItemLowerBound(entry.getKey())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean acceptsItemUpperBoundsAfterInsert(Map<ItemStackWrapper, Long> inserted, RecipeSlotBounds bounds) {
+        for (Map.Entry<ItemStackWrapper, Long> entry : inserted.entrySet()) {
+            if (getAmount(entry.getKey()) + entry.getValue() > bounds.outputItemUpperBound(entry.getKey())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public long getFluidAmount(String fluidName) {
         if (fluidName == null) return 0L;
         Long v = fluidAmounts.get(fluidName);
@@ -97,6 +117,24 @@ public final class AutomatedFacilityInventory {
         }
         fluidAmounts.put(fluidName, current + delta);
         return delta;
+    }
+
+    public boolean keepsFluidLowerBoundsAfterConsume(Map<String, Long> consumed, RecipeSlotBounds bounds) {
+        for (Map.Entry<String, Long> entry : consumed.entrySet()) {
+            if (getFluidAmount(entry.getKey()) - entry.getValue() < bounds.inputFluidLowerBound(entry.getKey())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean acceptsFluidUpperBoundsAfterInsert(Map<String, Long> inserted, RecipeSlotBounds bounds) {
+        for (Map.Entry<String, Long> entry : inserted.entrySet()) {
+            if (getFluidAmount(entry.getKey()) + entry.getValue() > bounds.outputFluidUpperBound(entry.getKey())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public @Nonnull Map<String, Long> fluidSnapshot() {

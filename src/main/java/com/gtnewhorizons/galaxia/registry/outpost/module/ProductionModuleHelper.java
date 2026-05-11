@@ -50,19 +50,15 @@ public final class ProductionModuleHelper {
         ItemStackWrapper[] inputWrappers = cachedWrappers(inputWrapperCache, recipe, inputs);
 
         Map<ItemStackWrapper, Long> requiredInputs = requiredInputs(inputWrappers, inputs);
-        for (Map.Entry<ItemStackWrapper, Long> e : requiredInputs.entrySet()) {
-            if (inv.getAmount(e.getKey()) - e.getValue() < bounds.inputItemLowerBound(e.getKey())) {
-                advanceScheduler(config, recipeModule);
-                return;
-            }
+        if (!inv.keepsItemLowerBoundsAfterConsume(requiredInputs, bounds)) {
+            advanceScheduler(config, recipeModule);
+            return;
         }
 
         Map<String, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
-        for (Map.Entry<String, Long> e : requiredFluidInputs.entrySet()) {
-            if (inv.getFluidAmount(e.getKey()) - e.getValue() < bounds.inputFluidLowerBound(e.getKey())) {
-                advanceScheduler(config, recipeModule);
-                return;
-            }
+        if (!inv.keepsFluidLowerBoundsAfterConsume(requiredFluidInputs, bounds)) {
+            advanceScheduler(config, recipeModule);
+            return;
         }
 
         ItemStackWrapper[] outputWrappers = cachedWrappers(outputWrapperCache, recipe, outputs);
@@ -156,11 +152,7 @@ public final class ProductionModuleHelper {
 
     private static boolean allowsItemOutputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> outputs,
         RecipeSlotBounds bounds) {
-        for (Map.Entry<ItemStackWrapper, Long> entry : outputs.entrySet()) {
-            long upperBound = bounds.outputItemUpperBound(entry.getKey());
-            if (inv.getAmount(entry.getKey()) + entry.getValue() > upperBound) return false;
-        }
-        return true;
+        return inv.acceptsItemUpperBoundsAfterInsert(outputs, bounds);
     }
 
     private static boolean canFitSelectedItemOutputs(AutomatedFacility outpost, Map<ItemStackWrapper, Long> outputs,
@@ -173,11 +165,7 @@ public final class ProductionModuleHelper {
 
     private static boolean allowsFluidOutputs(AutomatedFacilityInventory inv, Map<String, Long> outputs,
         RecipeSlotBounds bounds) {
-        for (Map.Entry<String, Long> entry : outputs.entrySet()) {
-            long upperBound = bounds.outputFluidUpperBound(entry.getKey());
-            if (inv.getFluidAmount(entry.getKey()) + entry.getValue() > upperBound) return false;
-        }
-        return true;
+        return inv.acceptsFluidUpperBoundsAfterInsert(outputs, bounds);
     }
 
     private static Map<ItemStackWrapper, Long> selectedOutputs(ItemStackWrapper[] wrappers, ItemStack[] stacks,
