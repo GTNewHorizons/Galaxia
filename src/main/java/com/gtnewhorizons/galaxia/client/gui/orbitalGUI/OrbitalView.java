@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
+
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -24,7 +26,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -2297,7 +2298,7 @@ public class OrbitalView {
         }
 
         private boolean isGT5AutomationAvailable() {
-            return GTUtility.isGTLoaded;
+            return isGregTechLoaded();
         }
 
         private boolean canCreateBaseStation(CelestialObject body) {

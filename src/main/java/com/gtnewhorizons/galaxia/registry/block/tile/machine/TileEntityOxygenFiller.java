@@ -5,6 +5,7 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraftforge.fluids.FluidTank;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -25,8 +26,18 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
     public static final int SLOT_COUNT = 6;
 
     private final ItemStack[] slots = new ItemStack[SLOT_COUNT];
-
     private final IItemHandler itemHandler = new InvWrapper(this);
+
+    protected FluidTank oxygenTank;
+
+    public TileEntityOxygenFiller() {
+        this.oxygenTank = new FluidTank(getMaxOxygenBuffer());
+    }
+
+    @Override
+    public FluidTank getOxygenTank() {
+        return oxygenTank;
+    }
 
     public IItemHandler getItemHandler() {
         return itemHandler;
@@ -54,10 +65,10 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
 
     @Override
     protected void doWork() {
-        if (storedOxygen <= 0) return;
+        if (getStoredOxygen() <= 0) return;
 
         int oxygenPerCycle = ConfigMachines.filler.oxygenPerOperation;
-        int remaining = Math.min(oxygenPerCycle, storedOxygen);
+        int remaining = Math.min(oxygenPerCycle, getStoredOxygen());
 
         for (int i = 0; i < SLOT_COUNT && remaining > 0; i++) {
             ItemStack stack = slots[i];
@@ -74,7 +85,7 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
             active = true;
         }
 
-        storedOxygen -= (Math.min(oxygenPerCycle, storedOxygen) - remaining);
+        drainOxygen(oxygenPerCycle - remaining, true);
     }
 
     @Override
@@ -103,6 +114,7 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
         }
     }
 
+    // IInventory methods (без изменений, кроме markDirty)
     @Override
     public int getSizeInventory() {
         return SLOT_COUNT;
@@ -181,7 +193,7 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
         IntSyncValue maxEnergySync = new IntSyncValue(
             () -> (int) Math.min(getMaxEnergyBuffer(), Integer.MAX_VALUE),
             _ -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(() -> storedOxygen, _ -> {});
+        IntSyncValue oxygenSync = new IntSyncValue(this::getStoredOxygen, _ -> {});
         IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, _ -> {});
 
         syncManager.syncValue("energy", energySync);
@@ -197,17 +209,14 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
         Flow slotRow2 = Flow.row()
             .height(18);
 
-        syncManager.registerSlotGroup("oxygen_tanks", 1);
-
-        for (int slotIndex = 0; slotIndex < 3; slotIndex++) {
+        for (int i = 0; i < 3; i++) {
             slotRow1.child(
-                new ItemSlot().slot(new ModularSlot(getItemHandler(), slotIndex))
+                new ItemSlot().slot(new ModularSlot(getItemHandler(), i))
                     .marginRight(2));
         }
-
-        for (int slotIndex = 3; slotIndex < 6; slotIndex++) {
+        for (int i = 3; i < 6; i++) {
             slotRow2.child(
-                new ItemSlot().slot(new ModularSlot(getItemHandler(), slotIndex))
+                new ItemSlot().slot(new ModularSlot(getItemHandler(), i))
                     .marginRight(2));
         }
 

@@ -10,17 +10,8 @@ import io.netty.buffer.ByteBuf;
 
 public class BeamEffectPacket implements IMessage {
 
-    // Pylon position
-    private int machineX;
-    private int machineY;
-    private int machineZ;
-
-    // Player center position (packed as fixed-point ints to avoid double precision issues)
-    private int playerX100;
-    private int playerY100;
-    private int playerZ100;
-
-    public BeamEffectPacket() {}
+    private int machineX, machineY, machineZ;
+    private int playerX100, playerY100, playerZ100;
 
     public BeamEffectPacket(int machineX, int machineY, int machineZ, double playerX, double playerY, double playerZ) {
         this.machineX = machineX;

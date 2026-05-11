@@ -9,6 +9,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
+import com.gtnewhorizons.galaxia.api.IOxygenHandler;
 import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
 
 import cofh.api.energy.IEnergyReceiver;
@@ -21,12 +22,10 @@ import gregtech.api.interfaces.tileentity.IEnergyConnected;
     @Optional.Interface(iface = "cofh.api.energy.IEnergyReceiver", modid = "CoFHCore"),
     @Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IColoredTileEntity", modid = "gregtech") })
 public abstract class TileEntityGalaxiaMachine extends TileEntity
-    implements IEnergyConnected, IEnergyReceiver, IColoredTileEntity, IGuiHolder<PosGuiData> {
+    implements IEnergyConnected, IEnergyReceiver, IOxygenHandler, IColoredTileEntity, IGuiHolder<PosGuiData> {
 
     protected double storedEnergy;
-    protected int storedOxygen;
     protected boolean active;
-
     private int tickCounter;
 
     protected abstract double getMaxEnergyBuffer();
@@ -40,21 +39,52 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     protected abstract void doWork();
 
     protected final boolean useEU() {
-        return !ConfigMachines.energy.forceRF;
+        return !ConfigMachines.energy.useRF;
     }
 
+    protected final boolean hasEnoughEnergy() {
+        return storedEnergy >= getEuPerOperation();
+    }
+
+    protected final void consumeEnergy() {
+        storedEnergy = Math.max(0, storedEnergy - getEuPerOperation());
+    }
+
+    // GT EU
+    @Override
+    @Optional.Method(modid = "gregtech")
+    public long injectEnergyUnits(ForgeDirection direction, long voltage, long amperage) {
+        if (!useEU()) return 0;
+
+        long maxAdd = (long) getMaxEnergyBuffer() - (long) storedEnergy;
+        long euToAdd = Math.min(voltage * amperage, maxAdd);
+
+        if (euToAdd > 0) storedEnergy += euToAdd;
+        return euToAdd > 0 ? amperage : 0;
+    }
+
+    @Override
+    @Optional.Method(modid = "gregtech")
+    public boolean inputEnergyFrom(ForgeDirection side) {
+        return useEU();
+    }
+
+    @Override
+    @Optional.Method(modid = "gregtech")
+    public boolean outputsEnergyTo(ForgeDirection side) {
+        return false;
+    }
+
+    // CoFH RF
     @Override
     @Optional.Method(modid = "CoFHCore")
     public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) {
         if (useEU()) return 0;
-
         int ratio = Math.max(1, ConfigMachines.energy.rfPerEU);
-        double euSpace = getMaxEnergyBuffer() - storedEnergy;
-        double euToAdd = Math.min((double) maxReceive / ratio, euSpace);
+        long euSpace = (long) getMaxEnergyBuffer() - (long) storedEnergy;
+        long euToAdd = Math.min((long) maxReceive / ratio, euSpace);
 
-        if (!simulate) {
-            storedEnergy += euToAdd;
-        }
+        if (!simulate) storedEnergy += euToAdd;
         return (int) (euToAdd * ratio);
     }
 
@@ -82,32 +112,6 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
 
     @Override
     @Optional.Method(modid = "gregtech")
-    public long injectEnergyUnits(ForgeDirection direction, long voltage, long amperage) {
-        if (!useEU()) return 0;
-
-        long maxAdd = (long) getMaxEnergyBuffer() - (long) storedEnergy;
-        long euToAdd = Math.min(voltage * amperage, maxAdd);
-
-        if (euToAdd > 0) {
-            storedEnergy += euToAdd;
-        }
-        return euToAdd > 0 ? amperage : 0;
-    }
-
-    @Override
-    @Optional.Method(modid = "gregtech")
-    public boolean inputEnergyFrom(ForgeDirection side) {
-        return useEU();
-    }
-
-    @Override
-    @Optional.Method(modid = "gregtech")
-    public boolean outputsEnergyTo(ForgeDirection side) {
-        return false;
-    }
-
-    @Override
-    @Optional.Method(modid = "gregtech")
     public byte getColorization() {
         return -1;
     }
@@ -116,14 +120,6 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     @Optional.Method(modid = "gregtech")
     public byte setColorization(byte colorization) {
         return -1;
-    }
-
-    protected final boolean hasEnoughEnergy() {
-        return storedEnergy >= getEuPerOperation();
-    }
-
-    protected final void consumeEnergy() {
-        storedEnergy = Math.max(0, storedEnergy - getEuPerOperation());
     }
 
     @Override
@@ -152,8 +148,8 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
         tag.setDouble("storedEnergy", storedEnergy);
-        tag.setInteger("storedOxygen", storedOxygen);
         tag.setBoolean("active", active);
+        writeOxygenToNBT(tag);
         writeMachineNBT(tag);
     }
 
@@ -161,8 +157,8 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
         storedEnergy = tag.getDouble("storedEnergy");
-        storedOxygen = tag.getInteger("storedOxygen");
         active = tag.getBoolean("active");
+        readOxygenFromNBT(tag);
         readMachineNBT(tag);
     }
 
@@ -186,24 +182,9 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
         return useEU() ? "EU" : "RF";
     }
 
-    protected double displayedStoredEnergy() {
-        if (useEU()) return storedEnergy;
-        return storedEnergy * Math.max(1, ConfigMachines.energy.rfPerEU);
-    }
-
-    protected long displayedMaxEnergy() {
-        if (useEU()) return (long) getMaxEnergyBuffer();
-        return (long) getMaxEnergyBuffer() * Math.max(1, ConfigMachines.energy.rfPerEU);
-    }
-
     protected double energyFraction() {
         double max = getMaxEnergyBuffer();
         return max == 0 ? 0 : storedEnergy / max;
-    }
-
-    protected float oxygenFraction() {
-        int max = getMaxOxygenBuffer();
-        return max == 0 ? 0 : (float) storedOxygen / max;
     }
 
     public boolean isItemValidForSlot(int slot, net.minecraft.item.ItemStack stack) {

@@ -23,15 +23,15 @@ public class ConfigMachines {
 
         /**
          * Force all Galaxia machines to use RF instead of EU.
-         * By default, EU is used when GregTech is loaded, RF otherwise.
+         * By default, EU is used
          */
         @Config.LangKey("galaxia.config.machines.energy.force_rf")
         @Config.DefaultBoolean(false)
-        public boolean forceRF;
+        public boolean useRF;
 
         /**
          * How many RF equal one EU. Used when converting RF input to internal EU storage.
-         * Standard GT ratio is 4 RF = 1 EU.
+         * Standard ratio is 4 RF = 1 EU.
          */
         @Config.LangKey("galaxia.config.machines.energy.rf_per_eu")
         @Config.DefaultInt(4)
@@ -91,7 +91,7 @@ public class ConfigMachines {
 
         /** Oxygen units pushed to each player per cycle. */
         @Config.LangKey("galaxia.config.machines.pylon.oxygen_per_player")
-        @Config.DefaultInt(10)
+        @Config.DefaultInt(100)
         @Config.RangeInt(min = 1, max = 500)
         public int oxygenPerPlayerPerCycle;
 

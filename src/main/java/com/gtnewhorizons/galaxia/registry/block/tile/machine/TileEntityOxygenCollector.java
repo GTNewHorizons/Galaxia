@@ -12,21 +12,25 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.gtnewhorizons.galaxia.api.IOxygenHandler;
 import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
 
-public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine implements IOxygenHandler {
+public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine {
 
-    /**
-     * Ticks between full leaf re-scans. The count stays cached between rescans
-     * so that frequent work cycles (if configured small) don't thrash block lookups.
-     */
     private static final int LEAF_RESCAN_INTERVAL = 200;
 
-    protected FluidTank oxygenTank = new FluidTank(10000);
+    protected FluidTank oxygenTank;
 
     private int cachedLeafCount;
     private int leafRescanTimer;
+
+    public TileEntityOxygenCollector() {
+        this.oxygenTank = new FluidTank(getMaxOxygenBuffer());
+    }
+
+    @Override
+    public FluidTank getOxygenTank() {
+        return oxygenTank;
+    }
 
     @Override
     protected double getMaxEnergyBuffer() {
@@ -66,19 +70,13 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine implemen
         if (cachedLeafCount == 0) return;
 
         int generated = cachedLeafCount * ConfigMachines.collector.oxygenPerLeaf;
-        int space = getMaxOxygenBuffer() - storedOxygen;
-        int added = Math.min(generated, space);
+        int added = fillOxygen(generated, true);
 
         if (added > 0) {
-            storedOxygen += added;
             active = true;
         }
     }
 
-    /**
-     * Counts leaves and saplings in the configured cubic radius.
-     * Called at most once every {@value #LEAF_RESCAN_INTERVAL} ticks.
-     */
     private int scanLeaves() {
         int radius = ConfigMachines.collector.scanRadius;
         int count = 0;
@@ -100,33 +98,26 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine implemen
     }
 
     @Override
-    public FluidTank getOxygenTank() {
-        return oxygenTank;
-    }
-
-    @Override
     protected void writeMachineNBT(NBTTagCompound tag) {
         tag.setInteger("cachedLeafCount", cachedLeafCount);
         tag.setInteger("leafRescanTimer", leafRescanTimer);
-        writeOxygenToNBT(tag);
     }
 
     @Override
     protected void readMachineNBT(NBTTagCompound tag) {
         cachedLeafCount = tag.getInteger("cachedLeafCount");
         leafRescanTimer = tag.getInteger("leafRescanTimer");
-        readOxygenFromNBT(tag);
     }
 
     @Override
     public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
-        IntSyncValue energySync = new IntSyncValue(() -> (int) Math.min(storedEnergy, Integer.MAX_VALUE), v -> {});
+        IntSyncValue energySync = new IntSyncValue(() -> (int) Math.min(storedEnergy, Integer.MAX_VALUE), _ -> {});
         IntSyncValue maxEnergySync = new IntSyncValue(
             () -> (int) Math.min(getMaxEnergyBuffer(), Integer.MAX_VALUE),
-            v -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(() -> storedOxygen, v -> {});
-        IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, v -> {});
-        IntSyncValue leafSync = new IntSyncValue(() -> cachedLeafCount, v -> {});
+            _ -> {});
+        IntSyncValue oxygenSync = new IntSyncValue(this::getStoredOxygen, _ -> {});
+        IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, _ -> {});
+        IntSyncValue leafSync = new IntSyncValue(() -> cachedLeafCount, _ -> {});
 
         syncManager.syncValue("energy", energySync);
         syncManager.syncValue("maxEnergy", maxEnergySync);
@@ -164,7 +155,7 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine implemen
                             .height(12)
                             .marginBottom(2))
                     .child(
-                        IKey.dynamic(() -> active ? "\u00a7aGenerating" : "\u00a77Idle")
+                        IKey.dynamic(() -> active ? "§aGenerating" : "§7Idle")
                             .asWidget()
                             .height(12)));
     }

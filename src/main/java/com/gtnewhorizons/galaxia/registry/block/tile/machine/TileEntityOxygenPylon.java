@@ -29,19 +29,22 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 
 public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements IOxygenHandler {
 
-    protected FluidTank oxygenTank = new FluidTank(10000);
+    protected FluidTank oxygenTank;
 
-    /** Default pylon service radius in blocks. Exposed here as a named constant per spec. */
     public static final int PYLON_RADIUS = 9;
-
-    /** Packet broadcast radius: observers at the edge of the pylon area should see beams too. */
     private static final double BEAM_BROADCAST_RADIUS = PYLON_RADIUS + 4;
 
-    /** UUIDs of players who were in range during the previous cycle. */
     private final Set<UUID> previousCyclePlayers = new HashSet<>();
-
-    /** Number of players charged during the last cycle, synced to GUI. */
     private int lastChargedCount;
+
+    public TileEntityOxygenPylon() {
+        this.oxygenTank = new FluidTank(getMaxOxygenBuffer());
+    }
+
+    @Override
+    public FluidTank getOxygenTank() {
+        return oxygenTank;
+    }
 
     @Override
     protected double getMaxEnergyBuffer() {
@@ -65,7 +68,11 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
 
     @Override
     protected void doWork() {
-        if (storedOxygen <= 0) return;
+        if (getStoredOxygen() <= 0) {
+            previousCyclePlayers.clear();
+            lastChargedCount = 0;
+            return;
+        }
 
         AxisAlignedBB area = AxisAlignedBB.getBoundingBox(
             xCoord - PYLON_RADIUS,
@@ -91,19 +98,19 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
             UUID id = player.getUniqueID();
             currentCyclePlayers.add(id);
 
-            // How much oxygen can be put in tanks
-            int canPush = Math.min(oxygenPerPlayer, storedOxygen);
+            int canPush = Math.min(oxygenPerPlayer, getStoredOxygen());
             if (canPush <= 0) break;
 
             int pushed = pushOxygenToPlayer(player, canPush);
+
             if (pushed > 0) {
-                storedOxygen -= pushed;
+                drainOxygen(pushed, true);
                 charged++;
                 active = true;
-            }
 
-            if (!previousCyclePlayers.contains(id)) {
-                sendBeamPacket((EntityPlayerMP) player);
+                if (player instanceof EntityPlayerMP mp) {
+                    sendBeamPacket(mp);
+                }
             }
         }
 
@@ -140,7 +147,7 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
             yCoord,
             zCoord,
             player.posX,
-            player.posY + player.getEyeHeight(),
+            player.posY + player.getEyeHeight() / 2,
             player.posZ);
 
         Galaxia.GALAXIA_NETWORK.sendToAllAround(
@@ -154,20 +161,13 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
     }
 
     @Override
-    public FluidTank getOxygenTank() {
-        return oxygenTank;
-    }
-
-    @Override
     protected void writeMachineNBT(NBTTagCompound tag) {
         tag.setInteger("lastChargedCount", lastChargedCount);
-        writeOxygenToNBT(tag);
     }
 
     @Override
     protected void readMachineNBT(NBTTagCompound tag) {
         lastChargedCount = tag.getInteger("lastChargedCount");
-        readOxygenFromNBT(tag);
     }
 
     @Override
@@ -176,7 +176,7 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
         IntSyncValue maxEnergySync = new IntSyncValue(
             () -> (int) Math.min(getMaxEnergyBuffer(), Integer.MAX_VALUE),
             v -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(() -> storedOxygen, v -> {});
+        IntSyncValue oxygenSync = new IntSyncValue(this::getStoredOxygen, v -> {});
         IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, v -> {});
         IntSyncValue chargedSync = new IntSyncValue(() -> lastChargedCount, v -> {});
 
