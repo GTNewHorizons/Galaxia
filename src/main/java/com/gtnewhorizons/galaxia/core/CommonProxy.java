@@ -13,9 +13,6 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtect
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import net.minecraftforge.common.MinecraftForge;
-
-import com.gtnewhorizons.galaxia.compat.GregTechCompat;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;

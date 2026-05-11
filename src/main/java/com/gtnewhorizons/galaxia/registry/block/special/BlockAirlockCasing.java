@@ -3,13 +3,12 @@ package com.gtnewhorizons.galaxia.registry.block.special;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockCasing;
 
-public class BlockAirlockCasing extends BlockConfigurable {
+public class BlockAirlockCasing extends BlockCasing {
 
     public BlockAirlockCasing() {
         super("machine/airlock_casing");
-        opaque();
     }
 
     @Override

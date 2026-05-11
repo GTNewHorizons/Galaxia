@@ -4,12 +4,14 @@ import net.minecraft.tileentity.TileEntity;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.IMachineBlockUpdateable;
 
+import cpw.mods.fml.common.Optional;
+
 /**
- * This class is for deferring updates on another thread. Also, optionally hooks into the GT update structure thread
- * through
- * {@link com.gtnewhorizons.galaxia.mixin.late.gregtech.MixinTileMachine}
+ * This class is for deferring updates on another thread.
  */
-public abstract class TileMachine extends TileEntity implements IMachineBlockUpdateable {
+@Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
+public abstract class TileMachine extends TileEntity
+    implements IMachineBlockUpdateable, gregtech.api.interfaces.tileentity.IMachineBlockUpdateable {
 
     @Override
     public abstract void onMachineBlockUpdate();

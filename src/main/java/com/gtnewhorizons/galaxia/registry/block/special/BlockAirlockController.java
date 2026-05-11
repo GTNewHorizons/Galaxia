@@ -11,7 +11,6 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 
