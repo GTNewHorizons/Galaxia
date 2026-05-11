@@ -70,7 +70,7 @@ public enum EnumTextures {
 
     EnumTextures(String location) {
         this.texture = LocationGalaxia(location);
-        this.uiTexture = UITexture.fullImage(this.texture);
+        this.uiTexture = UITexture.fullImage(location);
     }
 
     public ResourceLocation get() {
