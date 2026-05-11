@@ -29,13 +29,14 @@ public class OxygenCollectorGUI {
         syncManager.syncValue("maxOxygen", maxOxygenSync);
         syncManager.syncValue("leaves", leavesSync);
 
-        return ModularPanel.defaultPanel("oxygen_collector", 176, 172)
+        return ModularPanel.defaultPanel("oxygen_collector", 176, 220)
             .child(
                 IKey.lang("galaxia.gui.oxygen_collector.title")
                     .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                     .asWidget()
                     .top(6)
-                    .left(8))
+                    .left(8)
+                    .horizontalCenter())
 
             // Energy Bar
             .child(GUIHelper.createEnergyBar(energySync, maxEnergySync, 8, 22))
@@ -50,19 +51,14 @@ public class OxygenCollectorGUI {
             // Info
             .child(
                 Flow.column()
-                    .top(74)
+                    .top(158)
                     .left(8)
-                    .right(8)
+                    .coverChildrenHeight()
                     .child(
-                        IKey.lang("galaxia.gui.oxygen_collector.leaves_in_range")
+                        IKey.lang("galaxia.gui.oxygen_collector.leaves_in_range", leavesSync.getIntValue())
                             .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                             .asWidget()
                             .height(12))
-                    .child(
-                        IKey.dynamic(() -> String.valueOf(leavesSync.getIntValue()))
-                            .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                            .asWidget()
-                            .height(16))
                     .child(
                         IKey.dynamic(
                             () -> tile.active

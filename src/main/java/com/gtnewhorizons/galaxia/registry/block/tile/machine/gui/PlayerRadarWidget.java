@@ -2,17 +2,18 @@ package com.gtnewhorizons.galaxia.registry.block.tile.machine.gui;
 
 import java.util.List;
 
-import com.cleanroommc.modularui.theme.WidgetTheme;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
+
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPylon;
 
 public class PlayerRadarWidget extends Widget<PlayerRadarWidget> {
+
     private final TileEntityOxygenPylon tile;
     private final int size = 81;
 
@@ -26,10 +27,11 @@ public class PlayerRadarWidget extends Widget<PlayerRadarWidget> {
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
 
-        EnumTextures.MARS.getImage().draw(context, 0, 0, size, size, widgetTheme.getTheme());
+        EnumTextures.MARS.getImage()
+            .draw(context, 0, 0, size, size, widgetTheme.getTheme());
 
-        List<EntityPlayer> players = tile.getWorldObj().getEntitiesWithinAABB(
-            EntityPlayer.class, tile.getRangeAABB());
+        List<EntityPlayer> players = tile.getWorldObj()
+            .getEntitiesWithinAABB(EntityPlayer.class, tile.getRangeAABB());
 
         for (EntityPlayer p : players) {
             double relX = (p.posX - (tile.xCoord + 0.5)) / TileEntityOxygenPylon.PYLON_RADIUS;
@@ -38,9 +40,9 @@ public class PlayerRadarWidget extends Widget<PlayerRadarWidget> {
             int vx = (int) (40 + (relX * 40));
             int vy = (int) (40 + (relZ * 40));
 
-            int playerColor = p.getUniqueID().equals(Minecraft.getMinecraft().thePlayer.getUniqueID())
-                ? EnumColors.MAP_PLAYER_SELF.getColor()
-                : EnumColors.MAP_PLAYER_OTHER.getColor();
+            int playerColor = p.getUniqueID()
+                .equals(Minecraft.getMinecraft().thePlayer.getUniqueID()) ? EnumColors.MAP_PLAYER_SELF.getColor()
+                    : EnumColors.MAP_PLAYER_OTHER.getColor();
 
             EnumTextures.OVERWORLD.getImage()
                 .withColorOverride(playerColor)

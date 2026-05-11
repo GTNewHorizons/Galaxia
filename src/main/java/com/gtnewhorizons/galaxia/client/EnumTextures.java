@@ -2,10 +2,10 @@ package com.gtnewhorizons.galaxia.client;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import net.minecraft.util.ResourceLocation;
 
 import com.cleanroommc.modularui.drawable.UITexture;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 
 public enum EnumTextures {
 

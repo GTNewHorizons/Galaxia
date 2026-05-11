@@ -35,7 +35,8 @@ public class OxygenPylonGUI {
                     .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                     .asWidget()
                     .top(6)
-                    .left(8))
+                    .left(8)
+                    .horizontalCenter())
 
             .child(GUIHelper.createEnergyBar(energySync, maxEnergySync, 8, 22))
             .child(GUIHelper.createOxygenBar(oxygenSync, maxOxygenSync, 8, 48))
@@ -51,14 +52,15 @@ public class OxygenPylonGUI {
                     .left(8)
                     .right(8)
                     .child(
-                        IKey.lang("galaxia.gui.oxygen_pylon.radius")
+                        IKey.lang("galaxia.gui.oxygen_pylon.radius", TileEntityOxygenPylon.PYLON_RADIUS)
                             .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
                             .asWidget()
                             .height(12))
                     .child(
                         IKey.dynamic(
-                            () -> StatCollector.translateToLocal("galaxia.gui.oxygen_pylon.players_charged") + ": "
-                                + chargedSync.getIntValue())
+                            () -> StatCollector.translateToLocalFormatted(
+                                "galaxia.gui.oxygen_pylon.players_charged",
+                                chargedSync.getIntValue()))
                             .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                             .asWidget()
                             .height(12))

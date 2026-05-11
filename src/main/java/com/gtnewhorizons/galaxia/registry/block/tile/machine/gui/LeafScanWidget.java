@@ -1,16 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.block.tile.machine.gui;
 
-import com.cleanroommc.modularui.drawable.UITexture;
-import com.cleanroommc.modularui.theme.WidgetTheme;
-import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 import net.minecraft.block.Block;
+
+import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 
 public class LeafScanWidget extends Widget<LeafScanWidget> {
+
     private final TileEntityOxygenCollector tile;
     private static final UITexture GRID_TEX = EnumTextures.MIRAGE.getImage();
     private static final UITexture DOT_TEX = EnumTextures.TENEBRAE.getImage();
@@ -48,7 +49,8 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
         int worldX = tile.xCoord + dx;
         int worldZ = tile.zCoord + dz;
         for (int y = tile.yCoord - 3; y <= tile.yCoord + 3; y++) {
-            Block b = tile.getWorldObj().getBlock(worldX, y, worldZ);
+            Block b = tile.getWorldObj()
+                .getBlock(worldX, y, worldZ);
             if (b != null && b.isLeaves(tile.getWorldObj(), worldX, y, worldZ)) return true;
         }
         return false;
