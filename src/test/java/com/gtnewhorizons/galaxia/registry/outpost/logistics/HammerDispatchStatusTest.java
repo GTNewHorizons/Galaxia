@@ -1,16 +1,32 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
+import java.util.List;
+
+import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class HammerDispatchStatusTest {
 
@@ -40,6 +56,32 @@ final class HammerDispatchStatusTest {
 
         assertEquals(HammerDispatchStatus.Code.READY, status.code());
         assertEquals(32L, status.sendAmount());
+    }
+
+    @Test
+    void plannerReturnsReadyDispatchPlanForServerExecution() {
+        AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
+        AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
+        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(32, 32, false, true));
+        requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 32, true, false));
+        supplier.addInventoryWithoutSync(resource, 96L);
+        ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
+        ModuleInstance hammerModule = hammerModule(hammer);
+
+        HammerDispatchPlanner.Result result = HammerDispatchPlanner
+            .evaluate(supplier, hammerModule, List.of(requester), List.of(), 0.0);
+
+        assertEquals(HammerDispatchStatus.Code.READY, result.code());
+        HammerDispatchPlanner.Plan plan = result.plan();
+        assertNotNull(plan);
+        assertSame(supplier, plan.supplier());
+        assertSame(requester, plan.requester());
+        assertEquals(resource, plan.resource());
+        assertEquals(32L, plan.sendAmount());
+        assertEquals(10_000L, plan.requiredEnergy());
+        assertEquals(LogisticSignal.Scope.PLANETARY, plan.deliveryScope());
+        assertEquals(1, plan.travelTimeTicks());
     }
 
     @Test
@@ -101,5 +143,24 @@ final class HammerDispatchStatusTest {
             departureDv,
             totalDv,
             tofSeconds);
+    }
+
+    private static AutomatedFacility facility(CelestialObjectId bodyId) {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            bodyId,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+    }
+
+    private static ModuleInstance hammerModule(ModuleHammer hammer) {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.LuV);
+        module.setComponent(hammer);
+        return module;
     }
 }
