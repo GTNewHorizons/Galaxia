@@ -14,17 +14,19 @@ import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPyl
 
 public class PlayerRadarWidget extends Widget<PlayerRadarWidget> {
     private final TileEntityOxygenPylon tile;
+    private final int size = 81;
 
     public PlayerRadarWidget(TileEntityOxygenPylon tile) {
         this.tile = tile;
-        size(81, 81);
+        size(size, size);
         background(EnumTextures.SELECTION_FRAME.getImage());
     }
 
     @Override
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
-        EnumTextures.MARS.getImage().draw(context, getArea(), widgetTheme.getTheme());
+
+        EnumTextures.MARS.getImage().draw(context, 0, 0, size, size, widgetTheme.getTheme());
 
         List<EntityPlayer> players = tile.getWorldObj().getEntitiesWithinAABB(
             EntityPlayer.class, tile.getRangeAABB());
@@ -36,8 +38,12 @@ public class PlayerRadarWidget extends Widget<PlayerRadarWidget> {
             int vx = (int) (40 + (relX * 40));
             int vy = (int) (40 + (relZ * 40));
 
+            int playerColor = p.getUniqueID().equals(Minecraft.getMinecraft().thePlayer.getUniqueID())
+                ? EnumColors.MAP_PLAYER_SELF.getColor()
+                : EnumColors.MAP_PLAYER_OTHER.getColor();
+
             EnumTextures.OVERWORLD.getImage()
-                .withColorOverride(EnumColors.MAP_PLAYER_SELF.getColor())
+                .withColorOverride(playerColor)
                 .draw(context, vx - 2, vy - 2, 5, 5, widgetTheme.getTheme());
         }
     }

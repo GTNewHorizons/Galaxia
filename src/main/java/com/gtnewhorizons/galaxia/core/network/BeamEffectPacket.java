@@ -13,6 +13,8 @@ public class BeamEffectPacket implements IMessage {
     private int machineX, machineY, machineZ;
     private int playerX100, playerY100, playerZ100;
 
+    public BeamEffectPacket() {}
+
     public BeamEffectPacket(int machineX, int machineY, int machineZ, double playerX, double playerY, double playerZ) {
         this.machineX = machineX;
         this.machineY = machineY;

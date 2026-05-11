@@ -14,10 +14,11 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
     private final TileEntityOxygenCollector tile;
     private static final UITexture GRID_TEX = EnumTextures.MIRAGE.getImage();
     private static final UITexture DOT_TEX = EnumTextures.TENEBRAE.getImage();
+    private final int size = 81;
 
     public LeafScanWidget(TileEntityOxygenCollector tile) {
         this.tile = tile;
-        size(81, 81);
+        size(size, size);
         background(EnumTextures.SELECTION_FRAME.getImage());
     }
 
@@ -25,7 +26,7 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         super.draw(context, widgetTheme);
 
-        GRID_TEX.draw(context, getArea(), widgetTheme.getTheme());
+        GRID_TEX.draw(context, 0, 0, size, size, widgetTheme.getTheme());
 
         int radius = 4;
         for (int dx = -radius; dx <= radius; dx++) {
@@ -34,12 +35,12 @@ public class LeafScanWidget extends Widget<LeafScanWidget> {
                     int px = (dx + radius) * 9;
                     int py = (dz + radius) * 9;
                     DOT_TEX.withColorOverride(EnumColors.MAP_LEAF_GREEN.getColor())
-                        .draw(context, px + 1, py + 1, 7, 7, widgetTheme.getTheme());
+                        .draw(context, px, py, 9, 9, widgetTheme.getTheme());
                 }
             }
         }
         DOT_TEX.withColorOverride(EnumColors.MAP_MACHINE_BLUE.getColor())
-            .draw(context, 37, 37, 7, 7, widgetTheme.getTheme());
+            .draw(context, 36, 36, 9, 9, widgetTheme.getTheme());
     }
 
     private boolean hasLeafAt(int dx, int dz) {
