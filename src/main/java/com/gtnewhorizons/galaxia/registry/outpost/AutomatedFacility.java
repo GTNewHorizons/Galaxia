@@ -563,7 +563,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public boolean isDirty() {
-        return super.isDirty() || !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty()
+        return super.isDirty() || !dirtyModuleIds.isEmpty()
+            || !dirtyRemovedIds.isEmpty()
             || !dirtyInventoryDeltas.isEmpty();
     }
 
