@@ -1096,7 +1096,7 @@ final class AssetModuleUpdatePacketTest {
             .place(source);
         facility.stationLayout()
             .place(target);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         return facility;
     }
 

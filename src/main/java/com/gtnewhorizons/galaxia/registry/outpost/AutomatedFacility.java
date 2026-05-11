@@ -483,6 +483,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);
         bumpSyncRevision();
+        markDirty();
     }
 
     public List<ModuleInstance> drainDirtyModules() {

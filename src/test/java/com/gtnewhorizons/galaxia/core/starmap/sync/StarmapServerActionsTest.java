@@ -118,7 +118,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         StationTileCoord first = StationTileCoord.of(1, 0);
         StationTileCoord second = StationTileCoord.of(0, 1);
 
@@ -157,7 +157,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
         StationTileCoord first = StationTileCoord.of(1, 0);
         StationTileCoord chained = StationTileCoord.of(2, 0);
 
@@ -196,7 +196,7 @@ final class StarmapServerActionsTest {
             CelestialObjectId.MARS,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        CelestialAssetStore.SERVER.addInternal(TEAM, facility);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
 
         com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket
             .createMany(
