@@ -5,7 +5,9 @@ import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.G
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nonnull;
 

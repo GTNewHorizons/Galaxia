@@ -39,6 +39,8 @@ import cpw.mods.fml.common.registry.EntityRegistry;
 
 public class CommonProxy {
 
+    public final ReentrantLock TICK_LOCK = new ReentrantLock();
+
     // preInit "Run before anything else. Read your config, create blocks, items,
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
