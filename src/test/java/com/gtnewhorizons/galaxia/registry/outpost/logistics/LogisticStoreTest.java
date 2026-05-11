@@ -40,8 +40,8 @@ final class LogisticStoreTest {
         ItemStackWrapper filler = new ItemStackWrapper(new Item(), 0, null);
         ItemStackWrapper delivered = new ItemStackWrapper(new Item(), 0, null);
         destination.inventory.add(filler, 998L);
-        CelestialAssetStore.add(teamId, source);
-        CelestialAssetStore.add(teamId, destination);
+        CelestialAssetStore.registerAsset(teamId, source);
+        CelestialAssetStore.registerAsset(teamId, destination);
 
         LogisticStore.addDelivery(
             LogisticsDelivery.createWithTrajectory(

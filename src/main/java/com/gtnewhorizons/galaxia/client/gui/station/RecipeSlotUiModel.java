@@ -52,6 +52,10 @@ final class RecipeSlotUiModel {
         return Math.max(min, Math.min(max, parsed));
     }
 
+    static @Nullable String fluidSlotAmountText(@Nullable FluidStack stack) {
+        return stack != null && stack.amount > 0 ? stack.amount + "L" : null;
+    }
+
     private static @Nullable String itemSummary(@Nullable ItemStack[] stacks) {
         if (stacks == null) return null;
         for (ItemStack stack : stacks) {
@@ -74,10 +78,10 @@ final class RecipeSlotUiModel {
     private static @Nullable String fluidSummary(@Nullable FluidStack[] stacks) {
         if (stacks == null) return null;
         for (FluidStack stack : stacks) {
-            if (stack == null || stack.amount <= 0) continue;
+            if (RecipeSlotUiModel.fluidSlotAmountText(stack) == null) continue;
             String name = fluidName(stack);
             if (name == null || name.isBlank()) continue;
-            return stack.amount + "L " + name;
+            return RecipeSlotUiModel.fluidSlotAmountText(stack) + " " + name;
         }
         return null;
     }

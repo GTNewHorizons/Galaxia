@@ -1138,10 +1138,23 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             try {
                 com.cleanroommc.modularui.drawable.GuiDraw
                     .drawFluidTexture(stack, scale, scale, 16 * scale, 16 * scale, context.getCurrentDrawingZ());
+                drawFluidAmountText(stack, getArea().width, scale);
             } finally {
                 GL11.glPopAttrib();
                 GL11.glColor4f(1f, 1f, 1f, 1f);
             }
+        }
+
+        private void drawFluidAmountText(FluidStack stack, int size, int scale) {
+            String text = RecipeSlotUiModel.fluidSlotAmountText(stack);
+            if (text == null) return;
+            float textScale = 0.5F * scale;
+            GL11.glPushMatrix();
+            GL11.glScalef(textScale, textScale, 1.0F);
+            int scaledHeight = Math.max(1, Math.round(size / textScale));
+            int y = Math.max(0, scaledHeight - Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT);
+            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(text, 1, y, 0xFFFFFF);
+            GL11.glPopMatrix();
         }
 
         private void drawSlotHighlight(int size) {

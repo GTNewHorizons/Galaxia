@@ -2,7 +2,11 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.lang.reflect.Field;
+
 import org.junit.jupiter.api.Test;
+
+import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -34,5 +38,26 @@ final class RecipeSlotUiModelTest {
     @Test
     void nextModeCyclesSchedulerMode() {
         assertEquals(RecipeSchedulerMode.ORDER, RecipeSlotUiModel.nextMode(RecipeConfig.empty()));
+    }
+
+    @Test
+    void fluidSlotAmountTextShowsLitersForPositiveAmounts() {
+        assertEquals("1000L", RecipeSlotUiModel.fluidSlotAmountText(fluidStackWithAmount(1000)));
+    }
+
+    private static FluidStack fluidStackWithAmount(int amount) {
+        try {
+            FluidStack stack = (FluidStack) unsafe().allocateInstance(FluidStack.class);
+            stack.amount = amount;
+            return stack;
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static sun.misc.Unsafe unsafe() throws ReflectiveOperationException {
+        Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        field.setAccessible(true);
+        return (sun.misc.Unsafe) field.get(null);
     }
 }
