@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
-import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
 import net.minecraft.block.Block;
 import net.minecraft.tileentity.TileEntity;
 
@@ -14,11 +12,13 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;

@@ -1,9 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
-import com.cleanroommc.modularui.factory.GuiFactories;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
-import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -14,6 +10,10 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
+
+import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
 
 public class BlockStationDock extends Block implements ITileEntityProvider {
 
@@ -44,7 +44,7 @@ public class BlockStationDock extends Block implements ITileEntityProvider {
 
     @Override
     public boolean onBlockActivated(World worldIn, int x, int y, int z, EntityPlayer player, int side, float hitX,
-                                    float hitY, float hitZ) {
+        float hitY, float hitZ) {
         if (worldIn.isRemote) return true;
         TileEntity te = worldIn.getTileEntity(x, y, z);
         if (!(te instanceof TileStationDock)) return false;

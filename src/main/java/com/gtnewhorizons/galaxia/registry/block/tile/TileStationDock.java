@@ -1,5 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
+import net.minecraftforge.common.util.Constants;
+
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -17,16 +25,9 @@ import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
-import net.minecraftforge.common.util.Constants;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class TileStationDock extends TileStationSecondary<TileStationDock> implements IGuiHolder<PosGuiData>,
-    ArbitraryShapeTile<TileStationDock> {
+public class TileStationDock extends TileStationSecondary<TileStationDock>
+    implements IGuiHolder<PosGuiData>, ArbitraryShapeTile<TileStationDock> {
 
     private List<BlockPos> hammerTargets = new ArrayList<>();
 
@@ -47,9 +48,9 @@ public class TileStationDock extends TileStationSecondary<TileStationDock> imple
             if (tileEntity instanceof TileHammerTarget target) {
                 if (!target.isStructureValid()) return false;
 
-                BlockPos pos =  new BlockPos(target.xCoord, target.yCoord, target.zCoord);
+                BlockPos pos = new BlockPos(target.xCoord, target.yCoord, target.zCoord);
                 if (!stationController.hammerTargets.contains(pos)) {
-                   stationController.hammerTargets.add(pos);
+                    stationController.hammerTargets.add(pos);
                 }
                 return true;
             }
@@ -69,7 +70,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock> imple
         super.onStructureFormed();
 
         clearBroken(hammerTargets);
-        for (var pos: hammerTargets) {
+        for (var pos : hammerTargets) {
             TileHammerTarget target = pos.getTE(worldObj);
             target.setStationController(this.mainController);
         }
@@ -102,7 +103,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock> imple
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 int oxy = oxygenatedSync.getIntValue();
                 String targets = StatCollector.translateToLocal("galaxia.gui.station_controller.targets");
-                EnumChatFormatting color =  EnumChatFormatting.GREEN;
+                EnumChatFormatting color = EnumChatFormatting.GREEN;
                 return targets + ": " + color + hammerTargets.size() + EnumChatFormatting.RESET;
             })).pos(10, 50))
             .child(
@@ -139,7 +140,6 @@ public class TileStationDock extends TileStationSecondary<TileStationDock> imple
     protected int getControllerOffsetZ() {
         return 0;
     }
-
 
     @Override
     public void writeToNBT(NBTTagCompound nbt) {

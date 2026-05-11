@@ -197,7 +197,9 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
 
         final boolean[] valid = { true };
         this.validBoundaryBits.forEach((lx, ly, lz) -> {
-            if (!checkValidBoundary(tile, world,
+            if (!checkValidBoundary(
+                tile,
+                world,
                 LocalCoord.worldX(lx, tile.xCoord),
                 LocalCoord.worldY(ly, tile.yCoord),
                 LocalCoord.worldZ(lz, tile.zCoord))) {

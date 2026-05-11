@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
-import com.cleanroommc.modularui.factory.GuiFactories;
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -10,9 +9,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
-
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import net.minecraftforge.common.util.ForgeDirection;
+
+import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 
 public class BlockHammerTarget extends Block implements ITileEntityProvider {
 
@@ -24,7 +24,6 @@ public class BlockHammerTarget extends Block implements ITileEntityProvider {
     public TileEntity createNewTileEntity(World worldIn, int meta) {
         return new TileHammerTarget();
     }
-
 
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
@@ -41,7 +40,7 @@ public class BlockHammerTarget extends Block implements ITileEntityProvider {
 
     @Override
     public boolean onBlockActivated(World worldIn, int x, int y, int z, EntityPlayer player, int side, float hitX,
-                                    float hitY, float hitZ) {
+        float hitY, float hitZ) {
         if (worldIn.isRemote) return true;
         TileEntity te = worldIn.getTileEntity(x, y, z);
         if (!(te instanceof TileHammerTarget)) return false;
