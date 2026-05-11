@@ -4,6 +4,8 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import net.minecraft.util.ResourceLocation;
 
+import com.cleanroommc.modularui.drawable.UITexture;
+
 public enum EnumTextures {
 
     // Gui
@@ -64,12 +66,18 @@ public enum EnumTextures {
     ; // leave trailing semicolon
 
     private final ResourceLocation texture;
+    private final UITexture uiTexture;
 
     EnumTextures(String location) {
         this.texture = LocationGalaxia(location);
+        this.uiTexture = UITexture.fullImage(this.texture);
     }
 
     public ResourceLocation get() {
         return texture;
+    }
+
+    public UITexture getImage() {
+        return uiTexture;
     }
 }

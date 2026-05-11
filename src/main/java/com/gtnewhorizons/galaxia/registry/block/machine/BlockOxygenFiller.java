@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.block.machine;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 
 public class BlockOxygenFiller extends BlockGalaxiaMachine {
 
@@ -14,6 +14,6 @@ public class BlockOxygenFiller extends BlockGalaxiaMachine {
 
     @Override
     public TileEntity createNewTileEntity(World world, int meta) {
-        return new TileEntityOxygenCollector();
+        return new TileEntityOxygenFiller();
     }
 }

@@ -11,17 +11,15 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraftforge.fluids.FluidTank;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.api.IOxygenHandler;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.gui.OxygenPylonGUI;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 
 import baubles.api.BaublesApi;
@@ -35,7 +33,7 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
     private static final double BEAM_BROADCAST_RADIUS = PYLON_RADIUS + 4;
 
     private final Set<UUID> previousCyclePlayers = new HashSet<>();
-    private int lastChargedCount;
+    public int lastChargedCount;
 
     public TileEntityOxygenPylon() {
         this.oxygenTank = new FluidTank(getMaxOxygenBuffer());
@@ -47,12 +45,12 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
     }
 
     @Override
-    protected double getMaxEnergyBuffer() {
+    public double getMaxEnergyBuffer() {
         return ConfigMachines.pylon.maxEnergyBuffer;
     }
 
     @Override
-    protected int getMaxOxygenBuffer() {
+    public int getMaxOxygenBuffer() {
         return ConfigMachines.pylon.maxOxygenBuffer;
     }
 
@@ -74,13 +72,7 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
             return;
         }
 
-        AxisAlignedBB area = AxisAlignedBB.getBoundingBox(
-            xCoord - PYLON_RADIUS,
-            yCoord - PYLON_RADIUS,
-            zCoord - PYLON_RADIUS,
-            xCoord + PYLON_RADIUS + 1,
-            yCoord + PYLON_RADIUS + 1,
-            zCoord + PYLON_RADIUS + 1);
+        AxisAlignedBB area = getRangeAABB();
 
         List<EntityPlayer> playersInRange = worldObj.getEntitiesWithinAABB(EntityPlayer.class, area);
 
@@ -117,6 +109,16 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
         previousCyclePlayers.clear();
         previousCyclePlayers.addAll(currentCyclePlayers);
         lastChargedCount = charged;
+    }
+
+    public AxisAlignedBB getRangeAABB() {
+        return AxisAlignedBB.getBoundingBox(
+            xCoord - PYLON_RADIUS,
+            yCoord - PYLON_RADIUS,
+            zCoord - PYLON_RADIUS,
+            xCoord + PYLON_RADIUS + 1,
+            yCoord + PYLON_RADIUS + 1,
+            zCoord + PYLON_RADIUS + 1);
     }
 
     private int pushOxygenToPlayer(EntityPlayer player, int amount) {
@@ -172,57 +174,6 @@ public class TileEntityOxygenPylon extends TileEntityGalaxiaMachine implements I
 
     @Override
     public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
-        IntSyncValue energySync = new IntSyncValue(() -> (int) Math.min(storedEnergy, Integer.MAX_VALUE), v -> {});
-        IntSyncValue maxEnergySync = new IntSyncValue(
-            () -> (int) Math.min(getMaxEnergyBuffer(), Integer.MAX_VALUE),
-            v -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(this::getStoredOxygen, v -> {});
-        IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, v -> {});
-        IntSyncValue chargedSync = new IntSyncValue(() -> lastChargedCount, v -> {});
-
-        syncManager.syncValue("energy", energySync);
-        syncManager.syncValue("maxEnergy", maxEnergySync);
-        syncManager.syncValue("oxygen", oxygenSync);
-        syncManager.syncValue("maxOxygen", maxOxygenSync);
-        syncManager.syncValue("charged", chargedSync);
-
-        String unit = energyUnitLabel();
-
-        return ModularPanel.defaultPanel("oxygen_pylon", 176, 120)
-            .child(
-                IKey.lang("galaxia.gui.oxygen_pylon.title")
-                    .asWidget()
-                    .top(6)
-                    .left(8))
-            .child(
-                Flow.column()
-                    .top(20)
-                    .left(8)
-                    .right(8)
-                    .height(90)
-                    .child(
-                        IKey.dynamic(() -> unit + ": " + energySync.getIntValue() + " / " + maxEnergySync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> "O2: " + oxygenSync.getIntValue() + " / " + maxOxygenSync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.str("Radius: " + PYLON_RADIUS + " blocks")
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> "Players charged: " + chargedSync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> active ? "\u00a7aActive" : "\u00a77Idle")
-                            .asWidget()
-                            .height(12)));
+        return OxygenPylonGUI.build(this, guiData, syncManager);
     }
 }

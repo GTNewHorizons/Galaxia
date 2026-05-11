@@ -5,14 +5,12 @@ import net.minecraft.block.BlockSapling;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.FluidTank;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.gui.OxygenCollectorGUI;
 
 public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine {
 
@@ -20,7 +18,7 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine {
 
     protected FluidTank oxygenTank;
 
-    private int cachedLeafCount;
+    public int cachedLeafCount;
     private int leafRescanTimer;
 
     public TileEntityOxygenCollector() {
@@ -33,12 +31,12 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine {
     }
 
     @Override
-    protected double getMaxEnergyBuffer() {
+    public double getMaxEnergyBuffer() {
         return ConfigMachines.collector.maxEnergyBuffer;
     }
 
     @Override
-    protected int getMaxOxygenBuffer() {
+    public int getMaxOxygenBuffer() {
         return ConfigMachines.collector.maxOxygenBuffer;
     }
 
@@ -111,52 +109,6 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine {
 
     @Override
     public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
-        IntSyncValue energySync = new IntSyncValue(() -> (int) Math.min(storedEnergy, Integer.MAX_VALUE), _ -> {});
-        IntSyncValue maxEnergySync = new IntSyncValue(
-            () -> (int) Math.min(getMaxEnergyBuffer(), Integer.MAX_VALUE),
-            _ -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(this::getStoredOxygen, _ -> {});
-        IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, _ -> {});
-        IntSyncValue leafSync = new IntSyncValue(() -> cachedLeafCount, _ -> {});
-
-        syncManager.syncValue("energy", energySync);
-        syncManager.syncValue("maxEnergy", maxEnergySync);
-        syncManager.syncValue("oxygen", oxygenSync);
-        syncManager.syncValue("maxOxygen", maxOxygenSync);
-        syncManager.syncValue("leaves", leafSync);
-
-        String unit = energyUnitLabel();
-
-        return ModularPanel.defaultPanel("oxygen_collector", 176, 120)
-            .child(
-                IKey.lang("galaxia.gui.oxygen_collector.title")
-                    .asWidget()
-                    .top(6)
-                    .left(8))
-            .child(
-                Flow.column()
-                    .top(20)
-                    .left(8)
-                    .right(8)
-                    .height(90)
-                    .child(
-                        IKey.dynamic(() -> unit + ": " + energySync.getIntValue() + " / " + maxEnergySync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> "O2: " + oxygenSync.getIntValue() + " / " + maxOxygenSync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> "Leaves in range: " + leafSync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> active ? "§aGenerating" : "§7Idle")
-                            .asWidget()
-                            .height(12)));
+        return OxygenCollectorGUI.build(this, guiData, syncManager);
     }
 }

@@ -24,8 +24,8 @@ import gregtech.api.interfaces.tileentity.IEnergyConnected;
 public abstract class TileEntityGalaxiaMachine extends TileEntity
     implements IEnergyConnected, IEnergyReceiver, IOxygenHandler, IColoredTileEntity, IGuiHolder<PosGuiData> {
 
-    protected double storedEnergy;
-    protected boolean active;
+    public double storedEnergy;
+    public boolean active;
     private int tickCounter;
 
     protected abstract double getMaxEnergyBuffer();
@@ -180,11 +180,6 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
 
     protected String energyUnitLabel() {
         return useEU() ? "EU" : "RF";
-    }
-
-    protected double energyFraction() {
-        double max = getMaxEnergyBuffer();
-        return max == 0 ? 0 : storedEnergy / max;
     }
 
     public boolean isItemValidForSlot(int slot, net.minecraft.item.ItemStack stack) {

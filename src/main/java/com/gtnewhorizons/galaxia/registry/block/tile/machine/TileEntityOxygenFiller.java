@@ -7,18 +7,14 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraftforge.fluids.FluidTank;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.item.IItemHandler;
 import com.cleanroommc.modularui.utils.item.InvWrapper;
-import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.slot.ItemSlot;
-import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.gtnewhorizons.galaxia.core.config.ConfigMachines;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.gui.OxygenFillerGUI;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 
 public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements IInventory {
@@ -44,12 +40,12 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
     }
 
     @Override
-    protected double getMaxEnergyBuffer() {
+    public double getMaxEnergyBuffer() {
         return ConfigMachines.filler.maxEnergyBuffer;
     }
 
     @Override
-    protected int getMaxOxygenBuffer() {
+    public int getMaxOxygenBuffer() {
         return ConfigMachines.filler.maxOxygenBuffer;
     }
 
@@ -189,70 +185,6 @@ public class TileEntityOxygenFiller extends TileEntityGalaxiaMachine implements 
 
     @Override
     public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
-        IntSyncValue energySync = new IntSyncValue(() -> (int) Math.min(storedEnergy, Integer.MAX_VALUE), _ -> {});
-        IntSyncValue maxEnergySync = new IntSyncValue(
-            () -> (int) Math.min(getMaxEnergyBuffer(), Integer.MAX_VALUE),
-            _ -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(this::getStoredOxygen, _ -> {});
-        IntSyncValue maxOxygenSync = new IntSyncValue(this::getMaxOxygenBuffer, _ -> {});
-
-        syncManager.syncValue("energy", energySync);
-        syncManager.syncValue("maxEnergy", maxEnergySync);
-        syncManager.syncValue("oxygen", oxygenSync);
-        syncManager.syncValue("maxOxygen", maxOxygenSync);
-
-        String unit = energyUnitLabel();
-
-        Flow slotRow1 = Flow.row()
-            .height(18)
-            .marginBottom(2);
-        Flow slotRow2 = Flow.row()
-            .height(18);
-
-        for (int i = 0; i < 3; i++) {
-            slotRow1.child(
-                new ItemSlot().slot(new ModularSlot(getItemHandler(), i))
-                    .marginRight(2));
-        }
-        for (int i = 3; i < 6; i++) {
-            slotRow2.child(
-                new ItemSlot().slot(new ModularSlot(getItemHandler(), i))
-                    .marginRight(2));
-        }
-
-        return ModularPanel.defaultPanel("oxygen_filler", 176, 160)
-            .child(
-                IKey.lang("galaxia.gui.oxygen_filler.title")
-                    .asWidget()
-                    .top(6)
-                    .left(8))
-            .child(
-                Flow.column()
-                    .top(20)
-                    .left(8)
-                    .right(8)
-                    .height(130)
-                    .child(
-                        IKey.dynamic(() -> unit + ": " + energySync.getIntValue() + " / " + maxEnergySync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(2))
-                    .child(
-                        IKey.dynamic(() -> "O2: " + oxygenSync.getIntValue() + " / " + maxOxygenSync.getIntValue())
-                            .asWidget()
-                            .height(12)
-                            .marginBottom(4))
-                    .child(
-                        IKey.lang("galaxia.gui.oxygen_filler.tanks")
-                            .asWidget()
-                            .height(10)
-                            .marginBottom(2))
-                    .child(slotRow1)
-                    .child(slotRow2)
-                    .child(
-                        IKey.dynamic(() -> active ? "\u00a7aFilling" : "\u00a77Idle")
-                            .asWidget()
-                            .height(12)
-                            .marginTop(4)));
+        return OxygenFillerGUI.build(this, guiData, syncManager);
     }
 }
