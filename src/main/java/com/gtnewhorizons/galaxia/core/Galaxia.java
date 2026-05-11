@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.Tags;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
+import com.gtnewhorizons.galaxia.core.network.BeamEffectPacketClientHandler;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
@@ -93,20 +94,25 @@ public final class Galaxia {
     private static void registerNetwork() {
         int id = 0;
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
-                Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++, Side.CLIENT);
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++,
+            Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++,
-                Side.CLIENT);
+            Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
-                Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++, Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++, Side.CLIENT);
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++,
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++,
+            Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
-                Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(RocketLaunchPacket.class, RocketLaunchPacket.class, id++, Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class,
-                id++, Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++, Side.CLIENT);
+            Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(RocketLaunchPacket.class, RocketLaunchPacket.class, id++,
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(BeamEffectPacketClientHandler.class, BeamEffectPacket.class, id++,
+            Side.CLIENT);
     }
     // spotless:on
 
