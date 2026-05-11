@@ -46,6 +46,14 @@ public enum EnumColors {
     OrbitEllipse(0xEBFFFFFF), // 0.92 alpha white
     SpriteTint(0xFFFFFFFF),
 
+    // Players
+    MAP_PLAYER_SELF(0xAAAAAA),
+    MAP_PLAYER_OTHER(0xAAAAAA),
+
+    // Leaves
+    MAP_LEAF_GREEN(0x00FF00),
+    MAP_MACHINE_BLUE(0xFF00FF),
+
     // Celestial Map
 
     MAP_COLOR_OVERLAY_BG(0xAA09111B),
