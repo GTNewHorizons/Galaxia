@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
@@ -55,25 +56,8 @@ final class StarmapServerActionsTest {
     }
 
     @Test
-    void createAssetAddsToServerStoreAndReturnsImmediateFullSync() {
-        // AssetCreatePacket packet = AssetCreatePacket.create(
-        // CelestialObjectId.MARS,
-        // "Mars Automated Station",
-        // CelestialAsset.Kind.AUTOMATED_STATION,
-        // Buildable.Status.OPERATIONAL);
-        //
-        // AssetSyncPacket result = packet.apply(TEAM);
-        //
-        // assertNotNull(result, "create must immediately echo sync data for the open GUI");
-        // CelestialAsset created = CelestialAssetStore.SERVER.allAssetsInternal()
-        // .get(0);
-        // assertInstanceOf(AutomatedFacility.class, created);
-        // assertEquals("Mars Automated Station", created.displayName());
-    }
-
-    @Test
     void buildModuleRejectsMissingServerAsset() {
-        com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket packet = new com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket();
+        AssetBuildModulePacket packet = new AssetBuildModulePacket();
         // Don't set assetId - will be null, should fail
 
         AssetSyncPacket result = packet.apply(TEAM, false);

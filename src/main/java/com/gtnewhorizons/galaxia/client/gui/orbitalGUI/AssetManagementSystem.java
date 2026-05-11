@@ -238,7 +238,6 @@ public final class AssetManagementSystem {
                 return;
             }
             if (callbacks.isCreativeBuildModeEnabled()) {
-                System.out.println("here 1");
                 CelestialAsset asset = CelestialAsset.create(body.id(), kind, true);
                 asset.setDisplayName(displayName);
                 CelestialClient.registerAsset(body.id(), asset);
