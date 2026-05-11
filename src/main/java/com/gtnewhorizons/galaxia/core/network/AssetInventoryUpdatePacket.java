@@ -94,31 +94,19 @@ public final class AssetInventoryUpdatePacket {
         ItemStackWrapper resource = this.resource != null ? this.resource : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
 
-        if (delta == Long.MIN_VALUE) {
-            long amount = state.inventory.getAmount(resource);
-            if (amount > 0) {
-                state.addInventoryWithoutSync(resource, -amount);
-                state.bumpSyncRevision();
-                LOG.info("[Logistics] Removed {} x {} from outpost {}", amount, resource, assetId);
-                return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, -amount)
-                    .withSyncRevision(state.getSyncRevision());
-            }
-        } else {
-            long effectiveDelta = delta;
-            if (creativeOnly) {
-                effectiveDelta = Math.min(delta, Integer.MAX_VALUE);
-            }
-            if (effectiveDelta > 0L) {
-                effectiveDelta = state.insertInventoryWithoutSync(resource, effectiveDelta);
-            } else {
-                effectiveDelta = state.addInventoryWithoutSync(resource, effectiveDelta);
-            }
-            if (effectiveDelta == 0L) return null;
-            state.bumpSyncRevision();
-            LOG.info("[Logistics] Inventory update: {} x {} on outpost {}", effectiveDelta, resource, assetId);
-            return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, effectiveDelta)
-                .withSyncRevision(state.getSyncRevision());
+        long effectiveDelta = delta;
+        if (creativeOnly) {
+            effectiveDelta = Math.min(delta, Integer.MAX_VALUE);
         }
-        return null;
+        if (effectiveDelta > 0L) {
+            effectiveDelta = state.insertInventoryWithoutSync(resource, effectiveDelta);
+        } else {
+            effectiveDelta = state.addInventoryWithoutSync(resource, effectiveDelta);
+        }
+        if (effectiveDelta == 0L) return null;
+        state.bumpSyncRevision();
+        LOG.info("[Logistics] Inventory update: {} x {} on outpost {}", effectiveDelta, resource, assetId);
+        return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, effectiveDelta)
+            .withSyncRevision(state.getSyncRevision());
     }
 }

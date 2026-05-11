@@ -72,7 +72,7 @@ public final class LogisticStore {
                     long accepted = outpost.insertInventory(ticked.data.resourceId(), ticked.data.amount());
                     long remaining = ticked.data.amount() - accepted;
                     if (remaining > 0L) {
-                        activeDeliveries.set(i, ticked.withAmount(remaining));
+                        ticked.setAmount(remaining);
                     } else {
                         activeDeliveries.remove(i);
                     }
@@ -85,8 +85,6 @@ public final class LogisticStore {
                 } else {
                     activeDeliveries.remove(i);
                 }
-            } else {
-                activeDeliveries.set(i, ticked);
             }
         }
     }

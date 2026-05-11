@@ -14,6 +14,9 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -62,6 +65,8 @@ import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
 
 public final class AssetSyncPacket implements IMessage {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     public static final byte FULL_SYNC = 0;
     public static final byte MODULE_ADDED = 1;
@@ -856,7 +861,8 @@ public final class AssetSyncPacket implements IMessage {
         try {
             Fluid fluid = stack.getFluid();
             return fluid != null ? fluid.getName() : "";
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException e) {
+            LOG.warn("[Network] Failed to resolve fluid name for synced FluidStack {}", stack, e);
             return "";
         }
     }

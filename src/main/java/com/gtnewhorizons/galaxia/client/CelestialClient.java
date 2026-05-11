@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
+import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -50,8 +51,6 @@ public final class CelestialClient {
 
     @Deprecated
     public record TransferTarget(CelestialAsset.ID assetId, String displayName, CelestialObject hostBody) {}
-
-    public record HammerTrajectoryLoadSample(double ownMsPerTick, double allMsPerTick) {}
 
     // ── Client-side asset mirror (via CLIENT store) ──
 
@@ -382,8 +381,8 @@ public final class CelestialClient {
         return deliveryRevision;
     }
 
-    public static void updateHammerTrajectoryLoad(double ownMsPerTick, double allMsPerTick) {
-        hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(ownMsPerTick, allMsPerTick);
+    public static void updateHammerTrajectoryLoad(HammerTrajectoryLoadSample sample) {
+        hammerTrajectoryLoadSample = sample == null ? new HammerTrajectoryLoadSample(0.0, 0.0) : sample;
     }
 
     public static HammerTrajectoryLoadSample hammerTrajectoryLoadSample() {

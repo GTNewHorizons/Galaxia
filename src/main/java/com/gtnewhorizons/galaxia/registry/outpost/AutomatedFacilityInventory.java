@@ -17,6 +17,7 @@ public final class AutomatedFacilityInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
     private final Map<String, Long> fluidAmounts = new LinkedHashMap<>();
+    private long totalItemAmount;
 
     /** Returns the stored amount for the given item, or 0 if absent. */
     public long getAmount(ItemStackWrapper item) {
@@ -40,9 +41,11 @@ public final class AutomatedFacilityInventory {
             } else {
                 amounts.put(item, newValue);
             }
+            totalItemAmount += actual;
             return actual;
         }
         amounts.put(item, current + delta);
+        totalItemAmount += delta;
         return delta;
     }
 
@@ -60,6 +63,7 @@ public final class AutomatedFacilityInventory {
         } else {
             amounts.put(item, newValue);
         }
+        totalItemAmount -= amount;
         return true;
     }
 
@@ -69,11 +73,7 @@ public final class AutomatedFacilityInventory {
     }
 
     public long totalItems() {
-        long total = 0L;
-        for (long amount : amounts.values()) {
-            total += amount;
-        }
-        return total;
+        return totalItemAmount;
     }
 
     public long getFluidAmount(String fluidName) {
@@ -106,8 +106,12 @@ public final class AutomatedFacilityInventory {
     /** Replaces the entire inventory contents (used during deserialization and migration). */
     public void loadFromSnapshot(@Nonnull Map<ItemStackWrapper, Long> snapshot) {
         amounts.clear();
+        totalItemAmount = 0L;
         for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
-            if (e.getValue() > 0) amounts.put(e.getKey(), e.getValue());
+            if (e.getValue() > 0) {
+                amounts.put(e.getKey(), e.getValue());
+                totalItemAmount += e.getValue();
+            }
         }
     }
 
@@ -123,20 +127,23 @@ public final class AutomatedFacilityInventory {
 
     /** Returns {@code true} if the inventory contains no resources. */
     public boolean isEmpty() {
-        return amounts.isEmpty() && fluidAmounts.isEmpty();
+        return totalItemAmount == 0L && fluidAmounts.isEmpty();
     }
 
     /** Sets the exact amount for a resource (used by client-side delta updates). */
     public void setAmount(ItemStackWrapper item, long amount) {
+        long current = getAmount(item);
         if (amount <= 0) {
             amounts.remove(item);
         } else {
             amounts.put(item, amount);
         }
+        totalItemAmount += amount > 0 ? amount - current : -current;
     }
 
     public void clear() {
         amounts.clear();
         fluidAmounts.clear();
+        totalItemAmount = 0L;
     }
 }

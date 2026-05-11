@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
+import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -2287,7 +2288,7 @@ public class OrbitalView {
 
         private void drawHammerTrajectoryLoadDebug(int widgetWidth) {
             if (!isCreativeModeAvailable()) return;
-            CelestialClient.HammerTrajectoryLoadSample sample = CelestialClient.hammerTrajectoryLoadSample();
+            HammerTrajectoryLoadSample sample = CelestialClient.hammerTrajectoryLoadSample();
             String text = "route ms/tick own=" + formatDebugMillis(sample.ownMsPerTick())
                 + " all="
                 + formatDebugMillis(sample.allMsPerTick());

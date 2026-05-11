@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -8,6 +8,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
     Map<ItemStackWrapper, Long> outputItemUpperBounds, Map<String, Long> inputFluidLowerBounds,
     Map<String, Long> outputFluidUpperBounds) {
+
+    private static final RecipeSlotBounds EMPTY = new RecipeSlotBounds(Map.of(), Map.of(), Map.of(), Map.of());
 
     public RecipeSlotBounds {
         inputItemLowerBounds = sanitizeItemBounds(inputItemLowerBounds);
@@ -17,7 +19,7 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
     }
 
     public static RecipeSlotBounds empty() {
-        return new RecipeSlotBounds(Map.of(), Map.of(), Map.of(), Map.of());
+        return EMPTY;
     }
 
     public RecipeSlotBounds withInputItemLowerBound(ItemStackWrapper item, long amount) {
@@ -94,7 +96,9 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
         BoundKind kind) {
         if (item == null) throw new NullPointerException("item bound key must not be null");
         if (amount < 0L) throw new IllegalArgumentException("bound amount must be >= 0: " + amount);
-        Map<ItemStackWrapper, Long> updated = new LinkedHashMap<>(source);
+        Long current = source.get(item);
+        if (current != null && current == amount) return this;
+        Map<ItemStackWrapper, Long> updated = new HashMap<>(source);
         updated.put(item, amount);
         return switch (kind) {
             case INPUT_ITEM_LOWER -> new RecipeSlotBounds(
@@ -116,7 +120,9 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
             throw new IllegalArgumentException("fluid bound key must not be null/blank");
         }
         if (amount < 0L) throw new IllegalArgumentException("bound amount must be >= 0: " + amount);
-        Map<String, Long> updated = new LinkedHashMap<>(source);
+        Long current = source.get(fluidName);
+        if (current != null && current == amount) return this;
+        Map<String, Long> updated = new HashMap<>(source);
         updated.put(fluidName, amount);
         return switch (kind) {
             case INPUT_FLUID_LOWER -> new RecipeSlotBounds(
@@ -137,7 +143,7 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
         BoundKind kind) {
         if (item == null) return this;
         if (!source.containsKey(item)) return this;
-        Map<ItemStackWrapper, Long> updated = new LinkedHashMap<>(source);
+        Map<ItemStackWrapper, Long> updated = new HashMap<>(source);
         updated.remove(item);
         return switch (kind) {
             case INPUT_ITEM_LOWER -> new RecipeSlotBounds(
@@ -156,7 +162,7 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
 
     private RecipeSlotBounds withoutFluidBound(Map<String, Long> source, String fluidName, BoundKind kind) {
         if (fluidName == null || fluidName.isBlank() || !source.containsKey(fluidName)) return this;
-        Map<String, Long> updated = new LinkedHashMap<>(source);
+        Map<String, Long> updated = new HashMap<>(source);
         updated.remove(fluidName);
         return switch (kind) {
             case INPUT_FLUID_LOWER -> new RecipeSlotBounds(
@@ -175,7 +181,7 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
 
     private static Map<ItemStackWrapper, Long> sanitizeItemBounds(Map<ItemStackWrapper, Long> source) {
         if (source == null || source.isEmpty()) return Map.of();
-        Map<ItemStackWrapper, Long> sanitized = new LinkedHashMap<>();
+        Map<ItemStackWrapper, Long> sanitized = new HashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> entry : source.entrySet()) {
             if (entry.getKey() == null) throw new NullPointerException("item bound key must not be null");
             long amount = entry.getValue() == null ? 0L : entry.getValue();
@@ -187,7 +193,7 @@ public record RecipeSlotBounds(Map<ItemStackWrapper, Long> inputItemLowerBounds,
 
     private static Map<String, Long> sanitizeFluidBounds(Map<String, Long> source) {
         if (source == null || source.isEmpty()) return Map.of();
-        Map<String, Long> sanitized = new LinkedHashMap<>();
+        Map<String, Long> sanitized = new HashMap<>();
         for (Map.Entry<String, Long> entry : source.entrySet()) {
             String key = entry.getKey();
             if (key == null || key.isBlank())

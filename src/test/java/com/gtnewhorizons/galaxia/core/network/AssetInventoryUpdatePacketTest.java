@@ -67,6 +67,20 @@ final class AssetInventoryUpdatePacketTest {
         assertEquals(1, sync.syncRevision());
     }
 
+    @Test
+    void removePacketRemovesAllMatchingInventory() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        facility.inventory.add(resource, 32);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
+
+        AssetSyncPacket sync = packet.apply(TEAM, false);
+
+        assertEquals(0, facility.inventory.getAmount(resource));
+        assertEquals(1, facility.getSyncRevision());
+        assertEquals(1, sync.syncRevision());
+    }
+
     private static AutomatedFacility addFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),

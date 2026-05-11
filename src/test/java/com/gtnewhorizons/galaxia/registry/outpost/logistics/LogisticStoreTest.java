@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.UUID;
 
@@ -55,6 +56,8 @@ final class LogisticStoreTest {
                 0,
                 0));
 
+        LogisticsDelivery pending = LogisticStore.activeDeliveries()
+            .get(0);
         LogisticStore.tickDeliveries();
 
         assertEquals(2L, destination.inventory.getAmount(delivered));
@@ -62,10 +65,11 @@ final class LogisticStoreTest {
             1,
             LogisticStore.activeDeliveries()
                 .size());
-        assertEquals(
-            3L,
+        assertSame(
+            pending,
             LogisticStore.activeDeliveries()
-                .get(0).data.amount());
+                .get(0));
+        assertEquals(3L, pending.data.amount());
 
         destination.inventory.add(filler, -3L);
         LogisticStore.tickDeliveries();
@@ -75,6 +79,66 @@ final class LogisticStoreTest {
             0,
             LogisticStore.activeDeliveries()
                 .size());
+    }
+
+    @Test
+    void inboundInTransitAmountCountsOnlyMatchingDeliveries() {
+        AutomatedFacility source = facility();
+        AutomatedFacility destination = facility();
+        AutomatedFacility otherDestination = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper otherResource = new ItemStackWrapper(new Item(), 1, null);
+
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                source.assetId,
+                destination.assetId,
+                resource,
+                5L,
+                1,
+                LogisticSignal.Scope.SYSTEM,
+                source.celestialObjectId,
+                destination.celestialObjectId,
+                0,
+                0));
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                source.assetId,
+                destination.assetId,
+                resource,
+                7L,
+                1,
+                LogisticSignal.Scope.SYSTEM,
+                source.celestialObjectId,
+                destination.celestialObjectId,
+                0,
+                0));
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                source.assetId,
+                destination.assetId,
+                otherResource,
+                11L,
+                1,
+                LogisticSignal.Scope.SYSTEM,
+                source.celestialObjectId,
+                destination.celestialObjectId,
+                0,
+                0));
+        LogisticStore.addDelivery(
+            LogisticsDelivery.createWithTrajectory(
+                source.assetId,
+                otherDestination.assetId,
+                resource,
+                13L,
+                1,
+                LogisticSignal.Scope.SYSTEM,
+                source.celestialObjectId,
+                otherDestination.celestialObjectId,
+                0,
+                0));
+
+        assertEquals(12L, LogisticStore.inboundInTransitAmount(destination.assetId, resource));
     }
 
     private static AutomatedFacility facility() {

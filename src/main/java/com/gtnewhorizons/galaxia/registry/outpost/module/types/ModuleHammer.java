@@ -111,6 +111,21 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         module.setTier(targetTier);
     }
 
+    @Override
+    public int cooldownTicks(ModuleInstance module, ModuleTierData data) {
+        if (data.variantCooldowns() != null) {
+            Integer override = data.variantCooldowns()
+                .get(variant.name());
+            if (override != null) return override;
+        }
+        return data.cooldownTicks();
+    }
+
+    @Override
+    public void tickOperational(ModuleInstance module, AutomatedFacility outpost) {
+        tickDispatchCooldowns();
+    }
+
     public AllowShootingConfig config() {
         return config;
     }

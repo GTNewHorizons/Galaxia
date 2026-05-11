@@ -48,6 +48,14 @@ final class HammerDispatchStatusTest {
     }
 
     @Test
+    void codesExposeDispatchPriorityDirectly() {
+        assertEquals(100, HammerDispatchStatus.Code.READY.priority());
+        assertEquals(80, HammerDispatchStatus.Code.BLOCKED_BY_DV_LIMIT.priority());
+        assertEquals(80, HammerDispatchStatus.Code.BLOCKED_BY_TOF_LIMIT.priority());
+        assertEquals(20, HammerDispatchStatus.Code.WAITING_FOR_REQUEST.priority());
+    }
+
+    @Test
     void sendsOneConfiguredPackageWhenMoreItemsAreRequested() {
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BIG, 1_000_000L);
         HammerDispatchStatus.Candidate candidate = candidate(64, 64, 32, 1.5, 20.0, 120.0);

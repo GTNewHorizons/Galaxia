@@ -14,8 +14,8 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
-import com.gtnewhorizons.galaxia.core.network.HammerTrajectoryLoadSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -122,8 +122,9 @@ public class CelestialEventHandler {
 
             UUID playerTeam = TempTeamCompat.getTeam(player);
             HammerTrajectoryLoadTracker.Snapshot snapshot = HammerTrajectoryLoadTracker.snapshot(playerTeam);
-            Galaxia.GALAXIA_NETWORK
-                .sendTo(new HammerTrajectoryLoadSyncPacket(snapshot.ownMsPerTick(), snapshot.allMsPerTick()), player);
+            Galaxia.GALAXIA_NETWORK.sendTo(
+                ProfilerSyncPacket.hammerTrajectoryLoad(snapshot.ownMsPerTick(), snapshot.allMsPerTick()),
+                player);
         }
     }
 

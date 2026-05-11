@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -118,7 +117,7 @@ public final class HammerDispatchPlanner {
                 if (requesterCfg == null || !requesterCfg.isImportEnabled()) continue;
 
                 long requesterStock = requester.inventory.getAmount(resource);
-                long inboundInTransit = inboundInTransitAmount(deliveries, requester.assetId, resource);
+                long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
                 long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
                 if (requestedAmount <= 0L) continue;
 
@@ -173,7 +172,7 @@ public final class HammerDispatchPlanner {
         }
 
         long requesterStock = requester.inventory.getAmount(resource);
-        long inboundInTransit = inboundInTransitAmount(deliveries, requester.assetId, resource);
+        long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
         long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
         if (requestedAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
 
@@ -369,31 +368,9 @@ public final class HammerDispatchPlanner {
 
     private static Result prefer(Result result, Result current) {
         if (current == null) return result;
-        return priority(result.code()) > priority(current.code()) ? result : current;
-    }
-
-    private static int priority(HammerDispatchStatus.Code code) {
-        return switch (code) {
-            case NEED_ENERGY -> 90;
-            case BLOCKED_BY_DV_LIMIT, BLOCKED_BY_TOF_LIMIT -> 80;
-            case NEED_BIG_HAMMER -> 70;
-            case ROUTE_UNAVAILABLE -> 60;
-            case ORDER_BELOW_PACKAGE_SIZE -> 50;
-            case NO_SURPLUS_AFTER_RESERVE -> 40;
-            case NO_EXPORT_CONFIG -> 30;
-            case WAITING_FOR_REQUEST -> 20;
-            case READY -> 100;
-        };
-    }
-
-    private static long inboundInTransitAmount(Iterable<LogisticsDelivery> deliveries, CelestialAsset.ID toAssetId,
-        ItemStackWrapper resource) {
-        long total = 0L;
-        for (LogisticsDelivery task : deliveries) {
-            if (!toAssetId.equals(task.data.toAssetId())) continue;
-            if (!resource.equals(task.data.resourceId())) continue;
-            total += task.data.amount();
-        }
-        return total;
+        return result.code()
+            .priority()
+            > current.code()
+                .priority() ? result : current;
     }
 }

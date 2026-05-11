@@ -10,16 +10,27 @@ public final class HammerDispatchStatus {
     private HammerDispatchStatus() {}
 
     public enum Code {
-        READY,
-        WAITING_FOR_REQUEST,
-        NO_EXPORT_CONFIG,
-        NO_SURPLUS_AFTER_RESERVE,
-        ORDER_BELOW_PACKAGE_SIZE,
-        NEED_BIG_HAMMER,
-        ROUTE_UNAVAILABLE,
-        BLOCKED_BY_DV_LIMIT,
-        BLOCKED_BY_TOF_LIMIT,
-        NEED_ENERGY
+
+        READY(100),
+        WAITING_FOR_REQUEST(20),
+        NO_EXPORT_CONFIG(30),
+        NO_SURPLUS_AFTER_RESERVE(40),
+        ORDER_BELOW_PACKAGE_SIZE(50),
+        NEED_BIG_HAMMER(70),
+        ROUTE_UNAVAILABLE(60),
+        BLOCKED_BY_DV_LIMIT(80),
+        BLOCKED_BY_TOF_LIMIT(80),
+        NEED_ENERGY(90);
+
+        private final int priority;
+
+        Code(int priority) {
+            this.priority = priority;
+        }
+
+        public int priority() {
+            return priority;
+        }
     }
 
     public record Candidate(boolean sameBody, boolean shareAnchor, boolean routeAvailable, long availableSurplus,
