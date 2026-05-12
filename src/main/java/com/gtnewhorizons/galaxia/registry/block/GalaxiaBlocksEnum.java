@@ -6,6 +6,9 @@ import net.minecraft.tileentity.TileEntity;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockConfigurable;
+import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenCollector;
+import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenFiller;
+import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
@@ -17,6 +20,9 @@ import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
+import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
@@ -49,6 +55,9 @@ public enum GalaxiaBlocksEnum {
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),
     GANTRY_TERMINAL(new BlockGantryTerminal(), TileEntityGantryTerminal.class, "gantry_terminal"),
     ROCKET_TROPHY(new BlockRocketTrophy(), TileEntityRocketTrophy.class, "rocket_trophy"),
+    OXYGEN_COLLECTOR(new BlockOxygenCollector(), TileEntityOxygenCollector.class, "oxygen_collector"),
+    OXYGEN_FILLER(new BlockOxygenFiller(), TileEntityOxygenFiller.class, "oxygen_filler"),
+    OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),
 
     // NON-TE
     SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),

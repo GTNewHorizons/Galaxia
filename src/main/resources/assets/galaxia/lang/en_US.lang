@@ -477,3 +477,21 @@ galaxia.system_asset.tooltip.status=Status: %s
 galaxia.system_asset.tooltip.warning=Warning: %s
 galaxia.system_asset.tooltip.construction=Construction: %d%%
 
+#### Machine GUI
+# Oxygen Collector GUI
+galaxia.gui.oxygen_collector.title=Oxygen Collector
+galaxia.gui.oxygen_collector.leaves_in_range=Leaves in range: %s
+
+# Oxygen Filler GUI
+galaxia.gui.oxygen_filler.title=Oxygen Filler
+
+# Oxygen Pylon GUI
+galaxia.gui.oxygen_pylon.title=Oxygen Pylon
+galaxia.gui.oxygen_pylon.radius=Radius: %s
+galaxia.gui.oxygen_pylon.players_charged=Players Charged: %s
+
+# Common
+galaxia.gui.common.generating=Generating
+galaxia.gui.common.filling=Filling
+galaxia.gui.common.active=Active
+galaxia.gui.common.idle=Idle

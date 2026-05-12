@@ -53,6 +53,9 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void init(FMLInitializationEvent event) {
         super.init(event);
+        // Client Network
+        NetworkManager.registerClientPackets();
+
         // GUI init
         GalaxiaSkyBootstrap.clientInit();
         ItemPickerScreen.FACTORY.init();
