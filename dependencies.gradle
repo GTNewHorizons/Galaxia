@@ -35,16 +35,16 @@
  */
 dependencies {
     api("com.github.GTNewHorizons:StructureLib:1.4.34:dev")
-    api("com.github.GTNewHorizons:NotEnoughItems:2.8.97-GTNH:dev")
+    api("com.github.GTNewHorizons:NotEnoughItems:2.8.98-GTNH:dev")
     api("com.github.GTNewHorizons:GTNHLib:0.9.65:dev")
-    api("com.github.GTNewHorizons:ModularUI2:2.3.61-1.7.10:dev")
-    api("com.github.GTNewHorizons:waila:1.19.25:dev")
+    api("com.github.GTNewHorizons:ModularUI2:2.3.63-1.7.10:dev")
+    api("com.github.GTNewHorizons:waila:1.19.27:dev")
 
-    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.136:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.138:dev")
 
     compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
-    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.504:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.506:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.22:dev') { transitive = false }
     devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
 
