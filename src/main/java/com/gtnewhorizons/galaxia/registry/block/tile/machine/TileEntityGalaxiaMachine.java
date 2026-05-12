@@ -127,21 +127,29 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
         if (worldObj.isRemote) return;
 
         tickCounter++;
-        if (tickCounter >= getWorkIntervalTicks()) {
-            tickCounter = 0;
+        if (tickCounter < getWorkIntervalTicks()) return;
+        tickCounter = 0;
 
-            boolean wasActive = active;
-            active = false;
+        boolean wasActive = active;
+        active = false;
 
-            if (hasEnoughEnergy()) {
-                consumeEnergy();
-                doWork();
-            }
-
-            if (active != wasActive) {
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
+        if (canWork()) {
+            consumeEnergy();
+            doWork();
         }
+
+        if (active != wasActive) {
+            markDirtyAndUpdate();
+        }
+    }
+
+    protected boolean canWork() {
+        return hasEnoughEnergy();
+    }
+
+    protected void markDirtyAndUpdate() {
+        markDirty();
+        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
     @Override

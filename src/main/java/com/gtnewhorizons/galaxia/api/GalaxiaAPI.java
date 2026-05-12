@@ -6,6 +6,7 @@ import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.G
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
 
@@ -97,7 +98,7 @@ public final class GalaxiaAPI {
      * @param e The entity to check effects on
      * @return Boolean : True => Speed cancellation enabled
      */
-    public static boolean cancelSpeed(Entity e) {
+    public static boolean getSpeedCancelation(Entity e) {
         if (e == null || e.worldObj == null) return false;
         DimensionDef def = SolarSystemRegistry.getById(e.dimension);
         if (def == null) return false;
@@ -140,161 +141,111 @@ public final class GalaxiaAPI {
         int acceptableMinTemp = HazardTemperature.getAcceptableMinTemp(player);
 
         if (temp < acceptableMinTemp) {
-            return 0.f;
-        } else if (temp > acceptableMaxTemp) {
-            return 1.f;
+            return 0;
+        } else if (temp >= acceptableMaxTemp) {
+            return 1;
         }
 
         return (float) (temp - acceptableMinTemp) / (acceptableMaxTemp - acceptableMinTemp);
     }
 
-    public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {
-        var baubles = BaublesApi.getBaubles(player);
+    private static boolean hasBaubleInSlots(EntityPlayer player, int[] slots, Class<?> itemClass) {
+        IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return false;
 
-        for (int slot : Galaxia.oxygenSlots) {
-            var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ItemOxygenTank) {
+        for (int slot : slots) {
+            ItemStack stack = baubles.getStackInSlot(slot);
+            if (stack != null && itemClass.isInstance(stack.getItem())) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static <T> int sumBaubleProtection(EntityPlayer player, int[] slots, Class<T> clazz,
+        ToIntFunction<T> getter) {
+        IInventory baubles = BaublesApi.getBaubles(player);
+        if (baubles == null) return 0;
+
+        int total = 0;
+        for (int i : slots) {
+            ItemStack stack = baubles.getStackInSlot(i);
+            if (stack != null && clazz.isInstance(stack.getItem())) {
+                T item = clazz.cast(stack.getItem());
+                total += getter.applyAsInt(item);
+            }
+        }
+        return total;
+    }
+
+    public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {
+        return hasBaubleInSlots(player, Galaxia.oxygenSlots, ItemOxygenTank.class);
     }
 
     public static boolean hasOxygenmask(@Nonnull EntityPlayer player) {
-        var baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return false;
-
-        for (int slot : Galaxia.oxygenMaskSlots) {
-            var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ItemOxygenMask) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static int getRadiationProtection(@Nonnull EntityPlayer player) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        int protection = 0;
-        if (baubles == null) {
-            return protection;
-        }
-
-        for (int i : Galaxia.shieldSlots) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) {
-                continue;
-            }
-            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
-            protection += item.getRadiationProtection();
-        }
-        return protection;
-    }
-
-    public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
-        var baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return;
-
-        for (int slot : Galaxia.rcsSlot) {
-            var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
-                provider.setEnabled(enabled);
-
-                return;
-            }
-        }
+        return hasBaubleInSlots(player, Galaxia.oxygenMaskSlots, ItemOxygenMask.class);
     }
 
     public static boolean hasSporeFilter(@Nonnull EntityPlayer player) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) {
-            return false;
-        }
-
-        for (int i : Galaxia.sporeFilterSlots) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemSporeFilter)) {
-                continue;
-            }
-            return true;
-
-        }
-        return false;
+        return hasBaubleInSlots(player, Galaxia.sporeFilterSlots, ItemSporeFilter.class);
     }
 
     public static boolean hasWitherProtection(@Nonnull EntityPlayer player) {
-        var baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return false;
-
-        for (int slot : Galaxia.witherSlots) {
-            var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ItemWitherProtection) {
-                return true;
-            }
-        }
-        return false;
+        return hasBaubleInSlots(player, Galaxia.witherSlots, ItemWitherProtection.class);
     }
 
     public static boolean hasThermalProtection(@Nonnull EntityPlayer player) {
-        var baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return false;
-
-        for (int slot : Galaxia.thermalSlot) {
-            var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ItemThermalProtection) {
-                return true;
-            }
-        }
-        return false;
+        return hasBaubleInSlots(player, Galaxia.thermalSlot, ItemThermalProtection.class);
     }
 
-    public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
-        if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) return true;
-        var baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return false;
-
-        for (int slot : Galaxia.rcsSlot) {
-            var stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
-                return provider.isEnabled();
-            }
-        }
-        return false;
+    public static int getRadiationProtection(@Nonnull EntityPlayer player) {
+        return sumBaubleProtection(
+            player,
+            Galaxia.shieldSlots,
+            ItemProtectionShield.class,
+            ItemProtectionShield::getRadiationProtection);
     }
 
     public static int getThermalProtection(@Nonnull EntityPlayer player, boolean heat) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        int protection = 0;
-        if (baubles == null) {
-            return protection;
-        }
-
-        for (int i : Galaxia.thermalSlot) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemThermalProtection)) continue;
-
-            ItemThermalProtection item = (ItemThermalProtection) stack.getItem();
-            protection += heat ? item.getHeatProtection() : item.getColdProtection();
-        }
-        return protection;
+        return sumBaubleProtection(
+            player,
+            Galaxia.thermalSlot,
+            ItemThermalProtection.class,
+            item -> heat ? item.getHeatProtection() : item.getColdProtection());
     }
 
     public static int getPressureProtection(@Nonnull EntityPlayer player, boolean highPressure) {
+        return sumBaubleProtection(
+            player,
+            Galaxia.shieldSlots,
+            ItemProtectionShield.class,
+            item -> highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow());
+    }
+
+    private static ZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
-        int protection = 0;
-        if (baubles == null) {
-            return protection;
-        }
+        if (baubles == null) return null;
 
-        for (int i : Galaxia.shieldSlots) {
-            ItemStack stack = baubles.getStackInSlot(i);
-            if (stack == null || !(stack.getItem() instanceof ItemProtectionShield)) continue;
-
-            ItemProtectionShield item = (ItemProtectionShield) stack.getItem();
-            protection += highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow();
+        for (int slot : Galaxia.rcsSlot) {
+            ItemStack stack = baubles.getStackInSlot(slot);
+            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+                return provider;
+            }
         }
-        return protection;
+        return null;
+    }
+
+    public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
+        ZeroGMovementProvider provider = getZeroGMovementProvider(player);
+        if (provider != null) provider.setEnabled(enabled);
+    }
+
+    public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
+        if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) {
+            return true;
+        }
+        ZeroGMovementProvider provider = getZeroGMovementProvider(player);
+        return provider != null && provider.isEnabled();
     }
 
     public static boolean checkOxygenAndDrain(@Nonnull EntityPlayer player, int oxygenPercent) {
