@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.inventory.IInventory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -659,5 +660,15 @@ public final class AutomatedFacility extends CelestialAsset {
     private static boolean isCompletionRefund(ModuleOperationState operation) {
         return operation.elapsedBuildTicks() >= operation.plan()
             .buildTicks();
+    }
+
+    @Override
+    public List<IInventory> getInventories() {
+        return List.of(inventory);
+    }
+
+    @Override
+    public String getInventoryName() {
+        return "";
     }
 }

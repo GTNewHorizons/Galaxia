@@ -78,6 +78,11 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
         }
     }
 
+    public List<BlockPos> getHammerTargets() {
+        clearBroken(hammerTargets);
+        return hammerTargets;
+    }
+
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
         if (!worldObj.isRemote) {

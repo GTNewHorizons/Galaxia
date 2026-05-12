@@ -92,4 +92,8 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
         result = 31 * result + (nbt != null ? nbt.hashCode() : 0);
         return result;
     }
+
+    public ItemStack toItemStack() {
+        return new ItemStack(item, 1, meta);
+    }
 }

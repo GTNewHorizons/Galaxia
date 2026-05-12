@@ -6,6 +6,10 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
+
 /**
  * Virtual item inventory for an automated outpost.
  * All amounts are stored in RAM; persisted to JSON on WorldEvent.Save.
@@ -13,33 +17,31 @@ import javax.annotation.Nonnull;
  * <p>
  * This class is NOT thread-safe and must only be accessed from the server thread.
  */
-public final class AutomatedFacilityInventory {
+public final class AutomatedFacilityInventory implements IInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
     private final Map<String, Long> fluidAmounts = new LinkedHashMap<>();
 
-    /** Returns the stored amount for the given item, or 0 if absent. */
     public long getAmount(ItemStackWrapper item) {
         Long v = amounts.get(item);
         return v == null ? 0L : v;
     }
 
     /**
-     * Adds {@code delta} to the stored amount. Delta may be negative (withdrawal).
-     * The stored value will never go below zero; excess withdrawal is silently clamped.
+     * Adds {@code delta} units. Deposits are silently rejected when the item
+     * does not pass the current filter; withdrawals (negative delta) are always allowed.
      *
-     * @return the actual amount added (positive) or removed (negative as negative value)
+     * @return the actual amount added (positive) or removed (negative)
      */
     public long add(ItemStackWrapper item, long delta) {
+        if (delta > 0) return 0L;
+
         long current = getAmount(item);
         if (delta < 0) {
             long actual = Math.max(delta, -current);
             long newValue = current + actual;
-            if (newValue == 0) {
-                amounts.remove(item);
-            } else {
-                amounts.put(item, newValue);
-            }
+            if (newValue == 0) amounts.remove(item);
+            else amounts.put(item, newValue);
             return actual;
         }
         amounts.put(item, current + delta);
@@ -48,22 +50,19 @@ public final class AutomatedFacilityInventory {
 
     /**
      * Attempts to remove exactly {@code amount} units. Returns {@code true} only if
-     * the buffer holds at least that many units, in which case they are consumed.
+     * the buffer holds at least that many, in which case they are consumed.
+     * Withdrawals are never blocked by the filter.
      */
     public boolean tryConsume(ItemStackWrapper item, long amount) {
         if (amount <= 0) return true;
         long current = getAmount(item);
         if (current < amount) return false;
         long newValue = current - amount;
-        if (newValue == 0) {
-            amounts.remove(item);
-        } else {
-            amounts.put(item, newValue);
-        }
+        if (newValue == 0) amounts.remove(item);
+        else amounts.put(item, newValue);
         return true;
     }
 
-    /** Returns an unmodifiable snapshot of the full inventory contents. */
     public @Nonnull Map<ItemStackWrapper, Long> snapshot() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
@@ -80,11 +79,8 @@ public final class AutomatedFacilityInventory {
         if (delta < 0) {
             long actual = Math.max(delta, -current);
             long newValue = current + actual;
-            if (newValue == 0) {
-                fluidAmounts.remove(fluidName);
-            } else {
-                fluidAmounts.put(fluidName, newValue);
-            }
+            if (newValue == 0) fluidAmounts.remove(fluidName);
+            else fluidAmounts.put(fluidName, newValue);
             return actual;
         }
         fluidAmounts.put(fluidName, current + delta);
@@ -95,7 +91,6 @@ public final class AutomatedFacilityInventory {
         return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
     }
 
-    /** Replaces the entire inventory contents (used during deserialization and migration). */
     public void loadFromSnapshot(@Nonnull Map<ItemStackWrapper, Long> snapshot) {
         amounts.clear();
         for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
@@ -113,22 +108,74 @@ public final class AutomatedFacilityInventory {
         }
     }
 
-    /** Returns {@code true} if the inventory contains no resources. */
-    public boolean isEmpty() {
-        return amounts.isEmpty() && fluidAmounts.isEmpty();
+    public void setAmount(ItemStackWrapper item, long amount) {
+        if (amount <= 0) amounts.remove(item);
+        else amounts.put(item, amount);
     }
 
-    /** Sets the exact amount for a resource (used by client-side delta updates). */
-    public void setAmount(ItemStackWrapper item, long amount) {
-        if (amount <= 0) {
-            amounts.remove(item);
-        } else {
-            amounts.put(item, amount);
-        }
+    public boolean isEmpty() {
+        return amounts.isEmpty() && fluidAmounts.isEmpty();
     }
 
     public void clear() {
         amounts.clear();
         fluidAmounts.clear();
+    }
+
+    @Override
+    public int getSizeInventory() {
+        return 0;
+    }
+
+    @Override
+    public ItemStack getStackInSlot(int i) {
+        return null;
+    }
+
+    @Override
+    public ItemStack decrStackSize(int i, int c) {
+        return null;
+    }
+
+    @Override
+    public ItemStack getStackInSlotOnClosing(int i) {
+        return null;
+    }
+
+    @Override
+    public void setInventorySlotContents(int i, ItemStack s) {}
+
+    @Override
+    public String getInventoryName() {
+        return "";
+    }
+
+    @Override
+    public boolean hasCustomInventoryName() {
+        return false;
+    }
+
+    @Override
+    public int getInventoryStackLimit() {
+        return 0;
+    }
+
+    @Override
+    public void markDirty() {}
+
+    @Override
+    public boolean isUseableByPlayer(EntityPlayer p) {
+        return false;
+    }
+
+    @Override
+    public void openInventory() {}
+
+    @Override
+    public void closeInventory() {}
+
+    @Override
+    public boolean isItemValidForSlot(int index, ItemStack stack) {
+        return true;
     }
 }

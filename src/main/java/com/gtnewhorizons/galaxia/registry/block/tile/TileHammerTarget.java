@@ -5,6 +5,8 @@ import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -23,8 +25,10 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 
-public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> implements IGuiHolder<PosGuiData> {
+public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
+    implements IGuiHolder<PosGuiData>, IDistributedInventory {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -48,13 +52,35 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
-    private final List<TileEntityChest> inventory = new ArrayList<>();
+    private final List<IInventory> inventory = new ArrayList<>();
     private BlockPos stationController;
 
     public boolean setStationController(BlockPos pos) {
         final boolean change = stationController != pos;
         this.stationController = pos;
         return change;
+    }
+
+    @Override
+    public List<IInventory> getInventories() {
+        return this.inventory;
+    }
+
+    @Override
+    public List<ItemStack> getFiltersFor(int i) {
+        if (i >= inventory.size()) return List.of();
+        return List.of();
+    }
+
+    @Override
+    public String getInventoryName() {
+        return "Hammer target";
+    }
+
+    @Override
+    public void markDirty() {
+        super.markDirty();
+        IDistributedInventory.super.markDirty();
     }
 
     @Override
@@ -105,4 +131,5 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
                 return structure + ": " + color + status + EnumChatFormatting.RESET;
             })).pos(10, 30));
     }
+
 }

@@ -1,13 +1,18 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
@@ -19,7 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
-public abstract class CelestialAsset implements Buildable {
+public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
     public enum Kind {
 
@@ -70,6 +75,7 @@ public abstract class CelestialAsset implements Buildable {
     private int syncRevision;
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private boolean dirty = true;
+    private final Map<Integer, List<ItemStack>> filters = new Int2ObjectArrayMap<>();
 
     public final LogisticsConfiguration logisticsConfig;
 
@@ -224,6 +230,10 @@ public abstract class CelestialAsset implements Buildable {
 
     public void clean() {
         dirty = false;
+    }
+
+    public List<ItemStack> getFiltersFor(int i) {
+        return filters.getOrDefault(i, List.of());
     }
 
     @Override

@@ -3,7 +3,9 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -114,9 +116,21 @@ public class TileStationController extends TileStationBase<TileStationController
         int own = STRUCTURE_DEFINITION.getVolume();
         clearBroken(secondaries);
         return secondaries.stream()
-            .map(pos -> (TileStationRoom) pos.getTE(worldObj))
+            .map(pos -> (TileStationSecondary<?>) pos.getTE(worldObj))
             .mapToInt(TileStationSecondary::getVolume)
             .sum() + own;
+    }
+
+    public List<IInventory> getConnectedInventories() {
+        clearBroken(secondaries);
+        return secondaries.stream()
+            .map(pos -> (TileStationSecondary<?>) pos.getTE(worldObj))
+            .filter(TileStationDock.class::isInstance)
+            .map(TileStationDock.class::cast)
+            .map(TileStationDock::getHammerTargets)
+            .flatMap(List::stream)
+            .map(pos -> (IInventory) pos.getTE(worldObj))
+            .toList();
     }
 
     @Override

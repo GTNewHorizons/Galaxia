@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import net.minecraft.inventory.IInventory;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
@@ -7,6 +8,8 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+
+import java.util.List;
 
 public class Station extends CelestialAsset {
 
@@ -27,20 +30,37 @@ public class Station extends CelestialAsset {
 
     @Override
     public void tick() {
-        if (this.isDisabled()) return;
-        if (controller == null) return;
+        TileStationController teController = getTileController();
+        if (teController == null) return;
+
+        teController.tick();
+    }
+
+    @Override
+    public List<IInventory> getInventories() {
+        TileStationController teController = getTileController();
+        if (teController == null) return List.of();
+
+        return teController.getConnectedInventories();
+    }
+
+    @Override
+    public String getInventoryName() {
+        return "Station inventory";
+    }
+
+    private TileStationController getTileController() {
+        if (this.isDisabled()) return null;
+        if (controller == null) return null;
 
         MinecraftServer server = MinecraftServer.getServer();
-        if (server == null) return;
+        if (server == null) return null;
 
         int dimId = celestialObjectId.dimension()
             .getId();
         WorldServer world = server.worldServerForDimension(dimId);
-        if (world == null) return;
+        if (world == null) return null;
 
-        TileStationController teController = controller.getTE(world);
-        if (teController == null) return;
-
-        teController.tick();
+        return controller.getTE(world);
     }
 }
