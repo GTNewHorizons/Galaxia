@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
+import com.gtnewhorizons.galaxia.compat.GTUtility;
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -142,6 +143,9 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
         if (worldObj == null || worldObj.isRemote) return;
 
         if (mCheckTimer <= 0) {
+            // Just in case, but a proper checking with onMachineBlockUpdate would be better
+            if (!GTUtility.isGTLoaded) this.updated = true;
+
             if (this.updated) {
                 final boolean valid = checkStructure();
                 if (valid != structureValid) {

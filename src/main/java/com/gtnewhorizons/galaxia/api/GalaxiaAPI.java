@@ -26,7 +26,6 @@ import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
-import com.gtnewhorizons.galaxia.core.threads.RunnableMachineUpdate;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -461,6 +460,10 @@ public final class GalaxiaAPI {
      */
     @SuppressWarnings("UnusedReturnValue")
     public static boolean registerMachineBlock(Block aBlock, int aMeta) {
+        if (GTUtility.isGTLoaded) {
+            return GregTechAPI.registerMachineBlock(aBlock, -1);
+        }
+
         if (aBlock == null) return false;
         sMachineIDs.put(aBlock, aMeta);
         return true;
@@ -476,10 +479,10 @@ public final class GalaxiaAPI {
      * @param aZ     is the Z-Coord of the update causing Block
      */
     public static boolean causeMachineUpdate(World aWorld, int aX, int aY, int aZ) {
-        if (aWorld != null && !aWorld.isRemote) { // World might be null during World-gen
-            RunnableMachineUpdate.setMachineUpdateValues(aWorld, aX, aY, aZ);
-            return true;
+        if (GTUtility.isGTLoaded) {
+            return GregTechAPI.causeMachineUpdate(aWorld, aX, aY, aZ);
         }
+
         return false;
     }
 
