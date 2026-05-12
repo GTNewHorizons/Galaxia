@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
+package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import net.minecraft.entity.Entity;
@@ -7,10 +7,14 @@ import net.minecraft.world.World;
 
 public class EntityRocket extends Entity {
     private RocketBlueprint blueprint;
-    private int launchTicks = 0;
     private boolean ascending = true;
+    private int launchTicks = 0;
 
-    public EntityRocket(World world) { super(world); setSize(3f, 1f); noClip = true; }
+    public EntityRocket(World world) {
+        super(world);
+        setSize(3f, 1f);
+        noClip = true;
+    }
 
     public void setBlueprint(RocketBlueprint bp) { this.blueprint = bp; }
 
@@ -28,7 +32,6 @@ public class EntityRocket extends Entity {
             }
             if (posY > 500) {
                 ascending = false;
-                // todo: teleport to destination dimension
                 setDead();
             }
         }
