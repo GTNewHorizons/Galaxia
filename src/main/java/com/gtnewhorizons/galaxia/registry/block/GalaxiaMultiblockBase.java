@@ -1,8 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import cpw.mods.fml.common.Optional;
-import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -17,6 +14,10 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+
+import cpw.mods.fml.common.Optional;
+import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 
 @Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
 public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity

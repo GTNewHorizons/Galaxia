@@ -11,8 +11,6 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.B
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
-import java.util.concurrent.locks.ReentrantLock;
-
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;

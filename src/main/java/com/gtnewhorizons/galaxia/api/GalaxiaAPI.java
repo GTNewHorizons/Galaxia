@@ -5,14 +5,11 @@ import static com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry.G
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
 
-import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -23,7 +20,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 
-import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
@@ -53,6 +49,7 @@ import baubles.api.BaublesApi;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import gregtech.api.GregTechAPI;
+import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 
 /**
  * API underpinning planetary mechanics
