@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -59,7 +58,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Set<UUID> syncedPlayerIds = new HashSet<>();
+    private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
 
@@ -132,6 +131,8 @@ public final class AutomatedFacility extends CelestialAsset {
             module.shape(),
             module.status(),
             modules.size());
+
+        markDirty();
     }
 
     public void removeModule(int index) {
@@ -143,6 +144,7 @@ public final class AutomatedFacility extends CelestialAsset {
             bumpSyncRevision();
             if (layout != null) layout.removeTileForModule(removed.id);
             layoutCache.applyMutation(MutationKind.DECONSTRUCT, removed.kind(), removed);
+            markDirty();
         }
     }
 
@@ -163,6 +165,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void clearModules() {
         modules.clear();
+        markDirty();
     }
 
     public Stream<ModuleInstance> allOperationalModules() {
@@ -480,18 +483,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public void markModuleDirty(ModuleInstance.ID id) {
         dirtyModuleIds.add(id);
         bumpSyncRevision();
-    }
-
-    public boolean isDirty() {
-        return !dirtyModuleIds.isEmpty() || !dirtyRemovedIds.isEmpty();
-    }
-
-    public boolean needsFullSyncFor(UUID playerId) {
-        return !syncedPlayerIds.contains(playerId);
-    }
-
-    public void markSyncedFor(UUID playerId) {
-        syncedPlayerIds.add(playerId);
+        markDirty();
     }
 
     public List<ModuleInstance> drainDirtyModules() {

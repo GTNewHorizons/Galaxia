@@ -11,6 +11,7 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
@@ -20,6 +21,7 @@ import net.minecraftforge.fluids.FluidStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -50,10 +52,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-public final class AssetModuleUpdatePacket {
+public final class AssetModuleUpdatePacket implements IMessage {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
@@ -1169,4 +1174,13 @@ public final class AssetModuleUpdatePacket {
         }
     }
 
+    public static class Handler implements IMessageHandler<AssetModuleUpdatePacket, IMessage> {
+
+        @Override
+        public IMessage onMessage(AssetModuleUpdatePacket message, MessageContext ctx) {
+            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            UUID teamId = TempTeamCompat.getTeam(player);
+            return message.apply(teamId);
+        }
+    }
 }

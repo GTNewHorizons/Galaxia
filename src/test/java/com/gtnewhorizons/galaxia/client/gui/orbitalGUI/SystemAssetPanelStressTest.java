@@ -145,5 +145,8 @@ final class SystemAssetPanelStressTest {
         public WarningPriority warningPriority() {
             return warning;
         }
+
+        @Override
+        public void tick() {}
     }
 }

@@ -44,12 +44,7 @@ public class CelestialEventHandler {
         if (event.phase != TickEvent.Phase.END) return;
 
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
-            // TODO: Ticks other assets
-            if (asset.kind != CelestialAsset.Kind.AUTOMATED_OUTPOST
-                && asset.kind != CelestialAsset.Kind.AUTOMATED_STATION) continue;
-
-            AutomatedFacility outpost = (AutomatedFacility) asset;
-            outpost.tick();
+            asset.tick();
         }
 
         LogisticStore.tickDeliveries();
@@ -86,13 +81,14 @@ public class CelestialEventHandler {
 
             List<AssetSyncPacket> playerOutpostPackets = new ArrayList<>();
             for (CelestialAsset asset : aggregatedAssets) {
-                if (asset instanceof AutomatedFacility outpost) {
-                    playerOutpostPackets.addAll(AssetSyncPacket.figureOutWhatToSend(outpost, playerId));
-                }
+                playerOutpostPackets.addAll(AssetSyncPacket.figureOutWhatToSend(asset, playerId));
             }
             // TODO: make aggregate packet for this
             for (AssetSyncPacket pkt : playerOutpostPackets) {
                 Galaxia.GALAXIA_NETWORK.sendTo(pkt, player);
+            }
+            for (CelestialAsset asset : aggregatedAssets) {
+                asset.clean();
             }
 
             List<LogisticsDelivery> relevantDeliveries = LogisticStore.activeDeliveries()

@@ -19,6 +19,7 @@ public enum CelestialObjectId {
     MOON("galaxia.celestial.moon", DimensionEnum.MOON),
     FROZEN_BELT("galaxia.celestial.frozen_belt", DimensionEnum.FROZEN_BELT),
     AMBERGRIS_FRAGMENT("galaxia.celestial.ambergris_fragment", null),
+    OVERWORLD("galaxia.celestial.overworld", DimensionEnum.OVERWORLD),
     OVERWORLD_ORBIT("galaxia.celestial.overworld_orbit", DimensionEnum.OVERWORLD_ORBIT),
 
     ;

@@ -15,6 +15,7 @@ import net.minecraft.util.IIcon;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
 
 import cpw.mods.fml.relauncher.Side;
@@ -30,6 +31,7 @@ public class BlockFumarole extends Block implements ITileEntityProvider {
 
         this.setTickRandomly(true);
         this.setBlockName("tenebrae_fumarole");
+        this.setCreativeTab(Galaxia.creativeTab);
     }
 
     @Override

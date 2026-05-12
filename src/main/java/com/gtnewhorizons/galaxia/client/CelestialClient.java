@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
@@ -22,7 +23,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -77,21 +77,6 @@ public final class CelestialClient {
         return result;
     }
 
-    // ── Client-side asset creation (delegates to CLIENT store) ──
-
-    public static CelestialAsset createAssetInConstruction(CelestialObjectId celestialObjectId, String displayName,
-        CelestialAsset.Kind kind) {
-        StarmapActionSyncHandler
-            .sendCreateAsset(celestialObjectId, displayName, kind, Buildable.Status.CONSTRUCTION_SITE);
-        return null;
-    }
-
-    public static CelestialAsset createOperationalAsset(CelestialObjectId celestialObjectId, String displayName,
-        CelestialAsset.Kind kind) {
-        StarmapActionSyncHandler.sendCreateAsset(celestialObjectId, displayName, kind, Buildable.Status.OPERATIONAL);
-        return null;
-    }
-
     // ── Logistics mirror ──
 
     private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
@@ -102,6 +87,14 @@ public final class CelestialClient {
     private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
 
     private CelestialClient() {}
+
+    public static void registerAsset(CelestialObjectId celestialObjectId, CelestialAsset asset) {
+        StarmapActionSyncHandler.sendRegisterAsset(celestialObjectId, asset);
+    }
+
+    public static void add(CelestialAsset state) {
+        CelestialAssetStore.CLIENT.registerAssetInternal(TempTeamCompat.getTeam(), state);
+    }
 
     public static void clear() {
         CelestialAssetStore.CLIENT.clearInternal();

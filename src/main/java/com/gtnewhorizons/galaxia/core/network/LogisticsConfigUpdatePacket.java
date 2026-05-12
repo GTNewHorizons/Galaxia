@@ -2,15 +2,21 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.UUID;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -21,7 +27,7 @@ import io.netty.buffer.ByteBuf;
  * The server validates that the sending player belongs to the outpost's team
  * before applying the change.
  */
-public final class LogisticsConfigUpdatePacket {
+public final class LogisticsConfigUpdatePacket implements IMessage {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
@@ -61,6 +67,7 @@ public final class LogisticsConfigUpdatePacket {
         return packet;
     }
 
+    @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeString(buf, resourceKey);
@@ -71,6 +78,7 @@ public final class LogisticsConfigUpdatePacket {
         buf.writeBoolean(removeEntry);
     }
 
+    @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         resourceKey = PacketUtil.readString(buf);
@@ -79,6 +87,16 @@ public final class LogisticsConfigUpdatePacket {
         isImportEnabled = buf.readBoolean();
         isSupplyEnabled = buf.readBoolean();
         removeEntry = buf.readBoolean();
+    }
+
+    public static class Handler implements IMessageHandler<LogisticsConfigUpdatePacket, IMessage> {
+
+        @Override
+        public IMessage onMessage(LogisticsConfigUpdatePacket message, MessageContext ctx) {
+            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            UUID teamId = TempTeamCompat.getTeam(player);
+            return message.apply(teamId);
+        }
     }
 
     public AssetSyncPacket apply(UUID teamId) {
