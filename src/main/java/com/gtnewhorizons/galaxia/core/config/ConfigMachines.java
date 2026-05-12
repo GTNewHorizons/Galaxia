@@ -7,8 +7,6 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 @Config.LangKey("galaxia.config.category.machines")
 public class ConfigMachines {
 
-    public static final int rfPerEU = 4;
-
     @Config.LangKey("galaxia.config.category.machines.energy")
     public static final Energy energy = new Energy();
 
@@ -31,6 +29,14 @@ public class ConfigMachines {
         @Config.DefaultBoolean(false)
         public boolean useRF;
 
+        /**
+         * How many RF equal one EU. Used when converting RF input to internal EU storage.
+         * Standard ratio is 4 RF = 1 EU.
+         */
+        @Config.LangKey("galaxia.config.machines.energy.rf_per_eu")
+        @Config.DefaultInt(4)
+        @Config.RangeInt(min = 1, max = 100)
+        public int rfPerEU;
     }
 
     public static class OxygenCollector {

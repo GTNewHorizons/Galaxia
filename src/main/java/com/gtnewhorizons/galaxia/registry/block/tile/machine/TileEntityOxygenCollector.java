@@ -85,7 +85,7 @@ public class TileEntityOxygenCollector extends TileEntityGalaxiaMachine {
                     int by = yCoord + dy;
                     int bz = zCoord + dz;
                     Block block = worldObj.getBlock(bx, by, bz);
-                    if (block.isAir(worldObj, bx, by, bz)) continue;
+                    if (block == null || block.isAir(worldObj, bx, by, bz)) continue;
                     if (block.isLeaves(worldObj, bx, by, bz) || block instanceof BlockSapling) {
                         count++;
                     }

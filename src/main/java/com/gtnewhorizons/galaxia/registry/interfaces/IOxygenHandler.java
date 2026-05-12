@@ -11,10 +11,6 @@ import net.minecraftforge.fluids.IFluidHandler;
 
 public interface IOxygenHandler extends IFluidHandler {
 
-    Fluid OXYGEN = FluidRegistry.getFluid("oxygen");
-
-    String NBT_OXYGEN_TANK = "OxygenTank";
-
     FluidTank getOxygenTank();
 
     default int getStoredOxygen() {
@@ -23,8 +19,7 @@ public interface IOxygenHandler extends IFluidHandler {
     }
 
     default int fillOxygen(int amount, boolean doFill) {
-        if (OXYGEN == null) return 0;
-        return getOxygenTank().fill(new FluidStack(OXYGEN, amount), doFill);
+        return getOxygenTank().fill(new FluidStack(getOxygenFluid(), amount), doFill);
     }
 
     default int drainOxygen(int amount, boolean doDrain) {
@@ -32,15 +27,19 @@ public interface IOxygenHandler extends IFluidHandler {
         return drained != null ? drained.amount : 0;
     }
 
+    default Fluid getOxygenFluid() {
+        return FluidRegistry.getFluid("oxygen");
+    }
+
     @Override
     default int fill(ForgeDirection from, FluidStack resource, boolean doFill) {
-        if (OXYGEN == null || resource == null || resource.getFluid() != OXYGEN) return 0;
+        if (resource == null || resource.getFluid() != getOxygenFluid()) return 0;
         return getOxygenTank().fill(resource, doFill);
     }
 
     @Override
     default FluidStack drain(ForgeDirection from, FluidStack resource, boolean doDrain) {
-        if (OXYGEN == null || resource == null || resource.getFluid() != OXYGEN) return null;
+        if (resource == null || resource.getFluid() != getOxygenFluid()) return null;
         return getOxygenTank().drain(resource.amount, doDrain);
     }
 
@@ -51,12 +50,12 @@ public interface IOxygenHandler extends IFluidHandler {
 
     @Override
     default boolean canFill(ForgeDirection from, Fluid fluid) {
-        return OXYGEN != null && fluid == OXYGEN;
+        return fluid == getOxygenFluid();
     }
 
     @Override
     default boolean canDrain(ForgeDirection from, Fluid fluid) {
-        return OXYGEN != null && fluid == OXYGEN;
+        return fluid == getOxygenFluid();
     }
 
     @Override
@@ -67,12 +66,12 @@ public interface IOxygenHandler extends IFluidHandler {
     default void writeOxygenToNBT(NBTTagCompound tag) {
         NBTTagCompound tankTag = new NBTTagCompound();
         getOxygenTank().writeToNBT(tankTag);
-        tag.setTag(NBT_OXYGEN_TANK, tankTag);
+        tag.setTag("OxygenTank", tankTag);
     }
 
     default void readOxygenFromNBT(NBTTagCompound tag) {
-        if (tag.hasKey(NBT_OXYGEN_TANK)) {
-            getOxygenTank().readFromNBT(tag.getCompoundTag(NBT_OXYGEN_TANK));
+        if (tag.hasKey("OxygenTank")) {
+            getOxygenTank().readFromNBT(tag.getCompoundTag("OxygenTank"));
         }
     }
 }

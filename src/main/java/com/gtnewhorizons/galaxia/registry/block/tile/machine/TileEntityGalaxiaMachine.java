@@ -80,24 +80,28 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     @Optional.Method(modid = "CoFHCore")
     public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) {
         if (useEU()) return 0;
+        int ratio = Math.max(1, ConfigMachines.energy.rfPerEU);
         long euSpace = (long) getMaxEnergyBuffer() - (long) storedEnergy;
-        long euToAdd = Math.min((long) maxReceive / ConfigMachines.rfPerEU, euSpace);
+        long euToAdd = Math.min((long) maxReceive / ratio, euSpace);
+
         if (!simulate) storedEnergy += euToAdd;
-        return (int) (euToAdd * ConfigMachines.rfPerEU);
+        return (int) (euToAdd * ratio);
     }
 
     @Override
     @Optional.Method(modid = "CoFHCore")
     public int getEnergyStored(ForgeDirection from) {
         if (useEU()) return 0;
-        return (int) Math.min(storedEnergy * ConfigMachines.rfPerEU, Integer.MAX_VALUE);
+        int ratio = Math.max(1, ConfigMachines.energy.rfPerEU);
+        return (int) Math.min(storedEnergy * ratio, Integer.MAX_VALUE);
     }
 
     @Override
     @Optional.Method(modid = "CoFHCore")
     public int getMaxEnergyStored(ForgeDirection from) {
         if (useEU()) return 0;
-        return (int) Math.min(getMaxEnergyBuffer() * ConfigMachines.rfPerEU, Integer.MAX_VALUE);
+        int ratio = Math.max(1, ConfigMachines.energy.rfPerEU);
+        return (int) Math.min(getMaxEnergyBuffer() * ratio, Integer.MAX_VALUE);
     }
 
     @Override
@@ -172,5 +176,13 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
         readFromNBT(pkt.func_148857_g());
+    }
+
+    protected String energyUnitLabel() {
+        return useEU() ? "EU" : "RF";
+    }
+
+    public boolean isItemValidForSlot(int slot, net.minecraft.item.ItemStack stack) {
+        return true;
     }
 }
