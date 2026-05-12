@@ -14,6 +14,7 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.IRocketControllerTE;
 
 import cpw.mods.fml.relauncher.Side;
@@ -22,7 +23,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 /**
  * Abstract block class for handling controllers of multiblocks relating to launching a rocket
  */
-public abstract class BlockRocketController extends Block {
+public abstract class BlockRocketController extends BlockUpdatable {
 
     @SideOnly(Side.CLIENT)
     protected IIcon frontIconOff;
