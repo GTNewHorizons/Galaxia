@@ -107,7 +107,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.55f, -PADDING * 2));
         panel.child(
-            new ModuleDetailPanel(map, configController, tilePickerController).left(PADDING)
+            new ModuleDetailPanel(map, tilePickerController).left(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));

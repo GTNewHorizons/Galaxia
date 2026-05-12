@@ -321,6 +321,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private void removeSlot(int rowIndex) {
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0 || slotAtRow(rowIndex) == null) return;
+        updateBoundsAfterSlotRemoval(slotIndex);
         CelestialClient.updateModuleRecipeSlot(
             assetId,
             controller.moduleIndex(),
@@ -328,6 +329,15 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             (byte) slotIndex,
             null);
         page = Math.min(page, maxPageAfterRemoval());
+    }
+
+    private void updateBoundsAfterSlotRemoval(int removedSlotIndex) {
+        if (!isBoundsOpen()) return;
+        if (boundsSlotIndex == removedSlotIndex) {
+            closeBounds();
+            return;
+        }
+        if (boundsSlotIndex > removedSlotIndex) boundsSlotIndex--;
     }
 
     private void updateSlot(int rowIndex, SavedRecipe slot) {

@@ -47,12 +47,11 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private boolean lastCoveredResult;
     private final @Nullable StationTilePickerController tilePickerController;
 
-    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController) {
-        this(map, configController, null);
+    public ModuleDetailPanel(StationMapWidget map) {
+        this(map, null);
     }
 
-    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController,
-        @Nullable StationTilePickerController tilePickerController) {
+    public ModuleDetailPanel(StationMapWidget map, @Nullable StationTilePickerController tilePickerController) {
         this.map = map;
         this.tilePickerController = tilePickerController;
     }
