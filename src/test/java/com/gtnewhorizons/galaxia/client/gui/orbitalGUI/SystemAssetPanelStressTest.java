@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import net.minecraft.inventory.IInventory;
+
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -148,5 +150,11 @@ final class SystemAssetPanelStressTest {
 
         @Override
         public void tick() {}
+
+        @Override
+        public List<IInventory> getInventories() { return java.util.Collections.emptyList(); }
+
+        @Override
+        public String getInventoryName() { return "fake"; }
     }
 }

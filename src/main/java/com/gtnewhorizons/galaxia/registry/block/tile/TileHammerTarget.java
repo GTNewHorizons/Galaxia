@@ -7,9 +7,12 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
+import net.minecraftforge.common.util.Constants;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -53,6 +56,7 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
         .build();
 
     private final List<IInventory> inventory = new ArrayList<>();
+    private final List<ItemStack> filter = new ArrayList<>();
     private BlockPos stationController;
 
     public boolean setStationController(BlockPos pos) {
@@ -68,8 +72,7 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
 
     @Override
     public List<ItemStack> getFiltersFor(int i) {
-        if (i >= inventory.size()) return List.of();
-        return List.of();
+        return filter;
     }
 
     @Override
@@ -81,6 +84,60 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
     public void markDirty() {
         super.markDirty();
         IDistributedInventory.super.markDirty();
+    }
+
+    public void setFilters(List<ItemStack> filterList) {
+        filter.clear();
+        if (filterList != null) {
+            for (ItemStack stack : filterList) {
+                if (stack != null) filter.add(stack.copy());
+            }
+        }
+        markDirty();
+    }
+
+    public void addFilter(ItemStack stack) {
+        if (stack == null) return;
+        filter.add(stack.copy());
+        markDirty();
+    }
+
+    public void removeFilter(ItemStack stack) {
+        if (stack == null) return;
+        filter.removeIf(f -> f != null && f.getItem() == stack.getItem()
+            && (!f.getHasSubtypes() || f.getItemDamage() == stack.getItemDamage())
+            && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, stack)));
+        markDirty();
+    }
+
+    public void clearFilters() {
+        filter.clear();
+        markDirty();
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound nbt) {
+        super.writeToNBT(nbt);
+        NBTTagList filterList = new NBTTagList();
+        for (ItemStack stack : filter) {
+            NBTTagCompound stackNbt = new NBTTagCompound();
+            stack.writeToNBT(stackNbt);
+            filterList.appendTag(stackNbt);
+        }
+        nbt.setTag("filter", filterList);
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound nbt) {
+        super.readFromNBT(nbt);
+        filter.clear();
+        if (nbt.hasKey("filter")) {
+            NBTTagList filterList = nbt.getTagList("filter", Constants.NBT.TAG_COMPOUND);
+            for (int i = 0; i < filterList.tagCount(); i++) {
+                ItemStack stack = ItemStack.loadItemStackFromNBT(filterList.getCompoundTagAt(i));
+                if (stack != null) filter.add(stack);
+            }
+        }
     }
 
     @Override

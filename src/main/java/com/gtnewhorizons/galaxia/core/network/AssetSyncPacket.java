@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
@@ -72,6 +73,8 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
     public static final byte SETTINGS_GROUP_UPDATED = 11;
+    public static final byte FILTER_UPDATED = 12;
+    public static final byte FILTER_REMOVED = 13;
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
     private static final byte OPERATION_SPEC_TIER = 1;
@@ -114,6 +117,9 @@ public final class AssetSyncPacket implements IMessage {
     private boolean settingsGroupJoinable;
     private MinerSettings minerSettings;
 
+    private int filterSlot;
+    private List<ItemStack> filterItems;
+
     public AssetSyncPacket() {}
 
     public static AssetSyncPacket fullSync(CelestialAsset state) {
@@ -135,6 +141,11 @@ public final class AssetSyncPacket implements IMessage {
 
         pkt.celestialBodyId = state.celestialObjectId;
         pkt.stationControllerPos = state.getController();
+
+        pkt.fullSyncDeltas = new ArrayList<>();
+        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot().entrySet()) {
+            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
+        }
 
         return pkt;
     }
@@ -160,6 +171,10 @@ public final class AssetSyncPacket implements IMessage {
             .stream()
             .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
             .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
+
+        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot().entrySet()) {
+            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
+        }
 
         List<ModuleInstance> modules = state.modules();
         for (int i = 0; i < modules.size(); i++) {
@@ -298,6 +313,23 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    public static AssetSyncPacket filterUpdated(CelestialAsset.ID assetId, int slot, List<ItemStack> filters) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = FILTER_UPDATED;
+        pkt.filterSlot = slot;
+        pkt.filterItems = filters == null ? List.of() : filters;
+        return pkt;
+    }
+
+    public static AssetSyncPacket filterRemoved(CelestialAsset.ID assetId, int slot) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = FILTER_REMOVED;
+        pkt.filterSlot = slot;
+        return pkt;
+    }
+
     /**
      * Decides what to sync for the given facility and player. Returns a list of packets
      * (full sync or individual deltas) and updates the facility's dirty/sync state.
@@ -348,9 +380,16 @@ public final class AssetSyncPacket implements IMessage {
                 switch (assetKind) {
                     case STATION -> {
                         PacketUtil.writeEnum(buf, celestialBodyId);
-                        buf.writeInt(stationControllerPos.x());
-                        buf.writeInt(stationControllerPos.y());
-                        buf.writeInt(stationControllerPos.z());
+                        if (assetStatus == Buildable.Status.OPERATIONAL) {
+                            buf.writeInt(stationControllerPos.x());
+                            buf.writeInt(stationControllerPos.y());
+                            buf.writeInt(stationControllerPos.z());
+                        }
+                        buf.writeInt(fullSyncDeltas.size());
+                        for (AssetSyncPacket d : fullSyncDeltas) {
+                            buf.writeByte(d.syncType);
+                            d.writeDelta(buf);
+                        }
                     }
                     case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
                         buf.writeLong(teamId.getMostSignificantBits());
@@ -387,7 +426,18 @@ public final class AssetSyncPacket implements IMessage {
                 switch (assetKind) {
                     case STATION -> {
                         celestialBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
-                        stationControllerPos = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
+                        if (assetStatus == Buildable.Status.OPERATIONAL) {
+                            stationControllerPos = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
+                        }
+                        int count = buf.readInt();
+                        fullSyncDeltas = new ArrayList<>(count);
+                        for (int i = 0; i < count; i++) {
+                            AssetSyncPacket d = new AssetSyncPacket();
+                            d.assetId = assetId;
+                            d.syncType = buf.readByte();
+                            d.readDelta(buf);
+                            fullSyncDeltas.add(d);
+                        }
                     }
                     case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
                         teamId = new UUID(buf.readLong(), buf.readLong());
@@ -447,6 +497,14 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeBoolean(settingsGroupJoinable);
                 writeMinerSettingsPayload(buf, minerSettings);
             }
+            case FILTER_UPDATED -> {
+                buf.writeInt(filterSlot);
+                buf.writeShort(filterItems.size());
+                for (ItemStack stack : filterItems) {
+                    PacketUtil.writeItemStack(buf, stack);
+                }
+            }
+            case FILTER_REMOVED -> buf.writeInt(filterSlot);
         }
     }
 
@@ -482,6 +540,15 @@ public final class AssetSyncPacket implements IMessage {
                 settingsGroupJoinable = buf.readBoolean();
                 minerSettings = readMinerSettingsPayload(buf, "settingsGroup=" + settingsGroupId);
             }
+            case FILTER_UPDATED -> {
+                filterSlot = buf.readInt();
+                int count = buf.readShort();
+                filterItems = new ArrayList<>(count);
+                for (int i = 0; i < count; i++) {
+                    filterItems.add(PacketUtil.readItemStack(buf));
+                }
+            }
+            case FILTER_REMOVED -> filterSlot = buf.readInt();
         }
     }
 
@@ -928,6 +995,8 @@ public final class AssetSyncPacket implements IMessage {
                     packet.settingsGroupName,
                     packet.settingsGroupJoinable,
                     packet.minerSettings.copy());
+            case FILTER_UPDATED -> state.setFilters(packet.filterSlot, packet.filterItems);
+            case FILTER_REMOVED -> state.clearFilters(packet.filterSlot);
         }
     }
 
@@ -947,10 +1016,19 @@ public final class AssetSyncPacket implements IMessage {
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {
-                    if (CelestialAssetStore.CLIENT
-                        .findAssetInternal(packet.assetId) instanceof AutomatedFacility state) {
+                    CelestialAsset asset = CelestialAssetStore.CLIENT.findAssetInternal(packet.assetId);
+                    if (asset instanceof AutomatedFacility state) {
                         handleDelta(state, packet);
                         state.setSyncRevision(Math.max(state.getSyncRevision(), packet.syncRevision));
+                    } else if (asset instanceof Station station) {
+                        // Client-side Station mirror: store filter deltas on the asset directly
+                        // (no live TileStationController on the client)
+                        if (packet.syncType == FILTER_UPDATED) {
+                            station.setFilters(packet.filterSlot, packet.filterItems);
+                        } else if (packet.syncType == FILTER_REMOVED) {
+                            station.clearFilters(packet.filterSlot);
+                        }
+                        station.setSyncRevision(Math.max(station.getSyncRevision(), packet.syncRevision));
                     }
                 }
             }
@@ -967,6 +1045,13 @@ public final class AssetSyncPacket implements IMessage {
                         asset = station;
                     }
                     station.setController(packet.stationControllerPos);
+                    for (AssetSyncPacket d : packet.fullSyncDeltas) {
+                        if (d.syncType == FILTER_UPDATED) {
+                            station.setFilters(d.filterSlot, d.filterItems);
+                        } else if (d.syncType == FILTER_REMOVED) {
+                            station.clearFilters(d.filterSlot);
+                        }
+                    }
                 }
                 case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
                     AutomatedFacility state = asset instanceof AutomatedFacility o ? o : null;
@@ -1074,6 +1159,8 @@ public final class AssetSyncPacket implements IMessage {
                         packet.settingsGroupName,
                         packet.settingsGroupJoinable,
                         packet.minerSettings.copy());
+                case FILTER_UPDATED -> state.setFilters(packet.filterSlot, packet.filterItems);
+                case FILTER_REMOVED -> state.clearFilters(packet.filterSlot);
             }
         }
 

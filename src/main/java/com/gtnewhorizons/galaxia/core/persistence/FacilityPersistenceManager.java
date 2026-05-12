@@ -502,6 +502,17 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 cj);
         }
+        out.filters = new LinkedHashMap<>();
+        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot().entrySet()) {
+            List<String> keys = new ArrayList<>();
+            for (ItemStack stack : e.getValue()) {
+                if (stack != null) {
+                    keys.add(ItemStackWrapper.of(stack).toKey());
+                }
+            }
+            out.filters.put(e.getKey(), keys);
+        }
+
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         int anchorCount = 0;
@@ -712,6 +723,20 @@ public final class FacilityPersistenceManager {
             state.logisticsConfig.loadFromSnapshot(cfgSnapshot);
         }
 
+        if (json.filters != null) {
+            for (Map.Entry<Integer, List<String>> e : json.filters.entrySet()) {
+                int slot = e.getKey();
+                List<ItemStack> stacks = new ArrayList<>();
+                for (String key : e.getValue()) {
+                    ItemStackWrapper wrapper = ItemStackWrapper.fromKey(key);
+                    if (wrapper != null) {
+                        stacks.add(wrapper.toStack(1));
+                    }
+                }
+                state.setFilters(slot, stacks);
+            }
+        }
+
         StationLayout layout = state.stationLayout();
         int tilesLoaded = 0;
         int tilesSkipped = 0;
@@ -882,6 +907,7 @@ public final class FacilityPersistenceManager {
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
         Map<String, LogisticsConfigJson> logisticsConfig;
+        Map<Integer, List<String>> filters;
         List<StationTileJson> layoutTiles;
     }
 

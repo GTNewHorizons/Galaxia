@@ -9,10 +9,12 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.network.AssetFilterUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
@@ -321,6 +323,28 @@ public final class CelestialClient {
     public static void removeLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource) {
         LogisticsConfigUpdatePacket packet = LogisticsConfigUpdatePacket.remove(assetId, resource);
         StarmapActionSyncHandler.sendLogisticsConfig(packet);
+    }
+
+    // ── Filter actions ──
+
+    public static void addFilter(CelestialAsset.ID assetId, int slot, ItemStack filter) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.addFilter(assetId, slot, filter);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
+    }
+
+    public static void removeFilter(CelestialAsset.ID assetId, int slot, ItemStack filter) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.removeFilter(assetId, slot, filter);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
+    }
+
+    public static void clearFilters(CelestialAsset.ID assetId, int slot) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.clearSlot(assetId, slot);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
+    }
+
+    public static void setFilters(CelestialAsset.ID assetId, int slot, List<ItemStack> filters) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.setSlot(assetId, slot, filters);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
     }
 
     // ── Signal mirror ──

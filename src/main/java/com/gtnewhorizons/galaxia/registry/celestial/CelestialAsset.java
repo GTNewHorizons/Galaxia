@@ -236,6 +236,43 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return filters.getOrDefault(i, List.of());
     }
 
+    public void setFilters(int slot, List<ItemStack> filterList) {
+        if (filterList == null || filterList.isEmpty()) {
+            filters.remove(slot);
+        } else {
+            filters.put(slot, new ArrayList<>(filterList));
+        }
+        markDirty();
+    }
+
+    public void addFilter(int slot, ItemStack filter) {
+        if (filter == null) return;
+        filters.computeIfAbsent(slot, k -> new ArrayList<>()).add(filter.copy());
+        markDirty();
+    }
+
+    public void removeFilter(int slot, ItemStack filter) {
+        if (filter == null) return;
+        List<ItemStack> list = filters.get(slot);
+        if (list == null) return;
+        list.removeIf(f -> f != null && f.getItem() == filter.getItem()
+            && (!f.getHasSubtypes() || f.getItemDamage() == filter.getItemDamage())
+            && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, filter)));
+        if (list.isEmpty()) {
+            filters.remove(slot);
+        }
+        markDirty();
+    }
+
+    public void clearFilters(int slot) {
+        filters.remove(slot);
+        markDirty();
+    }
+
+    public Map<Integer, List<ItemStack>> filtersSnapshot() {
+        return Collections.unmodifiableMap(filters);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;

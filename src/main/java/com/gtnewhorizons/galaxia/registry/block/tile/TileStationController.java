@@ -1,11 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -131,6 +134,61 @@ public class TileStationController extends TileStationBase<TileStationController
             .flatMap(List::stream)
             .map(pos -> (IInventory) pos.getTE(worldObj))
             .toList();
+    }
+
+    public List<ItemStack> getFiltersForInventory(int i) {
+        List<IInventory> inventories = getConnectedInventories();
+        if (i < 0 || i >= inventories.size()) return List.of();
+        IInventory inv = inventories.get(i);
+        if (inv instanceof TileHammerTarget target) {
+            return target.getFiltersFor(0);
+        }
+        return List.of();
+    }
+
+    public void setFiltersForInventory(int slot, List<ItemStack> filterList) {
+        List<IInventory> inventories = getConnectedInventories();
+        if (slot >= 0 && slot < inventories.size() && inventories.get(slot) instanceof TileHammerTarget target) {
+            target.setFilters(filterList);
+        }
+    }
+
+    public void addFilterForInventory(int slot, ItemStack filter) {
+        List<IInventory> inventories = getConnectedInventories();
+        if (slot >= 0 && slot < inventories.size() && inventories.get(slot) instanceof TileHammerTarget target) {
+            target.addFilter(filter);
+        }
+    }
+
+    public void removeFilterForInventory(int slot, ItemStack filter) {
+        List<IInventory> inventories = getConnectedInventories();
+        if (slot >= 0 && slot < inventories.size() && inventories.get(slot) instanceof TileHammerTarget target) {
+            target.removeFilter(filter);
+        }
+    }
+
+    public void clearFiltersForInventory(int slot) {
+        List<IInventory> inventories = getConnectedInventories();
+        if (slot >= 0 && slot < inventories.size() && inventories.get(slot) instanceof TileHammerTarget target) {
+            target.clearFilters();
+        }
+    }
+
+    public Map<Integer, List<ItemStack>> filtersSnapshot() {
+        List<IInventory> inventories = getConnectedInventories();
+        if (inventories.isEmpty()) return Collections.emptyMap();
+        Map<Integer, List<ItemStack>> result = new LinkedHashMap<>();
+        int idx = 0;
+        for (IInventory inv : inventories) {
+            if (inv instanceof TileHammerTarget target) {
+                List<ItemStack> f = target.getFiltersFor(0);
+                if (f != null && !f.isEmpty()) {
+                    result.put(idx, new ArrayList<>(f));
+                }
+            }
+            idx++;
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     @Override

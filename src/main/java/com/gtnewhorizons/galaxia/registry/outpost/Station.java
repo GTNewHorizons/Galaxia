@@ -1,6 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
@@ -8,8 +13,6 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-
-import java.util.List;
 
 public class Station extends CelestialAsset {
 
@@ -49,7 +52,66 @@ public class Station extends CelestialAsset {
         return "Station inventory";
     }
 
-    private TileStationController getTileController() {
+    // ── Filter delegation ──
+
+    @Override
+    public Map<Integer, List<ItemStack>> filtersSnapshot() {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) return Collections.emptyMap();
+        return ctrl.filtersSnapshot();
+    }
+
+    @Override
+    public List<ItemStack> getFiltersFor(int i) {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) return super.getFiltersFor(i);
+        return ctrl.getFiltersForInventory(i);
+    }
+
+    @Override
+    public void setFilters(int slot, List<ItemStack> filterList) {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) {
+            super.setFilters(slot, filterList);
+            return;
+        }
+        ctrl.setFiltersForInventory(slot, filterList);
+    }
+
+    @Override
+    public void addFilter(int slot, ItemStack filter) {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) {
+            super.addFilter(slot, filter);
+            return;
+        }
+        ctrl.addFilterForInventory(slot, filter);
+    }
+
+    @Override
+    public void removeFilter(int slot, ItemStack filter) {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) {
+            super.removeFilter(slot, filter);
+            return;
+        }
+        ctrl.removeFilterForInventory(slot, filter);
+    }
+
+    @Override
+    public void clearFilters(int slot) {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) {
+            super.clearFilters(slot);
+            return;
+        }
+        ctrl.clearFiltersForInventory(slot);
+    }
+
+    // ── Controller lookup ──
+
+    /** Public so network handlers can route filter mutations. */
+    public TileStationController getTileController() {
         if (this.isDisabled()) return null;
         if (controller == null) return null;
 
