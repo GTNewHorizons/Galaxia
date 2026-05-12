@@ -46,7 +46,7 @@ final class AutomatedFacilityInventoryTest {
     }
 
     @Test
-    void recipeBoundsAreCheckedAgainstPostOperationInventoryAmounts() {
+    void recipeBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
         ItemStackWrapper input = resource();
         ItemStackWrapper output = resource();
@@ -55,20 +55,22 @@ final class AutomatedFacilityInventoryTest {
 
         assertTrue(inventory.keepsItemLowerBoundAfterConsume(input, 8L, 32L));
         assertFalse(inventory.keepsItemLowerBoundAfterConsume(input, 9L, 32L));
-        assertTrue(inventory.acceptsItemUpperBoundAfterInsert(output, 10L, 1000L));
-        assertFalse(inventory.acceptsItemUpperBoundAfterInsert(output, 11L, 1000L));
+        assertTrue(inventory.isItemBelowUpperBound(output, 1000L));
+        inventory.add(output, 10);
+        assertFalse(inventory.isItemBelowUpperBound(output, 1000L));
     }
 
     @Test
-    void recipeFluidBoundsAreCheckedAgainstPostOperationInventoryAmounts() {
+    void recipeFluidBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
         inventory.addFluid("input", 1000);
         inventory.addFluid("output", 900);
 
         assertTrue(inventory.keepsFluidLowerBoundAfterConsume("input", 200L, 800L));
         assertFalse(inventory.keepsFluidLowerBoundAfterConsume("input", 201L, 800L));
-        assertTrue(inventory.acceptsFluidUpperBoundAfterInsert("output", 100L, 1000L));
-        assertFalse(inventory.acceptsFluidUpperBoundAfterInsert("output", 101L, 1000L));
+        assertTrue(inventory.isFluidBelowUpperBound("output", 1000L));
+        inventory.addFluid("output", 100);
+        assertFalse(inventory.isFluidBelowUpperBound("output", 1000L));
     }
 
     private static ItemStackWrapper resource() {

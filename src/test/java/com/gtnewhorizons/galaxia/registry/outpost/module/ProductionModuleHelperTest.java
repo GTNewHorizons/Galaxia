@@ -68,14 +68,14 @@ final class ProductionModuleHelperTest {
     }
 
     @Test
-    void executeBlocksPerItemOutputUpperBoundAfterCombinedRecipeOutput() {
+    void executeAllowsOutputUpperBoundOvershootWhenCurrentInventoryIsBelowTarget() {
         AutomatedFacility station = station();
         Item inputItem = new Item();
         Item outputItem = new Item();
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 1);
-        station.inventory.add(outputResource, 995);
+        station.inventory.add(outputResource, 95);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 4, 0), new ItemStack(outputItem, 5, 0) };
@@ -85,7 +85,7 @@ final class ProductionModuleHelperTest {
                 RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30),
                 true,
                 SavedRecipeBounds.empty()
-                    .withBound(Kind.OUTPUT_ITEM_UPPER, 0, 1000),
+                    .withBound(Kind.OUTPUT_ITEM_UPPER, 0, 100),
                 (byte) 1,
                 (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
@@ -93,8 +93,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(1, station.inventory.getAmount(inputResource));
-        assertEquals(995, station.inventory.getAmount(outputResource));
+        assertEquals(0, station.inventory.getAmount(inputResource));
+        assertEquals(104, station.inventory.getAmount(outputResource));
     }
 
     @Test
@@ -105,7 +105,7 @@ final class ProductionModuleHelperTest {
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 1);
-        station.inventory.add(outputResource, 999);
+        station.inventory.add(outputResource, 99);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0), new ItemStack(outputItem, 2, 0) };
@@ -115,7 +115,7 @@ final class ProductionModuleHelperTest {
                 RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, new int[] { 0, 10_000 }, 20, 30),
                 true,
                 SavedRecipeBounds.empty()
-                    .withBound(Kind.OUTPUT_ITEM_UPPER, 1, 1000),
+                    .withBound(Kind.OUTPUT_ITEM_UPPER, 1, 100),
                 (byte) 1,
                 (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
@@ -123,8 +123,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(1, station.inventory.getAmount(inputResource));
-        assertEquals(999, station.inventory.getAmount(outputResource));
+        assertEquals(0, station.inventory.getAmount(inputResource));
+        assertEquals(101, station.inventory.getAmount(outputResource));
     }
 
     @Test
@@ -238,7 +238,7 @@ final class ProductionModuleHelperTest {
     }
 
     @Test
-    void executeUsesOutputUpperBoundAfterSelectedItemOutputs() {
+    void executeUsesOutputUpperBoundAsCurrentInventoryTargetForItems() {
         Item inputItem = new Item();
         Item outputItem = new Item();
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
@@ -273,7 +273,7 @@ final class ProductionModuleHelperTest {
     }
 
     @Test
-    void executeUsesOutputUpperBoundAfterSelectedFluidOutputs() throws Exception {
+    void executeUsesOutputUpperBoundAsCurrentInventoryTargetForFluids() throws Exception {
         Item inputItem = new Item();
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
 

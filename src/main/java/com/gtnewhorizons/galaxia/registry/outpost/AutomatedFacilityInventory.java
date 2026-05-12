@@ -80,8 +80,8 @@ public final class AutomatedFacilityInventory {
         return getAmount(item) - Math.max(0L, consumed) >= lowerBound;
     }
 
-    public boolean acceptsItemUpperBoundAfterInsert(ItemStackWrapper item, long inserted, long upperBound) {
-        return getAmount(item) + Math.max(0L, inserted) <= upperBound;
+    public boolean isItemBelowUpperBound(ItemStackWrapper item, long upperBound) {
+        return getAmount(item) < upperBound;
     }
 
     public long getFluidAmount(String fluidName) {
@@ -111,8 +111,8 @@ public final class AutomatedFacilityInventory {
         return getFluidAmount(fluidName) - Math.max(0L, consumed) >= lowerBound;
     }
 
-    public boolean acceptsFluidUpperBoundAfterInsert(String fluidName, long inserted, long upperBound) {
-        return getFluidAmount(fluidName) + Math.max(0L, inserted) <= upperBound;
+    public boolean isFluidBelowUpperBound(String fluidName, long upperBound) {
+        return getFluidAmount(fluidName) < upperBound;
     }
 
     public @Nonnull Map<String, Long> fluidSnapshot() {

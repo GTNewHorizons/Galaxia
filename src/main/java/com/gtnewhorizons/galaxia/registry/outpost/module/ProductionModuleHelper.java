@@ -197,7 +197,7 @@ public final class ProductionModuleHelper {
                     long inserted = selectedItemOutputs.totals()
                         .getOrDefault(item, 0L);
                     if (inserted <= 0L) continue;
-                    if (!inv.acceptsItemUpperBoundAfterInsert(item, inserted, entry.amount())) return false;
+                    if (!inv.isItemBelowUpperBound(item, entry.amount())) return false;
                 }
                 case OUTPUT_FLUID_UPPER -> {
                     String fluidName = selectedFluidOutputs.slotFluidName(entry.slotIndex());
@@ -205,7 +205,7 @@ public final class ProductionModuleHelper {
                     long inserted = selectedFluidOutputs.totals()
                         .getOrDefault(fluidName, 0L);
                     if (inserted <= 0L) continue;
-                    if (!inv.acceptsFluidUpperBoundAfterInsert(fluidName, inserted, entry.amount())) return false;
+                    if (!inv.isFluidBelowUpperBound(fluidName, entry.amount())) return false;
                 }
                 case INPUT_ITEM_LOWER, INPUT_FLUID_LOWER -> {}
             }

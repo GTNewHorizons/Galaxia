@@ -579,14 +579,14 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             long current = facility.inventory.getAmount(item);
             long recipeAmount = target.side() == BoundSide.INPUT ? itemInputAmount(slot.recipe(), item)
                 : itemOutputAmount(slot.recipe(), item);
-            return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current + recipeAmount > bound;
+            return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
         }
         String fluid = fluidName(target);
         if (fluid == null) return false;
         long current = facility.inventory.getFluidAmount(fluid);
         long recipeAmount = target.side() == BoundSide.INPUT ? fluidInputAmount(slot.recipe(), fluid)
             : fluidOutputAmount(slot.recipe(), fluid);
-        return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current + recipeAmount > bound;
+        return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
     }
 
     private SavedRecipeBounds updateBound(SavedRecipeBounds bounds, BoundTarget target, long amount) {
