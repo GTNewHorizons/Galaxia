@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -48,8 +49,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -353,12 +352,24 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 slot.recipe()
                     .fluidOutputChances());
             payloadBuf.writeBoolean(slot.enabled());
-            writeSavedRecipeBounds(payloadBuf, slot.bounds());
+            payloadBuf.writeLong(slot.requestAmount());
             payloadBuf.writeByte(slot.priority());
             payloadBuf.writeByte(slot.orderSize());
             pkt.rawPayload = new byte[payloadBuf.writerIndex()];
             payloadBuf.readBytes(pkt.rawPayload);
         }
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket inventoryBoundPayload(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ConfigAction action, BoundKind kind, String resourceKey, long amount) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer();
+        PacketUtil.writeEnum(payloadBuf, kind);
+        PacketUtil.writeString(payloadBuf, resourceKey);
+        payloadBuf.writeLong(amount);
+        pkt.rawPayload = new byte[payloadBuf.writerIndex()];
+        payloadBuf.readBytes(pkt.rawPayload);
         return pkt;
     }
 
@@ -388,7 +399,9 @@ public final class AssetModuleUpdatePacket implements IMessage {
         SET_RECIPE_SCHEDULER_MODE,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
-        REMOVE_RECIPE_SLOT
+        REMOVE_RECIPE_SLOT,
+        SET_INVENTORY_BOUND,
+        CLEAR_INVENTORY_BOUND
     }
 
     public void toBytes(ByteBuf buf) {
@@ -433,7 +446,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                         buf.writeInt(0);
                     }
                 }
-                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
+                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
                         buf.writeBytes(rawPayload);
@@ -515,7 +528,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 buf.readBytes(rawPayload);
                 decodeModuleUpgradeTargetsPayload(rawPayload);
             }
-            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
+            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
                     throw new IllegalArgumentException("invalid recipe payload length: " + len);
@@ -687,6 +700,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module, creative);
             case SET_RECIPE_SCHEDULER_MODE -> handleRecipeSchedulerMode(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
+            case SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> handleInventoryBound(packet, state);
         }
     }
 
@@ -950,6 +964,22 @@ public final class AssetModuleUpdatePacket implements IMessage {
         state.markModuleDirty(module.id);
     }
 
+    private static void handleInventoryBound(AssetModuleUpdatePacket packet, AutomatedFacility state) {
+        if (packet.rawPayload == null) throw new IllegalArgumentException("missing inventory bound payload");
+        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
+        BoundKind kind = PacketUtil.readEnum(payloadBuf, BoundKind.class);
+        String resourceKey = PacketUtil.readString(payloadBuf);
+        long amount = payloadBuf.readLong();
+        if (kind == null) throw new IllegalArgumentException("invalid inventory bound kind");
+        if (packet.getConfigAction() == ConfigAction.SET_INVENTORY_BOUND) {
+            state.inventory.setBound(kind, resourceKey, amount);
+            state.markInventoryBoundDelta(kind, resourceKey, true, amount);
+        } else {
+            state.inventory.clearBound(kind, resourceKey);
+            state.markInventoryBoundDelta(kind, resourceKey, false, amount);
+        }
+    }
+
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) return;
@@ -989,7 +1019,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
         int[] fluidOutputChances = readIntArray(payloadBuf);
         boolean enabled = payloadBuf.readBoolean();
-        SavedRecipeBounds bounds = readSavedRecipeBounds(payloadBuf);
+        long requestAmount = payloadBuf.readLong();
         byte priority = payloadBuf.readByte();
         byte orderSize = payloadBuf.readByte();
         RecipeSnapshot ref = new RecipeSnapshot(
@@ -1011,7 +1041,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         RecipeSnapshot recipe = recipeForSlotMutation(action, config, slotIndex, recipeModule, ref);
         if (recipe == null) return;
-        SavedRecipe slot = new SavedRecipe(recipe, enabled, bounds, priority, orderSize);
+        SavedRecipe slot = new SavedRecipe(recipe, enabled, requestAmount, priority, orderSize);
 
         if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, slot)) return;
         state.markModuleDirty(module.id);
@@ -1165,41 +1195,6 @@ public final class AssetModuleUpdatePacket implements IMessage {
             }
         }
         return stacks;
-    }
-
-    private static void writeSavedRecipeBounds(ByteBuf buf, SavedRecipeBounds bounds) {
-        if (bounds == null || bounds.isEmpty()) {
-            buf.writeByte(0);
-            return;
-        }
-        buf.writeByte(
-            bounds.entries()
-                .size());
-        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
-            buf.writeByte(
-                entry.kind()
-                    .ordinal());
-            buf.writeByte(entry.slotIndex());
-            buf.writeLong(entry.amount());
-        }
-    }
-
-    private static SavedRecipeBounds readSavedRecipeBounds(ByteBuf buf) {
-        int size = Byte.toUnsignedInt(buf.readByte());
-        if (size == 0) return SavedRecipeBounds.empty();
-        if (size > SavedRecipeList.MAX_SAVED_RECIPES * 4) {
-            throw new IllegalArgumentException("invalid recipe bound count: " + size);
-        }
-        List<SavedRecipeBounds.Entry> entries = new ArrayList<>(size);
-        Kind[] kinds = Kind.values();
-        for (int i = 0; i < size; i++) {
-            int kindOrdinal = Byte.toUnsignedInt(buf.readByte());
-            if (kindOrdinal >= kinds.length) throw new IllegalArgumentException("invalid recipe bound kind");
-            int slotIndex = Byte.toUnsignedInt(buf.readByte());
-            long amount = buf.readLong();
-            entries.add(new SavedRecipeBounds.Entry(kinds[kindOrdinal], slotIndex, amount));
-        }
-        return new SavedRecipeBounds(entries);
     }
 
     private static String fluidName(FluidStack stack) {

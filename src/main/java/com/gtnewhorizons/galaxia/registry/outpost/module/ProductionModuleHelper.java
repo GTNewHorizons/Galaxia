@@ -17,7 +17,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 
 public final class ProductionModuleHelper {
 
@@ -37,7 +36,6 @@ public final class ProductionModuleHelper {
         SavedRecipe slot = config.savedRecipes()
             .get(slotIdx);
         RecipeSnapshot recipe = slot.recipe();
-        SavedRecipeBounds bounds = slot.bounds();
 
         AutomatedFacilityInventory inv = outpost.inventory;
         ItemStack[] inputs = recipe.inputs();
@@ -52,15 +50,19 @@ public final class ProductionModuleHelper {
         Map<ItemStackWrapper, Long> requiredInputs = requiredInputs(inputWrappers, inputs);
         Map<String, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
         if (!hasRequiredInputs(inv, requiredInputs, requiredFluidInputs)
-            || !allowsInputs(inv, bounds, inputWrappers, inputs, requiredInputs, fluidInputs, requiredFluidInputs)) {
+            || !allowsInputs(inv, requiredInputs, requiredFluidInputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
 
         ItemStackWrapper[] outputWrappers = cachedWrappers(outputWrapperCache, recipe, outputs);
+        if (!matchesRequestAmount(inv, slot, outputWrappers, fluidOutputs)) {
+            advanceScheduler(config, recipeModule);
+            return;
+        }
         SelectedItemOutputs selectedItemOutputs = selectedOutputs(outputWrappers, outputs, outputChances, random);
         SelectedFluidOutputs selectedFluidOutputs = selectedFluidOutputs(fluidOutputs, fluidOutputChances, random);
-        if (!allowsOutputs(inv, bounds, outputWrappers, selectedItemOutputs, selectedFluidOutputs)) {
+        if (!allowsOutputs(inv, selectedItemOutputs, selectedFluidOutputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
@@ -163,51 +165,64 @@ public final class ProductionModuleHelper {
         return usedAfterInputs + outputAmount <= outpost.itemInventoryCapacity();
     }
 
-    private static boolean allowsInputs(AutomatedFacilityInventory inv, SavedRecipeBounds bounds,
-        ItemStackWrapper[] inputWrappers, ItemStack[] inputs, Map<ItemStackWrapper, Long> requiredInputs,
-        FluidStack[] fluidInputs, Map<String, Long> requiredFluidInputs) {
-        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
-            switch (entry.kind()) {
-                case INPUT_ITEM_LOWER -> {
-                    ItemStackWrapper item = wrapperAt(inputWrappers, entry.slotIndex());
-                    if (item == null) return false;
-                    long consumed = requiredInputs.getOrDefault(item, 0L);
-                    if (!inv.keepsItemLowerBoundAfterConsume(item, consumed, entry.amount())) return false;
-                }
-                case INPUT_FLUID_LOWER -> {
-                    String fluidName = fluidNameAt(fluidInputs, entry.slotIndex());
-                    if (fluidName == null) return false;
-                    long consumed = requiredFluidInputs.getOrDefault(fluidName, 0L);
-                    if (!inv.keepsFluidLowerBoundAfterConsume(fluidName, consumed, entry.amount())) return false;
-                }
-                case OUTPUT_ITEM_UPPER, OUTPUT_FLUID_UPPER -> {}
+    private static boolean allowsInputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> requiredInputs,
+        Map<String, Long> requiredFluidInputs) {
+        for (Map.Entry<ItemStackWrapper, Long> entry : requiredInputs.entrySet()) {
+            if (inv.hasItemLowerBound(entry.getKey()) && !inv.keepsItemLowerBoundAfterConsume(
+                entry.getKey(),
+                entry.getValue(),
+                inv.itemLowerBoundOrDefault(entry.getKey()))) {
+                return false;
+            }
+        }
+        for (Map.Entry<String, Long> entry : requiredFluidInputs.entrySet()) {
+            if (inv.hasFluidLowerBound(entry.getKey()) && !inv.keepsFluidLowerBoundAfterConsume(
+                entry.getKey(),
+                entry.getValue(),
+                inv.fluidLowerBoundOrDefault(entry.getKey()))) {
+                return false;
             }
         }
         return true;
     }
 
-    private static boolean allowsOutputs(AutomatedFacilityInventory inv, SavedRecipeBounds bounds,
-        ItemStackWrapper[] outputWrappers, SelectedItemOutputs selectedItemOutputs,
+    private static boolean matchesRequestAmount(AutomatedFacilityInventory inv, SavedRecipe slot,
+        ItemStackWrapper[] outputWrappers, FluidStack[] fluidOutputs) {
+        long requestAmount = slot.requestAmount();
+        if (requestAmount <= 0L) return true;
+        boolean hasOutputs = false;
+        for (ItemStackWrapper output : outputWrappers) {
+            if (output == null) continue;
+            hasOutputs = true;
+            if (inv.getAmount(output) < requestAmount) return true;
+        }
+        if (fluidOutputs != null) {
+            for (FluidStack stack : fluidOutputs) {
+                String fluidName = fluidName(stack);
+                if (fluidName == null) continue;
+                hasOutputs = true;
+                if (inv.getFluidAmount(fluidName) < requestAmount) return true;
+            }
+        }
+        return !hasOutputs;
+    }
+
+    private static boolean allowsOutputs(AutomatedFacilityInventory inv, SelectedItemOutputs selectedItemOutputs,
         SelectedFluidOutputs selectedFluidOutputs) {
-        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
-            switch (entry.kind()) {
-                case OUTPUT_ITEM_UPPER -> {
-                    ItemStackWrapper item = wrapperAt(outputWrappers, entry.slotIndex());
-                    if (item == null) return false;
-                    long inserted = selectedItemOutputs.totals()
-                        .getOrDefault(item, 0L);
-                    if (inserted <= 0L) continue;
-                    if (!inv.isItemBelowUpperBound(item, entry.amount())) return false;
-                }
-                case OUTPUT_FLUID_UPPER -> {
-                    String fluidName = selectedFluidOutputs.slotFluidName(entry.slotIndex());
-                    if (fluidName == null) return false;
-                    long inserted = selectedFluidOutputs.totals()
-                        .getOrDefault(fluidName, 0L);
-                    if (inserted <= 0L) continue;
-                    if (!inv.isFluidBelowUpperBound(fluidName, entry.amount())) return false;
-                }
-                case INPUT_ITEM_LOWER, INPUT_FLUID_LOWER -> {}
+        for (Map.Entry<ItemStackWrapper, Long> entry : selectedItemOutputs.totals()
+            .entrySet()) {
+            if (entry.getValue() <= 0L) continue;
+            if (inv.hasItemUpperBound(entry.getKey())
+                && !inv.isItemBelowUpperBound(entry.getKey(), inv.itemUpperBoundOrDefault(entry.getKey()))) {
+                return false;
+            }
+        }
+        for (Map.Entry<String, Long> entry : selectedFluidOutputs.totals()
+            .entrySet()) {
+            if (entry.getValue() <= 0L) continue;
+            if (inv.hasFluidUpperBound(entry.getKey())
+                && !inv.isFluidBelowUpperBound(entry.getKey(), inv.fluidUpperBoundOrDefault(entry.getKey()))) {
+                return false;
             }
         }
         return true;

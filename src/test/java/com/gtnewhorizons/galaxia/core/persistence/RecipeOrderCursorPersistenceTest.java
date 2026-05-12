@@ -19,7 +19,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -97,10 +96,7 @@ final class RecipeOrderCursorPersistenceTest {
         SavedRecipe firstSlot = loadedConfig.savedRecipes()
             .get(0);
         assertTrue(firstSlot.enabled(), "slot 0 enabled must survive");
-        assertTrue(
-            firstSlot.bounds()
-                .isEmpty(),
-            "slot 0 bounds must survive empty");
+        assertEquals(0L, firstSlot.requestAmount(), "slot 0 requestAmount must survive empty");
         assertEquals((byte) 5, firstSlot.priority(), "slot 0 priority must survive");
         assertEquals((byte) 2, firstSlot.orderSize(), "slot 0 orderSize must survive");
 
@@ -134,24 +130,9 @@ final class RecipeOrderCursorPersistenceTest {
             (byte) 3);
 
         // Add 3 recipe slots
-        SavedRecipe slot1 = new SavedRecipe(
-            RecipeSnapshot.unresolved((byte) 1, 0, 42L),
-            true,
-            SavedRecipeBounds.empty(),
-            (byte) 5,
-            (byte) 2);
-        SavedRecipe slot2 = new SavedRecipe(
-            RecipeSnapshot.unresolved((byte) 1, 1, 43L),
-            true,
-            SavedRecipeBounds.empty(),
-            (byte) 3,
-            (byte) 4);
-        SavedRecipe slot3 = new SavedRecipe(
-            RecipeSnapshot.unresolved((byte) 1, 2, 44L),
-            false,
-            SavedRecipeBounds.empty(),
-            (byte) 1,
-            (byte) 1);
+        SavedRecipe slot1 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 42L), true, 0L, (byte) 5, (byte) 2);
+        SavedRecipe slot2 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 1, 43L), true, 0L, (byte) 3, (byte) 4);
+        SavedRecipe slot3 = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 2, 44L), false, 0L, (byte) 1, (byte) 1);
         config.savedRecipes()
             .add(slot1);
         config.savedRecipes()

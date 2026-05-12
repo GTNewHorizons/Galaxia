@@ -12,18 +12,12 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 
 final class RecipeSlotUiModelTest {
 
     @Test
     void unresolvedRecipeFallsBackToRecipeIndex() {
-        SavedRecipe slot = new SavedRecipe(
-            RecipeSnapshot.unresolved((byte) 1, 7, 42L),
-            true,
-            SavedRecipeBounds.empty(),
-            (byte) 1,
-            (byte) 1);
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 7, 42L), true, 0L, (byte) 1, (byte) 1);
 
         assertEquals("Recipe #7", RecipeSlotUiModel.slotTitle(slot));
     }

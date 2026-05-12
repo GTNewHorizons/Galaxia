@@ -40,7 +40,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -235,7 +234,7 @@ final class StationPacketRoundTripTest {
             200,
             480);
         SavedRecipeList slots = new SavedRecipeList();
-        slots.add(new SavedRecipe(snapshot, true, SavedRecipeBounds.empty(), (byte) 1, (byte) 1));
+        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
         ((IRecipeModule) centrifuge.component()).setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 

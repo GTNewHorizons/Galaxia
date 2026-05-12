@@ -71,8 +71,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -460,7 +458,7 @@ public final class FacilityPersistenceManager {
                                 .contentHash());
                         writeRecipeSnapshot(slotObj, slot.recipe());
                         slotObj.addProperty("enabled", slot.enabled());
-                        writeSavedRecipeBounds(slotObj, slot.bounds());
+                        slotObj.addProperty("requestAmount", slot.requestAmount());
                         slotObj.addProperty("priority", slot.priority() & 0xFF);
                         slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
                         slotObj.addProperty("slotIndex", i);
@@ -491,6 +489,10 @@ public final class FacilityPersistenceManager {
                 e.getValue());
         }
         out.fluidBuffer = new LinkedHashMap<>(state.inventory.fluidSnapshot());
+        out.itemLowerBounds = encodeItemAmountMap(state.inventory.itemLowerBoundsSnapshot());
+        out.itemUpperBounds = encodeItemAmountMap(state.inventory.itemUpperBoundsSnapshot());
+        out.fluidLowerBounds = new LinkedHashMap<>(state.inventory.fluidLowerBoundsSnapshot());
+        out.fluidUpperBounds = new LinkedHashMap<>(state.inventory.fluidUpperBoundsSnapshot());
         out.logisticsConfig = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -703,6 +705,18 @@ public final class FacilityPersistenceManager {
         if (json.fluidBuffer != null) {
             state.inventory.loadFluidSnapshot(json.fluidBuffer);
         }
+        if (json.itemLowerBounds != null) {
+            state.inventory.loadItemLowerBounds(decodeItemAmountMap(json.itemLowerBounds));
+        }
+        if (json.itemUpperBounds != null) {
+            state.inventory.loadItemUpperBounds(decodeItemAmountMap(json.itemUpperBounds));
+        }
+        if (json.fluidLowerBounds != null) {
+            state.inventory.loadFluidLowerBounds(json.fluidLowerBounds);
+        }
+        if (json.fluidUpperBounds != null) {
+            state.inventory.loadFluidUpperBounds(json.fluidUpperBounds);
+        }
 
         if (json.logisticsConfig != null) {
             Map<ItemStackWrapper, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
@@ -863,6 +877,28 @@ public final class FacilityPersistenceManager {
         return requirements;
     }
 
+    private static Map<String, Long> encodeItemAmountMap(Map<ItemStackWrapper, Long> amounts) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        if (amounts == null) return encoded;
+        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() >= 0L) encoded.put(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue());
+        }
+        return encoded;
+    }
+
+    private static Map<ItemStackWrapper, Long> decodeItemAmountMap(Map<String, Long> encoded) {
+        Map<ItemStackWrapper, Long> decoded = new LinkedHashMap<>();
+        if (encoded == null || encoded.isEmpty()) return decoded;
+        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
+            ItemStackWrapper key = ItemStackWrapper.fromKey(entry.getKey());
+            if (key != null && entry.getValue() >= 0L) decoded.put(key, entry.getValue());
+        }
+        return decoded;
+    }
+
     static final class AssetJson {
 
         CelestialAsset.ID assetId;
@@ -891,6 +927,10 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
+        Map<String, Long> itemLowerBounds;
+        Map<String, Long> itemUpperBounds;
+        Map<String, Long> fluidLowerBounds;
+        Map<String, Long> fluidUpperBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         List<StationTileJson> layoutTiles;
     }
@@ -1010,44 +1050,6 @@ public final class FacilityPersistenceManager {
             readIntArray(slotObj, "fluidOutputChances"),
             duration,
             eut);
-    }
-
-    private static void writeSavedRecipeBounds(JsonObject slotObj, SavedRecipeBounds bounds) {
-        if (bounds == null || bounds.isEmpty()) return;
-        com.google.gson.JsonArray array = new com.google.gson.JsonArray();
-        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
-            JsonObject obj = new JsonObject();
-            obj.addProperty(
-                "kind",
-                entry.kind()
-                    .name());
-            obj.addProperty("slot", entry.slotIndex() & 0xFF);
-            obj.addProperty("amount", entry.amount());
-            array.add(obj);
-        }
-        slotObj.add("bounds", array);
-    }
-
-    private static SavedRecipeBounds readSavedRecipeBounds(JsonObject slotObj) {
-        if (!slotObj.has("bounds") || !slotObj.get("bounds")
-            .isJsonArray()) {
-            return SavedRecipeBounds.empty();
-        }
-        com.google.gson.JsonArray array = slotObj.getAsJsonArray("bounds");
-        List<SavedRecipeBounds.Entry> entries = new ArrayList<>(array.size());
-        for (JsonElement element : array) {
-            if (element == null || element.isJsonNull()) continue;
-            JsonObject obj = element.getAsJsonObject();
-            Kind kind = Kind.valueOf(
-                obj.get("kind")
-                    .getAsString());
-            int slot = obj.get("slot")
-                .getAsInt();
-            long amount = obj.get("amount")
-                .getAsLong();
-            entries.add(new SavedRecipeBounds.Entry(kind, slot, amount));
-        }
-        return new SavedRecipeBounds(entries);
     }
 
     private static void writeItemStacks(JsonObject target, String key, ItemStack[] stacks) {
@@ -1442,13 +1444,14 @@ public final class FacilityPersistenceManager {
                         .getAsLong();
                     boolean enabled = slotObj.get("enabled")
                         .getAsBoolean();
-                    SavedRecipeBounds bounds = readSavedRecipeBounds(slotObj);
+                    long requestAmount = slotObj.has("requestAmount") ? slotObj.get("requestAmount")
+                        .getAsLong() : 0L;
                     byte priority = slotObj.get("priority")
                         .getAsByte();
                     byte orderSize = slotObj.get("orderSize")
                         .getAsByte();
                     RecipeSnapshot ref = readRecipeSnapshot(slotObj, recipeMapOrdinal, recipeIndex, contentHash);
-                    SavedRecipe slot = new SavedRecipe(ref, enabled, bounds, priority, orderSize);
+                    SavedRecipe slot = new SavedRecipe(ref, enabled, requestAmount, priority, orderSize);
                     int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
                         .getAsInt() : i;
                     slots.setOrAppend(slotIndex, slot);

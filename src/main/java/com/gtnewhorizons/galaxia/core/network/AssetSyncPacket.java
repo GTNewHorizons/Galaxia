@@ -26,6 +26,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -51,8 +53,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -84,6 +84,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
     public static final byte SETTINGS_GROUP_UPDATED = 11;
+    public static final byte INVENTORY_BOUND_UPDATE = 12;
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
     private static final int MAX_RECIPE_STACKS = 64;
@@ -113,6 +114,9 @@ public final class AssetSyncPacket implements IMessage {
 
     private String resourceKey;
     private long inventoryDelta;
+    private BoundKind inventoryBoundKind;
+    private boolean inventoryBoundPresent;
+    private long inventoryBoundAmount;
     private LogisticsResourceConfig logConfig;
 
     private StationTileCoord tileCoord;
@@ -188,6 +192,38 @@ public final class AssetSyncPacket implements IMessage {
                         .toKey(),
                     e.getValue()));
         }
+        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.itemLowerBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(
+                inventoryBoundUpdate(
+                    state.assetId,
+                    BoundKind.ITEM_LOWER,
+                    e.getKey()
+                        .toKey(),
+                    true,
+                    e.getValue()));
+        }
+        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.itemUpperBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(
+                inventoryBoundUpdate(
+                    state.assetId,
+                    BoundKind.ITEM_UPPER,
+                    e.getKey()
+                        .toKey(),
+                    true,
+                    e.getValue()));
+        }
+        for (Map.Entry<String, Long> e : state.inventory.fluidLowerBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_LOWER, e.getKey(), true, e.getValue()));
+        }
+        for (Map.Entry<String, Long> e : state.inventory.fluidUpperBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_UPPER, e.getKey(), true, e.getValue()));
+        }
 
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -258,6 +294,18 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    public static AssetSyncPacket inventoryBoundUpdate(CelestialAsset.ID assetId, BoundKind kind, String resourceKey,
+        boolean present, long amount) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = INVENTORY_BOUND_UPDATE;
+        pkt.inventoryBoundKind = kind;
+        pkt.resourceKey = resourceKey;
+        pkt.inventoryBoundPresent = present;
+        pkt.inventoryBoundAmount = amount;
+        return pkt;
+    }
+
     public static AssetSyncPacket logisticsConfigUpdated(CelestialAsset.ID assetId, String resourceKey, int minReserve,
         int orderSize, boolean importEnabled, boolean supplyEnabled) {
         AssetSyncPacket pkt = new AssetSyncPacket();
@@ -324,6 +372,7 @@ public final class AssetSyncPacket implements IMessage {
                 facility.drainDirtyModules();
                 facility.drainRemovedIds();
                 facility.drainDirtyInventoryDeltas();
+                facility.drainDirtyInventoryBoundDeltas();
                 return packets;
             }
             if (!facility.isDirty()) {
@@ -346,6 +395,15 @@ public final class AssetSyncPacket implements IMessage {
                         delta.getKey()
                             .toKey(),
                         delta.getValue()).withSyncRevision(facility.getSyncRevision()));
+            }
+            for (InventoryBoundDelta delta : facility.drainDirtyInventoryBoundDeltas()) {
+                packets.add(
+                    inventoryBoundUpdate(
+                        facility.assetId,
+                        delta.kind(),
+                        delta.resourceKey(),
+                        delta.present(),
+                        delta.amount()).withSyncRevision(facility.getSyncRevision()));
             }
         } else if (asset instanceof Station station) {
             if (station.needsFullSyncFor(playerId)) {
@@ -450,6 +508,12 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeString(buf, resourceKey);
                 buf.writeLong(inventoryDelta);
             }
+            case INVENTORY_BOUND_UPDATE -> {
+                PacketUtil.writeEnum(buf, inventoryBoundKind);
+                PacketUtil.writeString(buf, resourceKey);
+                buf.writeBoolean(inventoryBoundPresent);
+                buf.writeLong(inventoryBoundAmount);
+            }
             case LOGISTICS_CONFIG_UPDATED -> {
                 PacketUtil.writeString(buf, resourceKey);
                 writeLogisticsConfig(buf, logConfig);
@@ -486,6 +550,12 @@ public final class AssetSyncPacket implements IMessage {
             case INVENTORY_UPDATE -> {
                 resourceKey = PacketUtil.readString(buf);
                 inventoryDelta = buf.readLong();
+            }
+            case INVENTORY_BOUND_UPDATE -> {
+                inventoryBoundKind = PacketUtil.readEnum(buf, BoundKind.class);
+                resourceKey = PacketUtil.readString(buf);
+                inventoryBoundPresent = buf.readBoolean();
+                inventoryBoundAmount = buf.readLong();
             }
             case LOGISTICS_CONFIG_UPDATED -> {
                 resourceKey = PacketUtil.readString(buf);
@@ -724,41 +794,6 @@ public final class AssetSyncPacket implements IMessage {
         return size;
     }
 
-    private static void writeSavedRecipeBounds(ByteBuf buf, SavedRecipeBounds bounds) {
-        if (bounds == null || bounds.isEmpty()) {
-            buf.writeByte(0);
-            return;
-        }
-        buf.writeByte(
-            bounds.entries()
-                .size());
-        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
-            buf.writeByte(
-                entry.kind()
-                    .ordinal());
-            buf.writeByte(entry.slotIndex());
-            buf.writeLong(entry.amount());
-        }
-    }
-
-    private static SavedRecipeBounds readSavedRecipeBounds(ByteBuf buf) {
-        int size = Byte.toUnsignedInt(buf.readByte());
-        if (size == 0) return SavedRecipeBounds.empty();
-        if (size > SavedRecipeList.MAX_SAVED_RECIPES * 4) {
-            throw new IllegalStateException("Invalid saved recipe bound count: " + size);
-        }
-        List<SavedRecipeBounds.Entry> entries = new ArrayList<>(size);
-        Kind[] kinds = Kind.values();
-        for (int i = 0; i < size; i++) {
-            int kindOrdinal = Byte.toUnsignedInt(buf.readByte());
-            if (kindOrdinal >= kinds.length) throw new IllegalStateException("Invalid saved recipe bound kind");
-            int slotIndex = Byte.toUnsignedInt(buf.readByte());
-            long amount = buf.readLong();
-            entries.add(new SavedRecipeBounds.Entry(kinds[kindOrdinal], slotIndex, amount));
-        }
-        return new SavedRecipeBounds(entries);
-    }
-
     private static void writeRecipeSnapshot(ByteBuf buf, RecipeSnapshot snapshot) {
         buf.writeInt(snapshot.duration());
         buf.writeInt(snapshot.eut());
@@ -953,7 +988,7 @@ public final class AssetSyncPacket implements IMessage {
             buf.writeLong(snap.contentHash());
             writeRecipeSnapshot(buf, snap);
             buf.writeBoolean(slot.enabled());
-            writeSavedRecipeBounds(buf, slot.bounds());
+            buf.writeLong(slot.requestAmount());
             buf.writeByte(slot.priority());
             buf.writeByte(slot.orderSize());
         }
@@ -985,11 +1020,11 @@ public final class AssetSyncPacket implements IMessage {
             long contentHash = buf.readLong();
             RecipeSnapshot snapshot = readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash);
             boolean enabled = buf.readBoolean();
-            SavedRecipeBounds bounds = readSavedRecipeBounds(buf);
+            long requestAmount = buf.readLong();
             byte priority = buf.readByte();
             byte orderSize = buf.readByte();
 
-            SavedRecipe slot = new SavedRecipe(snapshot, enabled, bounds, priority, orderSize);
+            SavedRecipe slot = new SavedRecipe(snapshot, enabled, requestAmount, priority, orderSize);
             config.savedRecipes()
                 .add(slot);
         }
@@ -1090,6 +1125,14 @@ public final class AssetSyncPacket implements IMessage {
                         state.inventory
                             .setAmount(r, Math.max(0, state.inventory.getAmount(r) - Math.abs(packet.inventoryDelta)));
                     }
+                }
+            }
+            case INVENTORY_BOUND_UPDATE -> {
+                if (packet.inventoryBoundPresent) {
+                    state.inventory
+                        .setBound(packet.inventoryBoundKind, packet.resourceKey, packet.inventoryBoundAmount);
+                } else {
+                    state.inventory.clearBound(packet.inventoryBoundKind, packet.resourceKey);
                 }
             }
             case LOGISTICS_CONFIG_UPDATED -> {
@@ -1236,6 +1279,14 @@ public final class AssetSyncPacket implements IMessage {
                                 r,
                                 Math.max(0, state.inventory.getAmount(r) - Math.abs(packet.inventoryDelta)));
                         }
+                    }
+                }
+                case INVENTORY_BOUND_UPDATE -> {
+                    if (packet.inventoryBoundPresent) {
+                        state.inventory
+                            .setBound(packet.inventoryBoundKind, packet.resourceKey, packet.inventoryBoundAmount);
+                    } else {
+                        state.inventory.clearBound(packet.inventoryBoundKind, packet.resourceKey);
                     }
                 }
                 case LOGISTICS_CONFIG_UPDATED -> {

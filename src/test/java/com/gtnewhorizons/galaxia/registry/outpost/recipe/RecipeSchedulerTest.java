@@ -9,12 +9,7 @@ import org.junit.jupiter.api.Test;
 final class RecipeSchedulerTest {
 
     private static SavedRecipe slot(boolean enabled, byte priority, byte orderSize) {
-        return new SavedRecipe(
-            RecipeSnapshot.unresolved((byte) 1, 0, 42L),
-            enabled,
-            SavedRecipeBounds.empty(),
-            priority,
-            orderSize);
+        return new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 42L), enabled, 0L, priority, orderSize);
     }
 
     // ---------- PRIORITY mode ----------

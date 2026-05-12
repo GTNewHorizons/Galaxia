@@ -61,8 +61,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -1296,15 +1294,9 @@ final class FacilityPersistenceManagerTest {
             320,
             480);
         SavedRecipeList slots = new SavedRecipeList();
-        slots.add(
-            new SavedRecipe(
-                snapshot,
-                true,
-                SavedRecipeBounds.empty()
-                    .withBound(Kind.INPUT_FLUID_LOWER, 0, 11)
-                    .withBound(Kind.OUTPUT_FLUID_UPPER, 0, 22),
-                (byte) 3,
-                (byte) 4));
+        station.inventory.setFluidLowerBound("galaxia.persistence.input", 11);
+        station.inventory.setFluidUpperBound("galaxia.persistence.output", 22);
+        slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
         recipeModule.setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
@@ -1335,14 +1327,9 @@ final class FacilityPersistenceManagerTest {
         assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
         assertEquals("galaxia.persistence.output", fluidName(decodedSnapshot.fluidOutputs()[0]));
         assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
-        assertEquals(
-            11,
-            decodedSlot.bounds()
-                .boundOrDefault(Kind.INPUT_FLUID_LOWER, 0));
-        assertEquals(
-            22,
-            decodedSlot.bounds()
-                .boundOrDefault(Kind.OUTPUT_FLUID_UPPER, 0));
+        assertEquals(12L, decodedSlot.requestAmount());
+        assertEquals(11, decoded.inventory.fluidLowerBoundOrDefault("galaxia.persistence.input"));
+        assertEquals(22, decoded.inventory.fluidUpperBoundOrDefault("galaxia.persistence.output"));
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
     }

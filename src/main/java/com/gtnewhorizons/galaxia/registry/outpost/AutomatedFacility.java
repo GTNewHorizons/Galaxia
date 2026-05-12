@@ -62,6 +62,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Map<ItemStackWrapper, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
+    private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
 
@@ -565,7 +566,8 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean isDirty() {
         return super.isDirty() || !dirtyModuleIds.isEmpty()
             || !dirtyRemovedIds.isEmpty()
-            || !dirtyInventoryDeltas.isEmpty();
+            || !dirtyInventoryDeltas.isEmpty()
+            || !dirtyInventoryBoundDeltas.isEmpty();
     }
 
     @Override
@@ -594,6 +596,12 @@ public final class AutomatedFacility extends CelestialAsset {
         return result;
     }
 
+    public List<InventoryBoundDelta> drainDirtyInventoryBoundDeltas() {
+        List<InventoryBoundDelta> result = new ArrayList<>(dirtyInventoryBoundDeltas);
+        dirtyInventoryBoundDeltas.clear();
+        return result;
+    }
+
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
@@ -608,6 +616,17 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         bumpSyncRevision();
     }
+
+    public void markInventoryBoundDelta(AutomatedFacilityInventory.BoundKind kind, String resourceKey, boolean present,
+        long amount) {
+        if (kind == null || resourceKey == null || resourceKey.isEmpty()) return;
+        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resourceKey, present, amount));
+        bumpSyncRevision();
+        markDirty();
+    }
+
+    public record InventoryBoundDelta(AutomatedFacilityInventory.BoundKind kind, String resourceKey, boolean present,
+        long amount) {}
 
     public long getEnergyStored() {
         return energyStored;
