@@ -12,6 +12,7 @@ import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
 
+import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -57,11 +58,6 @@ import gregtech.api.GregTechAPI;
  * API underpinning planetary mechanics
  */
 public final class GalaxiaAPI {
-
-    /**
-     * The List of Blocks, which can conduct Machine Block Updates
-     */
-    public static final Map<Block, Integer> sMachineIDs = new ConcurrentHashMap<>();
 
     /**
      * Gets the gravity on the planet, or returns 1 if failed
@@ -386,38 +382,28 @@ public final class GalaxiaAPI {
     }
 
     public static boolean isMachineBlock(Block block, int blockMetadata) {
-        if (GTUtility.isGTLoaded) {
+        if (isGregTechLoaded()) {
             return GregTechAPI.isMachineBlock(block, blockMetadata);
         }
 
-        if (block != null) {
-            Integer id = sMachineIDs.get(block);
-            if (id != null) {
-                if (id == -1) // for all-meta registrations, also with meta > 32
-                    return true;
-                return (id & (1 << blockMetadata)) != 0;
-            }
-        }
         return false;
     }
 
     /**
      * Adds a Multi-Machine Block, like my Machine Casings for example. You should call @causeMachineUpdate
      * in @Block.breakBlock and in {@link Block#onBlockAdded} of your registered Block. You don't need to register
-     * TileEntities which implement {@link com.gtnewhorizons.galaxia.registry.interfaces.IMachineBlockUpdateable}
+     * TileEntities which implement {@link IMachineBlockUpdateable}
      *
      * @param aBlock the Block
      * @param aMeta  the Metadata of the Blocks as Bitmask! -1 or ~0 for all Meta-values
      */
     @SuppressWarnings("UnusedReturnValue")
     public static boolean registerMachineBlock(Block aBlock, int aMeta) {
-        if (GTUtility.isGTLoaded) {
+        if (isGregTechLoaded()) {
             return GregTechAPI.registerMachineBlock(aBlock, -1);
         }
 
-        if (aBlock == null) return false;
-        sMachineIDs.put(aBlock, aMeta);
-        return true;
+        return false;
     }
 
     /**
@@ -430,7 +416,7 @@ public final class GalaxiaAPI {
      * @param aZ     is the Z-Coord of the update causing Block
      */
     public static boolean causeMachineUpdate(World aWorld, int aX, int aY, int aZ) {
-        if (GTUtility.isGTLoaded) {
+        if (isGregTechLoaded()) {
             return GregTechAPI.causeMachineUpdate(aWorld, aX, aY, aZ);
         }
 

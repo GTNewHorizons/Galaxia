@@ -23,7 +23,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 /**
  * Abstract block class for handling controllers of multiblocks relating to launching a rocket
  */
-public abstract class BlockRocketController extends BlockUpdatable {
+public abstract class BlockRocketController extends Block {
 
     @SideOnly(Side.CLIENT)
     protected IIcon frontIconOff;

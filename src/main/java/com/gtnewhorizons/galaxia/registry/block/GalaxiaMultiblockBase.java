@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
-import com.gtnewhorizons.galaxia.compat.GTUtility;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import cpw.mods.fml.common.Optional;
+import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -15,10 +17,10 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileMachine;
 
-public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileMachine
-    implements ISurvivalConstructable {
+@Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
+public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity
+    implements ISurvivalConstructable, IMachineBlockUpdateable {
 
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
@@ -144,7 +146,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
         if (mCheckTimer <= 0) {
             // Just in case, but a proper checking with onMachineBlockUpdate would be better
-            if (!GTUtility.isGTLoaded) this.updated = true;
+            if (!GalaxiaAPI.isGregTechLoaded()) this.updated = true;
 
             if (this.updated) {
                 final boolean valid = checkStructure();
