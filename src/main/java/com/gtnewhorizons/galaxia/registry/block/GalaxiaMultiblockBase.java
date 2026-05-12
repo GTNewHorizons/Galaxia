@@ -134,6 +134,8 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
+    protected void onStructureValid() {}
+
     @Override
     public void updateEntity() {
         super.updateEntity();
@@ -147,6 +149,9 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
                 else onStructureDisformed();
                 markDirty();
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            if (structureValid) {
+                onStructureValid();
             }
             mCheckTimer = 100;
         } else {

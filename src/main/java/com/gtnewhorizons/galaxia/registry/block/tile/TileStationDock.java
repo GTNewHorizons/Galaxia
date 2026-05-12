@@ -66,13 +66,15 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     }
 
     @Override
-    public void onStructureFormed() {
-        super.onStructureFormed();
+    public void onStructureValid() {
+        super.onStructureValid();
 
         clearBroken(hammerTargets);
         for (var pos : hammerTargets) {
             TileHammerTarget target = pos.getTE(worldObj);
-            target.setStationController(this.mainController);
+            if (target.setStationController(this.mainController)) {
+                markDirty();
+            }
         }
     }
 
@@ -84,7 +86,13 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
-        IntSyncValue oxygenatedSync = new IntSyncValue(() -> hammerTargets.size(), () -> hammerTargets.size());
+        IntSyncValue oxygenatedSync = new IntSyncValue(() -> {
+            clearBroken(hammerTargets);
+            return hammerTargets.size();
+        }, () -> {
+            clearBroken(hammerTargets);
+            return hammerTargets.size();
+        });
         syncManager.syncValue("oxygenated", 0, oxygenatedSync);
 
         return new ModularPanel("galaxia:station_room").size(210, 130)
@@ -104,7 +112,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
                 int oxy = oxygenatedSync.getIntValue();
                 String targets = StatCollector.translateToLocal("galaxia.gui.station_controller.targets");
                 EnumChatFormatting color = EnumChatFormatting.GREEN;
-                return targets + ": " + color + hammerTargets.size() + EnumChatFormatting.RESET;
+                return targets + ": " + color + oxy + EnumChatFormatting.RESET;
             })).pos(10, 50))
             .child(
                 new ButtonWidget<>().size(190, 30)

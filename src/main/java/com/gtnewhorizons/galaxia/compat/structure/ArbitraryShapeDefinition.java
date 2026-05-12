@@ -193,7 +193,11 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
         this.validBoundaryBits = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
 
         floodStructure(tile, world);
-        resizeOrClearEnclosedBitsets();
+        if (canReuse()) {
+            structureBlocks.clear();
+        } else {
+            structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+        }
 
         final boolean[] valid = { true };
         this.validBoundaryBits.forEach((lx, ly, lz) -> {
@@ -229,7 +233,13 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
 
         // Size (or reuse) the two persistent bitsets to exactly the discovered AABB,
         // then clear them so checkEnclosed() starts fresh.
-        resizeOrClearEnclosedBitsets();
+        if (canReuse()) {
+            structureBlocks.clear();
+            enclosedVisited.clear();
+        } else {
+            structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+            enclosedVisited = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+        }
 
         ForgeDirection placedFacing = extendedFacing.getDirection();
         boolean enclosed = checkEnclosed(tile, world, placedFacing);
@@ -255,7 +265,6 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
      */
     private boolean fastRevalidate(T tile) {
         if (structureBlocks == null || !tile.isStructureValid() || structureBlocks.isEmpty()) return false;
-
         World world = tile.worldObj();
         if (world == null || world.isRemote) return true;
 
@@ -304,7 +313,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
      * When the radius is unchanged from the previous check the existing arrays
      * are cleared in place, avoiding allocation churn on repeated validation.
      */
-    private void resizeOrClearEnclosedBitsets() {
+    private boolean canReuse() {
         int neededLenX = aabbMaxX - aabbMinX + 1;
         int neededLenY = aabbMaxY - aabbMinY + 1;
         int neededLenZ = aabbMaxZ - aabbMinZ + 1;
@@ -314,17 +323,15 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
             && aabbMinX == encMinX
             && aabbMinY == encMinY
             && aabbMinZ == encMinZ) {
-            structureBlocks.clear();
-            enclosedVisited.clear();
+            return true;
         } else {
-            structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, neededLenX, neededLenY, neededLenZ);
-            enclosedVisited = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, neededLenX, neededLenY, neededLenZ);
             encMinX = aabbMinX;
             encMinY = aabbMinY;
             encMinZ = aabbMinZ;
             encLenX = neededLenX;
             encLenY = neededLenY;
             encLenZ = neededLenZ;
+            return false;
         }
     }
 

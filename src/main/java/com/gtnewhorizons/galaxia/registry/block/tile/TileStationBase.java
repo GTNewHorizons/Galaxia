@@ -38,15 +38,17 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
     }
 
     protected void clearBroken(List<BlockPos> controllers) {
-        for (int i = controllers.size() - 1; i > 0; i--) {
+        for (int i = controllers.size() - 1; i >= 0; i--) {
             BlockPos pos = controllers.get(i);
             if (pos == null) {
                 controllers.remove(i);
+                markDirty();
                 continue;
             }
             GalaxiaMultiblockBase<?> secondary = pos.getTE(worldObj);
             if (secondary == null) {
                 controllers.remove(i);
+                markDirty();
             }
         }
     }

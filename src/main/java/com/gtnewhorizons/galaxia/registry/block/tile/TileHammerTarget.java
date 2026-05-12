@@ -51,8 +51,10 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> im
     private final List<TileEntityChest> inventory = new ArrayList<>();
     private BlockPos stationController;
 
-    public void setStationController(BlockPos pos) {
+    public boolean setStationController(BlockPos pos) {
+        final boolean change = stationController != pos;
         this.stationController = pos;
+        return change;
     }
 
     @Override
