@@ -53,9 +53,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
@@ -329,11 +329,11 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
             return;
         int slotIndex = 0;
         RecipeConfig cfg = rm.getRecipeConfig();
-        if (cfg != null) slotIndex = cfg.slots()
+        if (cfg != null) slotIndex = cfg.savedRecipes()
             .size();
         if (slotIndex < 0
-            || slotIndex >= com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList.MAX_RECIPE_SLOTS) return;
-        RecipeSlot slot = new RecipeSlot(snapshot, true, RecipeSlotBounds.empty(), (byte) 1, (byte) 1);
+            || slotIndex >= com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList.MAX_SAVED_RECIPES) return;
+        SavedRecipe slot = new SavedRecipe(snapshot, true, SavedRecipeBounds.empty(), (byte) 1, (byte) 1);
         CelestialClient.updateModuleRecipeSlot(
             assetId,
             pendingModuleIndex,

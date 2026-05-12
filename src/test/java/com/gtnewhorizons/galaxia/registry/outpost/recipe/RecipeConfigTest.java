@@ -8,14 +8,14 @@ final class RecipeConfigTest {
 
     @Test
     void constructionWithValidValues() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         RecipeConfig config = new RecipeConfig(
             slots,
             RecipeSchedulerMode.PRIORITY,
             NotDoablePolicy.SKIP,
             (byte) 0,
             (byte) 0);
-        assertSame(slots, config.slots());
+        assertSame(slots, config.savedRecipes());
         assertEquals(RecipeSchedulerMode.PRIORITY, config.mode());
         assertEquals(NotDoablePolicy.SKIP, config.notDoablePolicy());
         assertEquals((byte) 0, config.orderCursor());
@@ -24,7 +24,7 @@ final class RecipeConfigTest {
 
     @Test
     void constructionWithNonZeroOrderCursor() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         RecipeConfig config = new RecipeConfig(
             slots,
             RecipeSchedulerMode.ORDER,
@@ -37,8 +37,8 @@ final class RecipeConfigTest {
 
     @Test
     void orderCursorAtMaxMinusOneAllowed() {
-        RecipeSlotList slots = new RecipeSlotList();
-        byte maxIndex = (byte) (RecipeSlotList.MAX_RECIPE_SLOTS - 1);
+        SavedRecipeList slots = new SavedRecipeList();
+        byte maxIndex = (byte) (SavedRecipeList.MAX_SAVED_RECIPES - 1);
         RecipeConfig config = new RecipeConfig(
             slots,
             RecipeSchedulerMode.PRIORITY,
@@ -54,7 +54,7 @@ final class RecipeConfigTest {
             IllegalArgumentException.class,
             () -> {
                 new RecipeConfig(
-                    new RecipeSlotList(),
+                    new SavedRecipeList(),
                     RecipeSchedulerMode.PRIORITY,
                     NotDoablePolicy.SKIP,
                     (byte) 0,
@@ -64,7 +64,7 @@ final class RecipeConfigTest {
 
     @Test
     void orderRemainingZeroAllowed() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         RecipeConfig config = new RecipeConfig(
             slots,
             RecipeSchedulerMode.PRIORITY,
@@ -77,9 +77,9 @@ final class RecipeConfigTest {
     @Test
     void emptyFactoryProducesValidDefault() {
         RecipeConfig config = RecipeConfig.empty();
-        assertNotNull(config.slots());
+        assertNotNull(config.savedRecipes());
         assertTrue(
-            config.slots()
+            config.savedRecipes()
                 .isEmpty());
         assertEquals(RecipeSchedulerMode.PRIORITY, config.mode());
         assertEquals(NotDoablePolicy.SKIP, config.notDoablePolicy());
@@ -89,7 +89,7 @@ final class RecipeConfigTest {
 
     @Test
     void recordEqualityByValue() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         RecipeConfig a = new RecipeConfig(
             slots,
             RecipeSchedulerMode.ORDER,
@@ -108,7 +108,7 @@ final class RecipeConfigTest {
 
     @Test
     void recordInequalityWhenFieldDiffers() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         RecipeConfig a = new RecipeConfig(
             slots,
             RecipeSchedulerMode.ORDER,

@@ -38,10 +38,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -234,8 +234,8 @@ final class StationPacketRoundTripTest {
             null,
             200,
             480);
-        RecipeSlotList slots = new RecipeSlotList();
-        slots.add(new RecipeSlot(snapshot, true, RecipeSlotBounds.empty(), (byte) 1, (byte) 1));
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(new SavedRecipe(snapshot, true, SavedRecipeBounds.empty(), (byte) 1, (byte) 1));
         ((IRecipeModule) centrifuge.component()).setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
@@ -245,7 +245,7 @@ final class StationPacketRoundTripTest {
         RecipeSnapshot clientSnapshot = ((IRecipeModule) client.modules()
             .get(0)
             .component()).getRecipeConfig()
-                .slots()
+                .savedRecipes()
                 .get(0)
                 .recipe();
         assertEquals(200, clientSnapshot.duration());

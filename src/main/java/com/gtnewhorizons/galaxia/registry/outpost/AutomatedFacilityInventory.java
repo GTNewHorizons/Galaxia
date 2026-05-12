@@ -6,8 +6,6 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-
 /**
  * Virtual item inventory for an automated outpost.
  * All amounts are stored in RAM; persisted to JSON on WorldEvent.Save.
@@ -78,22 +76,12 @@ public final class AutomatedFacilityInventory {
         return totalItemAmount;
     }
 
-    public boolean keepsItemLowerBoundsAfterConsume(Map<ItemStackWrapper, Long> consumed, RecipeSlotBounds bounds) {
-        for (Map.Entry<ItemStackWrapper, Long> entry : consumed.entrySet()) {
-            if (getAmount(entry.getKey()) - entry.getValue() < bounds.inputItemLowerBound(entry.getKey())) {
-                return false;
-            }
-        }
-        return true;
+    public boolean keepsItemLowerBoundAfterConsume(ItemStackWrapper item, long consumed, long lowerBound) {
+        return getAmount(item) - Math.max(0L, consumed) >= lowerBound;
     }
 
-    public boolean acceptsItemUpperBoundsAfterInsert(Map<ItemStackWrapper, Long> inserted, RecipeSlotBounds bounds) {
-        for (Map.Entry<ItemStackWrapper, Long> entry : inserted.entrySet()) {
-            if (getAmount(entry.getKey()) + entry.getValue() > bounds.outputItemUpperBound(entry.getKey())) {
-                return false;
-            }
-        }
-        return true;
+    public boolean acceptsItemUpperBoundAfterInsert(ItemStackWrapper item, long inserted, long upperBound) {
+        return getAmount(item) + Math.max(0L, inserted) <= upperBound;
     }
 
     public long getFluidAmount(String fluidName) {
@@ -119,22 +107,12 @@ public final class AutomatedFacilityInventory {
         return delta;
     }
 
-    public boolean keepsFluidLowerBoundsAfterConsume(Map<String, Long> consumed, RecipeSlotBounds bounds) {
-        for (Map.Entry<String, Long> entry : consumed.entrySet()) {
-            if (getFluidAmount(entry.getKey()) - entry.getValue() < bounds.inputFluidLowerBound(entry.getKey())) {
-                return false;
-            }
-        }
-        return true;
+    public boolean keepsFluidLowerBoundAfterConsume(String fluidName, long consumed, long lowerBound) {
+        return getFluidAmount(fluidName) - Math.max(0L, consumed) >= lowerBound;
     }
 
-    public boolean acceptsFluidUpperBoundsAfterInsert(Map<String, Long> inserted, RecipeSlotBounds bounds) {
-        for (Map.Entry<String, Long> entry : inserted.entrySet()) {
-            if (getFluidAmount(entry.getKey()) + entry.getValue() > bounds.outputFluidUpperBound(entry.getKey())) {
-                return false;
-            }
-        }
-        return true;
+    public boolean acceptsFluidUpperBoundAfterInsert(String fluidName, long inserted, long upperBound) {
+        return getFluidAmount(fluidName) + Math.max(0L, inserted) <= upperBound;
     }
 
     public @Nonnull Map<String, Long> fluidSnapshot() {

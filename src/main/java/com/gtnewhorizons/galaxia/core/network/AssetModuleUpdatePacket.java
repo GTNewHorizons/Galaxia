@@ -46,10 +46,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -305,7 +306,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     }
 
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, RecipeSlot slot) {
+        ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, SavedRecipe slot) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
             pkt.rawPayload = new byte[] { slotIndex };
@@ -352,7 +353,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 slot.recipe()
                     .fluidOutputChances());
             payloadBuf.writeBoolean(slot.enabled());
-            writeRecipeSlotBounds(payloadBuf, slot.bounds());
+            writeSavedRecipeBounds(payloadBuf, slot.bounds());
             payloadBuf.writeByte(slot.priority());
             payloadBuf.writeByte(slot.orderSize());
             pkt.rawPayload = new byte[payloadBuf.writerIndex()];
@@ -944,8 +945,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         RecipeConfig config = recipeModule.getRecipeConfig();
         if (config == null) config = RecipeConfig.empty();
-        recipeModule
-            .setRecipeConfig(new RecipeConfig(config.slots(), mode, config.notDoablePolicy(), (byte) 0, (byte) 0));
+        recipeModule.setRecipeConfig(
+            new RecipeConfig(config.savedRecipes(), mode, config.notDoablePolicy(), (byte) 0, (byte) 0));
         state.markModuleDirty(module.id);
     }
 
@@ -956,7 +957,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
         int slotIndex = Byte.toUnsignedInt(payloadBuf.readByte());
-        if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) {
+        if (slotIndex >= SavedRecipeList.MAX_SAVED_RECIPES) {
             throw new IllegalArgumentException("recipe slot index out of range: " + slotIndex);
         }
 
@@ -968,7 +969,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 throw new IllegalArgumentException("remove recipe slot payload must be exactly 1 byte");
             }
             if (config == null) return;
-            if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, null)) return;
+            if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, null)) return;
             state.markModuleDirty(module.id);
             return;
         }
@@ -988,7 +989,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
         int[] fluidOutputChances = readIntArray(payloadBuf);
         boolean enabled = payloadBuf.readBoolean();
-        RecipeSlotBounds bounds = readRecipeSlotBounds(payloadBuf);
+        SavedRecipeBounds bounds = readSavedRecipeBounds(payloadBuf);
         byte priority = payloadBuf.readByte();
         byte orderSize = payloadBuf.readByte();
         RecipeSnapshot ref = new RecipeSnapshot(
@@ -1010,16 +1011,16 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         RecipeSnapshot recipe = recipeForSlotMutation(action, config, slotIndex, recipeModule, ref);
         if (recipe == null) return;
-        RecipeSlot slot = new RecipeSlot(recipe, enabled, bounds, priority, orderSize);
+        SavedRecipe slot = new SavedRecipe(recipe, enabled, bounds, priority, orderSize);
 
-        if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, slot)) return;
+        if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, slot)) return;
         state.markModuleDirty(module.id);
     }
 
     static @Nullable RecipeSnapshot recipeForSlotMutation(ConfigAction action, RecipeConfig config, int slotIndex,
         IRecipeModule recipeModule, RecipeSnapshot ref) {
         if (action == ConfigAction.UPDATE_RECIPE_SLOT) {
-            RecipeSlot existing = config.slots()
+            SavedRecipe existing = config.savedRecipes()
                 .getOrNull(slotIndex);
             return existing != null ? existing.recipe() : null;
         }
@@ -1029,9 +1030,9 @@ public final class AssetModuleUpdatePacket implements IMessage {
     private record ModuleUpgradeTargetsPayload(ModuleTier targetTier, @Nullable HammerVariant targetHammerVariant,
         boolean reserveItems, boolean voidCompletionRefund, List<StationTileCoord> targetCoords) {}
 
-    static boolean applyRecipeSlotMutation(RecipeSlotList slots, ConfigAction action, int slotIndex,
-        @Nullable RecipeSlot slot) {
-        if (slots == null || action == null || slotIndex < 0 || slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) {
+    static boolean applyRecipeSlotMutation(SavedRecipeList slots, ConfigAction action, int slotIndex,
+        @Nullable SavedRecipe slot) {
+        if (slots == null || action == null || slotIndex < 0 || slotIndex >= SavedRecipeList.MAX_SAVED_RECIPES) {
             return false;
         }
 
@@ -1166,68 +1167,39 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return stacks;
     }
 
-    private static void writeRecipeSlotBounds(ByteBuf buf, RecipeSlotBounds bounds) {
-        writeItemBoundMap(buf, bounds.inputItemLowerBounds());
-        writeItemBoundMap(buf, bounds.outputItemUpperBounds());
-        writeStringBoundMap(buf, bounds.inputFluidLowerBounds());
-        writeStringBoundMap(buf, bounds.outputFluidUpperBounds());
-    }
-
-    private static RecipeSlotBounds readRecipeSlotBounds(ByteBuf buf) {
-        return new RecipeSlotBounds(
-            readItemBoundMap(buf),
-            readItemBoundMap(buf),
-            readStringBoundMap(buf),
-            readStringBoundMap(buf));
-    }
-
-    private static void writeItemBoundMap(ByteBuf buf, Map<ItemStackWrapper, Long> amounts) {
-        buf.writeInt(amounts.size());
-        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(
-                buf,
-                entry.getKey()
-                    .toKey());
-            buf.writeLong(entry.getValue());
+    private static void writeSavedRecipeBounds(ByteBuf buf, SavedRecipeBounds bounds) {
+        if (bounds == null || bounds.isEmpty()) {
+            buf.writeByte(0);
+            return;
+        }
+        buf.writeByte(
+            bounds.entries()
+                .size());
+        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
+            buf.writeByte(
+                entry.kind()
+                    .ordinal());
+            buf.writeByte(entry.slotIndex());
+            buf.writeLong(entry.amount());
         }
     }
 
-    private static Map<ItemStackWrapper, Long> readItemBoundMap(ByteBuf buf) {
-        int size = readRecipeBoundMapSize(buf);
-        java.util.LinkedHashMap<ItemStackWrapper, Long> amounts = new java.util.LinkedHashMap<>();
+    private static SavedRecipeBounds readSavedRecipeBounds(ByteBuf buf) {
+        int size = Byte.toUnsignedInt(buf.readByte());
+        if (size == 0) return SavedRecipeBounds.empty();
+        if (size > SavedRecipeList.MAX_SAVED_RECIPES * 4) {
+            throw new IllegalArgumentException("invalid recipe bound count: " + size);
+        }
+        List<SavedRecipeBounds.Entry> entries = new ArrayList<>(size);
+        Kind[] kinds = Kind.values();
         for (int i = 0; i < size; i++) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
+            int kindOrdinal = Byte.toUnsignedInt(buf.readByte());
+            if (kindOrdinal >= kinds.length) throw new IllegalArgumentException("invalid recipe bound kind");
+            int slotIndex = Byte.toUnsignedInt(buf.readByte());
             long amount = buf.readLong();
-            if (item != null && amount >= 0L) amounts.put(item, amount);
+            entries.add(new SavedRecipeBounds.Entry(kinds[kindOrdinal], slotIndex, amount));
         }
-        return amounts;
-    }
-
-    private static void writeStringBoundMap(ByteBuf buf, Map<String, Long> amounts) {
-        buf.writeInt(amounts.size());
-        for (Map.Entry<String, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(buf, entry.getKey());
-            buf.writeLong(entry.getValue());
-        }
-    }
-
-    private static Map<String, Long> readStringBoundMap(ByteBuf buf) {
-        int size = readRecipeBoundMapSize(buf);
-        java.util.LinkedHashMap<String, Long> amounts = new java.util.LinkedHashMap<>();
-        for (int i = 0; i < size; i++) {
-            String key = PacketUtil.readString(buf);
-            long amount = buf.readLong();
-            if (!key.isBlank() && amount >= 0L) amounts.put(key, amount);
-        }
-        return amounts;
-    }
-
-    private static int readRecipeBoundMapSize(ByteBuf buf) {
-        int size = buf.readInt();
-        if (size < 0 || size > MAX_RECIPE_STACKS) {
-            throw new IllegalArgumentException("invalid recipe bound map size: " + size);
-        }
-        return size;
+        return new SavedRecipeBounds(entries);
     }
 
     private static String fluidName(FluidStack stack) {

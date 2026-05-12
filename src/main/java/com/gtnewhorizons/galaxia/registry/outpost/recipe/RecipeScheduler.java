@@ -9,21 +9,21 @@ public final class RecipeScheduler {
     public static int nextSlot(RecipeConfig config, Random random) {
         switch (config.mode()) {
             case PRIORITY:
-                return nextSlotPriority(config.slots());
+                return nextSlotPriority(config.savedRecipes());
             case ORDER:
                 return nextSlotOrder(config);
             case RANDOM:
-                return nextSlotRandom(config.slots(), random);
+                return nextSlotRandom(config.savedRecipes(), random);
             default:
                 return -1;
         }
     }
 
-    static int nextSlotPriority(RecipeSlotList slots) {
+    static int nextSlotPriority(SavedRecipeList slots) {
         int bestIndex = -1;
         byte bestPriority = -1;
         for (int i = 0; i < slots.size(); i++) {
-            RecipeSlot slot = slots.get(i);
+            SavedRecipe slot = slots.get(i);
             if (slot.enabled() && slot.priority() > bestPriority) {
                 bestIndex = i;
                 bestPriority = slot.priority();
@@ -35,7 +35,7 @@ public final class RecipeScheduler {
     static int nextSlotOrder(RecipeConfig config) {
         byte cursor = config.orderCursor();
         byte remaining = config.orderRemaining();
-        RecipeSlotList slots = config.slots();
+        SavedRecipeList slots = config.savedRecipes();
         int size = slots.size();
         if (size == 0) return -1;
 
@@ -47,13 +47,13 @@ public final class RecipeScheduler {
 
         for (int i = 1; i <= size; i++) {
             int idx = (cursor + i) % size;
-            RecipeSlot slot = slots.get(idx);
+            SavedRecipe slot = slots.get(idx);
             if (slot.enabled()) return idx;
         }
         return -1;
     }
 
-    static int nextSlotRandom(RecipeSlotList slots, Random random) {
+    static int nextSlotRandom(SavedRecipeList slots, Random random) {
         int size = slots.size();
         // Build the list of enabled indices in one pass
         int[] enabled = new int[size];
@@ -69,7 +69,7 @@ public final class RecipeScheduler {
     public static RecipeConfig advanceOrder(RecipeConfig config) {
         byte remaining = config.orderRemaining();
         byte cursor = config.orderCursor();
-        RecipeSlotList slots = config.slots();
+        SavedRecipeList slots = config.savedRecipes();
         int size = slots.size();
         if (size == 0) return config;
 
@@ -79,7 +79,7 @@ public final class RecipeScheduler {
 
         for (int i = 1; i <= size; i++) {
             int idx = (cursor + i) % size;
-            RecipeSlot slot = slots.get(idx);
+            SavedRecipe slot = slots.get(idx);
             if (slot.enabled()) {
                 return new RecipeConfig(slots, config.mode(), config.notDoablePolicy(), (byte) idx, slot.orderSize());
             }

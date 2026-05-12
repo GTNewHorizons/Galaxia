@@ -160,7 +160,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             lineY += SECTION_GAP;
             RecipeConfig cfg = recipeModule.getRecipeConfig();
             int slots = cfg == null ? 0
-                : cfg.slots()
+                : cfg.savedRecipes()
                     .toList()
                     .size();
             lineY = drawLine(

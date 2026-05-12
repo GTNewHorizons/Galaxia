@@ -15,9 +15,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 
 public final class ProductionModuleHelper {
 
@@ -34,10 +34,10 @@ public final class ProductionModuleHelper {
         int slotIdx = recipeModule.getNextSlot(random);
         if (slotIdx < 0) return;
 
-        RecipeSlot slot = config.slots()
+        SavedRecipe slot = config.savedRecipes()
             .get(slotIdx);
         RecipeSnapshot recipe = slot.recipe();
-        RecipeSlotBounds bounds = slot.bounds();
+        SavedRecipeBounds bounds = slot.bounds();
 
         AutomatedFacilityInventory inv = outpost.inventory;
         ItemStack[] inputs = recipe.inputs();
@@ -50,29 +50,21 @@ public final class ProductionModuleHelper {
         ItemStackWrapper[] inputWrappers = cachedWrappers(inputWrapperCache, recipe, inputs);
 
         Map<ItemStackWrapper, Long> requiredInputs = requiredInputs(inputWrappers, inputs);
-        if (!inv.keepsItemLowerBoundsAfterConsume(requiredInputs, bounds)) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
-
         Map<String, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
-        if (!inv.keepsFluidLowerBoundsAfterConsume(requiredFluidInputs, bounds)) {
+        if (!hasRequiredInputs(inv, requiredInputs, requiredFluidInputs)
+            || !allowsInputs(inv, bounds, inputWrappers, inputs, requiredInputs, fluidInputs, requiredFluidInputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
 
         ItemStackWrapper[] outputWrappers = cachedWrappers(outputWrapperCache, recipe, outputs);
-        Map<ItemStackWrapper, Long> selectedOutputs = selectedOutputs(outputWrappers, outputs, outputChances, random);
-        Map<String, Long> selectedFluidOutputs = selectedFluidOutputs(fluidOutputs, fluidOutputChances, random);
-        if (!allowsItemOutputs(inv, selectedOutputs, bounds)) {
+        SelectedItemOutputs selectedItemOutputs = selectedOutputs(outputWrappers, outputs, outputChances, random);
+        SelectedFluidOutputs selectedFluidOutputs = selectedFluidOutputs(fluidOutputs, fluidOutputChances, random);
+        if (!allowsOutputs(inv, bounds, outputWrappers, selectedItemOutputs, selectedFluidOutputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
-        if (!allowsFluidOutputs(inv, selectedFluidOutputs, bounds)) {
-            advanceScheduler(config, recipeModule);
-            return;
-        }
-        if (!canFitSelectedItemOutputs(outpost, selectedOutputs, requiredInputs)) {
+        if (!canFitSelectedItemOutputs(outpost, selectedItemOutputs.totals(), requiredInputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
@@ -90,12 +82,14 @@ public final class ProductionModuleHelper {
         }
 
         // Produce outputs
-        for (Map.Entry<ItemStackWrapper, Long> e : selectedOutputs.entrySet()) {
+        for (Map.Entry<ItemStackWrapper, Long> e : selectedItemOutputs.totals()
+            .entrySet()) {
             outpost.insertInventory(e.getKey(), e.getValue());
         }
 
         if (fluidOutputs != null) {
-            for (Map.Entry<String, Long> e : selectedFluidOutputs.entrySet()) {
+            for (Map.Entry<String, Long> e : selectedFluidOutputs.totals()
+                .entrySet()) {
                 inv.addFluid(e.getKey(), e.getValue());
             }
         }
@@ -150,9 +144,15 @@ public final class ProductionModuleHelper {
         return total;
     }
 
-    private static boolean allowsItemOutputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> outputs,
-        RecipeSlotBounds bounds) {
-        return inv.acceptsItemUpperBoundsAfterInsert(outputs, bounds);
+    private static boolean hasRequiredInputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> itemInputs,
+        Map<String, Long> fluidInputs) {
+        for (Map.Entry<ItemStackWrapper, Long> entry : itemInputs.entrySet()) {
+            if (inv.getAmount(entry.getKey()) < entry.getValue()) return false;
+        }
+        for (Map.Entry<String, Long> entry : fluidInputs.entrySet()) {
+            if (inv.getFluidAmount(entry.getKey()) < entry.getValue()) return false;
+        }
+        return true;
     }
 
     private static boolean canFitSelectedItemOutputs(AutomatedFacility outpost, Map<ItemStackWrapper, Long> outputs,
@@ -163,34 +163,94 @@ public final class ProductionModuleHelper {
         return usedAfterInputs + outputAmount <= outpost.itemInventoryCapacity();
     }
 
-    private static boolean allowsFluidOutputs(AutomatedFacilityInventory inv, Map<String, Long> outputs,
-        RecipeSlotBounds bounds) {
-        return inv.acceptsFluidUpperBoundsAfterInsert(outputs, bounds);
+    private static boolean allowsInputs(AutomatedFacilityInventory inv, SavedRecipeBounds bounds,
+        ItemStackWrapper[] inputWrappers, ItemStack[] inputs, Map<ItemStackWrapper, Long> requiredInputs,
+        FluidStack[] fluidInputs, Map<String, Long> requiredFluidInputs) {
+        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
+            switch (entry.kind()) {
+                case INPUT_ITEM_LOWER -> {
+                    ItemStackWrapper item = wrapperAt(inputWrappers, entry.slotIndex());
+                    if (item == null) return false;
+                    long consumed = requiredInputs.getOrDefault(item, 0L);
+                    if (!inv.keepsItemLowerBoundAfterConsume(item, consumed, entry.amount())) return false;
+                }
+                case INPUT_FLUID_LOWER -> {
+                    String fluidName = fluidNameAt(fluidInputs, entry.slotIndex());
+                    if (fluidName == null) return false;
+                    long consumed = requiredFluidInputs.getOrDefault(fluidName, 0L);
+                    if (!inv.keepsFluidLowerBoundAfterConsume(fluidName, consumed, entry.amount())) return false;
+                }
+                case OUTPUT_ITEM_UPPER, OUTPUT_FLUID_UPPER -> {}
+            }
+        }
+        return true;
     }
 
-    private static Map<ItemStackWrapper, Long> selectedOutputs(ItemStackWrapper[] wrappers, ItemStack[] stacks,
-        int[] chances, Random random) {
-        if (stacks == null || stacks.length == 0) return Map.of();
+    private static boolean allowsOutputs(AutomatedFacilityInventory inv, SavedRecipeBounds bounds,
+        ItemStackWrapper[] outputWrappers, SelectedItemOutputs selectedItemOutputs,
+        SelectedFluidOutputs selectedFluidOutputs) {
+        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
+            switch (entry.kind()) {
+                case OUTPUT_ITEM_UPPER -> {
+                    ItemStackWrapper item = wrapperAt(outputWrappers, entry.slotIndex());
+                    if (item == null) return false;
+                    long inserted = selectedItemOutputs.totals()
+                        .getOrDefault(item, 0L);
+                    if (inserted <= 0L) continue;
+                    if (!inv.acceptsItemUpperBoundAfterInsert(item, inserted, entry.amount())) return false;
+                }
+                case OUTPUT_FLUID_UPPER -> {
+                    String fluidName = selectedFluidOutputs.slotFluidName(entry.slotIndex());
+                    if (fluidName == null) return false;
+                    long inserted = selectedFluidOutputs.totals()
+                        .getOrDefault(fluidName, 0L);
+                    if (inserted <= 0L) continue;
+                    if (!inv.acceptsFluidUpperBoundAfterInsert(fluidName, inserted, entry.amount())) return false;
+                }
+                case INPUT_ITEM_LOWER, INPUT_FLUID_LOWER -> {}
+            }
+        }
+        return true;
+    }
+
+    private static SelectedItemOutputs selectedOutputs(ItemStackWrapper[] wrappers, ItemStack[] stacks, int[] chances,
+        Random random) {
+        if (stacks == null || stacks.length == 0) return SelectedItemOutputs.empty();
         Map<ItemStackWrapper, Long> selected = new HashMap<>();
+        long[] slotAmounts = new long[stacks.length];
         for (int i = 0; i < wrappers.length && i < stacks.length; i++) {
             if (wrappers[i] == null || stacks[i] == null || stacks[i].stackSize <= 0) continue;
             if (!shouldProduceOutput(chances, i, random)) continue;
+            slotAmounts[i] = stacks[i].stackSize;
             selected.merge(wrappers[i], (long) stacks[i].stackSize, Long::sum);
         }
-        return selected.isEmpty() ? Map.of() : selected;
+        return new SelectedItemOutputs(selected.isEmpty() ? Map.of() : selected, slotAmounts);
     }
 
-    private static Map<String, Long> selectedFluidOutputs(FluidStack[] stacks, int[] chances, Random random) {
-        if (stacks == null || stacks.length == 0) return Map.of();
+    private static SelectedFluidOutputs selectedFluidOutputs(FluidStack[] stacks, int[] chances, Random random) {
+        if (stacks == null || stacks.length == 0) return SelectedFluidOutputs.empty();
         Map<String, Long> selected = new HashMap<>();
+        String[] slotFluidNames = new String[stacks.length];
+        long[] slotAmounts = new long[stacks.length];
         for (int i = 0; i < stacks.length; i++) {
             FluidStack stack = stacks[i];
             String fluidName = fluidName(stack);
             if (fluidName == null || stack.amount <= 0) continue;
             if (!shouldProduceOutput(chances, i, random)) continue;
+            slotFluidNames[i] = fluidName;
+            slotAmounts[i] = stack.amount;
             selected.merge(fluidName, (long) stack.amount, Long::sum);
         }
-        return selected.isEmpty() ? Map.of() : selected;
+        return new SelectedFluidOutputs(selected.isEmpty() ? Map.of() : selected, slotFluidNames, slotAmounts);
+    }
+
+    private static ItemStackWrapper wrapperAt(ItemStackWrapper[] wrappers, int index) {
+        return index >= 0 && index < wrappers.length ? wrappers[index] : null;
+    }
+
+    private static String fluidNameAt(FluidStack[] stacks, int index) {
+        if (stacks == null || index < 0 || index >= stacks.length) return null;
+        return fluidName(stacks[index]);
     }
 
     private static boolean shouldProduceOutput(int[] chances, int index, Random random) {
@@ -220,6 +280,32 @@ public final class ProductionModuleHelper {
             } catch (ReflectiveOperationException e) {
                 return null;
             }
+        }
+    }
+
+    private record SelectedItemOutputs(Map<ItemStackWrapper, Long> totals, long[] slotAmounts) {
+
+        private static SelectedItemOutputs empty() {
+            return new SelectedItemOutputs(Map.of(), new long[0]);
+        }
+
+        private long slotAmount(int slotIndex) {
+            return slotIndex >= 0 && slotIndex < slotAmounts.length ? slotAmounts[slotIndex] : 0L;
+        }
+    }
+
+    private record SelectedFluidOutputs(Map<String, Long> totals, String[] slotFluidNames, long[] slotAmounts) {
+
+        private static SelectedFluidOutputs empty() {
+            return new SelectedFluidOutputs(Map.of(), new String[0], new long[0]);
+        }
+
+        private String slotFluidName(int slotIndex) {
+            return slotIndex >= 0 && slotIndex < slotFluidNames.length ? slotFluidNames[slotIndex] : null;
+        }
+
+        private long slotAmount(int slotIndex) {
+            return slotIndex >= 0 && slotIndex < slotAmounts.length ? slotAmounts[slotIndex] : 0L;
         }
     }
 }

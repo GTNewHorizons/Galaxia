@@ -39,10 +39,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -78,10 +78,10 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotAdd_encodeDecode_roundTrip() {
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 42, 12345L),
             true,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 5,
             (byte) 8);
         AssetModuleUpdatePacket original = AssetModuleUpdatePacket.recipeSlotPayload(
@@ -128,7 +128,7 @@ final class AssetModuleUpdatePacketTest {
         Item itemOutput = new Item();
         FluidStack fluidInput = fluidStack("galaxia_packet_input_fluid", 144);
         FluidStack fluidOutput = fluidStack("galaxia_packet_output_fluid", 72);
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipe slot = new SavedRecipe(
             new RecipeSnapshot(
                 (byte) 1,
                 42,
@@ -142,7 +142,7 @@ final class AssetModuleUpdatePacketTest {
                 200,
                 512),
             true,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 5,
             (byte) 8);
 
@@ -227,10 +227,10 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotUpdate_encodeDecode_roundTrip() {
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 2, 7, 999L),
             false,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 1,
             (byte) 3);
         AssetModuleUpdatePacket original = AssetModuleUpdatePacket.recipeSlotPayload(
@@ -980,11 +980,11 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void applyRecipeSlotMutation_addOnEmptyList_appendsAtZero() {
-        RecipeSlotList slots = new RecipeSlotList();
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipeList slots = new SavedRecipeList();
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 0, 1L),
             true,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 1,
             (byte) 1);
 
@@ -998,11 +998,11 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void applyRecipeSlotMutation_addWithGapIndexIsRejected() {
-        RecipeSlotList slots = new RecipeSlotList();
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipeList slots = new SavedRecipeList();
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 0, 1L),
             true,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 1,
             (byte) 1);
 
@@ -1015,11 +1015,11 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void applyRecipeSlotMutation_updateMissingSlotIsRejected() {
-        RecipeSlotList slots = new RecipeSlotList();
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipeList slots = new SavedRecipeList();
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 0, 1L),
             true,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 1,
             (byte) 1);
 
@@ -1035,8 +1035,8 @@ final class AssetModuleUpdatePacketTest {
         RecipeSnapshot existingRecipe = RecipeSnapshot.unresolved((byte) 1, 0, 1L);
         RecipeSnapshot clientRecipe = RecipeSnapshot.unresolved((byte) 2, 7, 999L);
         RecipeConfig config = RecipeConfig.empty();
-        config.slots()
-            .add(new RecipeSlot(existingRecipe, true, RecipeSlotBounds.empty(), (byte) 1, (byte) 1));
+        config.savedRecipes()
+            .add(new SavedRecipe(existingRecipe, true, SavedRecipeBounds.empty(), (byte) 1, (byte) 1));
 
         RecipeSnapshot resolved = AssetModuleUpdatePacket.recipeForSlotMutation(
             AssetModuleUpdatePacket.ConfigAction.UPDATE_RECIPE_SLOT,
@@ -1062,10 +1062,7 @@ final class AssetModuleUpdatePacketTest {
     }
 
     private static void assertEmptyBounds(ByteBuf payloadBuf) {
-        assertEquals(0, payloadBuf.readInt()); // input item lower bounds
-        assertEquals(0, payloadBuf.readInt()); // output item upper bounds
-        assertEquals(0, payloadBuf.readInt()); // input fluid lower bounds
-        assertEquals(0, payloadBuf.readInt()); // output fluid upper bounds
+        assertEquals(0, Byte.toUnsignedInt(payloadBuf.readByte()));
     }
 
     private static AutomatedFacility addHammerFacilityToServer(ModuleTier tier) {

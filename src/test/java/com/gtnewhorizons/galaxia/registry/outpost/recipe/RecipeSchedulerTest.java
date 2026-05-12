@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test;
 
 final class RecipeSchedulerTest {
 
-    private static RecipeSlot slot(boolean enabled, byte priority, byte orderSize) {
-        return new RecipeSlot(
+    private static SavedRecipe slot(boolean enabled, byte priority, byte orderSize) {
+        return new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 0, 42L),
             enabled,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             priority,
             orderSize);
     }
@@ -21,7 +21,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotPriority_returnsHighestPriority() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 1, (byte) 1));
         slots.add(slot(true, (byte) 5, (byte) 1));
         slots.add(slot(true, (byte) 3, (byte) 1));
@@ -31,7 +31,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotPriority_returnsNegativeOne_whenAllDisabled() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(false, (byte) 1, (byte) 1));
         slots.add(slot(false, (byte) 5, (byte) 1));
         assertEquals(-1, RecipeScheduler.nextSlotPriority(slots));
@@ -39,7 +39,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotPriority_returnsNegativeOne_whenEmpty() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         assertEquals(-1, RecipeScheduler.nextSlotPriority(slots));
     }
 
@@ -47,7 +47,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotOrder_returnsCurrentCursor_whenRemainingGreaterThanZero() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5));
         slots.add(slot(true, (byte) 0, (byte) 3));
         RecipeConfig config = new RecipeConfig(
@@ -62,7 +62,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotOrder_findsNextEnabledSlot_afterCursor_whenRemainingExhausted() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0
         slots.add(slot(true, (byte) 0, (byte) 3)); // index 1
         slots.add(slot(true, (byte) 0, (byte) 2)); // index 2
@@ -79,7 +79,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotOrder_wrapsAround_whenAtEnd() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0
         slots.add(slot(true, (byte) 0, (byte) 3)); // index 1
         // cursor=1, remaining=0 → next enabled after 1 wraps to 0
@@ -95,7 +95,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotOrder_skipsDisabledSlots() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0 - enabled
         slots.add(slot(false, (byte) 0, (byte) 3)); // index 1 - disabled
         slots.add(slot(true, (byte) 0, (byte) 2)); // index 2 - enabled
@@ -112,7 +112,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotOrder_returnsNegativeOne_whenNoEnabledSlots() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(false, (byte) 0, (byte) 5));
         RecipeConfig config = new RecipeConfig(
             slots,
@@ -127,7 +127,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotRandom_returnsIndexWithinEnabledSlots() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(false, (byte) 0, (byte) 1)); // index 0 - disabled
         slots.add(slot(true, (byte) 0, (byte) 1)); // index 1 - enabled
         slots.add(slot(true, (byte) 0, (byte) 1)); // index 2 - enabled
@@ -141,20 +141,20 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlotRandom_returnsNegativeOne_whenNoEnabledSlots() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(false, (byte) 0, (byte) 1));
         assertEquals(-1, RecipeScheduler.nextSlotRandom(slots, new Random(42)));
     }
 
     @Test
     void nextSlotRandom_returnsNegativeOne_whenEmpty() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         assertEquals(-1, RecipeScheduler.nextSlotRandom(slots, new Random(42)));
     }
 
     @Test
     void nextSlotRandom_returnsSpecificSlot_whenOnlyOneEnabled() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 1));
         int idx = RecipeScheduler.nextSlotRandom(slots, new Random(42));
         assertEquals(0, idx, "only one enabled slot, must be selected");
@@ -164,7 +164,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlot_dispatchesToPriority() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 1, (byte) 1));
         slots.add(slot(true, (byte) 5, (byte) 1));
         RecipeConfig config = new RecipeConfig(
@@ -178,7 +178,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlot_dispatchesToOrder() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5));
         slots.add(slot(true, (byte) 0, (byte) 3));
         RecipeConfig config = new RecipeConfig(
@@ -192,7 +192,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlot_dispatchesToRandom() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 1));
         slots.add(slot(true, (byte) 0, (byte) 1));
         // We use a deterministic Random but we can't predict which index;
@@ -205,7 +205,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void nextSlot_returnsNegativeOne_forEmptySlotsRegardlessOfMode() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         for (RecipeSchedulerMode mode : RecipeSchedulerMode.values()) {
             RecipeConfig config = new RecipeConfig(slots, mode, NotDoablePolicy.SKIP, (byte) 0, (byte) 0);
             assertEquals(
@@ -219,7 +219,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void advanceOrder_advancesCursor() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0
         slots.add(slot(true, (byte) 0, (byte) 3)); // index 1
         slots.add(slot(true, (byte) 0, (byte) 2)); // index 2
@@ -236,7 +236,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void advanceOrder_wrapsAround() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0
         slots.add(slot(true, (byte) 0, (byte) 3)); // index 1
         RecipeConfig config = new RecipeConfig(
@@ -252,7 +252,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void advanceOrder_skipsDisabledSlots() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0 - enabled
         slots.add(slot(false, (byte) 0, (byte) 3)); // index 1 - disabled
         slots.add(slot(true, (byte) 0, (byte) 2)); // index 2 - enabled
@@ -268,7 +268,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void advanceOrder_returnsSameConfig_whenNoEnabledSlots() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(false, (byte) 0, (byte) 5));
         RecipeConfig config = new RecipeConfig(
             slots,
@@ -282,7 +282,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void advanceOrder_staysOnOnlyEnabledSlot() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 5)); // index 0 - only enabled
         RecipeConfig config = new RecipeConfig(
             slots,
@@ -297,7 +297,7 @@ final class RecipeSchedulerTest {
 
     @Test
     void advanceOrder_decrementsRemaining_runsOrderSizeTimes() {
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(slot(true, (byte) 0, (byte) 3)); // orderSize=3
         RecipeConfig config = new RecipeConfig(
             slots,

@@ -10,18 +10,18 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
 
 final class RecipeSlotUiModelTest {
 
     @Test
     void unresolvedRecipeFallsBackToRecipeIndex() {
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 7, 42L),
             true,
-            RecipeSlotBounds.empty(),
+            SavedRecipeBounds.empty(),
             (byte) 1,
             (byte) 1);
 

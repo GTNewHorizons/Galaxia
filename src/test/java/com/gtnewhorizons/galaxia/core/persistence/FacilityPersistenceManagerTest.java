@@ -59,10 +59,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -1260,7 +1261,7 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void recipeSlotSnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
+    void savedRecipesnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -1294,14 +1295,14 @@ final class FacilityPersistenceManagerTest {
             fluidOutputChances,
             320,
             480);
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(
-            new RecipeSlot(
+            new SavedRecipe(
                 snapshot,
                 true,
-                RecipeSlotBounds.empty()
-                    .withInputFluidLowerBound("galaxia.persistence.input", 11)
-                    .withOutputFluidUpperBound("galaxia.persistence.output", 22),
+                SavedRecipeBounds.empty()
+                    .withBound(Kind.INPUT_FLUID_LOWER, 0, 11)
+                    .withBound(Kind.OUTPUT_FLUID_UPPER, 0, 22),
                 (byte) 3,
                 (byte) 4));
         recipeModule.setRecipeConfig(
@@ -1322,7 +1323,7 @@ final class FacilityPersistenceManagerTest {
             .orElseThrow();
         RecipeConfig decodedConfig = ((IRecipeModule) decodedMacerator.component()).getRecipeConfig();
         assertNotNull(decodedConfig);
-        RecipeSlot decodedSlot = decodedConfig.slots()
+        SavedRecipe decodedSlot = decodedConfig.savedRecipes()
             .get(0);
         RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
         assertEquals(320, decodedSnapshot.duration());
@@ -1337,11 +1338,11 @@ final class FacilityPersistenceManagerTest {
         assertEquals(
             11,
             decodedSlot.bounds()
-                .inputFluidLowerBound("galaxia.persistence.input"));
+                .boundOrDefault(Kind.INPUT_FLUID_LOWER, 0));
         assertEquals(
             22,
             decodedSlot.bounds()
-                .outputFluidUpperBound("galaxia.persistence.output"));
+                .boundOrDefault(Kind.OUTPUT_FLUID_UPPER, 0));
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
     }

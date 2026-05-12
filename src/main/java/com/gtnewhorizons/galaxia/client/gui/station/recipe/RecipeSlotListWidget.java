@@ -12,7 +12,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 public class RecipeSlotListWidget extends ParentWidget<RecipeSlotListWidget> {
 
@@ -68,7 +68,7 @@ public class RecipeSlotListWidget extends ParentWidget<RecipeSlotListWidget> {
                 TEXT_COLOR);
             y += fr.FONT_HEIGHT + LINE_GAP;
 
-            List<RecipeSlot> slots = config.slots()
+            List<SavedRecipe> slots = config.savedRecipes()
                 .toList();
             if (slots.isEmpty()) {
                 fr.drawStringWithShadow("No recipe slots configured", x, y, MUTED_COLOR);
@@ -78,7 +78,7 @@ public class RecipeSlotListWidget extends ParentWidget<RecipeSlotListWidget> {
                 y += fr.FONT_HEIGHT + LINE_GAP;
 
                 int slotIdx = 0;
-                for (RecipeSlot slot : slots) {
+                for (SavedRecipe slot : slots) {
                     int maxWidth = width - 4;
                     fr.drawStringWithShadow("#" + slotIdx + "  ", x, y, TEXT_COLOR);
                     int cx = x + fr.getStringWidth("#" + slotIdx + "  ");

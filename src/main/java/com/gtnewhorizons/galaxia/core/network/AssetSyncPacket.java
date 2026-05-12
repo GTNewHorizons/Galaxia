@@ -49,10 +49,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -723,60 +724,39 @@ public final class AssetSyncPacket implements IMessage {
         return size;
     }
 
-    private static void writeRecipeSlotBounds(ByteBuf buf, RecipeSlotBounds bounds) {
-        writeItemBoundMap(buf, bounds.inputItemLowerBounds());
-        writeItemBoundMap(buf, bounds.outputItemUpperBounds());
-        writeStringBoundMap(buf, bounds.inputFluidLowerBounds());
-        writeStringBoundMap(buf, bounds.outputFluidUpperBounds());
-    }
-
-    private static RecipeSlotBounds readRecipeSlotBounds(ByteBuf buf) {
-        return new RecipeSlotBounds(
-            readItemBoundMap(buf),
-            readItemBoundMap(buf),
-            readStringBoundMap(buf),
-            readStringBoundMap(buf));
-    }
-
-    private static void writeItemBoundMap(ByteBuf buf, Map<ItemStackWrapper, Long> amounts) {
-        buf.writeInt(amounts.size());
-        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(
-                buf,
-                entry.getKey()
-                    .toKey());
-            buf.writeLong(entry.getValue());
+    private static void writeSavedRecipeBounds(ByteBuf buf, SavedRecipeBounds bounds) {
+        if (bounds == null || bounds.isEmpty()) {
+            buf.writeByte(0);
+            return;
+        }
+        buf.writeByte(
+            bounds.entries()
+                .size());
+        for (SavedRecipeBounds.Entry entry : bounds.entries()) {
+            buf.writeByte(
+                entry.kind()
+                    .ordinal());
+            buf.writeByte(entry.slotIndex());
+            buf.writeLong(entry.amount());
         }
     }
 
-    private static Map<ItemStackWrapper, Long> readItemBoundMap(ByteBuf buf) {
-        int size = readOperationMapSize(buf);
-        Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
+    private static SavedRecipeBounds readSavedRecipeBounds(ByteBuf buf) {
+        int size = Byte.toUnsignedInt(buf.readByte());
+        if (size == 0) return SavedRecipeBounds.empty();
+        if (size > SavedRecipeList.MAX_SAVED_RECIPES * 4) {
+            throw new IllegalStateException("Invalid saved recipe bound count: " + size);
+        }
+        List<SavedRecipeBounds.Entry> entries = new ArrayList<>(size);
+        Kind[] kinds = Kind.values();
         for (int i = 0; i < size; i++) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
+            int kindOrdinal = Byte.toUnsignedInt(buf.readByte());
+            if (kindOrdinal >= kinds.length) throw new IllegalStateException("Invalid saved recipe bound kind");
+            int slotIndex = Byte.toUnsignedInt(buf.readByte());
             long amount = buf.readLong();
-            if (item != null && amount >= 0L) amounts.put(item, amount);
+            entries.add(new SavedRecipeBounds.Entry(kinds[kindOrdinal], slotIndex, amount));
         }
-        return amounts;
-    }
-
-    private static void writeStringBoundMap(ByteBuf buf, Map<String, Long> amounts) {
-        buf.writeInt(amounts.size());
-        for (Map.Entry<String, Long> entry : amounts.entrySet()) {
-            PacketUtil.writeString(buf, entry.getKey());
-            buf.writeLong(entry.getValue());
-        }
-    }
-
-    private static Map<String, Long> readStringBoundMap(ByteBuf buf) {
-        int size = readOperationMapSize(buf);
-        Map<String, Long> amounts = new LinkedHashMap<>();
-        for (int i = 0; i < size; i++) {
-            String key = PacketUtil.readString(buf);
-            long amount = buf.readLong();
-            if (!key.isBlank() && amount >= 0L) amounts.put(key, amount);
-        }
-        return amounts;
+        return new SavedRecipeBounds(entries);
     }
 
     private static void writeRecipeSnapshot(ByteBuf buf, RecipeSnapshot snapshot) {
@@ -963,17 +943,17 @@ public final class AssetSyncPacket implements IMessage {
         buf.writeByte(config.orderCursor());
         buf.writeByte(config.orderRemaining());
 
-        List<RecipeSlot> slots = config.slots()
+        List<SavedRecipe> slots = config.savedRecipes()
             .toList();
         buf.writeByte(slots.size());
-        for (RecipeSlot slot : slots) {
+        for (SavedRecipe slot : slots) {
             RecipeSnapshot snap = slot.recipe();
             buf.writeByte(snap.recipeMapOrdinal());
             buf.writeInt(snap.recipeIndex());
             buf.writeLong(snap.contentHash());
             writeRecipeSnapshot(buf, snap);
             buf.writeBoolean(slot.enabled());
-            writeRecipeSlotBounds(buf, slot.bounds());
+            writeSavedRecipeBounds(buf, slot.bounds());
             buf.writeByte(slot.priority());
             buf.writeByte(slot.orderSize());
         }
@@ -995,9 +975,9 @@ public final class AssetSyncPacket implements IMessage {
         NotDoablePolicy policy = policies[policyOrd];
 
         int slotCount = Byte.toUnsignedInt(buf.readByte());
-        if (slotCount < 0 || slotCount > RecipeSlotList.MAX_RECIPE_SLOTS) return;
+        if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return;
 
-        RecipeConfig config = new RecipeConfig(new RecipeSlotList(), mode, policy, orderCursor, orderRemaining);
+        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
 
         for (int i = 0; i < slotCount; i++) {
             byte mapOrdinal = buf.readByte();
@@ -1005,12 +985,12 @@ public final class AssetSyncPacket implements IMessage {
             long contentHash = buf.readLong();
             RecipeSnapshot snapshot = readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash);
             boolean enabled = buf.readBoolean();
-            RecipeSlotBounds bounds = readRecipeSlotBounds(buf);
+            SavedRecipeBounds bounds = readSavedRecipeBounds(buf);
             byte priority = buf.readByte();
             byte orderSize = buf.readByte();
 
-            RecipeSlot slot = new RecipeSlot(snapshot, enabled, bounds, priority, orderSize);
-            config.slots()
+            SavedRecipe slot = new SavedRecipe(snapshot, enabled, bounds, priority, orderSize);
+            config.savedRecipes()
                 .add(slot);
         }
 

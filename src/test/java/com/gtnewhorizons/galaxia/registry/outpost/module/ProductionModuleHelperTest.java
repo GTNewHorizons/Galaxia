@@ -23,10 +23,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 
 import sun.misc.Unsafe;
 
@@ -48,13 +49,13 @@ final class ProductionModuleHelperTest {
 
         ItemStack[] inputs = { new ItemStack(inputItem, 2, 0), new ItemStack(inputItem, 4, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(
-            new RecipeSlot(
+            new SavedRecipe(
                 RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30),
                 true,
-                RecipeSlotBounds.empty()
-                    .withInputItemLowerBound(inputResource, 100),
+                SavedRecipeBounds.empty()
+                    .withBound(Kind.INPUT_ITEM_LOWER, 0, 100),
                 (byte) 1,
                 (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
@@ -78,13 +79,13 @@ final class ProductionModuleHelperTest {
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 4, 0), new ItemStack(outputItem, 5, 0) };
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(
-            new RecipeSlot(
+            new SavedRecipe(
                 RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30),
                 true,
-                RecipeSlotBounds.empty()
-                    .withOutputItemUpperBound(outputResource, 1000),
+                SavedRecipeBounds.empty()
+                    .withBound(Kind.OUTPUT_ITEM_UPPER, 0, 1000),
                 (byte) 1,
                 (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
@@ -94,6 +95,36 @@ final class ProductionModuleHelperTest {
 
         assertEquals(1, station.inventory.getAmount(inputResource));
         assertEquals(995, station.inventory.getAmount(outputResource));
+    }
+
+    @Test
+    void executeUsesCanonicalOutputBoundWhenDuplicateSecondSlotProduces() {
+        AutomatedFacility station = station();
+        Item inputItem = new Item();
+        Item outputItem = new Item();
+        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
+        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
+        station.inventory.add(inputResource, 1);
+        station.inventory.add(outputResource, 999);
+
+        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
+        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0), new ItemStack(outputItem, 2, 0) };
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(
+            new SavedRecipe(
+                RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, new int[] { 0, 10_000 }, 20, 30),
+                true,
+                SavedRecipeBounds.empty()
+                    .withBound(Kind.OUTPUT_ITEM_UPPER, 1, 1000),
+                (byte) 1,
+                (byte) 1));
+        StubRecipeModule module = new StubRecipeModule(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+
+        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
+
+        assertEquals(1, station.inventory.getAmount(inputResource));
+        assertEquals(999, station.inventory.getAmount(outputResource));
     }
 
     @Test
@@ -117,8 +148,8 @@ final class ProductionModuleHelperTest {
             fluidOutputs,
             20,
             30);
-        RecipeSlotList slots = new RecipeSlotList();
-        slots.add(new RecipeSlot(snapshot, true, RecipeSlotBounds.empty(), (byte) 1, (byte) 1));
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(new SavedRecipe(snapshot, true, SavedRecipeBounds.empty(), (byte) 1, (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
@@ -144,8 +175,8 @@ final class ProductionModuleHelperTest {
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0), new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
         RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
-        RecipeSlotList slots = new RecipeSlotList();
-        slots.add(new RecipeSlot(snapshot, true, RecipeSlotBounds.empty(), (byte) 1, (byte) 1));
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(new SavedRecipe(snapshot, true, SavedRecipeBounds.empty(), (byte) 1, (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
@@ -171,13 +202,13 @@ final class ProductionModuleHelperTest {
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
         RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(
-            new RecipeSlot(
+            new SavedRecipe(
                 snapshot,
                 true,
-                RecipeSlotBounds.empty()
-                    .withInputItemLowerBound(inputResource, 64),
+                SavedRecipeBounds.empty()
+                    .withBound(Kind.INPUT_ITEM_LOWER, 0, 64),
                 (byte) 1,
                 (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
@@ -335,12 +366,12 @@ final class ProductionModuleHelperTest {
     private static StubRecipeModule itemOutputModule(Item inputItem, Item outputItem, int outputSize,
         int outputUpperBound) {
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        RecipeSlotBounds bounds = outputUpperBound == Integer.MAX_VALUE ? RecipeSlotBounds.empty()
-            : RecipeSlotBounds.empty()
-                .withOutputItemUpperBound(outputResource, outputUpperBound);
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeBounds bounds = outputUpperBound == Integer.MAX_VALUE ? SavedRecipeBounds.empty()
+            : SavedRecipeBounds.empty()
+                .withBound(Kind.OUTPUT_ITEM_UPPER, 0, outputUpperBound);
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(
-            new RecipeSlot(
+            new SavedRecipe(
                 RecipeSnapshot.resolved(
                     (byte) 1,
                     0,
@@ -361,13 +392,13 @@ final class ProductionModuleHelperTest {
 
     private static StubRecipeModule fluidOutputModule(Item inputItem, FluidStack output, int outputUpperBound) {
         String outputFluidName = fluidName(output);
-        RecipeSlotBounds bounds = outputUpperBound == Integer.MAX_VALUE || outputFluidName == null
-            ? RecipeSlotBounds.empty()
-            : RecipeSlotBounds.empty()
-                .withOutputFluidUpperBound(outputFluidName, outputUpperBound);
-        RecipeSlotList slots = new RecipeSlotList();
+        SavedRecipeBounds bounds = outputUpperBound == Integer.MAX_VALUE || outputFluidName == null
+            ? SavedRecipeBounds.empty()
+            : SavedRecipeBounds.empty()
+                .withBound(Kind.OUTPUT_FLUID_UPPER, 0, outputUpperBound);
+        SavedRecipeList slots = new SavedRecipeList();
         slots.add(
-            new RecipeSlot(
+            new SavedRecipe(
                 RecipeSnapshot.resolved(
                     (byte) 1,
                     0,

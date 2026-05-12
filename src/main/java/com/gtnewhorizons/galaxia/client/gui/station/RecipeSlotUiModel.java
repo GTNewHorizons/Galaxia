@@ -8,8 +8,8 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 final class RecipeSlotUiModel {
 
@@ -32,7 +32,7 @@ final class RecipeSlotUiModel {
         return values[(current.ordinal() + 1) % values.length];
     }
 
-    static String slotTitle(RecipeSlot slot) {
+    static String slotTitle(SavedRecipe slot) {
         RecipeSnapshot recipe = slot.recipe();
         String input = resourceSummary(recipe.inputs(), recipe.fluidInputs());
         String output = resourceSummary(recipe.outputs(), recipe.fluidOutputs());

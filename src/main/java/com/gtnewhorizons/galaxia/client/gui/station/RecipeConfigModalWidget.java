@@ -39,9 +39,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeBounds.Kind;
 
 import gregtech.api.modularui2.GTGuiTextures;
 
@@ -201,7 +202,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         ModuleConfigModalSupport.drawLine(modeLabel(), 116, BODY_TOP, color);
         drawHeader(color);
 
-        List<RecipeSlot> slots = slots();
+        List<SavedRecipe> slots = slots();
         if (slots.isEmpty()) {
             ModuleConfigModalSupport
                 .drawLine("No recipes configured", ModuleConfigModalSupport.PANEL_PADDING, ROW_TOP, color);
@@ -234,7 +235,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         ModuleConfigModalSupport.drawLine("Size", ORDER_X + 6, y, color);
     }
 
-    private void drawSlotRow(int row, int slotIndex, RecipeSlot slot, int color) {
+    private void drawSlotRow(int row, int slotIndex, SavedRecipe slot, int color) {
         int y = ROW_TOP + row * ROW_HEIGHT + 6;
         ModuleConfigModalSupport.drawLine(Integer.toString(slotIndex + 1), SLOT_X, y, color);
         ModuleConfigModalSupport.drawTrimmedLine(
@@ -271,13 +272,13 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private String fieldText(int rowIndex, Field field) {
-        RecipeSlot slot = slotAtRow(rowIndex);
+        SavedRecipe slot = slotAtRow(rowIndex);
         if (slot == null) return "";
         return Integer.toString(field.value(slot));
     }
 
     private void setField(int rowIndex, Field field, String text) {
-        RecipeSlot slot = slotAtRow(rowIndex);
+        SavedRecipe slot = slotAtRow(rowIndex);
         if (slot == null) return;
         int value = RecipeSlotUiModel.parseIntOrCurrent(text, field.value(slot), field.min, field.max);
         updateSlot(rowIndex, field.updated(slot, value));
@@ -292,16 +293,16 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private String enabledLabel(int rowIndex) {
-        RecipeSlot slot = slotAtRow(rowIndex);
+        SavedRecipe slot = slotAtRow(rowIndex);
         return slot != null && slot.enabled() ? "On" : "Off";
     }
 
     private void toggleEnabled(int rowIndex) {
-        RecipeSlot slot = slotAtRow(rowIndex);
+        SavedRecipe slot = slotAtRow(rowIndex);
         if (slot == null) return;
         updateSlot(
             rowIndex,
-            new RecipeSlot(slot.recipe(), !slot.enabled(), slot.bounds(), slot.priority(), slot.orderSize()));
+            new SavedRecipe(slot.recipe(), !slot.enabled(), slot.bounds(), slot.priority(), slot.orderSize()));
     }
 
     private void openBounds(int rowIndex) {
@@ -329,13 +330,13 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         page = Math.min(page, maxPageAfterRemoval());
     }
 
-    private void updateSlot(int rowIndex, RecipeSlot slot) {
+    private void updateSlot(int rowIndex, SavedRecipe slot) {
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0) return;
         updateSlotIndex(slotIndex, slot);
     }
 
-    private void updateSlotIndex(int slotIndex, RecipeSlot slot) {
+    private void updateSlotIndex(int slotIndex, SavedRecipe slot) {
         if (slotIndex < 0) return;
         updateLocalSlot(slotIndex, slot);
         CelestialClient.updateModuleRecipeSlot(
@@ -346,11 +347,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             slot);
     }
 
-    private void updateLocalSlot(int slotIndex, RecipeSlot slot) {
+    private void updateLocalSlot(int slotIndex, SavedRecipe slot) {
         RecipeConfig config = selectedConfig();
-        if (config == null || slotIndex >= config.slots()
+        if (config == null || slotIndex >= config.savedRecipes()
             .size()) return;
-        config.slots()
+        config.savedRecipes()
             .set(slotIndex, slot);
     }
 
@@ -395,8 +396,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return boundsSlotIndex >= 0 && boundsSlotIndex < slots().size();
     }
 
-    private @Nullable RecipeSlot boundsSlot() {
-        List<RecipeSlot> slots = slots();
+    private @Nullable SavedRecipe boundsSlot() {
+        List<SavedRecipe> slots = slots();
         return boundsSlotIndex >= 0 && boundsSlotIndex < slots.size() ? slots.get(boundsSlotIndex) : null;
     }
 
@@ -427,7 +428,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private void drawBoundsView() {
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         if (slot == null) return;
         int color = EnumColors.MAP_COLOR_TEXT_BODY.getColor();
         ModuleConfigModalSupport.drawTrimmedLine(
@@ -505,26 +506,26 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             return;
         }
         amount = Math.max(0L, amount);
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         if (slot == null) return;
-        RecipeSlotBounds bounds = updateBound(slot.bounds(), selectedBoundTarget, amount);
+        SavedRecipeBounds bounds = updateBound(slot.bounds(), selectedBoundTarget, amount);
         boundAmountInput = Long.toString(amount);
         syncBoundAmountFieldText();
         updateSlotIndex(
             boundsSlotIndex,
-            new RecipeSlot(slot.recipe(), slot.enabled(), bounds, slot.priority(), slot.orderSize()));
+            new SavedRecipe(slot.recipe(), slot.enabled(), bounds, slot.priority(), slot.orderSize()));
     }
 
     private void clearSelectedBound() {
         if (!canClearSelectedBound()) return;
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         if (slot == null) return;
-        RecipeSlotBounds bounds = clearBound(slot.bounds(), selectedBoundTarget);
+        SavedRecipeBounds bounds = clearBound(slot.bounds(), selectedBoundTarget);
         boundAmountInput = "";
         syncBoundAmountFieldText();
         updateSlotIndex(
             boundsSlotIndex,
-            new RecipeSlot(slot.recipe(), slot.enabled(), bounds, slot.priority(), slot.orderSize()));
+            new SavedRecipe(slot.recipe(), slot.enabled(), bounds, slot.priority(), slot.orderSize()));
     }
 
     private String currentBoundAmountInput() {
@@ -540,63 +541,34 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private String currentBoundText(BoundTarget target) {
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         if (slot == null) return "";
-        RecipeSlotBounds bounds = slot.bounds();
-        return switch (target.resource()) {
-            case ITEM -> {
-                ItemStackWrapper item = itemKey(target);
-                if (item == null) yield "";
-                if (target.side() == BoundSide.INPUT && bounds.hasInputItemLowerBound(item)) {
-                    yield Long.toString(bounds.inputItemLowerBound(item));
-                }
-                if (target.side() == BoundSide.OUTPUT && bounds.hasOutputItemUpperBound(item)) {
-                    yield Long.toString(bounds.outputItemUpperBound(item));
-                }
-                yield "";
-            }
-            case FLUID -> {
-                String fluid = fluidName(target);
-                if (fluid == null) yield "";
-                if (target.side() == BoundSide.INPUT && bounds.hasInputFluidLowerBound(fluid)) {
-                    yield Long.toString(bounds.inputFluidLowerBound(fluid));
-                }
-                if (target.side() == BoundSide.OUTPUT && bounds.hasOutputFluidUpperBound(fluid)) {
-                    yield Long.toString(bounds.outputFluidUpperBound(fluid));
-                }
-                yield "";
-            }
-        };
+        SavedRecipeBounds bounds = slot.bounds();
+        Kind kind = boundKind(target);
+        return bounds.hasBound(slot.recipe(), kind, target.index())
+            ? Long.toString(bounds.boundOrDefault(slot.recipe(), kind, target.index()))
+            : "";
     }
 
     private boolean hasBound(BoundTarget target) {
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         if (slot == null) return false;
-        RecipeSlotBounds bounds = slot.bounds();
-        if (target.resource() == BoundResource.ITEM) {
-            ItemStackWrapper item = itemKey(target);
-            return item != null && (target.side() == BoundSide.INPUT ? bounds.hasInputItemLowerBound(item)
-                : bounds.hasOutputItemUpperBound(item));
-        }
-        String fluid = fluidName(target);
-        return fluid != null && (target.side() == BoundSide.INPUT ? bounds.hasInputFluidLowerBound(fluid)
-            : bounds.hasOutputFluidUpperBound(fluid));
+        return slot.bounds()
+            .hasBound(slot.recipe(), boundKind(target), target.index());
     }
 
     private boolean isBoundBlocking(BoundTarget target) {
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (slot == null || facility == null || !hasBound(target)) return false;
+        long bound = slot.bounds()
+            .boundOrDefault(slot.recipe(), boundKind(target), target.index());
         if (target.resource() == BoundResource.ITEM) {
             ItemStackWrapper item = itemKey(target);
             if (item == null) return false;
             long current = facility.inventory.getAmount(item);
             long recipeAmount = target.side() == BoundSide.INPUT ? itemInputAmount(slot.recipe(), item)
                 : itemOutputAmount(slot.recipe(), item);
-            long bound = target.side() == BoundSide.INPUT ? slot.bounds()
-                .inputItemLowerBound(item)
-                : slot.bounds()
-                    .outputItemUpperBound(item);
             return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current + recipeAmount > bound;
         }
         String fluid = fluidName(target);
@@ -604,37 +576,26 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         long current = facility.inventory.getFluidAmount(fluid);
         long recipeAmount = target.side() == BoundSide.INPUT ? fluidInputAmount(slot.recipe(), fluid)
             : fluidOutputAmount(slot.recipe(), fluid);
-        long bound = target.side() == BoundSide.INPUT ? slot.bounds()
-            .inputFluidLowerBound(fluid)
-            : slot.bounds()
-                .outputFluidUpperBound(fluid);
         return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current + recipeAmount > bound;
     }
 
-    private RecipeSlotBounds updateBound(RecipeSlotBounds bounds, BoundTarget target, long amount) {
-        if (target.resource() == BoundResource.ITEM) {
-            ItemStackWrapper item = itemKey(target);
-            if (item == null) return bounds;
-            return target.side() == BoundSide.INPUT ? bounds.withInputItemLowerBound(item, amount)
-                : bounds.withOutputItemUpperBound(item, amount);
-        }
-        String fluid = fluidName(target);
-        if (fluid == null) return bounds;
-        return target.side() == BoundSide.INPUT ? bounds.withInputFluidLowerBound(fluid, amount)
-            : bounds.withOutputFluidUpperBound(fluid, amount);
+    private SavedRecipeBounds updateBound(SavedRecipeBounds bounds, BoundTarget target, long amount) {
+        SavedRecipe slot = boundsSlot();
+        return canUseBoundTarget(target) && slot != null
+            ? bounds.withBound(slot.recipe(), boundKind(target), target.index(), amount)
+            : bounds;
     }
 
-    private RecipeSlotBounds clearBound(RecipeSlotBounds bounds, BoundTarget target) {
-        if (target.resource() == BoundResource.ITEM) {
-            ItemStackWrapper item = itemKey(target);
-            if (item == null) return bounds;
-            return target.side() == BoundSide.INPUT ? bounds.withoutInputItemLowerBound(item)
-                : bounds.withoutOutputItemUpperBound(item);
-        }
-        String fluid = fluidName(target);
-        if (fluid == null) return bounds;
-        return target.side() == BoundSide.INPUT ? bounds.withoutInputFluidLowerBound(fluid)
-            : bounds.withoutOutputFluidUpperBound(fluid);
+    private SavedRecipeBounds clearBound(SavedRecipeBounds bounds, BoundTarget target) {
+        SavedRecipe slot = boundsSlot();
+        return slot != null ? bounds.withoutBound(slot.recipe(), boundKind(target), target.index()) : bounds;
+    }
+
+    private static Kind boundKind(BoundTarget target) {
+        return switch (target.resource()) {
+            case ITEM -> target.side() == BoundSide.INPUT ? Kind.INPUT_ITEM_LOWER : Kind.OUTPUT_ITEM_UPPER;
+            case FLUID -> target.side() == BoundSide.INPUT ? Kind.INPUT_FLUID_LOWER : Kind.OUTPUT_FLUID_UPPER;
+        };
     }
 
     private String boundDescription(BoundTarget target) {
@@ -652,11 +613,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private @Nullable ItemStack itemStack(BoundTarget target) {
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         return slot != null ? itemStack(slot, target) : null;
     }
 
-    private @Nullable ItemStack itemStack(RecipeSlot slot, BoundTarget target) {
+    private @Nullable ItemStack itemStack(SavedRecipe slot, BoundTarget target) {
         if (slot == null || target.resource() != BoundResource.ITEM) return null;
         ItemStack[] stacks = target.side() == BoundSide.INPUT ? slot.recipe()
             .inputs()
@@ -670,11 +631,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private @Nullable FluidStack fluidStack(BoundTarget target) {
-        RecipeSlot slot = boundsSlot();
+        SavedRecipe slot = boundsSlot();
         return slot != null ? fluidStack(slot, target) : null;
     }
 
-    private @Nullable FluidStack fluidStack(RecipeSlot slot, BoundTarget target) {
+    private @Nullable FluidStack fluidStack(SavedRecipe slot, BoundTarget target) {
         if (slot == null || target.resource() != BoundResource.FLUID) return null;
         FluidStack[] stacks = target.side() == BoundSide.INPUT ? slot.recipe()
             .fluidInputs()
@@ -757,9 +718,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return RecipeSlotUiModel.modeLabel(selectedConfig());
     }
 
-    private @Nullable RecipeSlot slotAtRow(int rowIndex) {
+    private @Nullable SavedRecipe slotAtRow(int rowIndex) {
         int slotIndex = slotIndexForRow(rowIndex);
-        List<RecipeSlot> slots = slots();
+        List<SavedRecipe> slots = slots();
         return slotIndex >= 0 && slotIndex < slots.size() ? slots.get(slotIndex) : null;
     }
 
@@ -768,10 +729,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return page * ROWS_PER_PAGE + rowIndex;
     }
 
-    private List<RecipeSlot> slots() {
+    private List<SavedRecipe> slots() {
         RecipeConfig config = selectedConfig();
         return config == null ? List.of()
-            : config.slots()
+            : config.savedRecipes()
                 .toList();
     }
 
@@ -1177,7 +1138,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
         private @Nullable String chanceText() {
             if (target.side() != BoundSide.OUTPUT) return null;
-            RecipeSlot slot = boundsSlot();
+            SavedRecipe slot = boundsSlot();
             if (slot == null) return null;
             int[] chances = target.resource() == BoundResource.ITEM ? slot.recipe()
                 .outputChances()
@@ -1226,25 +1187,25 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         PRIORITY(0, RecipeSlotUiModel.MAX_BYTE_SETTING, 1) {
 
             @Override
-            int value(RecipeSlot slot) {
+            int value(SavedRecipe slot) {
                 return slot.priority();
             }
 
             @Override
-            RecipeSlot updated(RecipeSlot slot, int value) {
-                return new RecipeSlot(slot.recipe(), slot.enabled(), slot.bounds(), (byte) value, slot.orderSize());
+            SavedRecipe updated(SavedRecipe slot, int value) {
+                return new SavedRecipe(slot.recipe(), slot.enabled(), slot.bounds(), (byte) value, slot.orderSize());
             }
         },
         ORDER_SIZE(1, RecipeSlotUiModel.MAX_BYTE_SETTING, 1) {
 
             @Override
-            int value(RecipeSlot slot) {
+            int value(SavedRecipe slot) {
                 return slot.orderSize();
             }
 
             @Override
-            RecipeSlot updated(RecipeSlot slot, int value) {
-                return new RecipeSlot(slot.recipe(), slot.enabled(), slot.bounds(), slot.priority(), (byte) value);
+            SavedRecipe updated(SavedRecipe slot, int value) {
+                return new SavedRecipe(slot.recipe(), slot.enabled(), slot.bounds(), slot.priority(), (byte) value);
             }
         };
 
@@ -1258,8 +1219,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             this.defaultValue = defaultValue;
         }
 
-        abstract int value(RecipeSlot slot);
+        abstract int value(SavedRecipe slot);
 
-        abstract RecipeSlot updated(RecipeSlot slot, int value);
+        abstract SavedRecipe updated(SavedRecipe slot, int value);
     }
 }
