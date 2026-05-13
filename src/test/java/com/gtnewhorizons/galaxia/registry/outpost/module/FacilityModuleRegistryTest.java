@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -141,5 +142,15 @@ final class FacilityModuleRegistryTest {
             List.of(),
             FacilityModuleRegistry.get(FacilityModuleKind.POWER)
                 .panelActions());
+    }
+
+    @Test
+    void moduleDefinitionsExposeSettingsGroupSupport() {
+        assertTrue(
+            FacilityModuleRegistry.get(FacilityModuleKind.MINER)
+                .settingsGroups());
+        assertFalse(
+            FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
+                .settingsGroups());
     }
 }

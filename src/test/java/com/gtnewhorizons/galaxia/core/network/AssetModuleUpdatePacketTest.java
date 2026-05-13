@@ -903,13 +903,13 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyCreateMinerSettingsGroupCopiesCurrentMinerBlacklist() {
+    void applyCreateModuleSettingsGroupCopiesCurrentMinerBlacklist() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         facility.setMinerOreBlacklisted(module, "ore:iron", true);
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.createMinerSettingsGroup(facility.assetId, 0, module.id, "  Priority miners  "));
+            AssetModuleUpdatePacket.createModuleSettingsGroup(facility.assetId, 0, module.id, "  Priority miners  "));
 
         packet.apply(TEAM);
 
@@ -928,14 +928,14 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyRenameMinerSettingsGroupUpdatesJoinableGroup() {
+    void applyRenameModuleSettingsGroupUpdatesJoinableGroup() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         short groupId = facility.createSettingsGroupForModule(module, "Old miners")
             .id();
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.renameMinerSettingsGroup(facility.assetId, 0, module.id, groupId, "New miners"));
+            AssetModuleUpdatePacket.renameModuleSettingsGroup(facility.assetId, 0, module.id, groupId, "New miners"));
 
         AssetSyncPacket sync = packet.apply(TEAM);
 
@@ -951,14 +951,14 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyMinerSettingsGroupZeroLeavesGroupWithCopiedSettings() {
+    void applyModuleSettingsGroupZeroLeavesGroupWithCopiedSettings() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         facility.setMinerOreBlacklisted(module, "ore:iron", true);
         facility.createSettingsGroupForModule(module, null);
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.minerSettingsGroup(facility.assetId, 0, module.id, (short) 0));
+            AssetModuleUpdatePacket.moduleSettingsGroup(facility.assetId, 0, module.id, (short) 0));
 
         packet.apply(TEAM);
 

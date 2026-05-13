@@ -150,26 +150,26 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket minerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket moduleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, short groupId) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_SETTINGS_GROUP);
         pkt.shortPayload = groupId;
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket createModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId) {
-        return createMinerSettingsGroup(assetId, moduleIndex, moduleId, "");
+        return createModuleSettingsGroup(assetId, moduleIndex, moduleId, "");
     }
 
-    public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket createModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, String displayName) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
         pkt.stringPayload = displayName == null ? "" : displayName;
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket renameMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket renameModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, short groupId, String displayName) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.RENAME_SETTINGS_GROUP);
         pkt.shortPayload = groupId;

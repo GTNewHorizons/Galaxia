@@ -34,7 +34,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     private Kind kind = Kind.NONE;
     private ModuleInstance.ID moduleId;
     private int minerBlacklistPage;
-    private boolean minerSettingsGroupMenuOpen;
+    private boolean settingsGroupMenuOpen;
     private boolean moduleOperationCancelArmed;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
@@ -72,7 +72,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.HAMMER;
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
-        this.minerSettingsGroupMenuOpen = false;
+        this.settingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
@@ -133,7 +133,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.MINER_BLACKLIST;
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
-        this.minerSettingsGroupMenuOpen = false;
+        this.settingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
         MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
@@ -183,7 +183,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.NONE;
         this.moduleId = null;
         this.minerBlacklistPage = 0;
-        this.minerSettingsGroupMenuOpen = false;
+        this.settingsGroupMenuOpen = false;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
         this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
@@ -279,16 +279,16 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
     }
 
-    boolean isMinerSettingsGroupMenuOpen() {
-        return minerSettingsGroupMenuOpen;
+    boolean isSettingsGroupMenuOpen() {
+        return settingsGroupMenuOpen;
     }
 
-    void toggleMinerSettingsGroupMenu() {
-        minerSettingsGroupMenuOpen = !minerSettingsGroupMenuOpen;
+    void toggleSettingsGroupMenu() {
+        settingsGroupMenuOpen = !settingsGroupMenuOpen;
     }
 
-    void closeMinerSettingsGroupMenu() {
-        minerSettingsGroupMenuOpen = false;
+    void closeSettingsGroupMenu() {
+        settingsGroupMenuOpen = false;
     }
 
     boolean isModuleOperationCancelArmed() {
@@ -372,7 +372,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         }
         moduleId = module.id;
         minerBlacklistPage = 0;
-        minerSettingsGroupMenuOpen = false;
+        settingsGroupMenuOpen = false;
         moduleOperationCancelArmed = false;
     }
 

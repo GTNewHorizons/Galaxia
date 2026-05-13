@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -406,6 +407,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
+        requireSettingsGroupsSupported(module);
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (current.members()
@@ -431,6 +433,7 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module == null) {
             throw new IllegalArgumentException("renameSettingsGroupForModule: module must not be null");
         }
+        requireSettingsGroupsSupported(module);
         SettingsGroup group = settingsGroups.require(groupId, module.kind());
         if (!group.isJoinable()) {
             throw new IllegalStateException("Settings group " + groupId + " is private and cannot be renamed");
@@ -445,6 +448,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void assignSettingsGroup(ModuleInstance module, short groupId) {
+        requireSettingsGroupsSupported(module);
         if (module.groupId() == groupId) return;
         if (groupId == 0) {
             leaveSettingsGroup(module);
@@ -459,6 +463,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {
+        requireSettingsGroupsSupported(module);
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (current.members()
@@ -489,10 +494,21 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private ModuleSettings copySettings(ModuleInstance module) {
+        requireSettingsGroupsSupported(module);
         if (module.component() instanceof ModuleMiner) {
             return minerSettings(module).copy();
         }
         throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+    }
+
+    private static void requireSettingsGroupsSupported(ModuleInstance module) {
+        if (module == null) {
+            throw new IllegalArgumentException("Settings group module must not be null");
+        }
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+        }
     }
 
     private void attachToSettingsGroup(ModuleInstance module, SettingsGroup group) {
