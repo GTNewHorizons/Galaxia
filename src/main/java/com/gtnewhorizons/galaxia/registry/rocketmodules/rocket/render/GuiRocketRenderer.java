@@ -96,12 +96,12 @@ public class GuiRocketRenderer {
                 .size(width, height);
 
             if (part.def()
-                .texture() != null) {
+                .textureLocation() != null) {
                 partWidget.background(
                     UITexture.fullImage(
                         Galaxia.MODID,
                         (part.def()
-                            .texture()
+                            .textureLocation()
                             .getResourcePath())));
             } else {
                 partWidget.background(new Rectangle().color(0x88FF8800));
