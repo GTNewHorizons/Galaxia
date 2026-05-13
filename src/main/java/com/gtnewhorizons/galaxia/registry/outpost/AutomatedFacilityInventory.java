@@ -34,18 +34,13 @@ public final class AutomatedFacilityInventory implements IInventory {
      * @return the actual amount added (positive) or removed (negative)
      */
     public long add(ItemStackWrapper item, long delta) {
-        if (delta > 0) return 0L;
+        final long current = getAmount(item);
+        final long actual = Math.clamp(delta, -current, getSizeInventory() - current);
+        final long value = current + actual;
+        if (value == 0) amounts.remove(item);
+        else amounts.put(item, value);
 
-        long current = getAmount(item);
-        if (delta < 0) {
-            long actual = Math.max(delta, -current);
-            long newValue = current + actual;
-            if (newValue == 0) amounts.remove(item);
-            else amounts.put(item, newValue);
-            return actual;
-        }
-        amounts.put(item, current + delta);
-        return delta;
+        return actual;
     }
 
     /**
@@ -124,7 +119,7 @@ public final class AutomatedFacilityInventory implements IInventory {
 
     @Override
     public int getSizeInventory() {
-        return 0;
+        return Integer.MAX_VALUE;
     }
 
     @Override

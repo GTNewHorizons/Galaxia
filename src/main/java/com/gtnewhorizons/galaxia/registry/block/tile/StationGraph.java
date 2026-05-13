@@ -149,13 +149,16 @@ public final class StationGraph {
                         pieces.put(other, neighbor);
 
                         for (int i = 0; i < listeners.size(); i++) {
-                            listeners.get(i).onPieceConnected(piece, neighbor, controller.here);
+                            listeners.get(i)
+                                .onPieceConnected(piece, neighbor, controller.here);
                         }
                     }
 
                     queue.add(other);
-                    adjacency.computeIfAbsent(current, k -> new ObjectArrayList<>()).add(other);
-                    adjacency.computeIfAbsent(other, k -> new ObjectArrayList<>()).add(current);
+                    adjacency.computeIfAbsent(current, k -> new ObjectArrayList<>())
+                        .add(other);
+                    adjacency.computeIfAbsent(other, k -> new ObjectArrayList<>())
+                        .add(current);
                 }
             }
         }
@@ -165,23 +168,28 @@ public final class StationGraph {
                 TileStationBase<?> piece = resolvePiece(removed);
                 if (piece != null) {
                     for (int i = 0; i < listeners.size(); i++) {
-                        listeners.get(i).onPieceDisconnected(piece, null);
+                        listeners.get(i)
+                            .onPieceDisconnected(piece, null);
                     }
                 }
             }
         }
 
         for (int i = 0; i < listeners.size(); i++) {
-            listeners.get(i).onGraphRebuilt(controller);
+            listeners.get(i)
+                .onGraphRebuilt(controller);
         }
     }
 
     public void destroy() {
-        for (var it = pieces.object2ObjectEntrySet().fastIterator(); it.hasNext();) {
-            TileStationBase<?> piece = it.next().getValue();
+        for (var it = pieces.object2ObjectEntrySet()
+            .fastIterator(); it.hasNext();) {
+            TileStationBase<?> piece = it.next()
+                .getValue();
             if (piece != null && piece != controller) {
                 for (int i = 0; i < listeners.size(); i++) {
-                    listeners.get(i).onPieceDisconnected(piece, null);
+                    listeners.get(i)
+                        .onPieceDisconnected(piece, null);
                 }
             }
         }

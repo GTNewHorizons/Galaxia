@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
@@ -258,8 +259,7 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = testResource();
 
-        AssetSyncPacket result = com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket
-            .add(facility.assetId, resource, 32)
+        AssetSyncPacket result = AssetInventoryUpdatePacket.add(facility.assetId, resource, 32)
             .apply(TEAM, true);
 
         assertNotNull(result);

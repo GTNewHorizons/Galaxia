@@ -49,7 +49,7 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
             }
 
             TileEntity te = pos.getTE(worldObj);
-            if (!(te instanceof GalaxiaMultiblockBase<?> base) || base.isStructureValid()) {
+            if (!(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid()) {
                 positions.remove(i);
                 markDirty();
             }
