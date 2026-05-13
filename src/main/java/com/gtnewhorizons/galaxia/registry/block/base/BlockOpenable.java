@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.base;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.Facing;
@@ -9,7 +8,7 @@ import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
-public abstract class BlockOpenable extends Block {
+public abstract class BlockOpenable extends BlockUpdatable {
 
     public static final int META_CLOSED = 0;
     public static final int META_OPEN = 1;

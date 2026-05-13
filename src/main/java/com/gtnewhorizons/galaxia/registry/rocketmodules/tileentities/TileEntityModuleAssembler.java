@@ -1,18 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import net.minecraft.block.Block;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.Packet;
-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -29,7 +22,6 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
-import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -132,88 +124,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     protected void onStructureDisformed() {
         shouldRender = false;
-    }
-
-    /**
-     * Handles the logic of checking structure validity - overridden to include
-     * terminal count checks
-     *
-     * @return Boolean : True => valid structure
-     */
-    @Override
-    protected boolean checkStructure() {
-        if (worldObj == null || worldObj.isRemote) return structureValid;
-        boolean valid = false;
-        final List<ExtendedFacing> HORIZONTAL_FACINGS = Arrays.stream(ExtendedFacing.values())
-            .filter(f -> f.getDirection() != ForgeDirection.UP && f.getDirection() != ForgeDirection.DOWN)
-            .collect(Collectors.toList());
-        for (ExtendedFacing facing : HORIZONTAL_FACINGS) {
-            foundTerminalCount = 0;
-            gantryTerminal = null;
-
-            valid = getStructureDefinition().check(
-                (TileEntityModuleAssembler) this,
-                STRUCTURE_PIECE_MAIN,
-                worldObj,
-                facing,
-                xCoord,
-                yCoord,
-                zCoord,
-                getControllerOffsetX(),
-                getControllerOffsetY(),
-                getControllerOffsetZ(),
-                false);
-
-            if (valid && foundTerminalCount == 1) {
-                currentFacing = facing;
-                break;
-            }
-            valid = false;
-        }
-
-        return valid;
-    }
-
-    @Override
-    public void construct(ItemStack trigger, boolean hintsOnly) {
-        if (worldObj == null) return;
-        if (!hintsOnly && worldObj.isRemote) return;
-
-        getStructureDefinition().buildOrHints(
-            (TileEntityModuleAssembler) this,
-            trigger,
-            STRUCTURE_PIECE_MAIN,
-            worldObj,
-            currentFacing,
-            xCoord,
-            yCoord,
-            zCoord,
-            getControllerOffsetX(),
-            getControllerOffsetY(),
-            getControllerOffsetZ(),
-            hintsOnly);
-    }
-
-    @Override
-    public int survivalConstruct(ItemStack trigger, int elementBudget, ISurvivalBuildEnvironment env) {
-        if (worldObj == null || worldObj.isRemote) return -1;
-        if (structureValid) return -1;
-
-        return getStructureDefinition().survivalBuild(
-            (TileEntityModuleAssembler) this,
-            trigger,
-            STRUCTURE_PIECE_MAIN,
-            worldObj,
-            currentFacing,
-            xCoord,
-            yCoord,
-            zCoord,
-            getControllerOffsetX(),
-            getControllerOffsetY(),
-            getControllerOffsetZ(),
-            elementBudget,
-            env,
-            false);
     }
 
     /**
@@ -339,28 +249,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         }
     }
 
-    private ForgeDirection placedFacing = ForgeDirection.NORTH;
-
-    @Override
-    public ForgeDirection getPlacedFacing() {
-        return placedFacing;
-    }
-
-    @Override
-    public void setPlacedFacing(ForgeDirection dir) {
-        placedFacing = dir;
-    }
-
-    @Override
-    public boolean isStructureValid() {
-        return structureValid;
-    }
-
-    @Override
-    public ExtendedFacing getCurrentFacing() {
-        return currentFacing;
-    }
-
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
@@ -384,29 +272,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         }
         tag.setTag("moduleMap", mapNbt);
         tag.setInteger("placedFacing", placedFacing.ordinal());
-    }
-
-    /**
-     * Writes an NBT packet to the server
-     *
-     * @return Packet holding the nbt update
-     */
-    @Override
-    public Packet getDescriptionPacket() {
-        NBTTagCompound nbt = new NBTTagCompound();
-        writeToNBT(nbt);
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 0, nbt);
-    }
-
-    /**
-     * Receives a data packet and updates NBT data
-     *
-     * @param net    The network manager of the server
-     * @param packet The incoming packet from the server
-     */
-    @Override
-    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
-        readFromNBT(packet.func_148857_g());
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.compat;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,7 +19,6 @@ import net.minecraftforge.oredict.OreDictionary;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 
-import cpw.mods.fml.common.Loader;
 import gregtech.api.enums.Materials;
 import gregtech.api.enums.OreMixes;
 import gregtech.api.enums.OrePrefixes;
@@ -26,15 +27,13 @@ import gregtech.common.OreMixBuilder;
 
 public final class GTUtility {
 
-    public static final boolean isGTLoaded = Loader.isModLoaded("gregtech");
-
     private static final Map<String, ItemStack> RAW_ORE_CACHE = new HashMap<>();
     private static final Set<String> RAW_ORE_FAILURES = new HashSet<>();
 
     private GTUtility() {}
 
     public static List<String> getGtVeinOres(@Nonnull String veinId) {
-        if (!isGTLoaded || veinId.isEmpty()) return List.of();
+        if (!isGregTechLoaded() || veinId.isEmpty()) return List.of();
 
         OreMixes oreMix = null;
         for (OreMixes mix : OreMixes.values()) {
@@ -81,7 +80,7 @@ public final class GTUtility {
     }
 
     public static ItemStack getRawOreStack(String materialName) {
-        if (!isGTLoaded) return null;
+        if (!isGregTechLoaded()) return null;
         if (materialName == null || materialName.isEmpty()) return null;
 
         ItemStack cached = RAW_ORE_CACHE.get(materialName);
