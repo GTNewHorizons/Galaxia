@@ -14,13 +14,19 @@ import com.gtnewhorizon.structurelib.alignment.constructable.ISurvivalConstructa
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 
+import cpw.mods.fml.common.Optional;
+import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
+
+@Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IMachineBlockUpdateable", modid = "gregtech")
 public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> extends TileEntity
-    implements ISurvivalConstructable {
+    implements ISurvivalConstructable, IMachineBlockUpdateable {
 
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     private int mCheckTimer = 0;
+    private boolean updated = true;
 
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;
@@ -140,18 +146,29 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
         if (worldObj == null || worldObj.isRemote) return;
 
         if (mCheckTimer <= 0) {
-            final boolean valid = checkStructure();
-            if (valid != structureValid) {
-                structureValid = valid;
-                if (valid) onStructureFormed();
-                else onStructureDisformed();
-                markDirty();
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            // Just in case, but a proper checking with onMachineBlockUpdate would be better
+            if (!GalaxiaAPI.isGregTechLoaded()) this.updated = true;
+
+            if (this.updated) {
+                final boolean valid = checkStructure();
+                if (valid != structureValid) {
+                    structureValid = valid;
+                    if (valid) onStructureFormed();
+                    else onStructureDisformed();
+                    markDirty();
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                }
+                this.updated = false;
             }
             mCheckTimer = 100;
         } else {
             mCheckTimer--;
         }
+    }
+
+    @Override
+    public void onMachineBlockUpdate() {
+        this.updated = true;
     }
 
     @Override

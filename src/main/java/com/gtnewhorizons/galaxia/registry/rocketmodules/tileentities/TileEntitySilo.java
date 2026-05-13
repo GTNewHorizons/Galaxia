@@ -5,16 +5,12 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.Packet;
-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -40,7 +36,6 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
-import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -179,6 +174,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
      */
     @Override
     protected void onStructureFormed() {
+        super.onStructureFormed();
         updateLinkedAssembler();
         shouldRender = true;
     }
@@ -189,6 +185,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
      */
     @Override
     protected void onStructureDisformed() {
+        super.onStructureDisformed();
         updateLinkedAssembler();
         shouldRender = false;
     }
@@ -215,103 +212,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             default:
                 return new int[] { localX, localY, -localZ };
         }
-    }
-
-    /**
-     * Checks the structure of the multi against the definition. Overridden to
-     * detect terminal counts being correct. Forms structure if correct, disforms
-     * otherwise
-     *
-     * @return Boolean : True => valid structure
-     */
-    @Override
-    protected boolean checkStructure() {
-        if (worldObj == null || worldObj.isRemote) return structureValid;
-        // Reset terminals as recounted in definition check
-        boolean valid = false;
-        final List<ExtendedFacing> HORIZONTAL_FACINGS = Arrays.stream(ExtendedFacing.values())
-            .filter(f -> f.getDirection() != ForgeDirection.UP && f.getDirection() != ForgeDirection.DOWN)
-            .collect(Collectors.toList());
-        for (ExtendedFacing facing : HORIZONTAL_FACINGS) {
-            foundTerminalCount = 0;
-            gantryTerminal = null;
-
-            valid = getStructureDefinition().check(
-                (TileEntitySilo) this,
-                STRUCTURE_PIECE_MAIN,
-                worldObj,
-                facing,
-                xCoord,
-                yCoord,
-                zCoord,
-                getControllerOffsetX(),
-                getControllerOffsetY(),
-                getControllerOffsetZ(),
-                false);
-
-            if (valid && foundTerminalCount == 1) {
-                currentFacing = facing;
-                break;
-            }
-            valid = false;
-        }
-
-        return valid;
-    }
-
-    /**
-     * Construction override for using StrucureLibs auto-construction
-     *
-     * @param trigger   The ItemStack used to construct
-     * @param hintsOnly Whether the construct should show hints only or build
-     */
-    @Override
-    public void construct(ItemStack trigger, boolean hintsOnly) {
-        if (worldObj == null) return;
-        if (!hintsOnly && worldObj.isRemote) return;
-
-        getStructureDefinition().buildOrHints(
-            (TileEntitySilo) this,
-            trigger,
-            STRUCTURE_PIECE_MAIN,
-            worldObj,
-            currentFacing,
-            xCoord,
-            yCoord,
-            zCoord,
-            getControllerOffsetX(),
-            getControllerOffsetY(),
-            getControllerOffsetZ(),
-            hintsOnly);
-    }
-
-    /**
-     * Construction override for auto-building in survival
-     *
-     * @param trigger       The ItemStack used to construct
-     * @param elementBudget The budget of elements available to the player
-     * @param env           The build environment
-     */
-    @Override
-    public int survivalConstruct(ItemStack trigger, int elementBudget, ISurvivalBuildEnvironment env) {
-        if (worldObj == null || worldObj.isRemote) return -1;
-        if (structureValid) return -1;
-
-        return getStructureDefinition().survivalBuild(
-            (TileEntitySilo) this,
-            trigger,
-            STRUCTURE_PIECE_MAIN,
-            worldObj,
-            currentFacing,
-            xCoord,
-            yCoord,
-            zCoord,
-            getControllerOffsetX(),
-            getControllerOffsetY(),
-            getControllerOffsetZ(),
-            elementBudget,
-            env,
-            false);
     }
 
     /**
@@ -903,26 +803,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (modules.isEmpty()) entityRocket = null;
     }
 
-    @Override
-    public ForgeDirection getPlacedFacing() {
-        return placedFacing;
-    }
-
-    @Override
-    public void setPlacedFacing(ForgeDirection dir) {
-        placedFacing = dir;
-    }
-
-    @Override
-    public boolean isStructureValid() {
-        return structureValid && hasAssembler;
-    }
-
-    @Override
-    public ExtendedFacing getCurrentFacing() {
-        return currentFacing;
-    }
-
     /**
      * Writes TE data to NBT taq
      *
@@ -985,28 +865,5 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void setGantryTerminal(TileEntityGantryTerminal teg) {
         this.gantryTerminal = teg;
         foundTerminalCount++;
-    }
-
-    /**
-     * Description packet method used for server side syncing
-     *
-     * @return The update packet
-     */
-    @Override
-    public Packet getDescriptionPacket() {
-        NBTTagCompound nbt = new NBTTagCompound();
-        this.writeToNBT(nbt);
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, nbt);
-    }
-
-    /**
-     * Receiver for the packet
-     *
-     * @param net The NetworkManager the packet came from
-     * @param pkt The packet
-     */
-    @Override
-    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
-        this.readFromNBT(pkt.func_148857_g());
     }
 }

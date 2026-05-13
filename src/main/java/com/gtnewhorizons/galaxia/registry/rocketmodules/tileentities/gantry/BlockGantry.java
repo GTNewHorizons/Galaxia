@@ -7,16 +7,16 @@ import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.init.Blocks;
-import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
-public class BlockGantry extends Block implements ITileEntityProvider {
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
+
+public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
 
     public BlockGantry() {
         super(Material.iron);
@@ -33,15 +33,14 @@ public class BlockGantry extends Block implements ITileEntityProvider {
      * Handles logic to be ran on block placing - in this case, connecting to other
      * gantries
      *
-     * @param world  The world placed in
-     * @param x      X position of placed block
-     * @param y      Y position of placed block
-     * @param z      Z position of placed block
-     * @param placer The placer of the block
-     * @param stack  The item stack being used to place
+     * @param world The world placed in
+     * @param x     X position of placed block
+     * @param y     Y position of placed block
+     * @param z     Z position of placed block
      */
     @Override
-    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
+    public void onBlockAdded(World world, int x, int y, int z) {
+        super.onBlockAdded(world, x, y, z);
         if (world.isRemote) return;
 
         TileEntity te = world.getTileEntity(x, y, z);
@@ -65,7 +64,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
                 .isReplaceable(world, nx, y, nz)) {
                 world.setBlock(nx, y, nz, this, 0, 3);
                 // Manually re-trigger this same logic for the new position
-                onBlockPlacedBy(world, nx, y, nz, placer, stack);
+                onBlockAdded(world, nx, y, nz);
             }
             return;
         }
@@ -96,7 +95,7 @@ public class BlockGantry extends Block implements ITileEntityProvider {
      */
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
-
+        super.breakBlock(world, x, y, z, block, meta);
         TileEntity gantry = world.getTileEntity(x, y, z);
         if (!(gantry instanceof TileEntityGantry terminal)) {
             return;
