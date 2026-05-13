@@ -7,6 +7,7 @@ import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 
@@ -41,7 +42,14 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
     protected void clearBroken(List<BlockPos> positions) {
         for (int i = positions.size() - 1; i >= 0; i--) {
             BlockPos pos = positions.get(i);
-            if (pos == null || pos.getTE(worldObj) == null) {
+            if (pos == null) {
+                positions.remove(i);
+                markDirty();
+                continue;
+            }
+
+            TileEntity te = pos.getTE(worldObj);
+            if (!(te instanceof GalaxiaMultiblockBase<?> base) || base.isStructureValid()) {
                 positions.remove(i);
                 markDirty();
             }

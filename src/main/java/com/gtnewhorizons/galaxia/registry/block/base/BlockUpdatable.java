@@ -15,13 +15,24 @@ public abstract class BlockUpdatable extends Block {
 
     @Override
     public void onBlockAdded(World aWorld, int aX, int aY, int aZ) {
-        if (GalaxiaAPI.isMachineBlock(this, aWorld.getBlockMetadata(aX, aY, aZ))) {
-            GalaxiaAPI.causeMachineUpdate(aWorld, aX, aY, aZ);
-        }
+        blockUpdate(aWorld, aX, aY, aZ, aWorld.getBlockMetadata(aX, aY, aZ));
     }
 
     @Override
     public void breakBlock(World aWorld, int aX, int aY, int aZ, Block aBlock, int aMetaData) {
+        blockUpdate(aWorld, aX, aY, aZ, aMetaData);
+    }
+
+    /**
+     * This is for listening and propagating block updates for MultiMultiblocks
+     */
+    @Override
+    public void onNeighborBlockChange(World world, int x, int y, int z, Block neighbor) {
+        super.onNeighborBlockChange(world, x, y, z, neighbor);
+        blockUpdate(world, x, y, z, world.getBlockMetadata(x, y, z));
+    }
+
+    public void blockUpdate(World aWorld, int aX, int aY, int aZ, int aMetaData) {
         if (GalaxiaAPI.isMachineBlock(this, aMetaData)) {
             GalaxiaAPI.causeMachineUpdate(aWorld, aX, aY, aZ);
         }

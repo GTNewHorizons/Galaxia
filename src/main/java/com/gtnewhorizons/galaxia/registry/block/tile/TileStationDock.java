@@ -46,7 +46,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dockController, tileEntity) -> {
             if (tileEntity instanceof TileHammerTarget target) {
-                if (!target.isStructureValid()) return false;
+                if (target.isStructureValid()) return false;
 
                 BlockPos pos = new BlockPos(target.xCoord, target.yCoord, target.zCoord);
                 if (!dockController.hammerTargets.contains(pos)) {
@@ -98,7 +98,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
 
     @Override
     public void onGraphRebuilt(TileStationController controller) {
-        clearBroken(hammerTargets);
+        onMachineBlockUpdate();
     }
 
     public List<BlockPos> getHammerTargets() {
