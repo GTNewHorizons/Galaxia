@@ -1,5 +1,10 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.IModelCustom;
 
@@ -63,28 +68,28 @@ public final class RocketVisualHelper {
 
     private static void renderFallbackPart(IRocketPartDef def) {
         float r, g, b;
-        switch (def.type()) {
-            case CAPSULE -> {
+        switch (def) {
+            case CapsulePartDef ignored -> {
                 r = 0.0f;
                 g = 0.8f;
                 b = 0.0f;
             }
-            case LANDER -> {
+            case LanderPartDef ignored -> {
                 r = 0.0f;
                 g = 0.9f;
                 b = 0.4f;
             }
-            case FUEL_TANK -> {
+            case FuelTankPartDef ignored -> {
                 r = 0.2f;
                 g = 0.4f;
                 b = 0.9f;
             }
-            case ENGINE -> {
+            case EnginePartDef ignored -> {
                 r = 0.9f;
                 g = 0.3f;
                 b = 0.0f;
             }
-            case DECOUPLER -> {
+            case DecouplerPartDef ignored -> {
                 r = 0.6f;
                 g = 0.6f;
                 b = 0.6f;

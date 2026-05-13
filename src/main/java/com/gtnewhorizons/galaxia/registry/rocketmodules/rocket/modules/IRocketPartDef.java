@@ -2,7 +2,16 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules;
 
 import net.minecraft.util.ResourceLocation;
 
-public interface IRocketPartDef {
+public sealed interface IRocketPartDef permits
+LanderPartDef,
+RiderPartDef,
+StructuralPartDef,
+FuelTankPartDef,
+FunctionalPartDef,
+EnginePartDef,
+DecouplerPartDef,
+CapsulePartDef
+{
 
     int id();
 
