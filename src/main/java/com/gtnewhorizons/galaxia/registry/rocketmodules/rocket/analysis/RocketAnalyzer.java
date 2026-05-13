@@ -1,13 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
 
 public final class RocketAnalyzer {
 
@@ -42,8 +42,12 @@ public final class RocketAnalyzer {
         Map<RocketPartInstance, Integer> stage = new HashMap<>();
         int currentStage = 0;
         for (RocketPartInstance p : parts) {
-            if (p.def().type() == RocketPartType.DECOUPLER) {
-                currentStage = Math.max(currentStage, p.def().decouplerStage());
+            if (p.def()
+                .type() == RocketPartType.DECOUPLER) {
+                currentStage = Math.max(
+                    currentStage,
+                    p.def()
+                        .decouplerStage());
             }
             stage.put(p, currentStage);
         }
@@ -53,18 +57,31 @@ public final class RocketAnalyzer {
     private static boolean checkViability(RocketBlueprint blueprint, List<RocketStage> stages) {
         if (stages.isEmpty()) return false;
 
-        boolean hasCommand = blueprint.getParts().stream()
-            .anyMatch(p -> p.def().type() == RocketPartType.CAPSULE || p.def().type() == RocketPartType.LANDER);
+        boolean hasCommand = blueprint.getParts()
+            .stream()
+            .anyMatch(
+                p -> p.def()
+                    .type() == RocketPartType.CAPSULE
+                    || p.def()
+                        .type() == RocketPartType.LANDER);
 
         if (!hasCommand) return false;
 
-        return stages.get(0).canLaunch(calculatePayloadMass(blueprint));
+        return stages.get(0)
+            .canLaunch(calculatePayloadMass(blueprint));
     }
 
     private static double calculatePayloadMass(RocketBlueprint bp) {
-        return bp.getParts().stream()
-            .filter(p -> p.def().type() == RocketPartType.CAPSULE || p.def().type() == RocketPartType.LANDER)
-            .mapToDouble(p -> p.def().weight())
+        return bp.getParts()
+            .stream()
+            .filter(
+                p -> p.def()
+                    .type() == RocketPartType.CAPSULE
+                    || p.def()
+                        .type() == RocketPartType.LANDER)
+            .mapToDouble(
+                p -> p.def()
+                    .weight())
             .sum();
     }
 }

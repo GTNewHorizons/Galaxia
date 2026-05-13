@@ -34,8 +34,7 @@ public class GuiRocketRenderer {
     }
 
     private IWidget buildGrid() {
-        ParentWidget<?> grid = new ParentWidget<>()
-            .pos(8, 8)
+        ParentWidget<?> grid = new ParentWidget<>().pos(8, 8)
             .size(blueprint.getWidth() * GRID_SIZE, blueprint.getHeight() * GRID_SIZE)
             .background(new Rectangle().color(0xFF2B2B2B));
 
@@ -44,10 +43,11 @@ public class GuiRocketRenderer {
                 final int cellX = x;
                 final int cellY = y;
 
-                ButtonWidget<?> cell = new ButtonWidget<>()
-                    .pos(x * GRID_SIZE, y * GRID_SIZE)
+                ButtonWidget<?> cell = new ButtonWidget<>().pos(x * GRID_SIZE, y * GRID_SIZE)
                     .size(GRID_SIZE, GRID_SIZE)
-                    .background(new Rectangle().color(0xFF444444).hollow())
+                    .background(
+                        new Rectangle().color(0xFF444444)
+                            .hollow())
                     .onMousePressed(mb -> handleCellClick(mb, cellX, cellY));
 
                 grid.child(cell);
@@ -62,8 +62,7 @@ public class GuiRocketRenderer {
             int pw = def.getWidthCells() * GRID_SIZE;
             int ph = def.getHeightCells() * GRID_SIZE;
 
-            ParentWidget<?> partWidget = new ParentWidget<>()
-                .pos(px, py)
+            ParentWidget<?> partWidget = new ParentWidget<>().pos(px, py)
                 .size(pw, ph);
 
             if (def.textureLocation() != null) {
@@ -97,25 +96,25 @@ public class GuiRocketRenderer {
             .coverChildren()
             .margin(3);
 
-        for (RocketPartDef def : RocketPartRegistry.instance().getAll()) {
+        for (RocketPartDef def : RocketPartRegistry.instance()
+            .getAll()) {
             flow.child(createPaletteButton(def));
         }
 
-        flow.child(new ButtonWidget<>()
-            .size(140, 22)
-            .overlay(IKey.str("Clear"))
-            .background(new Rectangle().color(0xFF772222))
-            .onMousePressed(mb -> {
-                if (mb == 0) blueprint.clear();
-                return true;
-            }));
+        flow.child(
+            new ButtonWidget<>().size(140, 22)
+                .overlay(IKey.str("Clear"))
+                .background(new Rectangle().color(0xFF772222))
+                .onMousePressed(mb -> {
+                    if (mb == 0) blueprint.clear();
+                    return true;
+                }));
 
         return flow;
     }
 
     private ButtonWidget<?> createPaletteButton(RocketPartDef def) {
-        return new ButtonWidget<>()
-            .size(140, 22)
+        return new ButtonWidget<>().size(140, 22)
             .overlay(IKey.str(def.name()))
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .tooltip(t -> {

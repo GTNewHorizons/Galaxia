@@ -1,9 +1,9 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.tileentity.TileEntity;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class SiloRenderer extends TileEntitySpecialRenderer {
@@ -21,14 +21,7 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
             TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
             silo.currentFacing);
 
-        RocketVisualHelper.renderBlueprint(
-            blueprint,
-            x + offset[0],
-            y + offset[1],
-            z + offset[2],
-            0.0f,
-            partialTicks,
-            true
-        );
+        RocketVisualHelper
+            .renderBlueprint(blueprint, x + offset[0], y + offset[1], z + offset[2], 0.0f, partialTicks, true);
     }
 }

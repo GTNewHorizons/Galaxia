@@ -165,7 +165,8 @@ public class RocketTeleportHelper {
                 for (int dy = -SILO_SEARCH_HEIGHT; dy <= SILO_SEARCH_HEIGHT; dy++) {
                     TileEntity te = world.getTileEntity(searchX + dx, groundY + dy, searchZ + dz);
                     if (te instanceof TileEntitySilo silo && silo.isStructureValid()
-                        && silo.getBlueprint().getParts()
+                        && silo.getBlueprint()
+                            .getParts()
                             .isEmpty()) {
                         return silo;
                     }

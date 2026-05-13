@@ -1,5 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.world.World;
+
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -19,9 +23,6 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.world.World;
 
 public class RocketEditorUI {
 
@@ -34,7 +35,8 @@ public class RocketEditorUI {
             return buildErrorPanel("Silo not found!");
         }
 
-        RocketBlueprint workingBlueprint = silo.getBlueprint().copy();
+        RocketBlueprint workingBlueprint = silo.getBlueprint()
+            .copy();
 
         // Выбранная деталь по ID в реестре
         IntSyncValue selectedPartId = new IntSyncValue(() -> -1);
@@ -69,18 +71,21 @@ public class RocketEditorUI {
     private static ModularPanel buildErrorPanel(String text) {
         ModularPanel panel = ModularPanel.defaultPanel("rocket_editor_error");
         panel.size(280, 120);
-        panel.child(IKey.str(EnumChatFormatting.RED + text).asWidget().pos(10, 10));
+        panel.child(
+            IKey.str(EnumChatFormatting.RED + text)
+                .asWidget()
+                .pos(10, 10));
         return panel;
     }
 
     // ====================== CANVAS ======================
 
-    private static ParentWidget<?> createCanvas(RocketBlueprint blueprint, IntSyncValue selectedPartId, TileEntitySilo silo) {
+    private static ParentWidget<?> createCanvas(RocketBlueprint blueprint, IntSyncValue selectedPartId,
+        TileEntitySilo silo) {
         int w = blueprint.getWidth() * CELL_SIZE + CANVAS_PADDING * 2;
         int h = blueprint.getHeight() * CELL_SIZE + CANVAS_PADDING * 2;
 
-        ParentWidget<?> canvas = new ParentWidget<>()
-            .size(w, h)
+        ParentWidget<?> canvas = new ParentWidget<>().size(w, h)
             .background(EnumTextures.SELECTION_FRAME.getImage());
 
         // Фоновые клетки
@@ -99,10 +104,9 @@ public class RocketEditorUI {
     }
 
     private static ButtonWidget<?> createCellButton(int cellX, int cellY, RocketBlueprint blueprint,
-                                                    IntSyncValue selectedPartId, TileEntitySilo silo) {
+        IntSyncValue selectedPartId, TileEntitySilo silo) {
 
-        return new ButtonWidget<>()
-            .pos(CANVAS_PADDING + cellX * CELL_SIZE, CANVAS_PADDING + cellY * CELL_SIZE)
+        return new ButtonWidget<>().pos(CANVAS_PADDING + cellX * CELL_SIZE, CANVAS_PADDING + cellY * CELL_SIZE)
             .size(CELL_SIZE, CELL_SIZE)
             .background(EnumTextures.OVERWORLD.getImage())
             .overlay(IKey.dynamic(() -> cellLabel(blueprint, cellX, cellY)))
@@ -112,7 +116,8 @@ public class RocketEditorUI {
                     int id = selectedPartId.getValue();
                     if (id < 0) return;
 
-                    RocketPartDef def = RocketPartRegistry.instance().get(id);
+                    RocketPartDef def = RocketPartRegistry.instance()
+                        .get(id);
                     if (def == null) return;
 
                     RocketPartInstance candidate = new RocketPartInstance(def, cellX, cellY, 0, false);
@@ -127,20 +132,33 @@ public class RocketEditorUI {
             }));
     }
 
-    private static ButtonWidget<?> createPartButton(RocketPartInstance part, RocketBlueprint blueprint, TileEntitySilo silo) {
-        int w = part.def().getWidthCells();
-        int h = part.def().getHeightCells();
+    private static ButtonWidget<?> createPartButton(RocketPartInstance part, RocketBlueprint blueprint,
+        TileEntitySilo silo) {
+        int w = part.def()
+            .getWidthCells();
+        int h = part.def()
+            .getHeightCells();
 
-        return new ButtonWidget<>()
-            .pos(CANVAS_PADDING + part.x() * CELL_SIZE, CANVAS_PADDING + part.y() * CELL_SIZE)
+        return new ButtonWidget<>().pos(CANVAS_PADDING + part.x() * CELL_SIZE, CANVAS_PADDING + part.y() * CELL_SIZE)
             .size(w * CELL_SIZE, h * CELL_SIZE)
-            .background(part.def().textureLocation() != null ?
-                UITexture.fullImage(part.def().textureLocation()) :
-                EnumTextures.ICON_MISSING.getImage())
+            .background(
+                part.def()
+                    .textureLocation() != null ? UITexture.fullImage(
+                        part.def()
+                            .textureLocation())
+                        : EnumTextures.ICON_MISSING.getImage())
             .overlay(IKey.str(partLabel(part)))
             .tooltip(t -> {
-                t.addLine(EnumChatFormatting.WHITE + part.def().name());
-                t.addLine(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", part.def().height(), part.def().weight()));
+                t.addLine(
+                    EnumChatFormatting.WHITE + part.def()
+                        .name());
+                t.addLine(
+                    EnumChatFormatting.GRAY + String.format(
+                        "%.1fm | %.0fkg",
+                        part.def()
+                            .height(),
+                        part.def()
+                            .weight()));
             })
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 1) {
@@ -156,9 +174,11 @@ public class RocketEditorUI {
     }
 
     private static String partLabel(RocketPartInstance part) {
-        String name = part.def().name();
+        String name = part.def()
+            .name();
         if (name == null || name.isEmpty()) return "?";
-        return name.substring(0, Math.min(2, name.length())).toUpperCase();
+        return name.substring(0, Math.min(2, name.length()))
+            .toUpperCase();
     }
 
     private static void addCellTooltip(Object tooltip, RocketBlueprint bp, int x, int y) {
@@ -168,13 +188,16 @@ public class RocketEditorUI {
     // ====================== PALETTE ======================
 
     private static ParentWidget<?> createPalette(IntSyncValue selectedPartId) {
-        ParentWidget<?> panel = new ParentWidget<>()
-            .size(160, 300)
+        ParentWidget<?> panel = new ParentWidget<>().size(160, 300)
             .background(EnumTextures.SELECTION_FRAME.getImage());
 
-        Flow flow = Flow.column().coverChildren().padding(4).margin(4);
+        Flow flow = Flow.column()
+            .coverChildren()
+            .padding(4)
+            .margin(4);
 
-        for (RocketPartDef def : RocketPartRegistry.instance().getAll()) {
+        for (RocketPartDef def : RocketPartRegistry.instance()
+            .getAll()) {
             flow.child(createPaletteButton(def, selectedPartId));
         }
 
@@ -183,12 +206,11 @@ public class RocketEditorUI {
     }
 
     private static ButtonWidget<?> createPaletteButton(RocketPartDef def, IntSyncValue selectedPartId) {
-        return new ButtonWidget<>()
-            .size(150, 20)
+        return new ButtonWidget<>().size(150, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .overlay(IKey.str(def.name()))
-            .tooltip(t -> t.addLine(EnumChatFormatting.GRAY +
-                String.format("%.1fm | %.0fkg", def.height(), def.weight())))
+            .tooltip(
+                t -> t.addLine(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", def.height(), def.weight())))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 0) {
                     selectedPartId.setValue(def.id()); // предполагаем, что есть getId()
@@ -202,26 +224,32 @@ public class RocketEditorUI {
         return IKey.dynamic(() -> {
             int id = selectedPartId.getValue();
             if (id < 0) return "Selected: none";
-            RocketPartDef def = RocketPartRegistry.instance().get(id);
+            RocketPartDef def = RocketPartRegistry.instance()
+                .get(id);
             return "Selected: " + (def != null ? def.name() : "Unknown");
-        }).asWidget().size(160, 20);
+        })
+            .asWidget()
+            .size(160, 20);
     }
 
     private static ButtonWidget<?> createClearSelectionButton(IntSyncValue selectedPartId) {
-        return new ButtonWidget<>()
-            .size(160, 20)
+        return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
-            .overlay(IKey.str("Clear Selection").alignment(Alignment.Center))
-            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) selectedPartId.setValue(-1);
-            }));
+            .overlay(
+                IKey.str("Clear Selection")
+                    .alignment(Alignment.Center))
+            .syncHandler(
+                new InteractionSyncHandler()
+                    .setOnMousePressed(md -> { if (md.mouseButton == 0) selectedPartId.setValue(-1); }));
     }
 
-    private static ButtonWidget<?> createClearBlueprintButton(RocketBlueprint blueprint, TileEntitySilo silo, IntSyncValue selectedPartId) {
-        return new ButtonWidget<>()
-            .size(160, 20)
+    private static ButtonWidget<?> createClearBlueprintButton(RocketBlueprint blueprint, TileEntitySilo silo,
+        IntSyncValue selectedPartId) {
+        return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
-            .overlay(IKey.str("Clear Blueprint").alignment(Alignment.Center))
+            .overlay(
+                IKey.str("Clear Blueprint")
+                    .alignment(Alignment.Center))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 0) {
                     blueprint.clear();

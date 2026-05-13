@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 
 public class RocketRenderer extends Render {

@@ -25,18 +25,15 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 
 public class RocketSchematicItemRenderer implements IItemRenderer {
 
-    private static final ResourceLocation SCHEMATIC_BASE =
-        LocationGalaxia("textures/items/tool/schematic_base.png");
-    private static final ResourceLocation MISSING_TEXTURE =
-        LocationGalaxia("textures/gui/rocket/placeholder_part.png");
+    private static final ResourceLocation SCHEMATIC_BASE = LocationGalaxia("textures/items/tool/schematic_base.png");
+    private static final ResourceLocation MISSING_TEXTURE = LocationGalaxia("textures/gui/rocket/placeholder_part.png");
 
     private static final int SIZE = 128;
     private static final int PADDING = 8;
 
     @Override
     public boolean handleRenderType(ItemStack stack, ItemRenderType type) {
-        return type == ItemRenderType.FIRST_PERSON_MAP
-            || (type == ItemRenderType.ENTITY && RenderItem.renderInFrame);
+        return type == ItemRenderType.FIRST_PERSON_MAP || (type == ItemRenderType.ENTITY && RenderItem.renderInFrame);
     }
 
     @Override
@@ -78,14 +75,24 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         GL11.glRotatef(45f, 0f, 0f, 1f);
         GL11.glTranslatef(-64f, -64f, 0f);
 
-        int minX = parts.stream().mapToInt(RocketPartInstance::x).min().orElse(0);
-        int minY = parts.stream().mapToInt(RocketPartInstance::y).min().orElse(0);
+        int minX = parts.stream()
+            .mapToInt(RocketPartInstance::x)
+            .min()
+            .orElse(0);
+        int minY = parts.stream()
+            .mapToInt(RocketPartInstance::y)
+            .min()
+            .orElse(0);
         int maxX = parts.stream()
-            .mapToInt(p -> p.x() + p.def().getWidthCells())
+            .mapToInt(
+                p -> p.x() + p.def()
+                    .getWidthCells())
             .max()
             .orElse(1);
         int maxY = parts.stream()
-            .mapToInt(p -> p.y() + p.def().getHeightCells())
+            .mapToInt(
+                p -> p.y() + p.def()
+                    .getHeightCells())
             .max()
             .orElse(1);
 
@@ -96,15 +103,18 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         if (pixelsPerCell < 1) pixelsPerCell = 1;
 
         for (RocketPartInstance part : parts) {
-            ResourceLocation tex = part.def().textureLocation();
+            ResourceLocation tex = part.def()
+                .textureLocation();
             if (tex == null) tex = MISSING_TEXTURE;
 
-            float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f
-                + (part.x() - minX) * pixelsPerCell;
+            float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
             float y = SIZE - PADDING
-                - ((part.y() - minY) + part.def().getHeightCells()) * pixelsPerCell;
-            float w = part.def().getWidthCells() * pixelsPerCell;
-            float h = part.def().getHeightCells() * pixelsPerCell;
+                - ((part.y() - minY) + part.def()
+                    .getHeightCells()) * pixelsPerCell;
+            float w = part.def()
+                .getWidthCells() * pixelsPerCell;
+            float h = part.def()
+                .getHeightCells() * pixelsPerCell;
 
             drawQuad(textureManager, tex, x, y, w, h, -0.02f);
         }
@@ -155,10 +165,14 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         String[] lines = {
             StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.name", blueprint.getName()),
             StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.stages", assembly.getStageCount()),
-            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.parts", blueprint.getParts().size()),
-            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.delta_v", (int) assembly.getTotalDeltaV()),
-            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.viable", assembly.viable() ? "YES" : "NO")
-        };
+            StatCollector.translateToLocalFormatted(
+                "galaxia.item.schematic.label.parts",
+                blueprint.getParts()
+                    .size()),
+            StatCollector
+                .translateToLocalFormatted("galaxia.item.schematic.label.delta_v", (int) assembly.getTotalDeltaV()),
+            StatCollector
+                .translateToLocalFormatted("galaxia.item.schematic.label.viable", assembly.viable() ? "YES" : "NO") };
 
         float offsetY = 16f;
         for (String line : lines) {

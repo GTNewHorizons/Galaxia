@@ -1,13 +1,14 @@
 package com.gtnewhorizons.galaxia.registry.items.special;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
+
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class ItemRocketSchematic extends Item {
 
@@ -43,14 +44,17 @@ public class ItemRocketSchematic extends Item {
     }
 
     public static ItemStack captureFromSilo(TileEntitySilo silo, String schematicName) {
-        if (silo == null || silo.getBlueprint().isEmpty()) return null;
+        if (silo == null || silo.getBlueprint()
+            .isEmpty()) return null;
 
         ItemStack stack = new ItemStack(new ItemRocketSchematic());
-        RocketBlueprint bp = silo.getBlueprint().copy();
+        RocketBlueprint bp = silo.getBlueprint()
+            .copy();
 
         setBlueprint(stack, bp);
 
-        if (schematicName != null && !schematicName.trim().isEmpty()) {
+        if (schematicName != null && !schematicName.trim()
+            .isEmpty()) {
             NBTTagCompound tag = stack.getTagCompound();
             if (tag == null) tag = new NBTTagCompound();
             tag.setString(NBT_KEY_NAME, schematicName.trim());

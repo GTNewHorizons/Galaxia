@@ -1,15 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class EntityRocket extends Entity {
 
@@ -104,7 +105,8 @@ public class EntityRocket extends Entity {
         }
     }
 
-    @Override protected void entityInit() {}
+    @Override
+    protected void entityInit() {}
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound tag) {

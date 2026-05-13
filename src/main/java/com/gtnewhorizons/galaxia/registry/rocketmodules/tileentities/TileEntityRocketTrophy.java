@@ -40,19 +40,53 @@ public class TileEntityRocketTrophy extends TileEntity {
         return cachedBlueprint != null ? cachedBlueprint : new RocketBlueprint();
     }
 
-    public float getOffsetX() { return offsetX; }
-    public float getOffsetY() { return offsetY; }
-    public float getOffsetZ() { return offsetZ; }
-    public float getYaw()     { return yaw; }
-    public float getPitch()   { return pitch; }
-    public float getScale()   { return scale; }
+    public float getOffsetX() {
+        return offsetX;
+    }
 
-    public void setOffsetX(float offsetX) { this.offsetX = offsetX; }
-    public void setOffsetY(float offsetY) { this.offsetY = offsetY; }
-    public void setOffsetZ(float offsetZ) { this.offsetZ = offsetZ; }
-    public void setYaw(float yaw)         { this.yaw = yaw; }
-    public void setPitch(float pitch)     { this.pitch = pitch; }
-    public void setScale(float scale)     { this.scale = scale; }
+    public float getOffsetY() {
+        return offsetY;
+    }
+
+    public float getOffsetZ() {
+        return offsetZ;
+    }
+
+    public float getYaw() {
+        return yaw;
+    }
+
+    public float getPitch() {
+        return pitch;
+    }
+
+    public float getScale() {
+        return scale;
+    }
+
+    public void setOffsetX(float offsetX) {
+        this.offsetX = offsetX;
+    }
+
+    public void setOffsetY(float offsetY) {
+        this.offsetY = offsetY;
+    }
+
+    public void setOffsetZ(float offsetZ) {
+        this.offsetZ = offsetZ;
+    }
+
+    public void setYaw(float yaw) {
+        this.yaw = yaw;
+    }
+
+    public void setPitch(float pitch) {
+        this.pitch = pitch;
+    }
+
+    public void setScale(float scale) {
+        this.scale = scale;
+    }
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {

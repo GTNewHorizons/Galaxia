@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
-import net.minecraft.client.renderer.GLAllocation;
-import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.IModelCustom;
 
@@ -19,8 +17,8 @@ public final class RocketVisualHelper {
 
     private RocketVisualHelper() {}
 
-    public static void renderBlueprint(RocketBlueprint blueprint, double x, double y, double z,
-                                       float yaw, float partialTicks, boolean isInSilo) {
+    public static void renderBlueprint(RocketBlueprint blueprint, double x, double y, double z, float yaw,
+        float partialTicks, boolean isInSilo) {
 
         if (blueprint == null || blueprint.isEmpty()) return;
 
@@ -66,12 +64,36 @@ public final class RocketVisualHelper {
     private static void renderFallbackPart(RocketPartDef def) {
         float r, g, b;
         switch (def.type()) {
-            case CAPSULE -> { r = 0.0f; g = 0.8f; b = 0.0f; }
-            case LANDER -> { r = 0.0f; g = 0.9f; b = 0.4f; }
-            case FUEL_TANK -> { r = 0.2f; g = 0.4f; b = 0.9f; }
-            case ENGINE -> { r = 0.9f; g = 0.3f; b = 0.0f; }
-            case DECOUPLER -> { r = 0.6f; g = 0.6f; b = 0.6f; }
-            default -> { r = 0.5f; g = 0.5f; b = 0.5f; }
+            case CAPSULE -> {
+                r = 0.0f;
+                g = 0.8f;
+                b = 0.0f;
+            }
+            case LANDER -> {
+                r = 0.0f;
+                g = 0.9f;
+                b = 0.4f;
+            }
+            case FUEL_TANK -> {
+                r = 0.2f;
+                g = 0.4f;
+                b = 0.9f;
+            }
+            case ENGINE -> {
+                r = 0.9f;
+                g = 0.3f;
+                b = 0.0f;
+            }
+            case DECOUPLER -> {
+                r = 0.6f;
+                g = 0.6f;
+                b = 0.6f;
+            }
+            default -> {
+                r = 0.5f;
+                g = 0.5f;
+                b = 0.5f;
+            }
         }
 
         GL11.glDisable(GL11.GL_TEXTURE_2D);
@@ -87,11 +109,15 @@ public final class RocketVisualHelper {
 
     private static void drawCubeVertices() {
         // Front
-        GL11.glVertex3f(0, 0, 0); GL11.glVertex3f(1, 0, 0);
-        GL11.glVertex3f(1, 1, 0); GL11.glVertex3f(0, 1, 0);
+        GL11.glVertex3f(0, 0, 0);
+        GL11.glVertex3f(1, 0, 0);
+        GL11.glVertex3f(1, 1, 0);
+        GL11.glVertex3f(0, 1, 0);
         // Back
-        GL11.glVertex3f(0, 0, 1); GL11.glVertex3f(0, 1, 1);
-        GL11.glVertex3f(1, 1, 1); GL11.glVertex3f(1, 0, 1);
+        GL11.glVertex3f(0, 0, 1);
+        GL11.glVertex3f(0, 1, 1);
+        GL11.glVertex3f(1, 1, 1);
+        GL11.glVertex3f(1, 0, 1);
         // Top / Bottom / Sides omitted for brevity — in production use full cube or model
         // (This is temporary visual placeholder)
     }

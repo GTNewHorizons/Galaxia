@@ -3,12 +3,12 @@ package com.gtnewhorizons.galaxia.registry.dimension;
 import java.util.Collections;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldProvider;
 
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 /**
  * Record to hold characteristics of the dimension (effectively a posh

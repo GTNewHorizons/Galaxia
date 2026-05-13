@@ -2,19 +2,10 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import com.cleanroommc.modularui.screen.RichTooltip;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -27,14 +18,11 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.IntValue;
-import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.StringSyncValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.PageButton;
-import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
@@ -42,17 +30,16 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
@@ -89,23 +76,21 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntitySilo>builder()
-        .addShape(STRUCTURE_PIECE_MAIN, StructureUtility.transpose(new String[][]{
-            {"  T  ", "     ", "T   T", "     ", "  T  "},
-            {"  T  ", "     ", "T   T", "     ", "  T  "},
-            {"  C  ", "     ", "C   C", "     ", "  C  "},
-            {" CCC ", "C   C", "C   C", "C   C", " CCC "},
-            {" C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC "}
-        }))
+        .addShape(
+            STRUCTURE_PIECE_MAIN,
+            StructureUtility.transpose(
+                new String[][] { { "  T  ", "     ", "T   T", "     ", "  T  " },
+                    { "  T  ", "     ", "T   T", "     ", "  T  " }, { "  C  ", "     ", "C   C", "     ", "  C  " },
+                    { " CCC ", "C   C", "C   C", "C   C", " CCC " }, { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " } }))
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
-        .addElement('T', StructureUtility.ofChain(
-            StructureUtility.ofTileAdder((silo, te) -> {
-                if (te instanceof TileEntityGantryTerminal terminal) {
-                    silo.setGantryTerminal(terminal);
-                    terminal.connectSilo(silo);
-                    return true;
-                }
-                return false;
-            }, GalaxiaBlocksEnum.GANTRY_TERMINAL.get(), 0),
+        .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, te) -> {
+            if (te instanceof TileEntityGantryTerminal terminal) {
+                silo.setGantryTerminal(terminal);
+                terminal.connectSilo(silo);
+                return true;
+            }
+            return false;
+        }, GalaxiaBlocksEnum.GANTRY_TERMINAL.get(), 0),
             StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
         .build();
 
@@ -118,9 +103,20 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         return STRUCTURE_DEFINITION;
     }
 
-    @Override protected int getControllerOffsetX() { return 2; }
-    @Override protected int getControllerOffsetY() { return 4; }
-    @Override protected int getControllerOffsetZ() { return 0; }
+    @Override
+    protected int getControllerOffsetX() {
+        return 2;
+    }
+
+    @Override
+    protected int getControllerOffsetY() {
+        return 4;
+    }
+
+    @Override
+    protected int getControllerOffsetZ() {
+        return 0;
+    }
 
     @Override
     protected void onStructureFormed() {
@@ -138,11 +134,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
         return switch (currentFacing.getDirection()) {
-            case SOUTH -> new int[]{localX, localY, -localZ};
-            case NORTH -> new int[]{-localX, localY, localZ};
-            case EAST  -> new int[]{-localZ, localY, -localX};
-            case WEST  -> new int[]{localZ, localY, localX};
-            default    -> new int[]{localX, localY, -localZ};
+            case SOUTH -> new int[] { localX, localY, -localZ };
+            case NORTH -> new int[] { -localX, localY, localZ };
+            case EAST -> new int[] { -localZ, localY, -localX };
+            case WEST -> new int[] { localZ, localY, localX };
+            default -> new int[] { localX, localY, -localZ };
         };
     }
 
@@ -184,44 +180,73 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     private ParentWidget<?> buildBuildPage(Flow moduleRow) {
         return new ParentWidget<>().size(240, 160)
             .child(moduleRow)
-            .child(new ButtonWidget<>().size(220, 30).pos(10, 80)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
-                    .alignment(Alignment.Center))
-                .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                    if (md.mouseButton == 0 && !worldObj.isRemote) returnModules();
-                })));
+            .child(
+                new ButtonWidget<>().size(220, 30)
+                    .pos(10, 80)
+                    .overlay(
+                        IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
+                            .alignment(Alignment.Center))
+                    .syncHandler(
+                        new InteractionSyncHandler().setOnMousePressed(
+                            md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(); })));
     }
 
     private ParentWidget<?> buildLaunchPage(Flow destRow, PosGuiData data) {
         return new ParentWidget<>().size(240, 160)
             .child(destRow)
-            .child(new ButtonWidget<>().size(220, 30).pos(10, 120)
-                .overlay(IKey.dynamic(() -> ( EnumChatFormatting.GREEN) // removed validators for now
-                    + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
-                    + EnumChatFormatting.RESET).alignment(Alignment.CENTER))
-                .tooltipAutoUpdate(true)
-                .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                    if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data);
-                })));
+            .child(
+                new ButtonWidget<>().size(220, 30)
+                    .pos(10, 120)
+                    .overlay(
+                        IKey.dynamic(
+                            () -> (EnumChatFormatting.GREEN) // removed validators for now
+                                + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
+                                + EnumChatFormatting.RESET)
+                            .alignment(Alignment.CENTER))
+                    .tooltipAutoUpdate(true)
+                    .syncHandler(
+                        new InteractionSyncHandler().setOnMousePressed(
+                            md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); })));
     }
 
     private ParentWidget<?> buildSchematicPage(StringSyncValue nameSync, PosGuiData data) {
         return new ParentWidget<>().size(240, 160)
-            .child(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_text"))
-                .asWidget().pos(10, 40))
-            .child(new TextFieldWidget().size(220, 30).pos(10, 60).setMaxLength(64).value(nameSync).autoUpdateOnChange(true))
-            .child(new ButtonWidget<>().size(220, 30).pos(10, 120)
-                .overlay(IKey.str(EnumChatFormatting.GREEN + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_save")
-                    + EnumChatFormatting.RESET).alignment(Alignment.CENTER))
-                .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                    if (md.mouseButton == 0 && !worldObj.isRemote) captureSchematic(data.getPlayer());
-                })));
+            .child(
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_text"))
+                    .asWidget()
+                    .pos(10, 40))
+            .child(
+                new TextFieldWidget().size(220, 30)
+                    .pos(10, 60)
+                    .setMaxLength(64)
+                    .value(nameSync)
+                    .autoUpdateOnChange(true))
+            .child(
+                new ButtonWidget<>().size(220, 30)
+                    .pos(10, 120)
+                    .overlay(
+                        IKey.str(
+                            EnumChatFormatting.GREEN
+                                + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_save")
+                                + EnumChatFormatting.RESET)
+                            .alignment(Alignment.CENTER))
+                    .syncHandler(
+                        new InteractionSyncHandler().setOnMousePressed(
+                            md -> {
+                                if (md.mouseButton == 0 && !worldObj.isRemote) captureSchematic(data.getPlayer());
+                            })));
     }
 
     private ToggleButton createDestinationButton(BasePlanet dim) {
         return new ToggleButton().size(48, 20)
-            .overlay(IKey.str(dim.getPlanetEnum().getName()))
-            .valueWrapped(selectedDim, dim.getPlanetEnum().getId());
+            .overlay(
+                IKey.str(
+                    dim.getPlanetEnum()
+                        .getName()))
+            .valueWrapped(
+                selectedDim,
+                dim.getPlanetEnum()
+                    .getId());
     }
 
     private void enterRocket(PosGuiData data) {
@@ -278,7 +303,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (entityRocket != null && !entityRocket.isDead) return entityRocket;
 
         entityRocket = new EntityRocket(worldObj);
-        int[] offset = getRotatedOffset(SILO_DEFAULT_X_OFFSET, SILO_DEFAULT_Y_OFFSET, SILO_DEFAULT_Z_OFFSET, currentFacing);
+        int[] offset = getRotatedOffset(
+            SILO_DEFAULT_X_OFFSET,
+            SILO_DEFAULT_Y_OFFSET,
+            SILO_DEFAULT_Z_OFFSET,
+            currentFacing);
         entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
         worldObj.spawnEntityInWorld(entityRocket);
         return entityRocket;
@@ -308,7 +337,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         }
 
         if (pendingAssemblerCoords != null) {
-            TileEntity te = worldObj.getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
+            TileEntity te = worldObj
+                .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
             if (te instanceof TileEntityModuleAssembler assembler) {
                 moduleAssembler = assembler;
             }
@@ -354,7 +384,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         pendingSchematicName = nbt.getString("pendingSchematicName");
 
         if (nbt.hasKey("assemblerX")) {
-            pendingAssemblerCoords = new int[]{nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"), nbt.getInteger("assemblerZ")};
+            pendingAssemblerCoords = new int[] { nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"),
+                nbt.getInteger("assemblerZ") };
         }
         if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
         if (nbt.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
@@ -382,8 +413,23 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     // IRocketControllerTE
-    @Override public ForgeDirection getPlacedFacing() { return placedFacing; }
-    @Override public void setPlacedFacing(ForgeDirection dir) { this.placedFacing = dir; }
-    @Override public boolean isStructureValid() { return structureValid; }
-    @Override public ExtendedFacing getCurrentFacing() { return currentFacing; }
+    @Override
+    public ForgeDirection getPlacedFacing() {
+        return placedFacing;
+    }
+
+    @Override
+    public void setPlacedFacing(ForgeDirection dir) {
+        this.placedFacing = dir;
+    }
+
+    @Override
+    public boolean isStructureValid() {
+        return structureValid;
+    }
+
+    @Override
+    public ExtendedFacing getCurrentFacing() {
+        return currentFacing;
+    }
 }

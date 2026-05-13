@@ -1,14 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraftforge.common.util.Constants;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 
 public class RocketBlueprint {
 
@@ -57,9 +58,11 @@ public class RocketBlueprint {
     }
 
     public boolean canPlacePart(RocketPartInstance candidate) {
-        if (candidate.x() < 0 || candidate.y() < 0 ||
-            candidate.x() + candidate.def().getWidthCells() > width ||
-            candidate.y() + candidate.def().getHeightCells() > height) {
+        if (candidate.x() < 0 || candidate.y() < 0
+            || candidate.x() + candidate.def()
+                .getWidthCells() > width
+            || candidate.y() + candidate.def()
+                .getHeightCells() > height) {
             return false;
         }
         for (RocketPartInstance existing : parts) {
@@ -94,10 +97,7 @@ public class RocketBlueprint {
     public static RocketBlueprint deserializeNBT(NBTTagCompound tag, RocketPartRegistry registry) {
         if (tag == null) return new RocketBlueprint();
 
-        RocketBlueprint bp = new RocketBlueprint(
-            tag.getInteger("width"),
-            tag.getInteger("height")
-        );
+        RocketBlueprint bp = new RocketBlueprint(tag.getInteger("width"), tag.getInteger("height"));
         bp.name = tag.getString("name");
 
         NBTTagList list = tag.getTagList("parts", Constants.NBT.TAG_COMPOUND);

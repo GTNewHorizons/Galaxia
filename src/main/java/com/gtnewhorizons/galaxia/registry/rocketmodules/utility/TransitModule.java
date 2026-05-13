@@ -17,7 +17,6 @@ public record TransitModule(RocketPartInstance module, TileEntityGantryTerminal 
      */
     @Override
     public String toString() {
-        return String
-            .format("TransitModule: Module: {%s}, Destination: {%s}", module(), destination.toString());
+        return String.format("TransitModule: Module: {%s}, Destination: {%s}", module(), destination.toString());
     }
 }

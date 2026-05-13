@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.minecraft.util.ResourceLocation;
-
 import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
 
@@ -14,8 +13,6 @@ public class ModelCache {
 
     public static IModelCustom get(ResourceLocation location) {
 
-        return CACHE.computeIfAbsent(
-            location,
-            AdvancedModelLoader::loadModel);
+        return CACHE.computeIfAbsent(location, AdvancedModelLoader::loadModel);
     }
 }

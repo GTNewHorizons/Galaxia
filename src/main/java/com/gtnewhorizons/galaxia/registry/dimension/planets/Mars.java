@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.dimension.planets;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -17,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilde
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 /**
  * The class holding all data related to the dimension Mars

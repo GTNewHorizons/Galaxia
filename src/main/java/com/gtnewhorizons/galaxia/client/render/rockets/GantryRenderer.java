@@ -4,8 +4,6 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
@@ -16,6 +14,8 @@ import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -99,7 +99,8 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         if (moduleId == -1) return;
 
         // TODO: clientModuleId -> clientPartInstance
-        RocketPartDef def = RocketPartRegistry.instance().get(moduleId);
+        RocketPartDef def = RocketPartRegistry.instance()
+            .get(moduleId);
         if (def == null) return;
 
         applyWorldLighting(gantry);
@@ -115,7 +116,9 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
             IModelCustom model = ModelCache.get(def.modelLocation());
             if (model != null) {
                 if (def.textureLocation() != null) {
-                    Minecraft.getMinecraft().getTextureManager().bindTexture(def.textureLocation());
+                    Minecraft.getMinecraft()
+                        .getTextureManager()
+                        .bindTexture(def.textureLocation());
                 }
                 model.renderAll();
             }
