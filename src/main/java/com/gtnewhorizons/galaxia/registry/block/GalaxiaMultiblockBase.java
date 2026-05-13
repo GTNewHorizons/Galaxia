@@ -15,6 +15,7 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 
 import cpw.mods.fml.common.Optional;
 import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;
@@ -51,6 +52,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     }
 
     public void markStructureDirty() {
+        updated = true;
         mCheckTimer = 0;
     }
 
@@ -140,10 +142,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
-    protected void preStructureCheck() {}
-
-    protected void postStructureCheck() {}
-
     @Override
     public void updateEntity() {
         super.updateEntity();
@@ -154,7 +152,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
             if (!GalaxiaAPI.isGregTechLoaded()) this.updated = true;
 
             if (this.updated) {
-                preStructureCheck();
+                this.updated = false;
                 final boolean valid = checkStructure();
                 if (valid != structureValid) {
                     structureValid = valid;
@@ -163,8 +161,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
                     markDirty();
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 }
-                this.updated = false;
-                postStructureCheck();
             }
             mCheckTimer = 100;
         } else {

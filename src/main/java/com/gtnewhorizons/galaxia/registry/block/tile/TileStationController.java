@@ -25,9 +25,9 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
-import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -39,12 +39,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TileStationController extends TileStationBase<TileStationController>
-    implements ArbitraryShapeTile<TileStationController>, IGraphListener, IFilteredInventory {
+    implements ArbitraryShapeTile<TileStationController>, IFilteredInventory {
 
     private UUID owner;
     private CelestialAsset.ID backingStation;
-
-    private StationGraph stationGraph;
 
     public final ArbitraryShapeDefinition<TileStationController> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStationController>builder()
@@ -70,9 +68,9 @@ public class TileStationController extends TileStationBase<TileStationController
     public void onStructureFormed() {
         super.onStructureFormed();
 
-        stationGraph = new StationGraph(this);
-        stationGraph.addListener(this);
-        stationGraph.rebuild();
+        graph = new StationGraph(this);
+        graph.addListener(this);
+        graph.rebuild();
 
         if (backingStation == null) {
             CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(this.worldObj.provider.dimensionId);
@@ -93,9 +91,9 @@ public class TileStationController extends TileStationBase<TileStationController
 
     @Override
     public void onStructureDisformed() {
-        if (stationGraph != null) {
-            stationGraph.destroy();
-            stationGraph = null;
+        if (graph != null) {
+            graph.destroy();
+            graph = null;
         }
         super.onStructureDisformed();
         if (backingStation != null) {
@@ -104,32 +102,32 @@ public class TileStationController extends TileStationBase<TileStationController
     }
 
     public StationGraph getGraph() {
-        return stationGraph;
+        return graph;
     }
 
     public int getVolume() {
         int own = STRUCTURE_DEFINITION.getVolume();
-        if (stationGraph == null) return own;
+        if (graph == null) return own;
         int sum = own;
-        for (TileStationSecondary<?> s : stationGraph.iterateOver(TileStationSecondary.class)) {
+        for (TileStationSecondary<?> s : graph.iterateOver(TileStationSecondary.class)) {
             sum += s.getVolume();
         }
         return sum;
     }
 
     public List<IInventory> getConnectedInventories() {
-        if (stationGraph == null) return List.of();
+        if (graph == null) return List.of();
         ObjectArrayList<IInventory> result = new ObjectArrayList<>();
-        for (IInventory inv : stationGraph.connectedInventories()) {
+        for (IInventory inv : graph.connectedInventories()) {
             result.add(inv);
         }
         return result;
     }
 
     public List<ItemStack> getFiltersFor(int i) {
-        if (stationGraph == null) return List.of();
+        if (graph == null) return List.of();
         int idx = 0;
-        for (IFilteredInventory inv : stationGraph.connectedInventories()) {
+        for (IFilteredInventory inv : graph.connectedInventories()) {
             if (idx == i) return inv.getFiltersFor(0);
             idx++;
         }
@@ -137,9 +135,9 @@ public class TileStationController extends TileStationBase<TileStationController
     }
 
     public void setFilters(int slot, List<ItemStack> filterList) {
-        if (stationGraph == null) return;
+        if (graph == null) return;
         int idx = 0;
-        for (IFilteredInventory inv : stationGraph.connectedInventories()) {
+        for (IFilteredInventory inv : graph.connectedInventories()) {
             if (idx == slot) {
                 inv.setFilters(slot, filterList);
                 return;
@@ -149,9 +147,9 @@ public class TileStationController extends TileStationBase<TileStationController
     }
 
     public void addFilter(int slot, ItemStack filter) {
-        if (stationGraph == null) return;
+        if (graph == null) return;
         int idx = 0;
-        for (IFilteredInventory inv : stationGraph.connectedInventories()) {
+        for (IFilteredInventory inv : graph.connectedInventories()) {
             if (idx == slot) {
                 inv.addFilter(slot, filter);
                 return;
@@ -161,9 +159,9 @@ public class TileStationController extends TileStationBase<TileStationController
     }
 
     public void removeFilter(int slot, ItemStack filter) {
-        if (stationGraph == null) return;
+        if (graph == null) return;
         int idx = 0;
-        for (IFilteredInventory inv : stationGraph.connectedInventories()) {
+        for (IFilteredInventory inv : graph.connectedInventories()) {
             if (idx == slot) {
                 inv.removeFilter(slot, filter);
                 return;
@@ -173,9 +171,9 @@ public class TileStationController extends TileStationBase<TileStationController
     }
 
     public void clearFilters(int slot) {
-        if (stationGraph == null) return;
+        if (graph == null) return;
         int idx = 0;
-        for (IFilteredInventory inv : stationGraph.connectedInventories()) {
+        for (IFilteredInventory inv : graph.connectedInventories()) {
             if (idx == slot) {
                 inv.clearFilters(slot);
                 return;
@@ -185,10 +183,10 @@ public class TileStationController extends TileStationBase<TileStationController
     }
 
     public Map<Integer, List<ItemStack>> filtersSnapshot() {
-        if (stationGraph == null) return Map.of();
+        if (graph == null) return Map.of();
         Map<Integer, List<ItemStack>> result = new LinkedHashMap<>();
         int idx = 0;
-        for (IFilteredInventory inv : stationGraph.connectedInventories()) {
+        for (IFilteredInventory inv : graph.connectedInventories()) {
             List<ItemStack> f = inv.getFiltersFor(0);
             if (f != null && !f.isEmpty()) {
                 result.put(idx, new ArrayList<>(f));
@@ -231,8 +229,8 @@ public class TileStationController extends TileStationBase<TileStationController
     public boolean hasOxygen(int x, int y, int z) {
         if (isInside(x, y, z)) return isOxygenated();
 
-        if (stationGraph != null) {
-            for (TileStationBase<?> secondary : stationGraph.iterateOver(TileStationBase.class)) {
+        if (graph != null) {
+            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
                 if (secondary.isInside(x, y, z)) return secondary.isOxygenated();
             }
         }
@@ -244,8 +242,8 @@ public class TileStationController extends TileStationBase<TileStationController
     public void tick() {
         super.tick();
 
-        if (stationGraph != null) {
-            for (TileStationBase<?> secondary : stationGraph.iterateOver(TileStationBase.class)) {
+        if (graph != null) {
+            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
                 secondary.tick();
             }
         }
@@ -291,8 +289,9 @@ public class TileStationController extends TileStationBase<TileStationController
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                         if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
                         markStructureDirty();
-                        if (stationGraph != null) {
-                            for (TileStationBase<?> secondary : stationGraph.iterateOver(TileStationBase.class)) {
+                        if (graph != null) {
+                            graph.rebuild();
+                            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
                                 System.out.println(secondary.here);
                             }
                         }
@@ -345,9 +344,9 @@ public class TileStationController extends TileStationBase<TileStationController
 
     @Override
     public void invalidate() {
-        if (stationGraph != null) {
-            stationGraph.destroy();
-            stationGraph = null;
+        if (graph != null) {
+            graph.destroy();
+            graph = null;
         }
         super.invalidate();
         if (backingStation != null) {

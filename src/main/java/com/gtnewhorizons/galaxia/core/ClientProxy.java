@@ -3,8 +3,6 @@ package com.gtnewhorizons.galaxia.core;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
 
-import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
@@ -28,6 +26,8 @@ import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;

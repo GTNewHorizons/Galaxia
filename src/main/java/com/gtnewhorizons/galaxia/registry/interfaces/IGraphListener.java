@@ -11,4 +11,8 @@ public interface IGraphListener {
     default void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {}
 
     default void onGraphRebuilt(TileStationController controller) {}
+
+    default void onAttachmentConnected(BlockPos pos, StationAttachment attachment) {}
+
+    default void onAttachmentDisconnected(BlockPos pos) {}
 }

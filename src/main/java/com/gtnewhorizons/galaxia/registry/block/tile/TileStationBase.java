@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
+import gregtech.common.items.behaviors.BehaviourDataStick;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -21,14 +23,17 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 
+import javax.annotation.Nullable;
+
 public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extends GalaxiaMultiblockBase<T>
-    implements IGuiHolder<PosGuiData> {
+    implements IGuiHolder<PosGuiData>, IGraphListener {
 
     public static final List<Block> BASE_VALID_BLOCKS = List.of(
         GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
         GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
         GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
 
+    protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
     protected BlockPos here;
 
@@ -37,23 +42,6 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
 
     public TileStationBase() {
         super();
-    }
-
-    protected void clearBroken(List<BlockPos> positions) {
-        for (int i = positions.size() - 1; i >= 0; i--) {
-            BlockPos pos = positions.get(i);
-            if (pos == null) {
-                positions.remove(i);
-                markDirty();
-                continue;
-            }
-
-            TileEntity te = pos.getTE(worldObj);
-            if (!(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid()) {
-                positions.remove(i);
-                markDirty();
-            }
-        }
     }
 
     @Override

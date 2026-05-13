@@ -1,31 +1,28 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
-import net.minecraft.tileentity.TileEntity;
+import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
+import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public final class StationGraph {
 
     private final TileStationController controller;
-
     private final Object2ObjectOpenHashMap<BlockPos, TileStationBase<?>> pieces = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<BlockPos, StationAttachment> attachments = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, ObjectArrayList<BlockPos>> adjacency = new Object2ObjectOpenHashMap<>();
-
     private final ObjectOpenHashSet<BlockPos> visited = new ObjectOpenHashSet<>();
     private final ObjectArrayList<BlockPos> queue = new ObjectArrayList<>();
-
     private final List<IGraphListener> listeners = new ObjectArrayList<>();
 
     public StationGraph(TileStationController controller) {
@@ -34,95 +31,101 @@ public final class StationGraph {
 
     @SuppressWarnings("unchecked")
     public <T extends TileStationBase<?>> Iterable<T> iterateOver(Class<T> clazz) {
-        return () -> new Iterator<T>() {
-
-            private final ObjectIterator<Object2ObjectMap.Entry<BlockPos, TileStationBase<?>>> it = pieces
-                .object2ObjectEntrySet()
-                .fastIterator();
-            private T next;
-
-            private void advance() {
-                while (next == null) {
-                    if (!it.hasNext()) return;
-                    TileStationBase<?> piece = it.next()
-                        .getValue();
-                    if (piece != controller && clazz.isInstance(piece)) {
-                        next = (T) piece;
-                    }
-                }
-            }
-
-            @Override
-            public boolean hasNext() {
-                advance();
-                return next != null;
-            }
-
-            @Override
-            public T next() {
-                advance();
-                T result = next;
-                if (result == null) throw new NoSuchElementException();
-                next = null;
-                return result;
-            }
-        };
+        return () -> pieces.values()
+            .stream()
+            .filter(p -> p != controller && clazz.isInstance(p))
+            .map(p -> (T) p)
+            .iterator();
     }
 
-    public Iterable<IDistributedInventory> connectedInventories() {
-        return () -> {
-            Iterator<TileStationDock> dockIt = iterateOver(TileStationDock.class).iterator();
-            return new Iterator<>() {
+    public @Nonnull Iterable<IDistributedInventory> connectedInventories() {
+        return () -> attachments.keySet()
+            .stream()
+            .map(pos -> pos.getTE(controller.getWorldObj()))
+            .filter(te -> te instanceof IDistributedInventory)
+            .filter(te -> !(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid())
+            .map(te -> (IDistributedInventory) te)
+            .iterator();
+    }
 
-                private List<BlockPos> targets = new ObjectArrayList<>();
-                private int targetIndex;
-                private IDistributedInventory next;
+    public void registerAttachment(BlockPos parent, BlockPos pos, StationAttachment attachment) {
+        if (!pieces.containsKey(parent)) return;
 
-                private void advance() {
-                    while (next == null) {
-                        if (targetIndex < targets.size()) {
-                            BlockPos pos = targets.get(targetIndex++);
-                            TileEntity te = pos.getTE(controller.getWorldObj());
-                            if (te instanceof IDistributedInventory inv) {
-                                next = inv;
-                                return;
-                            }
-                        } else if (dockIt.hasNext()) {
-                            targets = dockIt.next()
-                                .getHammerTargets();
-                            targetIndex = 0;
-                        } else {
-                            return;
-                        }
-                    }
-                }
+        addAdjacency(parent, pos);
+        attachments.put(pos, attachment);
+        attachment.onAttached(this);
+        fireListeners(l -> l.onAttachmentConnected(pos, attachment));
+    }
 
-                @Override
-                public boolean hasNext() {
-                    advance();
-                    return next != null;
-                }
+    public void removeAttachment(BlockPos pos) {
+        StationAttachment attachment = attachments.remove(pos);
+        adjacency.values()
+            .forEach(list -> list.remove(pos));
 
-                @Override
-                public IDistributedInventory next() {
-                    advance();
-                    IDistributedInventory result = next;
-                    if (result == null) throw new NoSuchElementException();
-                    next = null;
-                    return result;
-                }
-            };
-        };
+        if (attachment != null) {
+            attachment.onDetached(this);
+            fireListeners(l -> l.onAttachmentDisconnected(pos));
+        }
+    }
+
+    public void connectPiece(BlockPos pos) {
+        if (controller.getWorldObj() == null || pieces.containsKey(pos)) return;
+        if (!(pos.getTE(controller.getWorldObj()) instanceof TileStationBase<?>newPiece)) return;
+
+        pieces.put(pos, newPiece);
+        for (BlockPos airlockPos : newPiece.airlocks) {
+            if (!(airlockPos.getTE(controller.getWorldObj()) instanceof TileEntityAirlock airlock)) continue;
+
+            for (BlockPos other : airlock.getStationControllers()) {
+                if (!pieces.containsKey(other) || other.equals(pos)) continue;
+
+                addAdjacency(pos, other);
+                addAdjacency(other, pos);
+                fireListeners(l -> l.onPieceConnected(pieces.get(other), newPiece, controller.here));
+            }
+        }
+    }
+
+    public void disconnectPiece(BlockPos pos) {
+        if (!pieces.containsKey(pos)) return;
+
+        ObjectArrayList<BlockPos> adj = adjacency.getOrDefault(pos, new ObjectArrayList<>());
+        long pieceNeighborCount = adj.stream()
+            .filter(pieces::containsKey)
+            .count();
+
+        if (pieceNeighborCount > 1) {
+            rebuild();
+            return;
+        }
+
+        TileStationBase<?> piece = pieces.remove(pos);
+        // Remove children attachments
+        adj.stream()
+            .filter(attachments::containsKey)
+            .toList()
+            .forEach(this::removeAttachment);
+        // Cleanup neighbor pointers
+        adj.forEach(
+            neighbor -> {
+                if (adjacency.containsKey(neighbor)) adjacency.get(neighbor)
+                    .remove(pos);
+            });
+
+        adjacency.remove(pos);
+        if (piece != null) fireListeners(l -> l.onPieceDisconnected(piece, null));
     }
 
     public void rebuild() {
-        ObjectOpenHashSet<BlockPos> oldKeys = new ObjectOpenHashSet<>(pieces.keySet());
+        var oldPieces = new Object2ObjectOpenHashMap<>(pieces);
 
-        adjacency.clear();
-        pieces.clear();
-        visited.clear();
-        queue.clear();
+        // Detach all current attachments before clearing
+        attachments.forEach((pos, attachment) -> {
+            attachment.onDetached(this);
+            fireListeners(l -> l.onAttachmentDisconnected(pos));
+        });
 
+        clearData();
         BlockPos start = controller.here;
         if (start == null || controller.getWorldObj() == null) return;
 
@@ -130,74 +133,70 @@ public final class StationGraph {
         queue.add(start);
         visited.add(start);
 
-        int head = 0;
-        while (head < queue.size()) {
-            BlockPos current = queue.get(head++);
+        for (int head = 0; head < queue.size(); head++) {
+            BlockPos current = queue.get(head);
             TileStationBase<?> piece = pieces.get(current);
             if (piece == null) continue;
 
             for (BlockPos airlockPos : piece.airlocks) {
-                TileEntityAirlock airlock = resolveAirlock(airlockPos);
-                if (airlock == null) continue;
+                if (!(airlockPos.getTE(controller.getWorldObj()) instanceof TileEntityAirlock airlock)) continue;
 
                 for (BlockPos other : airlock.getStationControllers()) {
-                    if (other.equals(current)) continue;
-                    if (!visited.add(other)) continue;
+                    if (other.equals(current) || !visited.add(other)) continue;
+                    if (!(other.getTE(controller.getWorldObj()) instanceof TileStationBase<?>neighbor)) continue;
 
-                    TileStationBase<?> neighbor = resolvePiece(other);
-                    if (neighbor != null) {
-                        pieces.put(other, neighbor);
-
-                        for (int i = 0; i < listeners.size(); i++) {
-                            listeners.get(i)
-                                .onPieceConnected(piece, neighbor, controller.here);
-                        }
-                    }
-
+                    listeners.add(neighbor);
+                    pieces.put(other, neighbor);
                     queue.add(other);
-                    adjacency.computeIfAbsent(current, k -> new ObjectArrayList<>())
-                        .add(other);
-                    adjacency.computeIfAbsent(other, k -> new ObjectArrayList<>())
-                        .add(current);
+                    addAdjacency(current, other);
+                    addAdjacency(other, current);
+                    fireListeners(l -> l.onPieceConnected(piece, neighbor, controller.here));
                 }
             }
         }
 
-        for (BlockPos removed : oldKeys) {
-            if (!pieces.containsKey(removed) && !removed.equals(start)) {
-                TileStationBase<?> piece = resolvePiece(removed);
-                if (piece != null) {
-                    for (int i = 0; i < listeners.size(); i++) {
-                        listeners.get(i)
-                            .onPieceDisconnected(piece, null);
-                    }
-                }
+        // Notify for pieces that were lost in rebuild
+        oldPieces.forEach((pos, piece) -> {
+            if (!pieces.containsKey(pos) && !pos.equals(start)) {
+                fireListeners(l -> l.onPieceDisconnected(piece, null));
             }
-        }
+        });
 
-        for (int i = 0; i < listeners.size(); i++) {
-            listeners.get(i)
-                .onGraphRebuilt(controller);
-        }
+        fireListeners(l -> l.onGraphRebuilt(controller));
+        visited.clear();
+        queue.clear();
     }
 
     public void destroy() {
-        for (var it = pieces.object2ObjectEntrySet()
-            .fastIterator(); it.hasNext();) {
-            TileStationBase<?> piece = it.next()
-                .getValue();
-            if (piece != null && piece != controller) {
-                for (int i = 0; i < listeners.size(); i++) {
-                    listeners.get(i)
-                        .onPieceDisconnected(piece, null);
-                }
-            }
-        }
-        adjacency.clear();
+        pieces.values()
+            .stream()
+            .filter(p -> p != null && p != controller)
+            .forEach(p -> fireListeners(l -> l.onPieceDisconnected(p, null)));
+
+        attachments.forEach((pos, attachment) -> {
+            attachment.onDetached(this);
+            fireListeners(l -> l.onAttachmentDisconnected(pos));
+        });
+
+        clearData();
+        listeners.clear();
+    }
+
+    private void addAdjacency(BlockPos from, BlockPos to) {
+        adjacency.computeIfAbsent(from, k -> new ObjectArrayList<>())
+            .add(to);
+    }
+
+    private void clearData() {
         pieces.clear();
+        attachments.clear();
+        adjacency.clear();
         visited.clear();
         queue.clear();
-        listeners.clear();
+    }
+
+    private void fireListeners(Consumer<IGraphListener> action) {
+        listeners.forEach(action);
     }
 
     public boolean isEmpty() {
@@ -209,22 +208,10 @@ public final class StationGraph {
     }
 
     public void addListener(IGraphListener listener) {
-        if (!listeners.contains(listener)) {
-            listeners.add(listener);
-        }
+        if (!listeners.contains(listener)) listeners.add(listener);
     }
 
     public void removeListener(IGraphListener listener) {
         listeners.remove(listener);
-    }
-
-    private TileEntityAirlock resolveAirlock(BlockPos pos) {
-        TileEntity te = pos.getTE(controller.getWorldObj());
-        return te instanceof TileEntityAirlock lock ? lock : null;
-    }
-
-    private TileStationBase<?> resolvePiece(BlockPos pos) {
-        TileEntity te = pos.getTE(controller.getWorldObj());
-        return te instanceof TileStationBase<?>base ? base : null;
     }
 }

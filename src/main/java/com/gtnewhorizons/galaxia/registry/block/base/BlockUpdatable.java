@@ -23,13 +23,8 @@ public abstract class BlockUpdatable extends Block {
         blockUpdate(aWorld, aX, aY, aZ, aMetaData);
     }
 
-    /**
-     * This is for listening and propagating block updates for MultiMultiblocks
-     */
-    @Override
-    public void onNeighborBlockChange(World world, int x, int y, int z, Block neighbor) {
-        super.onNeighborBlockChange(world, x, y, z, neighbor);
-        blockUpdate(world, x, y, z, world.getBlockMetadata(x, y, z));
+    public void blockUpdate(World aWorld, int aX, int aY, int aZ) {
+        blockUpdate(aWorld, aX, aY, aZ, aWorld.getBlockMetadata(aX, aY, aZ));
     }
 
     public void blockUpdate(World aWorld, int aX, int aY, int aZ, int aMetaData) {

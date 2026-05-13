@@ -30,9 +30,12 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
+
+import javax.annotation.Nullable;
 
 public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, StationAttachment {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -58,14 +61,40 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
 
     private final List<IInventory> inventory = new ArrayList<>();
     private final List<ItemStack> filter = new ArrayList<>();
-    private BlockPos stationController;
+    private @Nullable StationGraph graph;
+    private final BlockPos here;
 
-    public void setStationController(BlockPos pos) {
-        this.stationController = pos;
+    public TileHammerTarget() {
+        super();
+        here = new BlockPos(xCoord, yCoord, zCoord);
     }
 
-    public BlockPos getStationController() {
-        return stationController;
+    @Override
+    public boolean checkStructure() {
+        return graph != null && super.checkStructure();
+    }
+
+    @Override
+    public BlockPos getPosition() {
+        return here;
+    }
+
+    @Override
+    public void onStructureDisformed() {
+        super.onStructureDisformed();
+        if (graph != null) {
+            graph.removeAttachment(here);
+        }
+    }
+
+    @Override
+    public void onAttached(StationGraph graph) {
+        this.graph = graph;
+    }
+
+    @Override
+    public void onDetached(StationGraph graph) {
+        this.graph = null;
     }
 
     @Override

@@ -1,82 +1,79 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import java.util.List;
-
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
-public abstract class TileStationSecondary<T extends TileStationBase<T>> extends TileStationBase<T>
-    implements IGraphListener {
+public abstract class TileStationSecondary<T extends TileStationBase<T>> extends TileStationBase<T> {
 
     public TileStationSecondary() {
         super();
     }
 
     @Override
+    public boolean checkStructure() {
+        final boolean valid = super.checkStructure();
+        if (graph == null) {
+            // force trigger onStructureFormed/onStructureDisformed
+            structureValid = !valid;
+            onMachineBlockUpdate();
+        }
+        return valid;
+    }
+
+    @Override
     public void onStructureFormed() {
         super.onStructureFormed();
-        StationGraph graph = findControllerGraph();
+        if (graph == null) {
+            for (BlockPos pos : airlocks) {
+                if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
+                for (BlockPos other : airlock.getStationControllers()) {
+                    if (other.equals(here)) continue;
+                    if (!(other.getTE(worldObj) instanceof TileStationBase<?> base)) continue;
+
+                    this.graph = base.graph;
+                }
+            }
+        }
+
         if (graph != null) {
-            graph.addListener(this);
-            graph.rebuild();
+            graph.connectPiece(here);
         }
     }
 
     @Override
     public void onStructureDisformed() {
-        StationGraph graph = findControllerGraph();
         if (graph != null) {
-            graph.removeListener(this);
+            graph.disconnectPiece(here);
         }
-        List<BlockPos> savedAirlocks = new java.util.ArrayList<>(this.airlocks);
         super.onStructureDisformed();
-        triggerControllerGraphRebuild(savedAirlocks);
     }
 
     @Override
     public void invalidate() {
-        List<BlockPos> savedAirlocks = new java.util.ArrayList<>(this.airlocks);
         super.invalidate();
-        triggerControllerGraphRebuild(savedAirlocks);
+        if (graph != null) {
+            graph.disconnectPiece(here);
+        }
     }
 
-    private StationGraph findControllerGraph() {
-        for (BlockPos airlockPos : airlocks) {
-            TileEntityAirlock airlock = airlockPos.getTE(worldObj);
-            if (airlock == null) continue;
-            for (BlockPos other : airlock.getStationControllers()) {
-                if (other.equals(this.here)) continue;
-                TileStationBase<?> piece = other.getTE(worldObj);
-                if (piece instanceof TileStationController ctrl) {
-                    return ctrl.getGraph();
-                }
+    @Override
+    public void onPieceConnected(TileStationBase<?> piece, TileStationBase<?> neighbor, BlockPos controllerPos) {
+        if ((piece == this || neighbor == this) && controllerPos != null) {
+            if (controllerPos.getTE(worldObj) instanceof TileStationController controller) {
+                graph = controller.getGraph();
             }
         }
-        return null;
     }
 
-    /**
-     * Finds a controller through saved airlock positions and triggers rebuild.
-     * Called after this piece has been untracked from airlocks, so existing
-     * airlocks list may be empty.
-     */
-    protected void triggerControllerGraphRebuild(List<BlockPos> airlockPositions) {
-        for (BlockPos airlockPos : airlockPositions) {
-            TileEntityAirlock airlock = airlockPos.getTE(worldObj);
-            if (airlock == null) continue;
-            for (BlockPos other : airlock.getStationControllers()) {
-                if (other.equals(this.here)) continue;
-                TileStationBase<?> piece = other.getTE(worldObj);
-                if (piece instanceof TileStationController ctrl) {
-                    StationGraph graph = ctrl.getGraph();
-                    if (graph != null) {
-                        graph.rebuild();
-                    }
-                    return;
-                }
-            }
-        }
+    @Override
+    public void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {
+        graph = null;
+    }
+
+    @Override
+    public void onGraphRebuilt(TileStationController controller) {
+        if (!structureValid || controller.getGraph() == null) return;
+        graph = controller.getGraph();
     }
 
     public int getVolume() {

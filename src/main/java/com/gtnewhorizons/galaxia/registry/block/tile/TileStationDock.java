@@ -2,7 +2,9 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -22,15 +24,16 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
-import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
 
 public class TileStationDock extends TileStationSecondary<TileStationDock>
     implements IGuiHolder<PosGuiData>, ArbitraryShapeTile<TileStationDock> {
 
-    private List<BlockPos> hammerTargets = new ArrayList<>();
+    private List<BlockPos> attachments = new ArrayList<>();
 
     public final ArbitraryShapeDefinition<TileStationDock> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStationDock>builder()
@@ -46,12 +49,10 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dockController, tileEntity) -> {
-            if (tileEntity instanceof TileHammerTarget target) {
-                if (!target.isStructureValid()) return false;
-
-                BlockPos pos = new BlockPos(target.xCoord, target.yCoord, target.zCoord);
-                if (!dockController.hammerTargets.contains(pos)) {
-                    dockController.hammerTargets.add(pos);
+            if (tileEntity instanceof StationAttachment) {
+                BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
+                if (!dockController.attachments.contains(pos)) {
+                    dockController.attachments.add(pos);
                 }
                 return true;
             }
@@ -67,43 +68,49 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     }
 
     @Override
-    protected void preStructureCheck() {
-        clearBroken(hammerTargets);
+    public void onStructureFormed() {
+        super.onStructureFormed();
+        if (graph != null) {
+            for (BlockPos pos : attachments) {
+                if (pos.getTE(worldObj) instanceof StationAttachment attachment) {
+                    graph.registerAttachment(here, pos, attachment);
+                }
+            }
+        }
     }
 
     @Override
-    public void onPieceConnected(TileStationBase<?> piece, TileStationBase<?> neighbor, BlockPos controllerPos) {
-        if (piece == this || neighbor == this) {
-            for (var pos : hammerTargets) {
-                TileHammerTarget target = pos.getTE(worldObj);
-                if (target != null) {
-                    target.setStationController(controllerPos);
-                }
-            }
+    public void onAttachmentConnected(BlockPos pos, StationAttachment attachment) {
+        if (!attachments.contains(pos)) {
+            attachments.add(pos);
             markDirty();
         }
     }
 
     @Override
-    public void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {
-        if (piece == this) {
-            for (var pos : hammerTargets) {
-                TileHammerTarget target = pos.getTE(worldObj);
-                if (target != null) {
-                    target.setStationController(null);
-                }
-            }
+    public void onAttachmentDisconnected(BlockPos pos) {
+        if (attachments.remove(pos)) {
             markDirty();
         }
     }
 
     @Override
     public void onGraphRebuilt(TileStationController controller) {
-        onMachineBlockUpdate();
+        super.onGraphRebuilt(controller);
+        if (graph == null) return;
+
+        for (BlockPos pos : attachments) {
+            if (pos.getTE(worldObj) instanceof StationAttachment attachment) {
+                graph.registerAttachment(here, pos, attachment);
+            }
+        }
     }
 
-    public List<BlockPos> getHammerTargets() {
-        return hammerTargets;
+    public List<BlockPos> getValidAttachments() {
+        return attachments.stream()
+            .filter(pos -> pos != null && pos.getTE(worldObj) instanceof GalaxiaMultiblockBase<?>)
+            .filter(pos -> ((GalaxiaMultiblockBase<?>)pos.getTE(worldObj)).isStructureValid())
+            .toList();
     }
 
     @Override
@@ -114,7 +121,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
-        IntSyncValue oxygenatedSync = new IntSyncValue(() -> hammerTargets.size(), () -> hammerTargets.size());
+        IntSyncValue oxygenatedSync = new IntSyncValue(() -> getValidAttachments().size(), () -> getValidAttachments().size());
         syncManager.syncValue("oxygenated", 0, oxygenatedSync);
 
         return new ModularPanel("galaxia:station_room").size(210, 130)
@@ -174,14 +181,14 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
-        nbt.setTag("hammerTargets", BlockPos.listToNBT(hammerTargets));
+        nbt.setTag("attachments", BlockPos.listToNBT(attachments));
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
-        if (nbt.hasKey("hammerTargets")) {
-            hammerTargets = BlockPos.listFromNBT(nbt.getTagList("hammerTargets", Constants.NBT.TAG_COMPOUND));
+        if (nbt.hasKey("attachments")) {
+            attachments = BlockPos.listFromNBT(nbt.getTagList("attachments", Constants.NBT.TAG_COMPOUND));
         }
     }
 }
