@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
@@ -66,7 +65,7 @@ public enum GalaxiaBlocksEnum {
     OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),
 
     // NON-TE
-    SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),
+    SPACE_STATION_GLASS(new BlockCasing("space_station/space_station_glass").glass(), "space_station_glass"),
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
 
     // MISC
@@ -83,7 +82,7 @@ public enum GalaxiaBlocksEnum {
     LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
 
     // MISC - MULTIBLOCK BLOCKS
-    RUSTY_SCAFFOLDING(new BlockCasing("rusty_scaffolding")),
+    RUSTY_SCAFFOLDING(new BlockCasing("rusty_scaffolding").transparent()),
     RUSTY_PANEL(new BlockCasing("rusty_panel")),
     RUSTY_SHEETMETAL(new BlockCasing("rusty_sheetmetal")),
     SPACE_STATION_PANEL(new BlockCasing("space_station/space_station_panel")),
