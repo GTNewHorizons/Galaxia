@@ -28,17 +28,31 @@ public class TileEntityRocketTrophy extends TileEntity {
 
     public void setSchematic(ItemStack stack) {
         this.schematic = stack != null ? stack.copy() : null;
-        this.cachedBlueprint = null; // сброс кэша
+        this.cachedBlueprint = null;
         markDirty();
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
     public RocketBlueprint getBlueprint() {
         if (cachedBlueprint == null && schematic != null) {
-            cachedBlueprint = ItemRocketSchematic.readBlueprint(schematic);
+            cachedBlueprint = ItemRocketSchematic.getBlueprint(schematic);
         }
         return cachedBlueprint != null ? cachedBlueprint : new RocketBlueprint();
     }
+
+    public float getOffsetX() { return offsetX; }
+    public float getOffsetY() { return offsetY; }
+    public float getOffsetZ() { return offsetZ; }
+    public float getYaw()     { return yaw; }
+    public float getPitch()   { return pitch; }
+    public float getScale()   { return scale; }
+
+    public void setOffsetX(float offsetX) { this.offsetX = offsetX; }
+    public void setOffsetY(float offsetY) { this.offsetY = offsetY; }
+    public void setOffsetZ(float offsetZ) { this.offsetZ = offsetZ; }
+    public void setYaw(float yaw)         { this.yaw = yaw; }
+    public void setPitch(float pitch)     { this.pitch = pitch; }
+    public void setScale(float scale)     { this.scale = scale; }
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {

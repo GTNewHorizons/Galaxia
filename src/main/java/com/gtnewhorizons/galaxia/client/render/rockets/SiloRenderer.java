@@ -15,7 +15,6 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
         RocketBlueprint blueprint = silo.getBlueprint();
         if (blueprint == null || blueprint.isEmpty()) return;
 
-        // Use silo-specific offset if needed
         final int[] offset = TileEntitySilo.getRotatedOffset(
             TileEntitySilo.SILO_DEFAULT_X_OFFSET,
             TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
@@ -27,7 +26,7 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
             x + offset[0],
             y + offset[1],
             z + offset[2],
-            0.0f,   // no yaw rotation in silo
+            0.0f,
             partialTicks,
             true
         );

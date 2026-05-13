@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.cleanroommc.modularui.screen.RichTooltip;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -312,10 +314,20 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         sync();
     }
 
-    public boolean receiveModulePart(/* RocketPartInstance or id */) {
-        // TODO: Full migration to adding RocketPartInstance to blueprint
-        sync();
-        return true;
+    public boolean receiveModulePart(RocketPartInstance part) {
+        if (part == null) return false;
+
+        if (blueprint.addPart(part.copy())) {
+            sync();
+            return true;
+        }
+        return false;
+    }
+
+    public void openEditor(EntityPlayer player) {
+        if (!worldObj.isRemote) {
+            new RocketEditorUI(blueprint, this).open(player);
+        }
     }
 
     public void returnModules() {
@@ -418,6 +430,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         }
         if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
         if (nbt.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
+    }
+
+    public void setDestination(int dim) {
+        this.destination = dim;
+        markDirty();
     }
 
     public void setGantryTerminal(TileEntityGantryTerminal terminal) {

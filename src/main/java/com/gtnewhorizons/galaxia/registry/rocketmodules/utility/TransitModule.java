@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.utility;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 /**
@@ -10,7 +10,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.Tile
  * @param destination The terminal endpoint of the journey
  */
 
-public record TransitModule(RocketModule module, TileEntityGantryTerminal destination) {
+public record TransitModule(RocketPartInstance module, TileEntityGantryTerminal destination) {
 
     /**
      * Custom method to return a more useful string format
@@ -18,6 +18,6 @@ public record TransitModule(RocketModule module, TileEntityGantryTerminal destin
     @Override
     public String toString() {
         return String
-            .format("TransitModule: Module: {%s}, Destination: {%s}", module().getName(), destination.toString());
+            .format("TransitModule: Module: {%s}, Destination: {%s}", module(), destination.toString());
     }
 }

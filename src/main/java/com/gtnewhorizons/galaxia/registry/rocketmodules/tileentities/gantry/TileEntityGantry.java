@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.NetworkManager;
@@ -20,7 +21,6 @@ import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
 import net.minecraftforge.common.util.Constants.NBT;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.TransitModule;
 
 import cpw.mods.fml.relauncher.Side;
@@ -376,7 +376,7 @@ public class TileEntityGantry extends TileEntity {
 
     }
 
-    public RocketModule getModule() {
+    public RocketPartInstance getModule() {
         if (containedTransitModule == null) return null;
         return containedTransitModule.module();
     }
@@ -528,7 +528,7 @@ public class TileEntityGantry extends TileEntity {
             tag.setInteger(
                 "moduleId",
                 containedTransitModule.module()
-                    .getId());
+                    .def().id());
         }
 
         return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);

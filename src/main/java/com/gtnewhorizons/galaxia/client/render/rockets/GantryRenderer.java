@@ -4,6 +4,8 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
@@ -14,8 +16,6 @@ import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -97,31 +97,32 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
 
         int moduleId = gantry.clientModuleId;
         if (moduleId == -1) return;
-        RocketModule module = ModuleRegistry.fromId(moduleId);
+
+        // TODO: clientModuleId -> clientPartInstance
+        RocketPartDef def = RocketPartRegistry.instance().get(moduleId);
+        if (def == null) return;
+
         applyWorldLighting(gantry);
         GL11.glPushMatrix();
+
         applyGantryOrientation(x, y, z, dx, dy, dz, yaw, pitch);
-        GL11.glTranslatef(0f, (float) -module.getWidth() / 2, 0f);
+
+        GL11.glTranslatef(0f, -0.5f, 0f);
         GL11.glRotatef(90f, 1, 0, 0);
         GL11.glScalef(MODULE_SCALE, MODULE_SCALE, MODULE_SCALE);
 
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(module.getTexture());
-        module.getModel()
-            .renderAll();
+        if (def.modelLocation() != null) {
+            IModelCustom model = ModelCache.get(def.modelLocation());
+            if (model != null) {
+                if (def.textureLocation() != null) {
+                    Minecraft.getMinecraft().getTextureManager().bindTexture(def.textureLocation());
+                }
+                model.renderAll();
+            }
+        } else {
+            renderFallbackModule(def);
+        }
 
-        GL11.glPopMatrix();
-
-        GL11.glPushMatrix();
-        applyGantryOrientation(x, y, z, dx, dy, dz, yaw, pitch);
-        GL11.glRotatef(90, 0, 1, 0);
-        GL11.glScalef(CARRIAGE_SCALE, CARRIAGE_SCALE, CARRIAGE_SCALE);
-
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(LocationGalaxia("textures/model/gantry/carriage.png"));
-        carriageModel.renderAll();
         GL11.glPopMatrix();
     }
 
@@ -494,5 +495,21 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         g.getCrossModel()
             .renderAll();
         GL11.glPopMatrix();
+    }
+
+    private static void renderFallbackModule(RocketPartDef def) {
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        switch (def.type()) {
+            case ENGINE -> GL11.glColor3f(0.9f, 0.3f, 0.1f);
+            case FUEL_TANK -> GL11.glColor3f(0.2f, 0.5f, 0.9f);
+            case CAPSULE, LANDER -> GL11.glColor3f(0.1f, 0.9f, 0.3f);
+            default -> GL11.glColor3f(0.6f, 0.6f, 0.6f);
+        }
+
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glEnd();
+
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glColor3f(1, 1, 1);
     }
 }
