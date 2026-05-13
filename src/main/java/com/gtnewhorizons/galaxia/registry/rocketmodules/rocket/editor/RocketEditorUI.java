@@ -38,8 +38,8 @@ public class RocketEditorUI {
         RocketBlueprint workingBlueprint = silo.getBlueprint()
             .copy();
 
-        // Выбранная деталь по ID в реестре
-        IntSyncValue selectedPartId = new IntSyncValue(() -> -1);
+        final int[] selectedId = { -1 };
+        IntSyncValue selectedPartId = new IntSyncValue(() -> selectedId[0], val -> selectedId[0] = val);
         syncManager.syncValue("selected_part_id", selectedPartId);
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_editor")
@@ -51,7 +51,6 @@ public class RocketEditorUI {
         panel.child(createClearSelectionButton(selectedPartId).pos(540, 370));
         panel.child(createClearBlueprintButton(workingBlueprint, silo, selectedPartId).pos(540, 398));
 
-        // Сохраняем при закрытии GUI
         panel.onCloseAction(() -> {
             silo.setBlueprint(workingBlueprint);
             silo.sync();
