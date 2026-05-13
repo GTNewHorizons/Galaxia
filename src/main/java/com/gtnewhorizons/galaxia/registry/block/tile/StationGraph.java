@@ -4,11 +4,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import net.minecraft.inventory.IInventory;
 import net.minecraft.tileentity.TileEntity;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
