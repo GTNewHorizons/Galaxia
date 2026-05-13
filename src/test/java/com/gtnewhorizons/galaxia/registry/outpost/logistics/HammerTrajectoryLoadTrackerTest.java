@@ -51,4 +51,18 @@ final class HammerTrajectoryLoadTrackerTest {
         assertEquals(0.1, snapshot.ownMsPerTick(), 1e-9);
         assertEquals(0.1, snapshot.allMsPerTick(), 1e-9);
     }
+
+    @Test
+    void disabledTicksIgnoreRouteComputations() {
+        UUID ownTeam = UUID.randomUUID();
+
+        HammerTrajectoryLoadTracker.beginTick(false);
+        HammerTrajectoryLoadTracker.recordRouteComputation(ownTeam, ONE_MS_NANOS);
+        HammerTrajectoryLoadTracker.endTick();
+
+        HammerTrajectoryLoadTracker.Snapshot snapshot = HammerTrajectoryLoadTracker.snapshot(ownTeam);
+
+        assertEquals(0.0, snapshot.ownMsPerTick(), 1e-9);
+        assertEquals(0.0, snapshot.allMsPerTick(), 1e-9);
+    }
 }

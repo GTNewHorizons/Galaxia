@@ -27,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoad
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -37,7 +36,6 @@ public class CelestialEventHandler {
 
     // TODO: Is there a centralized way to get ticks?
     private int syncCooldownTicks;
-    private int debugMetricsSyncCooldownTicks;
 
     public CelestialEventHandler() {}
 
@@ -45,7 +43,8 @@ public class CelestialEventHandler {
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
-        HammerTrajectoryLoadTracker.beginTick();
+        boolean profileHammerTrajectoryLoad = hasCreativeProfilerViewer();
+        HammerTrajectoryLoadTracker.beginTick(profileHammerTrajectoryLoad);
 
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             asset.tick();
@@ -63,19 +62,18 @@ public class CelestialEventHandler {
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
 
-            handleSignal(entry.getValue(), orbitalTime);
+            handleSignal(entry.getValue(), orbitalTime, profileHammerTrajectoryLoad);
         }
 
         HammerTrajectoryLoadTracker.endTick();
-        debugMetricsSyncCooldownTicks--;
-        if (debugMetricsSyncCooldownTicks <= 0) {
-            debugMetricsSyncCooldownTicks = 10;
-            syncHammerTrajectoryLoadDebug();
-        }
 
         syncCooldownTicks--;
         if (syncCooldownTicks > 0) return;
         syncCooldownTicks = 20;
+
+        if (profileHammerTrajectoryLoad) {
+            syncHammerTrajectoryLoadDebug();
+        }
 
         for (EntityPlayerMP player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
@@ -111,6 +109,14 @@ public class CelestialEventHandler {
         }
     }
 
+    private boolean hasCreativeProfilerViewer() {
+        for (EntityPlayerMP player : MinecraftServer.getServer()
+            .getConfigurationManager().playerEntityList) {
+            if (player != null && player.capabilities.isCreativeMode) return true;
+        }
+        return false;
+    }
+
     private void syncHammerTrajectoryLoadDebug() {
         for (EntityPlayerMP player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
@@ -125,7 +131,7 @@ public class CelestialEventHandler {
     }
 
     // TODO: Optimize this (O(n^2))
-    private void handleSignal(List<LogisticSignal> signals, double orbitalTime) {
+    private void handleSignal(List<LogisticSignal> signals, double orbitalTime, boolean profileHammerTrajectoryLoad) {
         int size = signals.size();
 
         for (int i = 0; i < size; i++) {
@@ -155,7 +161,9 @@ public class CelestialEventHandler {
                         m -> m.component() instanceof ModuleHammer h && h.canFire() && (sameBody || h.canPlanRoute(m)))
                     .anyMatch(m -> {
                         ModuleHammer hammer = (ModuleHammer) m.component();
-                        UUID supplierTeam = CelestialAssetStore.getTeamId(supplier.assetId);
+                        UUID supplierTeam = profileHammerTrajectoryLoad
+                            ? CelestialAssetStore.getTeamId(supplier.assetId)
+                            : null;
                         HammerDispatchPlanner.Result result = HammerDispatchPlanner.evaluate(
                             supplier,
                             m,
@@ -163,18 +171,7 @@ public class CelestialEventHandler {
                             resource,
                             LogisticStore.activeDeliveries(),
                             orbitalTime,
-                            new HammerDispatchPlanner.RouteObserver() {
-
-                                @Override
-                                public void beforeRouteComputation(ModuleInstance hammerModule, ModuleHammer hammer) {
-                                    hammer.markRouteProbeAttempted();
-                                }
-
-                                @Override
-                                public void afterRouteComputation(long elapsedNanos) {
-                                    HammerTrajectoryLoadTracker.recordRouteComputation(supplierTeam, elapsedNanos);
-                                }
-                            });
+                            supplierTeam);
                         HammerDispatchPlanner.Plan plan = result.plan();
                         if (result.code() != HammerDispatchStatus.Code.READY || plan == null) return false;
 

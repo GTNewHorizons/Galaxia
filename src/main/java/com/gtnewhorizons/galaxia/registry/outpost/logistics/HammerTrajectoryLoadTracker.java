@@ -23,6 +23,16 @@ public final class HammerTrajectoryLoadTracker {
     private HammerTrajectoryLoadTracker() {}
 
     public static void beginTick() {
+        beginTick(true);
+    }
+
+    public static void beginTick(boolean enabled) {
+        if (!enabled) {
+            tickOpen = false;
+            currentAllNanos = 0L;
+            currentTeamNanos.clear();
+            return;
+        }
         if (tickOpen) endTick();
         tickOpen = true;
         currentAllNanos = 0L;
