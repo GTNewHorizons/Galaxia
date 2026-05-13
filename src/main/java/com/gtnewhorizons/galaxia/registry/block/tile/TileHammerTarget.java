@@ -6,6 +6,7 @@ import java.util.Map;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -60,10 +61,12 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
     private final List<ItemStack> filter = new ArrayList<>();
     private BlockPos stationController;
 
-    public boolean setStationController(BlockPos pos) {
-        final boolean change = stationController != pos;
+    public void setStationController(BlockPos pos) {
         this.stationController = pos;
-        return change;
+    }
+
+    public BlockPos getStationController() {
+        return stationController;
     }
 
     @Override

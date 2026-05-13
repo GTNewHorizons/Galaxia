@@ -140,7 +140,9 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
-    protected void onStructureValid() {}
+    protected void preStructureCheck() {}
+
+    protected void postStructureCheck() {}
 
     @Override
     public void updateEntity() {
@@ -152,6 +154,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
             if (!GalaxiaAPI.isGregTechLoaded()) this.updated = true;
 
             if (this.updated) {
+                preStructureCheck();
                 final boolean valid = checkStructure();
                 if (valid != structureValid) {
                     structureValid = valid;
@@ -161,9 +164,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 }
                 this.updated = false;
-            }
-            if (structureValid) {
-                onStructureValid();
+                postStructureCheck();
             }
             mCheckTimer = 100;
         } else {

@@ -66,18 +66,42 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     }
 
     @Override
-    public void onGraphRebuilt(TileStationController controller) {
+    protected void preStructureCheck() {
         clearBroken(hammerTargets);
-        for (var pos : hammerTargets) {
-            TileHammerTarget target = pos.getTE(worldObj);
-            if (target != null && target.setStationController(controller.here)) {
-                markDirty();
+    }
+
+    @Override
+    public void onPieceConnected(TileStationBase<?> piece, TileStationBase<?> neighbor, BlockPos controllerPos) {
+        if (piece == this || neighbor == this) {
+            for (var pos : hammerTargets) {
+                TileHammerTarget target = pos.getTE(worldObj);
+                if (target != null) {
+                    target.setStationController(controllerPos);
+                }
             }
+            markDirty();
         }
     }
 
-    public List<BlockPos> getHammerTargets() {
+    @Override
+    public void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {
+        if (piece == this) {
+            for (var pos : hammerTargets) {
+                TileHammerTarget target = pos.getTE(worldObj);
+                if (target != null) {
+                    target.setStationController(null);
+                }
+            }
+            markDirty();
+        }
+    }
+
+    @Override
+    public void onGraphRebuilt(TileStationController controller) {
         clearBroken(hammerTargets);
+    }
+
+    public List<BlockPos> getHammerTargets() {
         return hammerTargets;
     }
 
@@ -89,13 +113,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
-        IntSyncValue oxygenatedSync = new IntSyncValue(() -> {
-            clearBroken(hammerTargets);
-            return hammerTargets.size();
-        }, () -> {
-            clearBroken(hammerTargets);
-            return hammerTargets.size();
-        });
+        IntSyncValue oxygenatedSync = new IntSyncValue(() -> hammerTargets.size(), () -> hammerTargets.size());
         syncManager.syncValue("oxygenated", 0, oxygenatedSync);
 
         return new ModularPanel("galaxia:station_room").size(210, 130)
