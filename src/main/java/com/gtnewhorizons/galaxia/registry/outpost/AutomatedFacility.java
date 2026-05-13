@@ -427,6 +427,23 @@ public final class AutomatedFacility extends CelestialAsset {
         return group;
     }
 
+    public void renameSettingsGroupForModule(ModuleInstance module, short groupId, String displayName) {
+        if (module == null) {
+            throw new IllegalArgumentException("renameSettingsGroupForModule: module must not be null");
+        }
+        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        if (!group.isJoinable()) {
+            throw new IllegalStateException("Settings group " + groupId + " is private and cannot be renamed");
+        }
+        group.setDisplayName(displayName);
+        markSettingsGroupMembersDirty(group);
+        if (group.members()
+            .isEmpty()) {
+            bumpSyncRevision();
+            markDirty();
+        }
+    }
+
     public void assignSettingsGroup(ModuleInstance module, short groupId) {
         if (module.groupId() == groupId) return;
         if (groupId == 0) {

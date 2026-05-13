@@ -159,7 +159,22 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
     public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId) {
-        return config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
+        return createMinerSettingsGroup(assetId, moduleIndex, moduleId, "");
+    }
+
+    public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, String displayName) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
+        pkt.stringPayload = displayName == null ? "" : displayName;
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket renameMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, short groupId, String displayName) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.RENAME_SETTINGS_GROUP);
+        pkt.shortPayload = groupId;
+        pkt.stringPayload = Objects.requireNonNull(displayName, "displayName");
+        return pkt;
     }
 
     public static AssetModuleUpdatePacket cancelModuleOperation(CelestialAsset.ID assetId, int moduleIndex,
@@ -393,6 +408,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         SET_ENABLED,
         SET_SETTINGS_GROUP,
         CREATE_SETTINGS_GROUP,
+        RENAME_SETTINGS_GROUP,
         CANCEL_MODULE_OPERATION,
         COPY_MINER_SETTINGS,
         PLAN_MODULE_UPGRADE_TARGETS,
@@ -437,7 +453,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
                 case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
-                case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
+                case CREATE_SETTINGS_GROUP -> PacketUtil.writeString(buf, stringPayload == null ? "" : stringPayload);
+                case RENAME_SETTINGS_GROUP -> {
+                    buf.writeShort(shortPayload);
+                    PacketUtil.writeString(buf, stringPayload);
+                }
+                case CANCEL_MODULE_OPERATION -> {}
                 case COPY_MINER_SETTINGS, PLAN_MODULE_UPGRADE_TARGETS -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
@@ -509,7 +530,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
             case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
-            case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
+            case CREATE_SETTINGS_GROUP -> stringPayload = PacketUtil.readString(buf);
+            case RENAME_SETTINGS_GROUP -> {
+                shortPayload = buf.readShort();
+                stringPayload = PacketUtil.readString(buf);
+            }
+            case CANCEL_MODULE_OPERATION -> {}
             case COPY_MINER_SETTINGS -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_TILE_COORD_PAYLOAD_BYTES || len > buf.readableBytes()) {
@@ -607,6 +633,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         }
         if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP
+            || getConfigAction() == ConfigAction.RENAME_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.COPY_MINER_SETTINGS
             || getConfigAction() == ConfigAction.PLAN_MODULE_UPGRADE_TARGETS)) {
             return AssetSyncPacket.fullSync(state)
@@ -694,7 +721,11 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
             }
             case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, packet.shortPayload);
-            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
+            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(
+                module,
+                packet.stringPayload == null || packet.stringPayload.isBlank() ? null : packet.stringPayload);
+            case RENAME_SETTINGS_GROUP -> state
+                .renameSettingsGroupForModule(module, packet.shortPayload, packet.stringPayload);
             case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
             case COPY_MINER_SETTINGS -> handleCopyMinerSettings(packet, state, module);
             case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module, creative);

@@ -164,11 +164,40 @@ final class ModuleMinerTest {
 
         assertTrue(group.isJoinable());
         assertEquals(originalGroupId, group.id());
+        assertEquals("Public miners", group.displayName());
         assertEquals(
             1,
             facility.settingsGroups()
                 .groups()
                 .size());
+    }
+
+    @Test
+    void renameSettingsGroupRequiresJoinableGroupOfSameKind() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> facility.renameSettingsGroupForModule(miner, miner.groupId(), "Hidden miners"));
+
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+        facility.renameSettingsGroupForModule(miner, group.id(), "  Priority miners  ");
+
+        assertEquals("Priority miners", group.displayName());
+    }
+
+    @Test
+    void renameSettingsGroupRejectsBlankName() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> facility.renameSettingsGroupForModule(miner, group.id(), " "));
     }
 
     @Test

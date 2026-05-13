@@ -909,17 +909,45 @@ final class AssetModuleUpdatePacketTest {
             .get(0);
         facility.setMinerOreBlacklisted(module, "ore:iron", true);
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.createMinerSettingsGroup(facility.assetId, 0, module.id));
+            AssetModuleUpdatePacket.createMinerSettingsGroup(facility.assetId, 0, module.id, "  Priority miners  "));
 
         packet.apply(TEAM);
 
         assertNotEquals(0, module.groupId());
+        assertEquals(
+            "Priority miners",
+            facility.settingsGroups()
+                .require(module.groupId())
+                .displayName());
         assertEquals(
             1,
             facility.settingsGroups()
                 .groups()
                 .size());
         assertTrue(facility.isMinerOreBlacklisted(module, "ore:iron"));
+    }
+
+    @Test
+    void applyRenameMinerSettingsGroupUpdatesJoinableGroup() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        short groupId = facility.createSettingsGroupForModule(module, "Old miners")
+            .id();
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.renameMinerSettingsGroup(facility.assetId, 0, module.id, groupId, "New miners"));
+
+        AssetSyncPacket sync = packet.apply(TEAM);
+
+        assertEquals(
+            "New miners",
+            facility.settingsGroups()
+                .require(groupId)
+                .displayName());
+        assertNotNull(sync);
+        assertFalse(
+            sync.fullSyncDeltas()
+                .isEmpty());
     }
 
     @Test

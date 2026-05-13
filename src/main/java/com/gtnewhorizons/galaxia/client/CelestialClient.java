@@ -242,10 +242,22 @@ public final class CelestialClient {
     }
 
     public static void createMinerSettingsGroup(ID assetId, int moduleIndex) {
+        createMinerSettingsGroup(assetId, moduleIndex, "");
+    }
+
+    public static void createMinerSettingsGroup(ID assetId, int moduleIndex, String displayName) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.createMinerSettingsGroup(assetId, moduleIndex, module.id));
+            module -> AssetModuleUpdatePacket.createMinerSettingsGroup(assetId, moduleIndex, module.id, displayName));
+    }
+
+    public static void renameMinerSettingsGroup(ID assetId, int moduleIndex, short groupId, String displayName) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket
+                .renameMinerSettingsGroup(assetId, moduleIndex, module.id, groupId, displayName));
     }
 
     public static void cancelModuleOperation(ID assetId, int moduleIndex) {
