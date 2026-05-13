@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,8 +30,10 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
+import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget> {
@@ -53,16 +53,28 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int SCROLL_HEIGHT = PANEL_HEIGHT - SCROLL_Y - 8;
     private static final int ICON_X = 4;
     private static final int NAME_X = 24;
-    private static final int NAME_WIDTH = 150;
-    private static final int AMOUNT_X = 180;
+    private static final int NAME_WIDTH = 104;
+    private static final int AMOUNT_X = 136;
     private static final int ROW_RIGHT_PADDING = 8;
     private static final int CONTROL_GAP = 4;
-    private static final int AMOUNT_INPUT_WIDTH = 48;
-    private static final int MODE_BUTTON_WIDTH = 54;
-    private static final int VOID_WIDTH = 44;
+    private static final int BOUNDS_WIDTH = 54;
+    private static final int AMOUNT_INPUT_WIDTH = 44;
+    private static final int MODE_BUTTON_WIDTH = 52;
+    private static final int VOID_WIDTH = 42;
     private static final int VOID_X = SCROLL_WIDTH - ROW_RIGHT_PADDING - VOID_WIDTH;
     private static final int MODE_BUTTON_X = VOID_X - CONTROL_GAP - MODE_BUTTON_WIDTH;
     private static final int AMOUNT_INPUT_X = MODE_BUTTON_X - CONTROL_GAP - AMOUNT_INPUT_WIDTH;
+    private static final int BOUNDS_X = AMOUNT_INPUT_X - CONTROL_GAP - BOUNDS_WIDTH;
+    private static final int BOUND_MARKER_SIZE = 4;
+    private static final int BOUND_MARKER_WARNING = 0xFFFFFF00;
+    private static final int BOUND_MARKER_BLOCKING = 0xFFFF0000;
+    private static final int BOUND_EDITOR_X = 54;
+    private static final int BOUND_EDITOR_Y = 78;
+    private static final int BOUND_EDITOR_WIDTH = 276;
+    private static final int BOUND_EDITOR_HEIGHT = 104;
+    private static final int BOUND_FIELD_X = BOUND_EDITOR_X + 96;
+    private static final int BOUND_SET_X = BOUND_FIELD_X + 74;
+    private static final int BOUND_CLEAR_X = BOUND_SET_X + 44;
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
 
     private final @Nullable CelestialAsset.ID assetId;
@@ -75,6 +87,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         .pos(8, 48);
     private final Map<String, Boolean> amountModes = new LinkedHashMap<>();
     private final Map<String, String> amountInputs = new LinkedHashMap<>();
+    private ResourceMode resourceMode = ResourceMode.ITEMS;
+    private @Nullable ItemStackWrapper selectedBoundItem;
+    private @Nullable String selectedBoundFluid;
+    private String inputBoundAmount = "";
+    private String outputBoundAmount = "";
+    private @Nullable TextFieldWidget inputBoundField;
+    private @Nullable TextFieldWidget outputBoundField;
     private boolean open;
     private String rowStructureSignature = "";
 
@@ -85,6 +104,22 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             ModuleConfigModalSupport.button(() -> assetId != null, this::toggleLabel, this::toggleOpen)
                 .pos(0, 0)
                 .size(BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport
+                .button(
+                    () -> open,
+                    () -> resourceMode == ResourceMode.ITEMS ? "* Items" : "Items",
+                    () -> setResourceMode(ResourceMode.ITEMS))
+                .pos(BUTTON_WIDTH + 6, 0)
+                .size(70, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport
+                .button(
+                    () -> open,
+                    () -> resourceMode == ResourceMode.FLUIDS ? "* Fluids" : "Fluids",
+                    () -> setResourceMode(ResourceMode.FLUIDS))
+                .pos(BUTTON_WIDTH + 80, 0)
+                .size(74, BUTTON_HEIGHT));
         panelRoot.pos(0, PANEL_Y)
             .size(PANEL_WIDTH, PANEL_HEIGHT)
             .setEnabled(false);
@@ -97,6 +132,32 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         panelRoot.child(scroll);
         emptyInventoryText.setEnabled(false);
         panelRoot.child(emptyInventoryText);
+        panelRoot.child(
+            boundField(true).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 34)
+                .size(70, 18));
+        panelRoot.child(
+            boundField(false).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 58)
+                .size(70, 18));
+        panelRoot.child(
+            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Set", () -> applyBound(true))
+                .pos(BOUND_SET_X, BOUND_EDITOR_Y + 34)
+                .size(40, 18));
+        panelRoot.child(
+            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Clear", () -> clearBound(true))
+                .pos(BOUND_CLEAR_X, BOUND_EDITOR_Y + 34)
+                .size(50, 18));
+        panelRoot.child(
+            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Set", () -> applyBound(false))
+                .pos(BOUND_SET_X, BOUND_EDITOR_Y + 58)
+                .size(40, 18));
+        panelRoot.child(
+            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Clear", () -> clearBound(false))
+                .pos(BOUND_CLEAR_X, BOUND_EDITOR_Y + 58)
+                .size(50, 18));
+        panelRoot.child(
+            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Close", this::closeBoundEditor)
+                .pos(BOUND_EDITOR_X + BOUND_EDITOR_WIDTH - 62, BOUND_EDITOR_Y + BOUND_EDITOR_HEIGHT - 26)
+                .size(54, 18));
         child(panelRoot);
     }
 
@@ -115,11 +176,12 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             open = false;
             return;
         }
-        List<Map.Entry<ItemStackWrapper, Long>> rows = rows(facility);
-        refreshAmountInputs(rows);
-        String nextSignature = rowStructureSignature(rows);
+        List<Map.Entry<ItemStackWrapper, Long>> itemRows = rows(facility);
+        List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(facility);
+        refreshAmountInputs(itemRows);
+        String nextSignature = rowStructureSignature(itemRows, fluidRows);
         if (!panelRoot.isEnabled() || !nextSignature.equals(rowStructureSignature)) {
-            rebuildPanel(rows);
+            rebuildPanel(itemRows, fluidRows);
             rowStructureSignature = nextSignature;
         }
     }
@@ -143,17 +205,46 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         super.drawBackground(context, widgetTheme);
         if (!open) return;
         ModuleConfigModalSupport.drawFrameAt("Station Inventory", 0, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
-        ModuleConfigModalSupport
-            .drawLine("Item", NAME_X + SCROLL_X, PANEL_Y + 32, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport.drawLine(
+            resourceMode == ResourceMode.ITEMS ? "Item" : "Fluid",
+            NAME_X + SCROLL_X,
+            PANEL_Y + 32,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
         ModuleConfigModalSupport
             .drawLine("Amount", AMOUNT_X + SCROLL_X, PANEL_Y + 32, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        if (isBoundEditorOpen()) {
+            ModuleConfigModalSupport.drawFrameAt(
+                "Inventory Bounds",
+                BOUND_EDITOR_X,
+                PANEL_Y + BOUND_EDITOR_Y,
+                BOUND_EDITOR_WIDTH,
+                BOUND_EDITOR_HEIGHT);
+            ModuleConfigModalSupport.drawTrimmedLine(
+                selectedBoundName(),
+                BOUND_EDITOR_X + 10,
+                PANEL_Y + BOUND_EDITOR_Y + 26,
+                BOUND_EDITOR_WIDTH - 20,
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            ModuleConfigModalSupport.drawLine(
+                "Input lower",
+                BOUND_EDITOR_X + 10,
+                PANEL_Y + BOUND_EDITOR_Y + 39,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            ModuleConfigModalSupport.drawLine(
+                "Output upper",
+                BOUND_EDITOR_X + 10,
+                PANEL_Y + BOUND_EDITOR_Y + 63,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        }
     }
 
-    private void rebuildPanel(List<Map.Entry<ItemStackWrapper, Long>> rows) {
+    private void rebuildPanel(List<Map.Entry<ItemStackWrapper, Long>> itemRows,
+        List<StationInventoryPanelModel.FluidRow> fluidRows) {
         panelRoot.setEnabled(true);
         scrollContent.removeAll();
-        emptyInventoryText.setEnabled(rows.isEmpty());
-        if (rows.isEmpty()) {
+        boolean empty = resourceMode == ResourceMode.ITEMS ? itemRows.isEmpty() : fluidRows.isEmpty();
+        emptyInventoryText.setEnabled(empty);
+        if (empty) {
             scrollContent.height(SCROLL_HEIGHT);
             scrollData.setScrollSize(SCROLL_HEIGHT);
             panelRoot.scheduleResize();
@@ -161,13 +252,20 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         }
 
         int y = 0;
-        for (Map.Entry<ItemStackWrapper, Long> row : rows) {
-            String rowKey = row.getKey()
-                .toKey();
-            amountModes.putIfAbsent(rowKey, false);
-            amountInputs.putIfAbsent(rowKey, Long.toString(row.getValue()));
-            scrollContent.child(buildRow(row).pos(0, y));
-            y += ROW_HEIGHT + ROW_GAP;
+        if (resourceMode == ResourceMode.ITEMS) {
+            for (Map.Entry<ItemStackWrapper, Long> row : itemRows) {
+                String rowKey = row.getKey()
+                    .toKey();
+                amountModes.putIfAbsent(rowKey, false);
+                amountInputs.putIfAbsent(rowKey, Long.toString(row.getValue()));
+                scrollContent.child(buildRow(row).pos(0, y));
+                y += ROW_HEIGHT + ROW_GAP;
+            }
+        } else {
+            for (StationInventoryPanelModel.FluidRow row : fluidRows) {
+                scrollContent.child(buildFluidRow(row).pos(0, y));
+                y += ROW_HEIGHT + ROW_GAP;
+            }
         }
         int contentHeight = Math.max(SCROLL_HEIGHT, y);
         scrollContent.height(contentHeight);
@@ -184,11 +282,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .background(
                 drawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
-        rowWidget.child(
-            drawable((ctx, x, y, w, h) -> renderItemIcon(displayStack, x, y + 4)).asWidget()
-                .pos(ICON_X, 0)
-                .size(16, ROW_HEIGHT)
-                .tooltip(t -> t.addLine(displayStack.getDisplayName())));
+        rowWidget.child(drawable((ctx, x, y, w, h) -> {
+            renderItemIcon(displayStack, x, y + 4);
+            renderBoundMarkers(wrapper, x, y + 4);
+        }).asWidget()
+            .pos(ICON_X, 0)
+            .size(16, ROW_HEIGHT)
+            .tooltip(t -> t.addLine(displayStack.getDisplayName())));
         rowWidget.child(
             drawable(
                 (ctx, x, y, w, h) -> ModuleConfigModalSupport.drawTrimmedLine(
@@ -205,6 +305,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .shadow(true)
                 .pos(AMOUNT_X, 8));
         rowWidget.child(
+            ModuleConfigModalSupport.button(() -> canEditBounds(wrapper), "Bounds", () -> openBoundEditor(wrapper))
+                .pos(BOUNDS_X, 3)
+                .size(BOUNDS_WIDTH, 18));
+        rowWidget.child(
             amountField(rowKey).pos(AMOUNT_INPUT_X, 3)
                 .size(AMOUNT_INPUT_WIDTH, 18));
         rowWidget.child(
@@ -219,6 +323,39 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             ModuleConfigModalSupport.button(() -> currentAmount(wrapper) > 0L, "Void", () -> voidRow(wrapper))
                 .pos(VOID_X, 3)
                 .size(VOID_WIDTH, 18));
+        return rowWidget;
+    }
+
+    private ParentWidget<?> buildFluidRow(StationInventoryPanelModel.FluidRow row) {
+        String fluidName = row.fluidName();
+        ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
+            .height(ROW_HEIGHT)
+            .background(
+                drawable(
+                    (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
+        rowWidget.child(drawable((ctx, x, y, w, h) -> {
+            renderFluidIcon(fluidName, x, y + 4);
+            renderFluidBoundMarkers(fluidName, x, y + 4);
+        }).asWidget()
+            .pos(ICON_X, 0)
+            .size(16, ROW_HEIGHT)
+            .tooltip(t -> t.addLine(fluidName)));
+        rowWidget.child(
+            drawable(
+                (ctx, x, y, w, h) -> ModuleConfigModalSupport
+                    .drawTrimmedLine(fluidName, x, y + 8, NAME_WIDTH, EnumColors.MAP_COLOR_TEXT_BODY.getColor()))
+                        .asWidget()
+                        .pos(NAME_X, 0)
+                        .size(NAME_WIDTH, ROW_HEIGHT));
+        rowWidget.child(
+            new TextWidget<>(IKey.dynamic(() -> formatAmount(currentFluidAmount(fluidName))))
+                .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+                .shadow(true)
+                .pos(AMOUNT_X, 8));
+        rowWidget.child(
+            ModuleConfigModalSupport.button(() -> canEditBounds(fluidName), "Bounds", () -> openBoundEditor(fluidName))
+                .pos(BOUNDS_X, 3)
+                .size(BOUNDS_WIDTH, 18));
         return rowWidget;
     }
 
@@ -249,8 +386,52 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             .setEnabledIf(w -> isAmountMode(rowKey));
     }
 
+    private TextFieldWidget boundField(boolean input) {
+        TextFieldWidget field = new TextFieldWidget().setMaxLength(9)
+            .setPattern(INTEGER_PATTERN)
+            .setDefaultNumber(0)
+            .setNumbers(0, Integer.MAX_VALUE)
+            .setFormatAsInteger(true)
+            .acceptsExpressions(false)
+            .autoUpdateOnChange(false)
+            .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+            .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+            .background(
+                ModuleConfigModalSupport.drawable(
+                    (ctx, x, y, w, h) -> BorderedRect.draw(
+                        x,
+                        y,
+                        w,
+                        h,
+                        EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+            .value(new StringValue.Dynamic(() -> input ? inputBoundAmount : outputBoundAmount, text -> {
+                if (input) {
+                    inputBoundAmount = text == null ? "" : text;
+                } else {
+                    outputBoundAmount = text == null ? "" : text;
+                }
+            }))
+            .setFocusOnGuiOpen(false)
+            .setEnabledIf(w -> isBoundEditorOpen());
+        if (input) {
+            inputBoundField = field;
+        } else {
+            outputBoundField = field;
+        }
+        return field;
+    }
+
     private void toggleOpen() {
         open = !open;
+        if (!open) closeBoundEditor();
+    }
+
+    private void setResourceMode(ResourceMode mode) {
+        if (resourceMode == mode) return;
+        resourceMode = mode;
+        closeBoundEditor();
+        rowStructureSignature = "";
     }
 
     private String toggleLabel() {
@@ -278,9 +459,137 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         }
     }
 
+    private boolean canEditBounds(ItemStackWrapper wrapper) {
+        return assetId != null && wrapper != null;
+    }
+
+    private boolean canEditBounds(String fluidName) {
+        return assetId != null && fluidName != null && !fluidName.isEmpty();
+    }
+
+    private boolean isBoundEditorOpen() {
+        return open && (selectedBoundItem != null || selectedBoundFluid != null);
+    }
+
+    private void openBoundEditor(ItemStackWrapper wrapper) {
+        selectedBoundItem = wrapper;
+        selectedBoundFluid = null;
+        AutomatedFacility facility = facility();
+        inputBoundAmount = facility != null && facility.inventory.hasItemLowerBound(wrapper)
+            ? Long.toString(facility.inventory.itemLowerBoundOrDefault(wrapper))
+            : "";
+        outputBoundAmount = facility != null && facility.inventory.hasItemUpperBound(wrapper)
+            ? Long.toString(facility.inventory.itemUpperBoundOrDefault(wrapper))
+            : "";
+        if (inputBoundField != null) inputBoundField.setText(inputBoundAmount);
+        if (outputBoundField != null) outputBoundField.setText(outputBoundAmount);
+    }
+
+    private void openBoundEditor(String fluidName) {
+        selectedBoundItem = null;
+        selectedBoundFluid = fluidName;
+        AutomatedFacility facility = facility();
+        inputBoundAmount = facility != null && facility.inventory.hasFluidLowerBound(fluidName)
+            ? Long.toString(facility.inventory.fluidLowerBoundOrDefault(fluidName))
+            : "";
+        outputBoundAmount = facility != null && facility.inventory.hasFluidUpperBound(fluidName)
+            ? Long.toString(facility.inventory.fluidUpperBoundOrDefault(fluidName))
+            : "";
+        if (inputBoundField != null) inputBoundField.setText(inputBoundAmount);
+        if (outputBoundField != null) outputBoundField.setText(outputBoundAmount);
+    }
+
+    private void closeBoundEditor() {
+        selectedBoundItem = null;
+        selectedBoundFluid = null;
+    }
+
+    private void applyBound(boolean input) {
+        if (assetId == null || !isBoundEditorOpen()) return;
+        String text = input ? inputBoundAmount : outputBoundAmount;
+        long amount = parseAmount(text);
+        BoundKind kind = selectedBoundItem != null ? (input ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
+            : (input ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
+        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey() : selectedBoundFluid;
+        AutomatedFacility facility = facility();
+        if (facility != null && selectedBoundItem != null && input) {
+            facility.inventory.setItemLowerBound(selectedBoundItem, amount);
+        } else if (facility != null && selectedBoundItem != null) {
+            facility.inventory.setItemUpperBound(selectedBoundItem, amount);
+        } else if (facility != null) {
+            facility.inventory.setBound(kind, resourceKey, amount);
+        }
+        CelestialClient.updateInventoryBound(
+            assetId,
+            AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
+            kind,
+            resourceKey,
+            amount);
+    }
+
+    private void clearBound(boolean input) {
+        if (assetId == null || !isBoundEditorOpen()) return;
+        BoundKind kind = selectedBoundItem != null ? (input ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
+            : (input ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
+        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey() : selectedBoundFluid;
+        AutomatedFacility facility = facility();
+        if (facility != null && selectedBoundItem != null && input) {
+            facility.inventory.clearItemLowerBound(selectedBoundItem);
+        } else if (facility != null && selectedBoundItem != null) {
+            facility.inventory.clearItemUpperBound(selectedBoundItem);
+        } else if (facility != null) {
+            facility.inventory.clearBound(kind, resourceKey);
+        }
+        CelestialClient.updateInventoryBound(
+            assetId,
+            AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
+            kind,
+            resourceKey,
+            0L);
+        if (input) {
+            inputBoundAmount = "";
+            if (inputBoundField != null) inputBoundField.setText("");
+        } else {
+            outputBoundAmount = "";
+            if (outputBoundField != null) outputBoundField.setText("");
+        }
+        facility = facility();
+        if (facility != null && selectedBoundItem != null
+            && currentAmount(selectedBoundItem) <= 0L
+            && !facility.inventory.hasItemLowerBound(selectedBoundItem)
+            && !facility.inventory.hasItemUpperBound(selectedBoundItem)) {
+            closeBoundEditor();
+        } else if (facility != null && selectedBoundFluid != null
+            && currentFluidAmount(selectedBoundFluid) <= 0L
+            && !facility.inventory.hasFluidLowerBound(selectedBoundFluid)
+            && !facility.inventory.hasFluidUpperBound(selectedBoundFluid)) {
+                closeBoundEditor();
+            }
+    }
+
+    private String selectedBoundName() {
+        if (selectedBoundItem != null) return selectedBoundItem.toStack(1)
+            .getDisplayName();
+        return selectedBoundFluid == null ? "" : selectedBoundFluid;
+    }
+
+    private static long parseAmount(String text) {
+        if (text == null || text.isBlank()) return 0L;
+        try {
+            return Math.max(0L, Long.parseLong(text));
+        } catch (NumberFormatException ignored) {
+            return 0L;
+        }
+    }
+
     private long currentAmount(ItemStackWrapper wrapper) {
         AutomatedFacility facility = facility();
         return facility == null ? 0L : facility.inventory.getAmount(wrapper);
+    }
+
+    private long currentFluidAmount(String fluidName) {
+        AutomatedFacility facility = facility();
+        return facility == null ? 0L : facility.inventory.getFluidAmount(fluidName);
     }
 
     private @Nullable AutomatedFacility facility() {
@@ -289,17 +598,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     }
 
     private List<Map.Entry<ItemStackWrapper, Long>> rows(AutomatedFacility facility) {
-        List<Map.Entry<ItemStackWrapper, Long>> rows = new ArrayList<>(
-            facility.inventory.snapshot()
-                .entrySet());
-        rows.removeIf(row -> row.getValue() <= 0L);
-        rows.sort(
-            Comparator.comparing(
-                row -> row.getKey()
-                    .toStack(1)
-                    .getDisplayName(),
-                String.CASE_INSENSITIVE_ORDER));
-        return rows;
+        return StationInventoryPanelModel.inventoryRows(facility.inventory);
+    }
+
+    private List<StationInventoryPanelModel.FluidRow> fluidRows(AutomatedFacility facility) {
+        return StationInventoryPanelModel.fluidRows(facility.inventory);
     }
 
     private void refreshAmountInputs(List<Map.Entry<ItemStackWrapper, Long>> rows) {
@@ -312,12 +615,20 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         }
     }
 
-    private String rowStructureSignature(List<Map.Entry<ItemStackWrapper, Long>> rows) {
-        StringBuilder signature = new StringBuilder(rows.size() * 24);
-        for (Map.Entry<ItemStackWrapper, Long> row : rows) {
+    private String rowStructureSignature(List<Map.Entry<ItemStackWrapper, Long>> itemRows,
+        List<StationInventoryPanelModel.FluidRow> fluidRows) {
+        StringBuilder signature = new StringBuilder((itemRows.size() + fluidRows.size()) * 24);
+        signature.append(resourceMode)
+            .append(':');
+        for (Map.Entry<ItemStackWrapper, Long> row : itemRows) {
             signature.append(
                 row.getKey()
                     .toKey())
+                .append(';');
+        }
+        signature.append('|');
+        for (StationInventoryPanelModel.FluidRow row : fluidRows) {
+            signature.append(row.fluidName())
                 .append(';');
         }
         return signature.toString();
@@ -343,6 +654,44 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         com.cleanroommc.modularui.utils.GlStateManager.popMatrix();
     }
 
+    private void renderBoundMarkers(ItemStackWrapper wrapper, int x, int y) {
+        AutomatedFacility facility = facility();
+        if (facility == null) return;
+        if (facility.inventory.hasItemLowerBound(wrapper)) {
+            int color = facility.inventory.getAmount(wrapper) < facility.inventory.itemLowerBoundOrDefault(wrapper)
+                ? BOUND_MARKER_BLOCKING
+                : BOUND_MARKER_WARNING;
+            Gui.drawRect(x, y, x + BOUND_MARKER_SIZE, y + BOUND_MARKER_SIZE, color);
+        }
+        if (facility.inventory.hasItemUpperBound(wrapper)) {
+            int color = facility.inventory.getAmount(wrapper) >= facility.inventory.itemUpperBoundOrDefault(wrapper)
+                ? BOUND_MARKER_BLOCKING
+                : BOUND_MARKER_WARNING;
+            Gui.drawRect(x + 16 - BOUND_MARKER_SIZE, y, x + 16, y + BOUND_MARKER_SIZE, color);
+        }
+    }
+
+    private void renderFluidIcon(String fluidName, int x, int y) {
+        Gui.drawRect(x, y, x + 16, y + 16, EnumColors.MAP_COLOR_SIDEBAR_GHOST_SLOT_BG.getColor());
+        Gui.drawRect(x + 2, y + 2, x + 14, y + 14, EnumColors.MAP_COLOR_CONNECTOR_TANK.getColor());
+    }
+
+    private void renderFluidBoundMarkers(String fluidName, int x, int y) {
+        AutomatedFacility facility = facility();
+        if (facility == null) return;
+        if (facility.inventory.hasFluidLowerBound(fluidName)) {
+            int color = facility.inventory.getFluidAmount(fluidName)
+                < facility.inventory.fluidLowerBoundOrDefault(fluidName) ? BOUND_MARKER_BLOCKING : BOUND_MARKER_WARNING;
+            Gui.drawRect(x, y, x + BOUND_MARKER_SIZE, y + BOUND_MARKER_SIZE, color);
+        }
+        if (facility.inventory.hasFluidUpperBound(fluidName)) {
+            int color = facility.inventory.getFluidAmount(fluidName)
+                >= facility.inventory.fluidUpperBoundOrDefault(fluidName) ? BOUND_MARKER_BLOCKING
+                    : BOUND_MARKER_WARNING;
+            Gui.drawRect(x + 16 - BOUND_MARKER_SIZE, y, x + 16, y + BOUND_MARKER_SIZE, color);
+        }
+    }
+
     private static String formatAmount(long amount) {
         if (amount < 1_000L) return Long.toString(amount);
         if (amount < 1_000_000L) return (amount / 1_000L) + "k";
@@ -351,5 +700,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {
         return (ctx, x, y, w, h, theme) -> cmd.draw(ctx, x, y, w, h);
+    }
+
+    private enum ResourceMode {
+        ITEMS,
+        FLUIDS
     }
 }

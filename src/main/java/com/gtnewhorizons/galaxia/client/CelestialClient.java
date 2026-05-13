@@ -215,11 +215,15 @@ public final class CelestialClient {
 
     public static void updateInventoryBound(ID assetId, int moduleIndex, ConfigAction configAction, BoundKind kind,
         String resourceKey, long amount) {
-        sendModuleUpdate(
-            assetId,
-            moduleIndex,
-            module -> AssetModuleUpdatePacket
-                .inventoryBoundPayload(assetId, moduleIndex, module.id, configAction, kind, resourceKey, amount));
+        updateInventoryBound(assetId, configAction, kind, resourceKey, amount);
+    }
+
+    public static void updateInventoryBound(ID assetId, ConfigAction configAction, BoundKind kind, String resourceKey,
+        long amount) {
+        AssetInventoryUpdatePacket packet = configAction == ConfigAction.CLEAR_INVENTORY_BOUND
+            ? AssetInventoryUpdatePacket.clearBound(assetId, kind, resourceKey)
+            : AssetInventoryUpdatePacket.setBound(assetId, kind, resourceKey, amount);
+        StarmapActionSyncHandler.sendInventoryUpdate(packet);
     }
 
     public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
