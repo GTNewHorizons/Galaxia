@@ -1,56 +1,46 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EntityRocket;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
-import net.minecraftforge.common.util.ForgeDirection;
 
 public class TileEntitySilo extends TileEntity {
 
-    public ForgeDirection currentFacing = ForgeDirection.NORTH;
-
-    public boolean receiveModule(int moduleId) {
-        return true;
-    }
-
     private RocketBlueprint blueprint = new RocketBlueprint();
-
-    public void setBlueprint(RocketBlueprint bp) {
-        this.blueprint = bp;
-        markDirty();
-    }
 
     public RocketBlueprint getBlueprint() {
         return blueprint;
     }
 
-    public RocketAssembly getAssembly() {
-        return RocketAnalyzer.analyze(blueprint);
+    public void setBlueprint(RocketBlueprint bp) {
+        this.blueprint = bp != null ? bp : new RocketBlueprint();
+        markDirty();
     }
 
     public void openEditor(EntityPlayer player) {
         if (!worldObj.isRemote) {
-            new RocketEditorUI(blueprint).open(player);
+            new RocketEditorUI(blueprint, this).open(player);
         }
     }
 
     public void launch(EntityPlayer player) {
         if (worldObj.isRemote) return;
-        RocketAssembly assembly = getAssembly();
+        RocketAssembly assembly = blueprint.analyze();
         if (!assembly.viable()) return;
 
         EntityRocket rocket = new EntityRocket(worldObj);
-        rocket.setBlueprint(blueprint);
+        rocket.setBlueprint(blueprint.copy());
         rocket.setPosition(xCoord + 0.5, yCoord + 1, zCoord + 0.5);
         worldObj.spawnEntityInWorld(rocket);
-        player.mountEntity(rocket);
+        rocket.launch();
+
+        // Clear for next build
         blueprint = new RocketBlueprint();
         markDirty();
     }

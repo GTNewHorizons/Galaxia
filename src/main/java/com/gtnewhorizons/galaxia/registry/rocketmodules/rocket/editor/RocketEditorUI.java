@@ -1,7 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
-import java.util.List;
-
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.EnumChatFormatting;
@@ -24,6 +22,9 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketB
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+
+import java.util.List;
 
 public class RocketEditorUI implements IGuiHolder<GuiData> {
 
@@ -37,6 +38,11 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
     public RocketEditorUI(RocketBlueprint targetBlueprint) {
         this.targetBlueprint = targetBlueprint;
         this.workingBlueprint = targetBlueprint.copy();
+    }
+
+    // For TileEntitySilo integration
+    public RocketEditorUI(RocketBlueprint targetBlueprint, TileEntitySilo silo) {
+        this(targetBlueprint);
     }
 
     public RocketEditorUI(PosGuiData data) {
@@ -92,20 +98,15 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
             .background(EnumTextures.OVERWORLD.getImage())
             .overlay(IKey.dynamic(() -> cellLabel(cellX, cellY)))
             .tooltipDynamic(t -> {
-                RocketPartInstance part = workingBlueprint.partAt(cellX, cellY);
+                RocketPartInstance part = workingBlueprint.partAt(cellX, cellY, 0);
                 if (part == null) {
                     t.addLine(EnumChatFormatting.GRAY + "Empty");
                 } else {
-                    t.addLine(
-                        EnumChatFormatting.WHITE + part.def()
-                            .name());
-                    t.addLine(
-                        EnumChatFormatting.GRAY + String.format(
-                            "%.1fm | %.0fkg",
-                            part.def()
-                                .height(),
-                            part.def()
-                                .weight()));
+                    t.addLine(EnumChatFormatting.WHITE + part.def().name());
+                    t.addLine(EnumChatFormatting.GRAY + String.format(
+                        "%.1fm | %.0fkg",
+                        part.def().height(),
+                        part.def().weight()));
                 }
             })
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
@@ -117,31 +118,28 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
                         }
                     }
 
-                    RocketPartInstance existing = workingBlueprint.partAt(cellX, cellY);
+                    RocketPartInstance existing = workingBlueprint.partAt(cellX, cellY, 0);
                     if (existing != null) {
                         selectedPart = existing.def();
                     }
                 }
 
                 if (md.mouseButton == 1) {
-                    workingBlueprint.removePartAt(cellX, cellY);
+                    workingBlueprint.removePartAt(cellX, cellY, 0);
                 }
-
             }));
     }
 
     private String cellLabel(int cellX, int cellY) {
-        RocketPartInstance part = workingBlueprint.partAt(cellX, cellY);
+        RocketPartInstance part = workingBlueprint.partAt(cellX, cellY, 0);
         if (part == null) {
             return "";
         }
-        String name = part.def()
-            .name();
+        String name = part.def().name();
         if (name == null || name.isEmpty()) {
             return "?";
         }
-        return name.substring(0, Math.min(2, name.length()))
-            .toUpperCase();
+        return name.substring(0, Math.min(2, name.length())).toUpperCase();
     }
 
     private ParentWidget<?> createPalette() {
@@ -153,8 +151,7 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
             .padding(4)
             .margin(4);
 
-        List<RocketPartDef> parts = RocketPartRegistry.instance()
-            .getAll();
+        List<RocketPartDef> parts = RocketPartRegistry.instance().getAll();
         for (RocketPartDef def : parts) {
             flow.child(createPaletteButton(def));
         }
@@ -167,8 +164,7 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
         return new ButtonWidget<>().size(150, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .overlay(IKey.str(def.name()))
-            .tooltip(
-                t -> t.addLine(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", def.height(), def.weight())))
+            .tooltip(t -> t.addLine(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", def.height(), def.weight())))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 0) {
                     selectedPart = def;
@@ -182,26 +178,18 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
     private ButtonWidget<?> createClearSelectionButton() {
         return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
-            .overlay(
-                IKey.str("Clear Selection")
-                    .alignment(Alignment.Center))
+            .overlay(IKey.str("Clear Selection").alignment(Alignment.Center))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) {
-                    selectedPart = null;
-                }
+                if (md.mouseButton == 0) selectedPart = null;
             }));
     }
 
     private ButtonWidget<?> createClearBlueprintButton() {
         return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
-            .overlay(
-                IKey.str("Clear Blueprint")
-                    .alignment(Alignment.Center))
+            .overlay(IKey.str("Clear Blueprint").alignment(Alignment.Center))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) {
-                    workingBlueprint.clear();
-                }
+                if (md.mouseButton == 0) workingBlueprint.clear();
             }));
     }
 
@@ -212,7 +200,6 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
                     return "Selected: none";
                 }
                 return "Selected: " + selectedPart.name();
-            })
-                .asWidget());
+            }).asWidget());
     }
 }

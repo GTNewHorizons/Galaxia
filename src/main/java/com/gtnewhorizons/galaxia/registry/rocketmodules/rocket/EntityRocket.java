@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket;
+package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
@@ -9,12 +9,11 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketB
 public class EntityRocket extends Entity {
 
     private RocketBlueprint blueprint;
-    private boolean ascending = true;
-    private int launchTicks = 0;
+    private boolean launched = false;
 
     public EntityRocket(World world) {
         super(world);
-        setSize(3f, 1f);
+        setSize(3f, 10f);
         noClip = true;
     }
 
@@ -22,25 +21,25 @@ public class EntityRocket extends Entity {
         this.blueprint = bp;
     }
 
-    @Override
-    protected void entityInit() {}
+    public void launch() {
+        launched = true;
+    }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
-        if (worldObj.isRemote) return;
-        if (ascending) {
-            launchTicks++;
-            if (launchTicks > 40) {
-                motionY += 0.05;
-                moveEntity(0, motionY, 0);
-            }
-            if (posY > 500) {
-                ascending = false;
-                setDead();
-            }
+        if (worldObj.isRemote || !launched) return;
+
+        motionY += 0.08;
+        moveEntity(0, motionY, 0);
+
+        if (posY > 600) {
+            setDead();
         }
     }
+
+    @Override
+    protected void entityInit() {}
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound tag) {}

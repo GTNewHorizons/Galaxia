@@ -1,28 +1,37 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis;
 
-import java.util.*;
-
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
 
-public class RocketAnalyzer {
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class RocketAnalyzer {
+
+    private RocketAnalyzer() {}
 
     public static RocketAssembly analyze(RocketBlueprint blueprint) {
-        List<RocketPartInstance> allParts = blueprint.getParts();
-        if (allParts.isEmpty()) return new RocketAssembly(blueprint, List.of(), false);
+        if (blueprint.isEmpty()) {
+            return new RocketAssembly(blueprint, List.of(), false);
+        }
 
-        Map<RocketPartInstance, Integer> stageMap = buildStageMap(allParts);
-        int maxStage = stageMap.values()
-            .stream()
-            .max(Integer::compareTo)
-            .orElse(0);
+        List<RocketPartInstance> parts = blueprint.getParts();
+        Map<RocketPartInstance, Integer> stageMap = buildStageMap(parts);
+
         List<RocketStage> stages = new ArrayList<>();
-        for (int i = 0; i <= maxStage; i++) stages.add(new RocketStage(i));
-
-        for (RocketPartInstance part : allParts) {
-            stages.get(stageMap.get(part))
-                .addPart(part);
+        for (int stageNum = 0; stageNum < 10; stageNum++) {  // reasonable max
+            RocketStage stage = new RocketStage(stageNum);
+            boolean hasParts = false;
+            for (RocketPartInstance p : parts) {
+                if (stageMap.getOrDefault(p, -1) == stageNum) {
+                    stage.addPart(p);
+                    hasParts = true;
+                }
+            }
+            if (hasParts) stages.add(stage);
         }
 
         boolean viable = checkViability(blueprint, stages);
@@ -31,82 +40,36 @@ public class RocketAnalyzer {
 
     private static Map<RocketPartInstance, Integer> buildStageMap(List<RocketPartInstance> parts) {
         Map<RocketPartInstance, Integer> stage = new HashMap<>();
-        Deque<RocketPartInstance> stack = new ArrayDeque<>();
-        Set<RocketPartInstance> visited = new HashSet<>();
-
-        for (RocketPartInstance part : parts) {
-            if (part.def()
-                .type() == RocketPartType.CAPSULE
-                || part.def()
-                    .type() == RocketPartType.LANDER) {
-                stage.put(part, 0);
-                stack.push(part);
-                visited.add(part);
-                break;
+        // Simple bottom-up staging for MVP: decouplers separate stages
+        int currentStage = 0;
+        for (RocketPartInstance p : parts) {
+            if (p.def().type() == RocketPartType.DECOUPLER) {
+                currentStage = Math.max(currentStage, p.def().decouplerStage());
             }
-        }
-        if (stack.isEmpty()) return stage;
-
-        while (!stack.isEmpty()) {
-            RocketPartInstance current = stack.pop();
-            int currentStage = stage.get(current);
-            for (RocketPartInstance neighbor : findConnected(current, parts)) {
-                if (visited.contains(neighbor)) continue;
-                visited.add(neighbor);
-                int neighborStage = currentStage;
-                if (neighbor.def()
-                    .type() == RocketPartType.DECOUPLER
-                    && neighbor.def()
-                        .decouplerStage() >= 0) {
-                    neighborStage = neighbor.def()
-                        .decouplerStage();
-                }
-                stage.put(neighbor, neighborStage);
-                stack.push(neighbor);
-            }
+            stage.put(p, currentStage);
         }
         return stage;
     }
 
-    private static List<RocketPartInstance> findConnected(RocketPartInstance part, List<RocketPartInstance> allParts) {
-        List<RocketPartInstance> connections = new ArrayList<>();
-        int px = part.x(), py = part.y(), pz = part.z();
-        int ph = part.def()
-            .getHeightCells();
-        int pw = part.def()
-            .getWidthCells();
-
-        for (RocketPartInstance other : allParts) {
-            if (part == other) continue;
-            int ox = other.x(), oy = other.y(), oz = other.z();
-            int oh = other.def()
-                .getHeightCells();
-            int ow = other.def()
-                .getWidthCells();
-
-            boolean vertical = (px == ox || (px < ox + ow && ox < px + pw)) && pz == oz
-                && (py + ph == oy || oy + oh == py);
-            boolean radial = part.isRadial() == other.isRadial() && py == oy
-                && pz == oz
-                && Math.abs(px - ox) <= (pw + ow) / 2 + 1;
-            if (vertical || radial) connections.add(other);
-        }
-        return connections;
-    }
-
     private static boolean checkViability(RocketBlueprint blueprint, List<RocketStage> stages) {
         if (stages.isEmpty()) return false;
-        double commandWeight = 0;
+
+        boolean hasCommand = false;
         for (RocketPartInstance p : blueprint.getParts()) {
-            if (p.def()
-                .type() == RocketPartType.CAPSULE
-                || p.def()
-                    .type() == RocketPartType.LANDER)
-                commandWeight = p.def()
-                    .weight();
+            if (p.def().type() == RocketPartType.CAPSULE || p.def().type() == RocketPartType.LANDER) {
+                hasCommand = true;
+                break;
+            }
         }
-        if (commandWeight == 0) return false;
-        return stages.getFirst()
-            .canLaunch(commandWeight);
+        if (!hasCommand) return false;
+
+        return stages.get(0).canLaunch(calculatePayloadMass(blueprint));
+    }
+
+    private static double calculatePayloadMass(RocketBlueprint bp) {
+        return bp.getParts().stream()
+            .filter(p -> p.def().type() == RocketPartType.CAPSULE || p.def().type() == RocketPartType.LANDER)
+            .mapToDouble(p -> p.def().weight())
+            .sum();
     }
 }

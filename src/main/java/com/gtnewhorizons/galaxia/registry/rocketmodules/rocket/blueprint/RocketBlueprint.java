@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -13,21 +14,21 @@ public class RocketBlueprint {
 
     private final List<RocketPartInstance> parts = new ArrayList<>();
     private String name = "";
-    private int width = 7;
-    private int height = 12;
+    private int width = 9;  // odd for centered vertical stack
+    private int height = 15;
 
     public RocketBlueprint() {}
 
     public RocketBlueprint(int width, int height) {
-        this.width = Math.max(3, width);
-        this.height = Math.max(5, height);
+        this.width = Math.max(5, width);
+        this.height = Math.max(8, height);
     }
 
     public RocketBlueprint copy() {
         RocketBlueprint copy = new RocketBlueprint(width, height);
         copy.name = this.name;
         for (RocketPartInstance part : parts) {
-            copy.parts.add(new RocketPartInstance(part.def(), part.x(), part.y(), part.z(), part.isRadial()));
+            copy.parts.add(part.copy());
         }
         return copy;
     }
@@ -121,7 +122,7 @@ public class RocketBlueprint {
     }
 
     public void setName(String name) {
-        this.name = name == null ? "" : name;
+        this.name = name == null ? "" : name.trim();
     }
 
     public int getWidth() {
@@ -133,7 +134,7 @@ public class RocketBlueprint {
     }
 
     public RocketAssembly analyze() {
-        return RocketAssembly.fromBlueprint(this);
+        return RocketAnalyzer.analyze(this);
     }
 
     public boolean isEmpty() {

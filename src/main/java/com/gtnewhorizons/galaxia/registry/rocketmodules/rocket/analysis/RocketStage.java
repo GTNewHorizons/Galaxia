@@ -1,17 +1,17 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class RocketStage {
 
     private final int number;
     private final List<RocketPartInstance> parts = new ArrayList<>();
-    private double totalFuel = 0;
     private double totalMass = 0;
+    private double totalFuel = 0;
     private double totalThrust = 0;
 
     public RocketStage(int number) {
@@ -20,16 +20,9 @@ public class RocketStage {
 
     public void addPart(RocketPartInstance part) {
         parts.add(part);
-        totalMass += part.def()
-            .weight();
-        if (part.def()
-            .type() == RocketPartType.ENGINE)
-            totalThrust += part.def()
-                .thrust();
-        if (part.def()
-            .type() == RocketPartType.FUEL_TANK)
-            totalFuel += part.def()
-                .fuelCapacity();
+        totalMass += part.def().weight();
+        if (part.def().type() == RocketPartType.ENGINE) totalThrust += part.def().thrust();
+        if (part.def().type() == RocketPartType.FUEL_TANK) totalFuel += part.def().fuelCapacity();
     }
 
     public double getDeltaV() {
@@ -42,7 +35,7 @@ public class RocketStage {
 
     public boolean canLaunch(double payloadMass) {
         double totalMassWithPayload = totalMass + payloadMass;
-        return totalThrust > totalMassWithPayload * 3.0;
+        return totalThrust > totalMassWithPayload * 1.5;
     }
 
     public List<RocketPartInstance> getParts() {
