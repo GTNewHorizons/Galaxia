@@ -79,6 +79,7 @@ public final class StationGraph {
             for (BlockPos other : airlock.getStationControllers()) {
                 if (!pieces.containsKey(other) || other.equals(pos)) continue;
 
+                listeners.add(newPiece);
                 addAdjacency(pos, other);
                 addAdjacency(other, pos);
                 fireListeners(l -> l.onPieceConnected(pieces.get(other), newPiece, controller.here));
