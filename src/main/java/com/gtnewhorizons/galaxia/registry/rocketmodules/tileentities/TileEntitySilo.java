@@ -10,8 +10,15 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAs
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
+import net.minecraftforge.common.util.ForgeDirection;
 
 public class TileEntitySilo extends TileEntity {
+
+    public ForgeDirection currentFacing = ForgeDirection.NORTH;
+
+    public boolean receiveModule(int moduleId) {
+        return true;
+    }
 
     private RocketBlueprint blueprint = new RocketBlueprint();
 
@@ -51,12 +58,12 @@ public class TileEntitySilo extends TileEntity {
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-        blueprint = RocketBlueprint.deserialize(tag.getCompoundTag("blueprint"), RocketPartRegistry.instance());
+        blueprint = RocketBlueprint.deserializeNBT(tag.getCompoundTag("blueprint"), RocketPartRegistry.instance());
     }
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
-        tag.setTag("blueprint", blueprint.serialize());
+        tag.setTag("blueprint", blueprint.serializeNBT());
     }
 }

@@ -21,4 +21,8 @@ public record RocketAssembly(RocketBlueprint blueprint, List<RocketStage> stages
             .mapToDouble(RocketStage::getTotalMass)
             .sum();
     }
+
+    public static RocketAssembly fromBlueprint(RocketBlueprint blueprint) {
+        return RocketAnalyzer.analyze(blueprint);
+    }
 }

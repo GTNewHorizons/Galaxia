@@ -26,8 +26,6 @@ import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -207,15 +205,27 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      * @return The ButtonWidget needed in the main panel
      */
     private ButtonWidget<?> createModuleButton(RocketModule m) {
-        return new ButtonWidget<>().size(48, 20)
+
+        return new ButtonWidget<>()
+            .size(48, 20)
             .overlay(IKey.str(m.getName()))
-            .tooltip(
-                t -> t.add(
-                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight())
-                        + EnumChatFormatting.RESET))
+            .tooltip(t -> t.add(
+                EnumChatFormatting.GRAY +
+                    String.format("%.1fm | %.0fkg", m.getHeight(), m.getWeight()) +
+                    EnumChatFormatting.RESET
+            ))
             .syncHandler(
                 new InteractionSyncHandler()
-                    .setOnMousePressed(md -> { if (md.mouseButton == 0) addModule(m.getId()); }));
+                    .setOnMousePressed(mouseData -> {
+
+                        if (mouseData.mouseButton == 0) {
+                            addModule(m.getId());
+                            return true;
+                        }
+
+                        return false;
+                    })
+            );
     }
 
     public void setGantryTerminal(TileEntityGantryTerminal teg) {

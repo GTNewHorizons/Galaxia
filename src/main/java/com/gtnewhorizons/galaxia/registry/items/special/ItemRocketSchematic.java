@@ -1,134 +1,49 @@
 package com.gtnewhorizons.galaxia.registry.items.special;
 
-import java.util.List;
-
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemMap;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
+import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
+public class ItemRocketSchematic extends Item {
 
-public class ItemRocketSchematic extends ItemMap {
+    private static final String NBT_KEY_BLUEPRINT = "GalaxiaRocketBlueprint";
 
     public ItemRocketSchematic() {
-        super();
+        setMaxStackSize(1);
+        setUnlocalizedName("galaxia.rocket_schematic");
     }
 
-    public static ItemStack captureFromSilo(TileEntitySilo silo, String name) {
-        RocketBlueprint blueprint = silo.getBlueprint();
-
-        if (blueprint == null || blueprint.getParts().isEmpty()) {
-            return null;
-        }
-
-        ItemStack stack = new ItemStack(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem());
-
-        NBTTagCompound tag = new NBTTagCompound();
-
-        tag.setString(
-            "schematicName",
-            name.isEmpty()
-                ? StatCollector.translateToLocal("item.galaxia.rocket_schematic.saved_name_none")
-                : name);
-
-        tag.setTag("blueprint", blueprint.serialize());
-
-        stack.setTagCompound(tag);
-
-        return stack;
-    }
-
-    public static RocketBlueprint readBlueprint(ItemStack stack) {
-
-        if (stack == null || !stack.hasTagCompound()) {
-            return new RocketBlueprint();
-        }
-
+    public static void setBlueprint(ItemStack stack, RocketBlueprint blueprint) {
+        if (stack == null || !(stack.getItem() instanceof ItemRocketSchematic)) return;
         NBTTagCompound tag = stack.getTagCompound();
-
-        if (!tag.hasKey("blueprint")) {
-            return new RocketBlueprint();
+        if (tag == null) {
+            tag = new NBTTagCompound();
+            stack.setTagCompound(tag);
         }
-
-        return RocketBlueprint.deserialize(
-            tag.getCompoundTag("blueprint"),
-            RocketPartRegistry.instance()
-        );
+        tag.setTag(NBT_KEY_BLUEPRINT, blueprint.serializeNBT());
     }
 
-    public static String readName(ItemStack stack) {
-        if (stack == null || !stack.hasTagCompound()) {
-            return StatCollector.translateToLocal("item.galaxia.rocket_schematic.saved_name_none");
-        }
-
+    public static RocketBlueprint getBlueprint(ItemStack stack) {
+        if (stack == null || !(stack.getItem() instanceof ItemRocketSchematic)) return null;
         NBTTagCompound tag = stack.getTagCompound();
+        if (tag == null || !tag.hasKey(NBT_KEY_BLUEPRINT)) return null;
+        return RocketBlueprint.deserializeNBT(tag.getCompoundTag(NBT_KEY_BLUEPRINT), RocketPartRegistry.instance());
+    }
 
-        if (!tag.hasKey("schematicName")) {
-            return StatCollector.translateToLocal("item.galaxia.rocket_schematic.saved_name_none");
-        }
-
-        return tag.getString("schematicName");
+    public static boolean hasBlueprint(ItemStack stack) {
+        if (stack == null || !(stack.getItem() instanceof ItemRocketSchematic)) return false;
+        NBTTagCompound tag = stack.getTagCompound();
+        return tag != null && tag.hasKey(NBT_KEY_BLUEPRINT);
     }
 
     @Override
-    public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced) {
-        RocketBlueprint blueprint = readBlueprint(stack);
-
-        tooltip.add(
-            EnumChatFormatting.AQUA
-                + readName(stack)
-                + EnumChatFormatting.RESET);
-
-        if (blueprint.getParts().isEmpty()) {
-            tooltip.add(
-                EnumChatFormatting.RED
-                    + StatCollector.translateToLocal("item.galaxia.rocket_schematic.empty")
-                    + EnumChatFormatting.RESET);
-            return;
+    public void onCreated(ItemStack stack, World world, EntityPlayer player) {
+        if (stack.getTagCompound() == null) {
+            stack.setTagCompound(new NBTTagCompound());
         }
-
-        int width = 0;
-        int height = 0;
-        float totalWeight = 0;
-
-        for (RocketPartInstance part : blueprint.getParts()) {
-
-            width = Math.max(
-                width,
-                part.x() + part.def().getWidthCells());
-
-            height = Math.max(
-                height,
-                part.y() + part.def().getHeightCells());
-
-            totalWeight += part.def().weight();
-        }
-
-        tooltip.add(
-            StatCollector.translateToLocalFormatted(
-                "item.galaxia.rocket_schematic.modules",
-                blueprint.getParts().size()));
-
-        tooltip.add(
-            StatCollector.translateToLocalFormatted(
-                "item.galaxia.rocket_schematic.height",
-                height));
-
-        tooltip.add(
-            StatCollector.translateToLocalFormatted(
-                "item.galaxia.rocket_schematic.width",
-                width));
-
-        tooltip.add(
-            StatCollector.translateToLocalFormatted(
-                "item.galaxia.rocket_schematic.weight",
-                totalWeight));
     }
 }
