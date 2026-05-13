@@ -22,7 +22,7 @@ public final class RocketAnalyzer {
         Map<RocketPartInstance, Integer> stageMap = buildStageMap(parts);
 
         List<RocketStage> stages = new ArrayList<>();
-        for (int stageNum = 0; stageNum < 10; stageNum++) {  // reasonable max
+        for (int stageNum = 0; stageNum < 10; stageNum++) {
             RocketStage stage = new RocketStage(stageNum);
             boolean hasParts = false;
             for (RocketPartInstance p : parts) {
@@ -40,7 +40,6 @@ public final class RocketAnalyzer {
 
     private static Map<RocketPartInstance, Integer> buildStageMap(List<RocketPartInstance> parts) {
         Map<RocketPartInstance, Integer> stage = new HashMap<>();
-        // Simple bottom-up staging for MVP: decouplers separate stages
         int currentStage = 0;
         for (RocketPartInstance p : parts) {
             if (p.def().type() == RocketPartType.DECOUPLER) {
@@ -54,13 +53,9 @@ public final class RocketAnalyzer {
     private static boolean checkViability(RocketBlueprint blueprint, List<RocketStage> stages) {
         if (stages.isEmpty()) return false;
 
-        boolean hasCommand = false;
-        for (RocketPartInstance p : blueprint.getParts()) {
-            if (p.def().type() == RocketPartType.CAPSULE || p.def().type() == RocketPartType.LANDER) {
-                hasCommand = true;
-                break;
-            }
-        }
+        boolean hasCommand = blueprint.getParts().stream()
+            .anyMatch(p -> p.def().type() == RocketPartType.CAPSULE || p.def().type() == RocketPartType.LANDER);
+
         if (!hasCommand) return false;
 
         return stages.get(0).canLaunch(calculatePayloadMass(blueprint));

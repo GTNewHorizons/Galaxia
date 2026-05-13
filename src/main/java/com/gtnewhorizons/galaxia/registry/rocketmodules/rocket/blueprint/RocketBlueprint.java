@@ -14,7 +14,7 @@ public class RocketBlueprint {
 
     private final List<RocketPartInstance> parts = new ArrayList<>();
     private String name = "";
-    private int width = 9;  // odd for centered vertical stack
+    private int width = 9;
     private int height = 15;
 
     public RocketBlueprint() {}
@@ -62,11 +62,8 @@ public class RocketBlueprint {
             candidate.y() + candidate.def().getHeightCells() > height) {
             return false;
         }
-
         for (RocketPartInstance existing : parts) {
-            if (existing.overlaps(candidate)) {
-                return false;
-            }
+            if (existing.overlaps(candidate)) return false;
         }
         return true;
     }
@@ -106,9 +103,7 @@ public class RocketBlueprint {
         NBTTagList list = tag.getTagList("parts", Constants.NBT.TAG_COMPOUND);
         for (int i = 0; i < list.tagCount(); i++) {
             RocketPartInstance part = RocketPartInstance.deserialize(list.getCompoundTagAt(i), registry);
-            if (part != null) {
-                bp.parts.add(part);
-            }
+            if (part != null) bp.parts.add(part);
         }
         return bp;
     }
