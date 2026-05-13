@@ -78,7 +78,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             LEFT_PANEL_WIDTH + PADDING * 2,
             PADDING * 2,
             tilePickerController);
-        StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId);
+        StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, configController::close);
         StationMapWidget map = new StationMapWidget(
             assetId,
             coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),

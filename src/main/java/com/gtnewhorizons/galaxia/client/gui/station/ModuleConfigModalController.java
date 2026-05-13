@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.Objects;
+
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -56,6 +58,7 @@ final class ModuleConfigModalController {
     void openHammer(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
+        if (closeIfSame(Kind.HAMMER, targetModuleId)) return;
         close();
         this.kind = Kind.HAMMER;
         this.moduleId = targetModuleId;
@@ -75,6 +78,7 @@ final class ModuleConfigModalController {
     void openUpgrade(int moduleIndex) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
+        if (closeIfSame(Kind.MODULE_UPGRADE, module.id)) return;
         close();
         this.kind = Kind.MODULE_UPGRADE;
         this.moduleId = module.id;
@@ -95,6 +99,7 @@ final class ModuleConfigModalController {
     void openLogistics(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
+        if (closeIfSame(Kind.LOGISTICS, targetModuleId)) return;
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = targetModuleId;
@@ -111,6 +116,7 @@ final class ModuleConfigModalController {
     void openMinerBlacklist(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
+        if (closeIfSame(Kind.MINER_BLACKLIST, targetModuleId)) return;
         close();
         this.kind = Kind.MINER_BLACKLIST;
         this.moduleId = targetModuleId;
@@ -133,6 +139,7 @@ final class ModuleConfigModalController {
     void openRecipeConfig(int moduleIndex) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         if (module == null || !(module.component() instanceof IRecipeModule)) return;
+        if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
         close();
         this.kind = Kind.RECIPE_CONFIG;
         this.moduleId = module.id;
@@ -144,6 +151,14 @@ final class ModuleConfigModalController {
             .height(RecipeConfigModalWidget.HEIGHT);
         this.modal = widget;
         host.child(widget);
+    }
+
+    private boolean closeIfSame(Kind targetKind, ModuleInstance.ID targetModuleId) {
+        if (kind == targetKind && Objects.equals(moduleId, targetModuleId)) {
+            close();
+            return true;
+        }
+        return false;
     }
 
     void close() {

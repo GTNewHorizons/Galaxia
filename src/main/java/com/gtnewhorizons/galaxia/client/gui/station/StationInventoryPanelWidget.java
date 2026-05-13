@@ -95,11 +95,17 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private String outputBoundAmount = "";
     private @Nullable TextFieldWidget inputBoundField;
     private @Nullable TextFieldWidget outputBoundField;
+    private final Runnable onOpen;
     private boolean open;
     private String rowStructureSignature = "";
 
     StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId) {
+        this(assetId, () -> {});
+    }
+
+    StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, Runnable onOpen) {
         this.assetId = assetId;
+        this.onOpen = onOpen;
         size(PANEL_WIDTH, PANEL_Y + PANEL_HEIGHT);
         child(
             ModuleConfigModalSupport.button(() -> assetId != null, this::toggleLabel, this::toggleOpen)
@@ -427,7 +433,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     private void toggleOpen() {
         open = !open;
-        if (!open) closeBoundEditor();
+        if (open) {
+            onOpen.run();
+        } else {
+            closeBoundEditor();
+        }
     }
 
     private void setResourceMode(ResourceMode mode) {
