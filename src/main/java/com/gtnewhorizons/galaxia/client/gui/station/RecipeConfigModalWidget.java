@@ -51,7 +51,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     static final int HEIGHT = 320;
 
     private static final int BODY_TOP = ModuleConfigModalSupport.HEADER_HEIGHT + 10;
-    private static final int ROW_TOP = BODY_TOP + 32;
+    private static final int ROW_TOP = BODY_TOP + 56;
     private static final int ROW_HEIGHT = 25;
     private static final int ROWS_PER_PAGE = 5;
     private static final int FOOTER_Y = HEIGHT - 28;
@@ -93,6 +93,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
     private int page;
     private int boundsSlotIndex = -1;
     private @Nullable BoundTarget selectedBoundTarget;
@@ -102,6 +103,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
         this.controller = controller;
+        this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
+            ModuleInstance module = selectedModule();
+            return module != null ? module.kind() : null;
+        }, this::isRecipeListOpen, WIDTH);
 
         for (int row = 0; row < ROWS_PER_PAGE; row++) {
             int rowY = ROW_TOP + row * ROW_HEIGHT;
@@ -167,6 +172,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 .button(() -> controller.isRecipeConfigOpen() && !isBoundsOpen(), "Close", controller::close)
                 .pos(WIDTH - CLOSE_BUTTON_WIDTH - ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
                 .size(CLOSE_BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            settingsGroupSelector.pos(0, 0)
+                .size(WIDTH, HEIGHT));
         setEnabledIf(w -> controller.isRecipeConfigOpen());
     }
 
@@ -284,7 +292,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean canConfigureRecipes() {
-        return controller.isRecipeConfigOpen() && selectedRecipeModule() != null && !isBoundsOpen();
+        return isRecipeListOpen() && !settingsGroupSelector.isBlockingModuleControls()
+            && selectedRecipeModule() != null;
+    }
+
+    private boolean isRecipeListOpen() {
+        return controller.isRecipeConfigOpen() && !isBoundsOpen();
     }
 
     private boolean canUseRow(int rowIndex) {
@@ -307,6 +320,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private void openBounds(int rowIndex) {
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0 || slotIndex >= slots().size()) return;
+        settingsGroupSelector.closeMenu();
         boundsSlotIndex = slotIndex;
         selectFirstBoundTarget();
     }
@@ -320,6 +334,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private void removeSlot(int rowIndex) {
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0 || slotAtRow(rowIndex) == null) return;
+        settingsGroupSelector.closeMenu();
         updateBoundsAfterSlotRemoval(slotIndex);
         CelestialClient.updateModuleRecipeSlot(
             assetId,
@@ -367,6 +382,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private void cycleMode() {
         IRecipeModule recipeModule = selectedRecipeModule();
         if (recipeModule == null) return;
+        settingsGroupSelector.closeMenu();
         CelestialClient.updateModuleConfig(
             assetId,
             controller.moduleIndex(),
@@ -377,6 +393,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private void addRecipe() {
         ModuleInstance module = selectedModule();
         if (module == null) return;
+        settingsGroupSelector.closeMenu();
         RecipeInputScreen.open(assetId, controller.moduleIndex(), module);
     }
 
@@ -389,11 +406,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean hasPreviousPage() {
-        return !isBoundsOpen() && page > 0;
+        return canConfigureRecipes() && page > 0;
     }
 
     private boolean hasNextPage() {
-        return !isBoundsOpen() && (page + 1) * ROWS_PER_PAGE < slots().size();
+        return canConfigureRecipes() && (page + 1) * ROWS_PER_PAGE < slots().size();
     }
 
     private int maxPageAfterRemoval() {

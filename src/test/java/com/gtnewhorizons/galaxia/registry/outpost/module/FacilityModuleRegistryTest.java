@@ -149,6 +149,14 @@ final class FacilityModuleRegistryTest {
         assertTrue(
             FacilityModuleRegistry.get(FacilityModuleKind.MINER)
                 .settingsGroups());
+        if (FacilityModuleKind.MACERATOR.isAvailable()) {
+            assertTrue(
+                FacilityModuleRegistry.get(FacilityModuleKind.MACERATOR)
+                    .settingsGroups());
+            assertTrue(
+                FacilityModuleRegistry.get(FacilityModuleKind.CENTRIFUGE)
+                    .settingsGroups());
+        }
         assertFalse(
             FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
                 .settingsGroups());

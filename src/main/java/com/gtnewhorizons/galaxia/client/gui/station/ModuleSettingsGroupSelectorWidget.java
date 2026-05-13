@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.RenderItem;
@@ -58,7 +59,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
-    private final FacilityModuleKind kind;
+    private final Supplier<FacilityModuleKind> kindSupplier;
     private final BooleanSupplier openSupplier;
     private final int modalWidth;
     private GroupNameAction groupNameAction = GroupNameAction.NONE;
@@ -70,9 +71,14 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     ModuleSettingsGroupSelectorWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
         FacilityModuleKind kind, BooleanSupplier openSupplier, int modalWidth) {
+        this(assetId, controller, () -> kind, openSupplier, modalWidth);
+    }
+
+    ModuleSettingsGroupSelectorWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
+        Supplier<FacilityModuleKind> kindSupplier, BooleanSupplier openSupplier, int modalWidth) {
         this.assetId = assetId;
         this.controller = controller;
-        this.kind = kind;
+        this.kindSupplier = kindSupplier;
         this.openSupplier = openSupplier;
         this.modalWidth = modalWidth;
 
@@ -168,10 +174,13 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
 
     private ModuleInstance selectedModule() {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
+        FacilityModuleKind kind = kind();
         return module != null && module.kind() == kind ? module : null;
     }
 
     private boolean hasModuleSelected() {
+        FacilityModuleKind kind = kind();
+        if (kind == null) return false;
         return isOpen() && selectedModule() != null
             && FacilityModuleRegistry.get(kind)
                 .settingsGroups();
@@ -326,7 +335,8 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     }
 
     private String defaultNewGroupName() {
-        return kind.name() + " Group";
+        FacilityModuleKind kind = kind();
+        return (kind != null ? kind.name() : "Module") + " Group";
     }
 
     private TextFieldWidget createGroupNameField() {
@@ -351,7 +361,9 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     private List<GroupOption> groupOptions() {
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         ModuleInstance module = selectedModule();
+        FacilityModuleKind kind = kind();
         if (facility == null || module == null
+            || kind == null
             || !FacilityModuleRegistry.get(kind)
                 .settingsGroups())
             return List.of();
@@ -366,6 +378,10 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
             .sorted(Comparator.comparing(SettingsGroup::displayName, String.CASE_INSENSITIVE_ORDER))
             .forEach(group -> options.add(new GroupOption(group.displayName(), group.id(), GroupOptionAction.SELECT)));
         return options;
+    }
+
+    private FacilityModuleKind kind() {
+        return kindSupplier.get();
     }
 
     private static boolean isVisibleJoinableGroup(SettingsGroup group) {
@@ -416,6 +432,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
+        FacilityModuleKind kind = kind();
         List<ModuleInstance> members = group.members()
             .stream()
             .map(

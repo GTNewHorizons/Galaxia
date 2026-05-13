@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -28,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
@@ -35,6 +37,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
@@ -105,6 +108,27 @@ public final class AutomatedFacility extends CelestialAsset {
         return settingsGroups;
     }
 
+    public void applySettingsGroupsToModules() {
+        for (SettingsGroup group : settingsGroups.groups()
+            .values()) {
+            applyRecipeSettingsToGroup(group);
+        }
+    }
+
+    public void syncRecipeSettingsGroupsFromModules() {
+        for (SettingsGroup group : settingsGroups.groups()
+            .values()) {
+            if (!(group.settings() instanceof RecipeModuleSettings recipeSettings)) continue;
+            for (StationTileCoord coord : group.members()) {
+                ModuleInstance module = moduleAtAnchor(coord);
+                if (module != null && module.component() instanceof IRecipeModule recipeModule) {
+                    recipeSettings.setConfig(recipeModule.getRecipeConfig());
+                    break;
+                }
+            }
+        }
+    }
+
     public LayoutCacheBundle layoutCache() {
         return layoutCache;
     }
@@ -123,8 +147,9 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
-        if (module.component() instanceof ModuleMiner && module.groupId() == 0) {
-            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new MinerSettings()));
+        if (FacilityModuleRegistry.get(module.kind())
+            .settingsGroups() && module.groupId() == 0) {
+            attachToSettingsGroup(module, settingsGroups.create(module.kind(), privateSettingsFor(module)));
         }
         dirtyModuleIds.add(module.id);
         bumpSyncRevision();
@@ -171,6 +196,14 @@ public final class AutomatedFacility extends CelestialAsset {
         return -1;
     }
 
+    private @Nullable ModuleInstance moduleAtAnchor(StationTileCoord coord) {
+        if (coord == null) return null;
+        for (ModuleInstance module : modules) {
+            if (coord.equals(module.anchorOrNull())) return module;
+        }
+        return null;
+    }
+
     public void clearModules() {
         modules.clear();
         markDirty();
@@ -208,6 +241,51 @@ public final class AutomatedFacility extends CelestialAsset {
         if (minerSettings(module).setOreBlacklisted(oreKey, blacklisted)) {
             markSettingsGroupMembersDirty(settingsGroups.require(module.groupId(), FacilityModuleKind.MINER));
         }
+    }
+
+    public RecipeConfig recipeConfig(ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            throw new IllegalStateException("Recipe config requested for non-recipe module " + module.id);
+        }
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            RecipeConfig config = recipeModule.getRecipeConfig();
+            return config != null ? config : RecipeConfig.empty();
+        }
+        if (module.groupId() == 0) {
+            throw new IllegalStateException("Recipe module " + module.id + " has no settings group");
+        }
+        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        if (!(group.settings() instanceof RecipeModuleSettings settings)) {
+            throw new IllegalStateException(
+                "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
+        }
+        RecipeConfig config = settings.config();
+        return config != null ? config : RecipeConfig.empty();
+    }
+
+    public void setRecipeConfig(ModuleInstance module, RecipeConfig config) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            throw new IllegalStateException("Recipe config update requested for non-recipe module " + module.id);
+        }
+        RecipeConfig normalized = RecipeModuleSettings.copyConfig(config);
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            recipeModule.setRecipeConfig(normalized);
+            markModuleDirty(module.id);
+            return;
+        }
+        if (module.groupId() == 0) {
+            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new RecipeModuleSettings(normalized)));
+        }
+        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        if (!(group.settings() instanceof RecipeModuleSettings settings)) {
+            throw new IllegalStateException(
+                "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
+        }
+        settings.setConfig(normalized);
+        applyRecipeSettingsToGroup(group);
+        markSettingsGroupMembersDirty(group);
     }
 
     public void copyMinerRuntimeSettings(ModuleInstance source, ModuleInstance target) {
@@ -498,6 +576,20 @@ public final class AutomatedFacility extends CelestialAsset {
         if (module.component() instanceof ModuleMiner) {
             return minerSettings(module).copy();
         }
+        if (module.component() instanceof IRecipeModule) {
+            return new RecipeModuleSettings(recipeConfig(module));
+        }
+        throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+    }
+
+    private ModuleSettings privateSettingsFor(ModuleInstance module) {
+        requireSettingsGroupsSupported(module);
+        if (module.component() instanceof ModuleMiner) {
+            return new MinerSettings();
+        }
+        if (module.component() instanceof IRecipeModule recipeModule) {
+            return new RecipeModuleSettings(recipeModule.getRecipeConfig());
+        }
         throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
     }
 
@@ -515,6 +607,7 @@ public final class AutomatedFacility extends CelestialAsset {
         settingsGroups.require(group.id(), module.kind());
         settingsGroups.addMember(group.id(), module.anchor());
         module.setGroupId(group.id());
+        applySettingsToModule(group.settings(), module);
         markModuleDirty(module.id);
     }
 
@@ -532,6 +625,22 @@ public final class AutomatedFacility extends CelestialAsset {
                     markModuleDirty(module.id);
                 }
             }
+        }
+    }
+
+    private void applyRecipeSettingsToGroup(SettingsGroup group) {
+        for (StationTileCoord coord : group.members()) {
+            for (ModuleInstance module : modules) {
+                if (coord.equals(module.anchorOrNull())) {
+                    applySettingsToModule(group.settings(), module);
+                }
+            }
+        }
+    }
+
+    private static void applySettingsToModule(ModuleSettings settings, ModuleInstance module) {
+        if (settings instanceof RecipeModuleSettings recipeSettings) {
+            recipeSettings.applyTo(module);
         }
     }
 

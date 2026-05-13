@@ -79,6 +79,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -377,6 +378,7 @@ public final class FacilityPersistenceManager {
         out.systemId = String.valueOf(state.systemId);
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
+        state.syncRecipeSettingsGroupsFromModules();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
         out.settingsGroups = new ArrayList<>();
@@ -428,43 +430,7 @@ public final class FacilityPersistenceManager {
             } else if (m.component() instanceof IRecipeModule recipeModule) {
                 RecipeConfig rc = recipeModule.getRecipeConfig();
                 if (rc != null) {
-                    moduleData.addProperty(
-                        "recipeMode",
-                        rc.mode()
-                            .name());
-                    moduleData.addProperty(
-                        "recipeNotDoablePolicy",
-                        rc.notDoablePolicy()
-                            .name());
-                    moduleData.addProperty("recipeOrderCursor", rc.orderCursor() & 0xFF);
-                    moduleData.addProperty("recipeOrderRemaining", rc.orderRemaining() & 0xFF);
-                    com.google.gson.JsonArray slotsArray = new com.google.gson.JsonArray();
-                    for (int i = 0; i < SavedRecipeList.MAX_SAVED_RECIPES; i++) {
-                        SavedRecipe slot = rc.savedRecipes()
-                            .getOrNull(i);
-                        if (slot == null) continue;
-                        com.google.gson.JsonObject slotObj = new com.google.gson.JsonObject();
-                        slotObj.addProperty(
-                            "recipeMapOrdinal",
-                            slot.recipe()
-                                .recipeMapOrdinal() & 0xFF);
-                        slotObj.addProperty(
-                            "recipeIndex",
-                            slot.recipe()
-                                .recipeIndex());
-                        slotObj.addProperty(
-                            "contentHash",
-                            slot.recipe()
-                                .contentHash());
-                        writeRecipeSnapshot(slotObj, slot.recipe());
-                        slotObj.addProperty("enabled", slot.enabled());
-                        slotObj.addProperty("requestAmount", slot.requestAmount());
-                        slotObj.addProperty("priority", slot.priority() & 0xFF);
-                        slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
-                        slotObj.addProperty("slotIndex", i);
-                        slotsArray.add(slotObj);
-                    }
-                    moduleData.add("savedRecipes", slotsArray);
+                    encodeRecipeConfig(moduleData, rc);
                 }
             }
             mj.data = moduleData;
@@ -831,8 +797,13 @@ public final class FacilityPersistenceManager {
 
         for (ModuleInstance module : state.modules()) {
             if (module.groupId() != 0) {
-                state.settingsGroups()
-                    .addMember(module.groupId(), module.anchor());
+                SettingsGroup group = state.settingsGroups()
+                    .require(module.groupId());
+                if (!group.members()
+                    .contains(module.anchor())) {
+                    state.settingsGroups()
+                        .addMember(module.groupId(), module.anchor());
+                }
             }
         }
         for (SettingsGroup group : state.settingsGroups()
@@ -843,6 +814,7 @@ public final class FacilityPersistenceManager {
                 throw new IllegalStateException("[PERSIST] Settings group " + group.id() + " has no member modules");
             }
         }
+        state.applySettingsGroupsToModules();
 
         LOG.info(
             "[PERSIST] LOAD DECODE END: facility {} has {} module(s), layout has {} tile(s)",
@@ -1364,6 +1336,14 @@ public final class FacilityPersistenceManager {
             data.add("minerSettings", PURE_GSON.toJsonTree(minerSettings));
             return data;
         }
+        if (settings instanceof RecipeModuleSettings recipeSettings) {
+            JsonObject recipeData = new JsonObject();
+            if (recipeSettings.config() != null) {
+                encodeRecipeConfig(recipeData, recipeSettings.config());
+            }
+            data.add("recipeSettings", recipeData);
+            return data;
+        }
         throw new IllegalStateException("[PERSIST] Unsupported settings group payload " + settings);
     }
 
@@ -1389,7 +1369,57 @@ public final class FacilityPersistenceManager {
                 "[PERSIST] Miner settings group " + groupJson.id + " has null blacklistedOreKeys");
             return new MinerSettings(keys);
         }
+        if (FacilityModuleRegistry.get(kind)
+            .settingsGroups()) {
+            if (data.entrySet()
+                .size() != 1 || !data.has("recipeSettings")) {
+                throw new IllegalStateException(
+                    "[PERSIST] Recipe settings group " + groupJson.id + " has malformed data");
+            }
+            JsonObject recipeData = data.getAsJsonObject("recipeSettings");
+            return new RecipeModuleSettings(recipeData.has("recipeMode") ? decodeRecipeConfig(recipeData) : null);
+        }
         throw new IllegalStateException("[PERSIST] Unsupported settings group kind " + kind);
+    }
+
+    private static void encodeRecipeConfig(JsonObject data, RecipeConfig rc) {
+        data.addProperty(
+            "recipeMode",
+            rc.mode()
+                .name());
+        data.addProperty(
+            "recipeNotDoablePolicy",
+            rc.notDoablePolicy()
+                .name());
+        data.addProperty("recipeOrderCursor", rc.orderCursor() & 0xFF);
+        data.addProperty("recipeOrderRemaining", rc.orderRemaining() & 0xFF);
+        com.google.gson.JsonArray slotsArray = new com.google.gson.JsonArray();
+        for (int i = 0; i < SavedRecipeList.MAX_SAVED_RECIPES; i++) {
+            SavedRecipe slot = rc.savedRecipes()
+                .getOrNull(i);
+            if (slot == null) continue;
+            com.google.gson.JsonObject slotObj = new com.google.gson.JsonObject();
+            slotObj.addProperty(
+                "recipeMapOrdinal",
+                slot.recipe()
+                    .recipeMapOrdinal() & 0xFF);
+            slotObj.addProperty(
+                "recipeIndex",
+                slot.recipe()
+                    .recipeIndex());
+            slotObj.addProperty(
+                "contentHash",
+                slot.recipe()
+                    .contentHash());
+            writeRecipeSnapshot(slotObj, slot.recipe());
+            slotObj.addProperty("enabled", slot.enabled());
+            slotObj.addProperty("requestAmount", slot.requestAmount());
+            slotObj.addProperty("priority", slot.priority() & 0xFF);
+            slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
+            slotObj.addProperty("slotIndex", i);
+            slotsArray.add(slotObj);
+        }
+        data.add("savedRecipes", slotsArray);
     }
 
     private static void decodeMinerSettings(ModuleInstance module, ModuleMiner miner, JsonObject data) {

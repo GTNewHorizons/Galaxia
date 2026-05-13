@@ -988,11 +988,10 @@ public final class AssetModuleUpdatePacket implements IMessage {
         RecipeSchedulerMode mode = PacketUtil.enumFromByte(packet.bytePayload, RecipeSchedulerMode.class);
         if (mode == null) throw new IllegalArgumentException("invalid recipe scheduler mode: " + packet.bytePayload);
 
-        RecipeConfig config = recipeModule.getRecipeConfig();
-        if (config == null) config = RecipeConfig.empty();
-        recipeModule.setRecipeConfig(
+        RecipeConfig config = state.recipeConfig(module);
+        state.setRecipeConfig(
+            module,
             new RecipeConfig(config.savedRecipes(), mode, config.notDoablePolicy(), (byte) 0, (byte) 0));
-        state.markModuleDirty(module.id);
     }
 
     private static void handleInventoryBound(AssetModuleUpdatePacket packet, AutomatedFacility state) {
@@ -1022,16 +1021,15 @@ public final class AssetModuleUpdatePacket implements IMessage {
             throw new IllegalArgumentException("recipe slot index out of range: " + slotIndex);
         }
 
-        RecipeConfig config = recipeModule.getRecipeConfig();
+        RecipeConfig config = state.recipeConfig(module);
         ConfigAction action = packet.getConfigAction();
 
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
             if (packet.rawPayload.length != 1) {
                 throw new IllegalArgumentException("remove recipe slot payload must be exactly 1 byte");
             }
-            if (config == null) return;
             if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, null)) return;
-            state.markModuleDirty(module.id);
+            state.setRecipeConfig(module, config);
             return;
         }
 
@@ -1065,17 +1063,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
             fluidOutputChances,
             duration,
             eut);
-        if (config == null) {
-            config = RecipeConfig.empty();
-            recipeModule.setRecipeConfig(config);
-        }
-
         RecipeSnapshot recipe = recipeForSlotMutation(action, config, slotIndex, recipeModule, ref);
         if (recipe == null) return;
         SavedRecipe slot = new SavedRecipe(recipe, enabled, requestAmount, priority, orderSize);
 
         if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, slot)) return;
-        state.markModuleDirty(module.id);
+        state.setRecipeConfig(module, config);
     }
 
     static @Nullable RecipeSnapshot recipeForSlotMutation(ConfigAction action, RecipeConfig config, int slotIndex,

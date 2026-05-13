@@ -60,6 +60,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -129,7 +131,7 @@ public final class AssetSyncPacket implements IMessage {
     private FacilityModuleKind settingsGroupKind;
     private String settingsGroupName;
     private boolean settingsGroupJoinable;
-    private MinerSettings minerSettings;
+    private ModuleSettings settingsGroupSettings;
 
     public AssetSyncPacket() {}
 
@@ -333,7 +335,9 @@ public final class AssetSyncPacket implements IMessage {
         pkt.settingsGroupName = group.displayName();
         pkt.settingsGroupJoinable = group.isJoinable();
         if (group.settings() instanceof MinerSettings settings) {
-            pkt.minerSettings = settings.copy();
+            pkt.settingsGroupSettings = settings.copy();
+        } else if (group.settings() instanceof RecipeModuleSettings settings) {
+            pkt.settingsGroupSettings = settings.copy();
         } else {
             throw new IllegalStateException("Unsupported settings group payload " + group.settings());
         }
@@ -532,7 +536,7 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeEnum(buf, settingsGroupKind);
                 PacketUtil.writeString(buf, settingsGroupName);
                 buf.writeBoolean(settingsGroupJoinable);
-                writeMinerSettingsPayload(buf, minerSettings);
+                writeSettingsGroupPayload(buf, settingsGroupKind, settingsGroupSettings);
             }
         }
     }
@@ -573,7 +577,10 @@ public final class AssetSyncPacket implements IMessage {
                 settingsGroupKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
                 settingsGroupName = PacketUtil.readString(buf);
                 settingsGroupJoinable = buf.readBoolean();
-                minerSettings = readMinerSettingsPayload(buf, "settingsGroup=" + settingsGroupId);
+                settingsGroupSettings = readSettingsGroupPayload(
+                    buf,
+                    settingsGroupKind,
+                    "settingsGroup=" + settingsGroupId);
             }
         }
     }
@@ -947,6 +954,42 @@ public final class AssetSyncPacket implements IMessage {
         return settings;
     }
 
+    private static void writeSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, ModuleSettings settings) {
+        if (kind == null) throw new IllegalStateException("Settings group kind must not be null");
+        if (kind == FacilityModuleKind.MINER && settings instanceof MinerSettings minerSettings) {
+            writeMinerSettingsPayload(buf, minerSettings);
+            return;
+        }
+        if (FacilityModuleRegistry.get(kind)
+            .settingsGroups() && settings instanceof RecipeModuleSettings recipeSettings) {
+            writeRecipeConfigPayload(buf, recipeSettings.config());
+            return;
+        }
+        throw new IllegalStateException("Unsupported settings group payload " + settings + " for kind " + kind);
+    }
+
+    private static ModuleSettings readSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, String context) {
+        if (kind == null) throw new IllegalStateException("Settings group kind must not be null for " + context);
+        if (kind == FacilityModuleKind.MINER) {
+            return readMinerSettingsPayload(buf, context);
+        }
+        if (FacilityModuleRegistry.get(kind)
+            .settingsGroups()) {
+            return new RecipeModuleSettings(readRecipeConfigPayload(buf));
+        }
+        throw new IllegalStateException("Unsupported settings group kind " + kind + " for " + context);
+    }
+
+    private static ModuleSettings copySettingsGroupPayload(ModuleSettings settings) {
+        if (settings instanceof MinerSettings minerSettings) {
+            return minerSettings.copy();
+        }
+        if (settings instanceof RecipeModuleSettings recipeSettings) {
+            return recipeSettings.copy();
+        }
+        throw new IllegalStateException("Unsupported settings group payload " + settings);
+    }
+
     private static void writeLogisticsConfig(ByteBuf buf, LogisticsResourceConfig cfg) {
         buf.writeInt(cfg.minReserve());
         buf.writeInt(cfg.orderSize());
@@ -963,7 +1006,10 @@ public final class AssetSyncPacket implements IMessage {
             buf.writeBoolean(false);
             return;
         }
-        RecipeConfig config = recipeModule.getRecipeConfig();
+        writeRecipeConfigPayload(buf, recipeModule.getRecipeConfig());
+    }
+
+    private static void writeRecipeConfigPayload(ByteBuf buf, RecipeConfig config) {
         if (config == null) {
             buf.writeBoolean(false);
             return;
@@ -995,22 +1041,30 @@ public final class AssetSyncPacket implements IMessage {
     }
 
     private static void readRecipeConfig(ByteBuf buf, ModuleInstance module) {
-        if (!buf.readBoolean()) return;
+        RecipeConfig config = readRecipeConfigPayload(buf);
+        if (config == null) return;
+        if (module.component() instanceof IRecipeModule recipeModule) {
+            recipeModule.setRecipeConfig(config);
+        }
+    }
+
+    private static RecipeConfig readRecipeConfigPayload(ByteBuf buf) {
+        if (!buf.readBoolean()) return null;
         int modeOrd = Byte.toUnsignedInt(buf.readByte());
         int policyOrd = Byte.toUnsignedInt(buf.readByte());
         byte orderCursor = buf.readByte();
         byte orderRemaining = buf.readByte();
 
         RecipeSchedulerMode[] modes = RecipeSchedulerMode.values();
-        if (modeOrd >= modes.length) return;
+        if (modeOrd >= modes.length) return null;
         RecipeSchedulerMode mode = modes[modeOrd];
 
         NotDoablePolicy[] policies = NotDoablePolicy.values();
-        if (policyOrd >= policies.length) return;
+        if (policyOrd >= policies.length) return null;
         NotDoablePolicy policy = policies[policyOrd];
 
         int slotCount = Byte.toUnsignedInt(buf.readByte());
-        if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return;
+        if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
 
         RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
 
@@ -1029,9 +1083,7 @@ public final class AssetSyncPacket implements IMessage {
                 .add(slot);
         }
 
-        if (module.component() instanceof IRecipeModule recipeModule) {
-            recipeModule.setRecipeConfig(config);
-        }
+        return config;
     }
 
     public AssetSyncPacket withSyncRevision(int rev) {
@@ -1152,13 +1204,16 @@ public final class AssetSyncPacket implements IMessage {
                 StationLayout layout = state.stationLayout();
                 if (layout != null) layout.remove(packet.tileCoord);
             }
-            case SETTINGS_GROUP_UPDATED -> state.settingsGroups()
-                .sync(
-                    packet.settingsGroupId,
-                    packet.settingsGroupKind,
-                    packet.settingsGroupName,
-                    packet.settingsGroupJoinable,
-                    packet.minerSettings.copy());
+            case SETTINGS_GROUP_UPDATED -> {
+                state.settingsGroups()
+                    .sync(
+                        packet.settingsGroupId,
+                        packet.settingsGroupKind,
+                        packet.settingsGroupName,
+                        packet.settingsGroupJoinable,
+                        copySettingsGroupPayload(packet.settingsGroupSettings));
+                state.applySettingsGroupsToModules();
+            }
         }
     }
 
@@ -1306,13 +1361,16 @@ public final class AssetSyncPacket implements IMessage {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
-                case SETTINGS_GROUP_UPDATED -> state.settingsGroups()
-                    .sync(
-                        packet.settingsGroupId,
-                        packet.settingsGroupKind,
-                        packet.settingsGroupName,
-                        packet.settingsGroupJoinable,
-                        packet.minerSettings.copy());
+                case SETTINGS_GROUP_UPDATED -> {
+                    state.settingsGroups()
+                        .sync(
+                            packet.settingsGroupId,
+                            packet.settingsGroupKind,
+                            packet.settingsGroupName,
+                            packet.settingsGroupJoinable,
+                            copySettingsGroupPayload(packet.settingsGroupSettings));
+                    state.applySettingsGroupsToModules();
+                }
             }
         }
 

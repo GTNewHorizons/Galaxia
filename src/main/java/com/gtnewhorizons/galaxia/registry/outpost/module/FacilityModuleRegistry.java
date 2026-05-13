@@ -253,6 +253,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleMacerator::processRecipe)
                 .factory(ModuleMacerator::new)
                 .register();
@@ -263,6 +264,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleCentrifuge::processRecipe)
                 .factory(ModuleCentrifuge::new)
                 .register();
@@ -273,6 +275,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleElectrolyzer::processRecipe)
                 .factory(ModuleElectrolyzer::new)
                 .register();
@@ -283,6 +286,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleChemicalReactor::processRecipe)
                 .factory(ModuleChemicalReactor::new)
                 .register();
@@ -293,6 +297,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleAssembler::processRecipe)
                 .factory(ModuleAssembler::new)
                 .register();
@@ -303,6 +308,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleDistillery::processRecipe)
                 .factory(ModuleDistillery::new)
                 .register();
