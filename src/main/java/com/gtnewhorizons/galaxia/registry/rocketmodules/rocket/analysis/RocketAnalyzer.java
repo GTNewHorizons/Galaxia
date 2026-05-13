@@ -7,7 +7,9 @@ import java.util.Map;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
 
 public final class RocketAnalyzer {
 
@@ -42,12 +44,8 @@ public final class RocketAnalyzer {
         Map<RocketPartInstance, Integer> stage = new HashMap<>();
         int currentStage = 0;
         for (RocketPartInstance p : parts) {
-            if (p.def()
-                .type() == RocketPartType.DECOUPLER) {
-                currentStage = Math.max(
-                    currentStage,
-                    p.def()
-                        .decouplerStage());
+            if (p.def() instanceof DecouplerPartDef def) {
+                currentStage = Math.max(currentStage, def.decouplerStage());
             }
             stage.put(p, currentStage);
         }
@@ -59,11 +57,7 @@ public final class RocketAnalyzer {
 
         boolean hasCommand = blueprint.getParts()
             .stream()
-            .anyMatch(
-                p -> p.def()
-                    .type() == RocketPartType.CAPSULE
-                    || p.def()
-                        .type() == RocketPartType.LANDER);
+            .anyMatch(p -> p.def() instanceof CapsulePartDef || p.def() instanceof LanderPartDef);
 
         if (!hasCommand) return false;
 
@@ -74,11 +68,7 @@ public final class RocketAnalyzer {
     private static double calculatePayloadMass(RocketBlueprint bp) {
         return bp.getParts()
             .stream()
-            .filter(
-                p -> p.def()
-                    .type() == RocketPartType.CAPSULE
-                    || p.def()
-                        .type() == RocketPartType.LANDER)
+            .filter(p -> p.def() instanceof CapsulePartDef || p.def() instanceof LanderPartDef)
             .mapToDouble(
                 p -> p.def()
                     .weight())

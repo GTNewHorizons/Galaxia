@@ -5,8 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FunctionalPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderPartDef;
 
 public class RocketPartRegistry {
 
@@ -34,7 +40,7 @@ public class RocketPartRegistry {
         int id = 0;
 
         register(
-            new RocketPartDef.CapsulePartDef(
+            new CapsulePartDef(
                 id++,
                 "Basic Capsule",
                 3.0,
@@ -44,7 +50,7 @@ public class RocketPartRegistry {
                 null));
 
         register(
-            new RocketPartDef.FuelTankPartDef(
+            new FuelTankPartDef(
                 id++,
                 "Basic Fuel Tank",
                 3.0,
@@ -55,7 +61,7 @@ public class RocketPartRegistry {
                 null));
 
         register(
-            new RocketPartDef.EnginePartDef(
+            new EnginePartDef(
                 id++,
                 "Basic Engine",
                 3.0,
@@ -66,7 +72,7 @@ public class RocketPartRegistry {
                 null));
 
         register(
-            new RocketPartDef.DecouplerPartDef(
+            new DecouplerPartDef(
                 id++,
                 "Basic Decoupler",
                 3.0,
@@ -77,7 +83,7 @@ public class RocketPartRegistry {
                 null));
 
         register(
-            new RocketPartDef.LanderPartDef(
+            new LanderPartDef(
                 id++,
                 "Basic Lander",
                 3.0,
@@ -87,7 +93,7 @@ public class RocketPartRegistry {
                 null));
 
         register(
-            new RocketPartDef.RiderPartDef(
+            new RiderPartDef(
                 id++,
                 "Basic Rider",
                 3.0,
@@ -98,7 +104,7 @@ public class RocketPartRegistry {
                 null));
 
         register(
-            new RocketPartDef.FunctionalPartDef(
+            new FunctionalPartDef(
                 id++,
                 "Basic Storage",
                 3.0,

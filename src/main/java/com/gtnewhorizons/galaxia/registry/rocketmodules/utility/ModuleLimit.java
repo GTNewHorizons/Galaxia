@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.utility;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 
-public record ModuleLimit(RocketPartType type, int limit) {
+public record ModuleLimit(Class<? extends IRocketPartDef> type, int limit) {
 
-    public static ModuleLimit of(RocketPartType type, int limit) {
+    public static ModuleLimit of(Class<? extends IRocketPartDef> type, int limit) {
         return new ModuleLimit(type, limit);
     }
 }

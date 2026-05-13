@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartType;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
 
 public class RocketStage {
 
@@ -22,14 +23,8 @@ public class RocketStage {
         parts.add(part);
         totalMass += part.def()
             .weight();
-        if (part.def()
-            .type() == RocketPartType.ENGINE)
-            totalThrust += part.def()
-                .thrust();
-        if (part.def()
-            .type() == RocketPartType.FUEL_TANK)
-            totalFuel += part.def()
-                .fuelCapacity();
+        if (part.def() instanceof EnginePartDef def) totalThrust += def.thrust();
+        if (part.def() instanceof FuelTankPartDef def) totalFuel += def.fuelCapacity();
     }
 
     public double getDeltaV() {
