@@ -23,9 +23,9 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler>
@@ -96,7 +96,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         return blueprint;
     }
 
-    public void addPart(RocketPartDef def, int x, int y, int z) {
+    public void addPart(IRocketPartDef def, int x, int y, int z) {
         RocketPartInstance part = new RocketPartInstance(def, x, y, z, false);
         if (blueprint.addPart(part)) {
             markDirty();
@@ -134,7 +134,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         Flow row = Flow.row()
             .coverChildren()
             .padding(4);
-        for (RocketPartDef def : RocketPartRegistry.instance()
+        for (IRocketPartDef def : RocketPartRegistry.instance()
             .getAll()) {
             row.child(createPartButton(def));
         }
@@ -143,7 +143,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         return panel;
     }
 
-    private ButtonWidget<?> createPartButton(RocketPartDef def) {
+    private ButtonWidget<?> createPartButton(IRocketPartDef def) {
         return new ButtonWidget<>().size(80, 20)
             .overlay(IKey.str(def.name()))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {

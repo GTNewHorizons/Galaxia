@@ -6,8 +6,8 @@ import net.minecraftforge.client.model.IModelCustom;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 
 /**
  * Central rendering engine for all rockets and rocket-like structures.
@@ -44,7 +44,7 @@ public final class RocketVisualHelper {
 
         GL11.glTranslated(part.x(), part.y(), part.z());
 
-        RocketPartDef def = part.def();
+        IRocketPartDef def = part.def();
 
         if (def.modelLocation() != null) {
             IModelCustom model = ModelCache.get(def.modelLocation());
@@ -61,7 +61,7 @@ public final class RocketVisualHelper {
         GL11.glPopMatrix();
     }
 
-    private static void renderFallbackPart(RocketPartDef def) {
+    private static void renderFallbackPart(IRocketPartDef def) {
         float r, g, b;
         switch (def.type()) {
             case CAPSULE -> {

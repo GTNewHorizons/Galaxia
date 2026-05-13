@@ -14,8 +14,8 @@ import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -99,7 +99,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         if (moduleId == -1) return;
 
         // TODO: clientModuleId -> clientPartInstance
-        RocketPartDef def = RocketPartRegistry.instance()
+        IRocketPartDef def = RocketPartRegistry.instance()
             .get(moduleId);
         if (def == null) return;
 
@@ -500,7 +500,7 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
     }
 
-    private static void renderFallbackModule(RocketPartDef def) {
+    private static void renderFallbackModule(IRocketPartDef def) {
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         switch (def.type()) {
             case ENGINE -> GL11.glColor3f(0.9f, 0.3f, 0.1f);

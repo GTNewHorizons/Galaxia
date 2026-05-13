@@ -17,9 +17,9 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class RocketEditorUI {
@@ -102,7 +102,7 @@ public class RocketEditorUI {
         partLayer.removeAll();
 
         for (RocketPartInstance part : blueprint.getParts()) {
-            partLayer.child(createPartButton(part, blueprint,  partLayer, silo));
+            partLayer.child(createPartButton(part, blueprint, partLayer, silo));
         }
     }
 
@@ -134,7 +134,7 @@ public class RocketEditorUI {
                     int id = selectedPartId.getValue();
                     if (id < 0) return false;
 
-                    RocketPartDef def = RocketPartRegistry.instance()
+                    IRocketPartDef def = RocketPartRegistry.instance()
                         .get(id);
                     if (def == null) return false;
 
@@ -157,11 +157,8 @@ public class RocketEditorUI {
             });
     }
 
-    private static ButtonWidget<?> createPartButton(
-        RocketPartInstance part,
-        RocketBlueprint blueprint,
-        ParentWidget<?> partLayer,
-        TileEntitySilo silo) {
+    private static ButtonWidget<?> createPartButton(RocketPartInstance part, RocketBlueprint blueprint,
+        ParentWidget<?> partLayer, TileEntitySilo silo) {
         int w = part.def()
             .getWidthCells();
         int h = part.def()
@@ -225,7 +222,7 @@ public class RocketEditorUI {
             .padding(4)
             .margin(4);
 
-        for (RocketPartDef def : RocketPartRegistry.instance()
+        for (IRocketPartDef def : RocketPartRegistry.instance()
             .getAll()) {
             flow.child(createPaletteButton(def, selectedPartId));
         }
@@ -234,7 +231,7 @@ public class RocketEditorUI {
         return panel;
     }
 
-    private static ButtonWidget<?> createPaletteButton(RocketPartDef def, IntSyncValue selectedPartId) {
+    private static ButtonWidget<?> createPaletteButton(IRocketPartDef def, IntSyncValue selectedPartId) {
         return new ButtonWidget<>().size(150, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .overlay(IKey.str(def.name()))
@@ -295,7 +292,7 @@ public class RocketEditorUI {
                 if (id < 0) {
                     return "Selected: none";
                 }
-                RocketPartDef def = RocketPartRegistry.instance()
+                IRocketPartDef def = RocketPartRegistry.instance()
                     .get(id);
                 return "Selected: " + (def != null ? def.name() : "Unknown");
             })

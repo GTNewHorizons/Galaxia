@@ -9,16 +9,16 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 
 public class GuiRocketRenderer {
 
     private static final int GRID_SIZE = 20;
 
     private final RocketBlueprint blueprint;
-    private RocketPartDef selectedPart;
+    private IRocketPartDef selectedPart;
 
     public GuiRocketRenderer(RocketBlueprint blueprint) {
         this.blueprint = blueprint;
@@ -55,7 +55,7 @@ public class GuiRocketRenderer {
         }
 
         for (RocketPartInstance part : blueprint.getParts()) {
-            RocketPartDef def = part.def();
+            IRocketPartDef def = part.def();
 
             int px = part.x() * GRID_SIZE;
             int py = part.y() * GRID_SIZE;
@@ -96,7 +96,7 @@ public class GuiRocketRenderer {
             .coverChildren()
             .margin(3);
 
-        for (RocketPartDef def : RocketPartRegistry.instance()
+        for (IRocketPartDef def : RocketPartRegistry.instance()
             .getAll()) {
             flow.child(createPaletteButton(def));
         }
@@ -113,7 +113,7 @@ public class GuiRocketRenderer {
         return flow;
     }
 
-    private ButtonWidget<?> createPaletteButton(RocketPartDef def) {
+    private ButtonWidget<?> createPaletteButton(IRocketPartDef def) {
         return new ButtonWidget<>().size(140, 22)
             .overlay(IKey.str(def.name()))
             .background(EnumTextures.SELECTION_FRAME.getImage())

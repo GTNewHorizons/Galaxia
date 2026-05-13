@@ -65,4 +65,8 @@ dependencies {
 
     // Speeds up mod identification and loading in dev
     runtimeOnlyNonPublishable(rfg.deobf("com.github.GTNewHorizons:CoreTweaks:0.3.4.2-GTNH"))
+
+    // @Data annotation for the data class, see: [https://projectlombok.org/features/Data]
+    compileOnly('org.projectlombok:lombok:1.18.34')
+    annotationProcessor('org.projectlombok:lombok:1.18.34')
 }
