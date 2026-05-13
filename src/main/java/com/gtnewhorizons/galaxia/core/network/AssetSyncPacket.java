@@ -143,7 +143,8 @@ public final class AssetSyncPacket implements IMessage {
         pkt.stationControllerPos = state.getController();
 
         pkt.fullSyncDeltas = new ArrayList<>();
-        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot().entrySet()) {
+        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot()
+            .entrySet()) {
             pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
         }
 
@@ -172,7 +173,8 @@ public final class AssetSyncPacket implements IMessage {
             .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
             .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
 
-        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot().entrySet()) {
+        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot()
+            .entrySet()) {
             pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
         }
 

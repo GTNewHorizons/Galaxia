@@ -65,7 +65,7 @@ public class Station extends CelestialAsset {
     public List<ItemStack> getFiltersFor(int i) {
         TileStationController ctrl = getTileController();
         if (ctrl == null) return super.getFiltersFor(i);
-        return ctrl.getFiltersForInventory(i);
+        return ctrl.getFiltersFor(i);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class Station extends CelestialAsset {
             super.setFilters(slot, filterList);
             return;
         }
-        ctrl.setFiltersForInventory(slot, filterList);
+        ctrl.setFilters(slot, filterList);
     }
 
     @Override
@@ -85,7 +85,7 @@ public class Station extends CelestialAsset {
             super.addFilter(slot, filter);
             return;
         }
-        ctrl.addFilterForInventory(slot, filter);
+        ctrl.addFilter(slot, filter);
     }
 
     @Override
@@ -95,7 +95,7 @@ public class Station extends CelestialAsset {
             super.removeFilter(slot, filter);
             return;
         }
-        ctrl.removeFilterForInventory(slot, filter);
+        ctrl.removeFilter(slot, filter);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class Station extends CelestialAsset {
             super.clearFilters(slot);
             return;
         }
-        ctrl.clearFiltersForInventory(slot);
+        ctrl.clearFilters(slot);
     }
 
     // ── Controller lookup ──

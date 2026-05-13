@@ -95,7 +95,7 @@ public interface IDistributedInventory extends IInventory, IFilteredInventory {
         int invIndex = 0;
 
         for (IInventory chest : getInventories()) {
-            if (chest == null || !passesFilter(invIndex, stack)) {
+            if (chest == null || !IFilteredInventory.super.passesFilter(invIndex, stack)) {
                 invIndex++;
                 continue;
             }

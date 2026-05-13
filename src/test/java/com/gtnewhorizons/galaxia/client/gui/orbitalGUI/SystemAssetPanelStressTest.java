@@ -152,9 +152,13 @@ final class SystemAssetPanelStressTest {
         public void tick() {}
 
         @Override
-        public List<IInventory> getInventories() { return java.util.Collections.emptyList(); }
+        public List<IInventory> getInventories() {
+            return java.util.Collections.emptyList();
+        }
 
         @Override
-        public String getInventoryName() { return "fake"; }
+        public String getInventoryName() {
+            return "fake";
+        }
     }
 }

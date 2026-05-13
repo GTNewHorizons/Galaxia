@@ -35,22 +35,22 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
         .<TileStationDock>builder()
         .addControllerBlock(GalaxiaBlocksEnum.STATION_DOCK.get())
         .addElement(GalaxiaStructureUtility.ofBlockAnyMeta(GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get()))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((stationController, tileEntity) -> {
+        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dockController, tileEntity) -> {
             if (tileEntity instanceof TileEntityAirlock airlock) {
                 if (!airlock.isStructureValid()) return false;
 
-                stationController.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                dockController.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
                 return true;
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((stationController, tileEntity) -> {
+        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dockController, tileEntity) -> {
             if (tileEntity instanceof TileHammerTarget target) {
                 if (!target.isStructureValid()) return false;
 
                 BlockPos pos = new BlockPos(target.xCoord, target.yCoord, target.zCoord);
-                if (!stationController.hammerTargets.contains(pos)) {
-                    stationController.hammerTargets.add(pos);
+                if (!dockController.hammerTargets.contains(pos)) {
+                    dockController.hammerTargets.add(pos);
                 }
                 return true;
             }
@@ -66,13 +66,11 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     }
 
     @Override
-    public void onStructureValid() {
-        super.onStructureValid();
-
+    public void onGraphRebuilt(TileStationController controller) {
         clearBroken(hammerTargets);
         for (var pos : hammerTargets) {
             TileHammerTarget target = pos.getTE(worldObj);
-            if (target.setStationController(this.mainController)) {
+            if (target != null && target.setStationController(controller.here)) {
                 markDirty();
             }
         }

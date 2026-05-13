@@ -10,19 +10,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
+
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
@@ -247,7 +247,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void addFilter(int slot, ItemStack filter) {
         if (filter == null) return;
-        filters.computeIfAbsent(slot, k -> new ArrayList<>()).add(filter.copy());
+        filters.computeIfAbsent(slot, k -> new ArrayList<>())
+            .add(filter.copy());
         markDirty();
     }
 
@@ -255,9 +256,10 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         if (filter == null) return;
         List<ItemStack> list = filters.get(slot);
         if (list == null) return;
-        list.removeIf(f -> f != null && f.getItem() == filter.getItem()
-            && (!f.getHasSubtypes() || f.getItemDamage() == filter.getItemDamage())
-            && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, filter)));
+        list.removeIf(
+            f -> f != null && f.getItem() == filter.getItem()
+                && (!f.getHasSubtypes() || f.getItemDamage() == filter.getItemDamage())
+                && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, filter)));
         if (list.isEmpty()) {
             filters.remove(slot);
         }

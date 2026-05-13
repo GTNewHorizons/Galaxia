@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -96,23 +97,50 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
         markDirty();
     }
 
+    @Override
+    public void setFilters(int slot, List<ItemStack> filterList) {
+        setFilters(filterList);
+    }
+
     public void addFilter(ItemStack stack) {
         if (stack == null) return;
         filter.add(stack.copy());
         markDirty();
     }
 
+    @Override
+    public void addFilter(int slot, ItemStack stack) {
+        addFilter(stack);
+    }
+
     public void removeFilter(ItemStack stack) {
         if (stack == null) return;
-        filter.removeIf(f -> f != null && f.getItem() == stack.getItem()
-            && (!f.getHasSubtypes() || f.getItemDamage() == stack.getItemDamage())
-            && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, stack)));
+        filter.removeIf(
+            f -> f != null && f.getItem() == stack.getItem()
+                && (!f.getHasSubtypes() || f.getItemDamage() == stack.getItemDamage())
+                && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, stack)));
         markDirty();
+    }
+
+    @Override
+    public void removeFilter(int slot, ItemStack stack) {
+        removeFilter(stack);
     }
 
     public void clearFilters() {
         filter.clear();
         markDirty();
+    }
+
+    @Override
+    public void clearFilters(int slot) {
+        clearFilters();
+    }
+
+    @Override
+    public Map<Integer, List<ItemStack>> filtersSnapshot() {
+        if (filter.isEmpty()) return Map.of();
+        return Map.of(0, new ArrayList<>(filter));
     }
 
     @Override

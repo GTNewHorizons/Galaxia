@@ -503,11 +503,14 @@ public final class FacilityPersistenceManager {
                 cj);
         }
         out.filters = new LinkedHashMap<>();
-        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot().entrySet()) {
+        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot()
+            .entrySet()) {
             List<String> keys = new ArrayList<>();
             for (ItemStack stack : e.getValue()) {
                 if (stack != null) {
-                    keys.add(ItemStackWrapper.of(stack).toKey());
+                    keys.add(
+                        ItemStackWrapper.of(stack)
+                            .toKey());
                 }
             }
             out.filters.put(e.getKey(), keys);
