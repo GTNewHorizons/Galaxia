@@ -2,9 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -28,6 +26,7 @@ import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
 
 public class TileStationDock extends TileStationSecondary<TileStationDock>
@@ -109,7 +108,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     public List<BlockPos> getValidAttachments() {
         return attachments.stream()
             .filter(pos -> pos != null && pos.getTE(worldObj) instanceof GalaxiaMultiblockBase<?>)
-            .filter(pos -> ((GalaxiaMultiblockBase<?>)pos.getTE(worldObj)).isStructureValid())
+            .filter(pos -> ((GalaxiaMultiblockBase<?>) pos.getTE(worldObj)).isStructureValid())
             .toList();
     }
 
@@ -121,7 +120,9 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
-        IntSyncValue oxygenatedSync = new IntSyncValue(() -> getValidAttachments().size(), () -> getValidAttachments().size());
+        IntSyncValue oxygenatedSync = new IntSyncValue(
+            () -> getValidAttachments().size(),
+            () -> getValidAttachments().size());
         syncManager.syncValue("oxygenated", 0, oxygenatedSync);
 
         return new ModularPanel("galaxia:station_room").size(210, 130)

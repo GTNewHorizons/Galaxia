@@ -15,7 +15,6 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.ISurvivalBuildEnvironment;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 
 import cpw.mods.fml.common.Optional;
 import gregtech.api.interfaces.tileentity.IMachineBlockUpdateable;

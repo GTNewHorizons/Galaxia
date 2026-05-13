@@ -33,7 +33,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFilteredInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

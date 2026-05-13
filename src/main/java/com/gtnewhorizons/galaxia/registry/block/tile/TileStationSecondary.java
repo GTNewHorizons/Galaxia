@@ -28,7 +28,7 @@ public abstract class TileStationSecondary<T extends TileStationBase<T>> extends
                 if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
                 for (BlockPos other : airlock.getStationControllers()) {
                     if (other.equals(here)) continue;
-                    if (!(other.getTE(worldObj) instanceof TileStationBase<?> base)) continue;
+                    if (!(other.getTE(worldObj) instanceof TileStationBase<?>base)) continue;
 
                     this.graph = base.graph;
                 }

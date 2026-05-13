@@ -5,11 +5,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
-import gregtech.common.items.behaviors.BehaviourDataStick;
+import javax.annotation.Nullable;
+
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 
@@ -22,8 +21,7 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-
-import javax.annotation.Nullable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extends GalaxiaMultiblockBase<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {
