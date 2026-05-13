@@ -362,6 +362,18 @@ entity.galaxia.EntityRocket.name=Rocket
 
 #### Config
 
+# Config - "Structures"
+galaxia.config.category.structures=Structures
+galaxia.config.category.structures.tooltip=Settings for ArbitraryShapeDefinition structures
+galaxia.config.category.structures_enclosed=Enclosed
+galaxia.config.category.structures_enclosed.tooltip=Settings for enclosed structures (controllers, rooms)
+galaxia.config.structures.enclosed_radius=Search radius
+galaxia.config.structures.enclosed_radius.tooltip=Search radius for structure boundaries (be careful, large structures could become very laggy!)
+galaxia.config.category.structures_open=Open
+galaxia.config.category.structures_open.tooltip=Settings for open structures (docks)
+galaxia.config.structures.open_radius=Search radius
+galaxia.config.structures.open_radius.tooltip=Search radius for structure boundaries 
+
 # Config - "Player"
 galaxia.config.category.player=Player
 galaxia.config.category.player.tooltip=Settings for the player

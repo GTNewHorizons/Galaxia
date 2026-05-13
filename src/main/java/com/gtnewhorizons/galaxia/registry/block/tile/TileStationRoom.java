@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 
@@ -37,7 +38,7 @@ public class TileStationRoom extends TileStationSecondary<TileStationRoom>
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-        .withSearchRadius(16)
+        .withSearchRadius(ConfigStructures.enclosed.searchRadius)
         .enclosed()
         .build();
 

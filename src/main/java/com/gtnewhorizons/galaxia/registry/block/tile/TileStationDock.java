@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -57,7 +58,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
             return false;
         }, GalaxiaBlocksEnum.HAMMER_TARGET.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-        .withSearchRadius(64)
+        .withSearchRadius(ConfigStructures.open.searchRadius)
         .open()
         .build();
 
