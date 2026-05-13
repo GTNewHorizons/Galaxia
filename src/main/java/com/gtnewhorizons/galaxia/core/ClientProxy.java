@@ -3,6 +3,8 @@ package com.gtnewhorizons.galaxia.core;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
 
+import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
@@ -99,6 +101,8 @@ public class ClientProxy extends CommonProxy {
         // StructureLib registering
         GalaxiaMultiblockHandler.register(new TileEntitySilo());
         GalaxiaMultiblockHandler.register(new TileEntityModuleAssembler());
+        GalaxiaMultiblockHandler.register(new TileEntityAirlock());
+        GalaxiaMultiblockHandler.register(new TileHammerTarget());
 
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);
