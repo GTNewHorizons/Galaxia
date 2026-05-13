@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
 public enum RocketPartType {
+
     CAPSULE,
     FUEL_TANK,
     ENGINE,

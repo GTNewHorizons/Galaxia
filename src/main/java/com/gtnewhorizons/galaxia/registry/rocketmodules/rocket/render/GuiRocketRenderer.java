@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.render;
 
+import java.util.List;
+
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -12,8 +14,6 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-
-import java.util.List;
 
 public class GuiRocketRenderer {
 
@@ -31,8 +31,7 @@ public class GuiRocketRenderer {
 
     public IWidget getWidget() {
 
-        ParentWidget<?> root = new ParentWidget<>()
-            .size(700, 420);
+        ParentWidget<?> root = new ParentWidget<>().size(700, 420);
 
         root.child(buildGrid());
         root.child(buildPalette());
@@ -42,15 +41,9 @@ public class GuiRocketRenderer {
 
     private IWidget buildGrid() {
 
-        ParentWidget<?> grid = new ParentWidget<>()
-            .pos(8, 8)
-            .size(
-                blueprint.getWidth() * GRID_SIZE,
-                blueprint.getHeight() * GRID_SIZE
-            )
-            .background(
-                new Rectangle().color(0xFF2B2B2B)
-            );
+        ParentWidget<?> grid = new ParentWidget<>().pos(8, 8)
+            .size(blueprint.getWidth() * GRID_SIZE, blueprint.getHeight() * GRID_SIZE)
+            .background(new Rectangle().color(0xFF2B2B2B));
 
         for (int y = 0; y < blueprint.getHeight(); y++) {
             for (int x = 0; x < blueprint.getWidth(); x++) {
@@ -58,12 +51,11 @@ public class GuiRocketRenderer {
                 final int cellX = x;
                 final int cellY = y;
 
-                ButtonWidget<?> cell = new ButtonWidget<>()
-                    .pos(x * GRID_SIZE, y * GRID_SIZE)
+                ButtonWidget<?> cell = new ButtonWidget<>().pos(x * GRID_SIZE, y * GRID_SIZE)
                     .size(GRID_SIZE, GRID_SIZE)
                     .background(
-                        new Rectangle().color(0xFF444444).hollow()
-                    )
+                        new Rectangle().color(0xFF444444)
+                            .hollow())
                     .onMousePressed(mouseButton -> {
 
                         if (mouseButton == 1) {
@@ -79,13 +71,7 @@ public class GuiRocketRenderer {
                             return false;
                         }
 
-                        RocketPartInstance instance = new RocketPartInstance(
-                            selectedPart,
-                            cellX,
-                            cellY,
-                            0,
-                            false
-                        );
+                        RocketPartInstance instance = new RocketPartInstance(selectedPart, cellX, cellY, 0, false);
 
                         if (!blueprint.canPlacePart(instance)) {
                             return false;
@@ -101,22 +87,24 @@ public class GuiRocketRenderer {
 
         for (RocketPartInstance part : blueprint.getParts()) {
 
-            int width = part.def().getWidthCells() * GRID_SIZE;
-            int height = part.def().getHeightCells() * GRID_SIZE;
+            int width = part.def()
+                .getWidthCells() * GRID_SIZE;
+            int height = part.def()
+                .getHeightCells() * GRID_SIZE;
 
-            ParentWidget<?> partWidget = new ParentWidget<>()
-                .pos(
-                    part.x() * GRID_SIZE,
-                    part.y() * GRID_SIZE
-                )
+            ParentWidget<?> partWidget = new ParentWidget<>().pos(part.x() * GRID_SIZE, part.y() * GRID_SIZE)
                 .size(width, height);
 
-            if (part.def().texture() != null) {
-                partWidget.background(UITexture.fullImage(Galaxia.MODID, (part.def().texture().getResourcePath())));
-            } else {
+            if (part.def()
+                .texture() != null) {
                 partWidget.background(
-                    new Rectangle().color(0x88FF8800)
-                );
+                    UITexture.fullImage(
+                        Galaxia.MODID,
+                        (part.def()
+                            .texture()
+                            .getResourcePath())));
+            } else {
+                partWidget.background(new Rectangle().color(0x88FF8800));
             }
 
             grid.child(partWidget);
@@ -134,8 +122,7 @@ public class GuiRocketRenderer {
 
         for (RocketPartDef def : availableParts) {
 
-            ButtonWidget<?> button = new ButtonWidget<>()
-                .size(140, 22)
+            ButtonWidget<?> button = new ButtonWidget<>().size(140, 22)
                 .overlay(IKey.str(def.name()))
                 .background(EnumTextures.SELECTION_FRAME.getImage())
                 .tooltip(tooltip -> {
@@ -155,12 +142,9 @@ public class GuiRocketRenderer {
             flow.child(button);
         }
 
-        ButtonWidget<?> clearButton = new ButtonWidget<>()
-            .size(140, 22)
+        ButtonWidget<?> clearButton = new ButtonWidget<>().size(140, 22)
             .overlay(IKey.str("Clear"))
-            .background(
-                new Rectangle().color(0xFF772222)
-            )
+            .background(new Rectangle().color(0xFF772222))
             .onMousePressed(mouseButton -> {
 
                 if (mouseButton != 0) {

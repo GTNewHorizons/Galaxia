@@ -2,20 +2,10 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
 import net.minecraft.util.ResourceLocation;
 
-public record RocketPartDef(
-    int id,
-    String name,
-    RocketPartType type,
-    double width,
-    double height,
-    double weight,
-    double fuelCapacity,
-    double thrust,
-    int decouplerStage,
-    int riderCapacity,
-    ResourceLocation model,
-    ResourceLocation texture
-) {
+public record RocketPartDef(int id, String name, RocketPartType type, double width, double height, double weight,
+    double fuelCapacity, double thrust, int decouplerStage, int riderCapacity, ResourceLocation model,
+    ResourceLocation texture) {
+
     public RocketPartDef {
         if (type == RocketPartType.ENGINE && thrust <= 0)
             throw new IllegalArgumentException("Engine needs positive thrust");

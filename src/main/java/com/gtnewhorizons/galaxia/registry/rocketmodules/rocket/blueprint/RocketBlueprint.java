@@ -1,12 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
 public class RocketBlueprint {
+
     private final List<RocketPartInstance> parts = new ArrayList<>();
     private String name = "";
     private int width = 3;
@@ -29,20 +30,21 @@ public class RocketBlueprint {
             int px = part.x();
             int py = part.y();
 
-            int pw = part.def().getWidthCells();
-            int ph = part.def().getHeightCells();
+            int pw = part.def()
+                .getWidthCells();
+            int ph = part.def()
+                .getHeightCells();
 
-            return x >= px &&
-                x < px + pw &&
-                y >= py &&
-                y < py + ph;
+            return x >= px && x < px + pw && y >= py && y < py + ph;
         });
     }
 
     public boolean canPlacePart(RocketPartInstance instance) {
 
-        int width = instance.def().getWidthCells();
-        int height = instance.def().getHeightCells();
+        int width = instance.def()
+            .getWidthCells();
+        int height = instance.def()
+            .getHeightCells();
 
         if (instance.x() < 0 || instance.y() < 0) {
             return false;
@@ -61,14 +63,14 @@ public class RocketBlueprint {
             int ox = other.x();
             int oy = other.y();
 
-            int ow = other.def().getWidthCells();
-            int oh = other.def().getHeightCells();
+            int ow = other.def()
+                .getWidthCells();
+            int oh = other.def()
+                .getHeightCells();
 
-            boolean overlap =
-                instance.x() < ox + ow &&
-                    instance.x() + width > ox &&
-                    instance.y() < oy + oh &&
-                    instance.y() + height > oy;
+            boolean overlap = instance.x() < ox + ow && instance.x() + width > ox
+                && instance.y() < oy + oh
+                && instance.y() + height > oy;
 
             if (overlap) {
                 return false;
@@ -82,8 +84,14 @@ public class RocketBlueprint {
         for (RocketPartInstance part : parts) {
             int px = part.x();
             int py = part.y();
-            int pw = Math.max(1, part.def().getWidthCells());
-            int ph = Math.max(1, part.def().getHeightCells());
+            int pw = Math.max(
+                1,
+                part.def()
+                    .getWidthCells());
+            int ph = Math.max(
+                1,
+                part.def()
+                    .getHeightCells());
             boolean inside = x >= px && x < px + pw && y >= py && y < py + ph;
             if (inside) {
                 return part;
@@ -103,8 +111,14 @@ public class RocketBlueprint {
         for (RocketPartInstance existing : parts) {
             int ex = existing.x();
             int ey = existing.y();
-            int ew = Math.max(1, existing.def().getWidthCells());
-            int eh = Math.max(1, existing.def().getHeightCells());
+            int ew = Math.max(
+                1,
+                existing.def()
+                    .getWidthCells());
+            int eh = Math.max(
+                1,
+                existing.def()
+                    .getHeightCells());
 
             int ex2 = ex + ew;
             int ey2 = ey + eh;

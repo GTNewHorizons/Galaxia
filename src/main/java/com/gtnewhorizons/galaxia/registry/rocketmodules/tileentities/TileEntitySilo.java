@@ -1,20 +1,28 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
+
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
 
 public class TileEntitySilo extends TileEntity {
+
     private RocketBlueprint blueprint = new RocketBlueprint();
 
-    public void setBlueprint(RocketBlueprint bp) { this.blueprint = bp; markDirty(); }
-    public RocketBlueprint getBlueprint() { return blueprint; }
+    public void setBlueprint(RocketBlueprint bp) {
+        this.blueprint = bp;
+        markDirty();
+    }
+
+    public RocketBlueprint getBlueprint() {
+        return blueprint;
+    }
 
     public RocketAssembly getAssembly() {
         return RocketAnalyzer.analyze(blueprint);
@@ -40,11 +48,14 @@ public class TileEntitySilo extends TileEntity {
         markDirty();
     }
 
-    @Override public void readFromNBT(NBTTagCompound tag) {
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
         blueprint = RocketBlueprint.deserialize(tag.getCompoundTag("blueprint"), RocketPartRegistry.instance());
     }
-    @Override public void writeToNBT(NBTTagCompound tag) {
+
+    @Override
+    public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
         tag.setTag("blueprint", blueprint.serialize());
     }

@@ -23,8 +23,7 @@ public record RocketPartInstance(RocketPartDef def, int x, int y, int z, boolean
             tag.getInteger("x"),
             tag.getInteger("y"),
             tag.getInteger("z"),
-            tag.getBoolean("radial")
-        );
+            tag.getBoolean("radial"));
     }
 
     public boolean overlaps(RocketPartInstance other) {

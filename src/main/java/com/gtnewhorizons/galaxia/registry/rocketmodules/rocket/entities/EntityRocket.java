@@ -1,20 +1,29 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+
 public class EntityRocket extends Entity {
+
     private RocketBlueprint blueprint;
     private int launchTicks = 0;
     private boolean ascending = true;
 
-    public EntityRocket(World world) { super(world); setSize(3f, 1f); noClip = true; }
+    public EntityRocket(World world) {
+        super(world);
+        setSize(3f, 1f);
+        noClip = true;
+    }
 
-    public void setBlueprint(RocketBlueprint bp) { this.blueprint = bp; }
+    public void setBlueprint(RocketBlueprint bp) {
+        this.blueprint = bp;
+    }
 
-    @Override protected void entityInit() {}
+    @Override
+    protected void entityInit() {}
 
     @Override
     public void onUpdate() {
@@ -34,6 +43,9 @@ public class EntityRocket extends Entity {
         }
     }
 
-    @Override protected void readEntityFromNBT(NBTTagCompound tag) {}
-    @Override protected void writeEntityToNBT(NBTTagCompound tag) {}
+    @Override
+    protected void readEntityFromNBT(NBTTagCompound tag) {}
+
+    @Override
+    protected void writeEntityToNBT(NBTTagCompound tag) {}
 }

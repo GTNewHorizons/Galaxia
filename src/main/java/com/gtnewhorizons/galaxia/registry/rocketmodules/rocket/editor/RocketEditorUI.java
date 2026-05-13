@@ -1,5 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.util.EnumChatFormatting;
+
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
@@ -18,13 +24,9 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketB
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.util.EnumChatFormatting;
-
-import java.util.List;
 
 public class RocketEditorUI implements IGuiHolder<GuiData> {
+
     private final RocketBlueprint targetBlueprint;
     private final RocketBlueprint workingBlueprint;
     private RocketPartDef selectedPart;
@@ -69,8 +71,7 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
         int w = workingBlueprint.getWidth() * cellSize + canvasPadding * 2;
         int h = workingBlueprint.getHeight() * cellSize + canvasPadding * 2;
 
-        ParentWidget<?> canvas = new ParentWidget<>()
-            .size(w, h)
+        ParentWidget<?> canvas = new ParentWidget<>().size(w, h)
             .background(EnumTextures.SELECTION_FRAME.getImage());
 
         for (int y = 0; y < workingBlueprint.getHeight(); y++) {
@@ -86,8 +87,7 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
         final int px = canvasPadding + cellX * cellSize;
         final int py = canvasPadding + cellY * cellSize;
 
-        return new ButtonWidget<>()
-            .pos(px, py)
+        return new ButtonWidget<>().pos(px, py)
             .size(cellSize, cellSize)
             .background(EnumTextures.OVERWORLD.getImage())
             .overlay(IKey.dynamic(() -> cellLabel(cellX, cellY)))
@@ -96,12 +96,16 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
                 if (part == null) {
                     t.addLine(EnumChatFormatting.GRAY + "Empty");
                 } else {
-                    t.addLine(EnumChatFormatting.WHITE + part.def().name());
-                    t.addLine(EnumChatFormatting.GRAY + String.format(
-                        "%.1fm | %.0fkg",
-                        part.def().height(),
-                        part.def().weight()
-                    ));
+                    t.addLine(
+                        EnumChatFormatting.WHITE + part.def()
+                            .name());
+                    t.addLine(
+                        EnumChatFormatting.GRAY + String.format(
+                            "%.1fm | %.0fkg",
+                            part.def()
+                                .height(),
+                            part.def()
+                                .weight()));
                 }
             })
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
@@ -131,21 +135,26 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
         if (part == null) {
             return "";
         }
-        String name = part.def().name();
+        String name = part.def()
+            .name();
         if (name == null || name.isEmpty()) {
             return "?";
         }
-        return name.substring(0, Math.min(2, name.length())).toUpperCase();
+        return name.substring(0, Math.min(2, name.length()))
+            .toUpperCase();
     }
 
     private ParentWidget<?> createPalette() {
-        ParentWidget<?> panel = new ParentWidget<>()
-            .size(160, 300)
+        ParentWidget<?> panel = new ParentWidget<>().size(160, 300)
             .background(EnumTextures.SELECTION_FRAME.getImage());
 
-        Flow flow = Flow.column().coverChildren().padding(4).margin(4);
+        Flow flow = Flow.column()
+            .coverChildren()
+            .padding(4)
+            .margin(4);
 
-        List<RocketPartDef> parts = RocketPartRegistry.instance().getAll();
+        List<RocketPartDef> parts = RocketPartRegistry.instance()
+            .getAll();
         for (RocketPartDef def : parts) {
             flow.child(createPaletteButton(def));
         }
@@ -155,15 +164,11 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createPaletteButton(final RocketPartDef def) {
-        return new ButtonWidget<>()
-            .size(150, 20)
+        return new ButtonWidget<>().size(150, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .overlay(IKey.str(def.name()))
-            .tooltip(t -> t.addLine(EnumChatFormatting.GRAY + String.format(
-                "%.1fm | %.0fkg",
-                def.height(),
-                def.weight()
-            )))
+            .tooltip(
+                t -> t.addLine(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", def.height(), def.weight())))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 0) {
                     selectedPart = def;
@@ -175,10 +180,11 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createClearSelectionButton() {
-        return new ButtonWidget<>()
-            .size(160, 20)
+        return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
-            .overlay(IKey.str("Clear Selection").alignment(Alignment.Center))
+            .overlay(
+                IKey.str("Clear Selection")
+                    .alignment(Alignment.Center))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 0) {
                     selectedPart = null;
@@ -187,10 +193,11 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
     }
 
     private ButtonWidget<?> createClearBlueprintButton() {
-        return new ButtonWidget<>()
-            .size(160, 20)
+        return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
-            .overlay(IKey.str("Clear Blueprint").alignment(Alignment.Center))
+            .overlay(
+                IKey.str("Clear Blueprint")
+                    .alignment(Alignment.Center))
             .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
                 if (md.mouseButton == 0) {
                     workingBlueprint.clear();
@@ -199,15 +206,13 @@ public class RocketEditorUI implements IGuiHolder<GuiData> {
     }
 
     private ParentWidget<?> createStatusLabel() {
-        return new ParentWidget<>()
-            .size(160, 20)
-            .child(
-                IKey.dynamic(() -> {
-                    if (selectedPart == null) {
-                        return "Selected: none";
-                    }
-                    return "Selected: " + selectedPart.name();
-                }).asWidget()
-            );
+        return new ParentWidget<>().size(160, 20)
+            .child(IKey.dynamic(() -> {
+                if (selectedPart == null) {
+                    return "Selected: none";
+                }
+                return "Selected: " + selectedPart.name();
+            })
+                .asWidget());
     }
 }
