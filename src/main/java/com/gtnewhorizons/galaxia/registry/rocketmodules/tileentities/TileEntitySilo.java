@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -177,74 +178,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        if (!worldObj.isRemote) {
-            markStructureDirty();
-            updateLinkedAssembler();
-        }
-
-        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
-        BooleanSyncValue assemblerSync = new BooleanSyncValue(() -> hasAssembler, v -> {});
-        StringSyncValue nameSync = new StringSyncValue(this::getPendingSchematicName, this::setPendingSchematicName);
-
-        syncManager.syncValue("rocketSiloStructureValid", validSync);
-        syncManager.syncValue("rocketSiloModuleAssembler", assemblerSync);
-
-        PagedWidget.Controller tabController = new PagedWidget.Controller();
-
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main").size(350, 160);
-
-        // Invalid structure messages
-        panel.childIf(!validSync.getBoolValue(),
-            () -> IKey.str(EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.not_formed"))
-                .asWidget().pos(10, 35));
-
-        panel.childIf(validSync.getBoolValue() && !assemblerSync.getBoolValue(),
-            () -> IKey.str(EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none"))
-                .asWidget().pos(10, 35));
-
-        // Tabs
-        panel.childIf(validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> new PageButton(0, tabController).size(120, 28).pos(0, -28)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))));
-
-        panel.childIf(validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> new PageButton(1, tabController).size(120, 28).pos(120, -28)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))));
-
-        panel.childIf(validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> new PageButton(2, tabController).size(120, 28).pos(240, -28)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.save"))));
-
-        // Title
-        panel.childIf(validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> IKey.str(EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title"))
-                .asWidget().pos(8, 8));
-
-        // === BUILD PAGE ===
-        Flow moduleRow = Flow.row().coverChildren().pos(8, 35).padding(4);
-        // TODO: Replace with part palette from RocketPartRegistry when editor is integrated
-        // For now keep old module buttons as bridge if needed
-
-        // === LAUNCH PAGE ===
-        Flow destRow = Flow.row().coverChildren().pos(10, 35).padding(4);
-        if (worldObj.provider.dimensionId != 0) {
-            destRow.child(new ToggleButton().size(48, 20)
-                .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.overworld")))
-                .valueWrapped(selectedDim, 0));
-        }
-        for (BasePlanet dim : SolarSystemRegistry.getAllPlanets()) {
-            if (dim.getPlanetEnum().getId() != worldObj.provider.dimensionId) {
-                destRow.child(createDestinationButton(dim));
-            }
-        }
-
-        panel.childIf(validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> new PagedWidget<>().controller(tabController)
-                .addPage(buildBuildPage(moduleRow))
-                .addPage(buildLaunchPage(destRow, data))
-                .addPage(buildSchematicPage(nameSync, data)));
-
-        return panel;
+        return RocketEditorUI.build(data, syncManager, settings);
     }
 
     private ParentWidget<?> buildBuildPage(Flow moduleRow) {
@@ -322,12 +256,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             return true;
         }
         return false;
-    }
-
-    public void openEditor(EntityPlayer player) {
-        if (!worldObj.isRemote) {
-            new RocketEditorUI(blueprint, this).open(player);
-        }
     }
 
     public void returnModules() {

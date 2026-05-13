@@ -20,16 +20,4 @@ public class BlockSilo extends BlockContainer {
     public TileEntity createNewTileEntity(World world, int meta) {
         return new TileEntitySilo();
     }
-
-    @Override
-    public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
-                                    float hitY, float hitZ) {
-        if (world.isRemote) return true;
-        TileEntity te = world.getTileEntity(x, y, z);
-        if (te instanceof TileEntitySilo silo) {
-            silo.openEditor(player);
-            return true;
-        }
-        return false;
-    }
 }
