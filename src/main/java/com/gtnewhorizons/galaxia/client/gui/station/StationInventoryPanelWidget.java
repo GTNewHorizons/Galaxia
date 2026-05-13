@@ -68,10 +68,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int BOUND_MARKER_SIZE = 4;
     private static final int BOUND_MARKER_WARNING = 0xFFFFFF00;
     private static final int BOUND_MARKER_BLOCKING = 0xFFFF0000;
-    private static final int BOUND_EDITOR_X = 54;
-    private static final int BOUND_EDITOR_Y = 78;
+    private static final int BOUND_EDITOR_X = 92;
+    private static final int BOUND_EDITOR_Y = 58;
     private static final int BOUND_EDITOR_WIDTH = 276;
-    private static final int BOUND_EDITOR_HEIGHT = 104;
+    private static final int BOUND_EDITOR_HEIGHT = 124;
     private static final int BOUND_FIELD_X = BOUND_EDITOR_X + 96;
     private static final int BOUND_SET_X = BOUND_FIELD_X + 74;
     private static final int BOUND_CLEAR_X = BOUND_SET_X + 44;
@@ -81,6 +81,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private final ParentWidget<?> panelRoot = new ParentWidget<>();
     private final VerticalScrollData scrollData = new VerticalScrollData();
     private final ParentWidget<?> scrollContent = new ParentWidget<>().widthRel(1f);
+    private final ParentWidget<?> boundEditorRoot = new ParentWidget<>();
     private final TextWidget<?> emptyInventoryText = new TextWidget<>(IKey.str("Inventory is empty."))
         .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
         .shadow(true)
@@ -132,32 +133,37 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         panelRoot.child(scroll);
         emptyInventoryText.setEnabled(false);
         panelRoot.child(emptyInventoryText);
-        panelRoot.child(
+        boundEditorRoot.pos(0, 0)
+            .size(PANEL_WIDTH, PANEL_HEIGHT)
+            .overlay(drawable((ctx, x, y, w, h) -> drawBoundEditorOverlay(x, y, w, h)))
+            .setEnabled(false);
+        boundEditorRoot.child(
             boundField(true).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 34)
                 .size(70, 18));
-        panelRoot.child(
+        boundEditorRoot.child(
             boundField(false).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 58)
                 .size(70, 18));
-        panelRoot.child(
+        boundEditorRoot.child(
             ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Set", () -> applyBound(true))
                 .pos(BOUND_SET_X, BOUND_EDITOR_Y + 34)
                 .size(40, 18));
-        panelRoot.child(
+        boundEditorRoot.child(
             ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Clear", () -> clearBound(true))
                 .pos(BOUND_CLEAR_X, BOUND_EDITOR_Y + 34)
                 .size(50, 18));
-        panelRoot.child(
+        boundEditorRoot.child(
             ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Set", () -> applyBound(false))
                 .pos(BOUND_SET_X, BOUND_EDITOR_Y + 58)
                 .size(40, 18));
-        panelRoot.child(
+        boundEditorRoot.child(
             ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Clear", () -> clearBound(false))
                 .pos(BOUND_CLEAR_X, BOUND_EDITOR_Y + 58)
                 .size(50, 18));
-        panelRoot.child(
+        boundEditorRoot.child(
             ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Close", this::closeBoundEditor)
                 .pos(BOUND_EDITOR_X + BOUND_EDITOR_WIDTH - 62, BOUND_EDITOR_Y + BOUND_EDITOR_HEIGHT - 26)
                 .size(54, 18));
+        panelRoot.child(boundEditorRoot);
         child(panelRoot);
     }
 
@@ -167,6 +173,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (!open) {
             if (panelRoot.isEnabled()) {
                 panelRoot.setEnabled(false);
+                boundEditorRoot.setEnabled(false);
                 rowStructureSignature = "";
             }
             return;
@@ -184,6 +191,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             rebuildPanel(itemRows, fluidRows);
             rowStructureSignature = nextSignature;
         }
+        boundEditorRoot.setEnabled(isBoundEditorOpen());
     }
 
     @Override
@@ -212,30 +220,25 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
         ModuleConfigModalSupport
             .drawLine("Amount", AMOUNT_X + SCROLL_X, PANEL_Y + 32, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        if (isBoundEditorOpen()) {
-            ModuleConfigModalSupport.drawFrameAt(
-                "Inventory Bounds",
-                BOUND_EDITOR_X,
-                PANEL_Y + BOUND_EDITOR_Y,
-                BOUND_EDITOR_WIDTH,
-                BOUND_EDITOR_HEIGHT);
-            ModuleConfigModalSupport.drawTrimmedLine(
-                selectedBoundName(),
-                BOUND_EDITOR_X + 10,
-                PANEL_Y + BOUND_EDITOR_Y + 26,
-                BOUND_EDITOR_WIDTH - 20,
-                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            ModuleConfigModalSupport.drawLine(
-                "Input lower",
-                BOUND_EDITOR_X + 10,
-                PANEL_Y + BOUND_EDITOR_Y + 39,
-                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-            ModuleConfigModalSupport.drawLine(
-                "Output upper",
-                BOUND_EDITOR_X + 10,
-                PANEL_Y + BOUND_EDITOR_Y + 63,
-                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
-        }
+    }
+
+    private void drawBoundEditorOverlay(int x, int y, int width, int height) {
+        if (!isBoundEditorOpen()) return;
+        Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_OVERLAY_BG.getColor());
+        int editorX = x + BOUND_EDITOR_X;
+        int editorY = y + BOUND_EDITOR_Y;
+        ModuleConfigModalSupport
+            .drawFrameAt("Inventory Bounds", editorX, editorY, BOUND_EDITOR_WIDTH, BOUND_EDITOR_HEIGHT);
+        ModuleConfigModalSupport.drawTrimmedLine(
+            selectedBoundName(),
+            editorX + 10,
+            editorY + 26,
+            BOUND_EDITOR_WIDTH - 20,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Input lower", editorX + 10, editorY + 39, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        ModuleConfigModalSupport
+            .drawLine("Output upper", editorX + 10, editorY + 63, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
     private void rebuildPanel(List<Map.Entry<ItemStackWrapper, Long>> itemRows,
