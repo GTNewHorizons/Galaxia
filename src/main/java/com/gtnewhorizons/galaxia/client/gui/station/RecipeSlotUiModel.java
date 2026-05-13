@@ -33,6 +33,10 @@ final class RecipeSlotUiModel {
     }
 
     static String slotTitle(SavedRecipe slot) {
+        if (slot.displayName() != null && !slot.displayName()
+            .isBlank()) {
+            return slot.displayName();
+        }
         RecipeSnapshot recipe = slot.recipe();
         String input = resourceSummary(recipe.inputs(), recipe.fluidInputs());
         String output = resourceSummary(recipe.outputs(), recipe.fluidOutputs());

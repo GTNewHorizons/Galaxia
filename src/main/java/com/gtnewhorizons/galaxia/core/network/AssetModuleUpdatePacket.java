@@ -370,6 +370,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             payloadBuf.writeLong(slot.requestAmount());
             payloadBuf.writeByte(slot.priority());
             payloadBuf.writeByte(slot.orderSize());
+            PacketUtil.writeString(payloadBuf, slot.displayName());
             pkt.rawPayload = new byte[payloadBuf.writerIndex()];
             payloadBuf.readBytes(pkt.rawPayload);
         }
@@ -1051,6 +1052,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         long requestAmount = payloadBuf.readLong();
         byte priority = payloadBuf.readByte();
         byte orderSize = payloadBuf.readByte();
+        String displayName = PacketUtil.readString(payloadBuf);
         RecipeSnapshot ref = new RecipeSnapshot(
             recipeMapOrdinal,
             recipeIndex,
@@ -1065,7 +1067,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             eut);
         RecipeSnapshot recipe = recipeForSlotMutation(action, config, slotIndex, recipeModule, ref);
         if (recipe == null) return;
-        SavedRecipe slot = new SavedRecipe(recipe, enabled, requestAmount, priority, orderSize);
+        SavedRecipe slot = new SavedRecipe(recipe, enabled, requestAmount, priority, orderSize, displayName);
 
         if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, slot)) return;
         state.setRecipeConfig(module, config);

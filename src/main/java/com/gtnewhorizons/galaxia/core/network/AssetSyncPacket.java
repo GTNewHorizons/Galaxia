@@ -1037,6 +1037,7 @@ public final class AssetSyncPacket implements IMessage {
             buf.writeLong(slot.requestAmount());
             buf.writeByte(slot.priority());
             buf.writeByte(slot.orderSize());
+            PacketUtil.writeString(buf, slot.displayName());
         }
     }
 
@@ -1077,8 +1078,9 @@ public final class AssetSyncPacket implements IMessage {
             long requestAmount = buf.readLong();
             byte priority = buf.readByte();
             byte orderSize = buf.readByte();
+            String displayName = PacketUtil.readString(buf);
 
-            SavedRecipe slot = new SavedRecipe(snapshot, enabled, requestAmount, priority, orderSize);
+            SavedRecipe slot = new SavedRecipe(snapshot, enabled, requestAmount, priority, orderSize, displayName);
             config.savedRecipes()
                 .add(slot);
         }

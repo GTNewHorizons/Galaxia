@@ -1416,6 +1416,10 @@ public final class FacilityPersistenceManager {
             slotObj.addProperty("requestAmount", slot.requestAmount());
             slotObj.addProperty("priority", slot.priority() & 0xFF);
             slotObj.addProperty("orderSize", slot.orderSize() & 0xFF);
+            if (slot.displayName() != null && !slot.displayName()
+                .isBlank()) {
+                slotObj.addProperty("displayName", slot.displayName());
+            }
             slotObj.addProperty("slotIndex", i);
             slotsArray.add(slotObj);
         }
@@ -1481,7 +1485,9 @@ public final class FacilityPersistenceManager {
                     byte orderSize = slotObj.get("orderSize")
                         .getAsByte();
                     RecipeSnapshot ref = readRecipeSnapshot(slotObj, recipeMapOrdinal, recipeIndex, contentHash);
-                    SavedRecipe slot = new SavedRecipe(ref, enabled, requestAmount, priority, orderSize);
+                    String displayName = slotObj.has("displayName") ? slotObj.get("displayName")
+                        .getAsString() : "";
+                    SavedRecipe slot = new SavedRecipe(ref, enabled, requestAmount, priority, orderSize, displayName);
                     int slotIndex = slotObj.has("slotIndex") ? slotObj.get("slotIndex")
                         .getAsInt() : i;
                     slots.setOrAppend(slotIndex, slot);

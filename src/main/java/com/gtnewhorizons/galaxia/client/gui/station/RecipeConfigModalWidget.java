@@ -72,6 +72,15 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int MODE_BUTTON_WIDTH = 96;
     private static final int ADD_BUTTON_WIDTH = 52;
     private static final int CLOSE_BUTTON_WIDTH = 54;
+    private static final int RENAME_MODAL_WIDTH = 260;
+    private static final int RENAME_MODAL_HEIGHT = 104;
+    private static final int RENAME_MODAL_Y = 110;
+    private static final int RENAME_FIELD_WIDTH = 150;
+    private static final int RENAME_BUTTON_WIDTH = 44;
+    private static final int RENAME_CLEAR_BUTTON_WIDTH = 48;
+    private static final int RENAME_CANCEL_BUTTON_WIDTH = 54;
+    private static final int RENAME_FIELD_HEIGHT = 18;
+    private static final int RENAME_FIELD_Y = RENAME_MODAL_Y + 40;
     private static final int DETAIL_TITLE_Y = BODY_TOP + 4;
     private static final int DETAIL_RECIPE_WIDGET_X = ModuleConfigModalSupport.PANEL_PADDING;
     private static final int DETAIL_RECIPE_WIDGET_Y = BODY_TOP + 22;
@@ -99,6 +108,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private @Nullable BoundTarget selectedBoundTarget;
     private String boundAmountInput = "";
     private @Nullable TextFieldWidget boundAmountField;
+    private int renameSlotIndex = -1;
+    private String recipeNameInput = "";
+    private @Nullable TextFieldWidget recipeNameField;
 
     RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
         this.assetId = assetId;
@@ -120,6 +132,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 ModuleConfigModalSupport.button(() -> canUseRow(rowIndex), "Config", () -> openBounds(rowIndex))
                     .pos(CONFIG_X, rowY)
                     .size(CONFIG_WIDTH, BUTTON_HEIGHT));
+            child(
+                new RecipeNameClickWidget(rowIndex).pos(RECIPE_X, rowY)
+                    .size(RECIPE_WIDTH, BUTTON_HEIGHT));
             child(
                 numberField(rowIndex, Field.PRIORITY).pos(PRIORITY_X, rowY)
                     .size(SMALL_FIELD_WIDTH, BUTTON_HEIGHT));
@@ -150,6 +165,22 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             ModuleConfigModalSupport.button(this::isBoundsOpen, "Back", this::closeBounds)
                 .pos(WIDTH - CLOSE_BUTTON_WIDTH - ModuleConfigModalSupport.PANEL_PADDING, FOOTER_Y)
                 .size(CLOSE_BUTTON_WIDTH, BUTTON_HEIGHT));
+        recipeNameField = createRecipeNameField();
+        child(
+            recipeNameField.pos(renameFieldX(), RENAME_FIELD_Y)
+                .size(RENAME_FIELD_WIDTH, RENAME_FIELD_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::canSaveRecipeName, "Save", this::saveRecipeName)
+                .pos(renameSaveButtonX(), RENAME_FIELD_Y)
+                .size(RENAME_BUTTON_WIDTH, RENAME_FIELD_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::isRecipeRenameOpen, "Clear", this::clearRecipeName)
+                .pos(renameClearButtonX(), RENAME_FIELD_Y)
+                .size(RENAME_CLEAR_BUTTON_WIDTH, RENAME_FIELD_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::isRecipeRenameOpen, "Cancel", this::closeRecipeRename)
+                .pos(renameCancelButtonX(), RENAME_FIELD_Y)
+                .size(RENAME_CANCEL_BUTTON_WIDTH, RENAME_FIELD_HEIGHT));
 
         child(
             ModuleConfigModalSupport.button(this::hasPreviousPage, "<", this::previousPage)
@@ -230,6 +261,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 ROW_TOP + ROWS_PER_PAGE * ROW_HEIGHT + 2,
                 EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
         }
+        drawRecipeRenameOverlay();
     }
 
     private void drawHeader(int color) {
@@ -292,8 +324,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     }
 
     private boolean canConfigureRecipes() {
-        return isRecipeListOpen() && !settingsGroupSelector.isBlockingModuleControls()
-            && selectedRecipeModule() != null;
+        return isRecipeListOpen() && !isRecipeRenameOpen() && selectedRecipeModule() != null;
     }
 
     private boolean isRecipeListOpen() {
@@ -314,13 +345,20 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (slot == null) return;
         updateSlot(
             rowIndex,
-            new SavedRecipe(slot.recipe(), !slot.enabled(), slot.requestAmount(), slot.priority(), slot.orderSize()));
+            new SavedRecipe(
+                slot.recipe(),
+                !slot.enabled(),
+                slot.requestAmount(),
+                slot.priority(),
+                slot.orderSize(),
+                slot.displayName()));
     }
 
     private void openBounds(int rowIndex) {
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0 || slotIndex >= slots().size()) return;
         settingsGroupSelector.closeMenu();
+        closeRecipeRename();
         boundsSlotIndex = slotIndex;
         selectFirstBoundTarget();
     }
@@ -335,6 +373,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         int slotIndex = slotIndexForRow(rowIndex);
         if (slotIndex < 0 || slotAtRow(rowIndex) == null) return;
         settingsGroupSelector.closeMenu();
+        updateRenameAfterSlotRemoval(slotIndex);
         updateBoundsAfterSlotRemoval(slotIndex);
         CelestialClient.updateModuleRecipeSlot(
             assetId,
@@ -343,6 +382,15 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             (byte) slotIndex,
             null);
         page = Math.min(page, maxPageAfterRemoval());
+    }
+
+    private void updateRenameAfterSlotRemoval(int removedSlotIndex) {
+        if (!isRecipeRenameOpen()) return;
+        if (renameSlotIndex == removedSlotIndex) {
+            closeRecipeRename();
+            return;
+        }
+        if (renameSlotIndex > removedSlotIndex) renameSlotIndex--;
     }
 
     private void updateBoundsAfterSlotRemoval(int removedSlotIndex) {
@@ -383,6 +431,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         IRecipeModule recipeModule = selectedRecipeModule();
         if (recipeModule == null) return;
         settingsGroupSelector.closeMenu();
+        closeRecipeRename();
         CelestialClient.updateModuleConfig(
             assetId,
             controller.moduleIndex(),
@@ -394,6 +443,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         ModuleInstance module = selectedModule();
         if (module == null) return;
         settingsGroupSelector.closeMenu();
+        closeRecipeRename();
         RecipeInputScreen.open(assetId, controller.moduleIndex(), module);
     }
 
@@ -558,6 +608,112 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private void focusBoundAmountField() {
         if (boundAmountField != null && getContext() != null) getContext().focus(boundAmountField);
+    }
+
+    private void beginRecipeRename(int rowIndex) {
+        int slotIndex = slotIndexForRow(rowIndex);
+        SavedRecipe slot = slotAtRow(rowIndex);
+        if (slotIndex < 0 || slot == null) return;
+        settingsGroupSelector.closeMenu();
+        renameSlotIndex = slotIndex;
+        recipeNameInput = slot.displayName() == null || slot.displayName()
+            .isBlank() ? RecipeSlotUiModel.slotTitle(slot) : slot.displayName();
+        syncRecipeNameFieldText();
+        focusRecipeNameField();
+    }
+
+    private boolean isRecipeRenameOpen() {
+        return renameSlotIndex >= 0 && renameSlotIndex < slots().size();
+    }
+
+    private boolean canSaveRecipeName() {
+        return isRecipeRenameOpen() && !currentRecipeNameInput().trim()
+            .isEmpty();
+    }
+
+    private void saveRecipeName() {
+        SavedRecipe slot = renameSlot();
+        if (slot == null) return;
+        updateSlotIndex(renameSlotIndex, slot.withDisplayName(currentRecipeNameInput()));
+        closeRecipeRename();
+    }
+
+    private void clearRecipeName() {
+        SavedRecipe slot = renameSlot();
+        if (slot == null) return;
+        updateSlotIndex(renameSlotIndex, slot.withDisplayName(""));
+        closeRecipeRename();
+    }
+
+    private void closeRecipeRename() {
+        renameSlotIndex = -1;
+        recipeNameInput = "";
+        syncRecipeNameFieldText();
+    }
+
+    private @Nullable SavedRecipe renameSlot() {
+        return isRecipeRenameOpen() ? slots().get(renameSlotIndex) : null;
+    }
+
+    private TextFieldWidget createRecipeNameField() {
+        return new TextFieldWidget().setMaxLength(64)
+            .autoUpdateOnChange(false)
+            .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+            .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+                if (!isRecipeRenameOpen()) return;
+                BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+            }))
+            .value(new StringValue.Dynamic(() -> recipeNameInput, text -> recipeNameInput = text == null ? "" : text))
+            .setFocusOnGuiOpen(false)
+            .setEnabledIf(w -> isRecipeRenameOpen());
+    }
+
+    private String currentRecipeNameInput() {
+        return recipeNameField != null ? recipeNameField.getText() : recipeNameInput;
+    }
+
+    private void syncRecipeNameFieldText() {
+        if (recipeNameField != null) recipeNameField.setText(recipeNameInput);
+    }
+
+    private void focusRecipeNameField() {
+        if (recipeNameField != null && getContext() != null) getContext().focus(recipeNameField);
+    }
+
+    private void drawRecipeRenameOverlay() {
+        if (!isRecipeRenameOpen()) return;
+        int x = renameModalX();
+        ModuleConfigModalSupport
+            .drawFrameAt("Rename Recipe", x, RENAME_MODAL_Y, RENAME_MODAL_WIDTH, RENAME_MODAL_HEIGHT);
+        ModuleConfigModalSupport
+            .drawLine("Recipe name", renameFieldX(), RENAME_FIELD_Y - 13, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+    }
+
+    private int renameModalX() {
+        return (WIDTH - RENAME_MODAL_WIDTH) / 2;
+    }
+
+    private int renameFieldX() {
+        return renameModalX() + ModuleConfigModalSupport.PANEL_PADDING;
+    }
+
+    private int renameSaveButtonX() {
+        return renameFieldX() + RENAME_FIELD_WIDTH + 6;
+    }
+
+    private int renameClearButtonX() {
+        return renameSaveButtonX() + RENAME_BUTTON_WIDTH + 4;
+    }
+
+    private int renameCancelButtonX() {
+        return renameClearButtonX() + RENAME_CLEAR_BUTTON_WIDTH + 4;
     }
 
     private String currentBoundText(BoundTarget target) {
@@ -842,6 +998,38 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         GL11.glScalef(scale, scale, 1.0F);
         renderItemIcon(stack, 0, 0);
         GL11.glPopMatrix();
+    }
+
+    private final class RecipeNameClickWidget extends ParentWidget<RecipeNameClickWidget> implements Interactable {
+
+        private final int rowIndex;
+
+        RecipeNameClickWidget(int rowIndex) {
+            this.rowIndex = rowIndex;
+        }
+
+        @Override
+        public boolean canHover() {
+            return canUseRow(rowIndex);
+        }
+
+        @Override
+        public boolean canHoverThrough() {
+            return !canUseRow(rowIndex);
+        }
+
+        @Override
+        public boolean canClickThrough() {
+            return !canUseRow(rowIndex);
+        }
+
+        @Override
+        public Interactable.Result onMousePressed(int mouseButton) {
+            if (mouseButton != 0 || !canUseRow(rowIndex)) return Interactable.Result.IGNORE;
+            beginRecipeRename(rowIndex);
+            Interactable.playButtonClickSound();
+            return Interactable.Result.SUCCESS;
+        }
     }
 
     private final class RecipeBoundsViewWidget extends ParentWidget<RecipeBoundsViewWidget> {
@@ -1261,7 +1449,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                     slot.enabled(),
                     slot.requestAmount(),
                     (byte) value,
-                    slot.orderSize());
+                    slot.orderSize(),
+                    slot.displayName());
             }
         },
         REQUEST_AMOUNT(0, Integer.MAX_VALUE, 0) {
@@ -1273,7 +1462,13 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
             @Override
             SavedRecipe updated(SavedRecipe slot, int value) {
-                return new SavedRecipe(slot.recipe(), slot.enabled(), value, slot.priority(), slot.orderSize());
+                return new SavedRecipe(
+                    slot.recipe(),
+                    slot.enabled(),
+                    value,
+                    slot.priority(),
+                    slot.orderSize(),
+                    slot.displayName());
             }
         };
 

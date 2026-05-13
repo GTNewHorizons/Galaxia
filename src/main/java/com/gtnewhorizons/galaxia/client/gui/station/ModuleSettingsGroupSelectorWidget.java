@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
+import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
@@ -28,7 +29,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
-final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSettingsGroupSelectorWidget> {
+final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSettingsGroupSelectorWidget>
+    implements Interactable {
 
     static final int GROUP_LABEL_Y = 50;
     static final int GROUP_BUTTON_X = 104;
@@ -36,7 +38,7 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     static final int GROUP_BUTTON_WIDTH = 170;
     static final int GROUP_BUTTON_HEIGHT = 14;
 
-    private static final int GROUP_OPTION_Y = GROUP_BUTTON_Y + GROUP_BUTTON_HEIGHT + 2;
+    private static final int GROUP_OPTION_Y = GROUP_BUTTON_Y + GROUP_BUTTON_HEIGHT;
     private static final int GROUP_OPTION_HEIGHT = 12;
     private static final int GROUP_ICON_BUTTON_SIZE = GROUP_OPTION_HEIGHT;
     private static final int GROUP_OPTION_SELECT_WIDTH = GROUP_BUTTON_WIDTH - GROUP_ICON_BUTTON_SIZE * 2;
@@ -138,8 +140,28 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     }
 
     @Override
+    public boolean canHover() {
+        return isBlockingModuleControls();
+    }
+
+    @Override
     public boolean canHoverThrough() {
         return !isBlockingModuleControls();
+    }
+
+    @Override
+    public boolean canClickThrough() {
+        return !isBlockingModuleControls();
+    }
+
+    @Override
+    public Interactable.Result onMousePressed(int mouseButton) {
+        if (mouseButton != 0 || !controller.isSettingsGroupMenuOpen() || isGroupOverlayOpen()) {
+            return Interactable.Result.IGNORE;
+        }
+        if (isMouseInGroupButtonOrMenu()) return Interactable.Result.IGNORE;
+        controller.closeSettingsGroupMenu();
+        return Interactable.Result.SUCCESS;
     }
 
     @Override
@@ -259,6 +281,22 @@ final class ModuleSettingsGroupSelectorWidget extends ParentWidget<ModuleSetting
     private GroupOption groupOptionAt(int optionIndex) {
         List<GroupOption> options = groupOptions();
         return optionIndex >= 0 && optionIndex < options.size() ? options.get(optionIndex) : null;
+    }
+
+    private boolean isMouseInGroupButtonOrMenu() {
+        int localX = getContext().getMouseX() - getArea().rx;
+        int localY = getContext().getMouseY() - getArea().ry;
+        if (contains(localX, localY, GROUP_BUTTON_X, GROUP_BUTTON_Y, GROUP_BUTTON_WIDTH, GROUP_BUTTON_HEIGHT)) {
+            return true;
+        }
+        int optionCount = Math.min(groupOptions().size(), MAX_GROUP_OPTIONS);
+        int optionHeight = optionCount * GROUP_OPTION_HEIGHT;
+        return optionCount > 0
+            && contains(localX, localY, GROUP_BUTTON_X, GROUP_OPTION_Y, GROUP_BUTTON_WIDTH, optionHeight);
+    }
+
+    private static boolean contains(int mouseX, int mouseY, int x, int y, int width, int height) {
+        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
     }
 
     private void beginCreateGroup() {
