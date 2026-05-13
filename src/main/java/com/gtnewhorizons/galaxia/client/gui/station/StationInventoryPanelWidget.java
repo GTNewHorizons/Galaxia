@@ -36,7 +36,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget> {
+final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget>
+    implements StationOverlayCoordinator.Overlay {
 
     static final int BUTTON_WIDTH = 78;
     static final int BUTTON_HEIGHT = 20;
@@ -95,17 +96,18 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private String outputBoundAmount = "";
     private @Nullable TextFieldWidget inputBoundField;
     private @Nullable TextFieldWidget outputBoundField;
-    private final Runnable onOpen;
+    private final StationOverlayCoordinator overlayCoordinator;
     private boolean open;
     private String rowStructureSignature = "";
 
     StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId) {
-        this(assetId, () -> {});
+        this(assetId, new StationOverlayCoordinator());
     }
 
-    StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, Runnable onOpen) {
+    StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, StationOverlayCoordinator overlayCoordinator) {
         this.assetId = assetId;
-        this.onOpen = onOpen;
+        this.overlayCoordinator = overlayCoordinator;
+        overlayCoordinator.register(this);
         size(PANEL_WIDTH, PANEL_Y + PANEL_HEIGHT);
         child(
             ModuleConfigModalSupport.button(() -> assetId != null, this::toggleLabel, this::toggleOpen)
@@ -212,6 +214,31 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     boolean isPointInPanel(int localX, int localY) {
         return open && localX >= 0 && localX <= PANEL_WIDTH && localY >= PANEL_Y && localY <= PANEL_Y + PANEL_HEIGHT;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return open;
+    }
+
+    @Override
+    public void close() {
+        if (!open) return;
+        open = false;
+        closeBoundEditor();
+    }
+
+    @Override
+    public boolean containsMouse(int mouseX, int mouseY) {
+        if (!open) return false;
+        int left = getArea().rx;
+        int top = getArea().ry;
+        return mouseX >= left && mouseX < left + PANEL_WIDTH && mouseY >= top && mouseY < top + PANEL_Y + PANEL_HEIGHT;
+    }
+
+    @Override
+    public boolean blocksInput() {
+        return false;
     }
 
     @Override
@@ -434,7 +461,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private void toggleOpen() {
         open = !open;
         if (open) {
-            onOpen.run();
+            overlayCoordinator.closeOthers(this);
         } else {
             closeBoundEditor();
         }

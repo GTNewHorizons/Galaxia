@@ -12,7 +12,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 
-final class ModuleConfigModalController {
+final class ModuleConfigModalController implements StationOverlayCoordinator.Overlay {
 
     enum Kind {
         NONE,
@@ -28,6 +28,7 @@ final class ModuleConfigModalController {
     private final int x;
     private final int y;
     private final StationTilePickerController tilePickerController;
+    private final StationOverlayCoordinator overlayCoordinator;
 
     private ParentWidget<?> modal;
     private Kind kind = Kind.NONE;
@@ -43,22 +44,30 @@ final class ModuleConfigModalController {
         .hammer(HammerVariant.BASE, ModuleTier.EV);
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
-        this(host, assetId, x, y, null);
+        this(host, assetId, x, y, null, new StationOverlayCoordinator());
     }
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
         StationTilePickerController tilePickerController) {
+        this(host, assetId, x, y, tilePickerController, new StationOverlayCoordinator());
+    }
+
+    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
+        StationTilePickerController tilePickerController, StationOverlayCoordinator overlayCoordinator) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
         this.tilePickerController = tilePickerController;
+        this.overlayCoordinator = overlayCoordinator;
+        overlayCoordinator.register(this);
     }
 
     void openHammer(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
         if (closeIfSame(Kind.HAMMER, targetModuleId)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.HAMMER;
         this.moduleId = targetModuleId;
@@ -79,6 +88,7 @@ final class ModuleConfigModalController {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
         if (closeIfSame(Kind.MODULE_UPGRADE, module.id)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.MODULE_UPGRADE;
         this.moduleId = module.id;
@@ -100,6 +110,7 @@ final class ModuleConfigModalController {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
         if (closeIfSame(Kind.LOGISTICS, targetModuleId)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = targetModuleId;
@@ -117,6 +128,7 @@ final class ModuleConfigModalController {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
         if (closeIfSame(Kind.MINER_BLACKLIST, targetModuleId)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.MINER_BLACKLIST;
         this.moduleId = targetModuleId;
@@ -140,6 +152,7 @@ final class ModuleConfigModalController {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         if (module == null || !(module.component() instanceof IRecipeModule)) return;
         if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.RECIPE_CONFIG;
         this.moduleId = module.id;
@@ -161,7 +174,8 @@ final class ModuleConfigModalController {
         return false;
     }
 
-    void close() {
+    @Override
+    public void close() {
         if (modal != null) {
             host.remove(modal);
             modal = null;
@@ -176,11 +190,13 @@ final class ModuleConfigModalController {
         this.moduleOperationCancelArmed = false;
     }
 
-    boolean isOpen() {
+    @Override
+    public boolean isOpen() {
         return kind != Kind.NONE;
     }
 
-    boolean containsMouse(int mouseX, int mouseY) {
+    @Override
+    public boolean containsMouse(int mouseX, int mouseY) {
         if (modal == null) return false;
         return mouseX >= modal.getArea().rx && mouseX < modal.getArea().rx + modal.getArea().width
             && mouseY >= modal.getArea().ry
@@ -193,7 +209,8 @@ final class ModuleConfigModalController {
         }
     }
 
-    void processDeferredActions() {
+    @Override
+    public void processDeferredActions() {
         if (retargetQueued) {
             ModuleInstance module = queuedRetargetModuleId == null ? null
                 : ModuleConfigModalSupport.module(assetId, queuedRetargetModuleId);

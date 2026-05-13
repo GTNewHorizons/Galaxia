@@ -115,6 +115,18 @@ final class ModuleConfigModalControllerTest {
         assertFalse(controller.isOpen());
     }
 
+    @Test
+    void openingSameUpgradeTwiceClosesIt() {
+        TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleConfigModalController controller = controllerFor(test.facility());
+
+        controller.openUpgrade(0);
+        assertTrue(controller.isModuleUpgradeOpen());
+
+        controller.openUpgrade(0);
+        assertFalse(controller.isOpen());
+    }
+
     private static ModuleConfigModalController controllerFor(AutomatedFacility facility) {
         CelestialAssetStore.CLIENT.registerAssetInternal(TEAM_ID, facility);
         return new ModuleConfigModalController(

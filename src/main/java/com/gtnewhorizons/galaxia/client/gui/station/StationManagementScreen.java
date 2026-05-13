@@ -72,13 +72,17 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationVisionLayer visionLayer = pendingVisionLayer;
         StationTilePickerController tilePickerController = new StationTilePickerController();
+        StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
+        int overlayX = LEFT_PANEL_WIDTH + PADDING * 2;
+        int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
         ModuleConfigModalController configController = new ModuleConfigModalController(
             panel,
             assetId,
-            LEFT_PANEL_WIDTH + PADDING * 2,
-            PADDING * 2,
-            tilePickerController);
-        StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, configController::close);
+            overlayX,
+            overlayY,
+            tilePickerController,
+            overlayCoordinator);
+        StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
         StationMapWidget map = new StationMapWidget(
             assetId,
             coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
@@ -87,8 +91,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             PADDING,
             PADDING,
             visionLayer,
-            (mouseX, mouseY) -> (configController.isOpen() && configController.containsMouse(mouseX, mouseY))
-                || inventoryPanel.isPointInPanel(mouseX - (LEFT_PANEL_WIDTH + PADDING * 2), mouseY - PADDING),
+            overlayCoordinator::containsMouse,
             tilePickerController);
 
         panel.child(
@@ -117,12 +120,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(StationTilePickerControlsWidget.WIDTH)
                 .height(StationTilePickerControlsWidget.HEIGHT));
         panel.child(
-            inventoryPanel.left(LEFT_PANEL_WIDTH + PADDING * 2)
+            inventoryPanel.left(overlayX)
                 .top(PADDING)
                 .width(StationInventoryPanelWidget.PANEL_WIDTH)
                 .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
         panel.child(
-            new ModalInputBlocker(configController).left(0)
+            new ModalInputBlocker(overlayCoordinator).left(0)
                 .top(0)
                 .widthRel(1f)
                 .heightRel(1f));
@@ -172,17 +175,17 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
     private static final class ModalInputBlocker extends ParentWidget<ModalInputBlocker> {
 
-        private final ModuleConfigModalController controller;
+        private final StationOverlayCoordinator overlayCoordinator;
         private boolean listenersRegistered;
 
-        private ModalInputBlocker(ModuleConfigModalController controller) {
-            this.controller = controller;
+        private ModalInputBlocker(StationOverlayCoordinator overlayCoordinator) {
+            this.overlayCoordinator = overlayCoordinator;
         }
 
         @Override
         public void onUpdate() {
             super.onUpdate();
-            controller.processDeferredActions();
+            overlayCoordinator.processDeferredActions();
         }
 
         @Override
@@ -191,25 +194,24 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             if (listenersRegistered) return;
             listenersRegistered = true;
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> controller.isOpen()
-                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> overlayCoordinator
+                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> controller.isOpen()
-                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> overlayCoordinator
+                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> controller.isOpen()
-                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> overlayCoordinator
+                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
         }
 
         @Override
         public boolean canHover() {
-            return controller.isOpen() && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
+            return overlayCoordinator.blocksInputAt(getContext().getMouseX(), getContext().getMouseY());
         }
 
         @Override
         public boolean canHoverThrough() {
-            return !controller.isOpen()
-                || !controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
+            return !overlayCoordinator.blocksInputAt(getContext().getMouseX(), getContext().getMouseY());
         }
     }
 
