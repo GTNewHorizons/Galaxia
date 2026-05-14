@@ -1,0 +1,79 @@
+package com.gtnewhorizons.galaxia.registry.block;
+
+import net.minecraft.nbt.NBTTagCompound;
+
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+
+public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultiblock<T>>
+    extends GalaxiaMultiblockBase<T> {
+
+    protected enum BootState {
+        UNINITIALIZED,
+        STRUCTURE_VALID,
+        BOOTED
+    }
+
+    protected BootState bootState = BootState.UNINITIALIZED;
+
+    protected void onBootComplete() {}
+
+    protected void onBootFailed() {}
+
+    protected boolean attemptBoot() {
+        return true;
+    }
+
+    protected void tickPostBoot() {}
+
+    @Override
+    protected boolean shouldCheckStructure() {
+        return bootState != BootState.STRUCTURE_VALID;
+    }
+
+    @Override
+    protected void onStructureFormed() {
+        super.onStructureFormed();
+        if (bootState == BootState.UNINITIALIZED) {
+            bootState = BootState.STRUCTURE_VALID;
+        }
+    }
+
+    @Override
+    protected void onStructureDisformed() {
+        super.onStructureDisformed();
+        if (bootState == BootState.BOOTED) {
+            bootState = BootState.UNINITIALIZED;
+            onBootFailed();
+        }
+    }
+
+    @Override
+    protected void onStructureChecked() {
+        if (bootState == BootState.STRUCTURE_VALID) {
+            if (attemptBoot()) {
+                bootState = BootState.BOOTED;
+                onBootComplete();
+                markDirty();
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+        }
+        if (bootState == BootState.BOOTED) {
+            tickPostBoot();
+        }
+    }
+
+    @Override
+    public void onMachineBlockUpdate() {
+        super.onMachineBlockUpdate();
+        if (bootState != BootState.UNINITIALIZED) {
+            bootState = BootState.UNINITIALIZED;
+            updated = true;
+        }
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound nbt) {
+        bootState = BootState.UNINITIALIZED;
+        super.readFromNBT(nbt);
+    }
+}

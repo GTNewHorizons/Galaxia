@@ -50,6 +50,7 @@ public final class StationGraph {
 
     public void registerAttachment(BlockPos parent, BlockPos pos, StationAttachment attachment) {
         if (!pieces.containsKey(parent)) return;
+        if (attachments.containsKey(pos)) return;
 
         addAdjacency(parent, pos);
         attachments.put(pos, attachment);

@@ -10,34 +10,25 @@ public abstract class TileStationSecondary<T extends TileStationBase<T>> extends
     }
 
     @Override
-    public boolean checkStructure() {
-        final boolean valid = super.checkStructure();
-        if (graph == null) {
-            // force trigger onStructureFormed/onStructureDisformed
-            structureValid = !valid;
-            onMachineBlockUpdate();
-        }
-        return valid;
+    public void onStructureFormed() {
+        super.onStructureFormed();
     }
 
     @Override
-    public void onStructureFormed() {
-        super.onStructureFormed();
-        if (graph == null) {
-            for (BlockPos pos : airlocks) {
-                if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
-                for (BlockPos other : airlock.getStationControllers()) {
-                    if (other.equals(here)) continue;
-                    if (!(other.getTE(worldObj) instanceof TileStationBase<?>base)) continue;
-
+    protected boolean attemptBoot() {
+        for (BlockPos pos : airlocks) {
+            if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
+            for (BlockPos other : airlock.getStationControllers()) {
+                if (other.equals(here)) continue;
+                if (!(other.getTE(worldObj) instanceof TileStationBase<?> base)) continue;
+                if (base.graph != null) {
                     this.graph = base.graph;
+                    graph.connectPiece(here);
+                    return true;
                 }
             }
         }
-
-        if (graph != null) {
-            graph.connectPiece(here);
-        }
+        return false;
     }
 
     @Override
@@ -77,7 +68,7 @@ public abstract class TileStationSecondary<T extends TileStationBase<T>> extends
     }
 
     public int getVolume() {
-        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?>def) {
+        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?> def) {
             return def.getVolume();
         }
 

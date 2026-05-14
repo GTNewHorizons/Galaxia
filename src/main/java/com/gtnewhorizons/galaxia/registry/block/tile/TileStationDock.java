@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants;
@@ -26,7 +27,7 @@ import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
 
 public class TileStationDock extends TileStationSecondary<TileStationDock>
@@ -67,15 +68,22 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     }
 
     @Override
-    public void onStructureFormed() {
-        super.onStructureFormed();
-        if (graph != null) {
-            for (BlockPos pos : attachments) {
-                if (pos.getTE(worldObj) instanceof StationAttachment attachment) {
-                    graph.registerAttachment(here, pos, attachment);
-                }
+    protected void tickPostBoot() {
+        if (graph == null) return;
+        boolean changed = false;
+        var it = attachments.iterator();
+        while (it.hasNext()) {
+            BlockPos pos = it.next();
+            TileEntity te = pos.getTE(worldObj);
+            if (!(te instanceof StationAttachment)
+                || (te instanceof GalaxiaBootableMultiblock<?> base && !base.isStructureValid())) {
+                graph.removeAttachment(pos);
+                it.remove();
+                changed = true;
             }
         }
+        registerAllAttachments();
+        if (changed) markDirty();
     }
 
     @Override
@@ -96,6 +104,10 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     @Override
     public void onGraphRebuilt(TileStationController controller) {
         super.onGraphRebuilt(controller);
+        registerAllAttachments();
+    }
+
+    private void registerAllAttachments() {
         if (graph == null) return;
 
         for (BlockPos pos : attachments) {
@@ -107,8 +119,8 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
 
     public List<BlockPos> getValidAttachments() {
         return attachments.stream()
-            .filter(pos -> pos != null && pos.getTE(worldObj) instanceof GalaxiaMultiblockBase<?>)
-            .filter(pos -> ((GalaxiaMultiblockBase<?>) pos.getTE(worldObj)).isStructureValid())
+            .filter(pos -> pos != null && pos.getTE(worldObj) instanceof GalaxiaBootableMultiblock<?>)
+            .filter(pos -> ((GalaxiaBootableMultiblock<?>) pos.getTE(worldObj)).isStructureValid())
             .toList();
     }
 

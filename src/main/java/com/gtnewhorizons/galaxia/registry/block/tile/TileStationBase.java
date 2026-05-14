@@ -19,11 +19,11 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
-public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extends GalaxiaMultiblockBase<T>
+public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {
 
     public static final List<Block> BASE_VALID_BLOCKS = List.of(

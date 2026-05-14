@@ -25,8 +25,8 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
-    private int mCheckTimer = 0;
-    private boolean updated = true;
+    protected int mCheckTimer = 0;
+    protected boolean updated = true;
 
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;
@@ -141,6 +141,10 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
+    protected boolean shouldCheckStructure() { return true;}
+
+    protected void onStructureChecked() { }
+
     @Override
     public void updateEntity() {
         super.updateEntity();
@@ -152,18 +156,24 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
             if (this.updated) {
                 this.updated = false;
-                final boolean valid = checkStructure();
-                if (valid != structureValid) {
-                    structureValid = valid;
-                    if (valid) onStructureFormed();
-                    else onStructureDisformed();
-                    markDirty();
-                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+
+                if (shouldCheckStructure()) {
+                    final boolean valid = checkStructure();
+                    if (valid != structureValid) {
+                        structureValid = valid;
+                        if (valid) onStructureFormed();
+                        else onStructureDisformed();
+
+                        markDirty();
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    }
                 }
+
+                onStructureChecked();
+                mCheckTimer = 100;
+            } else {
+                mCheckTimer--;
             }
-            mCheckTimer = 100;
-        } else {
-            mCheckTimer--;
         }
     }
 

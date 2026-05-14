@@ -30,11 +30,11 @@ import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
 
-public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
+public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
     implements IGuiHolder<PosGuiData>, IDistributedInventory, StationAttachment {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
@@ -70,11 +70,6 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
     }
 
     @Override
-    public boolean checkStructure() {
-        return graph != null && super.checkStructure();
-    }
-
-    @Override
     public BlockPos getPosition() {
         return here;
     }
@@ -85,6 +80,11 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
         if (graph != null) {
             graph.removeAttachment(here);
         }
+    }
+
+    @Override
+    protected boolean attemptBoot() {
+        return graph != null;
     }
 
     @Override
