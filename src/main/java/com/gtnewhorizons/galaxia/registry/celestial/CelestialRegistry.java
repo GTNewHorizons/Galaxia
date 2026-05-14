@@ -114,12 +114,11 @@ public final class CelestialRegistry {
                         .metadata("surface", "undefined")
                         .metadata("status", "placeholder_colony_world")
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.diamond_ore))
-                .featureProfile(
-                    p -> p.featureTileChance(0.18)
-                        .weight(PlanetaryFeatureRegistry.REGOLITH_FLATS, 3.0)
-                        .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.5)
-                        .weight(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.6)));
+                .featureTileChance(0.18)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 3.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.5)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.6));
 
         register(
             CelestialObjectId.REMUS,
@@ -138,11 +137,10 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.lapis_ore, Blocks.redstone_ore))
-                .featureProfile(
-                    p -> p.featureTileChance(0.24)
-                        .weight(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 4.0)
-                        .weight(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 2.0)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0)));
+                .featureTileChance(0.24)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 4.0)
+                .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
         register(
             CelestialObjectId.EGORA,
@@ -168,12 +166,11 @@ public final class CelestialRegistry {
                             Blocks.gold_ore,
                             Blocks.redstone_ore,
                             Blocks.diamond_ore))
-                .featureProfile(
-                    p -> p.featureTileChance(0.20)
-                        .weight(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
-                        .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
-                        .weight(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.4)));
+                .featureTileChance(0.20)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.4));
         register(
             DimensionEnum.PANSPIRA,
             builder -> builder.parent(CelestialObjectId.VAEL)
@@ -191,12 +188,11 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
-                .featureProfile(
-                    p -> p.featureTileChance(0.26)
-                        .weight(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 3.0)
-                        .weight(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 2.0)
-                        .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0)));
+                .featureTileChance(0.26)
+                .feature(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 3.0)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 2.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
         register(
             DimensionEnum.MARS,
@@ -215,11 +211,10 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore, Blocks.lapis_ore, Blocks.diamond_ore))
-                .featureProfile(
-                    p -> p.featureTileChance(0.16)
-                        .weight(PlanetaryFeatureRegistry.REGOLITH_FLATS, 4.0)
-                        .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0)));
+                .featureTileChance(0.16)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 4.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
         register(
             DimensionEnum.MOON,
@@ -238,11 +233,10 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore))
-                .featureProfile(
-                    p -> p.featureTileChance(0.14)
-                        .weight(PlanetaryFeatureRegistry.REGOLITH_FLATS, 5.0)
-                        .weight(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 0.8)));
+                .featureTileChance(0.14)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 5.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 0.8));
 
         register(
             CelestialObjectId.FROZEN_BELT,
@@ -261,12 +255,11 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
-                .featureProfile(
-                    p -> p.featureTileChance(0.34)
-                        .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
-                        .weight(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)
-                        .weight(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 1.0)
-                        .weight(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.8)));
+                .featureTileChance(0.34)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
+                .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 1.0)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.8));
 
         register(
             CelestialObjectId.AMBERGRIS_FRAGMENT,

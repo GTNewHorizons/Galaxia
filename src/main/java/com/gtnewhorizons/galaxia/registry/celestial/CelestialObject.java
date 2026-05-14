@@ -11,6 +11,8 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureProfile;
 
 public record CelestialObject(CelestialObjectId id, String name, String nameKey, CelestialObjectId parentId,
@@ -242,6 +244,25 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             PlanetaryFeatureProfile.Builder builder = PlanetaryFeatureProfile.builder();
             mutator.accept(builder);
             this.featureProfile = builder.build();
+            return this;
+        }
+
+        public Builder featureTileChance(double featureTileChance) {
+            this.featureProfile = featureProfile.toBuilder()
+                .featureTileChance(featureTileChance)
+                .build();
+            return this;
+        }
+
+        public Builder feature(PlanetaryFeatureDefinition definition, double weight) {
+            if (definition == null) return this;
+            return feature(definition.key(), weight);
+        }
+
+        public Builder feature(PlanetaryFeatureKey key, double weight) {
+            this.featureProfile = featureProfile.toBuilder()
+                .weight(key, weight)
+                .build();
             return this;
         }
 

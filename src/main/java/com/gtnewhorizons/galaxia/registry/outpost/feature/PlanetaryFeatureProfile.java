@@ -35,6 +35,11 @@ public final class PlanetaryFeatureProfile {
         return new Builder();
     }
 
+    public Builder toBuilder() {
+        return new Builder().featureTileChance(featureTileChance)
+            .weights(weights);
+    }
+
     public double featureTileChance() {
         return featureTileChance;
     }
@@ -95,6 +100,16 @@ public final class PlanetaryFeatureProfile {
         public Builder weight(PlanetaryFeatureDefinition definition, double weight) {
             Objects.requireNonNull(definition, "Planetary feature definition must not be null");
             return weight(definition.key(), weight);
+        }
+
+        public Builder weights(Map<PlanetaryFeatureKey, Double> weights) {
+            this.weights.clear();
+            if (weights != null) {
+                for (Map.Entry<PlanetaryFeatureKey, Double> entry : weights.entrySet()) {
+                    weight(entry.getKey(), entry.getValue());
+                }
+            }
+            return this;
         }
 
         public PlanetaryFeatureProfile build() {
