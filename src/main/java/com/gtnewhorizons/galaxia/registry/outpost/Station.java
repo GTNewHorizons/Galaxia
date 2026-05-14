@@ -3,7 +3,9 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
@@ -54,13 +56,31 @@ public class Station extends CelestialAsset {
         return "Station inventory";
     }
 
-    // ── Filter delegation ──
-
     @Override
     public Map<Integer, List<ItemStack>> filtersSnapshot() {
         TileStationController ctrl = getTileController();
         if (ctrl == null) return Collections.emptyMap();
         return ctrl.filtersSnapshot();
+    }
+
+    @Override
+    public boolean tryConsumeEnergy(long powerDraw) {
+        // TODO
+        return true;
+    }
+
+    @Override
+    public long getEnergyStored() {
+        // TODO
+        return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public Stream<ModuleInstance> forEachModule() {
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) return Stream.of();
+        // TODO
+        return Stream.of();
     }
 
     @Override

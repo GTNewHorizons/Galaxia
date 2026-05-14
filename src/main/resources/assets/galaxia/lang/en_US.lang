@@ -145,6 +145,7 @@ tile.silo_controller.name=Rocket Silo
 tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
 tile.gantry_block.name=Gantry Shaft
+tile.hammer_cannon.name=Hammer Cannon
 tile.gantry_terminal.name=Gantry Terminal
 tile.rocket_trophy.name=Rocket Trophy
 

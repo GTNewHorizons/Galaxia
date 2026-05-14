@@ -194,9 +194,8 @@ public final class AutomatedFacility extends CelestialAsset {
         markDirty();
     }
 
-    public Stream<ModuleInstance> allOperationalModules() {
-        return modules.stream()
-            .filter(ModuleInstance::isOperational);
+    public Stream<ModuleInstance> forEachModule() {
+        return modules.stream();
     }
 
     public List<ModuleInstance> modulesInternal() {

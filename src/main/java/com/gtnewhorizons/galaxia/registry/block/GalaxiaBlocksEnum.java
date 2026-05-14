@@ -13,12 +13,14 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
@@ -60,6 +62,7 @@ public enum GalaxiaBlocksEnum {
     GANTRY_TERMINAL(new BlockGantryTerminal(), TileEntityGantryTerminal.class, "gantry_terminal"),
     ROCKET_TROPHY(new BlockRocketTrophy(), TileEntityRocketTrophy.class, "rocket_trophy"),
     HAMMER_TARGET(new BlockHammerTarget(), TileHammerTarget.class, "hammer_target"),
+    HAMMER_CANNON(new BlockHammerCannon(), TileHammerCannon.class, "hammer_cannon"),
     OXYGEN_COLLECTOR(new BlockOxygenCollector(), TileEntityOxygenCollector.class, "oxygen_collector"),
     OXYGEN_FILLER(new BlockOxygenFiller(), TileEntityOxygenFiller.class, "oxygen_filler"),
     OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),

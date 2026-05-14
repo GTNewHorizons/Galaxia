@@ -136,7 +136,7 @@ public final class HammerDispatchPlanner {
         return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
     }
 
-    public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, CelestialAsset requester,
+    public static Result evaluate(CelestialAsset supplier, ModuleInstance hammerModule, CelestialAsset requester,
         ItemStackWrapper resource, Iterable<LogisticsDelivery> deliveries, double orbitalTime,
         UUID routeProfileTeamId) {
         if (supplier == null || requester == null
@@ -154,7 +154,7 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, hammer);
         }
 
-        long availableSurplus = supplier.inventory.getAmount(resource) - supplierCfg.minReserve();
+        long availableSurplus = supplier.getItemAmount(resource) - supplierCfg.minReserve();
         if (availableSurplus <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
 
         LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
@@ -290,7 +290,7 @@ public final class HammerDispatchPlanner {
         return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
     }
 
-    private static Result evaluateCandidateFor(AutomatedFacility supplier, CelestialAsset requester,
+    private static Result evaluateCandidateFor(CelestialAsset supplier, CelestialAsset requester,
         ItemStackWrapper resource, long availableSurplus, long requestedAmount, LogisticsResourceConfig requesterCfg,
         ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
         boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);

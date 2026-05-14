@@ -10,4 +10,6 @@ public interface IStationAttachment {
     default void onDetached(StationGraph graph) {}
 
     BlockPos getPosition();
+
+    void tick();
 }

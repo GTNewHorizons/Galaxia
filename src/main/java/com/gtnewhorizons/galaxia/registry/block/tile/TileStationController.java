@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import codechicken.nei.ItemStackAmount;
+import ic2.core.util.ItemStackWrapper;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -35,6 +37,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IFilteredInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraftforge.fluids.FluidStack;
+import thaumic.tinkerer.common.registry.ItemStackCompatator;
 
 public class TileStationController extends TileStationBase<TileStationController> implements IFilteredInventory {
 

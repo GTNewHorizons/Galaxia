@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.WeakHashMap;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -47,7 +48,7 @@ public class ModuleDistillery extends TieredModuleComponent implements IParallel
         this.recipeConfig = config;
     }
 
-    public static void processRecipe(ModuleInstance instance, AutomatedFacility outpost) {
+    public static void processRecipe(ModuleInstance instance, CelestialAsset outpost) {
         ModuleDistillery m = (ModuleDistillery) instance.component();
         ProductionModuleHelper.execute(instance, outpost, m, m.random, m.inputWrapperCache, m.outputWrapperCache);
     }

@@ -6,6 +6,7 @@ import java.util.Random;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -38,9 +39,12 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         this.kind = kind;
     }
 
-    public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
+    public static void generateOre(ModuleInstance instance, CelestialAsset outpost) {
         if (!(instance.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
+        }
+        if (!(outpost instanceof AutomatedFacility)) {
+            throw new IllegalStateException("Miner should be only created in the AutomatedFacility");
         }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
@@ -55,10 +59,10 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 String oreKey = ItemStackWrapper.of(chosen)
                     .toKey();
                 ((ModuleMiner) instance.component()).advanceFocusAlignment();
-                if (shouldVoidOre(instance, outpost, oreKey)) return;
+                if (shouldVoidOre(instance, (AutomatedFacility) outpost, oreKey)) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
-                outpost.insertInventory(ItemStackWrapper.of(ore), 1);
+                outpost.addToInventory(ore, 1);
             });
     }
 

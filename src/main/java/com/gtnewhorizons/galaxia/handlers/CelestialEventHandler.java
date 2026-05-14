@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 
@@ -19,7 +20,6 @@ import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
@@ -147,18 +147,17 @@ public class CelestialEventHandler {
                 if (supply.outpostAssetId()
                     .equals(request.outpostAssetId())) continue;
 
-                if (!(CelestialAssetStore.findAsset(supply.outpostAssetId()) instanceof AutomatedFacility supplier))
-                    continue;
+                CelestialAsset supplier = CelestialAssetStore.findAsset(supply.outpostAssetId());
+                if (supplier == null) continue;
                 CelestialAsset requester = CelestialAssetStore.findAsset(request.outpostAssetId());
                 if (requester == null) continue;
 
                 final boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
-
                 final ItemStackWrapper resource = request.resourceId();
 
-                final boolean success = supplier.allOperationalModules()
+                final boolean success = supplier.forEachModule()
                     .filter(
-                        m -> m.component() instanceof ModuleHammer h && h.canFire() && (sameBody || h.canPlanRoute(m)))
+                        m -> m.isOperational() && m.component() instanceof ModuleHammer h && h.canFire() && (sameBody || h.canPlanRoute(m)))
                     .anyMatch(m -> {
                         ModuleHammer hammer = (ModuleHammer) m.component();
                         UUID supplierTeam = profileHammerTrajectoryLoad
@@ -175,8 +174,8 @@ public class CelestialEventHandler {
                         HammerDispatchPlanner.Plan plan = result.plan();
                         if (result.code() != HammerDispatchStatus.Code.READY || plan == null) return false;
 
-                        if (!supplier.tryConsumeInventory(plan.resource(), plan.sendAmount())) return false;
-                        if (!hammer.trySpendShotEnergy(m, supplier, plan.requiredEnergy())) {
+                        if (!((AutomatedFacility)supplier).tryConsumeInventory(plan.resource(), plan.sendAmount())) return false;
+                        if (!hammer.trySpendShotEnergy(m, (AutomatedFacility) supplier, plan.requiredEnergy())) {
                             throw new IllegalStateException("HAMMER shot energy became inconsistent");
                         }
                         hammer.markShotDispatched(m);

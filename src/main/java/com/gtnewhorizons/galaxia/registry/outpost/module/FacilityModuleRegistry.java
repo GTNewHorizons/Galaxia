@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
@@ -34,8 +35,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
-        BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-        List<ModulePanelAction> panelActions, boolean settingsGroups) {
+                             BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
+                             List<ModulePanelAction> panelActions, boolean settingsGroups) {
 
         public Definition {
             if (tierData == null || tierData.isEmpty()) {
@@ -316,14 +317,14 @@ public class FacilityModuleRegistry {
     }
 
     public static void register(FacilityModuleKind kind, ModuleTierData data,
-        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
+        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
         DEFINITIONS.put(
             kind,
             new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of(), false));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
-        BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
+        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
         DEFINITIONS.put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false));
     }
 
@@ -463,7 +464,7 @@ public class FacilityModuleRegistry {
 
         private final FacilityModuleKind kind;
         private Map<ModuleTier, ModuleTierData> tierData;
-        private BiConsumer<ModuleInstance, AutomatedFacility> behavior;
+        private BiConsumer<ModuleInstance, CelestialAsset> behavior;
         private Supplier<IModuleComponent> factory;
         private final java.util.ArrayList<ModulePanelAction> panelActions = new java.util.ArrayList<>();
         private boolean settingsGroups;
@@ -485,7 +486,7 @@ public class FacilityModuleRegistry {
             return this;
         }
 
-        public ModuleDefinitionBuilder behavior(BiConsumer<ModuleInstance, AutomatedFacility> behavior) {
+        public ModuleDefinitionBuilder behavior(BiConsumer<ModuleInstance, CelestialAsset> behavior) {
             this.behavior = behavior;
             return this;
         }

@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
@@ -287,6 +289,12 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public Map<Integer, List<ItemStack>> filtersSnapshot() {
         return Collections.unmodifiableMap(filters);
     }
+
+    public abstract boolean tryConsumeEnergy(long powerDraw);
+
+    public abstract long getEnergyStored();
+
+    public abstract Stream<ModuleInstance> forEachModule();
 
     @Override
     public boolean equals(Object obj) {

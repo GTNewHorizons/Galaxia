@@ -56,6 +56,16 @@ public class TileStationDock extends TileStationSecondary<TileStationDock> imple
             }
             return false;
         }, GalaxiaBlocksEnum.HAMMER_TARGET.get(), 0))
+        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dockController, tileEntity) -> {
+            if (tileEntity instanceof IStationAttachment) {
+                BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
+                if (!dockController.attachments.contains(pos)) {
+                    dockController.attachments.add(pos);
+                }
+                return true;
+            }
+            return false;
+        }, GalaxiaBlocksEnum.HAMMER_CANNON.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
         .withSearchRadius(ConfigStructures.open.searchRadius)
         .open()

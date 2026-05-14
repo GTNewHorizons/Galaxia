@@ -27,6 +27,19 @@ public interface IDistributedInventory extends IInventory, IFilteredInventory {
         return result;
     }
 
+    default Long getItemAmount(ItemStackWrapper item) {
+        long acc = 0;
+        for (IInventory inv : getInventories()) {
+            for (int i = 0; i < inv.getSizeInventory(); i++) {
+                ItemStack stack = inv.getStackInSlot(i);
+                if (stack != null && ItemStackWrapper.of(stack).equals(item)) {
+                    acc += stack.stackSize;
+                }
+            }
+        }
+        return acc;
+    }
+
     default long totalItemCount() {
         long total = 0;
         for (IInventory inv : getInventories()) {
