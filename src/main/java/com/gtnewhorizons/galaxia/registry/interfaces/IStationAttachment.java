@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
 
-public interface StationAttachment {
+public interface IStationAttachment {
 
     default void onAttached(StationGraph graph) {}
 

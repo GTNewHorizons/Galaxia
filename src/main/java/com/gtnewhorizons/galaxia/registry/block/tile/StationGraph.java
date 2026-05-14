@@ -9,7 +9,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
-import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -19,7 +19,7 @@ public final class StationGraph {
 
     private final TileStationController controller;
     private final Object2ObjectOpenHashMap<BlockPos, TileStationBase<?>> pieces = new Object2ObjectOpenHashMap<>();
-    private final Object2ObjectOpenHashMap<BlockPos, StationAttachment> attachments = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<BlockPos, IStationAttachment> attachments = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, ObjectArrayList<BlockPos>> adjacency = new Object2ObjectOpenHashMap<>();
     private final ObjectOpenHashSet<BlockPos> visited = new ObjectOpenHashSet<>();
     private final ObjectArrayList<BlockPos> queue = new ObjectArrayList<>();
@@ -48,7 +48,7 @@ public final class StationGraph {
             .iterator();
     }
 
-    public void registerAttachment(BlockPos parent, BlockPos pos, StationAttachment attachment) {
+    public void registerAttachment(BlockPos parent, BlockPos pos, IStationAttachment attachment) {
         if (!pieces.containsKey(parent)) return;
         if (attachments.containsKey(pos)) return;
 
@@ -59,7 +59,7 @@ public final class StationGraph {
     }
 
     public void removeAttachment(BlockPos pos) {
-        StationAttachment attachment = attachments.remove(pos);
+        IStationAttachment attachment = attachments.remove(pos);
         adjacency.values()
             .forEach(list -> list.remove(pos));
 

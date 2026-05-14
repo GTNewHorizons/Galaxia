@@ -32,10 +32,10 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
 public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, StationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition

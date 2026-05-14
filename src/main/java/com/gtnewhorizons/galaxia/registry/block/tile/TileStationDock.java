@@ -28,7 +28,7 @@ import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.interfaces.StationAttachment;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
 public class TileStationDock extends TileStationSecondary<TileStationDock>
     implements IGuiHolder<PosGuiData>, ArbitraryShapeTile<TileStationDock> {
@@ -49,7 +49,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dockController, tileEntity) -> {
-            if (tileEntity instanceof StationAttachment) {
+            if (tileEntity instanceof IStationAttachment) {
                 BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
                 if (!dockController.attachments.contains(pos)) {
                     dockController.attachments.add(pos);
@@ -75,7 +75,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
         while (it.hasNext()) {
             BlockPos pos = it.next();
             TileEntity te = pos.getTE(worldObj);
-            if (!(te instanceof StationAttachment)
+            if (!(te instanceof IStationAttachment)
                 || (te instanceof GalaxiaBootableMultiblock<?>base && !base.isStructureValid())) {
                 graph.removeAttachment(pos);
                 it.remove();
@@ -87,7 +87,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
     }
 
     @Override
-    public void onAttachmentConnected(BlockPos pos, StationAttachment attachment) {
+    public void onAttachmentConnected(BlockPos pos, IStationAttachment attachment) {
         if (!attachments.contains(pos)) {
             attachments.add(pos);
             markDirty();
@@ -111,7 +111,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
         if (graph == null) return;
 
         for (BlockPos pos : attachments) {
-            if (pos.getTE(worldObj) instanceof StationAttachment attachment) {
+            if (pos.getTE(worldObj) instanceof IStationAttachment attachment) {
                 graph.registerAttachment(here, pos, attachment);
             }
         }
