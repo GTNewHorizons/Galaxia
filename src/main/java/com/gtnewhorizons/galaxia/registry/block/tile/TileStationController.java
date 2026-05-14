@@ -26,7 +26,6 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -37,8 +36,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class TileStationController extends TileStationBase<TileStationController>
-    implements ArbitraryShapeTile<TileStationController>, IFilteredInventory {
+public class TileStationController extends TileStationBase<TileStationController> implements IFilteredInventory {
 
     private UUID owner;
     private CelestialAsset.ID backingStation;
@@ -198,11 +196,6 @@ public class TileStationController extends TileStationBase<TileStationController
     @Override
     public ForgeDirection getPlacedFacing() {
         return placedFacing;
-    }
-
-    @Override
-    public boolean isStructureValid() {
-        return structureValid;
     }
 
     @Override

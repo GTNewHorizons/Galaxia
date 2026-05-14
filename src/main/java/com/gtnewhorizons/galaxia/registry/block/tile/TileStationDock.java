@@ -24,14 +24,12 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
-public class TileStationDock extends TileStationSecondary<TileStationDock>
-    implements IGuiHolder<PosGuiData>, ArbitraryShapeTile<TileStationDock> {
+public class TileStationDock extends TileStationSecondary<TileStationDock> implements IGuiHolder<PosGuiData> {
 
     private List<BlockPos> attachments = new ArrayList<>();
 

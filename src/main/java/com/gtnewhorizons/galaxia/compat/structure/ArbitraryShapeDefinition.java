@@ -9,7 +9,6 @@ import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -25,8 +24,9 @@ import com.gtnewhorizons.galaxia.compat.structure.util.DenseBitSet;
 import com.gtnewhorizons.galaxia.compat.structure.util.IntQueue;
 import com.gtnewhorizons.galaxia.compat.structure.util.LocalCoord;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 
-public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<T>> implements IStructureDefinition<T> {
+public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implements IStructureDefinition<T> {
 
     private static final int[] DIR_DX = { 0, 0, 0, 0, 1, -1 };
     private static final int[] DIR_DY = { 0, 0, 1, -1, 0, 0 };
@@ -81,7 +81,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     private final DenseBitSet coarseVisited;
     private final DenseBitSet coarseInterior;
 
-    public static <T extends TileEntity & ArbitraryShapeTile<T>> Builder<T> builder() {
+    public static <T extends GalaxiaMultiblockBase<T>> Builder<T> builder() {
         return new Builder<>();
     }
 
@@ -185,7 +185,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
         int offsetY, int offsetZ, IStructureWalker<T> walker) {}
 
     private boolean openCheck(T tile, World world) {
-        if (fastRevalidate(tile)) return true;
+        if (fastRevalidate(tile, world)) return true;
 
         int sr = searchRadius;
         int srLen = 2 * sr + 1;
@@ -220,7 +220,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     }
 
     private boolean enclosedCheck(T tile, World world, ExtendedFacing extendedFacing) {
-        if (fastRevalidate(tile)) return true;
+        if (fastRevalidate(tile, world)) return true;
         if (floodVisited == null) {
             int sr = searchRadius;
             int srLen = 2 * sr + 1;
@@ -263,9 +263,8 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
      * Checks if any of the known boundary blocks are still valid. Also checks if any of the neighboring *air* blocks
      * are still invalid. If they aren't something might have changed in the structure shell, so needs full revalidation
      */
-    private boolean fastRevalidate(T tile) {
+    private boolean fastRevalidate(T tile, World world) {
         if (structureBlocks == null || !tile.isStructureValid() || structureBlocks.isEmpty()) return false;
-        World world = tile.worldObj();
         if (world == null || world.isRemote) return true;
 
         final boolean[] valid = { true };
@@ -603,7 +602,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
         }
     }
 
-    public static class Builder<T extends TileEntity & ArbitraryShapeTile<T>> {
+    public static class Builder<T extends GalaxiaMultiblockBase<T>> {
 
         private final Map<Block, IStructureElement<T>> elements = new HashMap<>();
         private int searchRadius = LocalCoord.SEARCH_RADIUS;

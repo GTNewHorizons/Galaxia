@@ -15,12 +15,10 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 
-public class TileStationRoom extends TileStationSecondary<TileStationRoom>
-    implements ArbitraryShapeTile<TileStationRoom> {
+public class TileStationRoom extends TileStationSecondary<TileStationRoom> {
 
     public final ArbitraryShapeDefinition<TileStationRoom> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStationRoom>builder()
