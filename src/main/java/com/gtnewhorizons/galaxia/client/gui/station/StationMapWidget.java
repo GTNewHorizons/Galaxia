@@ -1,12 +1,17 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 
 import org.lwjgl.input.Mouse;
 
@@ -15,12 +20,17 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.CapacityConnectorLayer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
+import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -286,6 +296,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
 
+        drawFeatureOverlay(facility, tiles.keySet());
+
         drawPickerOverlay(tiles.keySet());
 
         StationTileCoord hov = hovered;
@@ -330,6 +342,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
                 }
             }
         }
+
+        drawFeatureTooltip(facility);
     }
 
     private void updateHover(StationLayout layout) {
@@ -358,6 +372,70 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             } else {
                 StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
             }
+        }
+    }
+
+    private void drawFeatureOverlay(AutomatedFacility facility, Set<StationTileCoord> occupiedTiles) {
+        Set<StationTileCoord> candidates = StationMapViewport.visibleTiles(
+            getArea().width,
+            getArea().height,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
+        for (StationTileCoord coord : candidates) {
+            PlanetaryFeatureOverlayRenderer
+                .draw(tileLocalX(coord), tileLocalY(coord), facility.planetaryFeaturesAt(coord));
+        }
+    }
+
+    private void drawFeatureTooltip(AutomatedFacility facility) {
+        int localX = toLocalMouseX(getContext().getMouseX());
+        int localY = toLocalMouseY(getContext().getMouseY());
+        StationTileCoord coord = StationMapViewport.coordAt(
+            localX,
+            localY,
+            getArea().width,
+            getArea().height,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
+        if (coord == null) return;
+        List<PlanetaryFeatureDefinition> features = new ArrayList<>();
+        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord)
+            .values()) {
+            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
+            if (definition != null) features.add(definition);
+        }
+        if (features.isEmpty()) return;
+
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int tooltipWidth = fr.getStringWidth("Features");
+        for (PlanetaryFeatureDefinition feature : features) {
+            tooltipWidth = Math.max(tooltipWidth, fr.getStringWidth(feature.displayName()));
+        }
+        tooltipWidth += 12;
+        int tooltipHeight = 8 + (features.size() + 1) * (fr.FONT_HEIGHT + 2);
+        int tooltipX = Math.min(localX + 10, getArea().width - tooltipWidth - 2);
+        int tooltipY = Math.min(localY + 10, getArea().height - tooltipHeight - 2);
+        tooltipX = Math.max(2, tooltipX);
+        tooltipY = Math.max(2, tooltipY);
+        BorderedRect.draw(
+            tooltipX,
+            tooltipY,
+            tooltipWidth,
+            tooltipHeight,
+            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
+            EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
+        int textY = tooltipY + 4;
+        fr.drawStringWithShadow("Features", tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+        textY += fr.FONT_HEIGHT + 2;
+        for (PlanetaryFeatureDefinition feature : features) {
+            fr.drawStringWithShadow(feature.displayName(), tooltipX + 6, textY, feature.overlayColor());
+            textY += fr.FONT_HEIGHT + 2;
         }
     }
 

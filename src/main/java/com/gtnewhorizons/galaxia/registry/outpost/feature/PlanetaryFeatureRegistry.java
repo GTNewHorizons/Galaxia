@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 
 public final class PlanetaryFeatureRegistry {
 
@@ -14,6 +15,7 @@ public final class PlanetaryFeatureRegistry {
         .description("Flat construction terrain")
         .layer(PlanetaryFeatureLayer.TERRAIN)
         .placement(PlanetaryFeaturePlacement.patch(42.0, 14.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_REGOLITH_FLATS.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition STABLE_BEDROCK = feature("stable_bedrock")
@@ -21,12 +23,14 @@ public final class PlanetaryFeatureRegistry {
         .description("Structurally stable terrain")
         .layer(PlanetaryFeatureLayer.TERRAIN)
         .placement(PlanetaryFeaturePlacement.patch(30.0, 10.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_STABLE_BEDROCK.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition MINERAL_VEIN = feature("mineral_vein").displayName("Mineral Vein")
         .description("Ore-rich tile")
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.patch(14.0, 6.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_MINERAL_VEIN.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition SUBSURFACE_ICE_POCKET = feature("subsurface_ice_pocket")
@@ -34,6 +38,7 @@ public final class PlanetaryFeatureRegistry {
         .description("Buried ice deposit")
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.patch(5.0, 2.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_SUBSURFACE_ICE_POCKET.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition GEOTHERMAL_VENT = feature("geothermal_vent")
@@ -41,6 +46,7 @@ public final class PlanetaryFeatureRegistry {
         .description("Natural heat source")
         .layer(PlanetaryFeatureLayer.ENVIRONMENT)
         .placement(PlanetaryFeaturePlacement.isolated())
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_GEOTHERMAL_VENT.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition VOLATILE_DEPOSIT = feature("volatile_deposit")
@@ -48,6 +54,7 @@ public final class PlanetaryFeatureRegistry {
         .description("Chemical volatile pocket")
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.clusteredPatch(8.0, 4.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_VOLATILE_DEPOSIT.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition RARE_CRYSTAL_FORMATION = feature("rare_crystal_formation")
@@ -55,6 +62,7 @@ public final class PlanetaryFeatureRegistry {
         .description("Rare crystal growth")
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.patch(3.0, 1.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_RARE_CRYSTAL_FORMATION.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition THERMAL_SINK_ZONE = feature("thermal_sink_zone")
@@ -62,6 +70,7 @@ public final class PlanetaryFeatureRegistry {
         .description("Naturally heat-absorbing terrain")
         .layer(PlanetaryFeatureLayer.ENVIRONMENT)
         .placement(PlanetaryFeaturePlacement.patch(12.0, 5.0))
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_THERMAL_SINK_ZONE.getColor())
         .build();
 
     private static final Map<PlanetaryFeatureKey, PlanetaryFeatureDefinition> FEATURES = new LinkedHashMap<>();

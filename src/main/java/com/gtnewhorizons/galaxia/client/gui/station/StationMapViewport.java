@@ -1,5 +1,8 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -90,5 +93,33 @@ public final class StationMapViewport {
         if (dx < StationTileCoord.MIN || dx > StationTileCoord.MAX) return null;
         if (dy < StationTileCoord.MIN || dy > StationTileCoord.MAX) return null;
         return StationTileCoord.of(dx, dy);
+    }
+
+    public static Set<StationTileCoord> visibleTiles(int width, int height, int contentLeft, int contentRightPadding,
+        int contentVerticalPadding, int panX, int panY) {
+        Set<StationTileCoord> result = new LinkedHashSet<>();
+        int left = contentLeft;
+        int right = width - contentRightPadding;
+        int top = contentVerticalPadding;
+        int bottom = height - contentVerticalPadding;
+        if (right <= left || bottom <= top) return result;
+
+        int originX = originLocalX(width, contentLeft, contentRightPadding, panX);
+        int originY = originLocalY(height, contentVerticalPadding, panY);
+        int minDx = Math.floorDiv(left - originX - TILE_SIZE + 1, TILE_STEP);
+        int maxDx = Math.floorDiv(right - 1 - originX, TILE_STEP);
+        int minDy = Math.floorDiv(top - originY - TILE_SIZE + 1, TILE_STEP);
+        int maxDy = Math.floorDiv(bottom - 1 - originY, TILE_STEP);
+
+        minDx = Math.max(minDx, StationTileCoord.MIN);
+        maxDx = Math.min(maxDx, StationTileCoord.MAX);
+        minDy = Math.max(minDy, StationTileCoord.MIN);
+        maxDy = Math.min(maxDy, StationTileCoord.MAX);
+        for (int dy = minDy; dy <= maxDy; dy++) {
+            for (int dx = minDx; dx <= maxDx; dx++) {
+                result.add(StationTileCoord.of(dx, dy));
+            }
+        }
+        return result;
     }
 }
