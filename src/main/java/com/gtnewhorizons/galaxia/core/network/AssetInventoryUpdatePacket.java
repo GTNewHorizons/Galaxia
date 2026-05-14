@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -130,26 +131,32 @@ public final class AssetInventoryUpdatePacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId, boolean creativePlayer) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
+        if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] InventoryDelta: unknown or unauthorized assetId {}", assetId);
             return null;
         }
 
         if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
-            return applyBoundUpdate(state);
+            if (asset instanceof AutomatedFacility state) {
+                return applyBoundUpdate(state);
+            }
+            return null;
+        }
+
+        if (!(asset instanceof IDistributedInventory distributed)) {
+            LOG.warn("[Logistics] InventoryDelta: asset {} does not support inventory operations", assetId);
+            return null;
         }
 
         if (delta > 0 && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: positive delta {} requires creative mode.", delta);
             return null;
         }
-
         if (creativeOnly && !creativePlayer) {
             LOG.warn("[Logistics] InventoryDelta rejected: player is not in creative mode.");
             return null;
         }
-
         if (creativeOnly && delta <= 0) {
             LOG.warn("[Logistics] InventoryDelta rejected: invalid amount {}", delta);
             return null;
@@ -162,16 +169,21 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         if (creativeOnly) {
             effectiveDelta = Math.min(delta, Integer.MAX_VALUE);
         }
+
+        long applied;
         if (effectiveDelta > 0L) {
-            effectiveDelta = state.insertInventoryWithoutSync(resource, effectiveDelta);
+            applied = distributed.addItems(resource, effectiveDelta);
+        } else if (effectiveDelta == Long.MIN_VALUE) {
+            applied = -distributed.removeItems(resource, Long.MAX_VALUE);
         } else {
-            effectiveDelta = state.addInventoryWithoutSync(resource, effectiveDelta);
+            applied = -distributed.removeItems(resource, -effectiveDelta);
         }
-        if (effectiveDelta == 0L) return null;
-        state.bumpSyncRevision();
-        LOG.info("[Logistics] Inventory update: {} x {} on outpost {}", effectiveDelta, resource, assetId);
-        return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, effectiveDelta)
-            .withSyncRevision(state.getSyncRevision());
+
+        if (applied == 0L) return null;
+        asset.bumpSyncRevision();
+        LOG.info("[Logistics] Inventory update: {} x {} on {}", applied, resource, assetId);
+        return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, applied)
+            .withSyncRevision(asset.getSyncRevision());
     }
 
     private AssetSyncPacket applyBoundUpdate(AutomatedFacility state) {

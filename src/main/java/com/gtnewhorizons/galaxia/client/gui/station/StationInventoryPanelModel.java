@@ -6,7 +6,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
+import javax.annotation.Nullable;
+
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IFluidInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModel {
@@ -27,20 +31,32 @@ final class StationInventoryPanelModel {
         return Math.min(parsed, availableAmount);
     }
 
-    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(AutomatedFacilityInventory inventory) {
-        Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.snapshot());
-        for (ItemStackWrapper item : inventory.itemLowerBoundsSnapshot()
-            .keySet()) {
-            rows.putIfAbsent(item, inventory.getAmount(item));
+    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory,
+        @Nullable IBoundedInventory bounds) {
+        Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItemAmounts());
+        if (bounds != null) {
+            for (ItemStackWrapper item : bounds.itemLowerBoundsSnapshot()
+                .keySet()) {
+                rows.putIfAbsent(
+                    item,
+                    inventory.aggregatedItemAmounts()
+                        .getOrDefault(item, 0L));
+            }
+            for (ItemStackWrapper item : bounds.itemUpperBoundsSnapshot()
+                .keySet()) {
+                rows.putIfAbsent(
+                    item,
+                    inventory.aggregatedItemAmounts()
+                        .getOrDefault(item, 0L));
+            }
+            rows.entrySet()
+                .removeIf(
+                    row -> row.getValue() <= 0L && !bounds.hasItemLowerBound(row.getKey())
+                        && !bounds.hasItemUpperBound(row.getKey()));
+        } else {
+            rows.entrySet()
+                .removeIf(row -> row.getValue() <= 0L);
         }
-        for (ItemStackWrapper item : inventory.itemUpperBoundsSnapshot()
-            .keySet()) {
-            rows.putIfAbsent(item, inventory.getAmount(item));
-        }
-        rows.entrySet()
-            .removeIf(
-                row -> row.getValue() <= 0L && !inventory.hasItemLowerBound(row.getKey())
-                    && !inventory.hasItemUpperBound(row.getKey()));
         List<Map.Entry<ItemStackWrapper, Long>> sorted = new ArrayList<>(rows.entrySet());
         sorted.sort(
             Comparator.comparing(
@@ -51,20 +67,21 @@ final class StationInventoryPanelModel {
         return sorted;
     }
 
-    static List<FluidRow> fluidRows(AutomatedFacilityInventory inventory) {
-        Map<String, Long> rows = new LinkedHashMap<>(inventory.fluidSnapshot());
-        for (String fluidName : inventory.fluidLowerBoundsSnapshot()
+    static List<FluidRow> fluidRows(@Nullable IFluidInventory fluidInv) {
+        if (fluidInv == null) return List.of();
+        Map<String, Long> rows = new LinkedHashMap<>(fluidInv.fluidSnapshot());
+        for (String fluidName : fluidInv.fluidLowerBoundsSnapshot()
             .keySet()) {
-            rows.putIfAbsent(fluidName, inventory.getFluidAmount(fluidName));
+            rows.putIfAbsent(fluidName, fluidInv.getFluidAmount(fluidName));
         }
-        for (String fluidName : inventory.fluidUpperBoundsSnapshot()
+        for (String fluidName : fluidInv.fluidUpperBoundsSnapshot()
             .keySet()) {
-            rows.putIfAbsent(fluidName, inventory.getFluidAmount(fluidName));
+            rows.putIfAbsent(fluidName, fluidInv.getFluidAmount(fluidName));
         }
         rows.entrySet()
             .removeIf(
-                row -> row.getValue() <= 0L && !inventory.hasFluidLowerBound(row.getKey())
-                    && !inventory.hasFluidUpperBound(row.getKey()));
+                row -> row.getValue() <= 0L && !fluidInv.hasFluidLowerBound(row.getKey())
+                    && !fluidInv.hasFluidUpperBound(row.getKey()));
         List<FluidRow> sorted = new ArrayList<>(rows.size());
         for (Map.Entry<String, Long> row : rows.entrySet()) {
             sorted.add(new FluidRow(row.getKey(), row.getValue()));

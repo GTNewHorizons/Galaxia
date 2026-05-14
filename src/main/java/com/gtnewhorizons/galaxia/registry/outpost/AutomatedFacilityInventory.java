@@ -6,6 +6,8 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IFluidInventory;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
@@ -17,7 +19,7 @@ import net.minecraft.item.ItemStack;
  * <p>
  * This class is NOT thread-safe and must only be accessed from the server thread.
  */
-public final class AutomatedFacilityInventory implements IInventory {
+public final class AutomatedFacilityInventory implements IInventory, IBoundedInventory, IFluidInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
     private final Map<String, Long> fluidAmounts = new LinkedHashMap<>();

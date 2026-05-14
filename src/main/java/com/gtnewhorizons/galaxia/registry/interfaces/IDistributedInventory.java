@@ -1,14 +1,42 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+
 public interface IDistributedInventory extends IInventory, IFilteredInventory {
 
     List<IInventory> getInventories();
+
+    default Map<ItemStackWrapper, Long> aggregatedItemAmounts() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (IInventory inv : getInventories()) {
+            for (int i = 0; i < inv.getSizeInventory(); i++) {
+                ItemStack stack = inv.getStackInSlot(i);
+                if (stack != null) {
+                    result.merge(ItemStackWrapper.of(stack), (long) stack.stackSize, Long::sum);
+                }
+            }
+        }
+        return result;
+    }
+
+    default long totalItemCount() {
+        long total = 0;
+        for (IInventory inv : getInventories()) {
+            for (int i = 0; i < inv.getSizeInventory(); i++) {
+                ItemStack stack = inv.getStackInSlot(i);
+                if (stack != null) total += stack.stackSize;
+            }
+        }
+        return total;
+    }
 
     @Override
     default int getSizeInventory() {
@@ -86,10 +114,10 @@ public interface IDistributedInventory extends IInventory, IFilteredInventory {
 
     /**
      * Distributes 'amount' units of 'stack' into all inventories that accept it.
-     * Returns true if at least one item was inserted.
+     * Returns the number of items actually inserted.
      */
-    default boolean addToInventory(ItemStack stack, int amount) {
-        if (amount <= 0) return false;
+    default long addToInventory(ItemStack stack, int amount) {
+        if (amount <= 0) return 0L;
 
         int remaining = amount;
         int invIndex = 0;
@@ -118,14 +146,14 @@ public interface IDistributedInventory extends IInventory, IFilteredInventory {
 
                 if (remaining <= 0) {
                     chest.markDirty();
-                    return true;
+                    return amount;
                 }
             }
             chest.markDirty();
             invIndex++;
         }
 
-        return remaining < amount;
+        return amount - remaining;
     }
 
     @Override
@@ -162,6 +190,40 @@ public interface IDistributedInventory extends IInventory, IFilteredInventory {
         for (IInventory inv : getInventories()) {
             if (inv != null) inv.closeInventory();
         }
+    }
+
+    default long addItems(ItemStackWrapper item, long amount) {
+        if (item == null || amount <= 0L) return 0L;
+        return addToInventory(item.toStack(1), (int) Math.min(amount, Integer.MAX_VALUE));
+    }
+
+    default long removeItems(ItemStackWrapper item, long amount) {
+        if (item == null || amount <= 0L) return 0L;
+        long remaining = amount;
+        long totalRemoved = 0L;
+        for (IInventory inv : getInventories()) {
+            if (inv == null) continue;
+            boolean markDirty = false;
+            for (int i = 0; i < inv.getSizeInventory(); i++) {
+                ItemStack stack = inv.getStackInSlot(i);
+                if (stack == null) continue;
+                if (ItemStackWrapper.of(stack)
+                    .equals(item)) {
+                    long toRemove = Math.min(remaining, stack.stackSize);
+                    stack.stackSize -= (int) toRemove;
+                    remaining -= toRemove;
+                    totalRemoved += toRemove;
+                    markDirty = true;
+                    if (stack.stackSize <= 0) {
+                        inv.setInventorySlotContents(i, null);
+                    }
+                    if (remaining <= 0L) break;
+                }
+            }
+            if (markDirty) inv.markDirty();
+            if (remaining <= 0L) break;
+        }
+        return totalRemoved;
     }
 
     private boolean canStacksMerge(ItemStack stack1, ItemStack stack2) {

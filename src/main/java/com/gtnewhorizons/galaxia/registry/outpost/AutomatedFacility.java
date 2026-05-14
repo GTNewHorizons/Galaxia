@@ -926,6 +926,32 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
+    public Map<ItemStackWrapper, Long> aggregatedItemAmounts() {
+        return inventory.snapshot();
+    }
+
+    @Override
+    public long totalItemCount() {
+        return inventory.totalItems();
+    }
+
+    @Override
+    public long addItems(ItemStackWrapper item, long amount) {
+        return insertInventoryWithoutSync(item, amount);
+    }
+
+    @Override
+    public long removeItems(ItemStackWrapper item, long amount) {
+        if (item == null || amount <= 0L) return 0L;
+        long current = inventory.getAmount(item);
+        long toRemove = Math.min(current, amount);
+        if (toRemove > 0L) {
+            inventory.add(item, -toRemove);
+        }
+        return toRemove;
+    }
+
+    @Override
     public List<IInventory> getInventories() {
         return List.of(inventory);
     }

@@ -6,10 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -41,7 +44,8 @@ final class StationInventoryPanelModelTest {
         ItemStackWrapper tracked = new ItemStackWrapper(new Item(), 0, null);
         inventory.setItemLowerBound(tracked, 32);
 
-        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(inventory);
+        IDistributedInventory distributed = distributed(inventory);
+        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed, inventory);
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -60,8 +64,55 @@ final class StationInventoryPanelModelTest {
         inventory.setAmount(new ItemStackWrapper(new Item(), 0, null), 0);
 
         assertTrue(
-            StationInventoryPanelModel.inventoryRows(inventory)
+            StationInventoryPanelModel.inventoryRows(distributed(inventory), null)
                 .isEmpty());
+    }
+
+    private static IDistributedInventory distributed(AutomatedFacilityInventory inv) {
+        return new IDistributedInventory() {
+
+            @Override
+            public Map<ItemStackWrapper, Long> aggregatedItemAmounts() {
+                return inv.snapshot();
+            }
+
+            @Override
+            public long totalItemCount() {
+                return inv.totalItems();
+            }
+
+            @Override
+            public List<IInventory> getInventories() {
+                return List.of(inv);
+            }
+
+            @Override
+            public String getInventoryName() {
+                return "test";
+            }
+
+            @Override
+            public List<ItemStack> getFiltersFor(int i) {
+                return List.of();
+            }
+
+            @Override
+            public void setFilters(int slot, List<ItemStack> filterList) {}
+
+            @Override
+            public void addFilter(int slot, ItemStack filter) {}
+
+            @Override
+            public void removeFilter(int slot, ItemStack filter) {}
+
+            @Override
+            public void clearFilters(int slot) {}
+
+            @Override
+            public Map<Integer, List<ItemStack>> filtersSnapshot() {
+                return Map.of();
+            }
+        };
     }
 
     @Test
