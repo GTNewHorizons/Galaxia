@@ -300,6 +300,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
 
         drawPickerOverlay(tiles.keySet());
 
+        drawCoreDirectionIndicator(tiles.keySet());
+
         StationTileCoord hov = hovered;
         if (hov != null && (tiles.containsKey(hov) || expansionSlots.contains(hov))) {
             int hx = tileLocalX(hov);
@@ -390,6 +392,32 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
                 tileLocalY(coord.dy()),
                 facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
         }
+    }
+
+    private void drawCoreDirectionIndicator(Set<StationTileCoord> occupiedTiles) {
+        if (hasVisibleStationTile(occupiedTiles)) return;
+        StationCoreDirectionIndicator.Arrow arrow = StationCoreDirectionIndicator.towardCore(
+            getArea().width,
+            getArea().height,
+            contentLeft,
+            contentRightPadding,
+            contentVerticalPadding,
+            panX,
+            panY);
+        StationCoreDirectionIndicator.draw(
+            arrow,
+            EnumColors.MAP_COLOR_TEXT_TITLE.getColor(),
+            EnumColors.MAP_COLOR_STATION_TILE_BORDER_HOVERED.getColor());
+    }
+
+    private boolean hasVisibleStationTile(Set<StationTileCoord> occupiedTiles) {
+        for (StationTileCoord coord : occupiedTiles) {
+            if (StationCoreDirectionIndicator
+                .tileIntersectsScreen(tileLocalX(coord), tileLocalY(coord), getArea().width, getArea().height)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void drawFeatureTooltip(AutomatedFacility facility) {
