@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 
 public class Station extends CelestialAsset {
 
@@ -37,6 +38,7 @@ public class Station extends CelestialAsset {
         if (teController == null) return;
 
         teController.tick();
+        LogisticStore.updateSignalsForFacility(this);
     }
 
     @Override

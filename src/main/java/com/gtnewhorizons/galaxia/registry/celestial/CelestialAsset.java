@@ -14,6 +14,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
@@ -64,6 +65,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public final ID assetId;
     public final CelestialObjectId celestialObjectId;
+    public final CelestialObjectId systemId;
+    public final CelestialObjectId planetaryAnchorBodyId;
     public final Kind kind;
     public final Location location;
 
@@ -107,6 +110,10 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         this.assetId = assetId;
         this.status = status;
         this.celestialObjectId = celestialObjectId;
+        this.systemId = GalaxiaCelestialAPI.findStar(celestialObjectId)
+            .id();
+        this.planetaryAnchorBodyId = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialObjectId)
+            .id();
         this.displayName = celestialObjectId.displayName() + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);

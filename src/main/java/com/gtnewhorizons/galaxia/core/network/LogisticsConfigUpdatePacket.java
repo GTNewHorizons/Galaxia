@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
@@ -100,8 +99,8 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
+        if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
             return null;
         }
@@ -118,18 +117,18 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         ItemStackWrapper resource = this.resource != null ? this.resource : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
         if (removeEntry) {
-            state.logisticsConfig.reset(resource);
-            state.bumpSyncRevision();
+            asset.logisticsConfig.reset(resource);
+            asset.bumpSyncRevision();
             return AssetSyncPacket.logisticsConfigRemoved(assetId, resourceKey)
-                .withSyncRevision(state.getSyncRevision());
+                .withSyncRevision(asset.getSyncRevision());
         } else {
             LogisticsResourceConfig config = new LogisticsResourceConfig(
                 minReserve,
                 orderSize,
                 isImportEnabled,
                 isSupplyEnabled);
-            state.logisticsConfig.set(resource, config);
-            state.bumpSyncRevision();
+            asset.logisticsConfig.set(resource, config);
+            asset.bumpSyncRevision();
             return AssetSyncPacket
                 .logisticsConfigUpdated(
                     assetId,
@@ -138,7 +137,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                     config.orderSize(),
                     config.isImportEnabled(),
                     config.isSupplyEnabled())
-                .withSyncRevision(state.getSyncRevision());
+                .withSyncRevision(asset.getSyncRevision());
         }
     }
 }

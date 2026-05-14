@@ -136,6 +136,14 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .heightRel(1f));
             startPendingBuildPicker(assetId, tilePickerController);
         } else {
+            int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
+            ModuleConfigModalController configController = new ModuleConfigModalController(
+                panel,
+                assetId,
+                overlayX,
+                overlayY,
+                null,
+                overlayCoordinator);
             StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
             panel.child(
                 new StationSidePanelWidget(assetId, null).left(PADDING)
@@ -147,6 +155,10 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                     .top(PADDING)
                     .width(StationInventoryPanelWidget.PANEL_WIDTH)
                     .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
+            panel.child(
+                ModuleConfigModalSupport.button("Items", () -> configController.openStationLogistics())
+                    .pos(PADDING, PADDING + 200)
+                    .size(88, 20));
             panel.child(
                 new ModalInputBlocker(overlayCoordinator).left(0)
                     .top(0)

@@ -914,6 +914,7 @@ public final class FacilityPersistenceManager {
         Integer controllerX;
         Integer controllerY;
         Integer controllerZ;
+        Map<String, LogisticsConfigJson> logisticsConfig;
     }
 
     static final class FacilityStateJson {

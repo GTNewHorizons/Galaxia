@@ -17,7 +17,6 @@ import net.minecraft.inventory.IInventory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
@@ -47,8 +46,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
-    public final CelestialObjectId systemId;
-    public final CelestialObjectId planetaryAnchorBodyId;
     public final AutomatedFacilityInventory inventory;
 
     private final List<ModuleInstance> modules;
@@ -72,10 +69,6 @@ public final class AutomatedFacility extends CelestialAsset {
             throw new IllegalArgumentException(
                 "AutomatedFacility kind must be AUTOMATED_OUTPOST or AUTOMATED_STATION, got: " + kind);
         }
-        this.systemId = GalaxiaCelestialAPI.findStar(celestialBodyId)
-            .id();
-        this.planetaryAnchorBodyId = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialBodyId)
-            .id();
         this.modules = new ArrayList<>();
         this.inventory = new AutomatedFacilityInventory();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;

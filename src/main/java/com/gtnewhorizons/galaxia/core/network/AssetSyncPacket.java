@@ -165,6 +165,19 @@ public final class AssetSyncPacket implements IMessage {
             .entrySet()) {
             pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
         }
+        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
+            .entrySet()) {
+            LogisticsResourceConfig cfg = e.getValue();
+            pkt.fullSyncDeltas.add(
+                logisticsConfigUpdated(
+                    state.assetId,
+                    e.getKey()
+                        .toKey(),
+                    cfg.minReserve(),
+                    cfg.orderSize(),
+                    cfg.isImportEnabled(),
+                    cfg.isSupplyEnabled()));
+        }
 
         return pkt;
     }
@@ -1310,12 +1323,22 @@ public final class AssetSyncPacket implements IMessage {
                         handleDelta(state, packet);
                         state.setSyncRevision(Math.max(state.getSyncRevision(), packet.syncRevision));
                     } else if (asset instanceof Station station) {
-                        // Client-side Station mirror: store filter deltas on the asset directly
-                        // (no live TileStationController on the client)
+                        // Client-side Station mirror: store filter and logistics config deltas
+                        // on the asset directly (no live TileStationController on the client)
                         if (packet.syncType == FILTER_UPDATED) {
                             station.setFilters(packet.filterSlot, packet.filterItems);
                         } else if (packet.syncType == FILTER_REMOVED) {
                             station.clearFilters(packet.filterSlot);
+                        } else if (packet.syncType == LOGISTICS_CONFIG_UPDATED) {
+                            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(packet.resourceKey);
+                            if (wrapper != null) {
+                                station.logisticsConfig.set(wrapper, packet.logConfig);
+                            }
+                        } else if (packet.syncType == LOGISTICS_CONFIG_REMOVED) {
+                            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(packet.resourceKey);
+                            if (wrapper != null) {
+                                station.logisticsConfig.reset(wrapper);
+                            }
                         }
                         station.setSyncRevision(Math.max(station.getSyncRevision(), packet.syncRevision));
                     }
@@ -1339,6 +1362,16 @@ public final class AssetSyncPacket implements IMessage {
                             station.setFilters(d.filterSlot, d.filterItems);
                         } else if (d.syncType == FILTER_REMOVED) {
                             station.clearFilters(d.filterSlot);
+                        } else if (d.syncType == LOGISTICS_CONFIG_UPDATED) {
+                            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(d.resourceKey);
+                            if (wrapper != null) {
+                                station.logisticsConfig.set(wrapper, d.logConfig);
+                            }
+                        } else if (d.syncType == LOGISTICS_CONFIG_REMOVED) {
+                            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(d.resourceKey);
+                            if (wrapper != null) {
+                                station.logisticsConfig.reset(wrapper);
+                            }
                         }
                     }
                 }

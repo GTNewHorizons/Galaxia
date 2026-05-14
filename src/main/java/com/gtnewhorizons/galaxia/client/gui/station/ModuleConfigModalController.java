@@ -124,6 +124,22 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         host.child(widget);
     }
 
+    void openStationLogistics() {
+        if (closeIfSame(Kind.LOGISTICS, null)) return;
+        overlayCoordinator.closeOthers(this);
+        close();
+        this.kind = Kind.LOGISTICS;
+        this.moduleId = null;
+
+        LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
+        widget.left(x)
+            .top(y)
+            .width(LogisticsConfigModalWidget.WIDTH)
+            .height(LogisticsConfigModalWidget.HEIGHT);
+        this.modal = widget;
+        host.child(widget);
+    }
+
     void openMinerBlacklist(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
