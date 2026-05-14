@@ -19,6 +19,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
 public final class ModuleMiner extends TieredModuleComponent implements IParallelModule {
 
@@ -82,6 +84,18 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     public static boolean shouldVoidOre(@Nonnull ModuleInstance instance, @Nonnull AutomatedFacility outpost,
         String oreKey) {
         return outpost.isMinerOreBlacklisted(instance, oreKey);
+    }
+
+    @Override
+    public ModuleSettings createPrivateSettings(ModuleInstance module) {
+        return new MinerSettings();
+    }
+
+    @Override
+    public void applySettings(ModuleInstance module, ModuleSettings settings) {
+        if (!(settings instanceof MinerSettings)) {
+            throw new IllegalStateException("MINER received non-miner settings for module " + module.id);
+        }
     }
 
     public MinerFocusTier focusTier() {

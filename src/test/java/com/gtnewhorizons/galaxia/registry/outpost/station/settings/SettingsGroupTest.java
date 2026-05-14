@@ -115,5 +115,10 @@ class SettingsGroupTest {
         public ModuleSettings from(ModuleInstance instance) {
             return this;
         }
+
+        @Override
+        public ModuleSettings copy() {
+            return this;
+        }
     }
 }

@@ -573,24 +573,19 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private ModuleSettings copySettings(ModuleInstance module) {
         requireSettingsGroupsSupported(module);
-        if (module.component() instanceof ModuleMiner) {
-            return minerSettings(module).copy();
+        if (module.groupId() != 0) {
+            SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+            return module.component()
+                .copySettings(module, group.settings());
         }
-        if (module.component() instanceof IRecipeModule) {
-            return new RecipeModuleSettings(recipeConfig(module));
-        }
-        throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+        return module.component()
+            .createPrivateSettings(module);
     }
 
     private ModuleSettings privateSettingsFor(ModuleInstance module) {
         requireSettingsGroupsSupported(module);
-        if (module.component() instanceof ModuleMiner) {
-            return new MinerSettings();
-        }
-        if (module.component() instanceof IRecipeModule recipeModule) {
-            return new RecipeModuleSettings(recipeModule.getRecipeConfig());
-        }
-        throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+        return module.component()
+            .createPrivateSettings(module);
     }
 
     private static void requireSettingsGroupsSupported(ModuleInstance module) {
@@ -639,9 +634,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private static void applySettingsToModule(ModuleSettings settings, ModuleInstance module) {
-        if (settings instanceof RecipeModuleSettings recipeSettings) {
-            recipeSettings.applyTo(module);
-        }
+        module.component()
+            .applySettings(module, settings);
     }
 
     private ModuleOperationState requireWaitingOperation(ModuleInstance module) {

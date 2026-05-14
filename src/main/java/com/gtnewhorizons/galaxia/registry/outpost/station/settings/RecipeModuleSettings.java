@@ -25,6 +25,7 @@ public final class RecipeModuleSettings implements ModuleSettings {
         this.config = copyOptionalConfig(config);
     }
 
+    @Override
     public RecipeModuleSettings copy() {
         return new RecipeModuleSettings(config);
     }
