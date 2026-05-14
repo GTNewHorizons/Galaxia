@@ -14,8 +14,17 @@ public final class PlanetaryFeatureGenerator {
         return featuresAt(stationFeatureSalt, tile, body).primary();
     }
 
+    public static PlanetaryFeatureKey featureAt(long stationFeatureSalt, int dx, int dy, CelestialObject body) {
+        return featuresAt(stationFeatureSalt, dx, dy, body).primary();
+    }
+
     public static PlanetaryFeatureSet featuresAt(long stationFeatureSalt, StationTileCoord tile, CelestialObject body) {
         if (tile == null || body == null) return PlanetaryFeatureSet.empty();
+        return featuresAt(stationFeatureSalt, tile.dx(), tile.dy(), body);
+    }
+
+    public static PlanetaryFeatureSet featuresAt(long stationFeatureSalt, int dx, int dy, CelestialObject body) {
+        if (body == null) return PlanetaryFeatureSet.empty();
         PlanetaryFeatureProfile profile = body.featureProfile();
         if (profile == null || !profile.canGenerateFeatures()) return PlanetaryFeatureSet.empty();
         long base = mix(
@@ -29,9 +38,9 @@ public final class PlanetaryFeatureGenerator {
             if (definition == null) continue;
             double weightShare = entry.getValue() / profile.totalWeight();
             PlanetaryFeaturePlacement placement = definition.placement();
-            if (!placement.contains(base, definition.key(), tile, profile.featureTileChance(), weightShare)) continue;
+            if (!placement.contains(base, definition.key(), dx, dy, profile.featureTileChance(), weightShare)) continue;
             PlanetaryFeatureLayer layer = definition.layer();
-            double score = placement.score(base, definition.key(), tile);
+            double score = placement.score(base, definition.key(), dx, dy);
             Double previousScore = selectedScores.get(layer);
             if (previousScore == null || score > previousScore) {
                 selected.put(layer, definition.key());

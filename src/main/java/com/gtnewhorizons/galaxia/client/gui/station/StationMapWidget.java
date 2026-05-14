@@ -296,7 +296,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
 
-        drawFeatureOverlay(facility, tiles.keySet());
+        drawFeatureOverlay(facility);
 
         drawPickerOverlay(tiles.keySet());
 
@@ -375,8 +375,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
         }
     }
 
-    private void drawFeatureOverlay(AutomatedFacility facility, Set<StationTileCoord> occupiedTiles) {
-        Set<StationTileCoord> candidates = StationMapViewport.visibleTiles(
+    private void drawFeatureOverlay(AutomatedFacility facility) {
+        Set<StationMapViewport.TilePosition> candidates = StationMapViewport.visibleTilePositions(
             getArea().width,
             getArea().height,
             contentLeft,
@@ -384,16 +384,18 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             contentVerticalPadding,
             panX,
             panY);
-        for (StationTileCoord coord : candidates) {
-            PlanetaryFeatureOverlayRenderer
-                .draw(tileLocalX(coord), tileLocalY(coord), facility.planetaryFeaturesAt(coord));
+        for (StationMapViewport.TilePosition coord : candidates) {
+            PlanetaryFeatureOverlayRenderer.draw(
+                tileLocalX(coord.dx()),
+                tileLocalY(coord.dy()),
+                facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
         }
     }
 
     private void drawFeatureTooltip(AutomatedFacility facility) {
         int localX = toLocalMouseX(getContext().getMouseX());
         int localY = toLocalMouseY(getContext().getMouseY());
-        StationTileCoord coord = StationMapViewport.coordAt(
+        StationMapViewport.TilePosition coord = StationMapViewport.tilePositionAt(
             localX,
             localY,
             getArea().width,
@@ -405,7 +407,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             panY);
         if (coord == null) return;
         List<PlanetaryFeatureDefinition> features = new ArrayList<>();
-        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord)
+        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord.dx(), coord.dy())
             .values()) {
             PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
             if (definition != null) features.add(definition);
@@ -506,11 +508,19 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
     }
 
     private int tileLocalX(StationTileCoord coord) {
-        return StationMapViewport.tileLeftX(coord, getArea().width, contentLeft, contentRightPadding, panX);
+        return tileLocalX(coord.dx());
     }
 
     private int tileLocalY(StationTileCoord coord) {
-        return StationMapViewport.tileTopY(coord, getArea().height, contentVerticalPadding, panY);
+        return tileLocalY(coord.dy());
+    }
+
+    private int tileLocalX(int dx) {
+        return StationMapViewport.tileLeftX(dx, getArea().width, contentLeft, contentRightPadding, panX);
+    }
+
+    private int tileLocalY(int dy) {
+        return StationMapViewport.tileTopY(dy, getArea().height, contentVerticalPadding, panY);
     }
 
     private int toLocalMouseX(int mouseX) {

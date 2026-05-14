@@ -43,14 +43,19 @@ public final class PlanetaryFeaturePlacement {
         double weightShare) {
         Objects.requireNonNull(key, "Planetary feature key must not be null");
         if (tile == null || featureTileChance <= 0.0 || weightShare <= 0.0) return false;
+        return contains(baseSeed, key, tile.dx(), tile.dy(), featureTileChance, weightShare);
+    }
+
+    boolean contains(long baseSeed, PlanetaryFeatureKey key, int tileX, int tileY, double featureTileChance,
+        double weightShare) {
+        Objects.requireNonNull(key, "Planetary feature key must not be null");
+        if (featureTileChance <= 0.0 || weightShare <= 0.0) return false;
         int maxRadius = maxRadius();
         int cellSize = Math.max(3, maxRadius * 2 + 3);
         double targetCoverage = Math.min(1.0, featureTileChance * weightShare);
         double highArea = Math.max(MIN_PATCH_AREA, meanTiles + stdDevTiles * 0.5);
         double cellArea = cellSize * cellSize;
         double spawnChance = Math.min(1.0, targetCoverage * cellArea / highArea * densityMultiplier);
-        int tileX = tile.dx();
-        int tileY = tile.dy();
         int cellX = Math.floorDiv(tileX, cellSize);
         int cellY = Math.floorDiv(tileY, cellSize);
         long featureSeed = featureSeed(baseSeed, key);
@@ -65,8 +70,12 @@ public final class PlanetaryFeaturePlacement {
     }
 
     double score(long baseSeed, PlanetaryFeatureKey key, StationTileCoord tile) {
+        return score(baseSeed, key, tile.dx(), tile.dy());
+    }
+
+    double score(long baseSeed, PlanetaryFeatureKey key, int tileX, int tileY) {
         long featureSeed = featureSeed(baseSeed, key);
-        long tileSeed = mix(featureSeed ^ ((long) tile.dx() << 32) ^ (tile.dy() & 0xffffffffL));
+        long tileSeed = mix(featureSeed ^ ((long) tileX << 32) ^ (tileY & 0xffffffffL));
         return unitDouble(mix(tileSeed ^ 0x9E3779B97F4A7C15L));
     }
 

@@ -51,6 +51,21 @@ final class PlanetaryFeatureGeneratorTest {
     }
 
     @Test
+    void intCoordinateGenerationMatchesStationTileCoordinateGeneration() {
+        CelestialObject body = CelestialObject.builder()
+            .id(CelestialObjectId.EGORA)
+            .featureProfile(
+                p -> p.featureTileChance(1.0)
+                    .weight(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0))
+            .build();
+        StationTileCoord tile = findTileWith(987654321L, body, PlanetaryFeatureRegistry.MINERAL_VEIN.key());
+
+        assertEquals(
+            PlanetaryFeatureGenerator.featureAt(987654321L, tile, body),
+            PlanetaryFeatureGenerator.featureAt(987654321L, tile.dx(), tile.dy(), body));
+    }
+
+    @Test
     void differentStationSaltsCanProduceDifferentFeatureLayouts() {
         CelestialObject body = CelestialObject.builder()
             .id(CelestialObjectId.EGORA)

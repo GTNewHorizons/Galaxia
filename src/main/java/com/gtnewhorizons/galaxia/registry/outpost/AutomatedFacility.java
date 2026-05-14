@@ -141,9 +141,18 @@ public final class AutomatedFacility extends CelestialAsset {
         return planetaryFeaturesAt(tile).primary();
     }
 
+    public PlanetaryFeatureKey planetaryFeatureAt(int dx, int dy) {
+        return planetaryFeaturesAt(dx, dy).primary();
+    }
+
     public PlanetaryFeatureSet planetaryFeaturesAt(StationTileCoord tile) {
+        if (tile == null) return PlanetaryFeatureSet.empty();
+        return planetaryFeaturesAt(tile.dx(), tile.dy());
+    }
+
+    public PlanetaryFeatureSet planetaryFeaturesAt(int dx, int dy) {
         return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
-            .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, tile, body))
+            .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
             .orElse(PlanetaryFeatureSet.empty());
     }
 
