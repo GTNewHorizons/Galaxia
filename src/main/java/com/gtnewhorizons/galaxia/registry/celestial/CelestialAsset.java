@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
@@ -81,6 +82,10 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private final Map<Integer, List<ItemStack>> filters = new Int2ObjectArrayMap<>();
 
     public final LogisticsConfiguration logisticsConfig;
+
+    public static long getItemAmount(CelestialAsset asset, ItemStackWrapper resource) {
+        return asset.aggregatedItemAmounts().getOrDefault(resource, 0L);
+    }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);

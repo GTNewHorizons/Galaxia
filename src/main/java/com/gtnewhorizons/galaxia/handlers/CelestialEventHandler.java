@@ -149,8 +149,8 @@ public class CelestialEventHandler {
 
                 if (!(CelestialAssetStore.findAsset(supply.outpostAssetId()) instanceof AutomatedFacility supplier))
                     continue;
-                if (!(CelestialAssetStore.findAsset(request.outpostAssetId()) instanceof AutomatedFacility requester))
-                    continue;
+                CelestialAsset requester = CelestialAssetStore.findAsset(request.outpostAssetId());
+                if (requester == null) continue;
 
                 final boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
 

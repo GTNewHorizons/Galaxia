@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -19,7 +20,7 @@ public final class HammerDispatchPlanner {
 
     private HammerDispatchPlanner() {}
 
-    public record Candidate(boolean sameBody, boolean shareAnchor, boolean routeAvailable, AutomatedFacility requester,
+    public record Candidate(boolean sameBody, boolean shareAnchor, boolean routeAvailable, CelestialAsset requester,
         ItemStackWrapper resource, long availableSurplus, long requestedAmount, int orderSize, double departureDv,
         double totalDv, double tofSeconds, int tofTicks, double tofOsu, OrbitalTransferPlanner.TransferRoute route) {
 
@@ -42,7 +43,7 @@ public final class HammerDispatchPlanner {
         }
     }
 
-    public record Plan(AutomatedFacility supplier, AutomatedFacility requester, ItemStackWrapper resource,
+    public record Plan(CelestialAsset supplier, CelestialAsset requester, ItemStackWrapper resource,
         ModuleInstance hammerModule, ModuleHammer hammer, long sendAmount, int orderSize, long requiredEnergy,
         LogisticSignal.Scope deliveryScope, int travelTimeTicks, double departureDv, double shotDv,
         double tofOrbitalSeconds, OrbitalTransferPlanner.TransferRoute route) {}
@@ -101,14 +102,14 @@ public final class HammerDispatchPlanner {
             }
 
             for (Object asset : assets) {
-                if (!(asset instanceof AutomatedFacility requester)) continue;
+                if (!(asset instanceof CelestialAsset requester)) continue;
                 if (supplier.assetId.equals(requester.assetId)) continue;
                 if (!Objects.equals(supplier.systemId, requester.systemId)) continue;
 
                 LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
                 if (requesterCfg == null || !requesterCfg.isImportEnabled()) continue;
 
-                long requesterStock = requester.inventory.getAmount(resource);
+                long requesterStock = CelestialAsset.getItemAmount(requester, resource);
                 long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
                 long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
                 if (requestedAmount <= 0L) continue;
@@ -135,7 +136,7 @@ public final class HammerDispatchPlanner {
         return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
     }
 
-    public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, AutomatedFacility requester,
+    public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, CelestialAsset requester,
         ItemStackWrapper resource, Iterable<LogisticsDelivery> deliveries, double orbitalTime,
         UUID routeProfileTeamId) {
         if (supplier == null || requester == null
@@ -161,7 +162,7 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
 
-        long requesterStock = requester.inventory.getAmount(resource);
+        long requesterStock = CelestialAsset.getItemAmount(requester, resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
         long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
         if (requestedAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
@@ -183,7 +184,7 @@ public final class HammerDispatchPlanner {
         return evaluateCandidate(hammer, candidate, null, null);
     }
 
-    public static Result evaluateCandidate(ModuleHammer hammer, Candidate candidate, AutomatedFacility supplier,
+    public static Result evaluateCandidate(ModuleHammer hammer, Candidate candidate, CelestialAsset supplier,
         ModuleInstance hammerModule) {
         return evaluateCandidate(
             hammer,
@@ -206,9 +207,9 @@ public final class HammerDispatchPlanner {
     }
 
     private static Result evaluateCandidate(ModuleHammer hammer, boolean sameBody, boolean shareAnchor,
-        boolean routeAvailable, AutomatedFacility requester, ItemStackWrapper resource, long availableSurplus,
+        boolean routeAvailable, CelestialAsset requester, ItemStackWrapper resource, long availableSurplus,
         long requestedAmount, int orderSize, double departureDv, double totalDv, double tofSeconds, int tofTicks,
-        double tofOsu, OrbitalTransferPlanner.TransferRoute route, AutomatedFacility supplier,
+        double tofOsu, OrbitalTransferPlanner.TransferRoute route, CelestialAsset supplier,
         ModuleInstance hammerModule) {
         long sendAmount = dispatchAmount(hammer, availableSurplus, requestedAmount, orderSize);
         if (sendAmount < orderSize || sendAmount <= 0L) {
@@ -289,7 +290,7 @@ public final class HammerDispatchPlanner {
         return Math.min(Math.min(Math.min(requestedAmount, availableSurplus), orderSize), hammer.maxBatchSize());
     }
 
-    private static Result evaluateCandidateFor(AutomatedFacility supplier, AutomatedFacility requester,
+    private static Result evaluateCandidateFor(AutomatedFacility supplier, CelestialAsset requester,
         ItemStackWrapper resource, long availableSurplus, long requestedAmount, LogisticsResourceConfig requesterCfg,
         ModuleInstance hammerModule, ModuleHammer hammer, double orbitalTime, UUID routeProfileTeamId) {
         boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
@@ -365,8 +366,8 @@ public final class HammerDispatchPlanner {
             hammerModule);
     }
 
-    private static OrbitalTransferPlanner.TransferRoute routeBetween(CelestialObject root, AutomatedFacility supplier,
-        AutomatedFacility requester, double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
+    private static OrbitalTransferPlanner.TransferRoute routeBetween(CelestialObject root, CelestialAsset supplier,
+        CelestialAsset requester, double orbitalTime, ModuleHammer hammer, UUID routeProfileTeamId) {
         CelestialObject srcBody = GalaxiaCelestialAPI.findBodyById(root, supplier.celestialObjectId);
         CelestialObject dstBody = GalaxiaCelestialAPI.findBodyById(root, requester.celestialObjectId);
         CelestialObject attractor = srcBody != null ? GalaxiaCelestialAPI.findStar(root, srcBody) : null;
