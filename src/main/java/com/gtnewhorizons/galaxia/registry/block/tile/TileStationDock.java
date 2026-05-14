@@ -76,7 +76,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock>
             BlockPos pos = it.next();
             TileEntity te = pos.getTE(worldObj);
             if (!(te instanceof StationAttachment)
-                || (te instanceof GalaxiaBootableMultiblock<?> base && !base.isStructureValid())) {
+                || (te instanceof GalaxiaBootableMultiblock<?>base && !base.isStructureValid())) {
                 graph.removeAttachment(pos);
                 it.remove();
                 changed = true;

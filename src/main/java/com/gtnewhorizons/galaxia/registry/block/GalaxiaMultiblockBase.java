@@ -141,9 +141,11 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
-    protected boolean shouldCheckStructure() { return true;}
+    protected boolean shouldCheckStructure() {
+        return true;
+    }
 
-    protected void onStructureChecked() { }
+    protected void onStructureChecked() {}
 
     @Override
     public void updateEntity() {

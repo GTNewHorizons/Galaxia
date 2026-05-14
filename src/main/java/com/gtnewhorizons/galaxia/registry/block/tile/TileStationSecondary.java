@@ -20,7 +20,7 @@ public abstract class TileStationSecondary<T extends TileStationBase<T>> extends
             if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
             for (BlockPos other : airlock.getStationControllers()) {
                 if (other.equals(here)) continue;
-                if (!(other.getTE(worldObj) instanceof TileStationBase<?> base)) continue;
+                if (!(other.getTE(worldObj) instanceof TileStationBase<?>base)) continue;
                 if (base.graph != null) {
                     this.graph = base.graph;
                     graph.connectPiece(here);
@@ -68,7 +68,7 @@ public abstract class TileStationSecondary<T extends TileStationBase<T>> extends
     }
 
     public int getVolume() {
-        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?> def) {
+        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?>def) {
             return def.getVolume();
         }
 

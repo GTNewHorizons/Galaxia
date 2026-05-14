@@ -2,8 +2,6 @@ package com.gtnewhorizons.galaxia.registry.block;
 
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-
 public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultiblock<T>>
     extends GalaxiaMultiblockBase<T> {
 
