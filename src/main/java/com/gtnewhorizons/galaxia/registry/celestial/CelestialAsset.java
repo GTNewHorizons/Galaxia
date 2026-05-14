@@ -84,7 +84,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public final LogisticsConfiguration logisticsConfig;
 
     public static long getItemAmount(CelestialAsset asset, ItemStackWrapper resource) {
-        return asset.aggregatedItemAmounts().getOrDefault(resource, 0L);
+        return asset.aggregatedItemAmounts()
+            .getOrDefault(resource, 0L);
     }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {

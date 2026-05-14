@@ -8,8 +8,8 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 

@@ -27,7 +27,6 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -259,8 +258,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
-    private void drawRowText(CelestialAsset asset, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
-        int x, int y, int width) {
+    private void drawRowText(CelestialAsset asset, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry, int x,
+        int y, int width) {
         ItemStackWrapper wrapper = entry.getKey();
         ItemStack stack = wrapper.toStack(1);
         renderItemIcon(stack, x + ICON_X, y + ICON_Y);

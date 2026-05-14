@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-
 import java.util.Map;
 
 import javax.annotation.Nonnull;
+
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public interface IBoundedInventory {
 
