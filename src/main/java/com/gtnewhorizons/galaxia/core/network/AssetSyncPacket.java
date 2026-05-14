@@ -107,6 +107,7 @@ public final class AssetSyncPacket implements IMessage {
     private CelestialAsset.Kind assetKind;
     private String displayName;
     private long energyStored;
+    private long stationFeatureSalt;
 
     private List<AssetSyncPacket> fullSyncDeltas;
 
@@ -171,6 +172,7 @@ public final class AssetSyncPacket implements IMessage {
         pkt.systemId = state.systemId;
         pkt.planetaryAnchorBodyId = state.planetaryAnchorBodyId;
         pkt.energyStored = state.getEnergyStored();
+        pkt.stationFeatureSalt = state.stationFeatureSalt();
         pkt.fullSyncDeltas = new ArrayList<>();
 
         state.settingsGroups()
@@ -444,6 +446,7 @@ public final class AssetSyncPacket implements IMessage {
                         PacketUtil.writeEnum(buf, systemId);
                         PacketUtil.writeEnum(buf, planetaryAnchorBodyId);
                         buf.writeLong(energyStored);
+                        buf.writeLong(stationFeatureSalt);
 
                         buf.writeInt(fullSyncDeltas.size());
                         for (AssetSyncPacket d : fullSyncDeltas) {
@@ -480,6 +483,7 @@ public final class AssetSyncPacket implements IMessage {
                         systemId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                         planetaryAnchorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
                         energyStored = buf.readLong();
+                        stationFeatureSalt = buf.readLong();
 
                         int count = buf.readInt();
                         fullSyncDeltas = new ArrayList<>(count);
@@ -1268,6 +1272,7 @@ public final class AssetSyncPacket implements IMessage {
                     }
 
                     state.setEnergyStored(packet.energyStored);
+                    state.setStationFeatureSalt(packet.stationFeatureSalt);
 
                     state.clearModules();
                     state.settingsGroups()

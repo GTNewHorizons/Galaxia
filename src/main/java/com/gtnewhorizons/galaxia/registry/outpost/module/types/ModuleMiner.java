@@ -12,6 +12,9 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
@@ -96,6 +99,18 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         if (!(settings instanceof MinerSettings)) {
             throw new IllegalStateException("MINER received non-miner settings for module " + module.id);
         }
+    }
+
+    @Override
+    public FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature, int coveredTiles,
+        int totalTiles) {
+        if (!PlanetaryFeatureRegistry.MINERAL_VEIN.key()
+            .equals(feature)) return null;
+        return new FeatureContribution(
+            feature,
+            (byte) coveredTiles,
+            (byte) totalTiles,
+            "Mining yield bonus " + coveredTiles + "/" + totalTiles);
     }
 
     public MinerFocusTier focusTier() {

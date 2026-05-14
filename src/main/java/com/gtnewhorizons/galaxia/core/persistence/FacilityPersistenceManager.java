@@ -378,6 +378,7 @@ public final class FacilityPersistenceManager {
         out.systemId = String.valueOf(state.systemId);
         out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
+        out.stationFeatureSalt = state.stationFeatureSalt();
         state.syncRecipeSettingsGroupsFromModules();
         out.settingsGroupsNextId = state.settingsGroups()
             .nextGroupId();
@@ -512,6 +513,7 @@ public final class FacilityPersistenceManager {
         if (asset == null || json == null || json.systemId == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
+        state.setStationFeatureSalt(json.stationFeatureSalt);
         state.settingsGroups()
             .clear();
         state.settingsGroups()
@@ -894,6 +896,7 @@ public final class FacilityPersistenceManager {
         String systemId;
         String planetaryAnchorBodyId;
         long energyStored;
+        long stationFeatureSalt;
         short settingsGroupsNextId;
         List<SettingsGroupJson> settingsGroups;
         List<ModuleJson> modules;
