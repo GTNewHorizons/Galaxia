@@ -7,6 +7,8 @@ import java.util.Random;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 
 public interface IRecipeModule extends IModuleComponent {
 
@@ -25,6 +27,19 @@ public interface IRecipeModule extends IModuleComponent {
     RecipeConfig getRecipeConfig();
 
     void setRecipeConfig(@javax.annotation.Nullable RecipeConfig config);
+
+    @Override
+    default ModuleSettings createPrivateSettings(ModuleInstance module) {
+        return new RecipeModuleSettings(getRecipeConfig());
+    }
+
+    @Override
+    default void applySettings(ModuleInstance module, ModuleSettings settings) {
+        if (!(settings instanceof RecipeModuleSettings recipeSettings)) {
+            throw new IllegalStateException("Recipe module received non-recipe settings for module " + module.id);
+        }
+        recipeSettings.applyTo(module);
+    }
 
     default int getNextSlot(Random random) {
         RecipeConfig cfg = getRecipeConfig();

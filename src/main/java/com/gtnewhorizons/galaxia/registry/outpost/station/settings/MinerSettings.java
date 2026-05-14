@@ -42,6 +42,7 @@ public final class MinerSettings implements ModuleSettings {
         }
     }
 
+    @Override
     public MinerSettings copy() {
         return new MinerSettings(blacklistedOreKeys);
     }

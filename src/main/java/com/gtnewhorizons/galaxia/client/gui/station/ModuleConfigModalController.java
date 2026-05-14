@@ -1,22 +1,26 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
+import java.util.Objects;
+
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 
-final class ModuleConfigModalController {
+final class ModuleConfigModalController implements StationOverlayCoordinator.Overlay {
 
     enum Kind {
         NONE,
         HAMMER,
         MODULE_UPGRADE,
         LOGISTICS,
-        MINER_BLACKLIST
+        MINER_BLACKLIST,
+        RECIPE_CONFIG
     }
 
     private final ModularPanel host;
@@ -24,39 +28,51 @@ final class ModuleConfigModalController {
     private final int x;
     private final int y;
     private final StationTilePickerController tilePickerController;
+    private final StationOverlayCoordinator overlayCoordinator;
 
     private ParentWidget<?> modal;
     private Kind kind = Kind.NONE;
     private ModuleInstance.ID moduleId;
     private int minerBlacklistPage;
-    private boolean minerSettingsGroupMenuOpen;
+    private boolean settingsGroupMenuOpen;
     private boolean moduleOperationCancelArmed;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
+    private boolean retargetQueued;
+    private ModuleInstance.ID queuedRetargetModuleId;
     private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
         .hammer(HammerVariant.BASE, ModuleTier.EV);
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
-        this(host, assetId, x, y, null);
+        this(host, assetId, x, y, null, new StationOverlayCoordinator());
     }
 
     ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
         StationTilePickerController tilePickerController) {
+        this(host, assetId, x, y, tilePickerController, new StationOverlayCoordinator());
+    }
+
+    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
+        StationTilePickerController tilePickerController, StationOverlayCoordinator overlayCoordinator) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
         this.tilePickerController = tilePickerController;
+        this.overlayCoordinator = overlayCoordinator;
+        overlayCoordinator.register(this);
     }
 
     void openHammer(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
+        if (closeIfSame(Kind.HAMMER, targetModuleId)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.HAMMER;
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
-        this.minerSettingsGroupMenuOpen = false;
+        this.settingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
         HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
@@ -71,6 +87,8 @@ final class ModuleConfigModalController {
     void openUpgrade(int moduleIndex) {
         ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
         if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
+        if (closeIfSame(Kind.MODULE_UPGRADE, module.id)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.MODULE_UPGRADE;
         this.moduleId = module.id;
@@ -91,6 +109,8 @@ final class ModuleConfigModalController {
     void openLogistics(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
+        if (closeIfSame(Kind.LOGISTICS, targetModuleId)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.LOGISTICS;
         this.moduleId = targetModuleId;
@@ -107,11 +127,13 @@ final class ModuleConfigModalController {
     void openMinerBlacklist(int moduleIndex) {
         ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
         if (targetModuleId == null) return;
+        if (closeIfSame(Kind.MINER_BLACKLIST, targetModuleId)) return;
+        overlayCoordinator.closeOthers(this);
         close();
         this.kind = Kind.MINER_BLACKLIST;
         this.moduleId = targetModuleId;
         this.minerBlacklistPage = 0;
-        this.minerSettingsGroupMenuOpen = false;
+        this.settingsGroupMenuOpen = false;
         this.moduleOperationCancelArmed = false;
 
         MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(
@@ -126,7 +148,34 @@ final class ModuleConfigModalController {
         host.child(widget);
     }
 
-    void close() {
+    void openRecipeConfig(int moduleIndex) {
+        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+        if (module == null || !(module.component() instanceof IRecipeModule)) return;
+        if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
+        overlayCoordinator.closeOthers(this);
+        close();
+        this.kind = Kind.RECIPE_CONFIG;
+        this.moduleId = module.id;
+
+        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this);
+        widget.left(x)
+            .top(y)
+            .width(RecipeConfigModalWidget.WIDTH)
+            .height(RecipeConfigModalWidget.HEIGHT);
+        this.modal = widget;
+        host.child(widget);
+    }
+
+    private boolean closeIfSame(Kind targetKind, ModuleInstance.ID targetModuleId) {
+        if (kind == targetKind && Objects.equals(moduleId, targetModuleId)) {
+            close();
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void close() {
         if (modal != null) {
             host.remove(modal);
             modal = null;
@@ -134,18 +183,20 @@ final class ModuleConfigModalController {
         this.kind = Kind.NONE;
         this.moduleId = null;
         this.minerBlacklistPage = 0;
-        this.minerSettingsGroupMenuOpen = false;
+        this.settingsGroupMenuOpen = false;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
         this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
     }
 
-    boolean isOpen() {
+    @Override
+    public boolean isOpen() {
         return kind != Kind.NONE;
     }
 
-    boolean containsMouse(int mouseX, int mouseY) {
+    @Override
+    public boolean containsMouse(int mouseX, int mouseY) {
         if (modal == null) return false;
         return mouseX >= modal.getArea().rx && mouseX < modal.getArea().rx + modal.getArea().width
             && mouseY >= modal.getArea().ry
@@ -156,6 +207,23 @@ final class ModuleConfigModalController {
         if (kind != Kind.NONE && moduleId != null && moduleIndex() < 0) {
             close();
         }
+    }
+
+    @Override
+    public void processDeferredActions() {
+        if (retargetQueued) {
+            ModuleInstance module = queuedRetargetModuleId == null ? null
+                : ModuleConfigModalSupport.module(assetId, queuedRetargetModuleId);
+            retargetQueued = false;
+            queuedRetargetModuleId = null;
+            retargetTo(module);
+        }
+        closeIfTargetMissing();
+    }
+
+    void requestRetargetTo(ModuleInstance module) {
+        retargetQueued = true;
+        queuedRetargetModuleId = module == null ? null : module.id;
     }
 
     void retargetTo(ModuleInstance module) {
@@ -169,6 +237,7 @@ final class ModuleConfigModalController {
             case MODULE_UPGRADE -> retargetModuleUpgrade(module);
             case LOGISTICS -> retargetLogistics(module);
             case MINER_BLACKLIST -> retargetMinerBlacklist(module);
+            case RECIPE_CONFIG -> retargetRecipeConfig(module);
             case NONE -> {}
         }
     }
@@ -189,6 +258,10 @@ final class ModuleConfigModalController {
         return kind == Kind.LOGISTICS;
     }
 
+    boolean isRecipeConfigOpen() {
+        return kind == Kind.RECIPE_CONFIG;
+    }
+
     int moduleIndex() {
         if (moduleId == null) return -1;
         return ModuleConfigModalSupport.moduleIndex(assetId, moduleId);
@@ -206,16 +279,16 @@ final class ModuleConfigModalController {
         this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
     }
 
-    boolean isMinerSettingsGroupMenuOpen() {
-        return minerSettingsGroupMenuOpen;
+    boolean isSettingsGroupMenuOpen() {
+        return settingsGroupMenuOpen;
     }
 
-    void toggleMinerSettingsGroupMenu() {
-        minerSettingsGroupMenuOpen = !minerSettingsGroupMenuOpen;
+    void toggleSettingsGroupMenu() {
+        settingsGroupMenuOpen = !settingsGroupMenuOpen;
     }
 
-    void closeMinerSettingsGroupMenu() {
-        minerSettingsGroupMenuOpen = false;
+    void closeSettingsGroupMenu() {
+        settingsGroupMenuOpen = false;
     }
 
     boolean isModuleOperationCancelArmed() {
@@ -299,8 +372,16 @@ final class ModuleConfigModalController {
         }
         moduleId = module.id;
         minerBlacklistPage = 0;
-        minerSettingsGroupMenuOpen = false;
+        settingsGroupMenuOpen = false;
         moduleOperationCancelArmed = false;
+    }
+
+    private void retargetRecipeConfig(ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule)) {
+            close();
+            return;
+        }
+        moduleId = module.id;
     }
 
 }

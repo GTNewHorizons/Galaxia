@@ -15,18 +15,18 @@ import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoadTracker;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -42,6 +42,9 @@ public class CelestialEventHandler {
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+
+        boolean profileHammerTrajectoryLoad = hasCreativeProfilerViewer();
+        HammerTrajectoryLoadTracker.beginTick(profileHammerTrajectoryLoad);
 
         for (CelestialAsset asset : CelestialAssetStore.allAssets()) {
             asset.tick();
@@ -59,12 +62,18 @@ public class CelestialEventHandler {
             .allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .entrySet()) {
 
-            handleSignal(entry.getValue(), orbitalTime);
+            handleSignal(entry.getValue(), orbitalTime, profileHammerTrajectoryLoad);
         }
+
+        HammerTrajectoryLoadTracker.endTick();
 
         syncCooldownTicks--;
         if (syncCooldownTicks > 0) return;
         syncCooldownTicks = 20;
+
+        if (profileHammerTrajectoryLoad) {
+            syncHammerTrajectoryLoadDebug();
+        }
 
         for (EntityPlayerMP player : MinecraftServer.getServer()
             .getConfigurationManager().playerEntityList) {
@@ -100,9 +109,29 @@ public class CelestialEventHandler {
         }
     }
 
+    private boolean hasCreativeProfilerViewer() {
+        for (EntityPlayerMP player : MinecraftServer.getServer()
+            .getConfigurationManager().playerEntityList) {
+            if (player != null && player.capabilities.isCreativeMode) return true;
+        }
+        return false;
+    }
+
+    private void syncHammerTrajectoryLoadDebug() {
+        for (EntityPlayerMP player : MinecraftServer.getServer()
+            .getConfigurationManager().playerEntityList) {
+            if (player == null || !player.capabilities.isCreativeMode) continue;
+
+            UUID playerTeam = TempTeamCompat.getTeam(player);
+            HammerTrajectoryLoadTracker.Snapshot snapshot = HammerTrajectoryLoadTracker.snapshot(playerTeam);
+            Galaxia.GALAXIA_NETWORK.sendTo(
+                ProfilerSyncPacket.hammerTrajectoryLoad(snapshot.ownMsPerTick(), snapshot.allMsPerTick()),
+                player);
+        }
+    }
+
     // TODO: Optimize this (O(n^2))
-    private void handleSignal(List<LogisticSignal> signals, double orbitalTime) {
-        CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
+    private void handleSignal(List<LogisticSignal> signals, double orbitalTime, boolean profileHammerTrajectoryLoad) {
         int size = signals.size();
 
         for (int i = 0; i < size; i++) {
@@ -123,81 +152,47 @@ public class CelestialEventHandler {
                 if (!(CelestialAssetStore.findAsset(request.outpostAssetId()) instanceof AutomatedFacility requester))
                     continue;
 
-                final boolean shareAnchor = GalaxiaCelestialAPI
-                    .sharesPlanetaryAnchor(root, supplier.celestialObjectId, requester.celestialObjectId);
+                final boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
 
                 final ItemStackWrapper resource = request.resourceId();
-                final LogisticsResourceConfig supplierCfg = supplier.logisticsConfig.get(resource);
-                if (supplierCfg == null) continue;
-                final long supplierStock = supplier.inventory.getAmount(resource);
-                final long availableSurplus = supplierStock - supplierCfg.minReserve();
-                if (availableSurplus <= 0) continue;
-
-                LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
-                if (requesterCfg == null) continue;
-                final long requesterStock = requester.inventory.getAmount(resource);
-                final long inboundInTransit = getInboundInTransitAmount(requester.assetId, resource);
-                final long requestedAmount = Math
-                    .max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
 
                 final boolean success = supplier.allOperationalModules()
                     .filter(
-                        m -> m.component() instanceof ModuleHammer h && h.canFire()
-                            && (shareAnchor || h.variant() == HammerVariant.BIG))
+                        m -> m.component() instanceof ModuleHammer h && h.canFire() && (sameBody || h.canPlanRoute(m)))
                     .anyMatch(m -> {
                         ModuleHammer hammer = (ModuleHammer) m.component();
-                        LogisticSignal.Scope deliveryScope = LogisticSignal.Scope.PLANETARY;
-                        int travelTime = 1;
-                        double osu = 0;
+                        UUID supplierTeam = profileHammerTrajectoryLoad
+                            ? CelestialAssetStore.getTeamId(supplier.assetId)
+                            : null;
+                        HammerDispatchPlanner.Result result = HammerDispatchPlanner.evaluate(
+                            supplier,
+                            m,
+                            requester,
+                            resource,
+                            LogisticStore.activeDeliveries(),
+                            orbitalTime,
+                            supplierTeam);
+                        HammerDispatchPlanner.Plan plan = result.plan();
+                        if (result.code() != HammerDispatchStatus.Code.READY || plan == null) return false;
 
-                        final long sendAmount = Math
-                            .min(Math.min(requestedAmount, availableSurplus), hammer.maxBatchSize());
-                        if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0) return false;
-
-                        double departureDv = 1;
-                        double shotDv = 1;
-                        if (!supplier.celestialObjectId.equals(requester.celestialObjectId)) {
-                            deliveryScope = LogisticSignal.Scope.SYSTEM;
-                            CelestialObject srcBody = GalaxiaCelestialAPI
-                                .findBodyById(root, supplier.celestialObjectId);
-                            CelestialObject dstBody = GalaxiaCelestialAPI
-                                .findBodyById(root, requester.celestialObjectId);
-                            CelestialObject attractor = srcBody != null ? GalaxiaCelestialAPI.findStar(root, srcBody)
-                                : null;
-
-                            if (srcBody == null || dstBody == null || attractor == null) return false;
-                            OrbitalTransferPlanner.TransferRoute route = OrbitalTransferPlanner
-                                .computeRoute(root, attractor, srcBody, dstBody, orbitalTime, hammer.routePriority());
-                            if (route == null) return false;
-
-                            departureDv = route.departureDv();
-                            shotDv = route.totalDv();
-                            travelTime = route.tofTicks();
-                            osu = route.tofOsu();
-                            if (!hammer.config()
-                                .allows(departureDv, route.tofSeconds())) return false;
-                        }
-
-                        final long shotEnergy = ModuleHammer.shotEnergyCost(shotDv);
-
-                        if (sendAmount < requesterCfg.orderSize() || sendAmount <= 0) return false;
-                        if (!hammer.canSpendShotEnergy(shotEnergy)) return false;
-                        if (!supplier.inventory.tryConsume(resource, sendAmount)) return false;
-                        if (!hammer.trySpendShotEnergy(m, supplier, shotEnergy)) {
+                        if (!supplier.tryConsumeInventory(plan.resource(), plan.sendAmount())) return false;
+                        if (!hammer.trySpendShotEnergy(m, supplier, plan.requiredEnergy())) {
                             throw new IllegalStateException("HAMMER shot energy became inconsistent");
                         }
+                        hammer.markShotDispatched(m);
 
                         LogisticsDelivery task = LogisticsDelivery.createWithTrajectory(
                             supplier.assetId,
                             requester.assetId,
-                            resource,
-                            sendAmount,
-                            travelTime,
-                            deliveryScope,
+                            plan.resource(),
+                            plan.sendAmount(),
+                            plan.travelTimeTicks(),
+                            plan.deliveryScope(),
                             supplier.celestialObjectId,
                             requester.celestialObjectId,
                             orbitalTime,
-                            osu);
+                            plan.tofOrbitalSeconds(),
+                            plan.route());
 
                         LogisticStore.addDelivery(task);
                         return true;
@@ -208,13 +203,4 @@ public class CelestialEventHandler {
         }
     }
 
-    private long getInboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
-        long total = 0L;
-        for (LogisticsDelivery task : LogisticStore.activeDeliveries()) {
-            if (!toAssetId.equals(task.data.toAssetId())) continue;
-            if (!resource.equals(task.data.resourceId())) continue;
-            total += task.data.amount();
-        }
-        return total;
-    }
 }

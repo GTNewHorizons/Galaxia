@@ -9,7 +9,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
@@ -19,6 +26,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -42,15 +51,17 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -61,6 +72,8 @@ import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
 
 public final class AssetSyncPacket implements IMessage {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     public static final byte FULL_SYNC = 0;
     public static final byte MODULE_ADDED = 1;
@@ -75,8 +88,10 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte SETTINGS_GROUP_UPDATED = 11;
     public static final byte FILTER_UPDATED = 12;
     public static final byte FILTER_REMOVED = 13;
+    public static final byte INVENTORY_BOUND_UPDATE = 14;
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
+    private static final int MAX_RECIPE_STACKS = 64;
     private static final byte OPERATION_SPEC_TIER = 1;
     private static final byte OPERATION_SPEC_HAMMER = 2;
     private static final byte OPERATION_SPEC_MINER_FOCUS = 3;
@@ -103,6 +118,9 @@ public final class AssetSyncPacket implements IMessage {
 
     private String resourceKey;
     private long inventoryDelta;
+    private BoundKind inventoryBoundKind;
+    private boolean inventoryBoundPresent;
+    private long inventoryBoundAmount;
     private LogisticsResourceConfig logConfig;
 
     private StationTileCoord tileCoord;
@@ -115,7 +133,7 @@ public final class AssetSyncPacket implements IMessage {
     private FacilityModuleKind settingsGroupKind;
     private String settingsGroupName;
     private boolean settingsGroupJoinable;
-    private MinerSettings minerSettings;
+    private ModuleSettings settingsGroupSettings;
 
     private int filterSlot;
     private List<ItemStack> filterItems;
@@ -192,6 +210,38 @@ public final class AssetSyncPacket implements IMessage {
                         .toKey(),
                     e.getValue()));
         }
+        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.itemLowerBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(
+                inventoryBoundUpdate(
+                    state.assetId,
+                    BoundKind.ITEM_LOWER,
+                    e.getKey()
+                        .toKey(),
+                    true,
+                    e.getValue()));
+        }
+        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.itemUpperBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(
+                inventoryBoundUpdate(
+                    state.assetId,
+                    BoundKind.ITEM_UPPER,
+                    e.getKey()
+                        .toKey(),
+                    true,
+                    e.getValue()));
+        }
+        for (Map.Entry<String, Long> e : state.inventory.fluidLowerBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_LOWER, e.getKey(), true, e.getValue()));
+        }
+        for (Map.Entry<String, Long> e : state.inventory.fluidUpperBoundsSnapshot()
+            .entrySet()) {
+            pkt.fullSyncDeltas
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_UPPER, e.getKey(), true, e.getValue()));
+        }
 
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -262,6 +312,18 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    public static AssetSyncPacket inventoryBoundUpdate(CelestialAsset.ID assetId, BoundKind kind, String resourceKey,
+        boolean present, long amount) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = INVENTORY_BOUND_UPDATE;
+        pkt.inventoryBoundKind = kind;
+        pkt.resourceKey = resourceKey;
+        pkt.inventoryBoundPresent = present;
+        pkt.inventoryBoundAmount = amount;
+        return pkt;
+    }
+
     public static AssetSyncPacket logisticsConfigUpdated(CelestialAsset.ID assetId, String resourceKey, int minReserve,
         int orderSize, boolean importEnabled, boolean supplyEnabled) {
         AssetSyncPacket pkt = new AssetSyncPacket();
@@ -289,7 +351,9 @@ public final class AssetSyncPacket implements IMessage {
         pkt.settingsGroupName = group.displayName();
         pkt.settingsGroupJoinable = group.isJoinable();
         if (group.settings() instanceof MinerSettings settings) {
-            pkt.minerSettings = settings.copy();
+            pkt.settingsGroupSettings = settings.copy();
+        } else if (group.settings() instanceof RecipeModuleSettings settings) {
+            pkt.settingsGroupSettings = settings.copy();
         } else {
             throw new IllegalStateException("Unsupported settings group payload " + group.settings());
         }
@@ -344,6 +408,8 @@ public final class AssetSyncPacket implements IMessage {
                 facility.markSyncedFor(playerId);
                 facility.drainDirtyModules();
                 facility.drainRemovedIds();
+                facility.drainDirtyInventoryDeltas();
+                facility.drainDirtyInventoryBoundDeltas();
                 return packets;
             }
             if (!facility.isDirty()) {
@@ -357,6 +423,24 @@ public final class AssetSyncPacket implements IMessage {
             for (ModuleInstance m : facility.drainDirtyModules()) {
                 int idx = facility.moduleIndex(m.id);
                 packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
+            }
+            for (Map.Entry<ItemStackWrapper, Long> delta : facility.drainDirtyInventoryDeltas()
+                .entrySet()) {
+                packets.add(
+                    inventoryUpdate(
+                        facility.assetId,
+                        delta.getKey()
+                            .toKey(),
+                        delta.getValue()).withSyncRevision(facility.getSyncRevision()));
+            }
+            for (InventoryBoundDelta delta : facility.drainDirtyInventoryBoundDeltas()) {
+                packets.add(
+                    inventoryBoundUpdate(
+                        facility.assetId,
+                        delta.kind(),
+                        delta.resourceKey(),
+                        delta.present(),
+                        delta.amount()).withSyncRevision(facility.getSyncRevision()));
             }
         } else if (asset instanceof Station station) {
             if (station.needsFullSyncFor(playerId)) {
@@ -479,6 +563,12 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeString(buf, resourceKey);
                 buf.writeLong(inventoryDelta);
             }
+            case INVENTORY_BOUND_UPDATE -> {
+                PacketUtil.writeEnum(buf, inventoryBoundKind);
+                PacketUtil.writeString(buf, resourceKey);
+                buf.writeBoolean(inventoryBoundPresent);
+                buf.writeLong(inventoryBoundAmount);
+            }
             case LOGISTICS_CONFIG_UPDATED -> {
                 PacketUtil.writeString(buf, resourceKey);
                 writeLogisticsConfig(buf, logConfig);
@@ -497,7 +587,7 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeEnum(buf, settingsGroupKind);
                 PacketUtil.writeString(buf, settingsGroupName);
                 buf.writeBoolean(settingsGroupJoinable);
-                writeMinerSettingsPayload(buf, minerSettings);
+                writeSettingsGroupPayload(buf, settingsGroupKind, settingsGroupSettings);
             }
             case FILTER_UPDATED -> {
                 buf.writeInt(filterSlot);
@@ -524,6 +614,12 @@ public final class AssetSyncPacket implements IMessage {
                 resourceKey = PacketUtil.readString(buf);
                 inventoryDelta = buf.readLong();
             }
+            case INVENTORY_BOUND_UPDATE -> {
+                inventoryBoundKind = PacketUtil.readEnum(buf, BoundKind.class);
+                resourceKey = PacketUtil.readString(buf);
+                inventoryBoundPresent = buf.readBoolean();
+                inventoryBoundAmount = buf.readLong();
+            }
             case LOGISTICS_CONFIG_UPDATED -> {
                 resourceKey = PacketUtil.readString(buf);
                 logConfig = readLogisticsConfig(buf);
@@ -540,7 +636,10 @@ public final class AssetSyncPacket implements IMessage {
                 settingsGroupKind = PacketUtil.readEnum(buf, FacilityModuleKind.class);
                 settingsGroupName = PacketUtil.readString(buf);
                 settingsGroupJoinable = buf.readBoolean();
-                minerSettings = readMinerSettingsPayload(buf, "settingsGroup=" + settingsGroupId);
+                settingsGroupSettings = readSettingsGroupPayload(
+                    buf,
+                    settingsGroupKind,
+                    "settingsGroup=" + settingsGroupId);
             }
             case FILTER_UPDATED -> {
                 filterSlot = buf.readInt();
@@ -770,6 +869,137 @@ public final class AssetSyncPacket implements IMessage {
         return size;
     }
 
+    private static void writeRecipeSnapshot(ByteBuf buf, RecipeSnapshot snapshot) {
+        buf.writeInt(snapshot.duration());
+        buf.writeInt(snapshot.eut());
+        writeItemStacks(buf, snapshot.inputs());
+        writeItemStacks(buf, snapshot.outputs());
+        writeIntArray(buf, snapshot.outputChances());
+        writeFluidStacks(buf, snapshot.fluidInputs());
+        writeFluidStacks(buf, snapshot.fluidOutputs());
+        writeIntArray(buf, snapshot.fluidOutputChances());
+    }
+
+    private static RecipeSnapshot readRecipeSnapshot(ByteBuf buf, byte recipeMapOrdinal, int recipeIndex,
+        long contentHash) {
+        int duration = buf.readInt();
+        int eut = buf.readInt();
+        ItemStack[] inputs = readItemStacks(buf);
+        ItemStack[] outputs = readItemStacks(buf);
+        int[] outputChances = readIntArray(buf);
+        FluidStack[] fluidInputs = readFluidStacks(buf);
+        FluidStack[] fluidOutputs = readFluidStacks(buf);
+        int[] fluidOutputChances = readIntArray(buf);
+        return new RecipeSnapshot(
+            recipeMapOrdinal,
+            recipeIndex,
+            contentHash,
+            inputs,
+            outputs,
+            fluidInputs,
+            fluidOutputs,
+            outputChances,
+            fluidOutputChances,
+            duration,
+            eut);
+    }
+
+    private static void writeItemStacks(ByteBuf buf, ItemStack[] stacks) {
+        if (stacks == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(stacks.length);
+        for (ItemStack stack : stacks) {
+            buf.writeBoolean(stack != null);
+            if (stack == null) continue;
+            buf.writeInt(Item.getIdFromItem(stack.getItem()));
+            buf.writeInt(stack.getItemDamage());
+            buf.writeInt(stack.stackSize);
+        }
+    }
+
+    private static ItemStack[] readItemStacks(ByteBuf buf) {
+        int len = readRecipeArrayLength(buf);
+        if (len == -1) return null;
+        ItemStack[] stacks = new ItemStack[len];
+        for (int i = 0; i < len; i++) {
+            if (!buf.readBoolean()) continue;
+            Item item = Item.getItemById(buf.readInt());
+            int damage = buf.readInt();
+            int size = buf.readInt();
+            stacks[i] = item != null ? new ItemStack(item, size, damage) : null;
+        }
+        return stacks;
+    }
+
+    private static void writeFluidStacks(ByteBuf buf, FluidStack[] stacks) {
+        if (stacks == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(stacks.length);
+        for (FluidStack stack : stacks) {
+            buf.writeBoolean(stack != null);
+            if (stack == null) continue;
+            PacketUtil.writeString(buf, fluidName(stack));
+            buf.writeInt(stack.amount);
+        }
+    }
+
+    private static FluidStack[] readFluidStacks(ByteBuf buf) {
+        int len = readRecipeArrayLength(buf);
+        if (len == -1) return null;
+        FluidStack[] stacks = new FluidStack[len];
+        for (int i = 0; i < len; i++) {
+            if (!buf.readBoolean()) continue;
+            String fluidName = PacketUtil.readString(buf);
+            int amount = buf.readInt();
+            Fluid fluid = FluidRegistry.getFluid(fluidName);
+            if (fluid != null) stacks[i] = new FluidStack(fluid, amount);
+        }
+        return stacks;
+    }
+
+    private static void writeIntArray(ByteBuf buf, int[] values) {
+        if (values == null) {
+            buf.writeInt(-1);
+            return;
+        }
+        buf.writeInt(values.length);
+        for (int value : values) {
+            buf.writeInt(value);
+        }
+    }
+
+    private static int[] readIntArray(ByteBuf buf) {
+        int len = readRecipeArrayLength(buf);
+        if (len == -1) return null;
+        int[] values = new int[len];
+        for (int i = 0; i < len; i++) {
+            values[i] = buf.readInt();
+        }
+        return values;
+    }
+
+    private static int readRecipeArrayLength(ByteBuf buf) {
+        int len = buf.readInt();
+        if (len < -1 || len > MAX_RECIPE_STACKS) {
+            throw new IllegalStateException("Invalid recipe array length: " + len);
+        }
+        return len;
+    }
+
+    private static String fluidName(FluidStack stack) {
+        try {
+            Fluid fluid = stack.getFluid();
+            return fluid != null ? fluid.getName() : "";
+        } catch (RuntimeException e) {
+            LOG.warn("[Network] Failed to resolve fluid name for synced FluidStack {}", stack, e);
+            return "";
+        }
+    }
+
     private static void writeMinerSettingsPayload(ByteBuf buf, MinerSettings settings) {
         buf.writeInt(
             settings.blacklistedOreKeys()
@@ -792,6 +1022,42 @@ public final class AssetSyncPacket implements IMessage {
         return settings;
     }
 
+    private static void writeSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, ModuleSettings settings) {
+        if (kind == null) throw new IllegalStateException("Settings group kind must not be null");
+        if (kind == FacilityModuleKind.MINER && settings instanceof MinerSettings minerSettings) {
+            writeMinerSettingsPayload(buf, minerSettings);
+            return;
+        }
+        if (FacilityModuleRegistry.get(kind)
+            .settingsGroups() && settings instanceof RecipeModuleSettings recipeSettings) {
+            writeRecipeConfigPayload(buf, recipeSettings.config());
+            return;
+        }
+        throw new IllegalStateException("Unsupported settings group payload " + settings + " for kind " + kind);
+    }
+
+    private static ModuleSettings readSettingsGroupPayload(ByteBuf buf, FacilityModuleKind kind, String context) {
+        if (kind == null) throw new IllegalStateException("Settings group kind must not be null for " + context);
+        if (kind == FacilityModuleKind.MINER) {
+            return readMinerSettingsPayload(buf, context);
+        }
+        if (FacilityModuleRegistry.get(kind)
+            .settingsGroups()) {
+            return new RecipeModuleSettings(readRecipeConfigPayload(buf));
+        }
+        throw new IllegalStateException("Unsupported settings group kind " + kind + " for " + context);
+    }
+
+    private static ModuleSettings copySettingsGroupPayload(ModuleSettings settings) {
+        if (settings instanceof MinerSettings minerSettings) {
+            return minerSettings.copy();
+        }
+        if (settings instanceof RecipeModuleSettings recipeSettings) {
+            return recipeSettings.copy();
+        }
+        throw new IllegalStateException("Unsupported settings group payload " + settings);
+    }
+
     private static void writeLogisticsConfig(ByteBuf buf, LogisticsResourceConfig cfg) {
         buf.writeInt(cfg.minReserve());
         buf.writeInt(cfg.orderSize());
@@ -808,7 +1074,10 @@ public final class AssetSyncPacket implements IMessage {
             buf.writeBoolean(false);
             return;
         }
-        RecipeConfig config = recipeModule.getRecipeConfig();
+        writeRecipeConfigPayload(buf, recipeModule.getRecipeConfig());
+    }
+
+    private static void writeRecipeConfigPayload(ByteBuf buf, RecipeConfig config) {
         if (config == null) {
             buf.writeBoolean(false);
             return;
@@ -823,61 +1092,68 @@ public final class AssetSyncPacket implements IMessage {
         buf.writeByte(config.orderCursor());
         buf.writeByte(config.orderRemaining());
 
-        List<RecipeSlot> slots = config.slots()
+        List<SavedRecipe> slots = config.savedRecipes()
             .toList();
         buf.writeByte(slots.size());
-        for (RecipeSlot slot : slots) {
+        for (SavedRecipe slot : slots) {
             RecipeSnapshot snap = slot.recipe();
             buf.writeByte(snap.recipeMapOrdinal());
             buf.writeInt(snap.recipeIndex());
             buf.writeLong(snap.contentHash());
+            writeRecipeSnapshot(buf, snap);
             buf.writeBoolean(slot.enabled());
-            buf.writeInt(slot.inputGuard());
-            buf.writeInt(slot.outputGuard());
+            buf.writeLong(slot.requestAmount());
             buf.writeByte(slot.priority());
             buf.writeByte(slot.orderSize());
+            PacketUtil.writeString(buf, slot.displayName());
         }
     }
 
     private static void readRecipeConfig(ByteBuf buf, ModuleInstance module) {
-        if (!buf.readBoolean()) return;
+        RecipeConfig config = readRecipeConfigPayload(buf);
+        if (config == null) return;
+        if (module.component() instanceof IRecipeModule recipeModule) {
+            recipeModule.setRecipeConfig(config);
+        }
+    }
+
+    private static RecipeConfig readRecipeConfigPayload(ByteBuf buf) {
+        if (!buf.readBoolean()) return null;
         int modeOrd = Byte.toUnsignedInt(buf.readByte());
         int policyOrd = Byte.toUnsignedInt(buf.readByte());
         byte orderCursor = buf.readByte();
         byte orderRemaining = buf.readByte();
 
         RecipeSchedulerMode[] modes = RecipeSchedulerMode.values();
-        if (modeOrd >= modes.length) return;
+        if (modeOrd >= modes.length) return null;
         RecipeSchedulerMode mode = modes[modeOrd];
 
         NotDoablePolicy[] policies = NotDoablePolicy.values();
-        if (policyOrd >= policies.length) return;
+        if (policyOrd >= policies.length) return null;
         NotDoablePolicy policy = policies[policyOrd];
 
         int slotCount = Byte.toUnsignedInt(buf.readByte());
-        if (slotCount < 0 || slotCount > RecipeSlotList.MAX_RECIPE_SLOTS) return;
+        if (slotCount < 0 || slotCount > SavedRecipeList.MAX_SAVED_RECIPES) return null;
 
-        RecipeConfig config = new RecipeConfig(new RecipeSlotList(), mode, policy, orderCursor, orderRemaining);
+        RecipeConfig config = new RecipeConfig(new SavedRecipeList(), mode, policy, orderCursor, orderRemaining);
 
         for (int i = 0; i < slotCount; i++) {
             byte mapOrdinal = buf.readByte();
             int recipeIndex = buf.readInt();
             long contentHash = buf.readLong();
+            RecipeSnapshot snapshot = readRecipeSnapshot(buf, mapOrdinal, recipeIndex, contentHash);
             boolean enabled = buf.readBoolean();
-            int inputGuard = buf.readInt();
-            int outputGuard = buf.readInt();
+            long requestAmount = buf.readLong();
             byte priority = buf.readByte();
             byte orderSize = buf.readByte();
+            String displayName = PacketUtil.readString(buf);
 
-            RecipeSnapshot ref = RecipeSnapshot.unresolved(mapOrdinal, recipeIndex, contentHash);
-            RecipeSlot slot = new RecipeSlot(ref, enabled, inputGuard, outputGuard, priority, orderSize);
-            config.slots()
+            SavedRecipe slot = new SavedRecipe(snapshot, enabled, requestAmount, priority, orderSize, displayName);
+            config.savedRecipes()
                 .add(slot);
         }
 
-        if (module.component() instanceof IRecipeModule recipeModule) {
-            recipeModule.setRecipeConfig(config);
-        }
+        return config;
     }
 
     public AssetSyncPacket withSyncRevision(int rev) {
@@ -973,6 +1249,14 @@ public final class AssetSyncPacket implements IMessage {
                     }
                 }
             }
+            case INVENTORY_BOUND_UPDATE -> {
+                if (packet.inventoryBoundPresent) {
+                    state.inventory
+                        .setBound(packet.inventoryBoundKind, packet.resourceKey, packet.inventoryBoundAmount);
+                } else {
+                    state.inventory.clearBound(packet.inventoryBoundKind, packet.resourceKey);
+                }
+            }
             case LOGISTICS_CONFIG_UPDATED -> {
                 ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                 if (r != null) state.logisticsConfig.set(r, packet.logConfig);
@@ -990,13 +1274,16 @@ public final class AssetSyncPacket implements IMessage {
                 StationLayout layout = state.stationLayout();
                 if (layout != null) layout.remove(packet.tileCoord);
             }
-            case SETTINGS_GROUP_UPDATED -> state.settingsGroups()
-                .sync(
-                    packet.settingsGroupId,
-                    packet.settingsGroupKind,
-                    packet.settingsGroupName,
-                    packet.settingsGroupJoinable,
-                    packet.minerSettings.copy());
+            case SETTINGS_GROUP_UPDATED -> {
+                state.settingsGroups()
+                    .sync(
+                        packet.settingsGroupId,
+                        packet.settingsGroupKind,
+                        packet.settingsGroupName,
+                        packet.settingsGroupJoinable,
+                        copySettingsGroupPayload(packet.settingsGroupSettings));
+                state.applySettingsGroupsToModules();
+            }
             case FILTER_UPDATED -> state.setFilters(packet.filterSlot, packet.filterItems);
             case FILTER_REMOVED -> state.clearFilters(packet.filterSlot);
         }
@@ -1137,6 +1424,14 @@ public final class AssetSyncPacket implements IMessage {
                         }
                     }
                 }
+                case INVENTORY_BOUND_UPDATE -> {
+                    if (packet.inventoryBoundPresent) {
+                        state.inventory
+                            .setBound(packet.inventoryBoundKind, packet.resourceKey, packet.inventoryBoundAmount);
+                    } else {
+                        state.inventory.clearBound(packet.inventoryBoundKind, packet.resourceKey);
+                    }
+                }
                 case LOGISTICS_CONFIG_UPDATED -> {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                     if (r != null) state.logisticsConfig.set(r, packet.logConfig);
@@ -1154,13 +1449,16 @@ public final class AssetSyncPacket implements IMessage {
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
-                case SETTINGS_GROUP_UPDATED -> state.settingsGroups()
-                    .sync(
-                        packet.settingsGroupId,
-                        packet.settingsGroupKind,
-                        packet.settingsGroupName,
-                        packet.settingsGroupJoinable,
-                        packet.minerSettings.copy());
+                case SETTINGS_GROUP_UPDATED -> {
+                    state.settingsGroups()
+                        .sync(
+                            packet.settingsGroupId,
+                            packet.settingsGroupKind,
+                            packet.settingsGroupName,
+                            packet.settingsGroupJoinable,
+                            copySettingsGroupPayload(packet.settingsGroupSettings));
+                    state.applySettingsGroupsToModules();
+                }
                 case FILTER_UPDATED -> state.setFilters(packet.filterSlot, packet.filterItems);
                 case FILTER_REMOVED -> state.clearFilters(packet.filterSlot);
             }

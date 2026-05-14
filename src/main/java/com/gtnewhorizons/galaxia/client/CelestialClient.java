@@ -20,12 +20,14 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
+import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -34,7 +36,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -84,6 +86,7 @@ public final class CelestialClient {
     private static final List<LogisticsDelivery> deliveries = new ArrayList<>();
     private static int deliveryRevision = 0;
     private static int signalRevision = 0;
+    private static HammerTrajectoryLoadSample hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
 
     private static final Map<CelestialObjectId, Map<String, Long>> systemSignals = new LinkedHashMap<>();
     private static final Map<CelestialObjectId, Map<String, Long>> planetSignals = new LinkedHashMap<>();
@@ -103,6 +106,7 @@ public final class CelestialClient {
         deliveries.clear();
         deliveryRevision = 0;
         signalRevision = 0;
+        hammerTrajectoryLoadSample = new HammerTrajectoryLoadSample(0.0, 0.0);
     }
 
     public static void createModule(ID assetId, FacilityModuleKind kind, boolean creativeBuildModeEnabled) {
@@ -203,12 +207,25 @@ public final class CelestialClient {
     }
 
     public static void updateModuleRecipeSlot(ID assetId, int moduleIndex, ConfigAction configAction, byte slotIndex,
-        RecipeSlot slot) {
+        SavedRecipe slot) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
             module -> AssetModuleUpdatePacket
                 .recipeSlotPayload(assetId, moduleIndex, module.id, configAction, slotIndex, slot));
+    }
+
+    public static void updateInventoryBound(ID assetId, int moduleIndex, ConfigAction configAction, BoundKind kind,
+        String resourceKey, long amount) {
+        updateInventoryBound(assetId, configAction, kind, resourceKey, amount);
+    }
+
+    public static void updateInventoryBound(ID assetId, ConfigAction configAction, BoundKind kind, String resourceKey,
+        long amount) {
+        AssetInventoryUpdatePacket packet = configAction == ConfigAction.CLEAR_INVENTORY_BOUND
+            ? AssetInventoryUpdatePacket.clearBound(assetId, kind, resourceKey)
+            : AssetInventoryUpdatePacket.setBound(assetId, kind, resourceKey, amount);
+        StarmapActionSyncHandler.sendInventoryUpdate(packet);
     }
 
     public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
@@ -219,18 +236,30 @@ public final class CelestialClient {
                 .minerOreBlacklisted(assetId, moduleIndex, module.id, oreKey, blacklisted));
     }
 
-    public static void updateMinerSettingsGroup(ID assetId, int moduleIndex, short groupId) {
+    public static void updateModuleSettingsGroup(ID assetId, int moduleIndex, short groupId) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.minerSettingsGroup(assetId, moduleIndex, module.id, groupId));
+            module -> AssetModuleUpdatePacket.moduleSettingsGroup(assetId, moduleIndex, module.id, groupId));
     }
 
-    public static void createMinerSettingsGroup(ID assetId, int moduleIndex) {
+    public static void createModuleSettingsGroup(ID assetId, int moduleIndex) {
+        createModuleSettingsGroup(assetId, moduleIndex, "");
+    }
+
+    public static void createModuleSettingsGroup(ID assetId, int moduleIndex, String displayName) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.createMinerSettingsGroup(assetId, moduleIndex, module.id));
+            module -> AssetModuleUpdatePacket.createModuleSettingsGroup(assetId, moduleIndex, module.id, displayName));
+    }
+
+    public static void renameModuleSettingsGroup(ID assetId, int moduleIndex, short groupId, String displayName) {
+        sendModuleUpdate(
+            assetId,
+            moduleIndex,
+            module -> AssetModuleUpdatePacket
+                .renameModuleSettingsGroup(assetId, moduleIndex, module.id, groupId, displayName));
     }
 
     public static void cancelModuleOperation(ID assetId, int moduleIndex) {
@@ -314,6 +343,11 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendInventoryUpdate(packet);
     }
 
+    public static void removeInventoryAmount(CelestialAsset.ID assetId, ItemStackWrapper resource, long amount) {
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.removeAmount(assetId, resource, amount);
+        StarmapActionSyncHandler.sendInventoryUpdate(packet);
+    }
+
     public static void updateLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource,
         LogisticsResourceConfig config) {
         LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(assetId, resource, config);
@@ -388,6 +422,14 @@ public final class CelestialClient {
 
     public static int clientDeliveryRevision() {
         return deliveryRevision;
+    }
+
+    public static void updateHammerTrajectoryLoad(HammerTrajectoryLoadSample sample) {
+        hammerTrajectoryLoadSample = sample == null ? new HammerTrajectoryLoadSample(0.0, 0.0) : sample;
+    }
+
+    public static HammerTrajectoryLoadSample hammerTrajectoryLoadSample() {
+        return hammerTrajectoryLoadSample;
     }
 
     // ── Helpers ──

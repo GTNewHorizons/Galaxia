@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -45,9 +46,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOpe
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -148,16 +150,31 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket minerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket moduleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, short groupId) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.SET_SETTINGS_GROUP);
         pkt.shortPayload = groupId;
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket createMinerSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket createModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId) {
-        return config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
+        return createModuleSettingsGroup(assetId, moduleIndex, moduleId, "");
+    }
+
+    public static AssetModuleUpdatePacket createModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, String displayName) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.CREATE_SETTINGS_GROUP);
+        pkt.stringPayload = displayName == null ? "" : displayName;
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket renameModuleSettingsGroup(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, short groupId, String displayName) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.RENAME_SETTINGS_GROUP);
+        pkt.shortPayload = groupId;
+        pkt.stringPayload = Objects.requireNonNull(displayName, "displayName");
+        return pkt;
     }
 
     public static AssetModuleUpdatePacket cancelModuleOperation(CelestialAsset.ID assetId, int moduleIndex,
@@ -303,7 +320,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
     }
 
     public static AssetModuleUpdatePacket recipeSlotPayload(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, RecipeSlot slot) {
+        ModuleInstance.ID moduleId, ConfigAction action, byte slotIndex, SavedRecipe slot) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
             pkt.rawPayload = new byte[] { slotIndex };
@@ -350,13 +367,25 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 slot.recipe()
                     .fluidOutputChances());
             payloadBuf.writeBoolean(slot.enabled());
-            payloadBuf.writeInt(slot.inputGuard());
-            payloadBuf.writeInt(slot.outputGuard());
+            payloadBuf.writeLong(slot.requestAmount());
             payloadBuf.writeByte(slot.priority());
             payloadBuf.writeByte(slot.orderSize());
+            PacketUtil.writeString(payloadBuf, slot.displayName());
             pkt.rawPayload = new byte[payloadBuf.writerIndex()];
             payloadBuf.readBytes(pkt.rawPayload);
         }
+        return pkt;
+    }
+
+    public static AssetModuleUpdatePacket inventoryBoundPayload(CelestialAsset.ID assetId, int moduleIndex,
+        ModuleInstance.ID moduleId, ConfigAction action, BoundKind kind, String resourceKey, long amount) {
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
+        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer();
+        PacketUtil.writeEnum(payloadBuf, kind);
+        PacketUtil.writeString(payloadBuf, resourceKey);
+        payloadBuf.writeLong(amount);
+        pkt.rawPayload = new byte[payloadBuf.writerIndex()];
+        payloadBuf.readBytes(pkt.rawPayload);
         return pkt;
     }
 
@@ -380,12 +409,16 @@ public final class AssetModuleUpdatePacket implements IMessage {
         SET_ENABLED,
         SET_SETTINGS_GROUP,
         CREATE_SETTINGS_GROUP,
+        RENAME_SETTINGS_GROUP,
         CANCEL_MODULE_OPERATION,
         COPY_MINER_SETTINGS,
         PLAN_MODULE_UPGRADE_TARGETS,
+        SET_RECIPE_SCHEDULER_MODE,
         ADD_RECIPE_SLOT,
         UPDATE_RECIPE_SLOT,
-        REMOVE_RECIPE_SLOT
+        REMOVE_RECIPE_SLOT,
+        SET_INVENTORY_BOUND,
+        CLEAR_INVENTORY_BOUND
     }
 
     public void toBytes(ByteBuf buf) {
@@ -410,7 +443,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 }
                 case PLAN_MINER_FOCUS_TIER -> buf.writeByte(bytePayload);
                 case SET_MINER_FOCUS_ORE -> PacketUtil.writeString(buf, stringPayload);
-                case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> buf.writeByte(bytePayload);
+                case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY, SET_RECIPE_SCHEDULER_MODE -> buf
+                    .writeByte(bytePayload);
                 case PLAN_HAMMER_UPGRADE -> {
                     if (rawPayload == null || rawPayload.length != HAMMER_UPGRADE_PAYLOAD_BYTES) {
                         throw new IllegalArgumentException("invalid hammer upgrade payload");
@@ -420,7 +454,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 case SET_ALLOW_SHOOTING_THRESHOLD -> buf.writeDouble(doublePayload);
                 case SET_TIER, SET_PRIORITY, SET_ENABLED -> buf.writeByte(bytePayload);
                 case SET_SETTINGS_GROUP -> buf.writeShort(shortPayload);
-                case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
+                case CREATE_SETTINGS_GROUP -> PacketUtil.writeString(buf, stringPayload == null ? "" : stringPayload);
+                case RENAME_SETTINGS_GROUP -> {
+                    buf.writeShort(shortPayload);
+                    PacketUtil.writeString(buf, stringPayload);
+                }
+                case CANCEL_MODULE_OPERATION -> {}
                 case COPY_MINER_SETTINGS, PLAN_MODULE_UPGRADE_TARGETS -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
@@ -429,7 +468,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                         buf.writeInt(0);
                     }
                 }
-                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
+                case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
                         buf.writeBytes(rawPayload);
@@ -474,7 +513,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
             }
             case PLAN_MINER_FOCUS_TIER -> bytePayload = buf.readByte();
             case SET_MINER_FOCUS_ORE -> stringPayload = PacketUtil.readString(buf);
-            case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY -> bytePayload = buf.readByte();
+            case SET_ALLOW_SHOOTING_MODE, SET_HAMMER_VARIANT, SET_ROUTE_PRIORITY, SET_RECIPE_SCHEDULER_MODE -> bytePayload = buf
+                .readByte();
             case PLAN_HAMMER_UPGRADE -> {
                 if (buf.readableBytes() < HAMMER_UPGRADE_PAYLOAD_BYTES) {
                     throw new IllegalArgumentException("missing hammer upgrade payload");
@@ -491,7 +531,12 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case SET_ALLOW_SHOOTING_THRESHOLD -> doublePayload = buf.readDouble();
             case SET_TIER, SET_PRIORITY, SET_ENABLED -> bytePayload = buf.readByte();
             case SET_SETTINGS_GROUP -> shortPayload = buf.readShort();
-            case CREATE_SETTINGS_GROUP, CANCEL_MODULE_OPERATION -> {}
+            case CREATE_SETTINGS_GROUP -> stringPayload = PacketUtil.readString(buf);
+            case RENAME_SETTINGS_GROUP -> {
+                shortPayload = buf.readShort();
+                stringPayload = PacketUtil.readString(buf);
+            }
+            case CANCEL_MODULE_OPERATION -> {}
             case COPY_MINER_SETTINGS -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_TILE_COORD_PAYLOAD_BYTES || len > buf.readableBytes()) {
@@ -510,7 +555,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 buf.readBytes(rawPayload);
                 decodeModuleUpgradeTargetsPayload(rawPayload);
             }
-            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> {
+            case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT, SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_RECIPE_PAYLOAD_BYTES || len > buf.readableBytes()) {
                     throw new IllegalArgumentException("invalid recipe payload length: " + len);
@@ -589,6 +634,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         }
         if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP
+            || getConfigAction() == ConfigAction.RENAME_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.COPY_MINER_SETTINGS
             || getConfigAction() == ConfigAction.PLAN_MODULE_UPGRADE_TARGETS)) {
             return AssetSyncPacket.fullSync(state)
@@ -676,11 +722,17 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     .applyMutation(MutationKind.SET_ENABLED, module.kind(), module);
             }
             case SET_SETTINGS_GROUP -> state.assignSettingsGroup(module, packet.shortPayload);
-            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(module, null);
+            case CREATE_SETTINGS_GROUP -> state.createSettingsGroupForModule(
+                module,
+                packet.stringPayload == null || packet.stringPayload.isBlank() ? null : packet.stringPayload);
+            case RENAME_SETTINGS_GROUP -> state
+                .renameSettingsGroupForModule(module, packet.shortPayload, packet.stringPayload);
             case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
             case COPY_MINER_SETTINGS -> handleCopyMinerSettings(packet, state, module);
             case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module, creative);
+            case SET_RECIPE_SCHEDULER_MODE -> handleRecipeSchedulerMode(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
+            case SET_INVENTORY_BOUND, CLEAR_INVENTORY_BOUND -> handleInventoryBound(packet, state);
         }
     }
 
@@ -931,6 +983,34 @@ public final class AssetModuleUpdatePacket implements IMessage {
         }
     }
 
+    private static void handleRecipeSchedulerMode(AssetModuleUpdatePacket packet, AutomatedFacility state,
+        ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) return;
+        RecipeSchedulerMode mode = PacketUtil.enumFromByte(packet.bytePayload, RecipeSchedulerMode.class);
+        if (mode == null) throw new IllegalArgumentException("invalid recipe scheduler mode: " + packet.bytePayload);
+
+        RecipeConfig config = state.recipeConfig(module);
+        state.setRecipeConfig(
+            module,
+            new RecipeConfig(config.savedRecipes(), mode, config.notDoablePolicy(), (byte) 0, (byte) 0));
+    }
+
+    private static void handleInventoryBound(AssetModuleUpdatePacket packet, AutomatedFacility state) {
+        if (packet.rawPayload == null) throw new IllegalArgumentException("missing inventory bound payload");
+        io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
+        BoundKind kind = PacketUtil.readEnum(payloadBuf, BoundKind.class);
+        String resourceKey = PacketUtil.readString(payloadBuf);
+        long amount = payloadBuf.readLong();
+        if (kind == null) throw new IllegalArgumentException("invalid inventory bound kind");
+        if (packet.getConfigAction() == ConfigAction.SET_INVENTORY_BOUND) {
+            state.inventory.setBound(kind, resourceKey, amount);
+            state.markInventoryBoundDelta(kind, resourceKey, true, amount);
+        } else {
+            state.inventory.clearBound(kind, resourceKey);
+            state.markInventoryBoundDelta(kind, resourceKey, false, amount);
+        }
+    }
+
     private static void handleRecipeSlot(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance module) {
         if (!(module.component() instanceof IRecipeModule recipeModule)) return;
@@ -938,89 +1018,77 @@ public final class AssetModuleUpdatePacket implements IMessage {
 
         io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
         int slotIndex = Byte.toUnsignedInt(payloadBuf.readByte());
-        if (slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) {
+        if (slotIndex >= SavedRecipeList.MAX_SAVED_RECIPES) {
             throw new IllegalArgumentException("recipe slot index out of range: " + slotIndex);
         }
 
-        RecipeConfig config = recipeModule.getRecipeConfig();
+        RecipeConfig config = state.recipeConfig(module);
         ConfigAction action = packet.getConfigAction();
 
         if (action == ConfigAction.REMOVE_RECIPE_SLOT) {
             if (packet.rawPayload.length != 1) {
                 throw new IllegalArgumentException("remove recipe slot payload must be exactly 1 byte");
             }
-            if (config == null) return;
-            if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, null)) return;
-            state.markModuleDirty(module.id);
+            if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, null)) return;
+            state.setRecipeConfig(module, config);
             return;
         }
 
-        // ADD or UPDATE: decode RecipeSlot from payload
-        if (packet.rawPayload.length < 25) {
+        if (packet.rawPayload.length < 2 + Integer.BYTES + Long.BYTES) {
             throw new IllegalArgumentException("truncated recipe slot payload");
         }
         byte recipeMapOrdinal = payloadBuf.readByte();
         int recipeIndex = payloadBuf.readInt();
         long contentHash = payloadBuf.readLong();
-        RecipeSnapshot ref;
-        boolean enabled;
-        int inputGuard;
-        int outputGuard;
-        byte priority;
-        byte orderSize;
-        if (packet.rawPayload.length == 25) {
-            enabled = payloadBuf.readBoolean();
-            inputGuard = payloadBuf.readInt();
-            outputGuard = payloadBuf.readInt();
-            priority = payloadBuf.readByte();
-            orderSize = payloadBuf.readByte();
-            ref = RecipeSnapshot.unresolved(recipeMapOrdinal, recipeIndex, contentHash);
-        } else {
-            int duration = payloadBuf.readInt();
-            int eut = payloadBuf.readInt();
-            ItemStack[] inputs = readItemStacks(payloadBuf);
-            ItemStack[] outputs = readItemStacks(payloadBuf);
-            int[] outputChances = readIntArray(payloadBuf);
-            FluidStack[] fluidInputs = readFluidStacks(payloadBuf);
-            FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
-            int[] fluidOutputChances = readIntArray(payloadBuf);
-            enabled = payloadBuf.readBoolean();
-            inputGuard = payloadBuf.readInt();
-            outputGuard = payloadBuf.readInt();
-            priority = payloadBuf.readByte();
-            orderSize = payloadBuf.readByte();
-            ref = new RecipeSnapshot(
-                recipeMapOrdinal,
-                recipeIndex,
-                contentHash,
-                inputs,
-                outputs,
-                fluidInputs,
-                fluidOutputs,
-                outputChances,
-                fluidOutputChances,
-                duration,
-                eut);
-        }
-        RecipeSnapshot validated = RecipeSlotPayloadValidator.validate(recipeModule, ref);
-        if (validated == null) return;
-        RecipeSlot slot = new RecipeSlot(validated, enabled, inputGuard, outputGuard, priority, orderSize);
+        int duration = payloadBuf.readInt();
+        int eut = payloadBuf.readInt();
+        ItemStack[] inputs = readItemStacks(payloadBuf);
+        ItemStack[] outputs = readItemStacks(payloadBuf);
+        int[] outputChances = readIntArray(payloadBuf);
+        FluidStack[] fluidInputs = readFluidStacks(payloadBuf);
+        FluidStack[] fluidOutputs = readFluidStacks(payloadBuf);
+        int[] fluidOutputChances = readIntArray(payloadBuf);
+        boolean enabled = payloadBuf.readBoolean();
+        long requestAmount = payloadBuf.readLong();
+        byte priority = payloadBuf.readByte();
+        byte orderSize = payloadBuf.readByte();
+        String displayName = PacketUtil.readString(payloadBuf);
+        RecipeSnapshot ref = new RecipeSnapshot(
+            recipeMapOrdinal,
+            recipeIndex,
+            contentHash,
+            inputs,
+            outputs,
+            fluidInputs,
+            fluidOutputs,
+            outputChances,
+            fluidOutputChances,
+            duration,
+            eut);
+        RecipeSnapshot recipe = recipeForSlotMutation(action, config, slotIndex, recipeModule, ref);
+        if (recipe == null) return;
+        SavedRecipe slot = new SavedRecipe(recipe, enabled, requestAmount, priority, orderSize, displayName);
 
-        if (config == null) {
-            config = RecipeConfig.empty();
-            recipeModule.setRecipeConfig(config);
-        }
+        if (!applyRecipeSlotMutation(config.savedRecipes(), action, slotIndex, slot)) return;
+        state.setRecipeConfig(module, config);
+    }
 
-        if (!applyRecipeSlotMutation(config.slots(), action, slotIndex, slot)) return;
-        state.markModuleDirty(module.id);
+    static @Nullable RecipeSnapshot recipeForSlotMutation(ConfigAction action, RecipeConfig config, int slotIndex,
+        IRecipeModule recipeModule, RecipeSnapshot ref) {
+        if (action == ConfigAction.UPDATE_RECIPE_SLOT) {
+            SavedRecipe existing = config.savedRecipes()
+                .getOrNull(slotIndex);
+            return existing != null ? existing.recipe() : null;
+        }
+        return RecipeSlotPayloadValidator.validate(recipeModule, ref);
     }
 
     private record ModuleUpgradeTargetsPayload(ModuleTier targetTier, @Nullable HammerVariant targetHammerVariant,
         boolean reserveItems, boolean voidCompletionRefund, List<StationTileCoord> targetCoords) {}
 
-    static boolean applyRecipeSlotMutation(RecipeSlotList slots, ConfigAction action, int slotIndex,
-        @Nullable RecipeSlot slot) {
-        if (slots == null || action == null || slotIndex < 0 || slotIndex >= RecipeSlotList.MAX_RECIPE_SLOTS) {
+    static boolean applyRecipeSlotMutation(SavedRecipeList slots, ConfigAction action, int slotIndex,
+        @Nullable SavedRecipe slot) {
+        if (slots == null || action == null || slotIndex < 0 || slotIndex >= SavedRecipeList.MAX_SAVED_RECIPES) {
             return false;
         }
 

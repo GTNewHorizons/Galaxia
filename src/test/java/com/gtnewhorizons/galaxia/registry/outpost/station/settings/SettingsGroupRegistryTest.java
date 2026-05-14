@@ -138,6 +138,11 @@ class SettingsGroupRegistryTest {
         }
 
         @Override
+        public ModuleSettings copy() {
+            return this;
+        }
+
+        @Override
         public String toString() {
             return marker;
         }

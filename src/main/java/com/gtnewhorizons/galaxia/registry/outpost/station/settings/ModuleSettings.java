@@ -7,4 +7,6 @@ public interface ModuleSettings {
     void applyTo(ModuleInstance instance);
 
     ModuleSettings from(ModuleInstance instance);
+
+    ModuleSettings copy();
 }

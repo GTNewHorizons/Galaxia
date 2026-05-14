@@ -8,8 +8,8 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 
 final class IRecipeModuleTest {
 
@@ -65,15 +65,15 @@ final class IRecipeModuleTest {
         StubRecipeModule module = new StubRecipeModule(null);
         module.setRecipeConfig(RecipeConfig.empty());
         RecipeConfig config = module.getRecipeConfig();
-        config.slots()
+        config.savedRecipes()
             .add(slot((byte) 1));
-        config.slots()
+        config.savedRecipes()
             .add(slot((byte) 5));
 
         assertEquals(1, module.getNextSlot(new Random(0)));
     }
 
-    private static RecipeSlot slot(byte priority) {
-        return new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 42L), true, 0, 0, priority, (byte) 1);
+    private static SavedRecipe slot(byte priority) {
+        return new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 42L), true, 0L, priority, (byte) 1);
     }
 }

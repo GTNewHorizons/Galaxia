@@ -13,7 +13,6 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
-import com.gtnewhorizons.galaxia.client.gui.station.recipe.RecipeInputScreen;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -327,7 +326,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         } else if (module.component() instanceof ModuleHammer) {
             configController.openHammer(moduleIndex);
         } else if (module.component() instanceof IRecipeModule) {
-            RecipeInputScreen.open(assetId, moduleIndex, module);
+            configController.openRecipeConfig(moduleIndex);
         }
     }
 

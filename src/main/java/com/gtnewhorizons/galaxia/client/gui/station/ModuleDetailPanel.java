@@ -13,18 +13,21 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
@@ -44,12 +47,11 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private boolean lastCoveredResult;
     private final @Nullable StationTilePickerController tilePickerController;
 
-    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController) {
-        this(map, configController, null);
+    public ModuleDetailPanel(StationMapWidget map) {
+        this(map, null);
     }
 
-    public ModuleDetailPanel(StationMapWidget map, ModuleConfigModalController configController,
-        @Nullable StationTilePickerController tilePickerController) {
+    public ModuleDetailPanel(StationMapWidget map, @Nullable StationTilePickerController tilePickerController) {
         this.map = map;
         this.tilePickerController = tilePickerController;
     }
@@ -150,14 +152,14 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
 
         if (module.component() instanceof ModuleHammer hammer) {
             lineY += SECTION_GAP;
-            lineY = drawHammerOverview(module, hammer, x, lineY, width);
+            lineY = drawHammerOverview(facility, module, hammer, x, lineY, width);
         }
 
         if (module.component() instanceof IRecipeModule recipeModule) {
             lineY += SECTION_GAP;
             RecipeConfig cfg = recipeModule.getRecipeConfig();
             int slots = cfg == null ? 0
-                : cfg.slots()
+                : cfg.savedRecipes()
                     .toList()
                     .size();
             lineY = drawLine(
@@ -174,7 +176,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         return y + fr.FONT_HEIGHT + 3;
     }
 
-    private int drawHammerOverview(ModuleInstance module, ModuleHammer hammer, int x, int y, int width) {
+    private int drawHammerOverview(AutomatedFacility facility, ModuleInstance module, ModuleHammer hammer, int x, int y,
+        int width) {
         int panelX = x + CONTENT_PADDING;
         int panelW = width - CONTENT_PADDING * 2;
         int lineY = y;
@@ -208,13 +211,28 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        HammerDispatchStatus.Status dispatchStatus = HammerDispatchStatus.evaluate(
+            facility,
+            module,
+            CelestialClient.allOutposts(),
+            CelestialClient.clientDeliveries(),
+            GalaxiaCelestialAPI.currentOrbitalTime());
+        lineY = drawLine(
+            hammerDispatchStatusLine(dispatchStatus),
+            panelX,
+            lineY,
+            dispatchStatus.code() == HammerDispatchStatus.Code.READY ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
+                : EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
         if (module.operationOrNull() != null && !module.operationOrNull()
             .phase()
             .isTerminal()) {
             lineY = drawLine(
-                "Operation: " + module.operationOrNull()
-                    .phase()
-                    .name(),
+                facility.isItemInventoryFull() && module.operationOrNull()
+                    .phase() == ModuleOperationPhase.REFUNDING
+                        ? "Inventory full; refund paused"
+                        : "Operation: " + module.operationOrNull()
+                            .phase()
+                            .name(),
                 panelX,
                 lineY,
                 EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
@@ -267,6 +285,25 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         if (amount < 1_000L) return Long.toString(amount);
         if (amount < 1_000_000L) return (amount / 1_000L) + "k";
         return (amount / 1_000_000L) + "M";
+    }
+
+    private static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
+        return switch (status.code()) {
+            case READY -> "Dispatch: ready";
+            case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";
+            case NO_EXPORT_CONFIG -> "Dispatch: export disabled";
+            case NO_SURPLUS_AFTER_RESERVE -> "Dispatch: no surplus after reserve";
+            case ORDER_BELOW_PACKAGE_SIZE -> "Dispatch: order below package size " + status.sendAmount()
+                + "/"
+                + status.orderSize();
+            case NEED_BIG_HAMMER -> "Dispatch: need BIG Hammer";
+            case ROUTE_UNAVAILABLE -> "Dispatch: route unavailable";
+            case BLOCKED_BY_DV_LIMIT -> "Dispatch: blocked by dV limit";
+            case BLOCKED_BY_TOF_LIMIT -> "Dispatch: blocked by TOF limit";
+            case NEED_ENERGY -> "Dispatch: need " + formatEu(status.requiredEnergy())
+                + " EU, buffer "
+                + formatEu(status.storedEnergy());
+        };
     }
 
     private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {

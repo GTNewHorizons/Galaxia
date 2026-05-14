@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
@@ -47,6 +48,8 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
             Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
+            Side.SERVER);
     }
 
     public static void registerClientPackets() {
@@ -58,7 +61,7 @@ public final class NetworkManager {
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
+        GALAXIA_NETWORK.registerMessage(ProfilerSyncPacket.Handler.class, ProfilerSyncPacket.class, id++,
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);

@@ -93,6 +93,40 @@ final class ModuleConfigModalControllerTest {
         assertTrue(controller.hammerUpgradeVoidRefund());
     }
 
+    @Test
+    void requestedRetargetIsDeferredUntilUpdatePass() {
+        TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleInstance miner = FacilityModuleKind.MINER
+            .create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        test.facility()
+            .addModule(miner);
+        test.facility()
+            .stationLayout()
+            .place(miner);
+        ModuleConfigModalController controller = controllerFor(test.facility());
+        controller.openHammer(0);
+
+        controller.requestRetargetTo(miner);
+
+        assertTrue(controller.isHammerOpen());
+
+        controller.processDeferredActions();
+
+        assertFalse(controller.isOpen());
+    }
+
+    @Test
+    void openingSameUpgradeTwiceClosesIt() {
+        TestFacility test = facilityWith(FacilityModuleKind.HAMMER, ModuleTier.EV);
+        ModuleConfigModalController controller = controllerFor(test.facility());
+
+        controller.openUpgrade(0);
+        assertTrue(controller.isModuleUpgradeOpen());
+
+        controller.openUpgrade(0);
+        assertFalse(controller.isOpen());
+    }
+
     private static ModuleConfigModalController controllerFor(AutomatedFacility facility) {
         CelestialAssetStore.CLIENT.registerAssetInternal(TEAM_ID, facility);
         return new ModuleConfigModalController(

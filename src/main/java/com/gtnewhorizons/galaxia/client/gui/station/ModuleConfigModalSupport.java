@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -28,10 +29,15 @@ final class ModuleConfigModalSupport {
     private ModuleConfigModalSupport() {}
 
     static void drawFrame(String title, int width, int height) {
-        net.minecraft.client.gui.Gui.drawRect(0, 0, width, height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-        net.minecraft.client.gui.Gui.drawRect(0, 0, width, HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-        BorderedRect.draw(0, 0, width, height, 0x00000000, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
-        drawLine(title, PANEL_PADDING, PANEL_PADDING, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+        drawFrameAt(title, 0, 0, width, height);
+    }
+
+    static void drawFrameAt(String title, int x, int y, int width, int height) {
+        net.minecraft.client.gui.Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
+        net.minecraft.client.gui.Gui
+            .drawRect(x, y, x + width, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
+        BorderedRect.draw(x, y, width, height, 0x00000000, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor());
+        drawLine(title, x + PANEL_PADDING, y + PANEL_PADDING, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
     }
 
     static ButtonWidget<?> button(String label, Runnable onClick) {
@@ -160,6 +166,15 @@ final class ModuleConfigModalSupport {
     static @Nullable ModuleInstance module(CelestialAsset.ID assetId, ModuleInstance.ID moduleId) {
         int moduleIndex = moduleIndex(assetId, moduleId);
         return moduleIndex >= 0 ? module(assetId, moduleIndex) : null;
+    }
+
+    static boolean refundBlockedByFullInventory(CelestialAsset.ID assetId, ModuleInstance module) {
+        AutomatedFacility facility = facility(assetId);
+        return facility != null && module != null
+            && module.operationOrNull() != null
+            && module.operationOrNull()
+                .phase() == ModuleOperationPhase.REFUNDING
+            && facility.isItemInventoryFull();
     }
 
     static String formatEu(long amount) {

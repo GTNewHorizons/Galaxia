@@ -19,6 +19,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
 public final class ModuleMiner extends TieredModuleComponent implements IParallelModule {
 
@@ -56,7 +58,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 if (shouldVoidOre(instance, outpost, oreKey)) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
-                outpost.inventory.add(ItemStackWrapper.of(ore), 1);
+                outpost.insertInventory(ItemStackWrapper.of(ore), 1);
             });
     }
 
@@ -82,6 +84,18 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     public static boolean shouldVoidOre(@Nonnull ModuleInstance instance, @Nonnull AutomatedFacility outpost,
         String oreKey) {
         return outpost.isMinerOreBlacklisted(instance, oreKey);
+    }
+
+    @Override
+    public ModuleSettings createPrivateSettings(ModuleInstance module) {
+        return new MinerSettings();
+    }
+
+    @Override
+    public void applySettings(ModuleInstance module, ModuleSettings settings) {
+        if (!(settings instanceof MinerSettings)) {
+            throw new IllegalStateException("MINER received non-miner settings for module " + module.id);
+        }
     }
 
     public MinerFocusTier focusTier() {
@@ -116,8 +130,9 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         if (focusTier == null) {
             throw new IllegalArgumentException("Miner focus tier must not be null");
         }
+        String normalizedFocusOreKey = normalizeFocusOreKey(focusOreKey);
         if (focusTier == MinerFocusTier.NONE) {
-            if (normalizeFocusOreKey(focusOreKey) != null) {
+            if (normalizedFocusOreKey != null) {
                 throw new IllegalArgumentException("Miner focus ore must be null when focus tier is NONE");
             }
             this.focusTier = focusTier;
@@ -126,8 +141,9 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             return;
         }
         this.focusTier = focusTier;
-        this.focusOreKey = normalizeFocusOreKey(focusOreKey);
-        this.focusAlignmentProgress = Math.clamp(focusAlignmentProgress, 0, MinerFocusTier.ALIGNMENT_REQUIRED_TICKS);
+        this.focusOreKey = normalizedFocusOreKey;
+        this.focusAlignmentProgress = normalizedFocusOreKey == null ? 0
+            : Math.clamp(focusAlignmentProgress, 0, MinerFocusTier.ALIGNMENT_REQUIRED_TICKS);
     }
 
     public void setFocusOre(String focusOreKey) {
@@ -144,13 +160,13 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         focusAlignmentProgress = 0;
     }
 
-    private static String normalizeFocusOreKey(String focusOreKey) {
-        return focusOreKey == null || focusOreKey.isBlank() ? null : focusOreKey;
-    }
-
     private void advanceFocusAlignment() {
         if (focusTier == MinerFocusTier.NONE || focusOreKey == null) return;
         focusAlignmentProgress = Math.min(MinerFocusTier.ALIGNMENT_REQUIRED_TICKS, focusAlignmentProgress + 1);
+    }
+
+    private static String normalizeFocusOreKey(String focusOreKey) {
+        return focusOreKey == null || focusOreKey.isBlank() ? null : focusOreKey;
     }
 
     private int effectiveFocusBonusFor(String oreKey) {

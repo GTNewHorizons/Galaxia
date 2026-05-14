@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,6 +65,17 @@ final class ModuleMinerTest {
 
         assertTrue(ModuleMiner.shouldVoidOre(miner, facility, "ore:iron"));
         assertFalse(ModuleMiner.shouldVoidOre(miner, facility, "ore:copper"));
+    }
+
+    @Test
+    void activeFocusTierCanExistWithoutSelectedOre() {
+        ModuleMiner miner = (ModuleMiner) createMiner().component();
+
+        miner.setFocus(MinerFocusTier.II, null, 1200);
+
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertNull(miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
     }
 
     @Test
@@ -152,11 +164,40 @@ final class ModuleMinerTest {
 
         assertTrue(group.isJoinable());
         assertEquals(originalGroupId, group.id());
+        assertEquals("Public miners", group.displayName());
         assertEquals(
             1,
             facility.settingsGroups()
                 .groups()
                 .size());
+    }
+
+    @Test
+    void renameSettingsGroupRequiresJoinableGroupOfSameKind() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> facility.renameSettingsGroupForModule(miner, miner.groupId(), "Hidden miners"));
+
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+        facility.renameSettingsGroupForModule(miner, group.id(), "  Priority miners  ");
+
+        assertEquals("Priority miners", group.displayName());
+    }
+
+    @Test
+    void renameSettingsGroupRejectsBlankName() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> facility.renameSettingsGroupForModule(miner, group.id(), " "));
     }
 
     @Test

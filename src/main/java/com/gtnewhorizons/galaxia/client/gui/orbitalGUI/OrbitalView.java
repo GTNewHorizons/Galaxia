@@ -3,9 +3,11 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isGregTechLoaded;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -26,6 +28,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
@@ -683,6 +686,11 @@ public class OrbitalView {
                     @Override
                     public double getServerOrbitalTime() {
                         return OrbitalMapWidget.this.getServerOrbitalTime();
+                    }
+
+                    @Override
+                    public boolean isBodyRendered(CelestialObject body) {
+                        return OrbitalMapWidget.this.isTransferEndpointRendered(body);
                     }
                 });
             this.transferTooltipWidget = new InterplanetaryTransferSystem.OrbitalTransferTooltipWidget(
@@ -1629,15 +1637,24 @@ public class OrbitalView {
         }
 
         private double getNearestOtherStarDistance(CelestialObject anchorStar) {
-            double[] anchorPos = getAbsoluteWorldPos(anchorStar);
+            return nearestOtherStarDistance(
+                anchorStar,
+                GalaxiaCelestialAPI.getChildren(root),
+                this::getAbsoluteWorldPos);
+        }
+
+        static double nearestOtherStarDistance(CelestialObject anchorStar, Collection<CelestialObject> galaxyBodies,
+            Function<CelestialObject, double[]> worldPositionProvider) {
+            if (anchorStar == null || galaxyBodies == null || worldPositionProvider == null) return Double.MAX_VALUE;
+            double[] anchorPos = worldPositionProvider.apply(anchorStar);
             if (anchorPos == null) return Double.MAX_VALUE;
             double nearestDistance = Double.MAX_VALUE;
-            for (CelestialObject child : GalaxiaCelestialAPI.getChildren(anchorStar)) {
-                if (child == anchorStar || child.objectClass() != CelestialObject.Class.STAR) continue;
-                double[] childPos = getAbsoluteWorldPos(child);
-                if (childPos == null) continue;
+            for (CelestialObject body : galaxyBodies) {
+                if (body == anchorStar || body.objectClass() != CelestialObject.Class.STAR) continue;
+                double[] bodyPos = worldPositionProvider.apply(body);
+                if (bodyPos == null) continue;
                 nearestDistance = Math
-                    .min(nearestDistance, Math.hypot(childPos[0] - anchorPos[0], childPos[1] - anchorPos[1]));
+                    .min(nearestDistance, Math.hypot(bodyPos[0] - anchorPos[0], bodyPos[1] - anchorPos[1]));
             }
             return nearestDistance;
         }
@@ -1807,6 +1824,10 @@ public class OrbitalView {
             return isDescendantOrSelf(viewRoot, body);
         }
 
+        private boolean isTransferEndpointRendered(CelestialObject body) {
+            return body != null && isVisibleInCurrentLayer(body) && shouldRenderBodyAtCurrentZoom(body);
+        }
+
         private boolean isDescendantOrSelf(CelestialObject ancestor, CelestialObject target) {
             if (ancestor == target) return true;
             for (CelestialObject child : GalaxiaCelestialAPI.getChildren(ancestor))
@@ -1872,12 +1893,14 @@ public class OrbitalView {
             if (!transfersHidden) {
                 transferRenderer.drawTransferPaths(
                     transferState,
+                    viewRoot,
                     globalTime,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
                 transferRenderer.drawTransferPaths(
                     clientSimulatedTransferState,
+                    viewRoot,
                     globalTime,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
@@ -1897,12 +1920,14 @@ public class OrbitalView {
             if (!transfersHidden) {
                 transferRenderer.drawTransferDots(
                     transferState,
+                    viewRoot,
                     globalTime,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
                         : 0f);
                 transferRenderer.drawTransferDots(
                     clientSimulatedTransferState,
+                    viewRoot,
                     globalTime,
                     viewRoot.objectClass() == CelestialObject.Class.STAR
                         ? (float) Math.max(0.0, 1.0 - viewState.isometricProgress * 2.5)
@@ -1917,6 +1942,7 @@ public class OrbitalView {
             drawActionStatusMessage();
             sceneRenderer.drawViewTitleBanner(viewRoot, getArea().width);
             drawViewStatusLabel(viewRoot, getArea().width);
+            drawHammerTrajectoryLoadDebug(getArea().width);
             int localMouseX = getContext().getMouseX();
             int localMouseY = getContext().getMouseY();
             if (transfersHidden || dragging
@@ -1928,11 +1954,12 @@ public class OrbitalView {
                 clientSimulatedTransferState.updateHoveredTransfer(null, localMouseX, localMouseY);
             } else {
                 InterplanetaryTransferJob hoveredSimulatedTransfer = transferRenderer
-                    .findHoveredTransfer(clientSimulatedTransferState, globalTime, localMouseX, localMouseY);
+                    .findHoveredTransfer(clientSimulatedTransferState, viewRoot, globalTime, localMouseX, localMouseY);
                 clientSimulatedTransferState.updateHoveredTransfer(hoveredSimulatedTransfer, localMouseX, localMouseY);
                 transferState.updateHoveredTransfer(
                     hoveredSimulatedTransfer == null
-                        ? transferRenderer.findHoveredTransfer(transferState, globalTime, localMouseX, localMouseY)
+                        ? transferRenderer
+                            .findHoveredTransfer(transferState, viewRoot, globalTime, localMouseX, localMouseY)
                         : null,
                     localMouseX,
                     localMouseY);
@@ -2001,9 +2028,9 @@ public class OrbitalView {
                 || contextMenuState.isOpen()
                 || transferSimulatorState.isWaitingForPick()) return null;
             InterplanetaryTransferJob simulatedTransfer = transferRenderer
-                .findHoveredTransfer(clientSimulatedTransferState, globalTime, mouseX, mouseY);
+                .findHoveredTransfer(clientSimulatedTransferState, viewRoot, globalTime, mouseX, mouseY);
             return simulatedTransfer == null
-                ? transferRenderer.findHoveredTransfer(transferState, globalTime, mouseX, mouseY)
+                ? transferRenderer.findHoveredTransfer(transferState, viewRoot, globalTime, mouseX, mouseY)
                 : simulatedTransfer;
         }
 
@@ -2101,14 +2128,25 @@ public class OrbitalView {
             double arrivalDisplayTime = mapServerOrbitalTimeToDisplay(
                 delivery.data.departureOrbitalTime() + delivery.data.tofOrbitalSeconds());
             double displayedTof = Math.max(1e-6, arrivalDisplayTime - departureDisplayTime);
-            InterplanetaryTransferJob base = transferSupport.createTransferJob(
-                root,
-                sourceBody,
-                destinationBody,
-                TransferPackageKind.HAMMER.displayName(),
-                summary,
-                departureDisplayTime,
-                displayedTof);
+            OrbitalTransferPlanner.TransferRoute route = delivery.data.transferRoute();
+            InterplanetaryTransferJob base = route != null && route.hasTrajectoryGeometry()
+                ? transferSupport.createTransferJob(
+                    root,
+                    sourceBody,
+                    destinationBody,
+                    TransferPackageKind.HAMMER.displayName(),
+                    summary,
+                    departureDisplayTime,
+                    displayedTof,
+                    route)
+                : transferSupport.createTransferJob(
+                    root,
+                    sourceBody,
+                    destinationBody,
+                    TransferPackageKind.HAMMER.displayName(),
+                    summary,
+                    departureDisplayTime,
+                    displayedTof);
             if (base == null) return null;
 
             return new InterplanetaryTransferJob(
@@ -2180,7 +2218,22 @@ public class OrbitalView {
                     "Stress: " + report.executedSimulations()
                         + " runs, 0 solved within 500 dV in "
                         + elapsedMs
-                        + " ms");
+                        + " ms\n"
+                        + formatStressBenchmarkBreakdown(report));
+                return;
+            }
+
+            if (report.hasTrajectoryFailures()) {
+                showActionStatus(
+                    "Stress: " + report.trajectoryFailures()
+                        + " trajectory failures / "
+                        + report.successfulTransfers()
+                        + " solved in "
+                        + elapsedMs
+                        + "ms avg="
+                        + formatDecimal1(elapsedMs / (double) Math.max(1, report.executedSimulations()))
+                        + "ms/run\n"
+                        + formatStressBenchmarkBreakdown(report));
                 return;
             }
 
@@ -2196,7 +2249,10 @@ public class OrbitalView {
                     + formatDecimal1(report.worstTotalDv())
                     + " time="
                     + elapsedMs
-                    + "ms");
+                    + "ms avg="
+                    + formatDecimal1(elapsedMs / (double) Math.max(1, report.executedSimulations()))
+                    + "ms/run\n"
+                    + formatStressBenchmarkBreakdown(report));
         }
 
         private void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha) {
@@ -2210,7 +2266,10 @@ public class OrbitalView {
                 return;
             }
             // TODO: COLOR
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(actionStatusMessage, 12, 24, 0xFFD9E0FF);
+            String[] lines = actionStatusMessage.split("\\R");
+            for (int i = 0; i < lines.length; i++) {
+                Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(lines[i], 12, 36 + i * 11, 0xFFD9E0FF);
+            }
         }
 
         private void drawViewStatusLabel(CelestialObject viewRoot, int widgetWidth) {
@@ -2226,6 +2285,24 @@ public class OrbitalView {
             int statusX = Math.round(widgetWidth / 2f + titleWidth / 2f + 68f);
             int statusY = 18;
             mc.fontRenderer.drawStringWithShadow(statusText, statusX, statusY, EnumColors.MapStatusText.getColor());
+        }
+
+        private void drawHammerTrajectoryLoadDebug(int widgetWidth) {
+            if (!isCreativeModeAvailable()) return;
+            HammerTrajectoryLoadSample sample = CelestialClient.hammerTrajectoryLoadSample();
+            String text = "route ms/tick own=" + formatDebugMillis(sample.ownMsPerTick())
+                + " all="
+                + formatDebugMillis(sample.allMsPerTick());
+
+            Minecraft mc = Minecraft.getMinecraft();
+            int x = Math.max(12, widgetWidth - mc.fontRenderer.getStringWidth(text) - 12);
+            mc.fontRenderer.drawStringWithShadow(text, x, 36, 0xFF9FD7FF);
+        }
+
+        private String formatDebugMillis(double value) {
+            if (value < 1.0) return String.format(java.util.Locale.ROOT, "%.3f", value);
+            if (value < 10.0) return String.format(java.util.Locale.ROOT, "%.2f", value);
+            return String.format(java.util.Locale.ROOT, "%.1f", value);
         }
 
         private String formatCompactDecimal(double value, int maxDecimals) {
@@ -2272,6 +2349,42 @@ public class OrbitalView {
         private String formatDecimal1(double value) {
             long scaled = Math.round(value * 10.0);
             return (scaled / 10L) + "." + Math.abs(scaled % 10L);
+        }
+
+        private String formatDecimal2(double value) {
+            long scaled = Math.round(value * 100.0);
+            return (scaled / 100L) + "." + Math.abs((scaled / 10L) % 10L) + Math.abs(scaled % 10L);
+        }
+
+        private String formatStressBenchmarkBreakdown(InterplanetaryTransferSystem.LambertStressReport report) {
+            int runs = Math.max(1, report.executedSimulations());
+            return "ms/action: scan=" + formatDecimal2(nanosToMillisPerRun(report.routeScanNanos(), runs))
+                + " sample="
+                + formatDecimal2(nanosToMillisPerRun(report.trajectorySampleNanos(), runs))
+                + " other="
+                + formatDecimal2(nanosToMillisPerRun(report.otherNanos(), runs))
+                + "\nscan: hoh="
+                + formatDecimal2(nanosToMillisPerRun(report.hohmannNanos(), runs))
+                + " dep="
+                + formatDecimal2(nanosToMillisPerRun(report.departureResolveNanos(), runs))
+                + " arr="
+                + formatDecimal2(nanosToMillisPerRun(report.arrivalResolveNanos(), runs))
+                + " geom="
+                + formatDecimal2(nanosToMillisPerRun(report.geometryNanos(), runs))
+                + " lam="
+                + formatDecimal2(nanosToMillisPerRun(report.lambertNanos(), runs))
+                + " acc="
+                + formatDecimal2(nanosToMillisPerRun(report.acceptNanos(), runs))
+                + " overhead="
+                + formatDecimal2(nanosToMillisPerRun(report.scanOverheadNanos(), runs))
+                + " cand="
+                + report.scanCandidateCount()
+                + " lamCalls="
+                + report.lambertPairCount() * 2;
+        }
+
+        private double nanosToMillisPerRun(long nanos, int runs) {
+            return nanos / 1_000_000.0 / Math.max(1, runs);
         }
 
         private void updateRenameFieldLayout() {
