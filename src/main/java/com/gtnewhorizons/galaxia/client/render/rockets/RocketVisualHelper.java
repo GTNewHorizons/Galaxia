@@ -1,18 +1,18 @@
 package com.gtnewhorizons.galaxia.client.render.rockets;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
 
 /**
  * Central rendering engine for all rockets and rocket-like structures.
@@ -54,8 +54,15 @@ public final class RocketVisualHelper {
         if (def.modelLocation() != null) {
             IModelCustom model = ModelCache.get(def.modelLocation());
             if (model != null) {
-                bindTexture(def.textureLocation());
+                GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT);
+                GL11.glDisable(GL11.GL_CULL_FACE);
+                GL11.glEnable(GL11.GL_BLEND);
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                Minecraft.getMinecraft()
+                    .getTextureManager()
+                    .bindTexture(def.textureLocation());
                 model.renderAll();
+                GL11.glPopAttrib();
                 GL11.glPopMatrix();
                 return;
             }
@@ -125,12 +132,5 @@ public final class RocketVisualHelper {
         GL11.glVertex3f(1, 0, 1);
         // Top / Bottom / Sides omitted for brevity — in production use full cube or model
         // (This is temporary visual placeholder)
-    }
-
-    private static void bindTexture(ResourceLocation texture) {
-        if (texture != null) {
-            // Use Minecraft's texture manager in real implementation
-            // net.minecraft.client.renderer.texture.TextureManager
-        }
     }
 }

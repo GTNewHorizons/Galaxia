@@ -46,8 +46,7 @@ public class RocketPartRegistry {
                 3.0,
                 2.5,
                 450.0,
-                null,
-                null));
+                "capsule_1"));
 
         register(
             new FuelTankPartDef(
@@ -57,7 +56,6 @@ public class RocketPartRegistry {
                 5.0,
                 1200.0,
                 8000.0,
-                null,
                 null));
 
         register(
@@ -68,7 +66,6 @@ public class RocketPartRegistry {
                 3.5,
                 250.0,
                 6000.0,
-                null,
                 null));
 
         register(
@@ -79,7 +76,6 @@ public class RocketPartRegistry {
                 1.0,
                 100.0,
                 1,
-                null,
                 null));
 
         register(
@@ -89,7 +85,6 @@ public class RocketPartRegistry {
                 3.0,
                 2.5,
                 250.0,
-                null,
                 null));
 
         register(
@@ -100,7 +95,6 @@ public class RocketPartRegistry {
                 5.0,
                 250.0,
                 6,
-                null,
                 null));
 
         register(
@@ -110,7 +104,6 @@ public class RocketPartRegistry {
                 3.0,
                 4.0,
                 900.0,
-                null,
                 null));
     }
     // spotless:on
