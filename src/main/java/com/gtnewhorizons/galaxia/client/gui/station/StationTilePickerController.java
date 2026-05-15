@@ -18,6 +18,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class StationTilePickerController {
 
+    enum VisualStyle {
+        BUILD,
+        DECONSTRUCT
+    }
+
     private String title = "";
     private String confirmLabel = "Confirm";
     private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
@@ -26,6 +31,7 @@ final class StationTilePickerController {
     private Consumer<List<StationTileCoord>> confirmHandler = selected -> {};
     private ModuleShape selectionFootprint = ModuleShape.SINGLE;
     private @Nullable FacilityModuleKind previewModuleKind;
+    private VisualStyle visualStyle = VisualStyle.BUILD;
     private boolean footprintRotationEnabled;
     private int footprintRotation;
     private final Set<StationTileCoord> selected = new LinkedHashSet<>();
@@ -70,6 +76,10 @@ final class StationTilePickerController {
 
     void setPreviewModuleKind(@Nullable FacilityModuleKind kind) {
         this.previewModuleKind = kind;
+    }
+
+    void setVisualStyle(VisualStyle visualStyle) {
+        this.visualStyle = visualStyle == null ? VisualStyle.BUILD : visualStyle;
     }
 
     boolean rotateSelectionFootprint() {
@@ -152,6 +162,10 @@ final class StationTilePickerController {
         return previewModuleKind;
     }
 
+    VisualStyle visualStyle() {
+        return visualStyle;
+    }
+
     Set<StationTileCoord> selectedTargets() {
         return Collections.unmodifiableSet(selected);
     }
@@ -179,6 +193,7 @@ final class StationTilePickerController {
         confirmHandler = selected -> {};
         selectionFootprint = ModuleShape.SINGLE;
         previewModuleKind = null;
+        visualStyle = VisualStyle.BUILD;
         footprintRotationEnabled = false;
         footprintRotation = 0;
     }

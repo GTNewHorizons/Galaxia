@@ -35,6 +35,12 @@ public final class StationTileRenderer {
         drawBorder(x, y, size, 0xCC249650);
     }
 
+    public static void drawPickerDeconstructSelectedOverlay(int x, int y, int size) {
+        int color = 0xFFFF4F4F;
+        drawBorder(x, y, size, color);
+        drawBorder(x - 1, y - 1, size + 2, color);
+    }
+
     private static void drawBorder(int x, int y, int size, int color) {
         BorderedRect.drawBorderOnly(x, y, size, size, color);
     }

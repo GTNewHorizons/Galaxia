@@ -309,7 +309,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         drawFeatureOverlay(facility);
 
-        drawPickerOverlay(context);
+        drawPickerOverlay(context, tiles);
 
         drawCoreDirectionIndicator(tiles.keySet());
 
@@ -369,8 +369,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         hovered = hitTest(layout, localX, localY);
     }
 
-    private void drawPickerOverlay(ModularGuiContext context) {
+    private void drawPickerOverlay(ModularGuiContext context, Map<StationTileCoord, PlacedTile> tiles) {
         if (!isPickerActive()) return;
+        if (tilePickerController.visualStyle() == StationTilePickerController.VisualStyle.DECONSTRUCT) {
+            drawDeconstructPickerOverlay(tiles);
+            return;
+        }
         ModuleShape footprint = tilePickerController.selectionFootprint();
         Set<StationTileCoord> touchTiles = new LinkedHashSet<>(expansionSlots);
         Set<StationTileCoord> candidateAnchors = new LinkedHashSet<>();
@@ -391,6 +395,21 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
         }
         drawPickerHoverFootprint(context, footprint);
+    }
+
+    private void drawDeconstructPickerOverlay(Map<StationTileCoord, PlacedTile> tiles) {
+        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
+            StationTileCoord coord = entry.getKey();
+            StationTileCoord normalized = normalizePickerTarget(coord);
+            if (!tilePickerController.isCompatibleNormalized(normalized)) continue;
+            int x = tileLocalX(coord);
+            int y = tileLocalY(coord);
+            if (tilePickerController.isSelected(coord)) {
+                StationTileRenderer.drawPickerDeconstructSelectedOverlay(x, y, StationMapViewport.TILE_SIZE);
+            } else {
+                StationTileRenderer.drawPickerCompatibleOverlay(x, y, StationMapViewport.TILE_SIZE);
+            }
+        }
     }
 
     private void drawPickerHoverFootprint(ModularGuiContext context, ModuleShape footprint) {
