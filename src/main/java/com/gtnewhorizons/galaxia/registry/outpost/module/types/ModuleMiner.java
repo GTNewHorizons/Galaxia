@@ -6,10 +6,10 @@ import java.util.Random;
 
 import javax.annotation.Nonnull;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -62,7 +62,8 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 if (shouldVoidOre(instance, (AutomatedFacility) outpost, oreKey)) return;
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
-                outpost.addToInventory(ore, 1);
+                ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
+                if (oreWrapper != null) outpost.updateItems(oreWrapper, 1);
             });
     }
 

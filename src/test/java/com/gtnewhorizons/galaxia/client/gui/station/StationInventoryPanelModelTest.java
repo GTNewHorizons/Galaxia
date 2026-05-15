@@ -3,16 +3,19 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.IFluidTank;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -39,13 +42,13 @@ final class StationInventoryPanelModelTest {
     }
 
     @Test
-    void inventoryRowsIncludeItemsWithBoundsButNoStock() {
+    void inventoryRowsShowAllItems() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
         ItemStackWrapper tracked = new ItemStackWrapper(new Item(), 0, null);
-        inventory.setItemLowerBound(tracked, 32);
+        inventory.setAmount(tracked, 5);
 
-        IDistributedInventoryOLD distributed = distributed(inventory);
-        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed, inventory);
+        IDistributedInventory distributed = distributed(inventory);
+        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -53,31 +56,31 @@ final class StationInventoryPanelModelTest {
             rows.get(0)
                 .getKey());
         assertEquals(
-            0L,
+            5L,
             rows.get(0)
                 .getValue());
     }
 
     @Test
-    void inventoryRowsHideZeroStockItemsWithoutBounds() {
+    void inventoryRowsHideZeroStockItems() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
         inventory.setAmount(new ItemStackWrapper(new Item(), 0, null), 0);
 
         assertTrue(
-            StationInventoryPanelModel.inventoryRows(distributed(inventory), null)
+            StationInventoryPanelModel.inventoryRows(distributed(inventory))
                 .isEmpty());
     }
 
-    private static IDistributedInventoryOLD distributed(AutomatedFacilityInventory inv) {
-        return new IDistributedInventoryOLD() {
+    private static IDistributedInventory distributed(AutomatedFacilityInventory inv) {
+        return new IDistributedInventory() {
 
             @Override
-            public Map<ItemStackWrapper, Long> aggregatedItemAmounts() {
+            public Map<ItemStackWrapper, Long> aggregatedItems() {
                 return inv.snapshot();
             }
 
             @Override
-            public long totalItemCount() {
+            public long totalItemsStored() {
                 return inv.totalItems();
             }
 
@@ -87,59 +90,49 @@ final class StationInventoryPanelModelTest {
             }
 
             @Override
-            public String getInventoryName() {
-                return "test";
-            }
-
-            @Override
-            public List<ItemStack> getFiltersFor(int i) {
+            public List<IFluidTank> getFluidTanks() {
                 return List.of();
             }
 
             @Override
-            public void setFilters(int slot, List<ItemStack> filterList) {}
+            public Map<FluidKey, Long> aggregatedFluids() {
+                Map<FluidKey, Long> result = new LinkedHashMap<>();
+                for (Map.Entry<FluidKey, Long> e : inv.fluidSnapshot()
+                    .entrySet()) {
+                    result.put(e.getKey(), e.getValue());
+                }
+                return result;
+            }
 
-            @Override
-            public void addFilter(int slot, ItemStack filter) {}
-
-            @Override
-            public void removeFilter(int slot, ItemStack filter) {}
-
-            @Override
-            public void clearFilters(int slot) {}
-
-            @Override
-            public Map<Integer, List<ItemStack>> filtersSnapshot() {
-                return Map.of();
+            public String getInventoryName() {
+                return "test";
             }
         };
     }
 
     @Test
-    void fluidRowsIncludeFluidsWithBoundsButNoStoredAmount() {
+    void fluidRowsShowStoredFluids() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.setFluidUpperBound("galaxia.test.fluid", 1000);
+        FluidKey water = new FluidKey(new Fluid("water"), null);
+        inventory.addFluid(water, 1000);
 
-        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(inventory);
+        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(distributed(inventory));
 
         assertEquals(1, rows.size());
         assertEquals(
-            "galaxia.test.fluid",
-            rows.get(0)
-                .fluidName());
-        assertEquals(
-            0L,
+            1000L,
             rows.get(0)
                 .amount());
     }
 
     @Test
-    void fluidRowsHideZeroAmountFluidsWithoutBounds() {
+    void fluidRowsHideZeroAmountFluids() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.addFluid("galaxia.test.fluid", 0);
+        FluidKey water = new FluidKey(new Fluid("water"), null);
+        inventory.addFluid(water, 0);
 
         assertTrue(
-            StationInventoryPanelModel.fluidRows(inventory)
+            StationInventoryPanelModel.fluidRows(distributed(inventory))
                 .isEmpty());
     }
 }

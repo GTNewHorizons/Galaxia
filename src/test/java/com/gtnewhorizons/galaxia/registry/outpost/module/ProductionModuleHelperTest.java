@@ -2,22 +2,24 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Random;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
@@ -27,13 +29,18 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 
-import sun.misc.Unsafe;
-
 final class ProductionModuleHelperTest {
+
+    private static Fluid TEST_FLUID_1;
+    private static Fluid TEST_FLUID_2;
 
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
+
+        TEST_FLUID_1 = FluidRegistry.WATER;
+        TEST_FLUID_2 = FluidRegistry.LAVA;
     }
 
     @Test
@@ -132,10 +139,11 @@ final class ProductionModuleHelperTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        station.inventory.addFluid("galaxia.production.input", 1000);
+        FluidKey inputKey = new FluidKey(TEST_FLUID_1, null);
+        station.inventory.addFluid(inputKey, 1000);
 
-        FluidStack[] fluidInputs = { fluidStack("galaxia.production.input", 144) };
-        FluidStack[] fluidOutputs = { fluidStack("galaxia.production.output", 72) };
+        FluidStack[] fluidInputs = { new FluidStack(TEST_FLUID_1, 144) };
+        FluidStack[] fluidOutputs = { new FluidStack(TEST_FLUID_2, 72) };
         RecipeSnapshot snapshot = new RecipeSnapshot(
             (byte) 1,
             0,
@@ -153,8 +161,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(856, station.inventory.getFluidAmount("galaxia.production.input"));
-        assertEquals(72, station.inventory.getFluidAmount("galaxia.production.output"));
+        assertEquals(856, station.inventory.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
+        assertEquals(72, station.inventory.getFluidAmount(new FluidKey(TEST_FLUID_2, null)));
     }
 
     @Test
@@ -273,32 +281,33 @@ final class ProductionModuleHelperTest {
 
         AutomatedFacility atGuard = station();
         atGuard.inventory.add(inputResource, 1);
-        atGuard.inventory.addFluid("galaxia.production.chanced_output", 72);
-        atGuard.inventory.setFluidUpperBound("galaxia.production.chanced_output", 72);
+        FluidKey outputKey = new FluidKey(TEST_FLUID_1, null);
+        atGuard.inventory.addFluid(outputKey, 72);
+        atGuard.inventory.setFluidUpperBound(outputKey, 72);
         ProductionModuleHelper.execute(
             null,
             atGuard,
-            fluidOutputModule(inputItem, fluidStack("galaxia.production.chanced_output", 72)),
+            fluidOutputModule(inputItem, new FluidStack(TEST_FLUID_1, 72)),
             new FixedRandom(4999),
             new HashMap<>(),
             new HashMap<>());
 
         assertEquals(1, atGuard.inventory.getAmount(inputResource));
-        assertEquals(72, atGuard.inventory.getFluidAmount("galaxia.production.chanced_output"));
+        assertEquals(72, atGuard.inventory.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
 
         AutomatedFacility belowGuard = station();
         belowGuard.inventory.add(inputResource, 1);
-        belowGuard.inventory.setFluidUpperBound("galaxia.production.chanced_output", 72);
+        belowGuard.inventory.setFluidUpperBound(new FluidKey(TEST_FLUID_1, null), 72);
         ProductionModuleHelper.execute(
             null,
             belowGuard,
-            fluidOutputModule(inputItem, fluidStack("galaxia.production.chanced_output", 72)),
+            fluidOutputModule(inputItem, new FluidStack(TEST_FLUID_1, 72)),
             new FixedRandom(4999),
             new HashMap<>(),
             new HashMap<>());
 
         assertEquals(0, belowGuard.inventory.getAmount(inputResource));
-        assertEquals(72, belowGuard.inventory.getFluidAmount("galaxia.production.chanced_output"));
+        assertEquals(72, belowGuard.inventory.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
     }
 
     @Test
@@ -439,35 +448,6 @@ final class ProductionModuleHelperTest {
         @Override
         public int nextInt(int bound) {
             return value;
-        }
-    }
-
-    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
-        Fluid fluid = new Fluid(fluidName);
-        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-        unsafeField.setAccessible(true);
-        Unsafe unsafe = (Unsafe) unsafeField.get(null);
-        FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
-        Field fluidField = FluidStack.class.getDeclaredField("fluid");
-        fluidField.setAccessible(true);
-        fluidField.set(stack, fluid);
-        stack.amount = amount;
-        return stack;
-    }
-
-    private static String fluidName(FluidStack stack) {
-        try {
-            Fluid fluid = stack.getFluid();
-            return fluid != null ? fluid.getName() : null;
-        } catch (RuntimeException ignored) {
-            try {
-                Field fluidField = FluidStack.class.getDeclaredField("fluid");
-                fluidField.setAccessible(true);
-                Fluid fluid = (Fluid) fluidField.get(stack);
-                return fluid != null ? fluid.getName() : null;
-            } catch (ReflectiveOperationException e) {
-                return null;
-            }
         }
     }
 }

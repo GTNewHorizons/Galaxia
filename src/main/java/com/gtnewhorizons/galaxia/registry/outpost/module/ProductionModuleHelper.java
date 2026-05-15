@@ -4,14 +4,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
@@ -25,9 +25,9 @@ public final class ProductionModuleHelper {
 
     private ProductionModuleHelper() {}
 
-    public static void execute(ModuleInstance instance, CelestialAsset asset, IRecipeModule recipeModule,
-                               Random random, Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
-                               Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache) {
+    public static void execute(ModuleInstance instance, CelestialAsset asset, IRecipeModule recipeModule, Random random,
+        Map<RecipeSnapshot, ItemStackWrapper[]> inputWrapperCache,
+        Map<RecipeSnapshot, ItemStackWrapper[]> outputWrapperCache) {
         // TODO: Make this work with the new inventory system
         if (!(asset instanceof AutomatedFacility outpost)) {
             throw new IllegalStateException("This method should only be called by AutomatedFacilities");
@@ -78,7 +78,7 @@ public final class ProductionModuleHelper {
 
         // Consume inputs
         for (Map.Entry<ItemStackWrapper, Long> e : requiredInputs.entrySet()) {
-            outpost.addItems(e.getKey(), -e.getValue());
+            outpost.updateItems(e.getKey(), -(int) Math.min(e.getValue(), Integer.MAX_VALUE));
         }
 
         if (fluidInputs != null) {
@@ -91,7 +91,7 @@ public final class ProductionModuleHelper {
         // Produce outputs
         for (Map.Entry<ItemStackWrapper, Long> e : selectedItemOutputs.totals()
             .entrySet()) {
-            outpost.addItems(e.getKey(), e.getValue());
+            outpost.updateItems(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE));
         }
 
         if (fluidOutputs != null) {
@@ -152,7 +152,7 @@ public final class ProductionModuleHelper {
     }
 
     private static boolean hasRequiredInputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> itemInputs,
-                                             Map<String, Long> fluidInputs) {
+        Map<String, Long> fluidInputs) {
         for (Map.Entry<ItemStackWrapper, Long> entry : itemInputs.entrySet()) {
             if (inv.getAmount(entry.getKey()) < entry.getValue()) return false;
         }
@@ -162,16 +162,16 @@ public final class ProductionModuleHelper {
         return true;
     }
 
-    private static boolean canFitSelectedItemOutputs(CelestialAsset outpost, Map<ItemStackWrapper, Long> outputs,
-                                                     Map<ItemStackWrapper, Long> inputs) {
+    private static boolean canFitSelectedItemOutputs(AutomatedFacility outpost, Map<ItemStackWrapper, Long> outputs,
+        Map<ItemStackWrapper, Long> inputs) {
         long outputAmount = totalAmount(outputs);
         if (outputAmount <= 0L) return true;
-        long usedAfterInputs = Math.max(0L, outpost.totalItemCount() - totalAmount(inputs));
-        return usedAfterInputs + outputAmount <= outpost.getSizeInventory();
+        long freedByInputs = totalAmount(inputs);
+        return outpost.remainingItemInventoryCapacity() + freedByInputs >= outputAmount;
     }
 
     private static boolean allowsInputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> requiredInputs,
-                                        Map<String, Long> requiredFluidInputs) {
+        Map<String, Long> requiredFluidInputs) {
         for (Map.Entry<ItemStackWrapper, Long> entry : requiredInputs.entrySet()) {
             if (inv.hasItemLowerBound(entry.getKey()) && !inv.keepsItemLowerBoundAfterConsume(
                 entry.getKey(),
@@ -192,7 +192,7 @@ public final class ProductionModuleHelper {
     }
 
     private static boolean matchesRequestAmount(AutomatedFacilityInventory inv, SavedRecipe slot,
-                                                ItemStackWrapper[] outputWrappers, FluidStack[] fluidOutputs) {
+        ItemStackWrapper[] outputWrappers, FluidStack[] fluidOutputs) {
         long requestAmount = slot.requestAmount();
         if (requestAmount <= 0L) return true;
         boolean hasOutputs = false;

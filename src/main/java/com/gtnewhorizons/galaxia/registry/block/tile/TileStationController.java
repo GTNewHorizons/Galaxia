@@ -1,15 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-import codechicken.nei.ItemStackAmount;
-import ic2.core.util.ItemStackWrapper;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -33,14 +26,10 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.interfaces.IFilteredInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraftforge.fluids.FluidStack;
-import thaumic.tinkerer.common.registry.ItemStackCompatator;
-
-public class TileStationController extends TileStationBase<TileStationController> implements IFilteredInventory {
+public class TileStationController extends TileStationBase<TileStationController> {
 
     private UUID owner;
     private CelestialAsset.ID backingStation;
@@ -116,85 +105,10 @@ public class TileStationController extends TileStationBase<TileStationController
         return sum;
     }
 
-    public List<IInventory> getConnectedInventories() {
+    public List<IDistributedInventory> getConnectedInventories() {
         if (graph == null) return List.of();
-        ObjectArrayList<IInventory> result = new ObjectArrayList<>();
-        for (IInventory inv : graph.connectedInventories()) {
-            result.add(inv);
-        }
-        return result;
-    }
-
-    public List<ItemStack> getFiltersFor(int i) {
-        if (graph == null) return List.of();
-        int idx = 0;
-        for (IFilteredInventory inv : graph.connectedInventories()) {
-            if (idx == i) return inv.getFiltersFor(0);
-            idx++;
-        }
-        return List.of();
-    }
-
-    public void setFilters(int slot, List<ItemStack> filterList) {
-        if (graph == null) return;
-        int idx = 0;
-        for (IFilteredInventory inv : graph.connectedInventories()) {
-            if (idx == slot) {
-                inv.setFilters(slot, filterList);
-                return;
-            }
-            idx++;
-        }
-    }
-
-    public void addFilter(int slot, ItemStack filter) {
-        if (graph == null) return;
-        int idx = 0;
-        for (IFilteredInventory inv : graph.connectedInventories()) {
-            if (idx == slot) {
-                inv.addFilter(slot, filter);
-                return;
-            }
-            idx++;
-        }
-    }
-
-    public void removeFilter(int slot, ItemStack filter) {
-        if (graph == null) return;
-        int idx = 0;
-        for (IFilteredInventory inv : graph.connectedInventories()) {
-            if (idx == slot) {
-                inv.removeFilter(slot, filter);
-                return;
-            }
-            idx++;
-        }
-    }
-
-    public void clearFilters(int slot) {
-        if (graph == null) return;
-        int idx = 0;
-        for (IFilteredInventory inv : graph.connectedInventories()) {
-            if (idx == slot) {
-                inv.clearFilters(slot);
-                return;
-            }
-            idx++;
-        }
-    }
-
-    public Map<Integer, List<ItemStack>> filtersSnapshot() {
-        if (graph == null) return Map.of();
-        Map<Integer, List<ItemStack>> result = new LinkedHashMap<>();
-        int idx = 0;
-        for (IFilteredInventory inv : graph.connectedInventories()) {
-            List<ItemStack> f = inv.getFiltersFor(0);
-            if (f != null && !f.isEmpty()) {
-                result.put(idx, new ArrayList<>(f));
-            }
-            idx++;
-        }
-        return result;
+        return graph.connectedInventories()
+            .toList();
     }
 
     @Override

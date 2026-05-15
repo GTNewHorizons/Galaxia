@@ -38,6 +38,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -454,11 +455,11 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 e.getValue());
         }
-        out.fluidBuffer = new LinkedHashMap<>(state.inventory.fluidSnapshot());
+        out.fluidBuffer = toFluidBuffer(state);
         out.itemLowerBounds = encodeItemAmountMap(state.inventory.itemLowerBoundsSnapshot());
         out.itemUpperBounds = encodeItemAmountMap(state.inventory.itemUpperBoundsSnapshot());
-        out.fluidLowerBounds = new LinkedHashMap<>(state.inventory.fluidLowerBoundsSnapshot());
-        out.fluidUpperBounds = new LinkedHashMap<>(state.inventory.fluidUpperBoundsSnapshot());
+        out.fluidLowerBounds = toFluidBounds(state.inventory.fluidLowerBoundsSnapshot());
+        out.fluidUpperBounds = toFluidBounds(state.inventory.fluidUpperBoundsSnapshot());
         out.logisticsConfig = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -897,6 +898,31 @@ public final class FacilityPersistenceManager {
             if (key != null && entry.getValue() >= 0L) decoded.put(key, entry.getValue());
         }
         return decoded;
+    }
+
+    private static Map<String, Long> toFluidBuffer(AutomatedFacility state) {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, Long> e : state.inventory.fluidSnapshot()
+            .entrySet()) {
+            result.put(
+                e.getKey()
+                    .fluid()
+                    .getName(),
+                e.getValue());
+        }
+        return result;
+    }
+
+    private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, Long> e : bounds.entrySet()) {
+            result.put(
+                e.getKey()
+                    .fluid()
+                    .getName(),
+                e.getValue());
+        }
+        return result;
     }
 
     static final class AssetJson {

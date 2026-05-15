@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
@@ -245,15 +246,29 @@ public final class AssetSyncPacket implements IMessage {
                     true,
                     e.getValue()));
         }
-        for (Map.Entry<String, Long> e : state.inventory.fluidLowerBoundsSnapshot()
+        for (Map.Entry<FluidKey, Long> e : state.inventory.fluidLowerBoundsSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas
-                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_LOWER, e.getKey(), true, e.getValue()));
+            pkt.fullSyncDeltas.add(
+                inventoryBoundUpdate(
+                    state.assetId,
+                    BoundKind.FLUID_LOWER,
+                    e.getKey()
+                        .fluid()
+                        .getName(),
+                    true,
+                    e.getValue()));
         }
-        for (Map.Entry<String, Long> e : state.inventory.fluidUpperBoundsSnapshot()
+        for (Map.Entry<FluidKey, Long> e : state.inventory.fluidUpperBoundsSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas
-                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_UPPER, e.getKey(), true, e.getValue()));
+            pkt.fullSyncDeltas.add(
+                inventoryBoundUpdate(
+                    state.assetId,
+                    BoundKind.FLUID_UPPER,
+                    e.getKey()
+                        .fluid()
+                        .getName(),
+                    true,
+                    e.getValue()));
         }
 
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()

@@ -281,7 +281,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         if (asset instanceof AutomatedFacility af) {
             return af.inventory.getAmount(wrapper);
         }
-        return asset.aggregatedItemAmounts()
+        return asset.aggregatedItems()
             .getOrDefault(wrapper, 0L);
     }
 

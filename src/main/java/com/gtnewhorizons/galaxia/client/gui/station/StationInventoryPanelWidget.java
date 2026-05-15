@@ -32,8 +32,8 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -93,7 +93,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private final Map<String, String> amountInputs = new LinkedHashMap<>();
     private ResourceMode resourceMode = ResourceMode.ITEMS;
     private @Nullable ItemStackWrapper selectedBoundItem;
-    private @Nullable String selectedBoundFluid;
+    private @Nullable FluidKey selectedBoundFluid;
     private String inputBoundAmount = "";
     private String outputBoundAmount = "";
     private @Nullable TextFieldWidget inputBoundField;
@@ -102,7 +102,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private boolean open;
     private String rowStructureSignature = "";
     private Map<ItemStackWrapper, Long> cachedItemAmounts = Map.of();
-    private Map<String, Long> cachedFluidAmounts = Map.of();
+    private Map<FluidKey, Long> cachedFluidAmounts = Map.of();
 
     StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId) {
         this(assetId, new StationOverlayCoordinator());
@@ -128,7 +128,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         child(
             ModuleConfigModalSupport
                 .button(
-                    () -> open && fluidInv() != null,
+                    () -> open && af() != null,
                     () -> resourceMode == ResourceMode.FLUIDS ? "* Fluids" : "Fluids",
                     () -> setResourceMode(ResourceMode.FLUIDS))
                 .pos(BUTTON_WIDTH + 80, 0)
@@ -192,20 +192,19 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             }
             return;
         }
-        IDistributedInventoryOLD distributed = distributed();
+        IDistributedInventory distributed = distributed();
         if (distributed == null) {
             open = false;
             return;
         }
-        cachedItemAmounts = distributed.aggregatedItemAmounts();
-        IFluidInventory fluidInv = fluidInv();
-        cachedFluidAmounts = fluidInv != null ? fluidInv.fluidSnapshot() : Map.of();
-        boolean hasFluids = fluidInv != null;
+        cachedItemAmounts = distributed.aggregatedItems();
+        cachedFluidAmounts = distributed.aggregatedFluids();
+        boolean hasFluids = !cachedFluidAmounts.isEmpty();
         if (!hasFluids && resourceMode == ResourceMode.FLUIDS) {
             resourceMode = ResourceMode.ITEMS;
         }
         List<Map.Entry<ItemStackWrapper, Long>> itemRows = rows(distributed);
-        List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(fluidInv);
+        List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(distributed);
         refreshAmountInputs(itemRows);
         String nextSignature = rowStructureSignature(itemRows, fluidRows);
         if (!panelRoot.isEnabled() || !nextSignature.equals(rowStructureSignature)) {
@@ -377,6 +376,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
 
     private ParentWidget<?> buildFluidRow(StationInventoryPanelModel.FluidRow row) {
         String fluidName = row.fluidName();
+        FluidKey fluidKey = row.fluidKey();
         ParentWidget<?> rowWidget = new ParentWidget<>().widthRel(1f)
             .height(ROW_HEIGHT)
             .background(
@@ -384,7 +384,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
         rowWidget.child(drawable((ctx, x, y, w, h) -> {
             renderFluidIcon(fluidName, x, y + 4);
-            renderFluidBoundMarkers(fluidName, x, y + 4);
+            renderFluidBoundMarkers(fluidKey, x, y + 4);
         }).asWidget()
             .pos(ICON_X, 0)
             .size(16, ROW_HEIGHT)
@@ -397,12 +397,12 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                         .pos(NAME_X, 0)
                         .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
-            new TextWidget<>(IKey.dynamic(() -> formatAmount(currentFluidAmount(fluidName))))
+            new TextWidget<>(IKey.dynamic(() -> formatAmount(currentFluidAmount(fluidKey))))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
                 .pos(AMOUNT_X, 8));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> canEditBounds(fluidName), "Bounds", () -> openBoundEditor(fluidName))
+            ModuleConfigModalSupport.button(() -> canEditBounds(fluidKey), "Bounds", () -> openBoundEditor(fluidKey))
                 .pos(BOUNDS_X, 3)
                 .size(BOUNDS_WIDTH, 18));
         return rowWidget;
@@ -513,11 +513,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     }
 
     private boolean canEditBounds(ItemStackWrapper wrapper) {
-        return bounds() != null && wrapper != null;
+        return af() != null && wrapper != null;
     }
 
-    private boolean canEditBounds(String fluidName) {
-        return fluidInv() != null && fluidName != null && !fluidName.isEmpty();
+    private boolean canEditBounds(FluidKey fluid) {
+        return af() != null && fluid != null;
     }
 
     private boolean isBoundEditorOpen() {
@@ -527,26 +527,28 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private void openBoundEditor(ItemStackWrapper wrapper) {
         selectedBoundItem = wrapper;
         selectedBoundFluid = null;
-        IBoundedInventory bounds = bounds();
-        inputBoundAmount = bounds != null && bounds.hasItemLowerBound(wrapper)
-            ? Long.toString(bounds.itemLowerBoundOrDefault(wrapper))
+        AutomatedFacility af = af();
+        inputBoundAmount = af != null && af.inventory.hasItemLowerBound(wrapper)
+            ? Long.toString(af.inventory.itemLowerBoundOrDefault(wrapper))
             : "";
-        outputBoundAmount = bounds != null && bounds.hasItemUpperBound(wrapper)
-            ? Long.toString(bounds.itemUpperBoundOrDefault(wrapper))
+        outputBoundAmount = af != null && af.inventory.hasItemUpperBound(wrapper)
+            ? Long.toString(af.inventory.itemUpperBoundOrDefault(wrapper))
             : "";
         if (inputBoundField != null) inputBoundField.setText(inputBoundAmount);
         if (outputBoundField != null) outputBoundField.setText(outputBoundAmount);
     }
 
-    private void openBoundEditor(String fluidName) {
+    private void openBoundEditor(FluidKey fluid) {
         selectedBoundItem = null;
-        selectedBoundFluid = fluidName;
-        IFluidInventory fluidInv = fluidInv();
-        inputBoundAmount = fluidInv != null && fluidInv.hasFluidLowerBound(fluidName)
-            ? Long.toString(fluidInv.fluidLowerBoundOrDefault(fluidName))
+        selectedBoundFluid = fluid;
+        AutomatedFacility af = af();
+        String fluidName = fluid.fluid()
+            .getName();
+        inputBoundAmount = af != null && af.inventory.hasFluidLowerBound(fluid)
+            ? Long.toString(af.inventory.fluidLowerBoundOrDefault(fluid))
             : "";
-        outputBoundAmount = fluidInv != null && fluidInv.hasFluidUpperBound(fluidName)
-            ? Long.toString(fluidInv.fluidUpperBoundOrDefault(fluidName))
+        outputBoundAmount = af != null && af.inventory.hasFluidUpperBound(fluid)
+            ? Long.toString(af.inventory.fluidUpperBoundOrDefault(fluid))
             : "";
         if (inputBoundField != null) inputBoundField.setText(inputBoundAmount);
         if (outputBoundField != null) outputBoundField.setText(outputBoundAmount);
@@ -563,13 +565,15 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         long amount = parseAmount(text);
         BoundKind kind = selectedBoundItem != null ? (input ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (input ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
-        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey() : selectedBoundFluid;
+        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey()
+            : selectedBoundFluid.fluid()
+                .getName();
         AutomatedFacility af = af();
         if (af != null && selectedBoundItem != null && input) {
             af.inventory.setItemLowerBound(selectedBoundItem, amount);
         } else if (af != null && selectedBoundItem != null) {
             af.inventory.setItemUpperBound(selectedBoundItem, amount);
-        } else if (af != null) {
+        } else if (af != null && selectedBoundFluid != null) {
             af.inventory.setBound(kind, resourceKey, amount);
         }
         CelestialClient.updateInventoryBound(
@@ -584,13 +588,15 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (assetId == null || !isBoundEditorOpen()) return;
         BoundKind kind = selectedBoundItem != null ? (input ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (input ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
-        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey() : selectedBoundFluid;
+        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey()
+            : selectedBoundFluid.fluid()
+                .getName();
         AutomatedFacility af = af();
         if (af != null && selectedBoundItem != null && input) {
             af.inventory.clearItemLowerBound(selectedBoundItem);
         } else if (af != null && selectedBoundItem != null) {
             af.inventory.clearItemUpperBound(selectedBoundItem);
-        } else if (af != null) {
+        } else if (af != null && selectedBoundFluid != null) {
             af.inventory.clearBound(kind, resourceKey);
         }
         CelestialClient.updateInventoryBound(
@@ -606,17 +612,16 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             outputBoundAmount = "";
             if (outputBoundField != null) outputBoundField.setText("");
         }
-        IBoundedInventory bounds = bounds();
-        IFluidInventory fluidInv = fluidInv();
-        if (bounds != null && selectedBoundItem != null
+        AutomatedFacility af2 = af();
+        if (af2 != null && selectedBoundItem != null
             && currentAmount(selectedBoundItem) <= 0L
-            && !bounds.hasItemLowerBound(selectedBoundItem)
-            && !bounds.hasItemUpperBound(selectedBoundItem)) {
+            && !af2.inventory.hasItemLowerBound(selectedBoundItem)
+            && !af2.inventory.hasItemUpperBound(selectedBoundItem)) {
             closeBoundEditor();
-        } else if (fluidInv != null && selectedBoundFluid != null
+        } else if (af2 != null && selectedBoundFluid != null
             && currentFluidAmount(selectedBoundFluid) <= 0L
-            && !fluidInv.hasFluidLowerBound(selectedBoundFluid)
-            && !fluidInv.hasFluidUpperBound(selectedBoundFluid)) {
+            && !af2.inventory.hasFluidLowerBound(selectedBoundFluid)
+            && !af2.inventory.hasFluidUpperBound(selectedBoundFluid)) {
                 closeBoundEditor();
             }
     }
@@ -624,7 +629,9 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private String selectedBoundName() {
         if (selectedBoundItem != null) return selectedBoundItem.toStack(1)
             .getDisplayName();
-        return selectedBoundFluid == null ? "" : selectedBoundFluid;
+        return selectedBoundFluid == null ? ""
+            : selectedBoundFluid.fluid()
+                .getName();
     }
 
     private static long parseAmount(String text) {
@@ -640,35 +647,25 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return cachedItemAmounts.getOrDefault(wrapper, 0L);
     }
 
-    private long currentFluidAmount(String fluidName) {
-        return cachedFluidAmounts.getOrDefault(fluidName, 0L);
+    private long currentFluidAmount(FluidKey fluid) {
+        return cachedFluidAmounts.getOrDefault(fluid, 0L);
     }
 
     private @Nullable AutomatedFacility af() {
         return assetId != null && CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
     }
 
-    private @Nullable IDistributedInventoryOLD distributed() {
+    private @Nullable IDistributedInventory distributed() {
         CelestialAsset asset = assetId != null ? CelestialClient.getByAssetId(assetId) : null;
-        return asset instanceof IDistributedInventoryOLD d ? d : null;
+        return asset instanceof IDistributedInventory d ? d : null;
     }
 
-    private @Nullable IBoundedInventory bounds() {
-        AutomatedFacility af = af();
-        return af != null ? af.inventory : null;
+    private List<Map.Entry<ItemStackWrapper, Long>> rows(IDistributedInventory distributed) {
+        return StationInventoryPanelModel.inventoryRows(distributed);
     }
 
-    private @Nullable IFluidInventory fluidInv() {
-        AutomatedFacility af = af();
-        return af != null ? af.inventory : null;
-    }
-
-    private List<Map.Entry<ItemStackWrapper, Long>> rows(IDistributedInventoryOLD distributed) {
-        return StationInventoryPanelModel.inventoryRows(distributed, bounds());
-    }
-
-    private List<StationInventoryPanelModel.FluidRow> fluidRows(@Nullable IFluidInventory fluidInv) {
-        return StationInventoryPanelModel.fluidRows(fluidInv);
+    private List<StationInventoryPanelModel.FluidRow> fluidRows(IDistributedInventory distributed) {
+        return StationInventoryPanelModel.fluidRows(distributed);
     }
 
     private void refreshAmountInputs(List<Map.Entry<ItemStackWrapper, Long>> rows) {
@@ -721,15 +718,16 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     }
 
     private void renderBoundMarkers(ItemStackWrapper wrapper, int x, int y) {
-        IBoundedInventory bounds = bounds();
-        if (bounds == null) return;
+        AutomatedFacility af = af();
+        if (af == null) return;
         long amount = currentAmount(wrapper);
-        if (bounds.hasItemLowerBound(wrapper)) {
-            int color = amount < bounds.itemLowerBoundOrDefault(wrapper) ? BOUND_MARKER_BLOCKING : BOUND_MARKER_WARNING;
+        if (af.inventory.hasItemLowerBound(wrapper)) {
+            int color = amount < af.inventory.itemLowerBoundOrDefault(wrapper) ? BOUND_MARKER_BLOCKING
+                : BOUND_MARKER_WARNING;
             Gui.drawRect(x, y, x + BOUND_MARKER_SIZE, y + BOUND_MARKER_SIZE, color);
         }
-        if (bounds.hasItemUpperBound(wrapper)) {
-            int color = amount >= bounds.itemUpperBoundOrDefault(wrapper) ? BOUND_MARKER_BLOCKING
+        if (af.inventory.hasItemUpperBound(wrapper)) {
+            int color = amount >= af.inventory.itemUpperBoundOrDefault(wrapper) ? BOUND_MARKER_BLOCKING
                 : BOUND_MARKER_WARNING;
             Gui.drawRect(x + 16 - BOUND_MARKER_SIZE, y, x + 16, y + BOUND_MARKER_SIZE, color);
         }
@@ -740,17 +738,17 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         Gui.drawRect(x + 2, y + 2, x + 14, y + 14, EnumColors.MAP_COLOR_CONNECTOR_TANK.getColor());
     }
 
-    private void renderFluidBoundMarkers(String fluidName, int x, int y) {
-        IFluidInventory fluidInv = fluidInv();
-        if (fluidInv == null) return;
-        long amount = currentFluidAmount(fluidName);
-        if (fluidInv.hasFluidLowerBound(fluidName)) {
-            int color = amount < fluidInv.fluidLowerBoundOrDefault(fluidName) ? BOUND_MARKER_BLOCKING
+    private void renderFluidBoundMarkers(FluidKey fluid, int x, int y) {
+        AutomatedFacility af = af();
+        if (af == null) return;
+        long amount = currentFluidAmount(fluid);
+        if (af.inventory.hasFluidLowerBound(fluid)) {
+            int color = amount < af.inventory.fluidLowerBoundOrDefault(fluid) ? BOUND_MARKER_BLOCKING
                 : BOUND_MARKER_WARNING;
             Gui.drawRect(x, y, x + BOUND_MARKER_SIZE, y + BOUND_MARKER_SIZE, color);
         }
-        if (fluidInv.hasFluidUpperBound(fluidName)) {
-            int color = amount >= fluidInv.fluidUpperBoundOrDefault(fluidName) ? BOUND_MARKER_BLOCKING
+        if (af.inventory.hasFluidUpperBound(fluid)) {
+            int color = amount >= af.inventory.fluidUpperBoundOrDefault(fluid) ? BOUND_MARKER_BLOCKING
                 : BOUND_MARKER_WARNING;
             Gui.drawRect(x + 16 - BOUND_MARKER_SIZE, y, x + 16, y + BOUND_MARKER_SIZE, color);
         }

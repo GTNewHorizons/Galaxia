@@ -2,14 +2,10 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
@@ -20,6 +16,7 @@ import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.fluids.IFluidTank;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -36,14 +33,19 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventoryOLD, IStationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
 
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
@@ -74,7 +76,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         .build();
 
     private final List<IInventory> inventory = new ArrayList<>();
-    private final List<ItemStack> filter = new ArrayList<>();
+    private final List<Predicate<ItemStackWrapper>> filter = new ArrayList<>();
     private @Nullable StationGraph graph;
     private BlockPos here;
     private final ModuleInstance moduleInstance;
@@ -85,7 +87,8 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
 
         here = new BlockPos(xCoord, yCoord, zCoord);
         // TODO: Figure out tiering system
-        this.moduleInstance = FacilityModuleKind.HAMMER.create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.EV);
+        this.moduleInstance = FacilityModuleKind.HAMMER
+            .create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.EV);
         this.hammer = (ModuleHammer) this.moduleInstance.component();
     }
 
@@ -97,7 +100,10 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     @Override
     public void tick() {
         if (graph == null) return;
-        moduleInstance.tick(CelestialAssetStore.findAsset(graph.getController().getBackingStation()));
+        moduleInstance.tick(
+            CelestialAssetStore.findAsset(
+                graph.getController()
+                    .getBackingStation()));
     }
 
     @Override
@@ -135,88 +141,35 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     }
 
     @Override
-    public List<ItemStack> getFiltersFor(int i) {
-        return filter;
+    public List<IFluidTank> getFluidTanks() {
+        return List.of();
     }
 
     @Override
-    public String getInventoryName() {
-        return "Hammer cannon";
+    public Predicate<ItemStackWrapper> getItemFilter(int idx) {
+        if (filter.isEmpty()) return w -> true;
+        return filter.get(idx);
     }
 
     @Override
-    public void markDirty() {
-        super.markDirty();
-        IDistributedInventoryOLD.super.markDirty();
-    }
-
-    public void setFilters(List<ItemStack> filterList) {
-        filter.clear();
-        if (filterList != null) {
-            for (ItemStack stack : filterList) {
-                if (stack != null) filter.add(stack.copy());
-            }
-        }
-        markDirty();
-    }
-
-    @Override
-    public void setFilters(int slot, List<ItemStack> filterList) {
-        setFilters(filterList);
-    }
-
-    public void addFilter(ItemStack stack) {
-        if (stack == null) return;
-        filter.add(stack.copy());
-        markDirty();
-    }
-
-    @Override
-    public void addFilter(int slot, ItemStack stack) {
-        addFilter(stack);
-    }
-
-    public void removeFilter(ItemStack stack) {
-        if (stack == null) return;
-        filter.removeIf(
-            f -> f != null && f.getItem() == stack.getItem()
-                && (!f.getHasSubtypes() || f.getItemDamage() == stack.getItemDamage())
-                && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, stack)));
-        markDirty();
-    }
-
-    @Override
-    public void removeFilter(int slot, ItemStack stack) {
-        removeFilter(stack);
-    }
-
-    public void clearFilters() {
-        filter.clear();
-        markDirty();
-    }
-
-    @Override
-    public void clearFilters(int slot) {
-        clearFilters();
-    }
-
-    @Override
-    public Map<Integer, List<ItemStack>> filtersSnapshot() {
-        if (filter.isEmpty()) return Map.of();
-        return Map.of(0, new ArrayList<>(filter));
+    public Predicate<FluidKey> getFluidFilter(int idx) {
+        return key -> true;
     }
 
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         NBTTagList filterList = new NBTTagList();
-        for (ItemStack stack : filter) {
-            NBTTagCompound stackNbt = new NBTTagCompound();
-            stack.writeToNBT(stackNbt);
-            filterList.appendTag(stackNbt);
-        }
+        // for (ItemStack stack : filter) {
+        // NBTTagCompound stackNbt = new NBTTagCompound();
+        // stack.writeToNBT(stackNbt);
+        // filterList.appendTag(stackNbt);
+        // }
         nbt.setTag(NBT_FILTER, filterList);
-        nbt.setString(NBT_HAMMER_VARIANT, hammer.variant().name());
+        nbt.setString(
+            NBT_HAMMER_VARIANT,
+            hammer.variant()
+                .name());
         nbt.setLong(NBT_HAMMER_ENERGY, hammer.energyStored());
         nbt.setInteger(NBT_HAMMER_COOLDOWN_SHOT, hammer.shotCooldownTicks());
         nbt.setInteger(NBT_HAMMER_COOLDOWN_ROUTE, hammer.routeProbeCooldownTicks());
@@ -230,7 +183,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
             NBTTagList filterList = nbt.getTagList(NBT_FILTER, Constants.NBT.TAG_COMPOUND);
             for (int i = 0; i < filterList.tagCount(); i++) {
                 ItemStack stack = ItemStack.loadItemStackFromNBT(filterList.getCompoundTagAt(i));
-                if (stack != null) filter.add(stack);
+                // if (stack != null) filter.add(stack);
             }
         }
         if (nbt.hasKey(NBT_HAMMER_VARIANT)) {
@@ -242,9 +195,8 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
             }
         }
         hammer.setEnergyStored(nbt.getLong(NBT_HAMMER_ENERGY));
-        hammer.setDispatchCooldowns(
-            nbt.getInteger(NBT_HAMMER_COOLDOWN_SHOT),
-            nbt.getInteger(NBT_HAMMER_COOLDOWN_ROUTE));
+        hammer
+            .setDispatchCooldowns(nbt.getInteger(NBT_HAMMER_COOLDOWN_SHOT), nbt.getInteger(NBT_HAMMER_COOLDOWN_ROUTE));
     }
 
     @Override

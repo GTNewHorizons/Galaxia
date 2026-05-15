@@ -67,7 +67,8 @@ public final class LogisticStore {
                         ticked.data.toAssetId());
                     return;
                 }
-                long accepted = destination.addItems(ticked.data.resourceId(), ticked.data.amount());
+                long accepted = destination
+                    .updateItems(ticked.data.resourceId(), (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE));
                 long remaining = ticked.data.amount() - accepted;
                 if (remaining > 0L) {
                     ticked.setAmount(remaining);
@@ -87,7 +88,7 @@ public final class LogisticStore {
     public static void updateSignalsForFacility(CelestialAsset asset) {
         CelestialAsset.ID assetId = asset.assetId;
         Map<ItemStackWrapper, Long> snapshot = asset instanceof AutomatedFacility af ? af.inventory.snapshot()
-            : asset.aggregatedItemAmounts();
+            : asset.aggregatedItems();
 
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
             .computeIfAbsent(assetId, k -> new LinkedHashMap<>());

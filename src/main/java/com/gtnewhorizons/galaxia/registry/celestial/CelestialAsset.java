@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -11,24 +10,24 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 
-public abstract class CelestialAsset implements Buildable, IDistributedInventoryOLD {
+public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
     public enum Kind {
 
@@ -86,7 +85,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public final LogisticsConfiguration logisticsConfig;
 
     public static long getItemAmount(CelestialAsset asset, ItemStackWrapper resource) {
-        return asset.aggregatedItemAmounts()
+        return asset.aggregatedItems()
             .getOrDefault(resource, 0L);
     }
 
@@ -245,49 +244,6 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void clean() {
         dirty = false;
-    }
-
-    public List<ItemStack> getFiltersFor(int i) {
-        return filters.getOrDefault(i, List.of());
-    }
-
-    public void setFilters(int slot, List<ItemStack> filterList) {
-        if (filterList == null || filterList.isEmpty()) {
-            filters.remove(slot);
-        } else {
-            filters.put(slot, new ArrayList<>(filterList));
-        }
-        markDirty();
-    }
-
-    public void addFilter(int slot, ItemStack filter) {
-        if (filter == null) return;
-        filters.computeIfAbsent(slot, k -> new ArrayList<>())
-            .add(filter.copy());
-        markDirty();
-    }
-
-    public void removeFilter(int slot, ItemStack filter) {
-        if (filter == null) return;
-        List<ItemStack> list = filters.get(slot);
-        if (list == null) return;
-        list.removeIf(
-            f -> f != null && f.getItem() == filter.getItem()
-                && (!f.getHasSubtypes() || f.getItemDamage() == filter.getItemDamage())
-                && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, filter)));
-        if (list.isEmpty()) {
-            filters.remove(slot);
-        }
-        markDirty();
-    }
-
-    public void clearFilters(int slot) {
-        filters.remove(slot);
-        markDirty();
-    }
-
-    public Map<Integer, List<ItemStack>> filtersSnapshot() {
-        return Collections.unmodifiableMap(filters);
     }
 
     public abstract boolean tryConsumeEnergy(long powerDraw);

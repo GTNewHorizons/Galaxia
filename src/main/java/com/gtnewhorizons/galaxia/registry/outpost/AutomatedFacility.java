@@ -13,12 +13,14 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import net.minecraft.inventory.IInventory;
+import net.minecraftforge.fluids.IFluidTank;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -917,26 +919,25 @@ public final class AutomatedFacility extends CelestialAsset {
             .buildTicks();
     }
 
+    // ── IDistributedInventory overrides ──
+
     @Override
-    public Map<ItemStackWrapper, Long> aggregatedItemAmounts() {
+    public Map<ItemStackWrapper, Long> aggregatedItems() {
         return inventory.snapshot();
     }
 
     @Override
-    public long totalItemCount() {
+    public long totalItemsStored() {
         return inventory.totalItems();
     }
 
     @Override
-    public long addItems(ItemStackWrapper item, long amount) {
-        return insertInventoryWithoutSync(item, amount);
-    }
-
-    @Override
-    public long removeItems(ItemStackWrapper item, long amount) {
-        if (item == null || amount <= 0L) return 0L;
-        long current = inventory.getAmount(item);
-        long toRemove = Math.min(current, amount);
+    public long updateItems(ItemStackWrapper item, int delta) {
+        if (item == null || delta == 0) return 0L;
+        if (delta > 0) {
+            return insertInventoryWithoutSync(item, delta);
+        }
+        long toRemove = Math.min(-(long) delta, inventory.getAmount(item));
         if (toRemove > 0L) {
             inventory.add(item, -toRemove);
         }
@@ -949,6 +950,44 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
+    public List<IFluidTank> getFluidTanks() {
+        return List.of();
+    }
+
+    @Override
+    public Map<FluidKey, Long> aggregatedFluids() {
+        return inventory.fluidSnapshot();
+    }
+
+    @Override
+    public long getFluidAmount(FluidKey fluid) {
+        return inventory.getFluidAmount(fluid);
+    }
+
+    @Override
+    public long totalFluidStored() {
+        long total = 0L;
+        for (long v : inventory.fluidSnapshot()
+            .values()) total += v;
+        return total;
+    }
+
+    @Override
+    public long totalFluidCapacity() {
+        return 0L;
+    }
+
+    @Override
+    public long getFreeFluidSpace(FluidKey fluid) {
+        return Long.MAX_VALUE;
+    }
+
+    @Override
+    public long updateFluids(FluidKey fluid, int delta) {
+        if (fluid == null || delta == 0) return 0L;
+        return inventory.addFluid(fluid, delta);
+    }
+
     public String getInventoryName() {
         return "";
     }

@@ -1,38 +1,46 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 
-import javax.annotation.Nullable;
-import java.util.*;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 /**
  * A virtual, distributed inventory that aggregates multiple {@link IInventory}
  * and {@link IFluidTank} sources behind a unified query and mutation API.
  *
- * <p>Implementors own the concrete aggregation, slot resolution, and mutation
+ * <p>
+ * Implementors own the concrete aggregation, slot resolution, and mutation
  * logic. Default methods here provide derived query patterns; they are
  * intentionally thin wrappers over the core API so implementors can override
  * them with optimised versions when needed.
  *
- * <p><b>Implementation contract:</b>
+ * <p>
+ * <b>Implementation contract:</b>
  * <ul>
- *   <li>{@link #getInventories()} and {@link #getFluidTanks()} may return lists
- *       containing {@code null} entries (e.g. for unloaded chunks); all default
- *       methods guard against this.</li>
- *   <li>{@link #aggregatedItems()} and {@link #aggregatedFluids()} return
- *       <em>snapshots</em>; callers should not assume they reflect concurrent
- *       mutations. Callers performing multiple filter passes should capture the
- *       snapshot once rather than calling these methods repeatedly.</li>
+ * <li>{@link #getInventories()} and {@link #getFluidTanks()} may return lists
+ * containing {@code null} entries (e.g. for unloaded chunks); all default
+ * methods guard against this.</li>
+ * <li>{@link #aggregatedItems()} and {@link #aggregatedFluids()} return
+ * <em>snapshots</em>; callers should not assume they reflect concurrent
+ * mutations. Callers performing multiple filter passes should capture the
+ * snapshot once rather than calling these methods repeatedly.</li>
  * </ul>
  */
 public interface IDistributedInventory {
@@ -133,7 +141,8 @@ public interface IDistributedInventory {
      * Returns a snapshot mapping each distinct fluid identity to its total
      * stored volume (in mB) across all backing tanks.
      *
-     * <p>Uses {@link FluidKey} rather than {@link FluidStack} to ensure a
+     * <p>
+     * Uses {@link FluidKey} rather than {@link FluidStack} to ensure a
      * stable, amount-independent key.
      */
     default Map<FluidKey, Long> aggregatedFluids() {
@@ -214,7 +223,10 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /** Total item slot capacity across all inventories (same as {@link #totalItemSlots()} for most implementations, but may differ when slots have per-slot stack-size limits). */
+    /**
+     * Total item slot capacity across all inventories (same as {@link #totalItemSlots()} for most implementations, but
+     * may differ when slots have per-slot stack-size limits).
+     */
     default long totalItemCapacity() {
         long total = 0;
         for (IInventory inv : getInventories()) {
@@ -249,12 +261,11 @@ public interface IDistributedInventory {
                 ItemStack stack = inv.getStackInSlot(s);
                 if (stack == null) {
                     space += Math.min(template.getMaxStackSize(), inv.getInventoryStackLimit());
-                } else if (stack.getItem() == item.item()
-                    && stack.getItemDamage() == item.meta()
+                } else if (stack.getItem() == item.item() && stack.getItemDamage() == item.meta()
                     && ItemStack.areItemStackTagsEqual(stack, template)) {
-                    int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
-                    space += Math.max(0, limit - stack.stackSize);
-                }
+                        int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
+                        space += Math.max(0, limit - stack.stackSize);
+                    }
             }
         }
         return space;
@@ -271,7 +282,8 @@ public interface IDistributedInventory {
             IFluidTank tank = tanks.get(i);
             if (tank == null || !getFluidFilter(i).test(fluid)) continue;
             FluidStack contents = tank.getFluid();
-            if (contents == null || FluidKey.of(contents).equals(fluid)) {
+            if (contents == null || FluidKey.of(contents)
+                .equals(fluid)) {
                 space += tank.getCapacity() - tank.getFluidAmount();
             }
         }
@@ -309,8 +321,7 @@ public interface IDistributedInventory {
             for (int s = 0; s < inv.getSizeInventory() && transferred < target; s++) {
                 ItemStack stack = inv.getStackInSlot(s);
                 if (stack == null) continue;
-                if (stack.getItem() == item.item()
-                    && stack.getItemDamage() == item.meta()
+                if (stack.getItem() == item.item() && stack.getItemDamage() == item.meta()
                     && ItemStack.areItemStackTagsEqual(stack, template)) {
                     int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
                     int space = limit - stack.stackSize;
@@ -476,12 +487,14 @@ public interface IDistributedInventory {
     /**
      * Returns a filtered view of the aggregated item snapshot.
      *
-     * <p><b>Performance note:</b> captures the aggregated snapshot once; prefer
+     * <p>
+     * <b>Performance note:</b> captures the aggregated snapshot once; prefer
      * calling {@link #aggregatedItems()} yourself if you intend to apply
      * multiple predicates to avoid redundant snapshots.
      */
     default Map<ItemStackWrapper, Long> filterItems(Predicate<ItemStackWrapper> predicate) {
-        return aggregatedItems().entrySet().stream()
+        return aggregatedItems().entrySet()
+            .stream()
             .filter(e -> predicate.test(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -490,7 +503,8 @@ public interface IDistributedInventory {
      * Returns a filtered view of the aggregated fluid snapshot.
      */
     default Map<FluidKey, Long> filterFluids(Predicate<FluidKey> predicate) {
-        return aggregatedFluids().entrySet().stream()
+        return aggregatedFluids().entrySet()
+            .stream()
             .filter(e -> predicate.test(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -500,14 +514,12 @@ public interface IDistributedInventory {
      * defined in {@code thresholds}. Items absent from {@code thresholds} are
      * <em>not</em> included in the result — "no threshold" means "no alarm".
      */
-    default Map<ItemStackWrapper, Long> getItemsBelowThreshold(
-        Map<ItemStackWrapper, Long> thresholds) {
+    default Map<ItemStackWrapper, Long> getItemsBelowThreshold(Map<ItemStackWrapper, Long> thresholds) {
         Map<ItemStackWrapper, Long> snapshot = aggregatedItems();
-        return thresholds.entrySet().stream()
+        return thresholds.entrySet()
+            .stream()
             .filter(e -> snapshot.getOrDefault(e.getKey(), 0L) < e.getValue())
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                e -> snapshot.getOrDefault(e.getKey(), 0L)));
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> snapshot.getOrDefault(e.getKey(), 0L)));
     }
 
     // =========================================================================
@@ -540,12 +552,16 @@ public interface IDistributedInventory {
      * Distinguishes between item inventory and fluid tank storage targets,
      * used in {@link #markDirty(int, StorageType)} and related APIs.
      */
-    enum StorageType { ITEM, FLUID }
+    enum StorageType {
+        ITEM,
+        FLUID
+    }
 
     /**
      * An immutable, half-open slot range {@code [start, end)}.
      *
-     * <p>Replaces the raw {@code int[]} previously returned by
+     * <p>
+     * Replaces the raw {@code int[]} previously returned by
      * {@code getBoundsFor*}, removing ambiguity about index semantics and
      * enabling safe equality and range checks.
      */
@@ -553,20 +569,22 @@ public interface IDistributedInventory {
 
         public SlotRange {
             if (start < 0 || end < start)
-                throw new IllegalArgumentException(
-                    "Invalid SlotRange: [" + start + ", " + end + ")");
+                throw new IllegalArgumentException("Invalid SlotRange: [" + start + ", " + end + ")");
         }
 
         /** Number of slots in this range. */
-        public int size() { return end - start; }
+        public int size() {
+            return end - start;
+        }
 
         /** Returns {@code true} if {@code slot} falls within this range. */
-        public boolean contains(int slot) { return slot >= start && slot < end; }
+        public boolean contains(int slot) {
+            return slot >= start && slot < end;
+        }
 
         /** Returns the local offset of {@code slot} within this range. */
         public int localOffset(int slot) {
-            if (!contains(slot)) throw new IndexOutOfBoundsException(
-                "Slot " + slot + " not in range " + this);
+            if (!contains(slot)) throw new IndexOutOfBoundsException("Slot " + slot + " not in range " + this);
             return slot - start;
         }
     }
@@ -574,7 +592,8 @@ public interface IDistributedInventory {
     /**
      * A stable, amount-independent identity key for a fluid.
      *
-     * <p>Replaces direct {@link FluidStack} use as a map/set key. {@link FluidStack}
+     * <p>
+     * Replaces direct {@link FluidStack} use as a map/set key. {@link FluidStack}
      * is mutable and its equality semantics include the stored amount, making
      * it unsuitable as a key in aggregation maps.
      */
@@ -587,9 +606,18 @@ public interface IDistributedInventory {
 
         /** Reconstructs a {@link FluidStack} with the given volume. */
         public FluidStack toStack(int amount) {
-            return tag == null
-                ? new FluidStack(fluid, amount)
-                : new FluidStack(fluid, amount, tag);
+            return tag == null ? new FluidStack(fluid, amount) : new FluidStack(fluid, amount, tag);
+        }
+
+        /** Looks up a Fluid by registry name and wraps it in a tagless FluidKey. */
+        public static @Nullable FluidKey fromName(String fluidName) {
+            if (fluidName == null || fluidName.isEmpty()) return null;
+            try {
+                Fluid fluid = FluidRegistry.getFluid(fluidName);
+                return fluid != null ? new FluidKey(fluid, null) : null;
+            } catch (Throwable e) {
+                return null;
+            }
         }
     }
 
@@ -600,18 +628,23 @@ public interface IDistributedInventory {
     /**
      * Static factory methods for common {@link ItemStackWrapper} predicates.
      *
-     * <p>Previously an inner class named {@code Filter}; split from fluid
+     * <p>
+     * Previously an inner class named {@code Filter}; split from fluid
      * predicates for clarity. Combinators ({@link #anyOf}, {@link #allOf},
      * {@link #noneOf}) are generic and work with any predicate type.
      *
-     * <p>Example usage:
-     * <pre>{@code
-     *   Predicate<ItemStackWrapper> filter = ItemFilters.anyOf(
-     *       ItemFilters.byMod("thermal"),
-     *       ItemFilters.byItem(Items.diamond)
-     *   );
-     *   Map<ItemStackWrapper, Long> result = inventory.filterItems(filter);
-     * }</pre>
+     * <p>
+     * Example usage:
+     *
+     * <pre>
+     *
+     * {
+     *     &#64;code
+     *     Predicate<ItemStackWrapper> filter = ItemFilters
+     *         .anyOf(ItemFilters.byMod("thermal"), ItemFilters.byItem(Items.diamond));
+     *     Map<ItemStackWrapper, Long> result = inventory.filterItems(filter);
+     * }
+     * </pre>
      */
     interface ItemFilters {
 
@@ -639,7 +672,10 @@ public interface IDistributedInventory {
          */
         static Predicate<ItemStackWrapper> byNameRegex(String regex) {
             Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-            return w -> pattern.matcher(w.toStack(1).getUnlocalizedName()).matches();
+            return w -> pattern.matcher(
+                w.toStack(1)
+                    .getUnlocalizedName())
+                .matches();
         }
 
         /**
@@ -700,12 +736,16 @@ public interface IDistributedInventory {
          */
         static Predicate<FluidKey> byNameRegex(String regex) {
             Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-            return key -> pattern.matcher(key.fluid().getName()).matches();
+            return key -> pattern.matcher(
+                key.fluid()
+                    .getName())
+                .matches();
         }
 
         /** Matches fluids that carry no NBT tag. */
         static Predicate<FluidKey> hasNoTag() {
-            return key -> key.tag() == null || key.tag().hasNoTags();
+            return key -> key.tag() == null || key.tag()
+                .hasNoTags();
         }
     }
 }

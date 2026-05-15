@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -144,7 +144,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
             return null;
         }
 
-        if (!(asset instanceof IDistributedInventoryOLD distributed)) {
+        if (!(asset instanceof IDistributedInventory distributed)) {
             LOG.warn("[Logistics] InventoryDelta: asset {} does not support inventory operations", assetId);
             return null;
         }
@@ -172,11 +172,11 @@ public final class AssetInventoryUpdatePacket implements IMessage {
 
         long applied;
         if (effectiveDelta > 0L) {
-            applied = distributed.addItems(resource, effectiveDelta);
+            applied = distributed.updateItems(resource, (int) Math.min(effectiveDelta, Integer.MAX_VALUE));
         } else if (effectiveDelta == Long.MIN_VALUE) {
-            applied = -distributed.removeItems(resource, Long.MAX_VALUE);
+            applied = -distributed.updateItems(resource, -Integer.MAX_VALUE);
         } else {
-            applied = -distributed.removeItems(resource, -effectiveDelta);
+            applied = -distributed.updateItems(resource, (int) Math.max(effectiveDelta, Integer.MIN_VALUE + 1));
         }
 
         if (applied == 0L) return null;

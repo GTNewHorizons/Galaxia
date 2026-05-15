@@ -7,13 +7,12 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleAssembler;
@@ -35,8 +34,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
-                             BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-                             List<ModulePanelAction> panelActions, boolean settingsGroups) {
+        BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
+        List<ModulePanelAction> panelActions, boolean settingsGroups) {
 
         public Definition {
             if (tierData == null || tierData.isEmpty()) {

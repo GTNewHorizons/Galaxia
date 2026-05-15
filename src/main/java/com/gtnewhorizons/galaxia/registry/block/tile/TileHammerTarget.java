@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -16,6 +16,7 @@ import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.fluids.IFluidTank;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -31,11 +32,12 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventoryOLD, IStationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -75,7 +77,7 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     }
 
     @Override
-    public void tick() { }
+    public void tick() {}
 
     @Override
     public void onStructureDisformed() {
@@ -106,75 +108,28 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     }
 
     @Override
-    public List<ItemStack> getFiltersFor(int i) {
-        return filter;
+    public List<IFluidTank> getFluidTanks() {
+        return List.of();
     }
 
     @Override
-    public String getInventoryName() {
-        return "Hammer target";
-    }
-
-    @Override
-    public void markDirty() {
-        super.markDirty();
-        IDistributedInventoryOLD.super.markDirty();
-    }
-
-    public void setFilters(List<ItemStack> filterList) {
-        filter.clear();
-        if (filterList != null) {
-            for (ItemStack stack : filterList) {
-                if (stack != null) filter.add(stack.copy());
+    public Predicate<ItemStackWrapper> getItemFilter(int idx) {
+        if (filter.isEmpty()) return w -> true;
+        return w -> {
+            for (ItemStack f : filter) {
+                if (f != null && f.getItem() == w.item()
+                    && (!f.getHasSubtypes() || f.getItemDamage() == w.meta())
+                    && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, w.toStack(1)))) {
+                    return true;
+                }
             }
-        }
-        markDirty();
+            return false;
+        };
     }
 
     @Override
-    public void setFilters(int slot, List<ItemStack> filterList) {
-        setFilters(filterList);
-    }
-
-    public void addFilter(ItemStack stack) {
-        if (stack == null) return;
-        filter.add(stack.copy());
-        markDirty();
-    }
-
-    @Override
-    public void addFilter(int slot, ItemStack stack) {
-        addFilter(stack);
-    }
-
-    public void removeFilter(ItemStack stack) {
-        if (stack == null) return;
-        filter.removeIf(
-            f -> f != null && f.getItem() == stack.getItem()
-                && (!f.getHasSubtypes() || f.getItemDamage() == stack.getItemDamage())
-                && (!f.hasTagCompound() || ItemStack.areItemStackTagsEqual(f, stack)));
-        markDirty();
-    }
-
-    @Override
-    public void removeFilter(int slot, ItemStack stack) {
-        removeFilter(stack);
-    }
-
-    public void clearFilters() {
-        filter.clear();
-        markDirty();
-    }
-
-    @Override
-    public void clearFilters(int slot) {
-        clearFilters();
-    }
-
-    @Override
-    public Map<Integer, List<ItemStack>> filtersSnapshot() {
-        if (filter.isEmpty()) return Map.of();
-        return Map.of(0, new ArrayList<>(filter));
+    public Predicate<FluidKey> getFluidFilter(int idx) {
+        return key -> true;
     }
 
     @Override
