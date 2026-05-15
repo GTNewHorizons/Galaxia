@@ -7,12 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
@@ -21,6 +22,7 @@ final class FacilityModuleRegistryTest {
 
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -53,7 +55,7 @@ final class FacilityModuleRegistryTest {
             10,
             null,
             null,
-            Map.of(new ItemStack(new Item()), 1L),
+            Map.of(new ItemStack(Items.diamond), 1L),
             40,
             50);
 
@@ -63,7 +65,7 @@ final class FacilityModuleRegistryTest {
 
     @Test
     void tierDataBuilderUsesNamedFieldsWithDefaults() {
-        ItemStack material = new ItemStack(new Item());
+        ItemStack material = new ItemStack(Items.diamond);
 
         ModuleTierData data = ModuleTierData.builder()
             .addedEnergyCapacity(1000L)
@@ -87,7 +89,7 @@ final class FacilityModuleRegistryTest {
 
     @Test
     void tierDataBuilderCarriesVariantCooldownsAndOperationSettings() {
-        ItemStack material = new ItemStack(new Item());
+        ItemStack material = new ItemStack(Items.diamond);
 
         ModuleTierData data = ModuleTierData.builder()
             .addedEnergyCapacity(2000L)

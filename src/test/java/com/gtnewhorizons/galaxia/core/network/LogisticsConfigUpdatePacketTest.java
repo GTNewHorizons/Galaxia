@@ -4,13 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.UUID;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -26,6 +27,7 @@ final class LogisticsConfigUpdatePacketTest {
 
     @BeforeAll
     static void init() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
     }
 
@@ -44,7 +46,7 @@ final class LogisticsConfigUpdatePacketTest {
     @Test
     void applyBumpsSyncRevisionForLogisticsConfigDelta() {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
             facility.assetId,
             resource,

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -58,6 +60,7 @@ final class StationPacketRoundTripTest {
 
     @BeforeAll
     static void init() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -117,7 +120,7 @@ final class StationPacketRoundTripTest {
         AutomatedFacility server = createFacility();
         UUID playerId = UUID.randomUUID();
         AssetSyncPacket.figureOutWhatToSend(server, playerId);
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
 
         server.insertInventory(resource, 42);
 
@@ -222,8 +225,8 @@ final class StationPacketRoundTripTest {
     void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.diamond;
         RecipeSnapshot snapshot = RecipeSnapshot.resolved(
             (byte) 1,
             832,

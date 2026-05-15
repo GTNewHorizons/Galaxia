@@ -6,16 +6,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 final class ModuleOperationPlanTest {
+
+    @BeforeAll
+    static void init() {
+        TestFMLRegistry.init();
+    }
 
     @Test
     void rejectsNullSpec() {
@@ -51,6 +58,6 @@ final class ModuleOperationPlanTest {
     }
 
     private static Map<ItemStackWrapper, Long> cost(long amount) {
-        return Map.of(ItemStackWrapper.of(new ItemStack(new Item())), amount);
+        return Map.of(ItemStackWrapper.of(new ItemStack(Items.diamond)), amount);
     }
 }

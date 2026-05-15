@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,7 +46,7 @@ final class AssetInventoryUpdatePacketTest {
     @Test
     void applyRejectsPositiveDeltaFromNonCreativeEvenWhenPacketClearsCreativeOnly() throws Exception {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
         setCreativeOnly(packet, false);
 
@@ -60,7 +59,7 @@ final class AssetInventoryUpdatePacketTest {
     @Test
     void applyBumpsSyncRevisionForInventoryDelta() {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
 
         AssetSyncPacket sync = packet.apply(TEAM, true);
@@ -72,7 +71,7 @@ final class AssetInventoryUpdatePacketTest {
     @Test
     void removePacketRemovesAllMatchingInventory() {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         facility.inventory.add(resource, 32);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
 

@@ -2,18 +2,26 @@ package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 
 import sun.misc.Unsafe;
 
 final class RecipeSnapshotTest {
+
+    @BeforeAll
+    static void init() {
+        TestFMLRegistry.init();
+    }
 
     @Test
     void snapshotRetainsFluidInputsAndOutputs() {
@@ -67,7 +75,7 @@ final class RecipeSnapshotTest {
 
     @Test
     void contentHashIncludesItemOutputChances() {
-        Item outputItem = new Item();
+        Item outputItem = Items.diamond;
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
 
         long base = RecipeSnapshot.computeContentHash(null, outputs, null, null, new int[] { 5000 }, 100, 512);

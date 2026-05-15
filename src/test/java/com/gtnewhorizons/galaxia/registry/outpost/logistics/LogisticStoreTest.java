@@ -5,12 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.UUID;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -23,6 +24,7 @@ final class LogisticStoreTest {
 
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
     }
 
@@ -37,8 +39,8 @@ final class LogisticStoreTest {
         UUID teamId = UUID.randomUUID();
         AutomatedFacility source = facility();
         AutomatedFacility destination = facility();
-        ItemStackWrapper filler = new ItemStackWrapper(new Item(), 0, null);
-        ItemStackWrapper delivered = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
+        ItemStackWrapper delivered = new ItemStackWrapper(Items.iron_ingot, 0, null);
         destination.inventory.add(filler, 998L);
         CelestialAssetStore.registerAsset(teamId, source);
         CelestialAssetStore.registerAsset(teamId, destination);
@@ -86,8 +88,8 @@ final class LogisticStoreTest {
         AutomatedFacility source = facility();
         AutomatedFacility destination = facility();
         AutomatedFacility otherDestination = facility();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
-        ItemStackWrapper otherResource = new ItemStackWrapper(new Item(), 1, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        ItemStackWrapper otherResource = new ItemStackWrapper(Items.diamond, 1, null);
 
         LogisticStore.addDelivery(
             LogisticsDelivery.createWithTrajectory(

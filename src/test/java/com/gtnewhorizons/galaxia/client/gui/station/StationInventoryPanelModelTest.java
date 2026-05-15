@@ -7,19 +7,26 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.IFluidTank;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModelTest {
+
+    @BeforeAll
+    static void init() {
+        TestFMLRegistry.init();
+    }
 
     @Test
     void allModeVoidsFullRowAmount() {
@@ -44,7 +51,7 @@ final class StationInventoryPanelModelTest {
     @Test
     void inventoryRowsShowAllItems() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        ItemStackWrapper tracked = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
         inventory.setAmount(tracked, 5);
 
         IDistributedInventory distributed = distributed(inventory);
@@ -64,7 +71,7 @@ final class StationInventoryPanelModelTest {
     @Test
     void inventoryRowsHideZeroStockItems() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.setAmount(new ItemStackWrapper(new Item(), 0, null), 0);
+        inventory.setAmount(new ItemStackWrapper(Items.diamond, 0, null), 0);
 
         assertTrue(
             StationInventoryPanelModel.inventoryRows(distributed(inventory))

@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Map;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -17,18 +19,23 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 
 final class ModuleOperationDefinitionTest {
 
+    @BeforeAll
+    static void init() {
+        TestFMLRegistry.init();
+    }
+
     @Test
     void tierDataValidatesBuildTicks() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(new Item()), 1L), 0, 80));
+            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(Items.diamond), 1L), 0, 80));
     }
 
     @Test
     void tierDataValidatesRefundPercent() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(new Item()), 1L), 200, -1));
+            () -> new ModuleTierData(1000L, 0L, 10, null, null, Map.of(new ItemStack(Items.diamond), 1L), 200, -1));
     }
 
     @Test
@@ -50,7 +57,7 @@ final class ModuleOperationDefinitionTest {
 
     @Test
     void materialCostIsDefensivelyCopied() {
-        ItemStack stack = new ItemStack(new Item());
+        ItemStack stack = new ItemStack(Items.diamond);
         Map<ItemStackWrapper, Long> cost = cost(6L);
         stack.stackSize = 32;
 
@@ -69,6 +76,6 @@ final class ModuleOperationDefinitionTest {
     }
 
     private static Map<ItemStackWrapper, Long> cost(long amount) {
-        return Map.of(ItemStackWrapper.of(new ItemStack(new Item())), amount);
+        return Map.of(ItemStackWrapper.of(new ItemStack(Items.diamond)), amount);
     }
 }

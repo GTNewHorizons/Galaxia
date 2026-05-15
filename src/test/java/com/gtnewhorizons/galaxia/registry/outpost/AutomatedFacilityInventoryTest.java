@@ -3,23 +3,32 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.minecraft.item.Item;
-import net.minecraftforge.fluids.Fluid;
+import net.minecraft.init.Items;
+import net.minecraftforge.fluids.FluidRegistry;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 
 final class AutomatedFacilityInventoryTest {
 
-    private static final FluidKey INPUT_KEY = new FluidKey(new Fluid("input"), null);
-    private static final FluidKey OUTPUT_KEY = new FluidKey(new Fluid("output"), null);
+    private static FluidKey INPUT_KEY;
+    private static FluidKey OUTPUT_KEY;
+
+    @BeforeAll
+    static void initRegistries() {
+        TestFMLRegistry.init();
+        INPUT_KEY = new FluidKey(FluidRegistry.LAVA, null);
+        OUTPUT_KEY = new FluidKey(FluidRegistry.WATER, null);
+    }
 
     @Test
     void recipeBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
         AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        ItemStackWrapper input = resource();
-        ItemStackWrapper output = resource();
+        ItemStackWrapper input = new ItemStackWrapper(Items.diamond, 0, null);
+        ItemStackWrapper output = new ItemStackWrapper(Items.iron_ingot, 0, null);
         inventory.add(input, 40);
         inventory.add(output, 990);
 
@@ -41,9 +50,5 @@ final class AutomatedFacilityInventoryTest {
         assertTrue(inventory.isFluidBelowUpperBound(OUTPUT_KEY, 1000L));
         inventory.addFluid(OUTPUT_KEY, 100);
         assertFalse(inventory.isFluidBelowUpperBound(OUTPUT_KEY, 1000L));
-    }
-
-    private static ItemStackWrapper resource() {
-        return new ItemStackWrapper(new Item(), 0, null);
     }
 }

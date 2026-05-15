@@ -8,15 +8,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
-import java.util.BitSet;
 import java.util.Map;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
@@ -38,17 +39,16 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
-import cpw.mods.fml.common.registry.GameData;
-
 final class AutomatedFacilityOperationTest {
 
-    private static final Item TEST_FILLER_ITEM = new Item();
-    private static final Item TEST_REFUND_ITEM = new Item();
+    private static Item TEST_FILLER_ITEM;
+    private static Item TEST_REFUND_ITEM;
 
     @BeforeAll
     static void initRegistries() throws ReflectiveOperationException {
-        registerTestItem(31000, "galaxia:test_filler_item", TEST_FILLER_ITEM);
-        registerTestItem(31001, "galaxia:test_refund_item", TEST_REFUND_ITEM);
+        TestFMLRegistry.init();
+        TEST_FILLER_ITEM = Items.diamond;
+        TEST_REFUND_ITEM = Items.iron_ingot;
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -168,7 +168,7 @@ final class AutomatedFacilityOperationTest {
     @Test
     void insertInventoryAcceptsOnlyRemainingCapacity() {
         AutomatedFacility facility = facilityWithHammer();
-        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(new Item()));
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond));
 
         assertEquals(1000L, facility.insertInventory(key, 1200L));
 
@@ -268,8 +268,7 @@ final class AutomatedFacilityOperationTest {
         AutomatedFacility facility = facilityWithHammer();
         ModuleInstance module = facility.modules()
             .get(0);
-        ItemStack material = material();
-        ItemStackWrapper key = ItemStackWrapper.of(material);
+        ItemStackWrapper key = new ItemStackWrapper(new Item(), 0, null);
         facility.inventory.add(key, 8L);
         module.setOperation(ModuleOperationState.waiting(plan()));
         facility.tryReserveOperationMaterials(module, Map.of(key, 5L));
@@ -495,24 +494,6 @@ final class AutomatedFacilityOperationTest {
     }
 
     private static ItemStack material() {
-        return new ItemStack(new Item());
+        return new ItemStack(Items.diamond);
     }
-
-    private static void registerTestItem(int id, String key, Item item) throws ReflectiveOperationException {
-        Object registry = GameData.getItemRegistry();
-        for (Method method : registry.getClass()
-            .getDeclaredMethods()) {
-            Class<?>[] parameters = method.getParameterTypes();
-            if (parameters.length == 4 && parameters[0] == int.class
-                && parameters[1] == String.class
-                && parameters[2].isAssignableFrom(Item.class)
-                && parameters[3] == BitSet.class) {
-                method.setAccessible(true);
-                method.invoke(registry, id, key, item, new BitSet());
-                return;
-            }
-        }
-        throw new NoSuchMethodException("Item registry raw add method");
-    }
-
 }

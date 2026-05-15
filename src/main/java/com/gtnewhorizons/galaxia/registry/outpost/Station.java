@@ -67,10 +67,6 @@ public class Station extends CelestialAsset {
             .toList();
     }
 
-    public String getInventoryName() {
-        return "Station inventory";
-    }
-
     @Override
     public boolean tryConsumeEnergy(long powerDraw) {
         // TODO

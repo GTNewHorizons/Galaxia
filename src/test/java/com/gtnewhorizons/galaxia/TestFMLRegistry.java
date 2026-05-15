@@ -25,7 +25,7 @@ public class TestFMLRegistry {
             instanceField.setAccessible(true);
             instanceField.set(null, fakeLoader);
             Bootstrap.func_151354_b();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
 

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.Random;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
@@ -46,8 +47,8 @@ final class ProductionModuleHelperTest {
     @Test
     void executeKeepsPerItemInputLowerBoundAfterCombinedRecipeCost() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 105);
@@ -75,8 +76,8 @@ final class ProductionModuleHelperTest {
     @Test
     void executeAllowsOutputUpperBoundOvershootWhenCurrentInventoryIsBelowTarget() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 1);
@@ -105,8 +106,8 @@ final class ProductionModuleHelperTest {
     @Test
     void executeUsesCanonicalOutputBoundWhenDuplicateSecondSlotProduces() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 1);
@@ -172,8 +173,8 @@ final class ProductionModuleHelperTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 1);
@@ -199,8 +200,8 @@ final class ProductionModuleHelperTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 64);
@@ -223,8 +224,8 @@ final class ProductionModuleHelperTest {
     @Test
     void executeConsumesInputWhenChancedItemOutputMisses() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
         station.inventory.add(inputResource, 1);
@@ -239,8 +240,8 @@ final class ProductionModuleHelperTest {
 
     @Test
     void executeUsesOutputUpperBoundAsCurrentInventoryTargetForItems() {
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
 
@@ -276,7 +277,7 @@ final class ProductionModuleHelperTest {
 
     @Test
     void executeUsesOutputUpperBoundAsCurrentInventoryTargetForFluids() throws Exception {
-        Item inputItem = new Item();
+        Item inputItem = Items.diamond;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
 
         AutomatedFacility atGuard = station();
@@ -313,9 +314,9 @@ final class ProductionModuleHelperTest {
     @Test
     void executeDoesNotConsumeInputsWhenSelectedItemOutputsWouldOverflowInventory() {
         AutomatedFacility station = station();
-        Item fillerItem = new Item();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item fillerItem = Items.diamond;
+        Item inputItem = Items.iron_ingot;
+        Item outputItem = Items.gold_ingot;
         ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
@@ -338,9 +339,9 @@ final class ProductionModuleHelperTest {
     @Test
     void executeCanUseFreedInputCapacityForSelectedItemOutputs() {
         AutomatedFacility station = station();
-        Item fillerItem = new Item();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item fillerItem = Items.diamond;
+        Item inputItem = Items.iron_ingot;
+        Item outputItem = Items.gold_ingot;
         ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
