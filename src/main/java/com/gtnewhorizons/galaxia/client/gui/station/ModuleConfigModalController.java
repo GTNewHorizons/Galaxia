@@ -157,7 +157,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         this.kind = Kind.RECIPE_CONFIG;
         this.moduleId = module.id;
 
-        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this);
+        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, tilePickerController);
         widget.left(x)
             .top(y)
             .width(RecipeConfigModalWidget.WIDTH)

@@ -234,9 +234,9 @@ final class MinerBlacklistConfigModalWidget extends ParentWidget<MinerBlacklistC
         tilePickerController.start(
             "Copy miner settings",
             "Copy",
-            coord -> MinerSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
-            coord -> MinerSettingsCopyPickerModel.normalizeTarget(facility, coord),
-            targets -> CelestialClient.copyMinerSettings(assetId, sourceModuleIndex, targets));
+            coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
+            coord -> ModuleSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
     }
 
     private boolean canUseRow(int rowIndex) {

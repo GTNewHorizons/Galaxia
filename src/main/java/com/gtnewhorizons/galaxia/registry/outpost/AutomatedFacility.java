@@ -359,27 +359,35 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void copyMinerRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
+        if (!(source.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
         }
-        if (!(target.component() instanceof ModuleMiner targetMiner)) {
+        if (!(target.component() instanceof ModuleMiner)) {
             throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
         }
-        if (source.id.equals(target.id)) {
-            throw new IllegalStateException("Miner settings copy target must be different from source: " + source.id);
-        }
-        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), FacilityModuleKind.MINER);
-        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
-        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
+        copyModuleRuntimeSettings(source, target);
+    }
+
+    public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        requireSettingsGroupsSupported(source);
+        requireSettingsGroupsSupported(target);
+        if (source.kind() != target.kind()) {
             throw new IllegalStateException(
-                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
+                "Module settings copy target kind mismatch: " + source.kind() + " -> " + target.kind());
         }
+        if (source.id.equals(target.id)) {
+            throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
+        }
+        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
         if (sourceGroup.isJoinable()) {
             assignSettingsGroup(target, sourceGroup.id());
         } else {
-            setPrivateMinerSettings(target, ((MinerSettings) sourceGroup.settings()).copy());
+            setPrivateModuleSettings(
+                target,
+                source.component()
+                    .copySettings(source, sourceGroup.settings()));
         }
-        targetMiner.setFocusOre(sourceFocusOreKey);
+        copyModuleExtraRuntimeSettings(source, target);
         markModuleDirty(target.id);
     }
 
@@ -628,17 +636,34 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void setPrivateMinerSettings(ModuleInstance module, MinerSettings settings) {
+        setPrivateModuleSettings(module, settings);
+    }
+
+    private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (!current.isJoinable() && current.members()
                 .size() == 1) {
                 current.setSettings(settings);
+                applySettingsToModule(settings, module);
                 markModuleDirty(module.id);
                 return;
             }
         }
         detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, settingsGroups.create(FacilityModuleKind.MINER, settings));
+        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
+    }
+
+    private static void copyModuleExtraRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        if (source.component() instanceof ModuleMiner sourceMiner
+            && target.component() instanceof ModuleMiner targetMiner) {
+            String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
+            if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
+                throw new IllegalStateException(
+                    "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
+            }
+            targetMiner.setFocusOre(sourceFocusOreKey);
+        }
     }
 
     private ModuleSettings copySettings(ModuleInstance module) {

@@ -211,16 +211,16 @@ public final class AssetModuleUpdatePacket implements IMessage {
         return pkt;
     }
 
-    public static AssetModuleUpdatePacket copyMinerSettings(CelestialAsset.ID assetId, int moduleIndex,
+    public static AssetModuleUpdatePacket copyModuleSettings(CelestialAsset.ID assetId, int moduleIndex,
         ModuleInstance.ID moduleId, List<StationTileCoord> targetCoords) {
         Objects.requireNonNull(targetCoords, "targetCoords");
         if (targetCoords.isEmpty()) {
-            throw new IllegalArgumentException("copy miner settings target list must not be empty");
+            throw new IllegalArgumentException("copy module settings target list must not be empty");
         }
         if (targetCoords.size() > MAX_TILE_PICKER_TARGETS) {
-            throw new IllegalArgumentException("too many copy miner settings targets: " + targetCoords.size());
+            throw new IllegalArgumentException("too many copy module settings targets: " + targetCoords.size());
         }
-        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.COPY_MINER_SETTINGS);
+        AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, ConfigAction.COPY_MODULE_SETTINGS);
         ByteBuf payloadBuf = Unpooled.buffer(Integer.BYTES + targetCoords.size() * Integer.BYTES * 2);
         payloadBuf.writeInt(targetCoords.size());
         for (StationTileCoord coord : targetCoords) {
@@ -411,7 +411,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         CREATE_SETTINGS_GROUP,
         RENAME_SETTINGS_GROUP,
         CANCEL_MODULE_OPERATION,
-        COPY_MINER_SETTINGS,
+        COPY_MODULE_SETTINGS,
         PLAN_MODULE_UPGRADE_TARGETS,
         SET_RECIPE_SCHEDULER_MODE,
         ADD_RECIPE_SLOT,
@@ -460,7 +460,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                     PacketUtil.writeString(buf, stringPayload);
                 }
                 case CANCEL_MODULE_OPERATION -> {}
-                case COPY_MINER_SETTINGS, PLAN_MODULE_UPGRADE_TARGETS -> {
+                case COPY_MODULE_SETTINGS, PLAN_MODULE_UPGRADE_TARGETS -> {
                     if (rawPayload != null) {
                         buf.writeInt(rawPayload.length);
                         buf.writeBytes(rawPayload);
@@ -537,7 +537,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
                 stringPayload = PacketUtil.readString(buf);
             }
             case CANCEL_MODULE_OPERATION -> {}
-            case COPY_MINER_SETTINGS -> {
+            case COPY_MODULE_SETTINGS -> {
                 int len = buf.readInt();
                 if (len <= 0 || len > MAX_TILE_COORD_PAYLOAD_BYTES || len > buf.readableBytes()) {
                     throw new IllegalArgumentException("invalid tile coord payload length: " + len);
@@ -635,7 +635,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (type == CONFIG_TYPE && (getConfigAction() == ConfigAction.SET_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.CREATE_SETTINGS_GROUP
             || getConfigAction() == ConfigAction.RENAME_SETTINGS_GROUP
-            || getConfigAction() == ConfigAction.COPY_MINER_SETTINGS
+            || getConfigAction() == ConfigAction.COPY_MODULE_SETTINGS
             || getConfigAction() == ConfigAction.PLAN_MODULE_UPGRADE_TARGETS)) {
             return AssetSyncPacket.fullSync(state)
                 .withSyncRevision(state.getSyncRevision());
@@ -728,7 +728,7 @@ public final class AssetModuleUpdatePacket implements IMessage {
             case RENAME_SETTINGS_GROUP -> state
                 .renameSettingsGroupForModule(module, packet.shortPayload, packet.stringPayload);
             case CANCEL_MODULE_OPERATION -> state.cancelModuleOperation(module);
-            case COPY_MINER_SETTINGS -> handleCopyMinerSettings(packet, state, module);
+            case COPY_MODULE_SETTINGS -> handleCopyModuleSettings(packet, state, module);
             case PLAN_MODULE_UPGRADE_TARGETS -> handleModuleUpgradeTargets(packet, state, module, creative);
             case SET_RECIPE_SCHEDULER_MODE -> handleRecipeSchedulerMode(packet, state, module);
             case ADD_RECIPE_SLOT, UPDATE_RECIPE_SLOT, REMOVE_RECIPE_SLOT -> handleRecipeSlot(packet, state, module);
@@ -882,22 +882,25 @@ public final class AssetModuleUpdatePacket implements IMessage {
         miner.setFocusOre(targetOreKey);
     }
 
-    private static void handleCopyMinerSettings(AssetModuleUpdatePacket packet, AutomatedFacility state,
+    private static void handleCopyModuleSettings(AssetModuleUpdatePacket packet, AutomatedFacility state,
         ModuleInstance source) {
-        if (!(source.component() instanceof ModuleMiner)) {
-            throw new IllegalStateException("COPY_MINER_SETTINGS sent to non-miner module " + source.id);
+        if (!FacilityModuleRegistry.get(source.kind())
+            .settingsGroups()) {
+            throw new IllegalStateException("COPY_MODULE_SETTINGS sent to module without settings " + source.id);
         }
         StationLayout layout = state.stationLayout();
         if (layout == null) {
-            throw new IllegalStateException("COPY_MINER_SETTINGS requires a station layout for " + state.assetId);
+            throw new IllegalStateException("COPY_MODULE_SETTINGS requires a station layout for " + state.assetId);
         }
+        Set<ModuleInstance.ID> copiedTargets = new HashSet<>();
         for (StationTileCoord targetCoord : decodeTileCoordPayload(packet.rawPayload)) {
             ModuleInstance target = layout.moduleAt(targetCoord);
             if (target == null) {
                 throw new IllegalStateException(
-                    "COPY_MINER_SETTINGS target tile is empty: " + targetCoord.dx() + "," + targetCoord.dy());
+                    "COPY_MODULE_SETTINGS target tile is empty: " + targetCoord.dx() + "," + targetCoord.dy());
             }
-            state.copyMinerRuntimeSettings(source, target);
+            if (!copiedTargets.add(target.id)) continue;
+            state.copyModuleRuntimeSettings(source, target);
         }
     }
 

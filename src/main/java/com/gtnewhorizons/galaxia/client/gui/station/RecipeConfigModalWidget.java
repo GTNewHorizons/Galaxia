@@ -37,6 +37,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -71,6 +72,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int PAGE_BUTTON_WIDTH = 28;
     private static final int MODE_BUTTON_WIDTH = 96;
     private static final int ADD_BUTTON_WIDTH = 52;
+    private static final int COPY_SETTINGS_BUTTON_X = 236;
+    private static final int COPY_SETTINGS_BUTTON_WIDTH = 116;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int RENAME_MODAL_WIDTH = 260;
     private static final int RENAME_MODAL_HEIGHT = 104;
@@ -102,6 +105,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private final @Nullable StationTilePickerController tilePickerController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
     private int page;
     private int boundsSlotIndex = -1;
@@ -112,9 +116,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private String recipeNameInput = "";
     private @Nullable TextFieldWidget recipeNameField;
 
-    RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
+    RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
+        @Nullable StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.controller = controller;
+        this.tilePickerController = tilePickerController;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
             return module != null ? module.kind() : null;
@@ -198,6 +204,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             ModuleConfigModalSupport.button(this::canConfigureRecipes, "Add", this::addRecipe)
                 .pos(178, FOOTER_Y)
                 .size(ADD_BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::canCopySettings, "Copy Settings...", this::startCopySettingsPicker)
+                .pos(COPY_SETTINGS_BUTTON_X, FOOTER_Y)
+                .size(COPY_SETTINGS_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport
                 .button(() -> controller.isRecipeConfigOpen() && !isBoundsOpen(), "Close", controller::close)
@@ -327,6 +337,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return isRecipeListOpen() && !isRecipeRenameOpen() && selectedRecipeModule() != null;
     }
 
+    private boolean canCopySettings() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance module = selectedModule();
+        return tilePickerController != null && canConfigureRecipes()
+            && !settingsGroupSelector.isBlockingModuleControls()
+            && facility != null
+            && facility.stationLayout() != null
+            && module != null
+            && FacilityModuleRegistry.get(module.kind())
+                .settingsGroups();
+    }
+
     private boolean isRecipeListOpen() {
         return controller.isRecipeConfigOpen() && !isBoundsOpen();
     }
@@ -445,6 +467,22 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         RecipeInputScreen.open(assetId, controller.moduleIndex(), module);
+    }
+
+    private void startCopySettingsPicker() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance source = selectedModule();
+        int sourceModuleIndex = controller.moduleIndex();
+        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        settingsGroupSelector.closeMenu();
+        closeRecipeRename();
+        controller.close();
+        tilePickerController.start(
+            "Copy module settings",
+            "Copy",
+            coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
+            coord -> ModuleSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
     }
 
     private void previousPage() {

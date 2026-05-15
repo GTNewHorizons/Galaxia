@@ -306,11 +306,11 @@ public final class CelestialClient {
             module -> AssetModuleUpdatePacket.minerFocusOre(assetId, moduleIndex, module.id, oreKey));
     }
 
-    public static void copyMinerSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
+    public static void copyModuleSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.copyMinerSettings(assetId, moduleIndex, module.id, targetCoords));
+            module -> AssetModuleUpdatePacket.copyModuleSettings(assetId, moduleIndex, module.id, targetCoords));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,

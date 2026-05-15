@@ -19,7 +19,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
-final class MinerSettingsCopyPickerModelTest {
+final class ModuleSettingsCopyPickerModelTest {
 
     @BeforeAll
     static void initRegistries() {
@@ -29,20 +29,38 @@ final class MinerSettingsCopyPickerModelTest {
 
     @Test
     void normalizeTargetReturnsModuleAnchorForOccupiedTile() {
-        TestFacility test = twoMinerFacility();
+        TestFacility test = twoModuleFacility(FacilityModuleKind.MINER);
 
         assertEquals(
             test.target()
                 .anchor(),
-            MinerSettingsCopyPickerModel.normalizeTarget(
+            ModuleSettingsCopyPickerModel.normalizeTarget(
                 test.facility(),
                 test.target()
                     .anchor()));
     }
 
     @Test
-    void compatibleTargetMustBeDifferentMinerWithRequiredFocusTier() {
-        TestFacility test = twoMinerFacility();
+    void compatibleTargetMustBeDifferentSameKindModuleWithSettingsGroups() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.MINER);
+
+        assertFalse(
+            ModuleSettingsCopyPickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                test.source()
+                    .anchor()));
+        assertTrue(
+            ModuleSettingsCopyPickerModel.isCompatibleTarget(
+                test.facility(),
+                test.source(),
+                test.target()
+                    .anchor()));
+    }
+
+    @Test
+    void compatibleMinerTargetMustHaveRequiredFocusTier() {
+        TestFacility test = twoModuleFacility(FacilityModuleKind.MINER);
         ModuleMiner sourceMiner = (ModuleMiner) test.source()
             .component();
         ModuleMiner targetMiner = (ModuleMiner) test.target()
@@ -51,13 +69,7 @@ final class MinerSettingsCopyPickerModelTest {
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
 
         assertFalse(
-            MinerSettingsCopyPickerModel.isCompatibleTarget(
-                test.facility(),
-                test.source(),
-                test.source()
-                    .anchor()));
-        assertFalse(
-            MinerSettingsCopyPickerModel.isCompatibleTarget(
+            ModuleSettingsCopyPickerModel.isCompatibleTarget(
                 test.facility(),
                 test.source(),
                 test.target()
@@ -66,23 +78,21 @@ final class MinerSettingsCopyPickerModelTest {
         targetMiner.setFocus(MinerFocusTier.I, null, 0);
 
         assertTrue(
-            MinerSettingsCopyPickerModel.isCompatibleTarget(
+            ModuleSettingsCopyPickerModel.isCompatibleTarget(
                 test.facility(),
                 test.source(),
                 test.target()
                     .anchor()));
     }
 
-    private static TestFacility twoMinerFacility() {
+    private static TestFacility twoModuleFacility(FacilityModuleKind kind) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance source = FacilityModuleKind.MINER
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
-        ModuleInstance target = FacilityModuleKind.MINER
-            .create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance source = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance target = kind.create(StationTileCoord.of(2, 0), ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(source);
         facility.addModule(target);
         facility.stationLayout()
