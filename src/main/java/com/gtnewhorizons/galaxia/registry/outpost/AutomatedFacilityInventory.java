@@ -11,7 +11,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 
 /**
  * Virtual item inventory for an automated outpost.

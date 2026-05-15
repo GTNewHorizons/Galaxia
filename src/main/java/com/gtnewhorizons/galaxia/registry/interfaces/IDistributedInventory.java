@@ -4,18 +4,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 
@@ -45,21 +37,17 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
  */
 public interface IDistributedInventory {
 
-    // =========================================================================
-    // Core Data Providers
-    // =========================================================================
-
     /**
      * Returns the ordered list of backing item inventories.
      * Indices here correspond to the {@code idx} parameter of
-     * {@link #getItemFilter(int)} and {@link #getItemSlotRange(int)}.
+     * {@link #getItemFilter(int)}
      */
     List<IInventory> getInventories();
 
     /**
      * Returns the ordered list of backing fluid tanks.
      * Indices here correspond to the {@code idx} parameter of
-     * {@link #getFluidFilter(int)} and {@link #getFluidSlotRange(int)}.
+     * {@link #getFluidFilter(int)}
      */
     List<IFluidTank> getFluidTanks();
 
@@ -68,53 +56,17 @@ public interface IDistributedInventory {
      * {@code idx}. Implementations should return a constant or cached value
      * rather than allocating on every call.
      */
-    default Predicate<ItemStackWrapper> getItemFilter(int idx) {
-        return w -> true;
+    default ResourceFilter<ItemStackWrapper> getItemFilter(int idx) {
+        return ResourceFilter.forItems();
     }
 
     /**
      * Returns the fluid predicate governing what may enter the tank at
      * {@code idx}.
      */
-    default Predicate<FluidKey> getFluidFilter(int idx) {
-        return key -> true;
+    default ResourceFilter<FluidKey> getFluidFilter(int idx) {
+        return ResourceFilter.forFluids();
     }
-
-    /**
-     * Returns the half-open slot range {@code [start, end)} that the inventory
-     * at {@code idx} occupies in the global flattened slot space.
-     */
-    default SlotRange getItemSlotRange(int idx) {
-        List<IInventory> inventories = getInventories();
-        int start = 0;
-        for (int i = 0; i < idx && i < inventories.size(); i++) {
-            IInventory inv = inventories.get(i);
-            if (inv != null) start += inv.getSizeInventory();
-        }
-        IInventory inv = inventories.get(idx);
-        int end = inv != null ? start + inv.getSizeInventory() : start;
-        return new SlotRange(start, end);
-    }
-
-    /**
-     * Returns the half-open slot range {@code [start, end)} that the tank at
-     * {@code idx} occupies in the global flattened slot space.
-     */
-    default SlotRange getFluidSlotRange(int idx) {
-        List<IFluidTank> tanks = getFluidTanks();
-        int start = 0;
-        for (int i = 0; i < idx && i < tanks.size(); i++) {
-            IFluidTank tank = tanks.get(i);
-            if (tank != null) start++;
-        }
-        IFluidTank tank = tanks.get(idx);
-        int end = tank != null ? start + 1 : start;
-        return new SlotRange(start, end);
-    }
-
-    // =========================================================================
-    // Aggregation API
-    // =========================================================================
 
     /**
      * Returns a snapshot mapping each distinct item identity to its total
@@ -184,10 +136,6 @@ public interface IDistributedInventory {
         }
         return total;
     }
-
-    // =========================================================================
-    // Capacity & Space
-    // =========================================================================
 
     /** Total number of item slots across all backing inventories. */
     default long totalItemSlots() {
@@ -289,10 +237,6 @@ public interface IDistributedInventory {
         }
         return space;
     }
-
-    // =========================================================================
-    // Mutation API
-    // =========================================================================
 
     /**
      * Inserts (positive {@code delta}) or extracts (negative {@code delta})
@@ -428,34 +372,21 @@ public interface IDistributedInventory {
     /**
      * Marks a specific sub-store dirty without touching the rest.
      *
-     * @param idx  index into {@link #getInventories()} or
-     *             {@link #getFluidTanks()} depending on {@code type}
-     * @param type whether the target is an item inventory or a fluid tank
+     * @param idx index into {@link #getInventories()}
      */
-    default void markDirty(int idx, StorageType type) {
-        switch (type) {
-            case ITEM: {
-                List<IInventory> invs = getInventories();
-                if (idx >= 0 && idx < invs.size()) {
-                    IInventory inv = invs.get(idx);
-                    if (inv != null) inv.markDirty();
-                }
-                break;
-            }
-            case FLUID:
-                break;
+    default void markDirty(int idx) {
+        List<IInventory> invs = getInventories();
+        if (idx >= 0 && idx < invs.size()) {
+            IInventory inv = invs.get(idx);
+            if (inv != null) inv.markDirty();
         }
     }
-
-    // =========================================================================
-    // Default: Inventory / Tank Filtering
-    // =========================================================================
 
     /**
      * Returns all non-null backing inventories satisfying {@code condition}.
      * Override with a more efficient implementation if inventories are indexed.
      */
-    default List<IInventory> filterInventories(Predicate<IInventory> condition) {
+    default List<IInventory> filterInventories(ResourceFilter<IInventory> condition) {
         return getInventories().stream()
             .filter(Objects::nonNull)
             .filter(condition)
@@ -465,24 +396,12 @@ public interface IDistributedInventory {
     /**
      * Returns all non-null backing tanks satisfying {@code condition}.
      */
-    default List<IFluidTank> filterTanks(Predicate<IFluidTank> condition) {
+    default List<IFluidTank> filterTanks(ResourceFilter<IFluidTank> condition) {
         return getFluidTanks().stream()
             .filter(Objects::nonNull)
             .filter(condition)
             .collect(Collectors.toList());
     }
-
-    /**
-     * Returns all tanks that can accept at least 1 mB of {@code fluid} right
-     * now. Uses a simulated fill (no mutation) to determine acceptance.
-     */
-    default List<IFluidTank> getTanksAccepting(FluidStack fluid) {
-        return filterTanks(tank -> tank.fill(fluid, /* doFill= */ false) > 0);
-    }
-
-    // =========================================================================
-    // Default: Aggregation Queries
-    // =========================================================================
 
     /**
      * Returns a filtered view of the aggregated item snapshot.
@@ -492,7 +411,7 @@ public interface IDistributedInventory {
      * calling {@link #aggregatedItems()} yourself if you intend to apply
      * multiple predicates to avoid redundant snapshots.
      */
-    default Map<ItemStackWrapper, Long> filterItems(Predicate<ItemStackWrapper> predicate) {
+    default Map<ItemStackWrapper, Long> filterItems(ResourceFilter<ItemStackWrapper> predicate) {
         return aggregatedItems().entrySet()
             .stream()
             .filter(e -> predicate.test(e.getKey()))
@@ -502,7 +421,7 @@ public interface IDistributedInventory {
     /**
      * Returns a filtered view of the aggregated fluid snapshot.
      */
-    default Map<FluidKey, Long> filterFluids(Predicate<FluidKey> predicate) {
+    default Map<FluidKey, Long> filterFluids(ResourceFilter<FluidKey> predicate) {
         return aggregatedFluids().entrySet()
             .stream()
             .filter(e -> predicate.test(e.getKey()))
@@ -522,10 +441,6 @@ public interface IDistributedInventory {
             .collect(Collectors.toMap(Map.Entry::getKey, e -> snapshot.getOrDefault(e.getKey(), 0L)));
     }
 
-    // =========================================================================
-    // Default: Metrics
-    // =========================================================================
-
     /**
      * Returns the fluid fill ratio in {@code [0.0, 1.0]}.
      * Returns {@code 0.0} if total fluid capacity is zero.
@@ -542,210 +457,5 @@ public interface IDistributedInventory {
     default double itemSlotFillFactor() {
         long capacity = totalItemCapacity();
         return capacity == 0L ? 0.0 : (double) totalItemSlots() / capacity;
-    }
-
-    // =========================================================================
-    // Supporting Types
-    // =========================================================================
-
-    /**
-     * Distinguishes between item inventory and fluid tank storage targets,
-     * used in {@link #markDirty(int, StorageType)} and related APIs.
-     */
-    enum StorageType {
-        ITEM,
-        FLUID
-    }
-
-    /**
-     * An immutable, half-open slot range {@code [start, end)}.
-     *
-     * <p>
-     * Replaces the raw {@code int[]} previously returned by
-     * {@code getBoundsFor*}, removing ambiguity about index semantics and
-     * enabling safe equality and range checks.
-     */
-    record SlotRange(int start, int end) {
-
-        public SlotRange {
-            if (start < 0 || end < start)
-                throw new IllegalArgumentException("Invalid SlotRange: [" + start + ", " + end + ")");
-        }
-
-        /** Number of slots in this range. */
-        public int size() {
-            return end - start;
-        }
-
-        /** Returns {@code true} if {@code slot} falls within this range. */
-        public boolean contains(int slot) {
-            return slot >= start && slot < end;
-        }
-
-        /** Returns the local offset of {@code slot} within this range. */
-        public int localOffset(int slot) {
-            if (!contains(slot)) throw new IndexOutOfBoundsException("Slot " + slot + " not in range " + this);
-            return slot - start;
-        }
-    }
-
-    /**
-     * A stable, amount-independent identity key for a fluid.
-     *
-     * <p>
-     * Replaces direct {@link FluidStack} use as a map/set key. {@link FluidStack}
-     * is mutable and its equality semantics include the stored amount, making
-     * it unsuitable as a key in aggregation maps.
-     */
-    record FluidKey(Fluid fluid, @Nullable NBTTagCompound tag) {
-
-        /** Constructs a {@code FluidKey} from an existing {@link FluidStack}. */
-        public static FluidKey of(FluidStack stack) {
-            return new FluidKey(stack.getFluid(), stack.tag);
-        }
-
-        /** Reconstructs a {@link FluidStack} with the given volume. */
-        public FluidStack toStack(int amount) {
-            return tag == null ? new FluidStack(fluid, amount) : new FluidStack(fluid, amount, tag);
-        }
-
-        /** Looks up a Fluid by registry name and wraps it in a tagless FluidKey. */
-        public static @Nullable FluidKey fromName(String fluidName) {
-            if (fluidName == null || fluidName.isEmpty()) return null;
-            try {
-                Fluid fluid = FluidRegistry.getFluid(fluidName);
-                return fluid != null ? new FluidKey(fluid, null) : null;
-            } catch (Throwable e) {
-                return null;
-            }
-        }
-    }
-
-    // =========================================================================
-    // Filter Factories
-    // =========================================================================
-
-    /**
-     * Static factory methods for common {@link ItemStackWrapper} predicates.
-     *
-     * <p>
-     * Previously an inner class named {@code Filter}; split from fluid
-     * predicates for clarity. Combinators ({@link #anyOf}, {@link #allOf},
-     * {@link #noneOf}) are generic and work with any predicate type.
-     *
-     * <p>
-     * Example usage:
-     *
-     * <pre>
-     *
-     * {
-     *     &#64;code
-     *     Predicate<ItemStackWrapper> filter = ItemFilters
-     *         .anyOf(ItemFilters.byMod("thermal"), ItemFilters.byItem(Items.diamond));
-     *     Map<ItemStackWrapper, Long> result = inventory.filterItems(filter);
-     * }
-     * </pre>
-     */
-    interface ItemFilters {
-
-        /** Matches a specific {@link Item} instance. */
-        static Predicate<ItemStackWrapper> byItem(Item item) {
-            return w -> w.item() == item;
-        }
-
-        /**
-         * Matches items whose registry name starts with {@code modId + ":"}.
-         * Returns {@code false} for items with no registered name.
-         */
-        static Predicate<ItemStackWrapper> byMod(String modId) {
-            String prefix = modId + ":";
-            return w -> {
-                String name = Item.itemRegistry.getNameForObject(w.item());
-                return name != null && name.startsWith(prefix);
-            };
-        }
-
-        /**
-         * Matches items whose unlocalized name matches the given regex.
-         * Matching is case-insensitive and requires a full match (use {@code .*}
-         * for partial matching, e.g. {@code ".*ore.*"}).
-         */
-        static Predicate<ItemStackWrapper> byNameRegex(String regex) {
-            Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-            return w -> pattern.matcher(
-                w.toStack(1)
-                    .getUnlocalizedName())
-                .matches();
-        }
-
-        /**
-         * Matches damageable items whose remaining durability ratio is strictly
-         * below {@code threshold} (e.g. {@code 0.25} for less than 25% durability
-         * remaining). Non-damageable items never match.
-         */
-        static Predicate<ItemStackWrapper> damagedBelow(double threshold) {
-            return w -> {
-                ItemStack stack = w.toStack(1);
-                if (!stack.isItemStackDamageable()) return false;
-                double remaining = 1.0 - (double) stack.getItemDamage() / stack.getMaxDamage();
-                return remaining < threshold;
-            };
-        }
-
-        /** Matches if <em>any</em> of the provided predicates match. */
-        @SafeVarargs
-        static <T> Predicate<T> anyOf(Predicate<T>... predicates) {
-            return t -> {
-                for (Predicate<T> p : predicates) if (p.test(t)) return true;
-                return false;
-            };
-        }
-
-        /** Matches if <em>all</em> of the provided predicates match. */
-        @SafeVarargs
-        static <T> Predicate<T> allOf(Predicate<T>... predicates) {
-            return t -> {
-                for (Predicate<T> p : predicates) if (!p.test(t)) return false;
-                return true;
-            };
-        }
-
-        /** Matches if <em>none</em> of the provided predicates match. */
-        @SafeVarargs
-        static <T> Predicate<T> noneOf(Predicate<T>... predicates) {
-            return t -> {
-                for (Predicate<T> p : predicates) if (p.test(t)) return false;
-                return true;
-            };
-        }
-    }
-
-    /**
-     * Static factory methods for common {@link FluidKey} predicates.
-     */
-    interface FluidFilters {
-
-        /** Matches a specific {@link Fluid} instance. */
-        static Predicate<FluidKey> byFluid(Fluid fluid) {
-            return key -> key.fluid() == fluid;
-        }
-
-        /**
-         * Matches fluids whose registry name matches the given regex.
-         * Matching is case-insensitive and requires a full match.
-         */
-        static Predicate<FluidKey> byNameRegex(String regex) {
-            Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-            return key -> pattern.matcher(
-                key.fluid()
-                    .getName())
-                .matches();
-        }
-
-        /** Matches fluids that carry no NBT tag. */
-        static Predicate<FluidKey> hasNoTag() {
-            return key -> key.tag() == null || key.tag()
-                .hasNoTags();
-        }
     }
 }

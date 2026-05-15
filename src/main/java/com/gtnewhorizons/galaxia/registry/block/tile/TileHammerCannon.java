@@ -1,17 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -35,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
+import com.gtnewhorizons.galaxia.registry.interfaces.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -75,8 +74,8 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
-    private final List<IInventory> inventory = new ArrayList<>();
-    private final List<Predicate<ItemStackWrapper>> filter = new ArrayList<>();
+    private final List<IInventory> inventory = new java.util.ArrayList<>();
+    private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private BlockPos here;
     private final ModuleInstance moduleInstance;
@@ -146,25 +145,12 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     }
 
     @Override
-    public Predicate<ItemStackWrapper> getItemFilter(int idx) {
-        if (filter.isEmpty()) return w -> true;
-        return filter.get(idx);
-    }
-
-    @Override
-    public Predicate<FluidKey> getFluidFilter(int idx) {
-        return key -> true;
-    }
-
-    @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         NBTTagList filterList = new NBTTagList();
-        // for (ItemStack stack : filter) {
-        // NBTTagCompound stackNbt = new NBTTagCompound();
-        // stack.writeToNBT(stackNbt);
-        // filterList.appendTag(stackNbt);
-        // }
+        for (String key : filter.serialize()) {
+            filterList.appendTag(new NBTTagString(key));
+        }
         nbt.setTag(NBT_FILTER, filterList);
         nbt.setString(
             NBT_HAMMER_VARIANT,
@@ -180,11 +166,12 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         super.readFromNBT(nbt);
         filter.clear();
         if (nbt.hasKey(NBT_FILTER)) {
-            NBTTagList filterList = nbt.getTagList(NBT_FILTER, Constants.NBT.TAG_COMPOUND);
+            NBTTagList filterList = nbt.getTagList(NBT_FILTER, Constants.NBT.TAG_STRING);
+            java.util.ArrayList<String> keys = new java.util.ArrayList<>();
             for (int i = 0; i < filterList.tagCount(); i++) {
-                ItemStack stack = ItemStack.loadItemStackFromNBT(filterList.getCompoundTagAt(i));
-                // if (stack != null) filter.add(stack);
+                keys.add(filterList.getStringTagAt(i));
             }
+            filter.setAll(keys);
         }
         if (nbt.hasKey(NBT_HAMMER_VARIANT)) {
             try {

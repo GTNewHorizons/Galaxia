@@ -38,7 +38,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -477,19 +477,7 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 cj);
         }
-        out.filters = new LinkedHashMap<>();
-        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot()
-            .entrySet()) {
-            List<String> keys = new ArrayList<>();
-            for (ItemStack stack : e.getValue()) {
-                if (stack != null) {
-                    keys.add(
-                        ItemStackWrapper.of(stack)
-                            .toKey());
-                }
-            }
-            out.filters.put(e.getKey(), keys);
-        }
+        out.filters = new LinkedHashMap<>(state.filtersSnapshot());
 
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
@@ -719,15 +707,7 @@ public final class FacilityPersistenceManager {
 
         if (json.filters != null) {
             for (Map.Entry<Integer, List<String>> e : json.filters.entrySet()) {
-                int slot = e.getKey();
-                List<ItemStack> stacks = new ArrayList<>();
-                for (String key : e.getValue()) {
-                    ItemStackWrapper wrapper = ItemStackWrapper.fromKey(key);
-                    if (wrapper != null) {
-                        stacks.add(wrapper.toStack(1));
-                    }
-                }
-                state.setFilters(slot, stacks);
+                state.setFilters(e.getKey(), e.getValue(), true);
             }
         }
 

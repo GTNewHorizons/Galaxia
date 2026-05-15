@@ -8,7 +8,7 @@ import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 
 final class AutomatedFacilityInventoryTest {
 

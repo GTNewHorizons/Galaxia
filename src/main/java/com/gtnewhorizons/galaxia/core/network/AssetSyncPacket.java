@@ -24,7 +24,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory.FluidKey;
+import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
@@ -162,9 +162,9 @@ public final class AssetSyncPacket implements IMessage {
         pkt.stationControllerPos = state.getController();
 
         pkt.fullSyncDeltas = new ArrayList<>();
-        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot()
+        for (Map.Entry<Integer, List<String>> e : state.filtersSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
+            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), identityStacks(e.getValue())));
         }
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -205,9 +205,9 @@ public final class AssetSyncPacket implements IMessage {
             .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
             .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
 
-        for (Map.Entry<Integer, List<ItemStack>> e : state.filtersSnapshot()
+        for (Map.Entry<Integer, List<String>> e : state.filtersSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
+            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), identityStacks(e.getValue())));
         }
 
         List<ModuleInstance> modules = state.modules();
@@ -422,6 +422,16 @@ public final class AssetSyncPacket implements IMessage {
         pkt.syncType = FILTER_REMOVED;
         pkt.filterSlot = slot;
         return pkt;
+    }
+
+    private static List<ItemStack> identityStacks(List<String> serializedKeys) {
+        List<ItemStack> stacks = new ArrayList<>();
+        for (String key : serializedKeys) {
+            if (key.startsWith("~:")) continue;
+            ItemStackWrapper w = ItemStackWrapper.fromKey(key);
+            if (w != null) stacks.add(w.toStack(1));
+        }
+        return stacks;
     }
 
     /**

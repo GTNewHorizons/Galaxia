@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -16,7 +17,9 @@ import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -80,7 +83,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private int syncRevision;
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private boolean dirty = true;
-    private final Map<Integer, List<ItemStack>> filters = new Int2ObjectArrayMap<>();
+    private final Map<Integer, ResourceFilter<ItemStackWrapper>> itemFilters = new Int2ObjectArrayMap<>();
+    private final Map<Integer, ResourceFilter<FluidKey>> fluidFilters = new Int2ObjectArrayMap<>();
 
     public final LogisticsConfiguration logisticsConfig;
 
@@ -244,6 +248,138 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void clean() {
         dirty = false;
+    }
+
+    @Override
+    public ResourceFilter<ItemStackWrapper> getItemFilter(int idx) {
+        ResourceFilter<ItemStackWrapper> f = itemFilters.get(idx);
+        return f != null ? f : ResourceFilter.forItems();
+    }
+
+    public void addFilter(int slot, ItemStack stack) {
+        ItemStackWrapper key = ItemStackWrapper.of(stack);
+        if (key == null) return;
+        itemFilters.computeIfAbsent(slot, s -> ResourceFilter.forItems())
+            .addIdentity(key);
+        markDirty();
+    }
+
+    public void removeFilter(int slot, ItemStack stack) {
+        ItemStackWrapper key = ItemStackWrapper.of(stack);
+        if (key == null) return;
+        ResourceFilter<ItemStackWrapper> f = itemFilters.get(slot);
+        if (f != null) {
+            f.remove(key);
+            if (f.isEmpty()) itemFilters.remove(slot);
+        }
+        markDirty();
+    }
+
+    public void setFilters(int slot, List<ItemStack> stacks) {
+        ResourceFilter<ItemStackWrapper> f = ResourceFilter.forItems();
+        for (ItemStack stack : stacks) {
+            ItemStackWrapper key = ItemStackWrapper.of(stack);
+            if (key != null) f.addIdentity(key);
+        }
+        if (f.isEmpty()) {
+            itemFilters.remove(slot);
+        } else {
+            itemFilters.put(slot, f);
+        }
+        markDirty();
+    }
+
+    public void setFilters(int slot, List<String> serializedKeys, boolean fromSerialized) {
+        ResourceFilter<ItemStackWrapper> f = ResourceFilter.forItems();
+        f.setAll(serializedKeys);
+        if (f.isEmpty()) {
+            itemFilters.remove(slot);
+        } else {
+            itemFilters.put(slot, f);
+        }
+        markDirty();
+    }
+
+    public void clearFilters(int slot) {
+        itemFilters.remove(slot);
+        markDirty();
+    }
+
+    public List<ItemStack> getFiltersFor(int slot) {
+        ResourceFilter<ItemStackWrapper> f = itemFilters.get(slot);
+        if (f == null) return List.of();
+        return f.identities()
+            .stream()
+            .map(w -> w.toStack(1))
+            .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+    }
+
+    public Map<Integer, List<String>> filtersSnapshot() {
+        Map<Integer, List<String>> result = new Int2ObjectArrayMap<>();
+        for (Map.Entry<Integer, ResourceFilter<ItemStackWrapper>> e : itemFilters.entrySet()) {
+            result.put(
+                e.getKey(),
+                e.getValue()
+                    .serialize());
+        }
+        return result;
+    }
+
+    @Override
+    public ResourceFilter<FluidKey> getFluidFilter(int idx) {
+        ResourceFilter<FluidKey> f = fluidFilters.get(idx);
+        return f != null ? f : ResourceFilter.forFluids();
+    }
+
+    public void addFluidFilter(int slot, FluidKey key) {
+        if (key == null) return;
+        fluidFilters.computeIfAbsent(slot, s -> ResourceFilter.forFluids())
+            .addIdentity(key);
+        markDirty();
+    }
+
+    public void removeFluidFilter(int slot, FluidKey key) {
+        if (key == null) return;
+        ResourceFilter<FluidKey> f = fluidFilters.get(slot);
+        if (f != null) {
+            f.remove(key);
+            if (f.isEmpty()) fluidFilters.remove(slot);
+        }
+        markDirty();
+    }
+
+    public void setFluidFilters(int slot, List<FluidKey> keys) {
+        ResourceFilter<FluidKey> f = ResourceFilter.forFluids();
+        for (FluidKey key : keys) {
+            if (key != null) f.addIdentity(key);
+        }
+        if (f.isEmpty()) {
+            fluidFilters.remove(slot);
+        } else {
+            fluidFilters.put(slot, f);
+        }
+        markDirty();
+    }
+
+    public void clearFluidFilters(int slot) {
+        fluidFilters.remove(slot);
+        markDirty();
+    }
+
+    public List<FluidKey> getFluidFiltersFor(int slot) {
+        ResourceFilter<FluidKey> f = fluidFilters.get(slot);
+        return f != null ? f.identities() : List.of();
+    }
+
+    public Map<Integer, List<String>> fluidFiltersSnapshot() {
+        Map<Integer, List<String>> result = new Int2ObjectArrayMap<>();
+        for (Map.Entry<Integer, ResourceFilter<FluidKey>> e : fluidFilters.entrySet()) {
+            result.put(
+                e.getKey(),
+                e.getValue()
+                    .serialize());
+        }
+        return result;
     }
 
     public abstract boolean tryConsumeEnergy(long powerDraw);
