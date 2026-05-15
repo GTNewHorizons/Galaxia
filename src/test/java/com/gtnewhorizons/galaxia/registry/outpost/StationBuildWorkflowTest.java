@@ -139,6 +139,22 @@ final class StationBuildWorkflowTest {
         assertEquals(5, layout.size(), "CORE + 4 child tiles = 5 total");
     }
 
+    @Test
+    void a5_minerDefaultFootprintIsTwoByTwo() {
+        AutomatedFacility facility = createOutpost();
+        StationLayout layout = facility.stationLayout();
+
+        StationTileCoord anchor = StationTileCoord.of(1, 0);
+        ModuleInstance module = buildModuleOnServer(facility, FacilityModuleKind.MINER, anchor);
+
+        assertEquals(ModuleShape.QUAD_2x2, module.shape());
+        assertTrue(layout.isOccupied(StationTileCoord.of(1, 0)), "[1,0] occupied");
+        assertTrue(layout.isOccupied(StationTileCoord.of(2, 0)), "[2,0] occupied");
+        assertTrue(layout.isOccupied(StationTileCoord.of(1, 1)), "[1,1] occupied");
+        assertTrue(layout.isOccupied(StationTileCoord.of(2, 1)), "[2,1] occupied");
+        assertEquals(5, layout.size(), "CORE + 2x2 miner footprint = 5 total");
+    }
+
     // ── Phase B — Validator parity (server vs simulated client) ──
 
     @Test
@@ -194,10 +210,18 @@ final class StationBuildWorkflowTest {
             Buildable.Status.OPERATIONAL);
     }
 
+    private static AutomatedFacility createOutpost() {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+    }
+
     /** Simulates what StarmapServerActions does server-side. */
     private static ModuleInstance buildModuleOnServer(AutomatedFacility facility, FacilityModuleKind kind,
         StationTileCoord anchor) {
-        return buildModuleOnServer(facility, kind, anchor, ModuleShape.SINGLE);
+        return buildModuleOnServer(facility, kind, anchor, kind.defaultShape());
     }
 
     private static ModuleInstance buildModuleOnServer(AutomatedFacility facility, FacilityModuleKind kind,

@@ -107,6 +107,50 @@ final class ModuleBuildPickerModelTest {
     }
 
     @Test
+    void selectedMultiTileBuildTargetsUnlockAdjacentFootprints() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord chained = StationTileCoord.of(3, 0);
+        StationTileCoord overlapping = StationTileCoord.of(2, 0);
+
+        assertFalse(
+            ModuleBuildPickerModel
+                .isCompatibleTarget(facility, FacilityModuleKind.MINER, ModuleShape.QUAD_2x2, ModuleTier.EV, chained));
+        assertTrue(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.MINER,
+                ModuleShape.QUAD_2x2,
+                ModuleTier.EV,
+                chained,
+                List.of(first)));
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.MINER,
+                ModuleShape.QUAD_2x2,
+                ModuleTier.EV,
+                overlapping,
+                List.of(first)));
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.MINER,
+                ModuleShape.QUAD_2x2,
+                ModuleTier.EV,
+                first,
+                List.of(first)));
+        assertEquals(
+            List.of(first, chained),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, chained), ModuleShape.QUAD_2x2));
+    }
+
+    @Test
     void disconnectedBuildTargetsArePrunedAfterSelectionChanges() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -120,8 +164,12 @@ final class ModuleBuildPickerModelTest {
 
         assertEquals(
             List.of(first, second, third),
-            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, second, third)));
-        assertEquals(List.of(), ModuleBuildPickerModel.connectedTargets(facility, List.of(second, third)));
-        assertEquals(List.of(first), ModuleBuildPickerModel.connectedTargets(facility, List.of(first, third)));
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, second, third), ModuleShape.SINGLE));
+        assertEquals(
+            List.of(),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(second, third), ModuleShape.SINGLE));
+        assertEquals(
+            List.of(first),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, third), ModuleShape.SINGLE));
     }
 }

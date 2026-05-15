@@ -144,15 +144,16 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             return;
         }
         FacilityModuleKind kind = request.kind();
+        ModuleShape shape = kind.defaultShape();
         controller.start(
             "Build " + kind.getDisplayName(),
             "Confirm",
             (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord, selected),
+                .isCompatibleTarget(facility, kind, shape, kind.defaultTier(), coord, selected),
             coord -> coord,
             targets -> com.gtnewhorizons.galaxia.client.CelestialClient
                 .createModules(assetId, kind, request.creativeBuildMode(), targets),
-            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets));
+            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {

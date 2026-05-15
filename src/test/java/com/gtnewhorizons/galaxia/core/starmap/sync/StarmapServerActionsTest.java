@@ -96,6 +96,67 @@ final class StarmapServerActionsTest {
     }
 
     @Test
+    void buildMinerUsesDefaultTwoByTwoFootprint() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+        StationTileCoord coord = StationTileCoord.of(1, 0);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.create(
+            facility.assetId,
+            FacilityModuleKind.MINER,
+            FacilityModuleKind.MINER.defaultShape(),
+            FacilityModuleKind.MINER.defaultTier(),
+            true,
+            coord);
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNotNull(result, "miner build must sync the new 2x2 footprint");
+        assertEquals(
+            1,
+            facility.modules()
+                .size());
+        assertEquals(
+            ModuleShape.QUAD_2x2,
+            facility.modules()
+                .get(0)
+                .shape());
+        assertEquals(
+            5,
+            facility.stationLayout()
+                .size());
+    }
+
+    @Test
+    void buildModuleRejectsShapeThatDoesNotMatchModuleKind() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        CelestialAssetStore.SERVER.registerAssetInternal(TEAM, facility);
+
+        AssetBuildModulePacket packet = AssetBuildModulePacket.create(
+            facility.assetId,
+            FacilityModuleKind.MINER,
+            ModuleShape.SINGLE,
+            FacilityModuleKind.MINER.defaultTier(),
+            true,
+            StationTileCoord.of(1, 0));
+
+        AssetSyncPacket result = packet.apply(TEAM, true);
+
+        assertNull(result);
+        assertTrue(
+            facility.modules()
+                .isEmpty());
+    }
+
+    @Test
     void buildModulesAddsMultipleModulesAndReturnsImmediateFullSync() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),

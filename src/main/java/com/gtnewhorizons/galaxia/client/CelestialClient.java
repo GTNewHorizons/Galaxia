@@ -35,7 +35,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -119,7 +118,7 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendBuildModule(
             assetId,
             kind,
-            ModuleShape.SINGLE,
+            kind.defaultShape(),
             kind.defaultTier(),
             creativeBuildModeEnabled,
             tileCoord);
@@ -133,7 +132,7 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendBuildModules(
             assetId,
             kind,
-            ModuleShape.SINGLE,
+            kind.defaultShape(),
             kind.defaultTier(),
             creativeBuildModeEnabled,
             tileCoords);

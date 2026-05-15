@@ -110,6 +110,13 @@ public enum FacilityModuleKind {
         };
     }
 
+    public ModuleShape defaultShape() {
+        return switch (this) {
+            case MINER -> ModuleShape.QUAD_2x2;
+            default -> ModuleShape.SINGLE;
+        };
+    }
+
     public ModulePriority defaultPriority() {
         return switch (this) {
             case HAMMER, MINER -> ModulePriority.NORMAL;
