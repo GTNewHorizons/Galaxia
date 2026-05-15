@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class StationTilePickerControllerTest {
@@ -95,5 +96,23 @@ final class StationTilePickerControllerTest {
         assertEquals(0, controller.selectedCount());
         assertFalse(controller.isSelected(second));
         assertFalse(controller.isSelected(third));
+    }
+
+    @Test
+    void rotatesConfiguredFootprintWithRActionOnlyWhenEnabled() {
+        StationTilePickerController controller = new StationTilePickerController();
+        controller.start("Build", "Confirm", coord -> true, coord -> coord, selected -> {});
+
+        assertFalse(controller.rotateSelectionFootprint());
+        assertEquals(0, controller.footprintRotation());
+
+        controller.setSelectionFootprint(ModuleShape.QUAD_2x2, true);
+
+        assertTrue(controller.rotateSelectionFootprint());
+        assertEquals(1, controller.footprintRotation());
+        assertTrue(controller.rotateSelectionFootprint());
+        assertTrue(controller.rotateSelectionFootprint());
+        assertTrue(controller.rotateSelectionFootprint());
+        assertEquals(0, controller.footprintRotation());
     }
 }

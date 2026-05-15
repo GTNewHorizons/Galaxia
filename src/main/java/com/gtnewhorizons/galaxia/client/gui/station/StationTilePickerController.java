@@ -10,6 +10,10 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
+import javax.annotation.Nullable;
+
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class StationTilePickerController {
@@ -20,6 +24,10 @@ final class StationTilePickerController {
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
     private UnaryOperator<List<StationTileCoord>> selectionPruner = targets -> targets;
     private Consumer<List<StationTileCoord>> confirmHandler = selected -> {};
+    private ModuleShape selectionFootprint = ModuleShape.SINGLE;
+    private @Nullable FacilityModuleKind previewModuleKind;
+    private boolean footprintRotationEnabled;
+    private int footprintRotation;
     private final Set<StationTileCoord> selected = new LinkedHashSet<>();
     private boolean active;
 
@@ -47,8 +55,28 @@ final class StationTilePickerController {
         this.normalizer = normalizer == null ? coord -> coord : normalizer;
         this.confirmHandler = confirmHandler == null ? selected -> {} : confirmHandler;
         this.selectionPruner = selectionPruner == null ? targets -> targets : selectionPruner;
+        selectionFootprint = ModuleShape.SINGLE;
+        footprintRotationEnabled = false;
+        footprintRotation = 0;
         selected.clear();
         active = true;
+    }
+
+    void setSelectionFootprint(ModuleShape shape, boolean rotationEnabled) {
+        this.selectionFootprint = shape == null ? ModuleShape.SINGLE : shape;
+        this.footprintRotationEnabled = rotationEnabled;
+        this.footprintRotation = 0;
+    }
+
+    void setPreviewModuleKind(@Nullable FacilityModuleKind kind) {
+        this.previewModuleKind = kind;
+    }
+
+    boolean rotateSelectionFootprint() {
+        if (!active || !footprintRotationEnabled) return false;
+        footprintRotation = (footprintRotation + 1) & 3;
+        pruneSelection();
+        return true;
     }
 
     boolean isActive() {
@@ -73,28 +101,55 @@ final class StationTilePickerController {
 
     boolean isCompatible(StationTileCoord coord) {
         if (!active || coord == null) return false;
-        StationTileCoord normalized = normalizer.apply(coord);
-        return normalized != null
+        return isCompatibleNormalized(normalize(coord));
+    }
+
+    boolean isCompatibleNormalized(StationTileCoord normalized) {
+        return active && normalized != null
             && (selected.contains(normalized) || compatibility.test(normalized, Collections.unmodifiableSet(selected)));
     }
 
     boolean isSelected(StationTileCoord coord) {
         if (!active || coord == null) return false;
-        StationTileCoord normalized = normalizer.apply(coord);
+        StationTileCoord normalized = normalize(coord);
         return normalized != null && selected.contains(normalized);
     }
 
     boolean toggle(StationTileCoord coord) {
-        StationTileCoord normalized = normalizer.apply(coord);
+        return toggleNormalized(normalize(coord));
+    }
+
+    boolean toggleNormalized(StationTileCoord normalized) {
         if (normalized == null) return false;
         if (selected.contains(normalized)) {
             selected.remove(normalized);
         } else {
-            if (!isCompatible(coord)) return false;
+            if (!isCompatibleNormalized(normalized)) return false;
             selected.add(normalized);
         }
         pruneSelection();
         return true;
+    }
+
+    StationTileCoord normalize(StationTileCoord coord) {
+        return coord == null ? null : normalizer.apply(coord);
+    }
+
+    ModuleShape selectionFootprint() {
+        return selectionFootprint;
+    }
+
+    boolean rotatesFootprint() {
+        return footprintRotationEnabled;
+    }
+
+    int footprintRotation() {
+        return footprintRotation;
+    }
+
+    @Nullable
+    FacilityModuleKind previewModuleKind() {
+        return previewModuleKind;
     }
 
     Set<StationTileCoord> selectedTargets() {
@@ -122,6 +177,10 @@ final class StationTilePickerController {
         normalizer = coord -> coord;
         selectionPruner = targets -> targets;
         confirmHandler = selected -> {};
+        selectionFootprint = ModuleShape.SINGLE;
+        previewModuleKind = null;
+        footprintRotationEnabled = false;
+        footprintRotation = 0;
     }
 
     private void pruneSelection() {

@@ -55,5 +55,12 @@ final class StationTilePickerControlsWidget extends ParentWidget<StationTilePick
             .drawTrimmedLine(controller.title(), 10, 9, WIDTH - 20, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
         ModuleConfigModalSupport
             .drawLine("Selected: " + controller.selectedCount(), 10, 24, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        if (controller.rotatesFootprint()) {
+            ModuleConfigModalSupport.drawLine(
+                "R: Anchor " + (controller.footprintRotation() + 1) + "/4",
+                96,
+                24,
+                EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        }
     }
 }

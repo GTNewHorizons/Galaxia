@@ -21,10 +21,18 @@ public final class StationTileRenderer {
         drawBorder(x, y, size, 0xFF9099A4);
     }
 
+    public static void drawPickerCompatibleSecondaryOverlay(int x, int y, int size) {
+        drawBorder(x, y, size, 0xCC59616A);
+    }
+
     public static void drawPickerSelectedOverlay(int x, int y, int size) {
         int color = 0xFF35D06F;
         drawBorder(x, y, size, color);
         drawBorder(x - 1, y - 1, size + 2, color);
+    }
+
+    public static void drawPickerSelectedSecondaryOverlay(int x, int y, int size) {
+        drawBorder(x, y, size, 0xCC249650);
     }
 
     private static void drawBorder(int x, int y, int size, int color) {

@@ -154,6 +154,8 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             targets -> com.gtnewhorizons.galaxia.client.CelestialClient
                 .createModules(assetId, kind, request.creativeBuildMode(), targets),
             targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
+        controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);
+        controller.setPreviewModuleKind(kind);
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {

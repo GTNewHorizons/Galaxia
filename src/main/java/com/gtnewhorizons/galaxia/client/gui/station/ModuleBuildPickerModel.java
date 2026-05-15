@@ -73,6 +73,38 @@ final class ModuleBuildPickerModel {
         return connectedTargets(facility, targets, ModuleShape.SINGLE);
     }
 
+    static StationTileCoord anchorForRotation(StationTileCoord tile, ModuleShape shape, int rotation) {
+        if (tile == null || shape != ModuleShape.QUAD_2x2) return tile;
+        int normalizedRotation = Math.floorMod(rotation, 4);
+        int anchorDx = tile.dx() - switch (normalizedRotation) {
+            case 1, 2 -> 1;
+            default -> 0;
+        };
+        int anchorDy = tile.dy() - switch (normalizedRotation) {
+            case 2, 3 -> 1;
+            default -> 0;
+        };
+        if (anchorDx < StationTileCoord.MIN || anchorDx > StationTileCoord.MAX) return null;
+        if (anchorDy < StationTileCoord.MIN || anchorDy > StationTileCoord.MAX) return null;
+        return StationTileCoord.of(anchorDx, anchorDy);
+    }
+
+    static StationTileCoord tileForAnchorRotation(StationTileCoord anchor, ModuleShape shape, int rotation) {
+        if (anchor == null || shape != ModuleShape.QUAD_2x2) return anchor;
+        int normalizedRotation = Math.floorMod(rotation, 4);
+        int tileDx = anchor.dx() + switch (normalizedRotation) {
+            case 1, 2 -> 1;
+            default -> 0;
+        };
+        int tileDy = anchor.dy() + switch (normalizedRotation) {
+            case 2, 3 -> 1;
+            default -> 0;
+        };
+        if (tileDx < StationTileCoord.MIN || tileDx > StationTileCoord.MAX) return null;
+        if (tileDy < StationTileCoord.MIN || tileDy > StationTileCoord.MAX) return null;
+        return StationTileCoord.of(tileDx, tileDy);
+    }
+
     private static boolean isCompatibleSingleTarget(AutomatedFacility facility, StationTileCoord coord,
         Collection<StationTileCoord> pendingTargets) {
         if (facility.stationLayout()
