@@ -100,11 +100,10 @@ final class PlanetaryFeatureGeneratorTest {
         boolean foundCoexistence = false;
         for (int x = StationTileCoord.MIN; x <= StationTileCoord.MAX && !foundCoexistence; x++) {
             for (int y = StationTileCoord.MIN; y <= StationTileCoord.MAX && !foundCoexistence; y++) {
-                PlanetaryFeatureSet features = PlanetaryFeatureGenerator
+                java.util.List<PlanetaryFeatureKey> features = PlanetaryFeatureGenerator
                     .featuresAt(42L, StationTileCoord.of(x, y), body);
-                foundCoexistence = features.get(PlanetaryFeatureLayer.TERRAIN)
-                    == PlanetaryFeatureRegistry.STABLE_BEDROCK.key()
-                    && features.get(PlanetaryFeatureLayer.RESOURCE) == PlanetaryFeatureRegistry.MINERAL_VEIN.key();
+                foundCoexistence = features.contains(PlanetaryFeatureRegistry.STABLE_BEDROCK.key())
+                    && features.contains(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
             }
         }
 

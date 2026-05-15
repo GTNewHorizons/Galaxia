@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -8,25 +9,28 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public final class PlanetaryFeatureGenerator {
 
+    private static final List<PlanetaryFeatureKey> NO_FEATURES = List.of();
+
     private PlanetaryFeatureGenerator() {}
 
     public static PlanetaryFeatureKey featureAt(long stationFeatureSalt, StationTileCoord tile, CelestialObject body) {
-        return featuresAt(stationFeatureSalt, tile, body).primary();
+        return firstFeature(featuresAt(stationFeatureSalt, tile, body));
     }
 
     public static PlanetaryFeatureKey featureAt(long stationFeatureSalt, int dx, int dy, CelestialObject body) {
-        return featuresAt(stationFeatureSalt, dx, dy, body).primary();
+        return firstFeature(featuresAt(stationFeatureSalt, dx, dy, body));
     }
 
-    public static PlanetaryFeatureSet featuresAt(long stationFeatureSalt, StationTileCoord tile, CelestialObject body) {
-        if (tile == null || body == null) return PlanetaryFeatureSet.empty();
+    public static List<PlanetaryFeatureKey> featuresAt(long stationFeatureSalt, StationTileCoord tile,
+        CelestialObject body) {
+        if (tile == null || body == null) return NO_FEATURES;
         return featuresAt(stationFeatureSalt, tile.dx(), tile.dy(), body);
     }
 
-    public static PlanetaryFeatureSet featuresAt(long stationFeatureSalt, int dx, int dy, CelestialObject body) {
-        if (body == null) return PlanetaryFeatureSet.empty();
+    public static List<PlanetaryFeatureKey> featuresAt(long stationFeatureSalt, int dx, int dy, CelestialObject body) {
+        if (body == null) return NO_FEATURES;
         PlanetaryFeatureProfile profile = body.featureProfile();
-        if (profile == null || !profile.canGenerateFeatures()) return PlanetaryFeatureSet.empty();
+        if (profile == null || !profile.canGenerateFeatures()) return NO_FEATURES;
         long base = mix(
             stationFeatureSalt ^ body.id()
                 .ordinal());
@@ -47,7 +51,26 @@ public final class PlanetaryFeatureGenerator {
                 selectedScores.put(layer, score);
             }
         }
-        return PlanetaryFeatureSet.of(selected);
+        return orderedFeatures(selected);
+    }
+
+    private static PlanetaryFeatureKey firstFeature(List<PlanetaryFeatureKey> features) {
+        return features.isEmpty() ? null : features.get(0);
+    }
+
+    private static List<PlanetaryFeatureKey> orderedFeatures(EnumMap<PlanetaryFeatureLayer, PlanetaryFeatureKey> map) {
+        if (map.isEmpty()) return NO_FEATURES;
+        List<PlanetaryFeatureKey> features = new java.util.ArrayList<>(map.size());
+        addIfPresent(features, map, PlanetaryFeatureLayer.RESOURCE);
+        addIfPresent(features, map, PlanetaryFeatureLayer.ENVIRONMENT);
+        addIfPresent(features, map, PlanetaryFeatureLayer.TERRAIN);
+        return List.copyOf(features);
+    }
+
+    private static void addIfPresent(List<PlanetaryFeatureKey> features,
+        EnumMap<PlanetaryFeatureLayer, PlanetaryFeatureKey> map, PlanetaryFeatureLayer layer) {
+        PlanetaryFeatureKey feature = map.get(layer);
+        if (feature != null) features.add(feature);
     }
 
     private static long mix(long value) {

@@ -435,8 +435,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> {
             panY);
         if (coord == null) return;
         List<PlanetaryFeatureDefinition> features = new ArrayList<>();
-        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord.dx(), coord.dy())
-            .values()) {
+        for (PlanetaryFeatureKey key : facility.planetaryFeaturesAt(coord.dx(), coord.dy())) {
             PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
             if (definition != null) features.add(definition);
         }

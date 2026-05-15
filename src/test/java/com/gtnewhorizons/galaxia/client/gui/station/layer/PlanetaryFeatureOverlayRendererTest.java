@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 
-final class PlanetaryFeatureOverlayLayoutTest {
+final class PlanetaryFeatureOverlayRendererTest {
 
     @Test
     void laysOutFeatureMarkersInsideBottomLeftCornerOfTile() {
-        List<PlanetaryFeatureOverlayLayout.Marker> markers = PlanetaryFeatureOverlayLayout.markers(
+        List<PlanetaryFeatureOverlayRenderer.Marker> markers = PlanetaryFeatureOverlayRenderer.markers(
             100,
             50,
             List.of(
@@ -49,7 +49,7 @@ final class PlanetaryFeatureOverlayLayoutTest {
 
     @Test
     void keepsOnlyRenderableMarkersThatFitInTile() {
-        List<PlanetaryFeatureOverlayLayout.Marker> markers = PlanetaryFeatureOverlayLayout.markers(
+        List<PlanetaryFeatureOverlayRenderer.Marker> markers = PlanetaryFeatureOverlayRenderer.markers(
             0,
             0,
             List.of(

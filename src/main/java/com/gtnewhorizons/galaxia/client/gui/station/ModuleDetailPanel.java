@@ -180,9 +180,7 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
         java.util.LinkedHashSet<PlanetaryFeatureKey> features = new java.util.LinkedHashSet<>();
         for (StationTileCoord coord : module.shape()
             .tiles(module.anchor())) {
-            features.addAll(
-                facility.planetaryFeaturesAt(coord)
-                    .values());
+            features.addAll(facility.planetaryFeaturesAt(coord));
         }
         if (features.isEmpty()) return y;
         y += SECTION_GAP;

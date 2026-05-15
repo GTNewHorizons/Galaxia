@@ -21,7 +21,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureSet;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -138,22 +137,26 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
-        return planetaryFeaturesAt(tile).primary();
+        return firstPlanetaryFeature(planetaryFeaturesAt(tile));
     }
 
     public PlanetaryFeatureKey planetaryFeatureAt(int dx, int dy) {
-        return planetaryFeaturesAt(dx, dy).primary();
+        return firstPlanetaryFeature(planetaryFeaturesAt(dx, dy));
     }
 
-    public PlanetaryFeatureSet planetaryFeaturesAt(StationTileCoord tile) {
-        if (tile == null) return PlanetaryFeatureSet.empty();
+    public List<PlanetaryFeatureKey> planetaryFeaturesAt(StationTileCoord tile) {
+        if (tile == null) return Collections.emptyList();
         return planetaryFeaturesAt(tile.dx(), tile.dy());
     }
 
-    public PlanetaryFeatureSet planetaryFeaturesAt(int dx, int dy) {
+    public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
         return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
             .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
-            .orElse(PlanetaryFeatureSet.empty());
+            .orElse(Collections.emptyList());
+    }
+
+    private static PlanetaryFeatureKey firstPlanetaryFeature(List<PlanetaryFeatureKey> features) {
+        return features.isEmpty() ? null : features.get(0);
     }
 
     public List<FeatureContribution> featureContributions(ModuleInstance module) {
@@ -163,7 +166,7 @@ public final class AutomatedFacility extends CelestialAsset {
         StationTileCoord[] tiles = module.shape()
             .tiles(module.anchor());
         for (StationTileCoord tile : tiles) {
-            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile).values()) {
+            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
                 counts.merge(feature, 1, Integer::sum);
             }
         }
