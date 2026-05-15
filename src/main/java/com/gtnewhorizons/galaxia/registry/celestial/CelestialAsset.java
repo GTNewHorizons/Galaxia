@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
@@ -32,42 +33,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 
 public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
-    public enum Kind {
-
-        STATION, // Not Implemented yet
-        AUTOMATED_STATION, // Not implemented yet
-        AUTOMATED_OUTPOST,
-
-        ;
-
-        public String getDisplayName() {
-            return StatCollector.translateToLocal(
-                "galaxia.outpost.module.kind." + this.name()
-                    .toLowerCase());
-        }
-    }
-
-    public enum Location {
-
-        ORBIT,
-        SURFACE,
-
-        ;
-
-        public String getDisplayName() {
-            return StatCollector.translateToLocal(
-                "galaxia.outpost.module.location." + this.name()
-                    .toLowerCase());
-        }
-
-        public static Location ofKind(Kind kind) {
-            return switch (kind) {
-                case STATION, AUTOMATED_STATION -> ORBIT;
-                case AUTOMATED_OUTPOST -> SURFACE;
-            };
-        }
-    }
-
     public final ID assetId;
     public final CelestialObjectId celestialObjectId;
     public final CelestialObjectId systemId;
@@ -83,6 +48,9 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private int syncRevision;
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private boolean dirty = true;
+
+    private final Map<ItemStackWrapper, InventoryBounds> itemBounds= new LinkedHashMap<>();
+    private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
     private final Map<Integer, ResourceFilter<ItemStackWrapper>> itemFilters = new Int2ObjectArrayMap<>();
     private final Map<Integer, ResourceFilter<FluidKey>> fluidFilters = new Int2ObjectArrayMap<>();
 
@@ -133,6 +101,12 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         this.syncRevision = 0;
         this.logisticsConfig = new LogisticsConfiguration();
     }
+
+    public abstract boolean tryConsumeEnergy(long powerDraw);
+
+    public abstract long getEnergyStored();
+
+    public abstract Stream<ModuleInstance> forEachModule();
 
     public Map<ItemStack, Long> requiredResources() {
         return requiredResources;
@@ -249,6 +223,10 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public void clean() {
         dirty = false;
     }
+
+    /// ----------------------------------------------------------------------
+    /// Inventory
+    /// ----------------------------------------------------------------------
 
     @Override
     public ResourceFilter<ItemStackWrapper> getItemFilter(int idx) {
@@ -382,12 +360,6 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         return result;
     }
 
-    public abstract boolean tryConsumeEnergy(long powerDraw);
-
-    public abstract long getEnergyStored();
-
-    public abstract Stream<ModuleInstance> forEachModule();
-
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
@@ -399,6 +371,42 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     @Override
     public int hashCode() {
         return Objects.hash(assetId);
+    }
+
+    public enum Kind {
+
+        STATION,
+        AUTOMATED_STATION, // Not implemented yet
+        AUTOMATED_OUTPOST,
+
+        ;
+
+        public String getDisplayName() {
+            return StatCollector.translateToLocal(
+                "galaxia.outpost.module.kind." + this.name()
+                    .toLowerCase());
+        }
+    }
+
+    public enum Location {
+
+        ORBIT,
+        SURFACE,
+
+        ;
+
+        public String getDisplayName() {
+            return StatCollector.translateToLocal(
+                "galaxia.outpost.module.location." + this.name()
+                    .toLowerCase());
+        }
+
+        public static Location ofKind(Kind kind) {
+            return switch (kind) {
+                case STATION, AUTOMATED_STATION -> ORBIT;
+                case AUTOMATED_OUTPOST -> SURFACE;
+            };
+        }
     }
 
     public record ID(UUID id) implements WithUUID {

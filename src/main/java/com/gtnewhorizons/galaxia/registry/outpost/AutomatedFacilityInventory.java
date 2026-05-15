@@ -24,10 +24,6 @@ public final class AutomatedFacilityInventory implements IInventory {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
     private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
-    private final Map<ItemStackWrapper, Long> itemLowerBounds = new LinkedHashMap<>();
-    private final Map<ItemStackWrapper, Long> itemUpperBounds = new LinkedHashMap<>();
-    private final Map<FluidKey, Long> fluidLowerBounds = new LinkedHashMap<>();
-    private final Map<FluidKey, Long> fluidUpperBounds = new LinkedHashMap<>();
     private long totalItemAmount;
 
     public long getAmount(ItemStackWrapper item) {
