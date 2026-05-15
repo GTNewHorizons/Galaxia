@@ -6,12 +6,10 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
@@ -35,29 +33,17 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 
 public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventoryOLD, IStationAttachment {
 
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
@@ -161,7 +147,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     @Override
     public void markDirty() {
         super.markDirty();
-        IDistributedInventory.super.markDirty();
+        IDistributedInventoryOLD.super.markDirty();
     }
 
     public void setFilters(List<ItemStack> filterList) {

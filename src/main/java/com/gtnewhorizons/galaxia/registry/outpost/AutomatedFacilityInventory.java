@@ -11,7 +11,6 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IFluidInventory;
 
 /**
  * Virtual item inventory for an automated outpost.

@@ -18,7 +18,7 @@ import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -28,7 +28,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 
-public abstract class CelestialAsset implements Buildable, IDistributedInventory {
+public abstract class CelestialAsset implements Buildable, IDistributedInventoryOLD {
 
     public enum Kind {
 

@@ -31,11 +31,11 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
 public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventoryOLD, IStationAttachment {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -118,7 +118,7 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     @Override
     public void markDirty() {
         super.markDirty();
-        IDistributedInventory.super.markDirty();
+        IDistributedInventoryOLD.super.markDirty();
     }
 
     public void setFilters(List<ItemStack> filterList) {

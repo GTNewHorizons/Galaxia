@@ -7,7 +7,7 @@ import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 
@@ -38,13 +38,13 @@ public final class StationGraph {
             .iterator();
     }
 
-    public @Nonnull Iterable<IDistributedInventory> connectedInventories() {
+    public @Nonnull Iterable<IDistributedInventoryOLD> connectedInventories() {
         return () -> attachments.keySet()
             .stream()
             .map(pos -> pos.getTE(controller.getWorldObj()))
-            .filter(te -> te instanceof IDistributedInventory)
+            .filter(te -> te instanceof IDistributedInventoryOLD)
             .filter(te -> !(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid())
-            .map(te -> (IDistributedInventory) te)
+            .map(te -> (IDistributedInventoryOLD) te)
             .iterator();
     }
 

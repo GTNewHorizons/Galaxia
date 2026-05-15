@@ -12,7 +12,7 @@ import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -44,7 +44,7 @@ final class StationInventoryPanelModelTest {
         ItemStackWrapper tracked = new ItemStackWrapper(new Item(), 0, null);
         inventory.setItemLowerBound(tracked, 32);
 
-        IDistributedInventory distributed = distributed(inventory);
+        IDistributedInventoryOLD distributed = distributed(inventory);
         List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed, inventory);
 
         assertEquals(1, rows.size());
@@ -68,8 +68,8 @@ final class StationInventoryPanelModelTest {
                 .isEmpty());
     }
 
-    private static IDistributedInventory distributed(AutomatedFacilityInventory inv) {
-        return new IDistributedInventory() {
+    private static IDistributedInventoryOLD distributed(AutomatedFacilityInventory inv) {
+        return new IDistributedInventoryOLD() {
 
             @Override
             public Map<ItemStackWrapper, Long> aggregatedItemAmounts() {

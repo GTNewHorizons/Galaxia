@@ -33,8 +33,7 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IFluidInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -193,7 +192,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             }
             return;
         }
-        IDistributedInventory distributed = distributed();
+        IDistributedInventoryOLD distributed = distributed();
         if (distributed == null) {
             open = false;
             return;
@@ -649,9 +648,9 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return assetId != null && CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility af ? af : null;
     }
 
-    private @Nullable IDistributedInventory distributed() {
+    private @Nullable IDistributedInventoryOLD distributed() {
         CelestialAsset asset = assetId != null ? CelestialClient.getByAssetId(assetId) : null;
-        return asset instanceof IDistributedInventory d ? d : null;
+        return asset instanceof IDistributedInventoryOLD d ? d : null;
     }
 
     private @Nullable IBoundedInventory bounds() {
@@ -664,7 +663,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return af != null ? af.inventory : null;
     }
 
-    private List<Map.Entry<ItemStackWrapper, Long>> rows(IDistributedInventory distributed) {
+    private List<Map.Entry<ItemStackWrapper, Long>> rows(IDistributedInventoryOLD distributed) {
         return StationInventoryPanelModel.inventoryRows(distributed, bounds());
     }
 

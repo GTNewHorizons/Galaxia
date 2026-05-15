@@ -9,8 +9,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.IBoundedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IFluidInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventoryOLD;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModel {
@@ -31,8 +30,8 @@ final class StationInventoryPanelModel {
         return Math.min(parsed, availableAmount);
     }
 
-    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory,
-        @Nullable IBoundedInventory bounds) {
+    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventoryOLD inventory,
+                                                                 @Nullable IBoundedInventory bounds) {
         Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItemAmounts());
         if (bounds != null) {
             for (ItemStackWrapper item : bounds.itemLowerBoundsSnapshot()
