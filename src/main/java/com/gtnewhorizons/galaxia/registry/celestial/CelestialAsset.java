@@ -11,16 +11,18 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.ResourceFilter;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -358,6 +360,73 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
                     .serialize());
         }
         return result;
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Inventory Bounds
+    /// ----------------------------------------------------------------------------------
+
+    private <T extends InventoryKey> Map<T, InventoryBounds> getBoundsMap(T key) {
+        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds : (Map<T, InventoryBounds>) fluidBounds;
+    }
+
+    public boolean hasLowerBound(InventoryKey key) {
+        return getBound(key).hasLow();
+    }
+
+    public boolean hasUpperBound(InventoryKey key) {
+        return getBound(key).hasUpper();
+    }
+
+    public InventoryBounds getBound(InventoryKey key) {
+        return getBoundsMap(key).getOrDefault(key, InventoryBounds.invalid());
+    }
+
+    public void setBound(InventoryKey key, long low, long upper) {
+        getBoundsMap(key).put(key, new InventoryBounds(low, upper));
+    }
+
+    public void setBound(InventoryKey key, long amount, boolean low) {
+        InventoryBounds bound = getBoundsMap(key).computeIfAbsent(key, k -> InventoryBounds.invalid());
+        if (low) {
+            bound.setLow(amount);
+        } else {
+            bound.setUppper(amount);
+        }
+    }
+
+    public void clearBound(InventoryKey key) {
+        getBoundsMap(key).remove(key);
+    }
+
+    public void clearBound(InventoryKey key, boolean low) {
+        InventoryBounds bound = getBoundsMap(key).remove(key);
+        if (low) {
+            bound.removeLow();
+        } else {
+            bound.removeUpper();
+        }
+        if (!bound.isInvalid()) getBoundsMap(key).put(key, bound);
+    }
+
+    private <T extends InventoryKey> long getResourceAmount(T key) {
+        return key instanceof ItemStackWrapper ? getItemAmount((ItemStackWrapper) key) : getFluidAmount((FluidKey) key);
+    }
+
+    public boolean isBelowUpper(InventoryKey key) {
+        return getResourceAmount(key) < getBound(key).upperOrDefault();
+    }
+
+    public boolean isAboveLow(InventoryKey key) {
+        return getResourceAmount(key) < getBound(key).lowOrDefault();
+    }
+
+    public boolean isAboveLow(InventoryKey key, long amount) {
+        return getResourceAmount(key) > (getBound(key).lowOrDefault() - amount);
+    }
+
+    public boolean isInBounds(InventoryKey key) {
+        return getBound(key).inBounds(getResourceAmount(key));
     }
 
     @Override

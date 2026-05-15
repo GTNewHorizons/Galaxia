@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.function.Predicate;
 
+import com.gtnewhorizons.galaxia.registry.outpost.Filters;
 import org.junit.jupiter.api.Test;
 
 final class FiltersTest {

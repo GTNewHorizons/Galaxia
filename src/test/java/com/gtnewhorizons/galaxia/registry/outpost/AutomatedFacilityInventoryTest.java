@@ -3,6 +3,9 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import net.minecraft.init.Items;
 import net.minecraftforge.fluids.FluidRegistry;
 
@@ -10,7 +13,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
-import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
 
 final class AutomatedFacilityInventoryTest {
 
@@ -26,29 +28,31 @@ final class AutomatedFacilityInventoryTest {
 
     @Test
     void recipeBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
+        AutomatedFacility outpost = new AutomatedFacility(CelestialAsset.ID.create(), CelestialObjectId.PROXIMA_CENTAURI, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
         ItemStackWrapper input = new ItemStackWrapper(Items.diamond, 0, null);
         ItemStackWrapper output = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        inventory.add(input, 40);
-        inventory.add(output, 990);
+        outpost.updateItems(input, 40);
+        outpost.updateItems(output, 990);
+        outpost.setBound(input, 32L, 1000L);
 
-        assertTrue(inventory.keepsItemLowerBoundAfterConsume(input, 8L, 32L));
-        assertFalse(inventory.keepsItemLowerBoundAfterConsume(input, 9L, 32L));
-        assertTrue(inventory.isItemBelowUpperBound(output, 1000L));
-        inventory.add(output, 10);
-        assertFalse(inventory.isItemBelowUpperBound(output, 1000L));
+        assertTrue(outpost.isAboveLow(input, 8));
+        assertFalse(outpost.isAboveLow(input, 9));
+        assertTrue(outpost.isBelowUpper(input));
+        outpost.updateItems(output, 10);
+        assertFalse(outpost.isBelowUpper(output));
     }
 
     @Test
     void recipeFluidBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.addFluid(INPUT_KEY, 1000);
-        inventory.addFluid(OUTPUT_KEY, 900);
+        AutomatedFacility outpost = new AutomatedFacility(CelestialAsset.ID.create(), CelestialObjectId.PROXIMA_CENTAURI, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        outpost.updateFluids(INPUT_KEY, 1000);
+        outpost.updateFluids(OUTPUT_KEY, 900);
+        outpost.setBound(INPUT_KEY, 800L, 1000L);
 
-        assertTrue(inventory.keepsFluidLowerBoundAfterConsume(INPUT_KEY, 200L, 800L));
-        assertFalse(inventory.keepsFluidLowerBoundAfterConsume(INPUT_KEY, 201L, 800L));
-        assertTrue(inventory.isFluidBelowUpperBound(OUTPUT_KEY, 1000L));
-        inventory.addFluid(OUTPUT_KEY, 100);
-        assertFalse(inventory.isFluidBelowUpperBound(OUTPUT_KEY, 1000L));
+        assertTrue(outpost.isAboveLow(INPUT_KEY, 200L));
+        assertFalse(outpost.isAboveLow(INPUT_KEY, 201L));
+        assertTrue(outpost.isBelowUpper(OUTPUT_KEY));
+        outpost.updateFluids(OUTPUT_KEY, 100);
+        assertFalse(outpost.isBelowUpper(OUTPUT_KEY));
     }
 }

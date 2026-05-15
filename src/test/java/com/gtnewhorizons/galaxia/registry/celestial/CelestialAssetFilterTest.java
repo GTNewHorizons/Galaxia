@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;

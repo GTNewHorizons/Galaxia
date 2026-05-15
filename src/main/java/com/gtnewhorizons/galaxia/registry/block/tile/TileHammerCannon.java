@@ -33,7 +33,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
-import com.gtnewhorizons.galaxia.registry.interfaces.ResourceFilter;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;

@@ -1,12 +1,10 @@
-package com.gtnewhorizons.galaxia.registry.interfaces;
+package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public final class ResourceFilter<T> implements Predicate<T> {
 

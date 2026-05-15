@@ -91,7 +91,7 @@ final class AssetInventoryUpdatePacketTest {
 
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
-        assertEquals(48, facility.inventory.itemLowerBoundOrDefault(resource));
+        assertEquals(48, facility.getBound(resource).lowOrDefault());
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
     }

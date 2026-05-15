@@ -11,8 +11,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
-
 /**
  * Virtual item inventory for an automated outpost.
  * All amounts are stored in RAM; persisted to JSON on WorldEvent.Save.
@@ -70,30 +68,6 @@ public final class AutomatedFacilityInventory implements IInventory {
 
     public long totalItems() {
         return totalItemAmount;
-    }
-
-    public boolean keepsItemLowerBoundAfterConsume(ItemStackWrapper item, long consumed, long lowerBound) {
-        return getAmount(item) - Math.max(0L, consumed) >= lowerBound;
-    }
-
-    public boolean isItemBelowUpperBound(ItemStackWrapper item, long upperBound) {
-        return getAmount(item) < upperBound;
-    }
-
-    public boolean hasItemLowerBound(ItemStackWrapper item) {
-        return itemLowerBounds.containsKey(item);
-    }
-
-    public boolean hasItemUpperBound(ItemStackWrapper item) {
-        return itemUpperBounds.containsKey(item);
-    }
-
-    public long itemLowerBoundOrDefault(ItemStackWrapper item) {
-        return itemLowerBounds.getOrDefault(item, 0L);
-    }
-
-    public long itemUpperBoundOrDefault(ItemStackWrapper item) {
-        return itemUpperBounds.getOrDefault(item, Long.MAX_VALUE);
     }
 
     public void setItemLowerBound(ItemStackWrapper item, long amount) {
@@ -186,121 +160,6 @@ public final class AutomatedFacilityInventory implements IInventory {
         return Collections.unmodifiableMap(new LinkedHashMap<>(fluidUpperBounds));
     }
 
-    // ── Fluid methods (String-keyed, deprecated) ──
-
-    @Deprecated
-    public long getFluidAmount(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null ? getFluidAmount(key) : 0L;
-    }
-
-    @Deprecated
-    public long addFluid(String fluidName, long delta) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null ? addFluid(key, delta) : 0L;
-    }
-
-    @Deprecated
-    public @Nonnull Map<String, Long> fluidSnapshotByName() {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : fluidAmounts.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return Collections.unmodifiableMap(result);
-    }
-
-    @Deprecated
-    public boolean keepsFluidLowerBoundAfterConsume(String fluidName, long consumed, long lowerBound) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null && keepsFluidLowerBoundAfterConsume(key, consumed, lowerBound);
-    }
-
-    @Deprecated
-    public boolean isFluidBelowUpperBound(String fluidName, long upperBound) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null && isFluidBelowUpperBound(key, upperBound);
-    }
-
-    @Deprecated
-    public boolean hasFluidLowerBound(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null && hasFluidLowerBound(key);
-    }
-
-    @Deprecated
-    public boolean hasFluidUpperBound(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null && hasFluidUpperBound(key);
-    }
-
-    @Deprecated
-    public long fluidLowerBoundOrDefault(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null ? fluidLowerBoundOrDefault(key) : 0L;
-    }
-
-    @Deprecated
-    public long fluidUpperBoundOrDefault(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        return key != null ? fluidUpperBoundOrDefault(key) : Long.MAX_VALUE;
-    }
-
-    @Deprecated
-    public void setFluidLowerBound(String fluidName, long amount) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        if (key != null) setFluidLowerBound(key, amount);
-    }
-
-    @Deprecated
-    public void setFluidUpperBound(String fluidName, long amount) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        if (key != null) setFluidUpperBound(key, amount);
-    }
-
-    @Deprecated
-    public void clearFluidLowerBound(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        if (key != null) clearFluidLowerBound(key);
-    }
-
-    @Deprecated
-    public void clearFluidUpperBound(String fluidName) {
-        FluidKey key = FluidKey.fromName(fluidName);
-        if (key != null) clearFluidUpperBound(key);
-    }
-
-    @Deprecated
-    public @Nonnull Map<String, Long> fluidBoundsLowerByName() {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : fluidLowerBounds.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return Collections.unmodifiableMap(result);
-    }
-
-    @Deprecated
-    public @Nonnull Map<String, Long> fluidBoundsUpperByName() {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : fluidUpperBounds.entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return Collections.unmodifiableMap(result);
-    }
-
-    // ── Unified bound dispatch (uses canonical FluidKey methods) ──
-
     public void setBound(BoundKind kind, String resourceKey, long amount) {
         if (kind == null || resourceKey == null || resourceKey.isEmpty()) return;
         switch (kind) {
@@ -383,10 +242,6 @@ public final class AutomatedFacilityInventory implements IInventory {
     public void clear() {
         amounts.clear();
         fluidAmounts.clear();
-        itemLowerBounds.clear();
-        itemUpperBounds.clear();
-        fluidLowerBounds.clear();
-        fluidUpperBounds.clear();
         totalItemAmount = 0L;
     }
 

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.interfaces;
+package com.gtnewhorizons.galaxia.registry.outpost;
 
 import javax.annotation.Nullable;
 
@@ -15,7 +15,7 @@ import net.minecraftforge.fluids.FluidStack;
  * is mutable and its equality semantics include the stored amount, making
  * it unsuitable as a key in aggregation maps.
  */
-public record FluidKey(Fluid fluid, @Nullable NBTTagCompound tag) {
+public record FluidKey(Fluid fluid, @Nullable NBTTagCompound tag) implements InventoryKey {
 
     /**
      * Constructs a {@code FluidKey} from an existing {@link FluidStack}.

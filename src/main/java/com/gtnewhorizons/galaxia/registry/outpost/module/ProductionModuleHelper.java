@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
@@ -53,9 +55,9 @@ public final class ProductionModuleHelper {
         ItemStackWrapper[] inputWrappers = cachedWrappers(inputWrapperCache, recipe, inputs);
 
         Map<ItemStackWrapper, Long> requiredInputs = requiredInputs(inputWrappers, inputs);
-        Map<String, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
+        Map<FluidKey, Long> requiredFluidInputs = requiredFluidInputs(fluidInputs);
         if (!hasRequiredInputs(inv, requiredInputs, requiredFluidInputs)
-            || !allowsInputs(inv, requiredInputs, requiredFluidInputs)) {
+            || !allowsInputs(outpost, requiredInputs, requiredFluidInputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
@@ -67,7 +69,7 @@ public final class ProductionModuleHelper {
         }
         SelectedItemOutputs selectedItemOutputs = selectedOutputs(outputWrappers, outputs, outputChances, random);
         SelectedFluidOutputs selectedFluidOutputs = selectedFluidOutputs(fluidOutputs, fluidOutputChances, random);
-        if (!allowsOutputs(inv, selectedItemOutputs, selectedFluidOutputs)) {
+        if (!allowsOutputs(outpost, selectedItemOutputs, selectedFluidOutputs)) {
             advanceScheduler(config, recipeModule);
             return;
         }
@@ -83,8 +85,7 @@ public final class ProductionModuleHelper {
 
         if (fluidInputs != null) {
             for (FluidStack fluid : fluidInputs) {
-                String fluidName = fluidName(fluid);
-                if (fluidName != null) inv.addFluid(fluidName, -fluid.amount);
+                 inv.addFluid(FluidKey.of(fluid), -fluid.amount);
             }
         }
 
@@ -95,7 +96,7 @@ public final class ProductionModuleHelper {
         }
 
         if (fluidOutputs != null) {
-            for (Map.Entry<String, Long> e : selectedFluidOutputs.totals()
+            for (Map.Entry<FluidKey, Long> e : selectedFluidOutputs.totals()
                 .entrySet()) {
                 inv.addFluid(e.getKey(), e.getValue());
             }
@@ -132,13 +133,11 @@ public final class ProductionModuleHelper {
         return required.isEmpty() ? Map.of() : required;
     }
 
-    private static Map<String, Long> requiredFluidInputs(FluidStack[] stacks) {
+    private static Map<FluidKey, Long> requiredFluidInputs(FluidStack[] stacks) {
         if (stacks == null || stacks.length == 0) return Map.of();
-        Map<String, Long> required = new HashMap<>();
+        Map<FluidKey, Long> required = new HashMap<>();
         for (FluidStack stack : stacks) {
-            String fluidName = fluidName(stack);
-            if (fluidName == null || stack.amount <= 0) continue;
-            required.merge(fluidName, (long) stack.amount, Long::sum);
+            required.merge(FluidKey.of(stack), (long) stack.amount, Long::sum);
         }
         return required.isEmpty() ? Map.of() : required;
     }
@@ -152,11 +151,11 @@ public final class ProductionModuleHelper {
     }
 
     private static boolean hasRequiredInputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> itemInputs,
-        Map<String, Long> fluidInputs) {
+        Map<FluidKey, Long> fluidInputs) {
         for (Map.Entry<ItemStackWrapper, Long> entry : itemInputs.entrySet()) {
             if (inv.getAmount(entry.getKey()) < entry.getValue()) return false;
         }
-        for (Map.Entry<String, Long> entry : fluidInputs.entrySet()) {
+        for (Map.Entry<FluidKey, Long> entry : fluidInputs.entrySet()) {
             if (inv.getFluidAmount(entry.getKey()) < entry.getValue()) return false;
         }
         return true;
@@ -170,21 +169,17 @@ public final class ProductionModuleHelper {
         return outpost.remainingItemInventoryCapacity() + freedByInputs >= outputAmount;
     }
 
-    private static boolean allowsInputs(AutomatedFacilityInventory inv, Map<ItemStackWrapper, Long> requiredInputs,
-        Map<String, Long> requiredFluidInputs) {
+    private static boolean allowsInputs(AutomatedFacility automatedFacility, Map<ItemStackWrapper, Long> requiredInputs,
+        Map<FluidKey, Long> requiredFluidInputs) {
         for (Map.Entry<ItemStackWrapper, Long> entry : requiredInputs.entrySet()) {
-            if (inv.hasItemLowerBound(entry.getKey()) && !inv.keepsItemLowerBoundAfterConsume(
-                entry.getKey(),
-                entry.getValue(),
-                inv.itemLowerBoundOrDefault(entry.getKey()))) {
+            InventoryBounds bound = automatedFacility.getBound(entry.getKey());
+            if (bound.hasLow() && !automatedFacility.isAboveLow(entry.getKey(), entry.getValue())) {
                 return false;
             }
         }
-        for (Map.Entry<String, Long> entry : requiredFluidInputs.entrySet()) {
-            if (inv.hasFluidLowerBound(entry.getKey()) && !inv.keepsFluidLowerBoundAfterConsume(
-                entry.getKey(),
-                entry.getValue(),
-                inv.fluidLowerBoundOrDefault(entry.getKey()))) {
+        for (Map.Entry<FluidKey, Long> entry : requiredFluidInputs.entrySet()) {
+            InventoryBounds bound = automatedFacility.getBound(entry.getKey());
+            if (bound.hasLow() && !automatedFacility.isAboveLow(entry.getKey(), entry.getValue())) {
                 return false;
             }
         }
@@ -203,30 +198,29 @@ public final class ProductionModuleHelper {
         }
         if (fluidOutputs != null) {
             for (FluidStack stack : fluidOutputs) {
-                String fluidName = fluidName(stack);
-                if (fluidName == null) continue;
                 hasOutputs = true;
-                if (inv.getFluidAmount(fluidName) < requestAmount) return true;
+                if (inv.getFluidAmount(FluidKey.of(stack)) < requestAmount) return true;
             }
         }
         return !hasOutputs;
     }
 
-    private static boolean allowsOutputs(AutomatedFacilityInventory inv, SelectedItemOutputs selectedItemOutputs,
+    private static boolean allowsOutputs(AutomatedFacility outpost, SelectedItemOutputs selectedItemOutputs,
         SelectedFluidOutputs selectedFluidOutputs) {
+        AutomatedFacilityInventory inv = outpost.inventory;
         for (Map.Entry<ItemStackWrapper, Long> entry : selectedItemOutputs.totals()
             .entrySet()) {
             if (entry.getValue() <= 0L) continue;
-            if (inv.hasItemUpperBound(entry.getKey())
-                && !inv.isItemBelowUpperBound(entry.getKey(), inv.itemUpperBoundOrDefault(entry.getKey()))) {
+            InventoryBounds bound = outpost.getBound(entry.getKey());
+            if (bound.hasUpper() && !outpost.isBelowUpper(entry.getKey())) {
                 return false;
             }
         }
-        for (Map.Entry<String, Long> entry : selectedFluidOutputs.totals()
+        for (Map.Entry<FluidKey, Long> entry : selectedFluidOutputs.totals()
             .entrySet()) {
             if (entry.getValue() <= 0L) continue;
-            if (inv.hasFluidUpperBound(entry.getKey())
-                && !inv.isFluidBelowUpperBound(entry.getKey(), inv.fluidUpperBoundOrDefault(entry.getKey()))) {
+            InventoryBounds bound = outpost.getBound(entry.getKey());
+            if (bound.hasUpper() && !outpost.isBelowUpper(entry.getKey())) {
                 return false;
             }
         }
@@ -249,7 +243,7 @@ public final class ProductionModuleHelper {
 
     private static SelectedFluidOutputs selectedFluidOutputs(FluidStack[] stacks, int[] chances, Random random) {
         if (stacks == null || stacks.length == 0) return SelectedFluidOutputs.empty();
-        Map<String, Long> selected = new HashMap<>();
+        Map<FluidKey, Long> selected = new HashMap<>();
         String[] slotFluidNames = new String[stacks.length];
         long[] slotAmounts = new long[stacks.length];
         for (int i = 0; i < stacks.length; i++) {
@@ -259,7 +253,7 @@ public final class ProductionModuleHelper {
             if (!shouldProduceOutput(chances, i, random)) continue;
             slotFluidNames[i] = fluidName;
             slotAmounts[i] = stack.amount;
-            selected.merge(fluidName, (long) stack.amount, Long::sum);
+            selected.merge(FluidKey.of(stack), (long) stack.amount, Long::sum);
         }
         return new SelectedFluidOutputs(selected.isEmpty() ? Map.of() : selected, slotFluidNames, slotAmounts);
     }
@@ -314,7 +308,7 @@ public final class ProductionModuleHelper {
         }
     }
 
-    private record SelectedFluidOutputs(Map<String, Long> totals, String[] slotFluidNames, long[] slotAmounts) {
+    private record SelectedFluidOutputs(Map<FluidKey, Long> totals, String[] slotFluidNames, long[] slotAmounts) {
 
         private static SelectedFluidOutputs empty() {
             return new SelectedFluidOutputs(Map.of(), new String[0], new long[0]);

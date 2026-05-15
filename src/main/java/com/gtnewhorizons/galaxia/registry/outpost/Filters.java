@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.interfaces;
+package com.gtnewhorizons.galaxia.registry.outpost;
 
 import java.util.function.Function;
 import java.util.function.Predicate;

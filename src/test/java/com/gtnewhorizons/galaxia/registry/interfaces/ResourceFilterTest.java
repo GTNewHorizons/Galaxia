@@ -3,6 +3,8 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;

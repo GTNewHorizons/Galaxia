@@ -40,7 +40,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -1301,8 +1301,8 @@ final class FacilityPersistenceManagerTest {
             320,
             480);
         SavedRecipeList slots = new SavedRecipeList();
-        station.inventory.setFluidLowerBound(new FluidKey(TEST_FLUID_1, null), 11);
-        station.inventory.setFluidUpperBound(new FluidKey(TEST_FLUID_2, null), 22);
+        station.getBound(new FluidKey(TEST_FLUID_1, null)).setLow(11);
+        station.getBound(new FluidKey(TEST_FLUID_2, null)).setUppper(22);
         slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
         recipeModule.setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
@@ -1341,8 +1341,8 @@ final class FacilityPersistenceManagerTest {
             fluidName(decodedSnapshot.fluidOutputs()[0]));
         assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
         assertEquals(12L, decodedSlot.requestAmount());
-        assertEquals(11, decoded.inventory.fluidLowerBoundOrDefault(new FluidKey(TEST_FLUID_1, null)));
-        assertEquals(22, decoded.inventory.fluidUpperBoundOrDefault(new FluidKey(TEST_FLUID_2, null)));
+        assertEquals(11, decoded.getBound(new FluidKey(TEST_FLUID_1, null)).lowOrDefault());
+        assertEquals(22, decoded.getBound(new FluidKey(TEST_FLUID_2, null)).upperOrDefault());
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
     }

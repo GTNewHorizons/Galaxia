@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
@@ -728,12 +729,14 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (facility == null) return false;
         ItemStackWrapper item = itemKey(target);
-        String fluid = fluidName(target);
+        FluidStack stack = fluidStack(target);
+        if (stack == null)  return false;
+        FluidKey fluid = FluidKey.of(stack);
         return switch (boundKind(target)) {
-            case ITEM_LOWER -> item != null && facility.inventory.hasItemLowerBound(item);
-            case ITEM_UPPER -> item != null && facility.inventory.hasItemUpperBound(item);
-            case FLUID_LOWER -> fluid != null && facility.inventory.hasFluidLowerBound(fluid);
-            case FLUID_UPPER -> fluid != null && facility.inventory.hasFluidUpperBound(fluid);
+            case ITEM_LOWER -> item != null && facility.hasLowerBound(item);
+            case ITEM_UPPER -> item != null && facility.hasUpperBound(item);
+            case FLUID_LOWER -> facility.hasLowerBound(fluid);
+            case FLUID_UPPER -> facility.hasUpperBound(fluid);
         };
     }
 
@@ -750,11 +753,12 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
                 : itemOutputAmount(slot.recipe(), item);
             return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
         }
-        String fluid = fluidName(target);
+        FluidStack fluid = fluidStack(target);
         if (fluid == null) return false;
-        long current = facility.inventory.getFluidAmount(fluid);
-        long recipeAmount = target.side() == BoundSide.INPUT ? fluidInputAmount(slot.recipe(), fluid)
-            : fluidOutputAmount(slot.recipe(), fluid);
+        FluidKey key = FluidKey.of(fluid);
+        long current = facility.getFluidAmount(key);
+        long recipeAmount = target.side() == BoundSide.INPUT ? fluidInputAmount(slot.recipe(), key)
+            : fluidOutputAmount(slot.recipe(), key);
         return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
     }
 
@@ -800,21 +804,13 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
 
     private long boundAmount(AutomatedFacility facility, BoundTarget target) {
         ItemStackWrapper item = itemKey(target);
-        String fluid = fluidName(target);
+        FluidStack fluid = fluidStack(target);
         return switch (boundKind(target)) {
-            case ITEM_LOWER -> item != null ? facility.inventory.itemLowerBoundOrDefault(item) : 0L;
-            case ITEM_UPPER -> item != null ? facility.inventory.itemUpperBoundOrDefault(item) : Long.MAX_VALUE;
-            case FLUID_LOWER -> fluid != null ? facility.inventory.fluidLowerBoundOrDefault(fluid) : 0L;
-            case FLUID_UPPER -> fluid != null ? facility.inventory.fluidUpperBoundOrDefault(fluid) : Long.MAX_VALUE;
+            case ITEM_LOWER -> facility.getBound(item).lowOrDefault();
+            case ITEM_UPPER -> facility.getBound(item).upperOrDefault();
+            case FLUID_LOWER -> facility.getBound(FluidKey.of(fluid)).lowOrDefault();
+            case FLUID_UPPER -> facility.getBound(FluidKey.of(fluid)).upperOrDefault();
         };
-    }
-
-    private @Nullable String resourceKey(BoundTarget target) {
-        if (target.resource() == BoundResource.ITEM) {
-            ItemStackWrapper item = itemKey(target);
-            return item != null ? item.toKey() : null;
-        }
-        return fluidName(target);
     }
 
     private String boundDescription(BoundTarget target) {
@@ -908,27 +904,20 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return total;
     }
 
-    private long fluidInputAmount(RecipeSnapshot recipe, String fluid) {
+    private long fluidInputAmount(RecipeSnapshot recipe, FluidKey fluid) {
         return fluidAmount(recipe.fluidInputs(), fluid);
     }
 
-    private long fluidOutputAmount(RecipeSnapshot recipe, String fluid) {
+    private long fluidOutputAmount(RecipeSnapshot recipe, FluidKey fluid) {
         return fluidAmount(recipe.fluidOutputs(), fluid);
     }
 
-    private long fluidAmount(@Nullable FluidStack[] stacks, String fluid) {
+    private long fluidAmount(@Nullable FluidStack[] stacks, FluidKey fluid) {
         if (stacks == null) return 0L;
         long total = 0L;
         for (FluidStack stack : stacks) {
             if (stack == null) continue;
-            String name;
-            try {
-                Fluid fluidType = stack.getFluid();
-                name = fluidType != null ? fluidType.getName() : null;
-            } catch (RuntimeException ignored) {
-                name = null;
-            }
-            if (fluid.equals(name)) total += stack.amount;
+            if (FluidKey.of(stack).equals(fluid)) total += stack.amount;
         }
         return total;
     }

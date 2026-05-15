@@ -32,7 +32,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
-import com.gtnewhorizons.galaxia.registry.interfaces.ResourceFilter;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>

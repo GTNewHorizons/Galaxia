@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
-import com.gtnewhorizons.galaxia.registry.interfaces.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
