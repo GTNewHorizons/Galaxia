@@ -213,7 +213,7 @@ final class ModuleMinerTest {
         short targetGroupId = target.groupId();
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
 
-        facility.copyMinerRuntimeSettings(source, target);
+        facility.copyModuleRuntimeSettings(source, target);
 
         assertEquals(sourceGroupId, source.groupId());
         assertEquals(targetGroupId, target.groupId());

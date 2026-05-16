@@ -53,7 +53,7 @@ public final class ModuleLayerRenderer {
     public static void drawPreview(GuiContext ctx, int x, int y, FacilityModuleKind kind) {
         int size = StationMapViewport.TILE_SIZE;
         if (!drawModuleTexture(x, y, size, kind, 0.55f, 0.55f, 0.55f, 0.7f)) {
-            Gui.drawRect(x, y, x + size, y + size, 0x884A5360);
+            Gui.drawRect(x, y, x + size, y + size, EnumColors.MAP_COLOR_STATION_TILE_PREVIEW_FALLBACK_FILL.getColor());
             drawLabel(
                 ctx,
                 x,
@@ -63,8 +63,8 @@ public final class ModuleLayerRenderer {
                     : kind.name()
                         .substring(0, 1));
         }
-        Gui.drawRect(x, y, x + size, y + size, 0x55000000);
-        drawBorder(x, y, size, 0xFF9099A4);
+        Gui.drawRect(x, y, x + size, y + size, EnumColors.MAP_COLOR_STATION_TILE_PREVIEW_DIM.getColor());
+        drawBorder(x, y, size, EnumColors.MAP_COLOR_STATION_PICKER_COMPATIBLE.getColor());
     }
 
     public static boolean drawModuleTextureRegion(int x, int y, int w, int h, FacilityModuleKind kind, float u0,

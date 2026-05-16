@@ -97,8 +97,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int DETAIL_SLOT_SIZE = 18;
     private static final int BOUND_MARKER_SIZE = 5;
     private static final int BOUND_MARKER_INSET = 1;
-    private static final int BOUND_MARKER_WARNING = 0xFFFFFF00;
-    private static final int BOUND_MARKER_BLOCKING = 0xFFFF2020;
+    private static final int BOUND_MARKER_WARNING = EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
+    private static final int BOUND_MARKER_BLOCKING = EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor();
     private static final int DETAIL_ITEM_SLOT_COUNT = 9;
     private static final int DETAIL_FLUID_SLOT_COUNT = 4;
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
@@ -1267,9 +1267,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             if (!progress.enabled()) return;
             UITexture texture = progress.texture();
             if (texture == null) {
-                BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF788398, 0xFFECF0FF);
-                Minecraft.getMinecraft().fontRenderer
-                    .drawString(">", getArea().width / 2 - 2, getArea().height / 2 - 4, 0xFFE6EAF6);
+                BorderedRect.draw(
+                    0,
+                    0,
+                    getArea().width,
+                    getArea().height,
+                    EnumColors.MAP_COLOR_RECIPE_PROGRESS_FALLBACK_BG.getColor(),
+                    EnumColors.MAP_COLOR_RECIPE_PROGRESS_FALLBACK_BORDER.getColor());
+                Minecraft.getMinecraft().fontRenderer.drawString(
+                    ">",
+                    getArea().width / 2 - 2,
+                    getArea().height / 2 - 4,
+                    EnumColors.MAP_COLOR_RECIPE_PROGRESS_FALLBACK_TEXT.getColor());
                 return;
             }
             texture.getSubArea(0, 0, 1, 0.5f)
@@ -1411,8 +1420,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             if (!canUseBoundTarget(target)) return;
             boolean selected = target.equals(selectedBoundTarget);
             if (!selected && !isHovering()) return;
-            int color = selected ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor() : 0x99FFFFFF;
-            BorderedRect.draw(-1, -1, size + 2, size + 2, 0x00000000, color);
+            int color = selected ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
+                : EnumColors.MAP_COLOR_RECIPE_BOUND_SLOT_INACTIVE_BORDER.getColor();
+            BorderedRect.draw(-1, -1, size + 2, size + 2, EnumColors.MAP_COLOR_TRANSPARENT.getColor(), color);
         }
 
         private void drawChanceText(int size) {
@@ -1421,7 +1431,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             GL11.glPushMatrix();
             GL11.glScalef(0.5F, 0.5F, 1.0F);
             int scaledX = Math.max(0, size * 2 - Minecraft.getMinecraft().fontRenderer.getStringWidth(text) - 1);
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(text, scaledX, 1, 0xFFFFFF55);
+            Minecraft.getMinecraft().fontRenderer
+                .drawStringWithShadow(text, scaledX, 1, EnumColors.MAP_COLOR_RECIPE_BOUND_CHANCE_TEXT.getColor());
             GL11.glPopMatrix();
         }
 

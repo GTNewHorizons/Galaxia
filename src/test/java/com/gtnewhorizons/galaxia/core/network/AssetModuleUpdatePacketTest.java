@@ -645,10 +645,12 @@ final class AssetModuleUpdatePacketTest {
         ModuleMiner targetMiner = (ModuleMiner) target.component();
         sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+        short originalTargetGroupId = target.groupId();
         AssetModuleUpdatePacket packet = roundTrip(
             AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        assertEquals(originalTargetGroupId, target.groupId());
         assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
         assertNull(targetMiner.focusOreKeyOrNull());
     }

@@ -25,7 +25,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
@@ -358,16 +357,6 @@ public final class AutomatedFacility extends CelestialAsset {
         markSettingsGroupMembersDirty(group);
     }
 
-    public void copyMinerRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        if (!(source.component() instanceof ModuleMiner)) {
-            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
-        }
-        if (!(target.component() instanceof ModuleMiner)) {
-            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
-        }
-        copyModuleRuntimeSettings(source, target);
-    }
-
     public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
         requireSettingsGroupsSupported(source);
         requireSettingsGroupsSupported(target);
@@ -379,6 +368,8 @@ public final class AutomatedFacility extends CelestialAsset {
             throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
         }
         SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
+        source.component()
+            .validateSettingsCopyTarget(source, target);
         if (sourceGroup.isJoinable()) {
             assignSettingsGroup(target, sourceGroup.id());
         } else {
@@ -387,7 +378,8 @@ public final class AutomatedFacility extends CelestialAsset {
                 source.component()
                     .copySettings(source, sourceGroup.settings()));
         }
-        copyModuleExtraRuntimeSettings(source, target);
+        source.component()
+            .afterSettingsCopied(source, target);
         markModuleDirty(target.id);
     }
 
@@ -652,18 +644,6 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         detachFromSettingsGroup(module);
         attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
-    }
-
-    private static void copyModuleExtraRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        if (source.component() instanceof ModuleMiner sourceMiner
-            && target.component() instanceof ModuleMiner targetMiner) {
-            String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
-            if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
-                throw new IllegalStateException(
-                    "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
-            }
-            targetMiner.setFocusOre(sourceFocusOreKey);
-        }
     }
 
     private ModuleSettings copySettings(ModuleInstance module) {

@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -172,7 +173,13 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF08101B, 0xFF17283C);
+            BorderedRect.draw(
+                0,
+                0,
+                getArea().width,
+                getArea().height,
+                EnumColors.MAP_COLOR_STATION_SCREEN_BG.getColor(),
+                EnumColors.MAP_COLOR_STATION_SCREEN_BORDER.getColor());
         }
     }
 

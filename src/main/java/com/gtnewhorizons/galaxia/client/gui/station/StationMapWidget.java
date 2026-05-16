@@ -349,8 +349,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
                             hy,
                             StationMapViewport.TILE_SIZE,
                             StationMapViewport.TILE_SIZE,
-                            0x4400FF00, // semi-transparent green fill
-                            0xFF00FF00); // solid green border
+                            EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_FILL.getColor(),
+                            EnumColors.MAP_COLOR_STATION_DEBUG_NEIGHBOR_BORDER.getColor());
                     }
                 }
             }

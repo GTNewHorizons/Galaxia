@@ -67,8 +67,8 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int AMOUNT_INPUT_X = MODE_BUTTON_X - CONTROL_GAP - AMOUNT_INPUT_WIDTH;
     private static final int BOUNDS_X = AMOUNT_INPUT_X - CONTROL_GAP - BOUNDS_WIDTH;
     private static final int BOUND_MARKER_SIZE = 4;
-    private static final int BOUND_MARKER_WARNING = 0xFFFFFF00;
-    private static final int BOUND_MARKER_BLOCKING = 0xFFFF0000;
+    private static final int BOUND_MARKER_WARNING = EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
+    private static final int BOUND_MARKER_BLOCKING = EnumColors.MAP_COLOR_INVENTORY_BOUND_MARKER_BLOCKING.getColor();
     private static final int BOUND_EDITOR_X = 92;
     private static final int BOUND_EDITOR_Y = 58;
     private static final int BOUND_EDITOR_WIDTH = 276;

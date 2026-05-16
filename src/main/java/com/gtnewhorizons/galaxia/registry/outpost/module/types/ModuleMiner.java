@@ -102,6 +102,32 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     @Override
+    public void validateSettingsCopyTarget(ModuleInstance source, ModuleInstance target) {
+        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
+            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
+        }
+        if (!(target.component() instanceof ModuleMiner targetMiner)) {
+            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
+        }
+        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
+        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
+            throw new IllegalStateException(
+                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
+        }
+    }
+
+    @Override
+    public void afterSettingsCopied(ModuleInstance source, ModuleInstance target) {
+        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
+            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
+        }
+        if (!(target.component() instanceof ModuleMiner targetMiner)) {
+            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
+        }
+        targetMiner.setFocusOre(sourceMiner.focusOreKeyOrNull());
+    }
+
+    @Override
     public FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature, int coveredTiles,
         int totalTiles) {
         if (!PlanetaryFeatureRegistry.MINERAL_VEIN.key()

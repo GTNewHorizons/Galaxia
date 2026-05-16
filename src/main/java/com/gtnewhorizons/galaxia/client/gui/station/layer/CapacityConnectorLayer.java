@@ -25,6 +25,7 @@ public final class CapacityConnectorLayer {
 
     private static final int COLOR_ALPHA_ACTIVE = 0xFF;
     private static final int COLOR_ALPHA_INACTIVE = 0x66;
+    private static final int RGB_CHANNEL_MASK = 0x00FFFFFF;
 
     private CapacityConnectorLayer() {}
 
@@ -94,7 +95,7 @@ public final class CapacityConnectorLayer {
         List<CapacityConnectorQuad> textureQuads) {
         int alpha = hasTexture ? COLOR_ALPHA_ACTIVE : COLOR_ALPHA_INACTIVE;
         int color = connectorColor(kind);
-        int argb = (alpha << 24) | (color & 0x00FFFFFF);
+        int argb = (alpha << 24) | (color & RGB_CHANNEL_MASK);
 
         if (hasTexture) {
             textureQuads.add(new CapacityConnectorQuad(x, y, w, h, argb));
