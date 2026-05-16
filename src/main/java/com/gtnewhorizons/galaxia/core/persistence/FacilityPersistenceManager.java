@@ -331,7 +331,7 @@ public final class FacilityPersistenceManager {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectId = asset.celestialObjectId.toString();
+        json.celestialObjectId = String.valueOf(asset.celestialObjectId);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -347,6 +347,28 @@ public final class FacilityPersistenceManager {
             json.controllerZ = station.getController()
                 .z();
         }
+
+        json.itemsBounds = encodeBoundsMap(asset.getBounds(true));
+        json.fluidsBounds = encodeBoundsMap(asset.getBounds(false));
+        json.logisticsConfig = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : asset.logisticsConfig.snapshot()
+            .entrySet()) {
+            LogisticsConfigJson cj = new LogisticsConfigJson();
+            cj.minReserve = e.getValue()
+                .minReserve();
+            cj.orderSize = e.getValue()
+                .orderSize();
+            cj.isImportEnabled = e.getValue()
+                .isImportEnabled();
+            cj.isSupplyEnabled = e.getValue()
+                .isSupplyEnabled();
+            json.logisticsConfig.put(
+                e.getKey()
+                    .toKey(),
+                cj);
+        }
+        json.filters = new LinkedHashMap<>(asset.filtersSnapshot());
+
         return json;
     }
 
@@ -372,14 +394,58 @@ public final class FacilityPersistenceManager {
             && json.controllerZ != null) {
             station.setController(new BlockPos(json.controllerX, json.controllerY, json.controllerZ));
         }
+
+        if (json.itemsBounds != null) {
+            var boundsMap = decodeBoundsMap(json.itemsBounds, true);
+            for (var bound : boundsMap.entrySet()) {
+                asset.setBound(
+                    bound.getKey(),
+                    bound.getValue()
+                        .low(),
+                    bound.getValue()
+                        .upper());
+            }
+        }
+        if (json.fluidsBounds != null) {
+            var boundsMap = decodeBoundsMap(json.fluidsBounds, false);
+            for (var bound : boundsMap.entrySet()) {
+                asset.setBound(
+                    bound.getKey(),
+                    bound.getValue()
+                        .low(),
+                    bound.getValue()
+                        .upper());
+            }
+        }
+        if (json.logisticsConfig != null) {
+            Map<ItemStackWrapper, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
+            for (Map.Entry<String, LogisticsConfigJson> e : json.logisticsConfig.entrySet()) {
+                ItemStackWrapper key = ItemStackWrapper.fromKey(e.getKey());
+                if (key != null) {
+                    LogisticsConfigJson cj = e.getValue();
+                    cfgSnapshot.put(
+                        key,
+                        new LogisticsResourceConfig(
+                            cj.minReserve,
+                            cj.orderSize,
+                            cj.isImportEnabled,
+                            cj.isSupplyEnabled));
+                }
+            }
+            asset.logisticsConfig.loadFromSnapshot(cfgSnapshot);
+        }
+
+        if (json.filters != null) {
+            for (Map.Entry<Integer, List<String>> e : json.filters.entrySet()) {
+                asset.setFilters(e.getKey(), e.getValue(), true);
+            }
+        }
+
         return asset;
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
         FacilityStateJson out = new FacilityStateJson();
-        out.celestialBodyId = String.valueOf(state.celestialObjectId);
-        out.systemId = String.valueOf(state.systemId);
-        out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
         out.stationFeatureSalt = state.stationFeatureSalt();
         state.syncRecipeSettingsGroupsFromModules();
@@ -459,28 +525,6 @@ public final class FacilityPersistenceManager {
                 e.getValue());
         }
         out.fluidBuffer = toFluidBuffer(state);
-        state.getBounds(true);
-
-        out.itemsBounds = encodeBoundsMap(state.getBounds(true));
-        out.fluidsBounds = encodeBoundsMap(state.getBounds(false));
-        out.logisticsConfig = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
-            .entrySet()) {
-            LogisticsConfigJson cj = new LogisticsConfigJson();
-            cj.minReserve = e.getValue()
-                .minReserve();
-            cj.orderSize = e.getValue()
-                .orderSize();
-            cj.isImportEnabled = e.getValue()
-                .isImportEnabled();
-            cj.isSupplyEnabled = e.getValue()
-                .isSupplyEnabled();
-            out.logisticsConfig.put(
-                e.getKey()
-                    .toKey(),
-                cj);
-        }
-        out.filters = new LinkedHashMap<>(state.filtersSnapshot());
 
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
@@ -515,7 +559,7 @@ public final class FacilityPersistenceManager {
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
-        if (asset == null || json == null || json.systemId == null) return null;
+        if (asset == null || json == null || asset.systemId == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.setStationFeatureSalt(json.stationFeatureSalt);
@@ -678,52 +722,6 @@ public final class FacilityPersistenceManager {
         if (json.fluidBuffer != null) {
             state.loadFluidSnapshot(json.fluidBuffer);
         }
-        if (json.itemsBounds != null) {
-            var boundsMap = decodeBoundsMap(json.itemsBounds, true);
-            for (var bound : boundsMap.entrySet()) {
-                state.setBound(
-                    bound.getKey(),
-                    bound.getValue()
-                        .low(),
-                    bound.getValue()
-                        .upper());
-            }
-        }
-        if (json.fluidsBounds != null) {
-            var boundsMap = decodeBoundsMap(json.fluidsBounds, false);
-            for (var bound : boundsMap.entrySet()) {
-                state.setBound(
-                    bound.getKey(),
-                    bound.getValue()
-                        .low(),
-                    bound.getValue()
-                        .upper());
-            }
-        }
-        if (json.logisticsConfig != null) {
-            Map<ItemStackWrapper, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
-            for (Map.Entry<String, LogisticsConfigJson> e : json.logisticsConfig.entrySet()) {
-                ItemStackWrapper key = ItemStackWrapper.fromKey(e.getKey());
-                if (key != null) {
-                    LogisticsConfigJson cj = e.getValue();
-                    cfgSnapshot.put(
-                        key,
-                        new LogisticsResourceConfig(
-                            cj.minReserve,
-                            cj.orderSize,
-                            cj.isImportEnabled,
-                            cj.isSupplyEnabled));
-                }
-            }
-            state.logisticsConfig.loadFromSnapshot(cfgSnapshot);
-        }
-
-        if (json.filters != null) {
-            for (Map.Entry<Integer, List<String>> e : json.filters.entrySet()) {
-                state.setFilters(e.getKey(), e.getValue(), true);
-            }
-        }
-
         StationLayout layout = state.stationLayout();
         int tilesLoaded = 0;
         int tilesSkipped = 0;
@@ -927,6 +925,8 @@ public final class FacilityPersistenceManager {
         CelestialAsset.ID assetId;
         String teamId;
         String celestialObjectId;
+        String systemId;
+        String planetaryAnchorBodyId;
         String displayName;
         String kind;
         String location;
@@ -937,14 +937,14 @@ public final class FacilityPersistenceManager {
         Integer controllerX;
         Integer controllerY;
         Integer controllerZ;
+        Map<String, Map.Entry<Long, Long>> itemsBounds;
+        Map<String, Map.Entry<Long, Long>> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
+        Map<Integer, List<String>> filters;
     }
 
     static final class FacilityStateJson {
 
-        String celestialBodyId;
-        String systemId;
-        String planetaryAnchorBodyId;
         long energyStored;
         long stationFeatureSalt;
         short settingsGroupsNextId;
@@ -952,10 +952,6 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
-        Map<String, Map.Entry<Long, Long>> itemsBounds;
-        Map<String, Map.Entry<Long, Long>> fluidsBounds;
-        Map<String, LogisticsConfigJson> logisticsConfig;
-        Map<Integer, List<String>> filters;
         List<StationTileJson> layoutTiles;
     }
 
