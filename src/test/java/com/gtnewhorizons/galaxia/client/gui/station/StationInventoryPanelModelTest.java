@@ -3,22 +3,19 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import net.minecraft.init.Items;
-import net.minecraft.inventory.IInventory;
 import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.IFluidTank;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModelTest {

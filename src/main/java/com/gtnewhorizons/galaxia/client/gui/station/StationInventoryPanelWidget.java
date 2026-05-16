@@ -32,10 +32,10 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget>
@@ -528,11 +528,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         selectedBoundItem = wrapper;
         selectedBoundFluid = null;
         AutomatedFacility af = af();
-        inputBoundAmount = af != null && af.hasLowerBound(wrapper)
-            ? Long.toString(af.getBound(wrapper).lowOrDefault())
+        inputBoundAmount = af != null && af.hasLowerBound(wrapper) ? Long.toString(
+            af.getBound(wrapper)
+                .lowOrDefault())
             : "";
-        outputBoundAmount = af != null && af.hasUpperBound(wrapper)
-            ? Long.toString(af.getBound(wrapper).upperOrDefault())
+        outputBoundAmount = af != null && af.hasUpperBound(wrapper) ? Long.toString(
+            af.getBound(wrapper)
+                .upperOrDefault())
             : "";
         if (inputBoundField != null) inputBoundField.setText(inputBoundAmount);
         if (outputBoundField != null) outputBoundField.setText(outputBoundAmount);
@@ -542,11 +544,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         selectedBoundItem = null;
         selectedBoundFluid = fluid;
         AutomatedFacility af = af();
-        inputBoundAmount = af != null && af.hasLowerBound(fluid)
-            ? Long.toString(af.getBound(fluid).lowOrDefault())
+        inputBoundAmount = af != null && af.hasLowerBound(fluid) ? Long.toString(
+            af.getBound(fluid)
+                .lowOrDefault())
             : "";
-        outputBoundAmount = af != null && af.hasUpperBound(fluid)
-            ? Long.toString(af.getBound(fluid).upperOrDefault())
+        outputBoundAmount = af != null && af.hasUpperBound(fluid) ? Long.toString(
+            af.getBound(fluid)
+                .upperOrDefault())
             : "";
         if (inputBoundField != null) inputBoundField.setText(inputBoundAmount);
         if (outputBoundField != null) outputBoundField.setText(outputBoundAmount);
@@ -720,13 +724,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (af == null) return;
         long amount = currentAmount(wrapper);
         if (af.hasLowerBound(wrapper)) {
-            int color = amount < af.getBound(wrapper).lowOrDefault() ? BOUND_MARKER_BLOCKING
-                : BOUND_MARKER_WARNING;
+            int color = amount < af.getBound(wrapper)
+                .lowOrDefault() ? BOUND_MARKER_BLOCKING : BOUND_MARKER_WARNING;
             Gui.drawRect(x, y, x + BOUND_MARKER_SIZE, y + BOUND_MARKER_SIZE, color);
         }
         if (af.hasUpperBound(wrapper)) {
-            int color = amount >= af.getBound(wrapper).upperOrDefault() ? BOUND_MARKER_BLOCKING
-                : BOUND_MARKER_WARNING;
+            int color = amount >= af.getBound(wrapper)
+                .upperOrDefault() ? BOUND_MARKER_BLOCKING : BOUND_MARKER_WARNING;
             Gui.drawRect(x + 16 - BOUND_MARKER_SIZE, y, x + 16, y + BOUND_MARKER_SIZE, color);
         }
     }
@@ -741,13 +745,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (af == null) return;
         long amount = currentFluidAmount(fluid);
         if (af.hasLowerBound(fluid)) {
-            int color = amount < af.getBound(fluid).lowOrDefault() ? BOUND_MARKER_BLOCKING
-                : BOUND_MARKER_WARNING;
+            int color = amount < af.getBound(fluid)
+                .lowOrDefault() ? BOUND_MARKER_BLOCKING : BOUND_MARKER_WARNING;
             Gui.drawRect(x, y, x + BOUND_MARKER_SIZE, y + BOUND_MARKER_SIZE, color);
         }
         if (af.hasUpperBound(fluid)) {
-            int color = amount >= af.getBound(fluid).upperOrDefault() ? BOUND_MARKER_BLOCKING
-                : BOUND_MARKER_WARNING;
+            int color = amount >= af.getBound(fluid)
+                .upperOrDefault() ? BOUND_MARKER_BLOCKING : BOUND_MARKER_WARNING;
             Gui.drawRect(x + 16 - BOUND_MARKER_SIZE, y, x + 16, y + BOUND_MARKER_SIZE, color);
         }
     }

@@ -40,8 +40,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -1341,8 +1341,14 @@ final class FacilityPersistenceManagerTest {
             fluidName(decodedSnapshot.fluidOutputs()[0]));
         assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
         assertEquals(12L, decodedSlot.requestAmount());
-        assertEquals(11, decoded.getBound(new FluidKey(TEST_FLUID_1, null)).lowOrDefault());
-        assertEquals(22, decoded.getBound(new FluidKey(TEST_FLUID_2, null)).upperOrDefault());
+        assertEquals(
+            11,
+            decoded.getBound(new FluidKey(TEST_FLUID_1, null))
+                .lowOrDefault());
+        assertEquals(
+            22,
+            decoded.getBound(new FluidKey(TEST_FLUID_2, null))
+                .upperOrDefault());
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
     }

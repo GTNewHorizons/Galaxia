@@ -4,10 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import net.minecraft.init.Items;
 import net.minecraftforge.fluids.FluidRegistry;
 
@@ -15,6 +11,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 
 final class AutomatedFacilityInventoryTest {
 
@@ -31,7 +31,11 @@ final class AutomatedFacilityInventoryTest {
 
     @Test
     void recipeBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
-        AutomatedFacility outpost = new AutomatedFacility(CelestialAsset.ID.create(), CelestialObjectId.PROXIMA_CENTAURI, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        AutomatedFacility outpost = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
         ItemStackWrapper input = new ItemStackWrapper(Items.diamond, 0, null);
         ItemStackWrapper output = new ItemStackWrapper(Items.iron_ingot, 0, null);
         outpost.updateItems(input, 40);
@@ -51,11 +55,15 @@ final class AutomatedFacilityInventoryTest {
 
     @Test
     void recipeFluidBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
-        AutomatedFacility outpost = new AutomatedFacility(CelestialAsset.ID.create(), CelestialObjectId.PROXIMA_CENTAURI, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
+        AutomatedFacility outpost = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
         outpost.updateFluids(INPUT_KEY, 1000);
         outpost.updateFluids(OUTPUT_KEY, 900);
-        outpost.setBound(INPUT_KEY, 800L,  true);
-        outpost.setBound(OUTPUT_KEY, 1000L,  false);
+        outpost.setBound(INPUT_KEY, 800L, true);
+        outpost.setBound(OUTPUT_KEY, 1000L, false);
 
         assertTrue(outpost.isAboveLow(INPUT_KEY, 200L));
         assertFalse(outpost.isAboveLow(INPUT_KEY, 201L));

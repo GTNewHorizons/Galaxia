@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
@@ -13,6 +11,8 @@ import net.minecraftforge.fluids.FluidStack;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeScheduler;
@@ -83,7 +83,7 @@ public final class ProductionModuleHelper {
 
         if (fluidInputs != null) {
             for (FluidStack fluid : fluidInputs) {
-                 outpost.updateFluids(FluidKey.of(fluid), -fluid.amount);
+                outpost.updateFluids(FluidKey.of(fluid), -fluid.amount);
             }
         }
 

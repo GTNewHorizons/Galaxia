@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.Objects;
 
 public final class InventoryBounds {
+
     private static long NO_BOUNDS = -1;
 
     public static InventoryBounds invalid() {
@@ -74,7 +75,7 @@ public final class InventoryBounds {
         low = NO_BOUNDS;
     }
 
-    public void removeUpper(){
+    public void removeUpper() {
         up = NO_BOUNDS;
     }
 
@@ -87,8 +88,7 @@ public final class InventoryBounds {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
         var that = (InventoryBounds) obj;
-        return this.low == that.low &&
-            this.up == that.up;
+        return this.low == that.low && this.up == that.up;
     }
 
     @Override

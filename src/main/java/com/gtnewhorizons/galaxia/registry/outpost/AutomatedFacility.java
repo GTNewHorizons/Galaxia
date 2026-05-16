@@ -18,6 +18,7 @@ import net.minecraftforge.fluids.IFluidTank;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
@@ -376,7 +377,8 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (updateResource(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true) <= 0L) {
+            if (updateResource(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true)
+                <= 0L) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
@@ -748,16 +750,14 @@ public final class AutomatedFacility extends CelestialAsset {
         bumpSyncRevision();
     }
 
-    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present,
-        long amount) {
+    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
         if (kind == null || resource == null) return;
         dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resource, present, amount));
         bumpSyncRevision();
         markDirty();
     }
 
-    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present,
-        long amount) {
+    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
 
         public String resourceKey() {
             return resource instanceof ItemStackWrapper item ? item.toKey()
@@ -992,7 +992,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public long updateResource(InventoryKey item, int delta, boolean sync) {
-        final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta) : updateFluids((FluidKey) item, delta);
+        final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
+            : updateFluids((FluidKey) item, delta);
         if (actual != 0L && sync) markInventoryDelta(item, delta);
         return actual;
     }
@@ -1082,7 +1083,11 @@ public final class AutomatedFacility extends CelestialAsset {
     public Map<String, Long> fluidSnapshot() {
         Map<String, Long> result = new LinkedHashMap<>();
         for (Map.Entry<FluidKey, Long> e : fluidAmounts.entrySet()) {
-            result.put(e.getKey().fluid().getName(), e.getValue());
+            result.put(
+                e.getKey()
+                    .fluid()
+                    .getName(),
+                e.getValue());
         }
         return Collections.unmodifiableMap(result);
     }
@@ -1101,7 +1106,8 @@ public final class AutomatedFacility extends CelestialAsset {
     public void loadFluidSnapshot(Map<String, Long> snapshot) {
         fluidAmounts.clear();
         for (Map.Entry<String, Long> e : snapshot.entrySet()) {
-            if (e.getKey() == null || e.getKey().isEmpty() || e.getValue() <= 0) continue;
+            if (e.getKey() == null || e.getKey()
+                .isEmpty() || e.getValue() <= 0) continue;
             FluidKey key = FluidKey.fromName(e.getKey());
             if (key != null) fluidAmounts.put(key, e.getValue());
         }

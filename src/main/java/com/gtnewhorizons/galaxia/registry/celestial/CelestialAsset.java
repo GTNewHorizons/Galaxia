@@ -11,21 +11,21 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -366,7 +366,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     /// ----------------------------------------------------------------------------------
 
     private <T extends InventoryKey> Map<T, InventoryBounds> getBoundsMap(T key) {
-        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds : (Map<T, InventoryBounds>) fluidBounds;
+        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds
+            : (Map<T, InventoryBounds>) fluidBounds;
     }
 
     public boolean hasLowerBound(InventoryKey key) {
@@ -435,7 +436,12 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public Map<ItemStackWrapper, Long> itemLowerBoundsSnapshot() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, InventoryBounds> e : itemBounds.entrySet()) {
-            if (e.getValue().hasLow()) result.put(e.getKey(), e.getValue().low());
+            if (e.getValue()
+                .hasLow())
+                result.put(
+                    e.getKey(),
+                    e.getValue()
+                        .low());
         }
         return Collections.unmodifiableMap(result);
     }
@@ -443,7 +449,12 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public Map<ItemStackWrapper, Long> itemUpperBoundsSnapshot() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, InventoryBounds> e : itemBounds.entrySet()) {
-            if (e.getValue().hasUpper()) result.put(e.getKey(), e.getValue().upper());
+            if (e.getValue()
+                .hasUpper())
+                result.put(
+                    e.getKey(),
+                    e.getValue()
+                        .upper());
         }
         return Collections.unmodifiableMap(result);
     }
@@ -451,7 +462,14 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public Map<String, Long> fluidLowerBoundsSnapshot() {
         Map<String, Long> result = new LinkedHashMap<>();
         for (Map.Entry<FluidKey, InventoryBounds> e : fluidBounds.entrySet()) {
-            if (e.getValue().hasLow()) result.put(e.getKey().fluid().getName(), e.getValue().low());
+            if (e.getValue()
+                .hasLow())
+                result.put(
+                    e.getKey()
+                        .fluid()
+                        .getName(),
+                    e.getValue()
+                        .low());
         }
         return Collections.unmodifiableMap(result);
     }
@@ -459,7 +477,14 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     public Map<String, Long> fluidUpperBoundsSnapshot() {
         Map<String, Long> result = new LinkedHashMap<>();
         for (Map.Entry<FluidKey, InventoryBounds> e : fluidBounds.entrySet()) {
-            if (e.getValue().hasUpper()) result.put(e.getKey().fluid().getName(), e.getValue().upper());
+            if (e.getValue()
+                .hasUpper())
+                result.put(
+                    e.getKey()
+                        .fluid()
+                        .getName(),
+                    e.getValue()
+                        .upper());
         }
         return Collections.unmodifiableMap(result);
     }
@@ -482,7 +507,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void loadFluidLowerBounds(Map<String, Long> snapshot) {
         for (Map.Entry<String, Long> e : snapshot.entrySet()) {
-            if (e.getKey() == null || e.getKey().isEmpty() || e.getValue() < 0L) continue;
+            if (e.getKey() == null || e.getKey()
+                .isEmpty() || e.getValue() < 0L) continue;
             FluidKey key = FluidKey.fromName(e.getKey());
             if (key != null) setBound(key, e.getValue(), true);
         }
@@ -490,7 +516,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public void loadFluidUpperBounds(Map<String, Long> snapshot) {
         for (Map.Entry<String, Long> e : snapshot.entrySet()) {
-            if (e.getKey() == null || e.getKey().isEmpty() || e.getValue() < 0L) continue;
+            if (e.getKey() == null || e.getKey()
+                .isEmpty() || e.getValue() < 0L) continue;
             FluidKey key = FluidKey.fromName(e.getKey());
             if (key != null) setBound(key, e.getValue(), false);
         }

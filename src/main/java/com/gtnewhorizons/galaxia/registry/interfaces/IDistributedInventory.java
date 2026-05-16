@@ -6,15 +6,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 /**
  * A virtual, distributed inventory that aggregates multiple {@link IInventory}
@@ -242,7 +242,8 @@ public interface IDistributedInventory {
     }
 
     default <T extends InventoryKey> long udpateContents(T key, int delta) {
-        return key instanceof ItemStackWrapper ?  updateItems((ItemStackWrapper) key, delta) : updateFluids((FluidKey) key, delta);
+        return key instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) key, delta)
+            : updateFluids((FluidKey) key, delta);
     }
 
     /**

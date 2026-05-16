@@ -24,12 +24,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -251,23 +251,13 @@ public final class AssetSyncPacket implements IMessage {
         }
         for (Map.Entry<String, Long> e : state.fluidLowerBoundsSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(
-                inventoryBoundUpdate(
-                    state.assetId,
-                    BoundKind.FLUID_LOWER,
-                    e.getKey(),
-                    true,
-                    e.getValue()));
+            pkt.fullSyncDeltas
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_LOWER, e.getKey(), true, e.getValue()));
         }
         for (Map.Entry<String, Long> e : state.fluidUpperBoundsSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(
-                inventoryBoundUpdate(
-                    state.assetId,
-                    BoundKind.FLUID_UPPER,
-                    e.getKey(),
-                    true,
-                    e.getValue()));
+            pkt.fullSyncDeltas
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_UPPER, e.getKey(), true, e.getValue()));
         }
 
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()

@@ -176,8 +176,10 @@ public class CelestialEventHandler {
                         HammerDispatchPlanner.Plan plan = result.plan();
                         if (result.code() != HammerDispatchStatus.Code.READY || plan == null) return false;
 
-                        if (((AutomatedFacility) supplier).updateResource(plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true) <= 0L)
-                            return false;
+                        if (((AutomatedFacility) supplier).updateResource(
+                            plan.resource(),
+                            -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE),
+                            true) <= 0L) return false;
                         if (!hammer.trySpendShotEnergy(m, (AutomatedFacility) supplier, plan.requiredEnergy())) {
                             throw new IllegalStateException("HAMMER shot energy became inconsistent");
                         }

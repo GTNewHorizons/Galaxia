@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.core.network;
 
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import org.apache.logging.log4j.LogManager;
@@ -11,10 +10,10 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;

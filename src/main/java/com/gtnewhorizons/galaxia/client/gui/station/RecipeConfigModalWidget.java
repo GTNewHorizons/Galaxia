@@ -5,7 +5,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
@@ -37,6 +36,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
@@ -731,7 +731,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (facility == null) return false;
         ItemStackWrapper item = itemKey(target);
         FluidStack stack = fluidStack(target);
-        if (stack == null)  return false;
+        if (stack == null) return false;
         FluidKey fluid = FluidKey.of(stack);
         return switch (boundKind(target)) {
             case ITEM_LOWER -> item != null && facility.hasLowerBound(item);
@@ -823,10 +823,14 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         ItemStackWrapper item = itemKey(target);
         FluidStack fluid = fluidStack(target);
         return switch (boundKind(target)) {
-            case ITEM_LOWER -> facility.getBound(item).lowOrDefault();
-            case ITEM_UPPER -> facility.getBound(item).upperOrDefault();
-            case FLUID_LOWER -> facility.getBound(FluidKey.of(fluid)).lowOrDefault();
-            case FLUID_UPPER -> facility.getBound(FluidKey.of(fluid)).upperOrDefault();
+            case ITEM_LOWER -> facility.getBound(item)
+                .lowOrDefault();
+            case ITEM_UPPER -> facility.getBound(item)
+                .upperOrDefault();
+            case FLUID_LOWER -> facility.getBound(FluidKey.of(fluid))
+                .lowOrDefault();
+            case FLUID_UPPER -> facility.getBound(FluidKey.of(fluid))
+                .upperOrDefault();
         };
     }
 
@@ -934,7 +938,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         long total = 0L;
         for (FluidStack stack : stacks) {
             if (stack == null) continue;
-            if (FluidKey.of(stack).equals(fluid)) total += stack.amount;
+            if (FluidKey.of(stack)
+                .equals(fluid)) total += stack.amount;
         }
         return total;
     }
