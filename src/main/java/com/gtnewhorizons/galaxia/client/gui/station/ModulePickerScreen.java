@@ -42,13 +42,13 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         "galaxia_station_module_picker",
         ModulePickerScreen::new);
 
-    private static final int PANEL_WIDTH = 430;
-    private static final int PANEL_HEIGHT = 410;
+    private static final int PANEL_WIDTH = 640;
+    private static final int PANEL_HEIGHT = 350;
     private static final int HEADER_HEIGHT = 24;
     private static final int PANEL_PADDING = 8;
     private static final int BUTTON_HEIGHT = 56;
     private static final int BUTTON_GAP = 5;
-    private static final int BUTTON_COLUMNS = 2;
+    private static final int BUTTON_COLUMNS = 3;
     private static final int BUTTON_TEXT_PADDING = 7;
     private static final int TEXT_BASELINE_OFFSET = 1;
     private static final int MULTIPLE_TOGGLE_WIDTH = 58;
@@ -105,7 +105,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             return panel;
         }
 
-        int buttonWidth = (PANEL_WIDTH - PANEL_PADDING * 2 - BUTTON_GAP) / BUTTON_COLUMNS;
+        int buttonWidth = (PANEL_WIDTH - PANEL_PADDING * 2 - BUTTON_GAP * (BUTTON_COLUMNS - 1)) / BUTTON_COLUMNS;
         int x = PANEL_PADDING;
         int y = HEADER_HEIGHT + PANEL_PADDING;
         int column = 0;
