@@ -94,6 +94,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeEnum(buf, operation);
+        PacketUtil.writeInventoryKey(buf, resource);
         buf.writeLong(delta);
         buf.writeBoolean(creativeOnly);
         if (operation != Operation.DELTA) {
@@ -105,6 +106,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         operation = PacketUtil.readEnum(buf, Operation.class);
+        resource = PacketUtil.readInventoryKey(buf);
         delta = buf.readLong();
         creativeOnly = buf.readBoolean();
         if (operation != Operation.DELTA) {

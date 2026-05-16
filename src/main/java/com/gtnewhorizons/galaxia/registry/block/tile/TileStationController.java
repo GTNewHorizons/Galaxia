@@ -62,16 +62,26 @@ public class TileStationController extends TileStationBase<TileStationController
         graph.addListener(this);
         graph.rebuild();
 
-        if (backingStation == null) {
-            CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(this.worldObj.provider.dimensionId);
-            Station station = (Station) CelestialAsset.create(objectId, CelestialAsset.Kind.STATION, true);
-            station.setController(this.here);
-            backingStation = station.assetId;
-
-            CelestialAssetStore.registerAsset(owner, station);
-        } else {
+        if (backingStation != null) {
             CelestialAssetStore.enableAsset(backingStation);
+            if (CelestialAssetStore.findAsset(backingStation) instanceof Station station) {
+                // Re
+                if (station.getController() == null) {
+                    station.setController(this.here);
+                }
+
+                return;
+            }
+
+            // Station either not found or not station (weird?), register a new one
         }
+
+        CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(this.worldObj.provider.dimensionId);
+        Station station = (Station) CelestialAsset.create(objectId, CelestialAsset.Kind.STATION, true);
+        station.setController(this.here);
+        backingStation = station.assetId;
+
+        CelestialAssetStore.registerAsset(owner, station);
     }
 
     @Override

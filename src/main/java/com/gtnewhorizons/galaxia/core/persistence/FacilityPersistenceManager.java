@@ -390,8 +390,8 @@ public final class FacilityPersistenceManager {
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
-            && json.controllerY != null
-            && json.controllerZ != null) {
+                && json.controllerY != null
+                && json.controllerZ != null) {
             station.setController(new BlockPos(json.controllerX, json.controllerY, json.controllerZ));
         }
 

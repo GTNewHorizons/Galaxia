@@ -4,6 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
@@ -133,6 +136,20 @@ public final class PacketUtil {
         int damage = buf.readInt();
         int size = buf.readInt();
         return item != null ? new ItemStack(item, size, damage) : null;
+    }
+
+    static void writeInventoryKey(ByteBuf buf, InventoryKey key) {
+        buf.writeBoolean(key.isItem());
+        writeString(buf, key.toKey());
+    }
+
+    static InventoryKey readInventoryKey(ByteBuf buf) {
+        final boolean item = buf.readBoolean();
+        if (item) {
+            return ItemStackWrapper.fromKey(readString(buf));
+        } else {
+            return FluidKey.fromName(readString(buf));
+        }
     }
 
 }
