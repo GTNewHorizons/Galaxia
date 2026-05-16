@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
@@ -42,7 +43,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
-        if (!(instance.component() instanceof ModuleMiner)) {
+        if (!(instance.component() instanceof ModuleMiner miner)) {
             throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
         }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
@@ -54,15 +55,31 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 candidates.addAll(ores);
                 candidates.addAll(veinOres);
                 if (candidates.isEmpty()) return;
-                ItemStack chosen = chooseFocusedOre((ModuleMiner) instance.component(), candidates);
-                String oreKey = ItemStackWrapper.of(chosen)
-                    .toKey();
-                ((ModuleMiner) instance.component()).advanceFocusAlignment();
-                if (shouldVoidOre(instance, outpost, oreKey)) return;
-                ItemStack ore = chosen.copy();
-                ore.stackSize = 1;
-                outpost.insertInventory(ItemStackWrapper.of(ore), 1);
+                miner.advanceFocusAlignment();
+                int rolls = 1 + mineralVeinBonusRolls(instance, outpost);
+                for (int i = 0; i < rolls; i++) {
+                    ItemStack chosen = chooseFocusedOre(miner, candidates);
+                    String oreKey = ItemStackWrapper.of(chosen)
+                        .toKey();
+                    if (shouldVoidOre(instance, outpost, oreKey)) continue;
+                    ItemStack ore = chosen.copy();
+                    ore.stackSize = 1;
+                    outpost.insertInventory(ItemStackWrapper.of(ore), 1);
+                }
             });
+    }
+
+    public static int mineralVeinBonusRolls(ModuleInstance module, AutomatedFacility outpost) {
+        if (module == null || outpost == null || module.anchorOrNull() == null) return 0;
+        int coveredTiles = 0;
+        for (StationTileCoord tile : module.shape()
+            .tiles(module.anchor())) {
+            if (outpost.planetaryFeaturesAt(tile)
+                .contains(PlanetaryFeatureRegistry.MINERAL_VEIN.key())) {
+                coveredTiles++;
+            }
+        }
+        return coveredTiles;
     }
 
     private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {
@@ -136,7 +153,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             feature,
             (byte) coveredTiles,
             (byte) totalTiles,
-            "Mining yield bonus " + coveredTiles + "/" + totalTiles);
+            "Mining yield +" + coveredTiles + " roll/t");
     }
 
     public MinerFocusTier focusTier() {

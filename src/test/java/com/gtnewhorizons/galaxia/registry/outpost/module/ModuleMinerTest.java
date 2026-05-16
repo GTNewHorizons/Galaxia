@@ -250,7 +250,25 @@ final class ModuleMinerTest {
         assertEquals(ModuleShape.QUAD_2x2, miner.shape());
         assertEquals(2, contribution.coveredTiles());
         assertEquals(4, contribution.totalTiles());
-        assertEquals("Mining yield bonus 2/4", contribution.effectLine());
+        assertEquals("Mining yield +2 roll/t", contribution.effectLine());
+    }
+
+    @Test
+    void mineralVeinBonusRollsUseCoveredTiles() {
+        AutomatedFacility facility = createFacility();
+        facility.setStationFeatureSalt(987654321L);
+        ModuleInstance miner = createMiner(findMinerAnchorWithMineralVein(facility));
+
+        int expectedCoveredTiles = facility.featureContributions(miner)
+            .stream()
+            .filter(
+                c -> c.key()
+                    .equals(PlanetaryFeatureRegistry.MINERAL_VEIN.key()))
+            .findFirst()
+            .orElseThrow()
+            .coveredTiles();
+
+        assertEquals(expectedCoveredTiles, ModuleMiner.mineralVeinBonusRolls(miner, facility));
     }
 
     private static AutomatedFacility createFacility() {
@@ -274,5 +292,22 @@ final class ModuleMinerTest {
             ModuleTier.EV);
         miner.updateStatus(Buildable.Status.OPERATIONAL);
         return miner;
+    }
+
+    private static StationTileCoord findMinerAnchorWithMineralVein(AutomatedFacility facility) {
+        for (int dx = StationTileCoord.MIN; dx < StationTileCoord.MAX; dx++) {
+            for (int dy = StationTileCoord.MIN; dy < StationTileCoord.MAX; dy++) {
+                StationTileCoord anchor = StationTileCoord.of(dx, dy);
+                ModuleInstance miner = createMiner(anchor);
+                if (facility.featureContributions(miner)
+                    .stream()
+                    .anyMatch(
+                        c -> c.key()
+                            .equals(PlanetaryFeatureRegistry.MINERAL_VEIN.key()))) {
+                    return anchor;
+                }
+            }
+        }
+        throw new AssertionError("No deterministic mineral vein found for miner test");
     }
 }
