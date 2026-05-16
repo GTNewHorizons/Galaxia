@@ -43,10 +43,10 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         ModulePickerScreen::new);
 
     private static final int PANEL_WIDTH = 640;
-    private static final int PANEL_HEIGHT = 350;
+    private static final int PANEL_HEIGHT = 430;
     private static final int HEADER_HEIGHT = 24;
     private static final int PANEL_PADDING = 8;
-    private static final int BUTTON_HEIGHT = 56;
+    private static final int BUTTON_HEIGHT = 72;
     private static final int BUTTON_GAP = 5;
     private static final int BUTTON_COLUMNS = 3;
     private static final int BUTTON_TEXT_PADDING = 7;
@@ -225,7 +225,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             lineY,
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
 
-        lineY += fr.FONT_HEIGHT + 1;
+        lineY += fr.FONT_HEIGHT;
         fr.drawStringWithShadow(
             fr.trimStringToWidth(moduleDescription(kind), width - BUTTON_TEXT_PADDING * 2),
             textX,
@@ -233,16 +233,23 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
         if (data == null) return;
 
-        lineY += fr.FONT_HEIGHT + 1;
+        lineY += fr.FONT_HEIGHT;
         fr.drawStringWithShadow(
-            fr.trimStringToWidth(buildAndUpkeepLine(data), width - BUTTON_TEXT_PADDING * 2),
+            fr.trimStringToWidth(energyAndUpkeepLine(data), width - BUTTON_TEXT_PADDING * 2),
             textX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
-        lineY += fr.FONT_HEIGHT + 1;
+        lineY += fr.FONT_HEIGHT;
         fr.drawStringWithShadow(
-            fr.trimStringToWidth(capacityAndCostLine(data), width - BUTTON_TEXT_PADDING * 2),
+            "Build Time: " + formatTicks(data.buildTicks()),
+            textX,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+
+        lineY += fr.FONT_HEIGHT;
+        fr.drawStringWithShadow(
+            fr.trimStringToWidth("Build Cost: " + formatCost(data.constructionCost()), width - BUTTON_TEXT_PADDING * 2),
             textX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
@@ -266,16 +273,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         };
     }
 
-    private static String buildAndUpkeepLine(ModuleTierData data) {
-        return "Build: " + formatTicks(data.buildTicks()) + "  " + formatPower(data.powerDrawEuPerTick());
-    }
-
-    private static String capacityAndCostLine(ModuleTierData data) {
-        String capacity = formatCapacity(data);
-        String cost = formatCost(data.constructionCost());
-        if (capacity.isEmpty()) return cost;
-        if (cost.isEmpty()) return capacity;
-        return capacity + "  " + cost;
+    private static String energyAndUpkeepLine(ModuleTierData data) {
+        return "Energy (EU/t): " + formatPower(data.powerDrawEuPerTick()) + "  Upkeep (items/min): 0";
     }
 
     private static String formatTicks(int ticks) {
@@ -284,21 +283,15 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     }
 
     private static String formatPower(long powerDraw) {
-        if (powerDraw < 0) return "Output: " + formatAmount(-powerDraw) + " EU/t";
-        if (powerDraw > 0) return "Upkeep: " + formatAmount(powerDraw) + " EU/t";
-        return "Upkeep: none";
-    }
-
-    private static String formatCapacity(ModuleTierData data) {
-        if (data.hasCapacity()) return "Cap: " + formatAmount(data.capacity());
-        if (data.baseEnergyCapacity() > 0) return "Energy: +" + formatAmount(data.baseEnergyCapacity());
-        return "";
+        if (powerDraw < 0) return "+" + formatAmount(-powerDraw);
+        if (powerDraw > 0) return "-" + formatAmount(powerDraw);
+        return "0";
     }
 
     private static String formatCost(java.util.Map<ItemStack, Long> cost) {
-        if (cost.isEmpty()) return "Cost: free";
+        if (cost.isEmpty()) return "free";
         int shown = 0;
-        StringBuilder out = new StringBuilder("Cost: ");
+        StringBuilder out = new StringBuilder();
         for (java.util.Map.Entry<ItemStack, Long> entry : cost.entrySet()) {
             if (shown > 0) out.append(", ");
             out.append(formatAmount(entry.getValue()))
@@ -307,7 +300,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                     entry.getKey()
                         .getDisplayName());
             shown++;
-            if (shown >= 1) break;
+            if (shown >= 2) break;
         }
         int remaining = cost.size() - shown;
         if (remaining > 0) out.append(" +")
