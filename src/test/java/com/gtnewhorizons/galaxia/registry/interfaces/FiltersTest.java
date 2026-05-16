@@ -7,13 +7,13 @@ import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.outpost.Filters;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 final class FiltersTest {
 
     @Test
     void anyOfMatchesWhenAnyPredicateMatches() {
-        Predicate<String> p = Filters.anyOf(s -> s.equals("a"), s -> s.equals("b"));
+        Predicate<String> p = ResourceFilter.anyOf(s -> s.equals("a"), s -> s.equals("b"));
         assertTrue(p.test("a"));
         assertTrue(p.test("b"));
         assertFalse(p.test("c"));
@@ -21,7 +21,7 @@ final class FiltersTest {
 
     @Test
     void allOfMatchesWhenAllPredicatesMatch() {
-        Predicate<String> p = Filters.allOf(s -> s.length() > 0, s -> s.startsWith("a"));
+        Predicate<String> p = ResourceFilter.allOf(s -> s.length() > 0, s -> s.startsWith("a"));
         assertTrue(p.test("ab"));
         assertFalse(p.test("b"));
         assertFalse(p.test(""));
@@ -29,14 +29,14 @@ final class FiltersTest {
 
     @Test
     void noneOfMatchesWhenNoPredicateMatches() {
-        Predicate<String> p = Filters.noneOf(s -> s.equals("a"), s -> s.equals("b"));
+        Predicate<String> p = ResourceFilter.noneOf(s -> s.equals("a"), s -> s.equals("b"));
         assertTrue(p.test("c"));
         assertFalse(p.test("a"));
     }
 
     @Test
     void nameRegexMatchesUsingProvidedNameGetter() {
-        Predicate<String> p = Filters.nameRegex(".*oo.*", s -> s);
+        Predicate<String> p = ResourceFilter.nameRegex(".*oo.*", s -> s);
         assertTrue(p.test("foo"));
         assertTrue(p.test("foobar"));
         assertFalse(p.test("bar"));
