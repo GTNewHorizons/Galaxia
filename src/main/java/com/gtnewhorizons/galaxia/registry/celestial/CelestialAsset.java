@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
@@ -54,6 +55,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
     private final Map<Integer, ResourceFilter<ItemStackWrapper>> itemFilters = new Int2ObjectArrayMap<>();
     private final Map<Integer, ResourceFilter<FluidKey>> fluidFilters = new Int2ObjectArrayMap<>();
+
+    private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
 
     public final LogisticsConfiguration logisticsConfig;
 
@@ -205,7 +208,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
-        return isDirty() || !syncedPlayerIds.contains(playerId);
+        return isDirty() || !syncedPlayerIds.contains(playerId)
+            || !dirtyInventoryBoundDeltas.isEmpty();
     }
 
     public void markSyncedFor(UUID playerId) {
@@ -435,6 +439,28 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
 
     public <T extends InventoryKey> Map<T, InventoryBounds> getBounds(boolean items) {
         return items ? (Map<T, InventoryBounds>) itemBounds : (Map<T, InventoryBounds>) fluidBounds;
+    }
+
+    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
+        if (kind == null || resource == null) return;
+        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resource, present, amount));
+        bumpSyncRevision();
+        markDirty();
+    }
+
+    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
+
+        public String resourceKey() {
+            return resource instanceof ItemStackWrapper item ? item.toKey()
+                : ((FluidKey) resource).fluid()
+                  .getName();
+        }
+    }
+
+    public List<InventoryBoundDelta> drainDirtyInventoryBoundDeltas() {
+        List<InventoryBoundDelta> result = new ArrayList<>(dirtyInventoryBoundDeltas);
+        dirtyInventoryBoundDeltas.clear();
+        return result;
     }
 
     /// ----------------------------------------------------------------------------------

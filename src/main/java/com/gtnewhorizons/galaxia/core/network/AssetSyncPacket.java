@@ -27,7 +27,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -462,7 +461,7 @@ public final class AssetSyncPacket implements IMessage {
                             .toKey(),
                         delta.getValue()).withSyncRevision(facility.getSyncRevision()));
             }
-            for (InventoryBoundDelta delta : facility.drainDirtyInventoryBoundDeltas()) {
+            for (CelestialAsset.InventoryBoundDelta delta : facility.drainDirtyInventoryBoundDeltas()) {
                 packets.add(
                     inventoryBoundUpdate(
                         facility.assetId,
@@ -1390,21 +1389,7 @@ public final class AssetSyncPacket implements IMessage {
                     }
                     station.setController(packet.stationControllerPos);
                     for (AssetSyncPacket d : packet.fullSyncDeltas) {
-                        if (d.syncType == FILTER_UPDATED) {
-                            station.setFilters(d.filterSlot, d.filterItems);
-                        } else if (d.syncType == FILTER_REMOVED) {
-                            station.clearFilters(d.filterSlot);
-                        } else if (d.syncType == LOGISTICS_CONFIG_UPDATED) {
-                            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(d.resourceKey);
-                            if (wrapper != null) {
-                                station.logisticsConfig.set(wrapper, d.logConfig);
-                            }
-                        } else if (d.syncType == LOGISTICS_CONFIG_REMOVED) {
-                            ItemStackWrapper wrapper = ItemStackWrapper.fromKey(d.resourceKey);
-                            if (wrapper != null) {
-                                station.logisticsConfig.reset(wrapper);
-                            }
-                        }
+                        handleDelta(station, d);
                     }
                 }
                 case AUTOMATED_OUTPOST, AUTOMATED_STATION -> {
@@ -1443,9 +1428,12 @@ public final class AssetSyncPacket implements IMessage {
             asset.setSyncRevision(packet.syncRevision);
         }
 
-        private static void handleDelta(AutomatedFacility state, AssetSyncPacket packet) {
+        private static void handleDelta(CelestialAsset asset, AssetSyncPacket packet) {
             switch (packet.syncType) {
                 case MODULE_ADDED -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong delta packet target");
+                    }
                     if (packet.moduleIndex < state.modules()
                         .size()) {
                         state.modulesInternal()
@@ -1462,11 +1450,17 @@ public final class AssetSyncPacket implements IMessage {
                     syncModuleGroupMembership(state, module);
                 }
                 case MODULE_REMOVED -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong delta packet target");
+                    }
                     state.removeModule(packet.moduleId);
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.removeTileForModule(packet.moduleId);
                 }
                 case MODULE_UPDATED -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong delta packet target");
+                    }
                     if (packet.moduleIndex < state.modules()
                         .size()) {
                         state.modulesInternal()
@@ -1483,9 +1477,9 @@ public final class AssetSyncPacket implements IMessage {
                     if (r != null) {
                         long delta = packet.inventoryDelta;
                         if (delta > 0) {
-                            state.updateItems(r, (int) Math.min(delta, Integer.MAX_VALUE));
+                            asset.updateItems(r, (int) Math.min(delta, Integer.MAX_VALUE));
                         } else {
-                            state.updateItems(r, (int) Math.max(delta, Integer.MIN_VALUE + 1));
+                            asset.updateItems(r, (int) Math.max(delta, Integer.MIN_VALUE + 1));
                         }
                     }
                 }
@@ -1495,35 +1489,44 @@ public final class AssetSyncPacket implements IMessage {
                         if (key != null) {
                             boolean isLow = packet.inventoryBoundKind == BoundKind.ITEM_LOWER
                                 || packet.inventoryBoundKind == BoundKind.FLUID_LOWER;
-                            state.setBound(key, packet.inventoryBoundAmount, isLow);
+                            asset.setBound(key, packet.inventoryBoundAmount, isLow);
                         }
                     } else {
                         InventoryKey key = boundKey(packet.inventoryBoundKind, packet.resourceKey);
                         if (key != null) {
                             boolean isLow = packet.inventoryBoundKind == BoundKind.ITEM_LOWER
                                 || packet.inventoryBoundKind == BoundKind.FLUID_LOWER;
-                            state.clearBound(key, isLow);
+                            asset.clearBound(key, isLow);
                         }
                     }
                 }
                 case LOGISTICS_CONFIG_UPDATED -> {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
-                    if (r != null) state.logisticsConfig.set(r, packet.logConfig);
+                    if (r != null) asset.logisticsConfig.set(r, packet.logConfig);
                 }
                 case LOGISTICS_CONFIG_REMOVED -> {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
-                    if (r != null) state.logisticsConfig.reset(r);
+                    if (r != null) asset.logisticsConfig.reset(r);
                 }
                 case LAYOUT_TILE_UPDATED -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong delta packet target");
+                    }
                     ModuleInstance module = findModuleById(state, packet.tileModuleId);
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.place(packet.tileCoord, new PlacedTile(module, packet.tileState));
                 }
                 case LAYOUT_TILE_REMOVED -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong delta packet target");
+                    }
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.remove(packet.tileCoord);
                 }
                 case SETTINGS_GROUP_UPDATED -> {
+                    if (!(asset instanceof AutomatedFacility state)) {
+                        throw new IllegalStateException("Wrong delta packet target");
+                    }
                     state.settingsGroups()
                         .sync(
                             packet.settingsGroupId,
@@ -1533,8 +1536,8 @@ public final class AssetSyncPacket implements IMessage {
                             copySettingsGroupPayload(packet.settingsGroupSettings));
                     state.applySettingsGroupsToModules();
                 }
-                case FILTER_UPDATED -> state.setFilters(packet.filterSlot, packet.filterItems);
-                case FILTER_REMOVED -> state.clearFilters(packet.filterSlot);
+                case FILTER_UPDATED -> asset.setFilters(packet.filterSlot, packet.filterItems);
+                case FILTER_REMOVED -> asset.clearFilters(packet.filterSlot);
             }
         }
 

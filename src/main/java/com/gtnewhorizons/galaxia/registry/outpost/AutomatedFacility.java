@@ -64,7 +64,6 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Map<InventoryKey, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
-    private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
 
@@ -699,8 +698,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean isDirty() {
         return super.isDirty() || !dirtyModuleIds.isEmpty()
             || !dirtyRemovedIds.isEmpty()
-            || !dirtyInventoryDeltas.isEmpty()
-            || !dirtyInventoryBoundDeltas.isEmpty();
+            || !dirtyInventoryDeltas.isEmpty();
     }
 
     @Override
@@ -729,12 +727,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return result;
     }
 
-    public List<InventoryBoundDelta> drainDirtyInventoryBoundDeltas() {
-        List<InventoryBoundDelta> result = new ArrayList<>(dirtyInventoryBoundDeltas);
-        dirtyInventoryBoundDeltas.clear();
-        return result;
-    }
-
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
@@ -748,22 +740,6 @@ public final class AutomatedFacility extends CelestialAsset {
             dirtyInventoryDeltas.remove(item);
         }
         bumpSyncRevision();
-    }
-
-    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
-        if (kind == null || resource == null) return;
-        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resource, present, amount));
-        bumpSyncRevision();
-        markDirty();
-    }
-
-    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
-
-        public String resourceKey() {
-            return resource instanceof ItemStackWrapper item ? item.toKey()
-                : ((FluidKey) resource).fluid()
-                    .getName();
-        }
     }
 
     public long getEnergyStored() {
