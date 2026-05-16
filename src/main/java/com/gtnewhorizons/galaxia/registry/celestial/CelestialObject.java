@@ -11,11 +11,14 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalParams;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureProfile;
 
 public record CelestialObject(CelestialObjectId id, String name, String nameKey, CelestialObjectId parentId,
     DimensionEnum dimensionEnum, Class objectClass, OrbitalParams orbitalParams,
     OrbitalMechanics.AbsolutePosition absolutePosition, ResourceLocation texture, double spriteSize,
-    CelestialBodyProperties properties) {
+    CelestialBodyProperties properties, PlanetaryFeatureProfile featureProfile) {
 
     public enum Class {
         GALAXY,
@@ -37,6 +40,7 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         orbitalParams = orbitalParams == null ? OrbitalParams.circular(0.0, 0.0) : orbitalParams;
         properties = properties == null ? CelestialBodyProperties.builder()
             .build() : properties;
+        featureProfile = featureProfile == null ? PlanetaryFeatureProfile.NONE : featureProfile;
     }
 
     public static Builder builder() {
@@ -108,6 +112,7 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
         private double spriteSize;
         private CelestialBodyProperties properties = CelestialBodyProperties.builder()
             .build();
+        private PlanetaryFeatureProfile featureProfile = PlanetaryFeatureProfile.NONE;
 
         public Builder() {}
 
@@ -124,6 +129,7 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             this.texture = source.texture;
             this.spriteSize = source.spriteSize;
             this.properties = source.properties;
+            this.featureProfile = source.featureProfile;
         }
 
         public Builder id(CelestialObjectId value) {
@@ -229,6 +235,37 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
             return this;
         }
 
+        public Builder featureProfile(PlanetaryFeatureProfile value) {
+            this.featureProfile = value == null ? PlanetaryFeatureProfile.NONE : value;
+            return this;
+        }
+
+        public Builder featureProfile(Consumer<PlanetaryFeatureProfile.Builder> mutator) {
+            PlanetaryFeatureProfile.Builder builder = PlanetaryFeatureProfile.builder();
+            mutator.accept(builder);
+            this.featureProfile = builder.build();
+            return this;
+        }
+
+        public Builder featureTileChance(double featureTileChance) {
+            this.featureProfile = featureProfile.toBuilder()
+                .featureTileChance(featureTileChance)
+                .build();
+            return this;
+        }
+
+        public Builder feature(PlanetaryFeatureDefinition definition, double weight) {
+            if (definition == null) return this;
+            return feature(definition.key(), weight);
+        }
+
+        public Builder feature(PlanetaryFeatureKey key, double weight) {
+            this.featureProfile = featureProfile.toBuilder()
+                .weight(key, weight)
+                .build();
+            return this;
+        }
+
         public CelestialObject build() {
             return new CelestialObject(
                 id,
@@ -241,7 +278,8 @@ public record CelestialObject(CelestialObjectId id, String name, String nameKey,
                 absolutePosition,
                 texture,
                 spriteSize,
-                properties);
+                properties,
+                featureProfile);
         }
     }
 }

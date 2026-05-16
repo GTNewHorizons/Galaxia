@@ -20,6 +20,9 @@ import org.apache.logging.log4j.Logger;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -55,6 +58,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
     private final SettingsGroupRegistry settingsGroups;
+    private long stationFeatureSalt;
     private long energyStored;
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
@@ -76,7 +80,22 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
+        this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
+    }
+
+    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectId bodyId) {
+        long value = assetId == null || assetId.id() == null ? 0L
+            : assetId.id()
+                .getMostSignificantBits()
+                ^ assetId.id()
+                    .getLeastSignificantBits();
+        value ^= bodyId == null ? 0L : ((long) bodyId.ordinal() << 32);
+        value ^= 0xD1B54A32D192ED03L;
+        value ^= value >>> 33;
+        value *= 0xff51afd7ed558ccdL;
+        value ^= value >>> 33;
+        return value;
     }
 
     public static boolean ownsStationLayout(Kind kind) {
@@ -93,6 +112,56 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public SettingsGroupRegistry settingsGroups() {
         return settingsGroups;
+    }
+
+    public long stationFeatureSalt() {
+        return stationFeatureSalt;
+    }
+
+    public void setStationFeatureSalt(long stationFeatureSalt) {
+        this.stationFeatureSalt = stationFeatureSalt;
+    }
+
+    public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
+        return firstPlanetaryFeature(planetaryFeaturesAt(tile));
+    }
+
+    public PlanetaryFeatureKey planetaryFeatureAt(int dx, int dy) {
+        return firstPlanetaryFeature(planetaryFeaturesAt(dx, dy));
+    }
+
+    public List<PlanetaryFeatureKey> planetaryFeaturesAt(StationTileCoord tile) {
+        if (tile == null) return Collections.emptyList();
+        return planetaryFeaturesAt(tile.dx(), tile.dy());
+    }
+
+    public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
+        return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
+            .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
+            .orElse(Collections.emptyList());
+    }
+
+    private static PlanetaryFeatureKey firstPlanetaryFeature(List<PlanetaryFeatureKey> features) {
+        return features.isEmpty() ? null : features.get(0);
+    }
+
+    public List<FeatureContribution> featureContributions(ModuleInstance module) {
+        if (module == null || module.anchorOrNull() == null) return Collections.emptyList();
+        List<FeatureContribution> contributions = new ArrayList<>();
+        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
+        StationTileCoord[] tiles = module.shape()
+            .tiles(module.anchor());
+        for (StationTileCoord tile : tiles) {
+            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
+                counts.merge(feature, 1, Integer::sum);
+            }
+        }
+        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
+            FeatureContribution contribution = module.component()
+                .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
+            if (contribution != null) contributions.add(contribution);
+        }
+        return contributions;
     }
 
     public void applySettingsGroupsToModules() {

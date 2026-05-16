@@ -1,6 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
@@ -37,7 +40,12 @@ public interface IModuleComponent {
         settings.applyTo(module);
     }
 
-    default void tickOperational(ModuleInstance module, CelestialAsset asset) {}
+    default FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature,
+        int coveredTiles, int totalTiles) {
+        return null;
+    }
+
+    default void tickOperational(ModuleInstance module, CelestialAsset outpost) {}
 
     default IllegalStateException unsupportedSettingsGroups(ModuleInstance module) {
         return new IllegalStateException(

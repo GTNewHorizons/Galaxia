@@ -20,6 +20,10 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
@@ -150,6 +154,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             }
         }
 
+        lineY = drawPlanetaryFeatures(facility, module, x, lineY);
+
         if (module.component() instanceof ModuleHammer hammer) {
             lineY += SECTION_GAP;
             lineY = drawHammerOverview(facility, module, hammer, x, lineY, width);
@@ -168,6 +174,32 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
                 lineY,
                 EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         }
+    }
+
+    private int drawPlanetaryFeatures(AutomatedFacility facility, ModuleInstance module, int x, int y) {
+        java.util.LinkedHashSet<PlanetaryFeatureKey> features = new java.util.LinkedHashSet<>();
+        for (StationTileCoord coord : module.shape()
+            .tiles(module.anchor())) {
+            features.addAll(facility.planetaryFeaturesAt(coord));
+        }
+        if (features.isEmpty()) return y;
+        y += SECTION_GAP;
+        for (PlanetaryFeatureKey key : features) {
+            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
+            String name = definition != null ? definition.displayName() : key.toString();
+            y = drawLine("Feature: " + name, x + CONTENT_PADDING, y, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        }
+        for (FeatureContribution contribution : facility.featureContributions(module)) {
+            if (!contribution.effectLine()
+                .isBlank()) {
+                y = drawLine(
+                    contribution.effectLine(),
+                    x + CONTENT_PADDING,
+                    y,
+                    EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            }
+        }
+        return y;
     }
 
     private static int drawLine(String text, int x, int y, int color) {
