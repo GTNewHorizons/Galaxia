@@ -327,7 +327,7 @@ public final class FacilityPersistenceManager {
         }
     }
 
-    private AssetJson encodeAsset(CelestialAsset asset) {
+    AssetJson encodeAsset(CelestialAsset asset) {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
@@ -372,7 +372,7 @@ public final class FacilityPersistenceManager {
         return json;
     }
 
-    private CelestialAsset decodeAsset(AssetJson json) {
+    CelestialAsset decodeAsset(AssetJson json) {
         if (json == null || json.teamId == null
             || json.assetId == null
             || json.celestialObjectId == null
@@ -390,8 +390,8 @@ public final class FacilityPersistenceManager {
         asset.setConstructionInventory(decodeRequirements(json.constructionInventory));
         asset.setDisplayName(json.displayName);
         if (asset instanceof Station station && json.controllerX != null
-                && json.controllerY != null
-                && json.controllerZ != null) {
+            && json.controllerY != null
+            && json.controllerZ != null) {
             station.setController(new BlockPos(json.controllerX, json.controllerY, json.controllerZ));
         }
 

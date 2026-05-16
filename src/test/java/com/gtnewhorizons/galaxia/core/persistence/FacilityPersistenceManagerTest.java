@@ -532,15 +532,11 @@ final class FacilityPersistenceManagerTest {
 
     private static FacilityPersistenceManager.FacilityStateJson malformedFacilityState() {
         FacilityPersistenceManager.FacilityStateJson facility = new FacilityPersistenceManager.FacilityStateJson();
-        facility.celestialBodyId = CelestialObjectId.PANSPIRA.toString();
-        facility.systemId = CelestialObjectId.NOVA_CAELUM.toString();
-        facility.planetaryAnchorBodyId = CelestialObjectId.PANSPIRA.toString();
         facility.settingsGroupsNextId = 1;
         facility.settingsGroups = new ArrayList<>();
         facility.modules = new ArrayList<>();
         facility.buffer = new LinkedHashMap<>();
         facility.fluidBuffer = new LinkedHashMap<>();
-        facility.logisticsConfig = new LinkedHashMap<>();
         facility.layoutTiles = new ArrayList<>();
 
         FacilityPersistenceManager.ModuleJson miner = new FacilityPersistenceManager.ModuleJson();
@@ -1307,12 +1303,9 @@ final class FacilityPersistenceManagerTest {
         recipeModule.setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
+        FacilityPersistenceManager.AssetJson aencoded = manager.encodeAsset(station);
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(aencoded);
         manager.decodeFacilityState(decoded, encoded);
 
         ModuleInstance decodedMacerator = decoded.modules()
@@ -1452,9 +1445,6 @@ final class FacilityPersistenceManagerTest {
 
         // Simulate a save with a module that has an unresolvable kind (unknown enum value)
         FacilityPersistenceManager.FacilityStateJson legacy = new FacilityPersistenceManager.FacilityStateJson();
-        legacy.celestialBodyId = "PANSPIRA";
-        legacy.systemId = "NOVA_CAELUM";
-        legacy.planetaryAnchorBodyId = "PANSPIRA";
         legacy.energyStored = 0L;
         legacy.settingsGroupsNextId = 1;
         legacy.settingsGroups = new ArrayList<>();
@@ -1506,7 +1496,6 @@ final class FacilityPersistenceManagerTest {
         legacy.layoutTiles.add(orphanTj);
 
         legacy.buffer = new LinkedHashMap<>();
-        legacy.logisticsConfig = new LinkedHashMap<>();
         AutomatedFacility decoded = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
