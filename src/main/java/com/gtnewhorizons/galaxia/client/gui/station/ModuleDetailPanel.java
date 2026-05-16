@@ -1,8 +1,5 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
-import java.util.Objects;
-import java.util.Set;
-
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
@@ -12,7 +9,6 @@ import net.minecraft.client.gui.Gui;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -20,20 +16,14 @@ import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -47,8 +37,6 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
     private static final int CHARGE_BAR_BOTTOM_GAP = 3;
 
     private final StationMapWidget map;
-    private StationTileCoord lastCoveredAnchor;
-    private boolean lastCoveredResult;
     private final @Nullable StationTilePickerController tilePickerController;
 
     public ModuleDetailPanel(StationMapWidget map) {
@@ -99,107 +87,14 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
             EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
 
-        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int lineY = y + CONTENT_PADDING;
-
-        lineY = drawLine(
-            "Module: " + module.kind()
-                .name(),
-            x + CONTENT_PADDING,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-
-        StationTileCoord modAnchor = module.anchor();
-        if (module.kind()
-            .isCapacityModule()) {
-            {
-                long baseCapacity = module.baseCapacity();
-                int neighborCount = StationLayout.countOrthogonalNeighbors(layout, modAnchor, module.kind());
-                long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
-                lineY += SECTION_GAP;
-                lineY = drawLine(
-                    "Base: " + baseCapacity,
-                    x + CONTENT_PADDING,
-                    lineY,
-                    EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-                lineY = drawLine(
-                    "Capacity: " + effectiveCapacity,
-                    x + CONTENT_PADDING,
-                    lineY,
-                    EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            }
-        }
-
-        if (facilityId != null) {
-            StationTileCoord curAnchor = module.anchor();
-            if (!Objects.equals(curAnchor, lastCoveredAnchor)) {
-                lastCoveredAnchor = curAnchor;
-                lastCoveredResult = false;
-                Set<StationTileCoord> coverage = GalaxiaAPI.getMaintenanceCoverage(facilityId);
-                for (StationTileCoord tc : module.shape()
-                    .tiles(curAnchor)) {
-                    if (coverage.contains(tc)) {
-                        lastCoveredResult = true;
-                        break;
-                    }
-                }
-            }
-            if (lastCoveredResult) {
-                lineY += SECTION_GAP;
-                drawLine(
-                    "Maintenance Bay: -20% upkeep",
-                    x + CONTENT_PADDING,
-                    lineY,
-                    EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
-            }
-        }
-
-        lineY = drawPlanetaryFeatures(facility, module, x, lineY);
+        int lineY = ModuleDetailTextRegistry
+            .collect(new ModuleDetailTextRegistry.Context(facility, layout, module, facilityId))
+            .draw(x + CONTENT_PADDING, y + CONTENT_PADDING);
 
         if (module.component() instanceof ModuleHammer hammer) {
             lineY += SECTION_GAP;
             lineY = drawHammerOverview(facility, module, hammer, x, lineY, width);
         }
-
-        if (module.component() instanceof IRecipeModule recipeModule) {
-            lineY += SECTION_GAP;
-            RecipeConfig cfg = recipeModule.getRecipeConfig();
-            int slots = cfg == null ? 0
-                : cfg.savedRecipes()
-                    .toList()
-                    .size();
-            lineY = drawLine(
-                "Recipes: " + slots,
-                x + CONTENT_PADDING,
-                lineY,
-                EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        }
-    }
-
-    private int drawPlanetaryFeatures(AutomatedFacility facility, ModuleInstance module, int x, int y) {
-        java.util.LinkedHashSet<PlanetaryFeatureKey> features = new java.util.LinkedHashSet<>();
-        for (StationTileCoord coord : module.shape()
-            .tiles(module.anchor())) {
-            features.addAll(facility.planetaryFeaturesAt(coord));
-        }
-        if (features.isEmpty()) return y;
-        y += SECTION_GAP;
-        for (PlanetaryFeatureKey key : features) {
-            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-            String name = definition != null ? definition.displayName() : key.toString();
-            y = drawLine("Feature: " + name, x + CONTENT_PADDING, y, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        }
-        for (FeatureContribution contribution : facility.featureContributions(module)) {
-            if (!contribution.effectLine()
-                .isBlank()) {
-                y = drawLine(
-                    contribution.effectLine(),
-                    x + CONTENT_PADDING,
-                    y,
-                    EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
-            }
-        }
-        return y;
     }
 
     private static int drawLine(String text, int x, int y, int color) {
