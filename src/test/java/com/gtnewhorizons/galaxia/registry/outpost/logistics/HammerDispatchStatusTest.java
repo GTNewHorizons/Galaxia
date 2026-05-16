@@ -75,7 +75,7 @@ final class HammerDispatchStatusTest {
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(32, 32, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 32, true, false));
-        supplier.addInventoryWithoutSync(resource, 96L);
+        supplier.updateItems(resource, 96);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
         ModuleInstance hammerModule = hammerModule(hammer);
 

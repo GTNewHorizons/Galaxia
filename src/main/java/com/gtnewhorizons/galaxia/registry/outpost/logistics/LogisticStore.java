@@ -87,7 +87,7 @@ public final class LogisticStore {
 
     public static void updateSignalsForFacility(CelestialAsset asset) {
         CelestialAsset.ID assetId = asset.assetId;
-        Map<ItemStackWrapper, Long> snapshot = asset instanceof AutomatedFacility af ? af.inventory.snapshot()
+        Map<ItemStackWrapper, Long> snapshot = asset instanceof AutomatedFacility af ? af.aggregatedItems()
             : asset.aggregatedItems();
 
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals

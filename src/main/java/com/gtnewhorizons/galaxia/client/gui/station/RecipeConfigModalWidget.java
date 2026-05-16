@@ -36,7 +36,8 @@ import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapLayout;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -748,7 +749,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         if (target.resource() == BoundResource.ITEM) {
             ItemStackWrapper item = itemKey(target);
             if (item == null) return false;
-            long current = facility.inventory.getAmount(item);
+            long current = facility.getItemAmount(item);
             long recipeAmount = target.side() == BoundSide.INPUT ? itemInputAmount(slot.recipe(), item)
                 : itemOutputAmount(slot.recipe(), item);
             return target.side() == BoundSide.INPUT ? current - recipeAmount < bound : current >= bound;
@@ -767,15 +768,16 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (facility == null) return;
         BoundKind kind = boundKind(target);
-        String resourceKey = resourceKey(target);
-        if (resourceKey == null) return;
-        facility.inventory.setBound(kind, resourceKey, amount);
+        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
+        InventoryKey key = inventoryKey(target);
+        if (key == null) return;
+        facility.setBound(key, amount, isLow);
         CelestialClient.updateInventoryBound(
             assetId,
             controller.moduleIndex(),
             AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
             kind,
-            resourceKey,
+            resourceKeyString(key),
             amount);
     }
 
@@ -783,16 +785,31 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
         if (facility == null) return;
         BoundKind kind = boundKind(target);
-        String resourceKey = resourceKey(target);
-        if (resourceKey == null) return;
-        facility.inventory.clearBound(kind, resourceKey);
+        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
+        InventoryKey key = inventoryKey(target);
+        if (key == null) return;
+        facility.clearBound(key, isLow);
         CelestialClient.updateInventoryBound(
             assetId,
             controller.moduleIndex(),
             AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
             kind,
-            resourceKey,
+            resourceKeyString(key),
             0L);
+    }
+
+    private @Nullable InventoryKey inventoryKey(BoundTarget target) {
+        if (target.resource() == BoundResource.ITEM) {
+            return itemKey(target);
+        }
+        FluidStack stack = fluidStack(target);
+        return stack != null ? FluidKey.of(stack) : null;
+    }
+
+    private static String resourceKeyString(InventoryKey key) {
+        return key instanceof ItemStackWrapper item ? item.toKey()
+            : ((FluidKey) key).fluid()
+                .getName();
     }
 
     private static BoundKind boundKind(BoundTarget target) {

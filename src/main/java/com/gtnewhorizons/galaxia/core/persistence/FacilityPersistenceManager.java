@@ -448,7 +448,7 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE ENCODE: facility {} has {} module(s) in state", state.assetId, moduleCount);
 
         out.buffer = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.snapshot()
+        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
             .entrySet()) {
             out.buffer.put(
                 e.getKey()
@@ -456,10 +456,10 @@ public final class FacilityPersistenceManager {
                 e.getValue());
         }
         out.fluidBuffer = toFluidBuffer(state);
-        out.itemLowerBounds = encodeItemAmountMap(state.inventory.itemLowerBoundsSnapshot());
-        out.itemUpperBounds = encodeItemAmountMap(state.inventory.itemUpperBoundsSnapshot());
-        out.fluidLowerBounds = toFluidBounds(state.inventory.fluidLowerBoundsSnapshot());
-        out.fluidUpperBounds = toFluidBounds(state.inventory.fluidUpperBoundsSnapshot());
+        out.itemLowerBounds = encodeItemAmountMap(state.itemLowerBoundsSnapshot());
+        out.itemUpperBounds = encodeItemAmountMap(state.itemUpperBoundsSnapshot());
+        out.fluidLowerBounds = new LinkedHashMap<>(state.fluidLowerBoundsSnapshot());
+        out.fluidUpperBounds = new LinkedHashMap<>(state.fluidUpperBoundsSnapshot());
         out.logisticsConfig = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -669,22 +669,22 @@ public final class FacilityPersistenceManager {
                     bufferSnapshot.put(key, e.getValue());
                 }
             }
-            state.inventory.loadFromSnapshot(bufferSnapshot);
+            state.loadFromSnapshot(bufferSnapshot);
         }
         if (json.fluidBuffer != null) {
-            state.inventory.loadFluidSnapshot(json.fluidBuffer);
+            state.loadFluidSnapshot(json.fluidBuffer);
         }
         if (json.itemLowerBounds != null) {
-            state.inventory.loadItemLowerBounds(decodeItemAmountMap(json.itemLowerBounds));
+            state.loadItemLowerBounds(decodeItemAmountMap(json.itemLowerBounds));
         }
         if (json.itemUpperBounds != null) {
-            state.inventory.loadItemUpperBounds(decodeItemAmountMap(json.itemUpperBounds));
+            state.loadItemUpperBounds(decodeItemAmountMap(json.itemUpperBounds));
         }
         if (json.fluidLowerBounds != null) {
-            state.inventory.loadFluidLowerBounds(json.fluidLowerBounds);
+            state.loadFluidLowerBounds(json.fluidLowerBounds);
         }
         if (json.fluidUpperBounds != null) {
-            state.inventory.loadFluidUpperBounds(json.fluidUpperBounds);
+            state.loadFluidUpperBounds(json.fluidUpperBounds);
         }
 
         if (json.logisticsConfig != null) {
@@ -881,16 +881,7 @@ public final class FacilityPersistenceManager {
     }
 
     private static Map<String, Long> toFluidBuffer(AutomatedFacility state) {
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, Long> e : state.inventory.fluidSnapshot()
-            .entrySet()) {
-            result.put(
-                e.getKey()
-                    .fluid()
-                    .getName(),
-                e.getValue());
-        }
-        return result;
+        return new LinkedHashMap<>(state.fluidSnapshot());
     }
 
     private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {

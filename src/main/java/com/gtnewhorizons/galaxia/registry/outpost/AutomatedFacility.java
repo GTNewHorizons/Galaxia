@@ -47,7 +47,9 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private static final Logger LOG = LogManager.getLogger(AutomatedFacility.class);
 
-    public final AutomatedFacilityInventory inventory;
+    private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
+    private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
+    private long totalItemAmount;
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -56,7 +58,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private long energyStored;
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
-    private final Map<ItemStackWrapper, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
+    private final Map<InventoryKey, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
     private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
@@ -71,7 +73,6 @@ public final class AutomatedFacility extends CelestialAsset {
                 "AutomatedFacility kind must be AUTOMATED_OUTPOST or AUTOMATED_STATION, got: " + kind);
         }
         this.modules = new ArrayList<>();
-        this.inventory = new AutomatedFacilityInventory();
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
@@ -302,11 +303,11 @@ public final class AutomatedFacility extends CelestialAsset {
         ModuleOperationState operation = requireWaitingOperation(module);
         Map<ItemStackWrapper, Long> requested = requireMaterialCost(materialCost);
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (inventory.getAmount(material.getKey()) < material.getValue()) return false;
+            if (getItemAmount(material.getKey()) < material.getValue()) return false;
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (!tryConsumeInventory(material.getKey(), material.getValue())) {
+            if (updateResource(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true) <= 0L) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
@@ -324,66 +325,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    public long itemInventoryCapacity() {
-        long capacity = BASE_ITEM_CAPACITY;
-        for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)) {
-            capacity += cluster.effectiveCapacity();
-        }
-        return capacity;
-    }
-
-    public long usedItemInventoryCapacity() {
-        return inventory.totalItems();
-    }
-
-    public long remainingItemInventoryCapacity() {
-        return Math.max(0L, itemInventoryCapacity() - usedItemInventoryCapacity());
-    }
-
-    public boolean isItemInventoryFull() {
-        return remainingItemInventoryCapacity() <= 0L;
-    }
-
-    public long insertInventory(ItemStackWrapper item, long amount) {
-        return insertInventory(item, amount, true);
-    }
-
-    public long insertInventoryWithoutSync(ItemStackWrapper item, long amount) {
-        return insertInventory(item, amount, false);
-    }
-
-    private long insertInventory(ItemStackWrapper item, long amount, boolean trackSync) {
-        if (item == null || amount <= 0L) return 0L;
-        long accepted = Math.min(amount, remainingItemInventoryCapacity());
-        if (accepted <= 0L) return 0L;
-        inventory.add(item, accepted);
-        if (trackSync) markInventoryDelta(item, accepted);
-        return accepted;
-    }
-
-    public long addInventory(ItemStackWrapper item, long delta) {
-        return addInventory(item, delta, true);
-    }
-
-    public long addInventoryWithoutSync(ItemStackWrapper item, long delta) {
-        return addInventory(item, delta, false);
-    }
-
-    private long addInventory(ItemStackWrapper item, long delta, boolean trackSync) {
-        if (item == null || delta == 0L) return 0L;
-        long actual = inventory.add(item, delta);
-        if (actual != 0L && trackSync) markInventoryDelta(item, actual);
-        return actual;
-    }
-
-    public boolean tryConsumeInventory(ItemStackWrapper item, long amount) {
-        if (item == null) return false;
-        if (amount <= 0L) return true;
-        if (!inventory.tryConsume(item, amount)) return false;
-        markInventoryDelta(item, -amount);
-        return true;
-    }
-
     public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
         Map<ItemStackWrapper, Long> materialCost) {
         ModuleOperationState operation = requireWaitingOperation(module);
@@ -397,10 +338,10 @@ public final class AutomatedFacility extends CelestialAsset {
                 .getOrDefault(itemKey, 0L);
             long remaining = material.getValue() - alreadyDeposited;
             if (remaining <= 0L) continue;
-            long available = inventory.getAmount(material.getKey());
+            long available = getItemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (!tryConsumeInventory(material.getKey(), reserved)) {
+            if (updateResource(material.getKey(), -(int) Math.min(reserved, Integer.MAX_VALUE), true) <= 0L) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
@@ -452,7 +393,7 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
             ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = insertInventory(item, entry.getValue());
+            long accepted = updateItems(item, (int) (long) entry.getValue());
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -711,8 +652,8 @@ public final class AutomatedFacility extends CelestialAsset {
         return result;
     }
 
-    public Map<ItemStackWrapper, Long> drainDirtyInventoryDeltas() {
-        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>(dirtyInventoryDeltas);
+    public Map<InventoryKey, Long> drainDirtyInventoryDeltas() {
+        Map<InventoryKey, Long> result = new LinkedHashMap<>(dirtyInventoryDeltas);
         dirtyInventoryDeltas.clear();
         return result;
     }
@@ -729,7 +670,7 @@ public final class AutomatedFacility extends CelestialAsset {
         return result;
     }
 
-    private void markInventoryDelta(ItemStackWrapper item, long delta) {
+    private void markInventoryDelta(InventoryKey item, long delta) {
         if (item == null || delta == 0L) return;
         dirtyInventoryDeltas.merge(item, delta, Long::sum);
         if (dirtyInventoryDeltas.getOrDefault(item, 0L) == 0L) {
@@ -738,16 +679,23 @@ public final class AutomatedFacility extends CelestialAsset {
         bumpSyncRevision();
     }
 
-    public void markInventoryBoundDelta(AutomatedFacilityInventory.BoundKind kind, String resourceKey, boolean present,
+    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present,
         long amount) {
-        if (kind == null || resourceKey == null || resourceKey.isEmpty()) return;
-        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resourceKey, present, amount));
+        if (kind == null || resource == null) return;
+        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resource, present, amount));
         bumpSyncRevision();
         markDirty();
     }
 
-    public record InventoryBoundDelta(AutomatedFacilityInventory.BoundKind kind, String resourceKey, boolean present,
-        long amount) {}
+    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present,
+        long amount) {
+
+        public String resourceKey() {
+            return resource instanceof ItemStackWrapper item ? item.toKey()
+                : ((FluidKey) resource).fluid()
+                    .getName();
+        }
+    }
 
     public long getEnergyStored() {
         return energyStored;
@@ -918,34 +866,10 @@ public final class AutomatedFacility extends CelestialAsset {
             .buildTicks();
     }
 
-    // ── IDistributedInventory overrides ──
-
-    @Override
-    public Map<ItemStackWrapper, Long> aggregatedItems() {
-        return inventory.snapshot();
-    }
-
-    @Override
-    public long totalItemsStored() {
-        return inventory.totalItems();
-    }
-
-    @Override
-    public long updateItems(ItemStackWrapper item, int delta) {
-        if (item == null || delta == 0) return 0L;
-        if (delta > 0) {
-            return insertInventoryWithoutSync(item, delta);
-        }
-        long toRemove = Math.min(-(long) delta, inventory.getAmount(item));
-        if (toRemove > 0L) {
-            inventory.add(item, -toRemove);
-        }
-        return toRemove;
-    }
-
+    /// Stub methods until we have a proper distributed inventory for the automated station
     @Override
     public List<IInventory> getInventories() {
-        return List.of(inventory);
+        return List.of();
     }
 
     @Override
@@ -954,26 +878,43 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
-    public Map<FluidKey, Long> aggregatedFluids() {
-        return inventory.fluidSnapshot();
+    public Map<ItemStackWrapper, Long> aggregatedItems() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
 
     @Override
-    public long getFluidAmount(FluidKey fluid) {
-        return inventory.getFluidAmount(fluid);
+    public Map<FluidKey, Long> aggregatedFluids() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
+    }
+
+    @Override
+    public long totalItemsStored() {
+        return totalItemAmount;
     }
 
     @Override
     public long totalFluidStored() {
         long total = 0L;
-        for (long v : inventory.fluidSnapshot()
-            .values()) total += v;
+        for (long v : fluidAmounts.values()) total += v;
         return total;
     }
 
     @Override
-    public long totalFluidCapacity() {
-        return 0L;
+    public long getItemAmount(ItemStackWrapper item) {
+        Long v = amounts.get(item);
+        return v == null ? 0L : v;
+    }
+
+    @Override
+    public long getFluidAmount(FluidKey fluid) {
+        if (fluid == null) return 0L;
+        Long v = fluidAmounts.get(fluid);
+        return v == null ? 0L : v;
+    }
+
+    @Override
+    public long getFreeItemSpace(ItemStackWrapper item) {
+        return Long.MAX_VALUE;
     }
 
     @Override
@@ -981,13 +922,132 @@ public final class AutomatedFacility extends CelestialAsset {
         return Long.MAX_VALUE;
     }
 
-    @Override
-    public long updateFluids(FluidKey fluid, int delta) {
-        if (fluid == null || delta == 0) return 0L;
-        return inventory.addFluid(fluid, delta);
+    public long updateResource(InventoryKey item, int delta, boolean sync) {
+        final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta) : updateFluids((FluidKey) item, delta);
+        if (actual != 0L && sync) markInventoryDelta(item, delta);
+        return actual;
     }
 
-    public String getInventoryName() {
-        return "";
+    @Override
+    public long updateItems(ItemStackWrapper item, int delta) {
+        if (item == null) return 0L;
+
+        long current = amounts.getOrDefault(item, 0L);
+        long actualDelta = Math.clamp(delta, -current, remainingItemInventoryCapacity());
+        long newValue = current + actualDelta;
+
+        if (newValue == 0L) {
+            amounts.remove(item);
+        } else {
+            amounts.put(item, newValue);
+        }
+
+        totalItemAmount += actualDelta;
+        return Math.abs(actualDelta);
     }
+
+    @Override
+    public long updateFluids(FluidKey fluid, int delta) {
+        if (fluid == null) return 0L;
+
+        long current = fluidAmounts.getOrDefault(fluid, 0L);
+        long actualDelta = Math.clamp(delta, -current, remainingFluidInventoryCapacity());
+        long newValue = current + actualDelta;
+
+        if (newValue == 0L) {
+            fluidAmounts.remove(fluid);
+        } else {
+            fluidAmounts.put(fluid, newValue);
+        }
+
+        return Math.abs(actualDelta);
+    }
+
+    public long usedItemInventoryCapacity() {
+        return totalItemsStored();
+    }
+
+    public long remainingItemInventoryCapacity() {
+        return Math.max(0L, totalItemCapacity() - usedItemInventoryCapacity());
+    }
+
+    public boolean isItemInventoryFull() {
+        return remainingItemInventoryCapacity() <= 0L;
+    }
+
+    @Override
+    public long totalItemCapacity() {
+        long capacity = BASE_ITEM_CAPACITY;
+        for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)) {
+            capacity += cluster.effectiveCapacity();
+        }
+        return capacity;
+    }
+
+    public long usedFluidInventoryCapacity() {
+        return totalFluidStored();
+    }
+
+    public long remainingFluidInventoryCapacity() {
+        return Math.max(0L, totalFluidCapacity() - usedFluidInventoryCapacity());
+    }
+
+    public boolean isFluidInventoryFull() {
+        return remainingFluidInventoryCapacity() <= 0L;
+    }
+
+    @Override
+    public long totalFluidCapacity() {
+        // TODO
+        return Long.MAX_VALUE;
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Persistence helpers
+    /// ----------------------------------------------------------------------------------
+
+    public Map<ItemStackWrapper, Long> itemSnapshot() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
+    }
+
+    public Map<String, Long> fluidSnapshot() {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, Long> e : fluidAmounts.entrySet()) {
+            result.put(e.getKey().fluid().getName(), e.getValue());
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public void loadFromSnapshot(Map<ItemStackWrapper, Long> snapshot) {
+        amounts.clear();
+        totalItemAmount = 0L;
+        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
+            if (e.getValue() > 0) {
+                amounts.put(e.getKey(), e.getValue());
+                totalItemAmount += e.getValue();
+            }
+        }
+    }
+
+    public void loadFluidSnapshot(Map<String, Long> snapshot) {
+        fluidAmounts.clear();
+        for (Map.Entry<String, Long> e : snapshot.entrySet()) {
+            if (e.getKey() == null || e.getKey().isEmpty() || e.getValue() <= 0) continue;
+            FluidKey key = FluidKey.fromName(e.getKey());
+            if (key != null) fluidAmounts.put(key, e.getValue());
+        }
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        amounts.clear();
+        fluidAmounts.clear();
+        totalItemAmount = 0L;
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Internal helpers used by facility logic
+    /// ----------------------------------------------------------------------------------
+
 }

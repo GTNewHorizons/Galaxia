@@ -1648,7 +1648,7 @@ public final class AssetManagementSystem {
 
         private List<Map.Entry<ItemStackWrapper, Long>> getSortedInventoryEntries(AutomatedFacility outpost) {
             List<Map.Entry<ItemStackWrapper, Long>> entries = new ArrayList<>(
-                outpost.inventory.snapshot()
+                outpost.aggregatedItems()
                     .entrySet());
             Comparator<Map.Entry<ItemStackWrapper, Long>> comparator;
             if (state.inventorySortMode == InventorySortMode.AMOUNT) {
@@ -1904,7 +1904,7 @@ public final class AssetManagementSystem {
                 final ItemStackWrapper wrapper = entry.getKey();
                 final LogisticsResourceConfig cfg = entry.getValue();
                 final ItemStack displayStack = wrapper.toStack(1);
-                long currentAmount = outpost.inventory.getAmount(wrapper);
+                long currentAmount = outpost.getItemAmount(wrapper);
 
                 ParentWidget<?> row = new ParentWidget<>().pos(4, rowY)
                     .widthRelOffset(1f, -8)

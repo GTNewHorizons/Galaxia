@@ -865,7 +865,7 @@ final class FacilityPersistenceManagerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         FluidKey bufferKey = new FluidKey(TEST_FLUID_1, null);
-        station.inventory.addFluid(bufferKey, 4096);
+        station.updateFluids(bufferKey, 4096);
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -875,7 +875,7 @@ final class FacilityPersistenceManagerTest {
             station.status());
         manager.decodeFacilityState(decoded, encoded);
 
-        assertEquals(4096, decoded.inventory.getFluidAmount(bufferKey));
+        assertEquals(4096, decoded.getFluidAmount(bufferKey));
         assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
     }
 
@@ -1301,8 +1301,8 @@ final class FacilityPersistenceManagerTest {
             320,
             480);
         SavedRecipeList slots = new SavedRecipeList();
-        station.getBound(new FluidKey(TEST_FLUID_1, null)).setLow(11);
-        station.getBound(new FluidKey(TEST_FLUID_2, null)).setUppper(22);
+        station.setBound(new FluidKey(TEST_FLUID_1, null), 11, true);
+        station.setBound(new FluidKey(TEST_FLUID_2, null), 22, false);
         slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
         recipeModule.setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));

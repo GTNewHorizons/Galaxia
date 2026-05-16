@@ -95,7 +95,7 @@ public final class HammerDispatchPlanner {
             if (!supplierCfg.isSupplyEnabled()) continue;
 
             ItemStackWrapper resource = supplierEntry.getKey();
-            long availableSurplus = supplier.inventory.getAmount(resource) - supplierCfg.minReserve();
+            long availableSurplus = supplier.getItemAmount(resource) - supplierCfg.minReserve();
             if (availableSurplus <= 0L) {
                 sawSurplusBlocked = true;
                 continue;

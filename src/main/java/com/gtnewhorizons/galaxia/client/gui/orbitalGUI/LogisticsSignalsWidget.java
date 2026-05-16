@@ -463,7 +463,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
                 CelestialAsset asset = outpost;
                 if (asset == null) continue;
-                long stock = outpost.inventory.getAmount(item);
+                long stock = outpost.getItemAmount(item);
                 LogisticsResourceConfig cfg = outpost.logisticsConfig.get(item);
                 if (stock == 0 && cfg.minReserve() == 0 && !cfg.isImportEnabled() && !cfg.isSupplyEnabled()) continue;
                 long localNet = stock - cfg.minReserve();

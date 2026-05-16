@@ -19,7 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class AssetInventoryUpdatePacketTest {
@@ -53,7 +53,7 @@ final class AssetInventoryUpdatePacketTest {
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
         assertNull(sync);
-        assertEquals(0, facility.inventory.getAmount(resource));
+        assertEquals(0L, facility.getItemAmount(resource));
     }
 
     @Test
@@ -72,12 +72,12 @@ final class AssetInventoryUpdatePacketTest {
     void removePacketRemovesAllMatchingInventory() {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
-        facility.inventory.add(resource, 32);
+        facility.updateItems(resource, 32);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
 
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
-        assertEquals(0, facility.inventory.getAmount(resource));
+        assertEquals(0L, facility.getItemAmount(resource));
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
     }

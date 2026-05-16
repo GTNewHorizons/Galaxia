@@ -1,10 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import net.minecraft.init.Items;
 import net.minecraftforge.fluids.FluidRegistry;
@@ -24,6 +26,7 @@ final class AutomatedFacilityInventoryTest {
         TestFMLRegistry.init();
         INPUT_KEY = new FluidKey(FluidRegistry.LAVA, null);
         OUTPUT_KEY = new FluidKey(FluidRegistry.WATER, null);
+        CelestialRegistry.freezeAndBake();
     }
 
     @Test
@@ -33,7 +36,11 @@ final class AutomatedFacilityInventoryTest {
         ItemStackWrapper output = new ItemStackWrapper(Items.iron_ingot, 0, null);
         outpost.updateItems(input, 40);
         outpost.updateItems(output, 990);
-        outpost.setBound(input, 32L, 1000L);
+        // Hits capacity limit
+        assertEquals(960, outpost.getItemAmount(output));
+        outpost.updateItems(output, -470);
+        outpost.setBound(input, 32L, true);
+        outpost.setBound(output, 500L, false);
 
         assertTrue(outpost.isAboveLow(input, 8));
         assertFalse(outpost.isAboveLow(input, 9));
@@ -47,7 +54,8 @@ final class AutomatedFacilityInventoryTest {
         AutomatedFacility outpost = new AutomatedFacility(CelestialAsset.ID.create(), CelestialObjectId.PROXIMA_CENTAURI, CelestialAsset.Kind.AUTOMATED_OUTPOST, Buildable.Status.OPERATIONAL);
         outpost.updateFluids(INPUT_KEY, 1000);
         outpost.updateFluids(OUTPUT_KEY, 900);
-        outpost.setBound(INPUT_KEY, 800L, 1000L);
+        outpost.setBound(INPUT_KEY, 800L,  true);
+        outpost.setBound(OUTPUT_KEY, 1000L,  false);
 
         assertTrue(outpost.isAboveLow(INPUT_KEY, 200L));
         assertFalse(outpost.isAboveLow(INPUT_KEY, 201L));

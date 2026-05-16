@@ -122,7 +122,7 @@ final class StationPacketRoundTripTest {
         AssetSyncPacket.figureOutWhatToSend(server, playerId);
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
 
-        server.insertInventory(resource, 42);
+        server.updateResource(resource, 42, true);
 
         List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
         assertEquals(1, deltas.size());
@@ -397,7 +397,7 @@ final class StationPacketRoundTripTest {
         client.clearModules();
         client.settingsGroups()
             .clear();
-        client.inventory.clear();
+        client.clear();
         client.logisticsConfig.clear();
         StationLayout layout = client.stationLayout();
         if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());

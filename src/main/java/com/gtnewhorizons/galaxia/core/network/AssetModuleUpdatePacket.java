@@ -27,7 +27,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -1002,12 +1004,19 @@ public final class AssetModuleUpdatePacket implements IMessage {
         String resourceKey = PacketUtil.readString(payloadBuf);
         long amount = payloadBuf.readLong();
         if (kind == null) throw new IllegalArgumentException("invalid inventory bound kind");
+        if (resourceKey == null || resourceKey.isEmpty()) throw new IllegalArgumentException("invalid resource key");
+        InventoryKey key = switch (kind) {
+            case ITEM_LOWER, ITEM_UPPER -> ItemStackWrapper.fromKey(resourceKey);
+            case FLUID_LOWER, FLUID_UPPER -> FluidKey.fromName(resourceKey);
+        };
+        if (key == null) throw new IllegalArgumentException("unresolvable resource key: " + resourceKey);
+        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
         if (packet.getConfigAction() == ConfigAction.SET_INVENTORY_BOUND) {
-            state.inventory.setBound(kind, resourceKey, amount);
-            state.markInventoryBoundDelta(kind, resourceKey, true, amount);
+            state.setBound(key, amount, isLow);
+            state.markInventoryBoundDelta(kind, key, true, amount);
         } else {
-            state.inventory.clearBound(kind, resourceKey);
-            state.markInventoryBoundDelta(kind, resourceKey, false, amount);
+            state.clearBound(key, isLow);
+            state.markInventoryBoundDelta(kind, key, false, amount);
         }
     }
 

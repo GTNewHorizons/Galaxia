@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import net.minecraft.init.Blocks;
@@ -51,7 +50,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private boolean dirty = true;
 
-    private final Map<ItemStackWrapper, InventoryBounds> itemBounds= new LinkedHashMap<>();
+    private final Map<ItemStackWrapper, InventoryBounds> itemBounds = new LinkedHashMap<>();
     private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
     private final Map<Integer, ResourceFilter<ItemStackWrapper>> itemFilters = new Int2ObjectArrayMap<>();
     private final Map<Integer, ResourceFilter<FluidKey>> fluidFilters = new Int2ObjectArrayMap<>();
@@ -418,15 +417,92 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public boolean isAboveLow(InventoryKey key) {
-        return getResourceAmount(key) < getBound(key).lowOrDefault();
+        return getResourceAmount(key) >= getBound(key).lowOrDefault();
     }
 
     public boolean isAboveLow(InventoryKey key, long amount) {
-        return getResourceAmount(key) > (getBound(key).lowOrDefault() - amount);
+        return (getResourceAmount(key) - amount) >= getBound(key).lowOrDefault();
     }
 
     public boolean isInBounds(InventoryKey key) {
         return getBound(key).inBounds(getResourceAmount(key));
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Bound Snapshots & Loads (for persistence)
+    /// ----------------------------------------------------------------------------------
+
+    public Map<ItemStackWrapper, Long> itemLowerBoundsSnapshot() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, InventoryBounds> e : itemBounds.entrySet()) {
+            if (e.getValue().hasLow()) result.put(e.getKey(), e.getValue().low());
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public Map<ItemStackWrapper, Long> itemUpperBoundsSnapshot() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, InventoryBounds> e : itemBounds.entrySet()) {
+            if (e.getValue().hasUpper()) result.put(e.getKey(), e.getValue().upper());
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public Map<String, Long> fluidLowerBoundsSnapshot() {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, InventoryBounds> e : fluidBounds.entrySet()) {
+            if (e.getValue().hasLow()) result.put(e.getKey().fluid().getName(), e.getValue().low());
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public Map<String, Long> fluidUpperBoundsSnapshot() {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, InventoryBounds> e : fluidBounds.entrySet()) {
+            if (e.getValue().hasUpper()) result.put(e.getKey().fluid().getName(), e.getValue().upper());
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public void loadItemLowerBounds(Map<ItemStackWrapper, Long> snapshot) {
+        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
+            if (e.getKey() != null && e.getValue() >= 0L) {
+                setBound(e.getKey(), e.getValue(), true);
+            }
+        }
+    }
+
+    public void loadItemUpperBounds(Map<ItemStackWrapper, Long> snapshot) {
+        for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
+            if (e.getKey() != null && e.getValue() >= 0L) {
+                setBound(e.getKey(), e.getValue(), false);
+            }
+        }
+    }
+
+    public void loadFluidLowerBounds(Map<String, Long> snapshot) {
+        for (Map.Entry<String, Long> e : snapshot.entrySet()) {
+            if (e.getKey() == null || e.getKey().isEmpty() || e.getValue() < 0L) continue;
+            FluidKey key = FluidKey.fromName(e.getKey());
+            if (key != null) setBound(key, e.getValue(), true);
+        }
+    }
+
+    public void loadFluidUpperBounds(Map<String, Long> snapshot) {
+        for (Map.Entry<String, Long> e : snapshot.entrySet()) {
+            if (e.getKey() == null || e.getKey().isEmpty() || e.getValue() < 0L) continue;
+            FluidKey key = FluidKey.fromName(e.getKey());
+            if (key != null) setBound(key, e.getValue(), false);
+        }
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Clear all inventory state
+    /// ----------------------------------------------------------------------------------
+
+    public void clear() {
+        itemBounds.clear();
+        fluidBounds.clear();
     }
 
     @Override

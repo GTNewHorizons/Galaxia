@@ -60,12 +60,12 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStack material = material();
         ItemStackWrapper key = ItemStackWrapper.of(material);
-        facility.inventory.add(key, 8L);
+        facility.updateItems(key, 8);
         module.setOperation(ModuleOperationState.waiting(plan()));
 
         assertTrue(facility.tryReserveOperationMaterials(module, Map.of(key, 5L)));
 
-        assertEquals(3L, facility.inventory.getAmount(key));
+        assertEquals(3L, facility.getItemAmount(key));
         assertEquals(
             5L,
             module.operationOrNull()
@@ -80,12 +80,12 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStack material = material();
         ItemStackWrapper key = ItemStackWrapper.of(material);
-        facility.inventory.add(key, 2L);
+        facility.updateItems(key, 2);
         module.setOperation(ModuleOperationState.waiting(plan()));
 
         assertFalse(facility.tryReserveOperationMaterials(module, Map.of(key, 5L)));
 
-        assertEquals(2L, facility.inventory.getAmount(key));
+        assertEquals(2L, facility.getItemAmount(key));
         assertTrue(
             module.operationOrNull()
                 .depositedResources()
@@ -99,19 +99,19 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStack material = material();
         ItemStackWrapper key = ItemStackWrapper.of(material);
-        facility.inventory.add(key, 2L);
+        facility.updateItems(key, 2);
         module.setOperation(ModuleOperationState.waiting(plan()));
 
         assertFalse(facility.tryReserveAvailableOperationMaterials(module, Map.of(key, 5L)));
 
-        assertEquals(0L, facility.inventory.getAmount(key));
+        assertEquals(0L, facility.getItemAmount(key));
         assertEquals(
             2L,
             module.operationOrNull()
                 .depositedResources()
                 .get(key.toKey()));
 
-        facility.inventory.add(key, 3L);
+        facility.updateItems(key, 3);
 
         assertTrue(facility.tryReserveAvailableOperationMaterials(module, Map.of(key, 5L)));
         assertEquals(
@@ -128,7 +128,7 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStack material = material();
         ItemStackWrapper key = ItemStackWrapper.of(material);
-        facility.inventory.add(key, 8L);
+        facility.updateItems(key, 8);
         module.setOperation(ModuleOperationState.waiting(plan()));
         facility.tryReserveOperationMaterials(module, Map.of(key, 5L));
 
@@ -138,7 +138,7 @@ final class AutomatedFacilityOperationTest {
             ModuleOperationPhase.REFUNDING,
             module.operationOrNull()
                 .phase());
-        assertEquals(3L, facility.inventory.getAmount(key));
+        assertEquals(3L, facility.getItemAmount(key));
         assertEquals(
             5L,
             module.operationOrNull()
@@ -150,7 +150,7 @@ final class AutomatedFacilityOperationTest {
     void itemInventoryCapacityStartsAtBaseLimit() {
         AutomatedFacility facility = facilityWithHammer();
 
-        assertEquals(1000L, facility.itemInventoryCapacity());
+        assertEquals(1000L, facility.totalItemCapacity());
         assertEquals(1000L, facility.remainingItemInventoryCapacity());
     }
 
@@ -162,7 +162,7 @@ final class AutomatedFacilityOperationTest {
         facility.stationLayout()
             .place(storage);
 
-        assertEquals(2024L, facility.itemInventoryCapacity());
+        assertEquals(2024L, facility.totalItemCapacity());
     }
 
     @Test
@@ -170,9 +170,9 @@ final class AutomatedFacilityOperationTest {
         AutomatedFacility facility = facilityWithHammer();
         ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond));
 
-        assertEquals(1000L, facility.insertInventory(key, 1200L));
+        assertEquals(1000L, facility.updateItems(key, 1200));
 
-        assertEquals(1000L, facility.inventory.getAmount(key));
+        assertEquals(1000L, facility.getItemAmount(key));
         assertEquals(0L, facility.remainingItemInventoryCapacity());
     }
 
@@ -183,14 +183,14 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
         ItemStackWrapper refund = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
-        facility.insertInventory(filler, 998L);
+        facility.updateItems(filler, 998);
         module.setOperation(
             ModuleOperationState
                 .restore(plan(), ModuleOperationPhase.REFUNDING, 0, Map.of(), Map.of(refund.toKey(), 5L)));
 
         assertTrue(facility.flushModuleOperationRefund(module));
 
-        assertEquals(2L, facility.inventory.getAmount(refund));
+        assertEquals(2L, facility.getItemAmount(refund));
         assertNotNull(module.operationOrNull());
         assertEquals(
             ModuleOperationPhase.REFUNDING,
@@ -210,7 +210,7 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
         ItemStackWrapper refund = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
-        facility.insertInventory(filler, 1000L);
+        facility.updateItems(filler, 1000);
         module.setOperation(
             ModuleOperationState
                 .restore(plan(), ModuleOperationPhase.REFUNDING, 0, Map.of(), Map.of(refund.toKey(), 1L)));
@@ -222,14 +222,14 @@ final class AutomatedFacilityOperationTest {
             module.operationOrNull()
                 .phase());
 
-        facility.inventory.add(filler, -1L);
+        facility.updateItems(filler, -1);
         facility.tick();
 
         assertEquals(
             ModuleOperationPhase.CANCELLED,
             module.operationOrNull()
                 .phase());
-        assertEquals(1L, facility.inventory.getAmount(refund));
+        assertEquals(1L, facility.getItemAmount(refund));
     }
 
     @Test
@@ -239,7 +239,7 @@ final class AutomatedFacilityOperationTest {
             .get(0);
         ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
         ItemStackWrapper refund = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
-        facility.insertInventory(filler, 999L);
+        facility.updateItems(filler, 999);
         module.setOperation(
             ModuleOperationState.waiting(hammerUpgradePlan(2, false, refund))
                 .beginBuilding());
@@ -255,7 +255,7 @@ final class AutomatedFacilityOperationTest {
 
         facility.tick();
 
-        assertEquals(1L, facility.inventory.getAmount(refund));
+        assertEquals(1L, facility.getItemAmount(refund));
         assertEquals(
             5L,
             module.operationOrNull()
@@ -269,7 +269,7 @@ final class AutomatedFacilityOperationTest {
         ModuleInstance module = facility.modules()
             .get(0);
         ItemStackWrapper key = new ItemStackWrapper(new Item(), 0, null);
-        facility.inventory.add(key, 8L);
+        facility.updateItems(key, 8);
         module.setOperation(ModuleOperationState.waiting(plan()));
         facility.tryReserveOperationMaterials(module, Map.of(key, 5L));
         facility.cancelModuleOperation(module);

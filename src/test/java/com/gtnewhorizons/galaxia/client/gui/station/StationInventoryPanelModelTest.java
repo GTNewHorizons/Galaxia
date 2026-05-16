@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModelTest {
@@ -50,11 +50,10 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void inventoryRowsShowAllItems() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
+        IDistributedInventory distributed = distributed();
         ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
-        inventory.setAmount(tracked, 5);
+        setAmount(distributed, tracked, 5);
 
-        IDistributedInventory distributed = distributed(inventory);
         List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed);
 
         assertEquals(1, rows.size());
@@ -70,60 +69,36 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void inventoryRowsHideZeroStockItems() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.setAmount(new ItemStackWrapper(Items.diamond, 0, null), 0);
+        IDistributedInventory distributed = distributed();
+        ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
+        setAmount(distributed, tracked, 0);
 
         assertTrue(
-            StationInventoryPanelModel.inventoryRows(distributed(inventory))
+            StationInventoryPanelModel.inventoryRows(distributed)
                 .isEmpty());
     }
 
-    private static IDistributedInventory distributed(AutomatedFacilityInventory inv) {
-        return new IDistributedInventory() {
+    private static void setAmount(IDistributedInventory distributed, ItemStackWrapper item, int amount) {
+        if (distributed instanceof AutomatedFacility af) {
+            af.updateItems(item, amount);
+        }
+    }
 
-            @Override
-            public Map<ItemStackWrapper, Long> aggregatedItems() {
-                return inv.snapshot();
-            }
-
-            @Override
-            public long totalItemsStored() {
-                return inv.totalItems();
-            }
-
-            @Override
-            public List<IInventory> getInventories() {
-                return List.of(inv);
-            }
-
-            @Override
-            public List<IFluidTank> getFluidTanks() {
-                return List.of();
-            }
-
-            @Override
-            public Map<FluidKey, Long> aggregatedFluids() {
-                Map<FluidKey, Long> result = new LinkedHashMap<>();
-                for (Map.Entry<FluidKey, Long> e : inv.fluidSnapshot()
-                    .entrySet()) {
-                    result.put(e.getKey(), e.getValue());
-                }
-                return result;
-            }
-
-            public String getInventoryName() {
-                return "test";
-            }
-        };
+    private static IDistributedInventory distributed() {
+        return new AutomatedFacility(
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID.create(),
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.PROXIMA_CENTAURI,
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            com.gtnewhorizons.galaxia.registry.interfaces.Buildable.Status.OPERATIONAL);
     }
 
     @Test
     void fluidRowsShowStoredFluids() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
+        IDistributedInventory distributed = distributed();
         FluidKey water = new FluidKey(new Fluid("water"), null);
-        inventory.addFluid(water, 1000);
+        addFluid(distributed, water, 1000);
 
-        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(distributed(inventory));
+        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -134,12 +109,18 @@ final class StationInventoryPanelModelTest {
 
     @Test
     void fluidRowsHideZeroAmountFluids() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
+        IDistributedInventory distributed = distributed();
         FluidKey water = new FluidKey(new Fluid("water"), null);
-        inventory.addFluid(water, 0);
+        addFluid(distributed, water, 0);
 
         assertTrue(
-            StationInventoryPanelModel.fluidRows(distributed(inventory))
+            StationInventoryPanelModel.fluidRows(distributed)
                 .isEmpty());
+    }
+
+    private static void addFluid(IDistributedInventory distributed, FluidKey fluid, int amount) {
+        if (distributed instanceof AutomatedFacility af) {
+            af.updateFluids(fluid, amount);
+        }
     }
 }

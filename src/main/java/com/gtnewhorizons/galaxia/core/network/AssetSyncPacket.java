@@ -25,10 +25,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility.InventoryBoundDelta;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -215,7 +216,7 @@ public final class AssetSyncPacket implements IMessage {
             pkt.fullSyncDeltas.add(moduleAdded(state.assetId, i, modules.get(i)));
         }
 
-        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.snapshot()
+        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryUpdate(
@@ -224,7 +225,7 @@ public final class AssetSyncPacket implements IMessage {
                         .toKey(),
                     e.getValue()));
         }
-        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.itemLowerBoundsSnapshot()
+        for (Map.Entry<ItemStackWrapper, Long> e : state.itemLowerBoundsSnapshot()
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryBoundUpdate(
@@ -235,7 +236,7 @@ public final class AssetSyncPacket implements IMessage {
                     true,
                     e.getValue()));
         }
-        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.itemUpperBoundsSnapshot()
+        for (Map.Entry<ItemStackWrapper, Long> e : state.itemUpperBoundsSnapshot()
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryBoundUpdate(
@@ -246,27 +247,23 @@ public final class AssetSyncPacket implements IMessage {
                     true,
                     e.getValue()));
         }
-        for (Map.Entry<FluidKey, Long> e : state.inventory.fluidLowerBoundsSnapshot()
+        for (Map.Entry<String, Long> e : state.fluidLowerBoundsSnapshot()
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryBoundUpdate(
                     state.assetId,
                     BoundKind.FLUID_LOWER,
-                    e.getKey()
-                        .fluid()
-                        .getName(),
+                    e.getKey(),
                     true,
                     e.getValue()));
         }
-        for (Map.Entry<FluidKey, Long> e : state.inventory.fluidUpperBoundsSnapshot()
+        for (Map.Entry<String, Long> e : state.fluidUpperBoundsSnapshot()
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryBoundUpdate(
                     state.assetId,
                     BoundKind.FLUID_UPPER,
-                    e.getKey()
-                        .fluid()
-                        .getName(),
+                    e.getKey(),
                     true,
                     e.getValue()));
         }
@@ -462,7 +459,7 @@ public final class AssetSyncPacket implements IMessage {
                 int idx = facility.moduleIndex(m.id);
                 packets.add(moduleAdded(facility.assetId, idx, m).withSyncRevision(facility.getSyncRevision()));
             }
-            for (Map.Entry<ItemStackWrapper, Long> delta : facility.drainDirtyInventoryDeltas()
+            for (Map.Entry<InventoryKey, Long> delta : facility.drainDirtyInventoryDeltas()
                 .entrySet()) {
                 packets.add(
                     inventoryUpdate(
@@ -1279,20 +1276,29 @@ public final class AssetSyncPacket implements IMessage {
             case INVENTORY_UPDATE -> {
                 ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                 if (r != null) {
-                    if (packet.inventoryDelta > 0) {
-                        state.inventory.setAmount(r, state.inventory.getAmount(r) + packet.inventoryDelta);
+                    long delta = packet.inventoryDelta;
+                    if (delta > 0) {
+                        state.updateItems(r, (int) Math.min(delta, Integer.MAX_VALUE));
                     } else {
-                        state.inventory
-                            .setAmount(r, Math.max(0, state.inventory.getAmount(r) - Math.abs(packet.inventoryDelta)));
+                        state.updateItems(r, (int) Math.max(delta, Integer.MIN_VALUE + 1));
                     }
                 }
             }
             case INVENTORY_BOUND_UPDATE -> {
                 if (packet.inventoryBoundPresent) {
-                    state.inventory
-                        .setBound(packet.inventoryBoundKind, packet.resourceKey, packet.inventoryBoundAmount);
+                    InventoryKey key = boundKey(packet.inventoryBoundKind, packet.resourceKey);
+                    if (key != null) {
+                        boolean isLow = packet.inventoryBoundKind == BoundKind.ITEM_LOWER
+                            || packet.inventoryBoundKind == BoundKind.FLUID_LOWER;
+                        state.setBound(key, packet.inventoryBoundAmount, isLow);
+                    }
                 } else {
-                    state.inventory.clearBound(packet.inventoryBoundKind, packet.resourceKey);
+                    InventoryKey key = boundKey(packet.inventoryBoundKind, packet.resourceKey);
+                    if (key != null) {
+                        boolean isLow = packet.inventoryBoundKind == BoundKind.ITEM_LOWER
+                            || packet.inventoryBoundKind == BoundKind.FLUID_LOWER;
+                        state.clearBound(key, isLow);
+                    }
                 }
             }
             case LOGISTICS_CONFIG_UPDATED -> {
@@ -1327,6 +1333,14 @@ public final class AssetSyncPacket implements IMessage {
         }
     }
 
+    static InventoryKey boundKey(BoundKind kind, String resourceKey) {
+        if (resourceKey == null || resourceKey.isEmpty()) return null;
+        return switch (kind) {
+            case ITEM_LOWER, ITEM_UPPER -> ItemStackWrapper.fromKey(resourceKey);
+            case FLUID_LOWER, FLUID_UPPER -> FluidKey.fromName(resourceKey);
+        };
+    }
+
     public static final class Handler implements IMessageHandler<AssetSyncPacket, IMessage> {
 
         @Override
@@ -1337,7 +1351,6 @@ public final class AssetSyncPacket implements IMessage {
             return null;
         }
 
-        @SideOnly(Side.CLIENT)
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
@@ -1348,8 +1361,6 @@ public final class AssetSyncPacket implements IMessage {
                         handleDelta(state, packet);
                         state.setSyncRevision(Math.max(state.getSyncRevision(), packet.syncRevision));
                     } else if (asset instanceof Station station) {
-                        // Client-side Station mirror: store filter and logistics config deltas
-                        // on the asset directly (no live TileStationController on the client)
                         if (packet.syncType == FILTER_UPDATED) {
                             station.setFilters(packet.filterSlot, packet.filterItems);
                         } else if (packet.syncType == FILTER_REMOVED) {
@@ -1416,7 +1427,7 @@ public final class AssetSyncPacket implements IMessage {
                     state.clearModules();
                     state.settingsGroups()
                         .clear();
-                    state.inventory.clear();
+                    state.clear();
                     state.logisticsConfig.clear();
                     StationLayout layout = state.stationLayout();
                     if (layout != null) layout.loadFromSnapshot(Collections.emptyMap());
@@ -1473,21 +1484,29 @@ public final class AssetSyncPacket implements IMessage {
                 case INVENTORY_UPDATE -> {
                     ItemStackWrapper r = ItemStackWrapper.fromKey(packet.resourceKey);
                     if (r != null) {
-                        if (packet.inventoryDelta > 0) {
-                            state.inventory.setAmount(r, state.inventory.getAmount(r) + packet.inventoryDelta);
+                        long delta = packet.inventoryDelta;
+                        if (delta > 0) {
+                            state.updateItems(r, (int) Math.min(delta, Integer.MAX_VALUE));
                         } else {
-                            state.inventory.setAmount(
-                                r,
-                                Math.max(0, state.inventory.getAmount(r) - Math.abs(packet.inventoryDelta)));
+                            state.updateItems(r, (int) Math.max(delta, Integer.MIN_VALUE + 1));
                         }
                     }
                 }
                 case INVENTORY_BOUND_UPDATE -> {
                     if (packet.inventoryBoundPresent) {
-                        state.inventory
-                            .setBound(packet.inventoryBoundKind, packet.resourceKey, packet.inventoryBoundAmount);
+                        InventoryKey key = boundKey(packet.inventoryBoundKind, packet.resourceKey);
+                        if (key != null) {
+                            boolean isLow = packet.inventoryBoundKind == BoundKind.ITEM_LOWER
+                                || packet.inventoryBoundKind == BoundKind.FLUID_LOWER;
+                            state.setBound(key, packet.inventoryBoundAmount, isLow);
+                        }
                     } else {
-                        state.inventory.clearBound(packet.inventoryBoundKind, packet.resourceKey);
+                        InventoryKey key = boundKey(packet.inventoryBoundKind, packet.resourceKey);
+                        if (key != null) {
+                            boolean isLow = packet.inventoryBoundKind == BoundKind.ITEM_LOWER
+                                || packet.inventoryBoundKind == BoundKind.FLUID_LOWER;
+                            state.clearBound(key, isLow);
+                        }
                     }
                 }
                 case LOGISTICS_CONFIG_UPDATED -> {

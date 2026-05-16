@@ -41,7 +41,7 @@ final class LogisticStoreTest {
         AutomatedFacility destination = facility();
         ItemStackWrapper filler = new ItemStackWrapper(Items.diamond, 0, null);
         ItemStackWrapper delivered = new ItemStackWrapper(Items.iron_ingot, 0, null);
-        destination.inventory.add(filler, 998L);
+        destination.updateItems(filler, 998);
         CelestialAssetStore.registerAsset(teamId, source);
         CelestialAssetStore.registerAsset(teamId, destination);
 
@@ -62,7 +62,7 @@ final class LogisticStoreTest {
             .get(0);
         LogisticStore.tickDeliveries();
 
-        assertEquals(2L, destination.inventory.getAmount(delivered));
+        assertEquals(2L, destination.getItemAmount(delivered));
         assertEquals(
             1,
             LogisticStore.activeDeliveries()
@@ -73,10 +73,10 @@ final class LogisticStoreTest {
                 .get(0));
         assertEquals(3L, pending.data.amount());
 
-        destination.inventory.add(filler, -3L);
+        destination.updateItems(filler, -3);
         LogisticStore.tickDeliveries();
 
-        assertEquals(5L, destination.inventory.getAmount(delivered));
+        assertEquals(5L, destination.getItemAmount(delivered));
         assertEquals(
             0,
             LogisticStore.activeDeliveries()

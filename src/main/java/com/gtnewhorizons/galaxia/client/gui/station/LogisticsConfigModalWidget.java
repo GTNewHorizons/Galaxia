@@ -279,7 +279,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private static long stockAmount(CelestialAsset asset, ItemStackWrapper wrapper) {
         if (asset instanceof AutomatedFacility af) {
-            return af.inventory.getAmount(wrapper);
+            return af.getItemAmount(wrapper);
         }
         return asset.aggregatedItems()
             .getOrDefault(wrapper, 0L);
