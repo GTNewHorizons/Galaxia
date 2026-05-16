@@ -13,6 +13,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -179,15 +180,18 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             return;
         }
         FacilityModuleKind kind = request.kind();
+        ModuleShape shape = kind.defaultShape();
         controller.start(
             "Build " + kind.getDisplayName(),
             "Confirm",
             (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord, selected),
+                .isCompatibleTarget(facility, kind, shape, kind.defaultTier(), coord, selected),
             coord -> coord,
             targets -> com.gtnewhorizons.galaxia.client.CelestialClient
                 .createModules(assetId, kind, request.creativeBuildMode(), targets),
-            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets));
+            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
+        controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);
+        controller.setPreviewModuleKind(kind);
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {
@@ -204,7 +208,13 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF08101B, 0xFF17283C);
+            BorderedRect.draw(
+                0,
+                0,
+                getArea().width,
+                getArea().height,
+                EnumColors.MAP_COLOR_STATION_SCREEN_BG.getColor(),
+                EnumColors.MAP_COLOR_STATION_SCREEN_BORDER.getColor());
         }
     }
 

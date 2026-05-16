@@ -39,6 +39,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -73,6 +74,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int PAGE_BUTTON_WIDTH = 28;
     private static final int MODE_BUTTON_WIDTH = 96;
     private static final int ADD_BUTTON_WIDTH = 52;
+    private static final int COPY_SETTINGS_BUTTON_X = 236;
+    private static final int COPY_SETTINGS_BUTTON_WIDTH = 116;
     private static final int CLOSE_BUTTON_WIDTH = 54;
     private static final int RENAME_MODAL_WIDTH = 260;
     private static final int RENAME_MODAL_HEIGHT = 104;
@@ -96,14 +99,15 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private static final int DETAIL_SLOT_SIZE = 18;
     private static final int BOUND_MARKER_SIZE = 5;
     private static final int BOUND_MARKER_INSET = 1;
-    private static final int BOUND_MARKER_WARNING = 0xFFFFFF00;
-    private static final int BOUND_MARKER_BLOCKING = 0xFFFF2020;
+    private static final int BOUND_MARKER_WARNING = EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
+    private static final int BOUND_MARKER_BLOCKING = EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor();
     private static final int DETAIL_ITEM_SLOT_COUNT = 9;
     private static final int DETAIL_FLUID_SLOT_COUNT = 4;
     private static final Pattern INTEGER_PATTERN = Pattern.compile("[0-9]*");
 
     private final CelestialAsset.ID assetId;
     private final ModuleConfigModalController controller;
+    private final @Nullable StationTilePickerController tilePickerController;
     private final ModuleSettingsGroupSelectorWidget settingsGroupSelector;
     private int page;
     private int boundsSlotIndex = -1;
@@ -114,9 +118,11 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
     private String recipeNameInput = "";
     private @Nullable TextFieldWidget recipeNameField;
 
-    RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller) {
+    RecipeConfigModalWidget(CelestialAsset.ID assetId, ModuleConfigModalController controller,
+        @Nullable StationTilePickerController tilePickerController) {
         this.assetId = assetId;
         this.controller = controller;
+        this.tilePickerController = tilePickerController;
         this.settingsGroupSelector = new ModuleSettingsGroupSelectorWidget(assetId, controller, () -> {
             ModuleInstance module = selectedModule();
             return module != null ? module.kind() : null;
@@ -200,6 +206,10 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             ModuleConfigModalSupport.button(this::canConfigureRecipes, "Add", this::addRecipe)
                 .pos(178, FOOTER_Y)
                 .size(ADD_BUTTON_WIDTH, BUTTON_HEIGHT));
+        child(
+            ModuleConfigModalSupport.button(this::canCopySettings, "Copy Settings...", this::startCopySettingsPicker)
+                .pos(COPY_SETTINGS_BUTTON_X, FOOTER_Y)
+                .size(COPY_SETTINGS_BUTTON_WIDTH, BUTTON_HEIGHT));
         child(
             ModuleConfigModalSupport
                 .button(() -> controller.isRecipeConfigOpen() && !isBoundsOpen(), "Close", controller::close)
@@ -329,6 +339,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         return isRecipeListOpen() && !isRecipeRenameOpen() && selectedRecipeModule() != null;
     }
 
+    private boolean canCopySettings() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance module = selectedModule();
+        return tilePickerController != null && canConfigureRecipes()
+            && !settingsGroupSelector.isBlockingModuleControls()
+            && facility != null
+            && facility.stationLayout() != null
+            && module != null
+            && FacilityModuleRegistry.get(module.kind())
+                .settingsGroups();
+    }
+
     private boolean isRecipeListOpen() {
         return controller.isRecipeConfigOpen() && !isBoundsOpen();
     }
@@ -447,6 +469,22 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         settingsGroupSelector.closeMenu();
         closeRecipeRename();
         RecipeInputScreen.open(assetId, controller.moduleIndex(), module);
+    }
+
+    private void startCopySettingsPicker() {
+        AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
+        ModuleInstance source = selectedModule();
+        int sourceModuleIndex = controller.moduleIndex();
+        if (facility == null || source == null || tilePickerController == null || sourceModuleIndex < 0) return;
+        settingsGroupSelector.closeMenu();
+        closeRecipeRename();
+        controller.close();
+        tilePickerController.start(
+            "Copy module settings",
+            "Copy",
+            coord -> ModuleSettingsCopyPickerModel.isCompatibleTarget(facility, source, coord),
+            coord -> ModuleSettingsCopyPickerModel.normalizeTarget(facility, coord),
+            targets -> CelestialClient.copyModuleSettings(assetId, sourceModuleIndex, targets));
     }
 
     private void previousPage() {
@@ -1240,9 +1278,18 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             if (!progress.enabled()) return;
             UITexture texture = progress.texture();
             if (texture == null) {
-                BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF788398, 0xFFECF0FF);
-                Minecraft.getMinecraft().fontRenderer
-                    .drawString(">", getArea().width / 2 - 2, getArea().height / 2 - 4, 0xFFE6EAF6);
+                BorderedRect.draw(
+                    0,
+                    0,
+                    getArea().width,
+                    getArea().height,
+                    EnumColors.MAP_COLOR_RECIPE_PROGRESS_FALLBACK_BG.getColor(),
+                    EnumColors.MAP_COLOR_RECIPE_PROGRESS_FALLBACK_BORDER.getColor());
+                Minecraft.getMinecraft().fontRenderer.drawString(
+                    ">",
+                    getArea().width / 2 - 2,
+                    getArea().height / 2 - 4,
+                    EnumColors.MAP_COLOR_RECIPE_PROGRESS_FALLBACK_TEXT.getColor());
                 return;
             }
             texture.getSubArea(0, 0, 1, 0.5f)
@@ -1384,8 +1431,9 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             if (!canUseBoundTarget(target)) return;
             boolean selected = target.equals(selectedBoundTarget);
             if (!selected && !isHovering()) return;
-            int color = selected ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor() : 0x99FFFFFF;
-            BorderedRect.draw(-1, -1, size + 2, size + 2, 0x00000000, color);
+            int color = selected ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
+                : EnumColors.MAP_COLOR_RECIPE_BOUND_SLOT_INACTIVE_BORDER.getColor();
+            BorderedRect.draw(-1, -1, size + 2, size + 2, EnumColors.MAP_COLOR_TRANSPARENT.getColor(), color);
         }
 
         private void drawChanceText(int size) {
@@ -1394,7 +1442,8 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             GL11.glPushMatrix();
             GL11.glScalef(0.5F, 0.5F, 1.0F);
             int scaledX = Math.max(0, size * 2 - Minecraft.getMinecraft().fontRenderer.getStringWidth(text) - 1);
-            Minecraft.getMinecraft().fontRenderer.drawStringWithShadow(text, scaledX, 1, 0xFFFFFF55);
+            Minecraft.getMinecraft().fontRenderer
+                .drawStringWithShadow(text, scaledX, 1, EnumColors.MAP_COLOR_RECIPE_BOUND_CHANCE_TEXT.getColor());
             GL11.glPopMatrix();
         }
 

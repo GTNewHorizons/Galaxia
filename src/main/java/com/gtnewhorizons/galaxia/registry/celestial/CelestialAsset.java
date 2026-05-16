@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
@@ -21,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -208,8 +208,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
-        return isDirty() || !syncedPlayerIds.contains(playerId)
-            || !dirtyInventoryBoundDeltas.isEmpty();
+        return isDirty() || !syncedPlayerIds.contains(playerId) || !dirtyInventoryBoundDeltas.isEmpty();
     }
 
     public void markSyncedFor(UUID playerId) {
@@ -453,7 +452,7 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         public String resourceKey() {
             return resource instanceof ItemStackWrapper item ? item.toKey()
                 : ((FluidKey) resource).fluid()
-                  .getName();
+                    .getName();
         }
     }
 

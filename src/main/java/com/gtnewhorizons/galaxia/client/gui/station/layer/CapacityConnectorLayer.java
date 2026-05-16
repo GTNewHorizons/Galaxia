@@ -25,6 +25,7 @@ public final class CapacityConnectorLayer {
 
     private static final int COLOR_ALPHA_ACTIVE = 0xFF;
     private static final int COLOR_ALPHA_INACTIVE = 0x66;
+    private static final int RGB_CHANNEL_MASK = 0x00FFFFFF;
 
     private CapacityConnectorLayer() {}
 
@@ -50,7 +51,7 @@ public final class CapacityConnectorLayer {
             // Check right neighbor
             StationTileCoord right = StationTileCoord.of(coord.dx() + 1, coord.dy());
             PlacedTile b = tiles.get(right);
-            if (b != null && sameCapacityKind(kindA, b)) {
+            if (b != null && !sameModule(a, b) && sameCapacityKind(kindA, b)) {
                 int cx = StationMapViewport.connectorLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX);
                 int cy = StationMapViewport.tileTopY(coord, widgetHeight, contentVerticalPadding, panY)
                     + (tileSize - connH) / 2;
@@ -60,7 +61,7 @@ public final class CapacityConnectorLayer {
             // Check down neighbor
             StationTileCoord down = StationTileCoord.of(coord.dx(), coord.dy() + 1);
             PlacedTile c = tiles.get(down);
-            if (c != null && sameCapacityKind(kindA, c)) {
+            if (c != null && !sameModule(a, c) && sameCapacityKind(kindA, c)) {
                 int cx = StationMapViewport.tileLeftX(coord, widgetWidth, contentLeft, contentRightPadding, panX)
                     + (tileSize - connW) / 2;
                 int cy = StationMapViewport.connectorTopY(coord, widgetHeight, contentVerticalPadding, panY);
@@ -83,11 +84,18 @@ public final class CapacityConnectorLayer {
         return kindB != null && kindB.isCapacityModule() && kindA == kindB;
     }
 
+    private static boolean sameModule(PlacedTile a, PlacedTile b) {
+        if (a == null || b == null) return false;
+        ModuleInstance moduleA = a.module();
+        ModuleInstance moduleB = b.module();
+        return moduleA != null && moduleB != null && moduleA.id.equals(moduleB.id);
+    }
+
     private static void addConnector(int x, int y, int w, int h, FacilityModuleKind kind, boolean hasTexture,
         List<CapacityConnectorQuad> textureQuads) {
         int alpha = hasTexture ? COLOR_ALPHA_ACTIVE : COLOR_ALPHA_INACTIVE;
         int color = connectorColor(kind);
-        int argb = (alpha << 24) | (color & 0x00FFFFFF);
+        int argb = (alpha << 24) | (color & RGB_CHANNEL_MASK);
 
         if (hasTexture) {
             textureQuads.add(new CapacityConnectorQuad(x, y, w, h, argb));

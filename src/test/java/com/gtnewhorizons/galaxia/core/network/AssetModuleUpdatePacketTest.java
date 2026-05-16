@@ -597,22 +597,22 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void copyMinerSettingsPayload_roundTripsTargetTiles() {
+    void copyModuleSettingsPayload_roundTripsTargetTiles() {
         AssetModuleUpdatePacket decoded = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(
+            AssetModuleUpdatePacket.copyModuleSettings(
                 ASSET_ID,
                 0,
                 MODULE_ID,
                 List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1))));
 
-        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MINER_SETTINGS, decoded.getConfigAction());
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MODULE_SETTINGS, decoded.getConfigAction());
         assertEquals(
             List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1)),
             AssetModuleUpdatePacket.decodeTileCoordPayload(decoded.getRawPayload()));
     }
 
     @Test
-    void applyCopyMinerSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
+    void applyCopyModuleSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
         AutomatedFacility facility = addTwoMinerFacilityToServer();
         ModuleInstance source = facility.modules()
             .get(0);
@@ -626,7 +626,7 @@ final class AssetModuleUpdatePacketTest {
         facility.createSettingsGroupForModule(source, "Shared miners");
 
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         packet.apply(TEAM);
 
@@ -638,7 +638,7 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyCopyMinerSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
+    void applyCopyModuleSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
         AutomatedFacility facility = addTwoMinerFacilityToServer();
         ModuleInstance source = facility.modules()
             .get(0);
@@ -648,12 +648,61 @@ final class AssetModuleUpdatePacketTest {
         ModuleMiner targetMiner = (ModuleMiner) target.component();
         sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+        short originalTargetGroupId = target.groupId();
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        assertEquals(originalTargetGroupId, target.groupId());
         assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
         assertNull(targetMiner.focusOreKeyOrNull());
+    }
+
+    @Test
+    void applyCopyModuleSettingsCopiesRecipeConfig() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.MACERATOR, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        RecipeConfig config = RecipeConfig.empty();
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 7, 42L), true, 0L, (byte) 3, (byte) 2);
+        config.savedRecipes()
+            .add(slot);
+        facility.setRecipeConfig(source, config);
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+
+        packet.apply(TEAM);
+
+        RecipeConfig copied = ((IRecipeModule) target.component()).getRecipeConfig();
+        assertNotNull(copied);
+        assertEquals(config.mode(), copied.mode());
+        assertEquals(config.notDoablePolicy(), copied.notDoablePolicy());
+        assertEquals(
+            config.savedRecipes()
+                .size(),
+            copied.savedRecipes()
+                .size());
+        assertEquals(
+            slot.recipe()
+                .contentHash(),
+            copied.savedRecipes()
+                .get(0)
+                .recipe()
+                .contentHash());
+        assertEquals(
+            slot.priority(),
+            copied.savedRecipes()
+                .get(0)
+                .priority());
+        assertEquals(
+            slot.orderSize(),
+            copied.savedRecipes()
+                .get(0)
+                .orderSize());
     }
 
     @Test

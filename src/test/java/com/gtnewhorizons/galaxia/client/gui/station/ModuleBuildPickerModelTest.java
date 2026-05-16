@@ -107,6 +107,98 @@ final class ModuleBuildPickerModelTest {
     }
 
     @Test
+    void selectedMultiTileBuildTargetsUnlockAdjacentFootprints() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+
+        StationTileCoord first = StationTileCoord.of(1, 0);
+        StationTileCoord chained = StationTileCoord.of(3, 0);
+        StationTileCoord overlapping = StationTileCoord.of(2, 0);
+
+        assertFalse(
+            ModuleBuildPickerModel
+                .isCompatibleTarget(facility, FacilityModuleKind.MINER, ModuleShape.QUAD_2x2, ModuleTier.EV, chained));
+        assertTrue(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.MINER,
+                ModuleShape.QUAD_2x2,
+                ModuleTier.EV,
+                chained,
+                List.of(first)));
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.MINER,
+                ModuleShape.QUAD_2x2,
+                ModuleTier.EV,
+                overlapping,
+                List.of(first)));
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.MINER,
+                ModuleShape.QUAD_2x2,
+                ModuleTier.EV,
+                first,
+                List.of(first)));
+        assertEquals(
+            List.of(first, chained),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, chained), ModuleShape.QUAD_2x2));
+    }
+
+    @Test
+    void twoByTwoAnchorFollowsSelectedRotation() {
+        StationTileCoord tile = StationTileCoord.of(5, 5);
+
+        assertEquals(
+            StationTileCoord.of(5, 5),
+            ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 0));
+        assertEquals(
+            StationTileCoord.of(4, 5),
+            ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 1));
+        assertEquals(
+            StationTileCoord.of(4, 5),
+            ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 5));
+        assertEquals(
+            StationTileCoord.of(4, 4),
+            ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 2));
+        assertEquals(
+            StationTileCoord.of(5, 4),
+            ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 3));
+    }
+
+    @Test
+    void twoByTwoClickTileFollowsSelectedAnchorRotation() {
+        StationTileCoord anchor = StationTileCoord.of(5, 5);
+
+        assertEquals(
+            StationTileCoord.of(5, 5),
+            ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 0));
+        assertEquals(
+            StationTileCoord.of(6, 5),
+            ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 1));
+        assertEquals(
+            StationTileCoord.of(6, 6),
+            ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 2));
+        assertEquals(
+            StationTileCoord.of(5, 6),
+            ModuleBuildPickerModel.tileForAnchorRotation(anchor, ModuleShape.QUAD_2x2, 3));
+    }
+
+    @Test
+    void twoByTwoAnchorReturnsNullWhenRotationWouldLeaveMap() {
+        StationTileCoord tile = StationTileCoord.of(StationTileCoord.MIN, StationTileCoord.MIN);
+
+        assertNull(ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 1));
+        assertNull(ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 2));
+        assertNull(ModuleBuildPickerModel.anchorForRotation(tile, ModuleShape.QUAD_2x2, 3));
+    }
+
+    @Test
     void disconnectedBuildTargetsArePrunedAfterSelectionChanges() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -120,8 +212,12 @@ final class ModuleBuildPickerModelTest {
 
         assertEquals(
             List.of(first, second, third),
-            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, second, third)));
-        assertEquals(List.of(), ModuleBuildPickerModel.connectedTargets(facility, List.of(second, third)));
-        assertEquals(List.of(first), ModuleBuildPickerModel.connectedTargets(facility, List.of(first, third)));
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, second, third), ModuleShape.SINGLE));
+        assertEquals(
+            List.of(),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(second, third), ModuleShape.SINGLE));
+        assertEquals(
+            List.of(first),
+            ModuleBuildPickerModel.connectedTargets(facility, List.of(first, third), ModuleShape.SINGLE));
     }
 }

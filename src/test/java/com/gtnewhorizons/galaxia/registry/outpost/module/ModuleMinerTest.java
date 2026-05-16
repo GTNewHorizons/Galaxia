@@ -15,6 +15,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -211,7 +213,7 @@ final class ModuleMinerTest {
         short targetGroupId = target.groupId();
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
 
-        facility.copyMinerRuntimeSettings(source, target);
+        facility.copyModuleRuntimeSettings(source, target);
 
         assertEquals(sourceGroupId, source.groupId());
         assertEquals(targetGroupId, target.groupId());
@@ -233,6 +235,24 @@ final class ModuleMinerTest {
         assertThrows(IllegalStateException.class, () -> facility.assignSettingsGroup(target, source.groupId()));
     }
 
+    @Test
+    void mineralVeinContributionScalesAgainstTwoByTwoFootprint() {
+        ModuleInstance miner = createMiner();
+
+        FeatureContribution contribution = miner.component()
+            .featureContribution(
+                miner,
+                PlanetaryFeatureRegistry.MINERAL_VEIN.key(),
+                2,
+                miner.shape()
+                    .tileCount());
+
+        assertEquals(ModuleShape.QUAD_2x2, miner.shape());
+        assertEquals(2, contribution.coveredTiles());
+        assertEquals(4, contribution.totalTiles());
+        assertEquals("Mining yield bonus 2/4", contribution.effectLine());
+    }
+
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -246,8 +266,12 @@ final class ModuleMinerTest {
     }
 
     private static ModuleInstance createMiner(StationTileCoord anchor) {
-        ModuleInstance miner = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, anchor, ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance miner = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            anchor,
+            FacilityModuleKind.MINER.defaultShape(),
+            ModuleTier.EV);
         miner.updateStatus(Buildable.Status.OPERATIONAL);
         return miner;
     }

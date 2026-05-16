@@ -39,6 +39,10 @@ public interface IModuleComponent {
         settings.applyTo(module);
     }
 
+    default void validateSettingsCopyTarget(ModuleInstance source, ModuleInstance target) {}
+
+    default void afterSettingsCopied(ModuleInstance source, ModuleInstance target) {}
+
     default FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature,
         int coveredTiles, int totalTiles) {
         return null;

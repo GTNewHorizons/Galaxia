@@ -14,9 +14,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import com.cleanroommc.modularui.factory.inventory.Inventory;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
-import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.ISaveHandler;
@@ -44,6 +41,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -682,13 +681,23 @@ public final class FacilityPersistenceManager {
         if (json.itemsBounds != null) {
             var boundsMap = decodeBoundsMap(json.itemsBounds, true);
             for (var bound : boundsMap.entrySet()) {
-                state.setBound(bound.getKey(), bound.getValue().low(), bound.getValue().upper());
+                state.setBound(
+                    bound.getKey(),
+                    bound.getValue()
+                        .low(),
+                    bound.getValue()
+                        .upper());
             }
         }
         if (json.fluidsBounds != null) {
             var boundsMap = decodeBoundsMap(json.fluidsBounds, false);
             for (var bound : boundsMap.entrySet()) {
-                state.setBound(bound.getKey(), bound.getValue().low(), bound.getValue().upper());
+                state.setBound(
+                    bound.getKey(),
+                    bound.getValue()
+                        .low(),
+                    bound.getValue()
+                        .upper());
             }
         }
         if (json.logisticsConfig != null) {
@@ -867,20 +876,32 @@ public final class FacilityPersistenceManager {
         if (amounts == null) return encoded;
         for (Map.Entry<InventoryKey, InventoryBounds> entry : amounts.entrySet()) {
             if (entry.getKey() == null) continue;
-            encoded.put(entry.getKey().toKey(), Map.entry(
-                entry.getValue().low(), entry.getValue().upper()
-            ));
+            encoded.put(
+                entry.getKey()
+                    .toKey(),
+                Map.entry(
+                    entry.getValue()
+                        .low(),
+                    entry.getValue()
+                        .upper()));
         }
         return encoded;
     }
 
-    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, Map.Entry<Long, Long>> encoded, boolean items) {
+    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, Map.Entry<Long, Long>> encoded,
+        boolean items) {
         Map<InventoryKey, InventoryBounds> decoded = new LinkedHashMap<>();
         if (encoded == null || encoded.isEmpty()) return decoded;
         for (Map.Entry<String, Map.Entry<Long, Long>> entry : encoded.entrySet()) {
             InventoryKey key = items ? ItemStackWrapper.fromKey(entry.getKey()) : FluidKey.fromName(entry.getKey());
-            if (key == null)  continue;
-            decoded.put(key, new InventoryBounds(entry.getValue().getKey(), entry.getValue().getValue()));
+            if (key == null) continue;
+            decoded.put(
+                key,
+                new InventoryBounds(
+                    entry.getValue()
+                        .getKey(),
+                    entry.getValue()
+                        .getValue()));
         }
         return decoded;
     }

@@ -37,7 +37,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -121,7 +120,7 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendBuildModule(
             assetId,
             kind,
-            ModuleShape.SINGLE,
+            kind.defaultShape(),
             kind.defaultTier(),
             creativeBuildModeEnabled,
             tileCoord);
@@ -135,7 +134,7 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendBuildModules(
             assetId,
             kind,
-            ModuleShape.SINGLE,
+            kind.defaultShape(),
             kind.defaultTier(),
             creativeBuildModeEnabled,
             tileCoords);
@@ -309,11 +308,11 @@ public final class CelestialClient {
             module -> AssetModuleUpdatePacket.minerFocusOre(assetId, moduleIndex, module.id, oreKey));
     }
 
-    public static void copyMinerSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
+    public static void copyModuleSettings(ID assetId, int moduleIndex, List<StationTileCoord> targetCoords) {
         sendModuleUpdate(
             assetId,
             moduleIndex,
-            module -> AssetModuleUpdatePacket.copyMinerSettings(assetId, moduleIndex, module.id, targetCoords));
+            module -> AssetModuleUpdatePacket.copyModuleSettings(assetId, moduleIndex, module.id, targetCoords));
     }
 
     private static void sendModuleUpdate(ID assetId, int moduleIndex,
