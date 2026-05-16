@@ -199,10 +199,6 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         }
         cachedItemAmounts = distributed.aggregatedItems();
         cachedFluidAmounts = distributed.aggregatedFluids();
-        boolean hasFluids = !cachedFluidAmounts.isEmpty();
-        if (!hasFluids && resourceMode == ResourceMode.FLUIDS) {
-            resourceMode = ResourceMode.ITEMS;
-        }
         List<Map.Entry<ItemStackWrapper, Long>> itemRows = rows(distributed);
         List<StationInventoryPanelModel.FluidRow> fluidRows = fluidRows(distributed);
         refreshAmountInputs(itemRows);
