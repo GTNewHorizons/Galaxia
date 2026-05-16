@@ -14,6 +14,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import com.cleanroommc.modularui.factory.inventory.Inventory;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.ISaveHandler;
@@ -457,10 +460,10 @@ public final class FacilityPersistenceManager {
                 e.getValue());
         }
         out.fluidBuffer = toFluidBuffer(state);
-        out.itemLowerBounds = encodeItemAmountMap(state.itemLowerBoundsSnapshot());
-        out.itemUpperBounds = encodeItemAmountMap(state.itemUpperBoundsSnapshot());
-        out.fluidLowerBounds = new LinkedHashMap<>(state.fluidLowerBoundsSnapshot());
-        out.fluidUpperBounds = new LinkedHashMap<>(state.fluidUpperBoundsSnapshot());
+        state.getBounds(true);
+
+        out.itemsBounds = encodeBoundsMap(state.getBounds(true));
+        out.fluidsBounds = encodeBoundsMap(state.getBounds(false));
         out.logisticsConfig = new LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
@@ -676,19 +679,18 @@ public final class FacilityPersistenceManager {
         if (json.fluidBuffer != null) {
             state.loadFluidSnapshot(json.fluidBuffer);
         }
-        if (json.itemLowerBounds != null) {
-            state.loadItemLowerBounds(decodeItemAmountMap(json.itemLowerBounds));
+        if (json.itemsBounds != null) {
+            var boundsMap = decodeBoundsMap(json.itemsBounds, true);
+            for (var bound : boundsMap.entrySet()) {
+                state.setBound(bound.getKey(), bound.getValue().low(), bound.getValue().upper());
+            }
         }
-        if (json.itemUpperBounds != null) {
-            state.loadItemUpperBounds(decodeItemAmountMap(json.itemUpperBounds));
+        if (json.fluidsBounds != null) {
+            var boundsMap = decodeBoundsMap(json.fluidsBounds, false);
+            for (var bound : boundsMap.entrySet()) {
+                state.setBound(bound.getKey(), bound.getValue().low(), bound.getValue().upper());
+            }
         }
-        if (json.fluidLowerBounds != null) {
-            state.loadFluidLowerBounds(json.fluidLowerBounds);
-        }
-        if (json.fluidUpperBounds != null) {
-            state.loadFluidUpperBounds(json.fluidUpperBounds);
-        }
-
         if (json.logisticsConfig != null) {
             Map<ItemStackWrapper, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
             for (Map.Entry<String, LogisticsConfigJson> e : json.logisticsConfig.entrySet()) {
@@ -860,24 +862,25 @@ public final class FacilityPersistenceManager {
         return requirements;
     }
 
-    private static Map<String, Long> encodeItemAmountMap(Map<ItemStackWrapper, Long> amounts) {
-        Map<String, Long> encoded = new LinkedHashMap<>();
+    private static Map<String, Map.Entry<Long, Long>> encodeBoundsMap(Map<InventoryKey, InventoryBounds> amounts) {
+        Map<String, Map.Entry<Long, Long>> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
-        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
-            if (entry.getKey() != null && entry.getValue() >= 0L) encoded.put(
-                entry.getKey()
-                    .toKey(),
-                entry.getValue());
+        for (Map.Entry<InventoryKey, InventoryBounds> entry : amounts.entrySet()) {
+            if (entry.getKey() == null) continue;
+            encoded.put(entry.getKey().toKey(), Map.entry(
+                entry.getValue().low(), entry.getValue().upper()
+            ));
         }
         return encoded;
     }
 
-    private static Map<ItemStackWrapper, Long> decodeItemAmountMap(Map<String, Long> encoded) {
-        Map<ItemStackWrapper, Long> decoded = new LinkedHashMap<>();
+    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, Map.Entry<Long, Long>> encoded, boolean items) {
+        Map<InventoryKey, InventoryBounds> decoded = new LinkedHashMap<>();
         if (encoded == null || encoded.isEmpty()) return decoded;
-        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
-            ItemStackWrapper key = ItemStackWrapper.fromKey(entry.getKey());
-            if (key != null && entry.getValue() >= 0L) decoded.put(key, entry.getValue());
+        for (Map.Entry<String, Map.Entry<Long, Long>> entry : encoded.entrySet()) {
+            InventoryKey key = items ? ItemStackWrapper.fromKey(entry.getKey()) : FluidKey.fromName(entry.getKey());
+            if (key == null)  continue;
+            decoded.put(key, new InventoryBounds(entry.getValue().getKey(), entry.getValue().getValue()));
         }
         return decoded;
     }
@@ -928,10 +931,8 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
-        Map<String, Long> itemLowerBounds;
-        Map<String, Long> itemUpperBounds;
-        Map<String, Long> fluidLowerBounds;
-        Map<String, Long> fluidUpperBounds;
+        Map<String, Map.Entry<Long, Long>> itemsBounds;
+        Map<String, Map.Entry<Long, Long>> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         Map<Integer, List<String>> filters;
         List<StationTileJson> layoutTiles;

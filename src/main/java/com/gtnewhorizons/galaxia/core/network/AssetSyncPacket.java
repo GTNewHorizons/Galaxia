@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -227,7 +228,8 @@ public final class AssetSyncPacket implements IMessage {
                         .toKey(),
                     e.getValue()));
         }
-        for (Map.Entry<ItemStackWrapper, Long> e : state.itemLowerBoundsSnapshot()
+        // TODO: This is HORRIBLE, rework it when optimizing the packets
+        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(true)
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryBoundUpdate(
@@ -236,9 +238,9 @@ public final class AssetSyncPacket implements IMessage {
                     e.getKey()
                         .toKey(),
                     true,
-                    e.getValue()));
+                    e.getValue().low()));
         }
-        for (Map.Entry<ItemStackWrapper, Long> e : state.itemUpperBoundsSnapshot()
+        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(true)
             .entrySet()) {
             pkt.fullSyncDeltas.add(
                 inventoryBoundUpdate(
@@ -247,17 +249,17 @@ public final class AssetSyncPacket implements IMessage {
                     e.getKey()
                         .toKey(),
                     true,
-                    e.getValue()));
+                    e.getValue().upper()));
         }
-        for (Map.Entry<String, Long> e : state.fluidLowerBoundsSnapshot()
+        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(false)
             .entrySet()) {
             pkt.fullSyncDeltas
-                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_LOWER, e.getKey(), true, e.getValue()));
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_LOWER, e.getKey().toKey(), true, e.getValue().low()));
         }
-        for (Map.Entry<String, Long> e : state.fluidUpperBoundsSnapshot()
+        for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(false)
             .entrySet()) {
             pkt.fullSyncDeltas
-                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_UPPER, e.getKey(), true, e.getValue()));
+                .add(inventoryBoundUpdate(state.assetId, BoundKind.FLUID_UPPER, e.getKey().toKey(), true, e.getValue().upper()));
         }
 
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
