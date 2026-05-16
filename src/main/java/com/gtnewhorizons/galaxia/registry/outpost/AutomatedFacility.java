@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -73,6 +74,7 @@ public final class AutomatedFacility extends CelestialAsset {
     private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
+    private long ticks;
 
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
@@ -95,6 +97,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.settingsGroups = new SettingsGroupRegistry();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
+        this.ticks = 0;
     }
 
     private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectId bodyId) {
@@ -172,6 +175,9 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
             FeatureContribution contribution = module.component()
                 .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
+            if (contribution == null) {
+                contribution = FeatureContribution.generic(entry.getKey(), entry.getValue(), tiles.length);
+            }
             if (contribution != null) contributions.add(contribution);
         }
         return contributions;
@@ -885,6 +891,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void tick() {
+        ticks++;
         for (ModuleInstance module : modules) {
             boolean moduleTickBlocked = tickModuleOperation(module);
             if (!moduleTickBlocked) {
@@ -936,12 +943,59 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void tickBuildingOperation(ModuleInstance module, ModuleOperationState operation) {
-        ModuleOperationState next = operation.tickBuilding();
+        int progressTicks = featureModifiedBuildProgressTicks(module);
+        ModuleOperationState next = operation;
+        for (int i = 0; i < progressTicks && next.phase() == ModuleOperationPhase.BUILDING; i++) {
+            next = next.tickBuilding();
+        }
         module.setOperation(next);
         markModuleDirty(module.id);
         if (next.phase() == ModuleOperationPhase.COMPLETE) {
             applyCompletedModuleOperation(module, next);
         }
+    }
+
+    private int featureModifiedBuildProgressTicks(ModuleInstance module) {
+        int modifierPercent = buildSpeedModifierPercent(module);
+        if (modifierPercent == 0) return 1;
+
+        if (modifierPercent > 0) {
+            int extraProgressPercent = Math.min(100, modifierPercent);
+            return shouldApplyPercent(extraProgressPercent) ? 2 : 1;
+        }
+
+        int progressPercent = Math.max(20, 100 + modifierPercent);
+        return shouldApplyPercentFromCurrentTick(progressPercent) ? 1 : 0;
+    }
+
+    private boolean shouldApplyPercent(int percent) {
+        return Math.floorMod(ticks * percent, 100) < percent;
+    }
+
+    private boolean shouldApplyPercentFromCurrentTick(int percent) {
+        return Math.floorMod((ticks - 1) * percent, 100) < percent;
+    }
+
+    public int buildSpeedModifierPercent(ModuleInstance module) {
+        int regolithTiles = featureCoverage(module, PlanetaryFeatureRegistry.REGOLITH_FLATS.key());
+        int bedrockTiles = featureCoverage(module, PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
+        return regolithTiles * FeatureContribution.REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT_PER_TILE
+            - bedrockTiles * FeatureContribution.STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT_PER_TILE;
+    }
+
+    public int upkeepReductionPercent(ModuleInstance module) {
+        int bedrockTiles = featureCoverage(module, PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
+        return bedrockTiles * FeatureContribution.STABLE_BEDROCK_UPKEEP_REDUCTION_PERCENT_PER_TILE;
+    }
+
+    private int featureCoverage(ModuleInstance module, PlanetaryFeatureKey feature) {
+        if (module == null || feature == null || module.anchorOrNull() == null) return 0;
+        int coveredTiles = 0;
+        for (StationTileCoord tile : module.shape()
+            .tiles(module.anchor())) {
+            if (planetaryFeaturesAt(tile).contains(feature)) coveredTiles++;
+        }
+        return coveredTiles;
     }
 
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {

@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.item.Item;
@@ -21,6 +22,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -421,14 +424,64 @@ final class AutomatedFacilityOperationTest {
         assertEquals(ModuleTier.EV, module.tier());
     }
 
+    @Test
+    void regolithFlatsSpeedUpBuildOperations() {
+        AutomatedFacility facility = facilityWithStorageOnFeature(
+            PlanetaryFeatureRegistry.REGOLITH_FLATS.key(),
+            PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.waiting(tierOperationPlan(6, ModuleTier.EV))
+                .beginBuilding());
+
+        tickFacility(facility, 5);
+
+        assertNull(module.operationOrNull());
+        assertEquals(ModuleTier.EV, module.tier());
+        assertEquals(20, facility.buildSpeedModifierPercent(module));
+    }
+
+    @Test
+    void stableBedrockSlowsBuildOperationsAndReducesUpkeep() {
+        AutomatedFacility facility = facilityWithStorageOnFeature(
+            PlanetaryFeatureRegistry.STABLE_BEDROCK.key(),
+            PlanetaryFeatureRegistry.REGOLITH_FLATS.key());
+        ModuleInstance module = facility.modules()
+            .get(0);
+        module.setOperation(
+            ModuleOperationState.waiting(tierOperationPlan(5, ModuleTier.EV))
+                .beginBuilding());
+
+        tickFacility(facility, 5);
+
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleOperationPhase.BUILDING,
+            module.operationOrNull()
+                .phase());
+        assertEquals(
+            4,
+            module.operationOrNull()
+                .elapsedBuildTicks());
+        assertEquals(-20, facility.buildSpeedModifierPercent(module));
+        assertEquals(5, facility.upkeepReductionPercent(module));
+
+        facility.tick();
+
+        assertNull(module.operationOrNull());
+        assertEquals(ModuleTier.EV, module.tier());
+    }
+
     private static AutomatedFacility facilityWithHammer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.HAMMER
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        StationTileCoord coord = StationTileCoord.of(1, 0);
+        useNeutralBuildFeatureSalt(facility, coord);
+        ModuleInstance module = FacilityModuleKind.HAMMER.create(coord, ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
         return facility;
     }
@@ -439,8 +492,9 @@ final class AutomatedFacilityOperationTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.MINER
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
+        StationTileCoord coord = StationTileCoord.of(1, 0);
+        useNeutralBuildFeatureSalt(facility, coord);
+        ModuleInstance module = FacilityModuleKind.MINER.create(coord, ModuleShape.SINGLE, ModuleTier.EV);
         facility.addModule(module);
         return facility;
     }
@@ -451,10 +505,52 @@ final class AutomatedFacilityOperationTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        ModuleInstance module = FacilityModuleKind.STORAGE
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        StationTileCoord coord = StationTileCoord.of(1, 0);
+        useNeutralBuildFeatureSalt(facility, coord);
+        ModuleInstance module = FacilityModuleKind.STORAGE.create(coord, ModuleShape.SINGLE, ModuleTier.HV);
         facility.addModule(module);
         return facility;
+    }
+
+    private static void useNeutralBuildFeatureSalt(AutomatedFacility facility, StationTileCoord coord) {
+        for (long salt = 0; salt < 10_000L; salt++) {
+            facility.setStationFeatureSalt(salt);
+            List<PlanetaryFeatureKey> features = facility.planetaryFeaturesAt(coord);
+            if (!features.contains(PlanetaryFeatureRegistry.REGOLITH_FLATS.key())
+                && !features.contains(PlanetaryFeatureRegistry.STABLE_BEDROCK.key())) {
+                return;
+            }
+        }
+        throw new AssertionError("Could not find neutral station salt");
+    }
+
+    private static AutomatedFacility facilityWithStorageOnFeature(PlanetaryFeatureKey required,
+        PlanetaryFeatureKey excluded) {
+        for (long salt = 0; salt < 10_000L; salt++) {
+            AutomatedFacility facility = new AutomatedFacility(
+                CelestialAsset.ID.create(),
+                CelestialObjectId.MARS,
+                CelestialAsset.Kind.AUTOMATED_STATION,
+                Buildable.Status.OPERATIONAL);
+            facility.setStationFeatureSalt(salt);
+            for (int dx = StationTileCoord.MIN; dx <= StationTileCoord.MAX; dx++) {
+                for (int dy = StationTileCoord.MIN; dy <= StationTileCoord.MAX; dy++) {
+                    StationTileCoord coord = StationTileCoord.of(dx, dy);
+                    List<PlanetaryFeatureKey> features = facility.planetaryFeaturesAt(coord);
+                    if (!features.contains(required) || features.contains(excluded)) continue;
+                    ModuleInstance module = FacilityModuleKind.STORAGE.create(coord, ModuleShape.SINGLE, ModuleTier.HV);
+                    facility.addModule(module);
+                    return facility;
+                }
+            }
+        }
+        throw new AssertionError("Could not find station salt for feature " + required);
+    }
+
+    private static void tickFacility(AutomatedFacility facility, int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            facility.tick();
+        }
     }
 
     private static ModuleOperationPlan plan() {
