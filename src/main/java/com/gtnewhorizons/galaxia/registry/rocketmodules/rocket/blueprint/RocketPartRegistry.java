@@ -76,7 +76,7 @@ public class RocketPartRegistry {
                 1.0,
                 100.0,
                 1,
-                null));
+                "decoupler_1"));
 
         register(
             new LanderPartDef(
