@@ -305,6 +305,7 @@ galaxia.outpost.module.hammer=HAMMER
 galaxia.outpost.module.big_hammer=BIG HAMMER
 galaxia.outpost.module.miner=MINER
 galaxia.outpost.module.power=POWER
+galaxia.outpost.module.geothermal_generator=GEOTHERMAL GENERATOR
 galaxia.outpost.module.storage=STORAGE
 galaxia.outpost.module.tank=TANK
 galaxia.outpost.module.battery=BATTERY

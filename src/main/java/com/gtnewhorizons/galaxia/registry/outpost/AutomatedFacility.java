@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifiers;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -65,6 +66,9 @@ public final class AutomatedFacility extends CelestialAsset {
     private final SettingsGroupRegistry settingsGroups;
 
     private long stationFeatureSalt;
+    private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
+    private long featureModifiersLayoutVersion = Long.MIN_VALUE;
+    private long featureModifiersStationFeatureSalt = Long.MIN_VALUE;
 
     private long energyStored;
 
@@ -136,6 +140,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setStationFeatureSalt(long stationFeatureSalt) {
         this.stationFeatureSalt = stationFeatureSalt;
+        featureModifiersByModule.clear();
+        featureModifiersStationFeatureSalt = Long.MIN_VALUE;
     }
 
     public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
@@ -162,25 +168,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public List<FeatureContribution> featureContributions(ModuleInstance module) {
-        if (module == null || module.anchorOrNull() == null) return Collections.emptyList();
-        List<FeatureContribution> contributions = new ArrayList<>();
-        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        StationTileCoord[] tiles = module.shape()
-            .tiles(module.anchor());
-        for (StationTileCoord tile : tiles) {
-            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
-                counts.merge(feature, 1, Integer::sum);
-            }
-        }
-        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
-            FeatureContribution contribution = module.component()
-                .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
-            if (contribution == null) {
-                contribution = FeatureContribution.generic(entry.getKey(), entry.getValue(), tiles.length);
-            }
-            if (contribution != null) contributions.add(contribution);
-        }
-        return contributions;
+        return featureModifiers(module).contributions();
     }
 
     public void applySettingsGroupsToModules() {
@@ -977,25 +965,59 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public int buildSpeedModifierPercent(ModuleInstance module) {
-        int regolithTiles = featureCoverage(module, PlanetaryFeatureRegistry.REGOLITH_FLATS.key());
-        int bedrockTiles = featureCoverage(module, PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
-        return regolithTiles * FeatureContribution.REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT_PER_TILE
-            - bedrockTiles * FeatureContribution.STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT_PER_TILE;
+        return featureModifiers(module).buildSpeedModifierPercent();
     }
 
     public int upkeepReductionPercent(ModuleInstance module) {
-        int bedrockTiles = featureCoverage(module, PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
-        return bedrockTiles * FeatureContribution.STABLE_BEDROCK_UPKEEP_REDUCTION_PERCENT_PER_TILE;
+        return 100 - featureModifiers(module).upkeepMultiplierPercent();
     }
 
-    private int featureCoverage(ModuleInstance module, PlanetaryFeatureKey feature) {
-        if (module == null || feature == null || module.anchorOrNull() == null) return 0;
-        int coveredTiles = 0;
-        for (StationTileCoord tile : module.shape()
-            .tiles(module.anchor())) {
-            if (planetaryFeaturesAt(tile).contains(feature)) coveredTiles++;
+    public ModuleFeatureModifiers featureModifiers(ModuleInstance module) {
+        if (module == null || module.anchorOrNull() == null) return ModuleFeatureModifiers.EMPTY;
+        refreshFeatureModifierCache();
+        return featureModifiersByModule.computeIfAbsent(module.id, ignored -> computeFeatureModifiers(module));
+    }
+
+    private void refreshFeatureModifierCache() {
+        long layoutVersion = layout != null ? layout.version() : Long.MIN_VALUE;
+        if (featureModifiersLayoutVersion == layoutVersion
+            && featureModifiersStationFeatureSalt == stationFeatureSalt) {
+            return;
         }
-        return coveredTiles;
+        featureModifiersByModule.clear();
+        featureModifiersLayoutVersion = layoutVersion;
+        featureModifiersStationFeatureSalt = stationFeatureSalt;
+    }
+
+    private ModuleFeatureModifiers computeFeatureModifiers(ModuleInstance module) {
+        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
+        List<FeatureContribution> contributions = new ArrayList<>();
+        StationTileCoord[] tiles = module.shape()
+            .tiles(module.anchor());
+        for (StationTileCoord tile : tiles) {
+            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
+                counts.merge(feature, 1, Integer::sum);
+            }
+        }
+        int buildSpeedModifierPercent = 0;
+        int upkeepMultiplierPercent = 100;
+        if (counts.containsKey(PlanetaryFeatureRegistry.REGOLITH_FLATS.key())) {
+            buildSpeedModifierPercent += FeatureContribution.REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT;
+        }
+        if (counts.containsKey(PlanetaryFeatureRegistry.STABLE_BEDROCK.key())) {
+            buildSpeedModifierPercent -= FeatureContribution.STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT;
+            upkeepMultiplierPercent = Math
+                .min(upkeepMultiplierPercent, FeatureContribution.STABLE_BEDROCK_UPKEEP_MULTIPLIER_PERCENT);
+        }
+        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
+            FeatureContribution contribution = module.component()
+                .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
+            if (contribution == null) {
+                contribution = FeatureContribution.generic(entry.getKey(), entry.getValue(), tiles.length);
+            }
+            if (contribution != null) contributions.add(contribution);
+        }
+        return new ModuleFeatureModifiers(buildSpeedModifierPercent, upkeepMultiplierPercent, counts, contributions);
     }
 
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {

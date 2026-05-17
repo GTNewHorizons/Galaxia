@@ -37,7 +37,7 @@ public final class PlanetaryFeatureRegistry {
         .displayName("Subsurface Ice Pocket")
         .description("Buried ice deposit")
         .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.patch(5.0, 2.0))
+        .placement(PlanetaryFeaturePlacement.patch(3.0, 1.0))
         .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_SUBSURFACE_ICE_POCKET.getColor())
         .build();
 
@@ -45,7 +45,7 @@ public final class PlanetaryFeatureRegistry {
         .displayName("Geothermal Vent")
         .description("Natural heat source")
         .layer(PlanetaryFeatureLayer.ENVIRONMENT)
-        .placement(PlanetaryFeaturePlacement.isolated())
+        .placement(PlanetaryFeaturePlacement.isolated(6))
         .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_GEOTHERMAL_VENT.getColor())
         .build();
 
@@ -53,7 +53,7 @@ public final class PlanetaryFeatureRegistry {
         .displayName("Volatile Deposit")
         .description("Chemical volatile pocket")
         .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.clusteredPatch(8.0, 4.0))
+        .placement(PlanetaryFeaturePlacement.clusteredPatch(5.0, 2.0))
         .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_VOLATILE_DEPOSIT.getColor())
         .build();
 
@@ -61,7 +61,7 @@ public final class PlanetaryFeatureRegistry {
         .displayName("Rare Crystal Formation")
         .description("Rare crystal growth")
         .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.patch(3.0, 1.0))
+        .placement(PlanetaryFeaturePlacement.line(5.0, 1.0))
         .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_RARE_CRYSTAL_FORMATION.getColor())
         .build();
 

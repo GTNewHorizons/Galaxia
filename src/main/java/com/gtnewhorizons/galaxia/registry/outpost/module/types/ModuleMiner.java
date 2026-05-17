@@ -22,7 +22,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 
@@ -71,15 +70,8 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     public static int mineralVeinBonusRolls(ModuleInstance module, AutomatedFacility outpost) {
         if (module == null || outpost == null || module.anchorOrNull() == null) return 0;
-        int coveredTiles = 0;
-        for (StationTileCoord tile : module.shape()
-            .tiles(module.anchor())) {
-            if (outpost.planetaryFeaturesAt(tile)
-                .contains(PlanetaryFeatureRegistry.MINERAL_VEIN.key())) {
-                coveredTiles++;
-            }
-        }
-        return coveredTiles;
+        return outpost.featureModifiers(module)
+            .coveredTiles(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
     }
 
     private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {

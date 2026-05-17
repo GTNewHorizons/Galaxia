@@ -22,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifiers;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -465,12 +466,33 @@ final class AutomatedFacilityOperationTest {
             module.operationOrNull()
                 .elapsedBuildTicks());
         assertEquals(-20, facility.buildSpeedModifierPercent(module));
-        assertEquals(5, facility.upkeepReductionPercent(module));
+        assertEquals(20, facility.upkeepReductionPercent(module));
 
         facility.tick();
 
         assertNull(module.operationOrNull());
         assertEquals(ModuleTier.EV, module.tier());
+    }
+
+    @Test
+    void featureModifiersAreCachedAndInvalidatedWithFeatureSalt() {
+        AutomatedFacility facility = facilityWithStorageOnFeature(
+            PlanetaryFeatureRegistry.REGOLITH_FLATS.key(),
+            PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
+        ModuleInstance module = facility.modules()
+            .get(0);
+
+        ModuleFeatureModifiers modifiers = facility.featureModifiers(module);
+
+        assertEquals(20, modifiers.buildSpeedModifierPercent());
+        assertEquals(100, modifiers.upkeepMultiplierPercent());
+
+        useNeutralBuildFeatureSalt(facility, module.anchor());
+
+        assertEquals(
+            0,
+            facility.featureModifiers(module)
+                .buildSpeedModifierPercent());
     }
 
     private static AutomatedFacility facilityWithHammer() {

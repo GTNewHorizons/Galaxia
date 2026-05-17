@@ -115,6 +115,8 @@ final class PlanetaryFeatureGeneratorTest {
         PlanetaryFeatureDefinition bedrock = PlanetaryFeatureRegistry
             .get(PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
         PlanetaryFeatureDefinition vein = PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
+        PlanetaryFeatureDefinition geothermal = PlanetaryFeatureRegistry
+            .get(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key());
 
         assertSame(PlanetaryFeatureLayer.TERRAIN, bedrock.layer());
         assertSame(PlanetaryFeatureLayer.RESOURCE, vein.layer());
@@ -122,9 +124,54 @@ final class PlanetaryFeatureGeneratorTest {
             bedrock.placement()
                 .isIsolated());
         assertTrue(
-            PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key())
-                .placement()
+            geothermal.placement()
                 .isIsolated());
+        assertEquals(
+            1.0,
+            geothermal.placement()
+                .meanTiles());
+        assertEquals(
+            6,
+            geothermal.placement()
+                .minSpacingTiles());
+        assertEquals(
+            3.0,
+            PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.placement()
+                .meanTiles());
+        assertEquals(
+            5.0,
+            PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.placement()
+                .meanTiles());
+        assertEquals(
+            5.0,
+            PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.placement()
+                .meanTiles());
+    }
+
+    @Test
+    void isolatedGeothermalVentsRejectNearbySecondVent() {
+        CelestialObject body = CelestialObject.builder()
+            .id(CelestialObjectId.EGORA)
+            .featureProfile(
+                p -> p.featureTileChance(1.0)
+                    .weight(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 1.0))
+            .build();
+
+        StationTileCoord vent = findTileWith(99887766L, body, PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key());
+
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dy = -6; dy <= 6; dy++) {
+                if (Math.abs(dx) + Math.abs(dy) > 6 || dx == 0 && dy == 0) continue;
+                int x = vent.dx() + dx;
+                int y = vent.dy() + dy;
+                if (x < StationTileCoord.MIN || x > StationTileCoord.MAX) continue;
+                if (y < StationTileCoord.MIN || y > StationTileCoord.MAX) continue;
+                assertFalse(
+                    PlanetaryFeatureGenerator.featuresAt(99887766L, StationTileCoord.of(x, y), body)
+                        .contains(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key()),
+                    "Geothermal vent generated too close to " + vent);
+            }
+        }
     }
 
     private static StationTileCoord findTileWith(long salt, CelestialObject body, PlanetaryFeatureKey key) {

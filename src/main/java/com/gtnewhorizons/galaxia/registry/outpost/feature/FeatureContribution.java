@@ -2,9 +2,9 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature;
 
 public record FeatureContribution(PlanetaryFeatureKey key, byte coveredTiles, byte totalTiles, String effectLine) {
 
-    public static final int STABLE_BEDROCK_UPKEEP_REDUCTION_PERCENT_PER_TILE = 5;
-    public static final int REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT_PER_TILE = 20;
-    public static final int STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT_PER_TILE = 20;
+    public static final int STABLE_BEDROCK_UPKEEP_MULTIPLIER_PERCENT = 80;
+    public static final int REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT = 20;
+    public static final int STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT = 20;
 
     public FeatureContribution {
         if (key == null) {
@@ -23,7 +23,7 @@ public record FeatureContribution(PlanetaryFeatureKey key, byte coveredTiles, by
                 key,
                 (byte) coveredTiles,
                 (byte) totalTiles,
-                "Build speed +" + coveredTiles * REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT_PER_TILE + "%");
+                "Build speed +" + REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT + "%");
         }
         if (PlanetaryFeatureRegistry.STABLE_BEDROCK.key()
             .equals(key)) {
@@ -31,10 +31,7 @@ public record FeatureContribution(PlanetaryFeatureKey key, byte coveredTiles, by
                 key,
                 (byte) coveredTiles,
                 (byte) totalTiles,
-                "Upkeep -" + coveredTiles * STABLE_BEDROCK_UPKEEP_REDUCTION_PERCENT_PER_TILE
-                    + "%, build speed -"
-                    + coveredTiles * STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT_PER_TILE
-                    + "%");
+                "Upkeep x0.8, build speed -" + STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT + "%");
         }
         return null;
     }

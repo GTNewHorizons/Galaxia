@@ -14,8 +14,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
 
 final class FacilityModuleRegistryTest {
 
@@ -160,5 +163,22 @@ final class FacilityModuleRegistryTest {
         assertFalse(
             FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
                 .settingsGroups());
+    }
+
+    @Test
+    void geothermalGeneratorIsThreeByThreePowerModuleAnchoredOnVent() {
+        FacilityModuleRegistry.Definition definition = FacilityModuleRegistry
+            .get(FacilityModuleKind.GEOTHERMAL_GENERATOR);
+
+        assertEquals(ModuleShape.BLOCK_3x3, FacilityModuleKind.GEOTHERMAL_GENERATOR.defaultShape());
+        assertEquals(ModuleTier.HV, FacilityModuleKind.GEOTHERMAL_GENERATOR.defaultTier());
+        assertEquals(StationModuleCategory.POWER, FacilityModuleKind.GEOTHERMAL_GENERATOR.getCategory());
+        assertEquals(
+            PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key(),
+            FacilityModuleKind.GEOTHERMAL_GENERATOR.requiredAnchorFeature());
+        assertEquals(
+            -8192L,
+            definition.getTierData(ModuleTier.HV)
+                .powerDrawEuPerTick());
     }
 }

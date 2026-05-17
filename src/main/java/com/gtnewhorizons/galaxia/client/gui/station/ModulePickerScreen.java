@@ -260,6 +260,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             case HAMMER -> "Launches logistics packages";
             case MINER -> "Extracts planetary ores";
             case POWER -> "Adds station EU generation";
+            case GEOTHERMAL_GENERATOR -> "Generates EU from geothermal vents";
             case STORAGE -> "Adds item inventory capacity";
             case TANK -> "Adds fluid inventory capacity";
             case BATTERY -> "Adds energy buffer capacity";

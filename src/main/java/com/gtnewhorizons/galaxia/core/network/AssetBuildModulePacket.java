@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -145,7 +146,7 @@ public final class AssetBuildModulePacket implements IMessage {
             .anyMatch(coord -> coord == null)) {
             return null;
         }
-        if (!validateAllTargets(facility, anchors)) {
+        if (!validateAllTargets(facility, anchors, moduleKind)) {
             return null;
         }
 
@@ -171,17 +172,23 @@ public final class AssetBuildModulePacket implements IMessage {
         return AssetSyncPacket.fullSync(facility);
     }
 
-    private boolean validateAllTargets(AutomatedFacility facility, List<StationTileCoord> anchors) {
+    private boolean validateAllTargets(AutomatedFacility facility, List<StationTileCoord> anchors,
+        FacilityModuleKind moduleKind) {
         if (anchors.size() == 1 && StationTileCoord.CORE.equals(anchors.get(0)) && !facility.hasStationLayout()) {
             return true;
         }
         if (!facility.hasStationLayout()) return false;
+        PlanetaryFeatureKey requiredAnchorFeature = moduleKind.requiredAnchorFeature();
         Set<StationTileCoord> plannedTiles = new HashSet<>();
         Set<StationTileCoord> originalTiles = facility.stationLayout()
             .snapshot()
             .keySet();
         for (StationTileCoord anchor : anchors) {
             if (!shape.fitsAt(anchor)) return false;
+            if (requiredAnchorFeature != null && !facility.planetaryFeaturesAt(anchor)
+                .contains(requiredAnchorFeature)) {
+                return false;
+            }
             StationTileCoord[] footprint = shape.tiles(anchor);
             boolean hasAdjacent = false;
             for (StationTileCoord coord : footprint) {

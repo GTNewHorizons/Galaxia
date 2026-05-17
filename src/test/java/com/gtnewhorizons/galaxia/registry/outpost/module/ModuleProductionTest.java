@@ -23,6 +23,7 @@ final class ModuleProductionTest {
         assertNotNull(FacilityModuleKind.valueOf("CHEMICAL_REACTOR"));
         assertNotNull(FacilityModuleKind.valueOf("ASSEMBLER"));
         assertNotNull(FacilityModuleKind.valueOf("DISTILLERY"));
+        assertNotNull(FacilityModuleKind.valueOf("GEOTHERMAL_GENERATOR"));
     }
 
     @Test
@@ -40,6 +41,7 @@ final class ModuleProductionTest {
         assertEquals(10, FacilityModuleKind.CHEMICAL_REACTOR.ordinal());
         assertEquals(11, FacilityModuleKind.ASSEMBLER.ordinal());
         assertEquals(12, FacilityModuleKind.DISTILLERY.ordinal());
+        assertEquals(13, FacilityModuleKind.GEOTHERMAL_GENERATOR.ordinal());
     }
 
     // ---------- allowedTiers / defaultTier ----------
