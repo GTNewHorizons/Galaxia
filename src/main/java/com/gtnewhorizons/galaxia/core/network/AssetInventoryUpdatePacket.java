@@ -161,7 +161,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         } else {
             intDelta = (int) Math.max(delta, Integer.MIN_VALUE + 1);
         }
-        final long applied = asset.udpateContents(resource, intDelta) * (delta > 0 ? 1 : -1);
+        final long applied = asset.updateContents(resource, intDelta) * (delta > 0 ? 1 : -1);
         if (applied == 0L) return null;
 
         asset.bumpSyncRevision();

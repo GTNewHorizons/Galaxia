@@ -39,6 +39,13 @@ public final class StationGraph {
             .iterator();
     }
 
+    public <T extends IStationAttachment> Stream<T> getAttachments(Class<T> type) {
+        return attachments.values()
+            .stream()
+            .filter(type::isInstance)
+            .map(type::cast);
+    }
+
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
         return attachments.keySet()
             .stream()

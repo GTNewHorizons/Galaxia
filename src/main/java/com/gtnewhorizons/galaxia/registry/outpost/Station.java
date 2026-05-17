@@ -1,14 +1,19 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.fluids.IFluidTank;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -68,6 +73,30 @@ public class Station extends CelestialAsset {
     }
 
     @Override
+    public Map<ItemStackWrapper, Long> aggregatedItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>(super.aggregatedItems());
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) return result;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return result;
+        for (TileHammerCannon cannon : graph.getAttachments(TileHammerCannon.class).toList()) {
+            if (!cannon.isStructureValid()) continue;
+            for (IInventory inv : cannon.getChestInventories()) {
+                for (int s = 0; s < inv.getSizeInventory(); s++) {
+                    ItemStack stack = inv.getStackInSlot(s);
+                    if (stack != null) {
+                        ItemStackWrapper key = ItemStackWrapper.of(stack);
+                        if (key != null) {
+                            result.merge(key, (long) stack.stackSize, Long::sum);
+                        }
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
     public boolean tryConsumeEnergy(long powerDraw) {
         // TODO
         return true;
@@ -83,8 +112,11 @@ public class Station extends CelestialAsset {
     public Stream<ModuleInstance> forEachModule() {
         TileStationController ctrl = getTileController();
         if (ctrl == null) return Stream.of();
-        // TODO
-        return Stream.of();
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return Stream.of();
+        return graph.getAttachments(TileHammerCannon.class)
+            .filter(TileHammerCannon::isStructureValid)
+            .map(TileHammerCannon::getModuleInstance);
     }
 
     /** Public so network handlers can route filter mutations. */

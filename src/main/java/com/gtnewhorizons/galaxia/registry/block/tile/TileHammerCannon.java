@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -74,12 +75,29 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
-    private final List<IInventory> inventory = new java.util.ArrayList<>();
+    // Internal inventory only available for firing hammer packages
+    private final List<IInventory> inventory = new ArrayList<>();
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private BlockPos here;
     private final ModuleInstance moduleInstance;
     private final ModuleHammer hammer;
+
+    public ModuleInstance getModuleInstance() {
+        return moduleInstance;
+    }
+
+    public ModuleHammer getHammer() {
+        return hammer;
+    }
+
+    public List<IInventory> getChestInventories() {
+        return inventory;
+    }
+
+    public ResourceFilter<ItemStackWrapper> getFilter() {
+        return filter;
+    }
 
     public TileHammerCannon() {
         super();
@@ -136,7 +154,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
 
     @Override
     public List<IInventory> getInventories() {
-        return this.inventory;
+        return List.of();
     }
 
     @Override
