@@ -4,7 +4,7 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import net.minecraft.util.ResourceLocation;
 
-public sealed interface IRocketPartDef permits LanderPartDef,RiderPartDef,StructuralPartDef,FuelTankPartDef,FunctionalPartDef,EnginePartDef,DecouplerPartDef,CapsulePartDef {
+public interface IRocketPartDef {
 
     String MODULE_DOMAIN = "textures/model/modules/";
 

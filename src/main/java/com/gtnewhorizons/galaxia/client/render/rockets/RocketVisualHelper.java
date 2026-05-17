@@ -7,12 +7,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
 
 /**
  * Central rendering engine for all rockets and rocket-like structures.
@@ -68,69 +63,6 @@ public final class RocketVisualHelper {
             }
         }
 
-        renderFallbackPart(def);
-
         GL11.glPopMatrix();
-    }
-
-    private static void renderFallbackPart(IRocketPartDef def) {
-        float r, g, b;
-        switch (def) {
-            case CapsulePartDef ignored -> {
-                r = 0.0f;
-                g = 0.8f;
-                b = 0.0f;
-            }
-            case LanderPartDef ignored -> {
-                r = 0.0f;
-                g = 0.9f;
-                b = 0.4f;
-            }
-            case FuelTankPartDef ignored -> {
-                r = 0.2f;
-                g = 0.4f;
-                b = 0.9f;
-            }
-            case EnginePartDef ignored -> {
-                r = 0.9f;
-                g = 0.3f;
-                b = 0.0f;
-            }
-            case DecouplerPartDef ignored -> {
-                r = 0.6f;
-                g = 0.6f;
-                b = 0.6f;
-            }
-            default -> {
-                r = 0.5f;
-                g = 0.5f;
-                b = 0.5f;
-            }
-        }
-
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glColor3f(r, g, b);
-
-        GL11.glBegin(GL11.GL_QUADS);
-        drawCubeVertices();
-        GL11.glEnd();
-
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glColor3f(1, 1, 1);
-    }
-
-    private static void drawCubeVertices() {
-        // Front
-        GL11.glVertex3f(0, 0, 0);
-        GL11.glVertex3f(1, 0, 0);
-        GL11.glVertex3f(1, 1, 0);
-        GL11.glVertex3f(0, 1, 0);
-        // Back
-        GL11.glVertex3f(0, 0, 1);
-        GL11.glVertex3f(0, 1, 1);
-        GL11.glVertex3f(1, 1, 1);
-        GL11.glVertex3f(1, 0, 1);
-        // Top / Bottom / Sides omitted for brevity — in production use full cube or model
-        // (This is temporary visual placeholder)
     }
 }

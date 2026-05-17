@@ -15,11 +15,7 @@ import net.minecraftforge.client.model.IModelCustom;
 import org.lwjgl.opengl.GL11;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -126,8 +122,6 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
                 }
                 model.renderAll();
             }
-        } else {
-            renderFallbackModule(def);
         }
 
         GL11.glPopMatrix();
@@ -502,22 +496,5 @@ public class GantryRenderer extends TileEntitySpecialRenderer {
         g.getCrossModel()
             .renderAll();
         GL11.glPopMatrix();
-    }
-
-    private static void renderFallbackModule(IRocketPartDef def) {
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        switch (def) {
-            case EnginePartDef ignored -> GL11.glColor3f(0.9f, 0.3f, 0.1f);
-            case FuelTankPartDef ignored -> GL11.glColor3f(0.2f, 0.5f, 0.9f);
-            case LanderPartDef ignored -> GL11.glColor3f(0.1f, 0.9f, 0.3f);
-            case CapsulePartDef ignored -> GL11.glColor3f(0.1f, 0.9f, 0.3f);
-            default -> GL11.glColor3f(0.6f, 0.6f, 0.6f);
-        }
-
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glEnd();
-
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glColor3f(1, 1, 1);
     }
 }

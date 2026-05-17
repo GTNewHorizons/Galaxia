@@ -56,7 +56,7 @@ public class RocketPartRegistry {
                 5.0,
                 1200.0,
                 8000.0,
-                null));
+                "fuel_tank_1"));
 
         register(
             new EnginePartDef(
@@ -66,7 +66,7 @@ public class RocketPartRegistry {
                 3.5,
                 250.0,
                 6000.0,
-                null));
+                "engine_1"));
 
         register(
             new DecouplerPartDef(
@@ -104,7 +104,7 @@ public class RocketPartRegistry {
                 3.0,
                 4.0,
                 900.0,
-                null));
+                "storage_unit_1"));
     }
     // spotless:on
 }
