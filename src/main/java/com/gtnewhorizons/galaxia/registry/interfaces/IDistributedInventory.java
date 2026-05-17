@@ -24,7 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
  * Implementors own the concrete aggregation, slot resolution, and mutation
  * logic. Default methods here provide derived query patterns; they are
  * intentionally thin wrappers over the core API so implementors can override
- * them with optimised versions when needed.
+ * them with optimized versions when needed.
  *
  * <p>
  * <b>Implementation contract:</b>
@@ -43,16 +43,38 @@ public interface IDistributedInventory {
     /**
      * Returns the ordered list of backing item inventories.
      * Indices here correspond to the {@code idx} parameter of
-     * {@link #getItemFilter(int)}
+     * {@link #getItemFilter(int)}.
      */
     List<IInventory> getInventories();
 
     /**
+     * Returns a list of backing item inventories sorted by their insertion/extraction priority.
+     * <p>
+     * <b>Note:</b> Indices in this list do <em>not</em> correspond to {@link #getItemFilter(int)}.
+     * Implementations should return a pre-computed or cached list to avoid sorting allocations on every tick.
+     * By default, this falls back to the standard, unordered inventory list.
+     */
+    default List<IInventory> getInventoriesWithPriority() {
+        return getInventories();
+    }
+
+    /**
      * Returns the ordered list of backing fluid tanks.
      * Indices here correspond to the {@code idx} parameter of
-     * {@link #getFluidFilter(int)}
+     * {@link #getFluidFilter(int)}.
      */
     List<IFluidTank> getFluidTanks();
+
+    /**
+     * Returns a list of backing fluid tanks sorted by their insertion/extraction priority.
+     * <p>
+     * <b>Note:</b> Indices in this list do <em>not</em> correspond to {@link #getFluidFilter(int)}.
+     * Implementations should return a pre-computed or cached list to ensure optimal performance.
+     * By default, this falls back to the standard, unordered fluid tank list.
+     */
+    default List<IFluidTank> getFluidTanksWithPriority() {
+        return getFluidTanks();
+    }
 
     /**
      * Returns the item predicate governing what may enter the inventory at
@@ -64,10 +86,27 @@ public interface IDistributedInventory {
     }
 
     /**
+     * Returns the item predicate governing what may enter the inventory at
+     * {@code idx}. Implementations should return a constant or cached value
+     * rather than allocating on every call.
+     */
+    default ResourceFilter<ItemStackWrapper> getItemFilterWithPriority(int idx) {
+        return ResourceFilter.forItems();
+    }
+
+    /**
      * Returns the fluid predicate governing what may enter the tank at
-     * {@code idx}.
+     * {@code idx}. Implementations should return a constant or cached value.
      */
     default ResourceFilter<FluidKey> getFluidFilter(int idx) {
+        return ResourceFilter.forFluids();
+    }
+
+    /**
+     * Returns the fluid predicate governing what may enter the tank at
+     * {@code idx}. Implementations should return a constant or cached value.
+     */
+    default ResourceFilter<FluidKey> getFluidFilterWithPriority(int idx) {
         return ResourceFilter.forFluids();
     }
 
@@ -175,8 +214,8 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Total item slot capacity across all inventories (same as {@link #totalItemSlots()} for most implementations, but
-     * may differ when slots have per-slot stack-size limits).
+     * Total item capacity across all inventories.
+     * Calculated as the sum of every slot multiplied by its inventory stack limit.
      */
     default long totalItemCapacity() {
         long total = 0;
@@ -241,14 +280,21 @@ public interface IDistributedInventory {
         return space;
     }
 
-    default <T extends InventoryKey> long udpateContents(T key, int delta) {
+    /**
+     * Modifies the underlying storage dynamically based on the key type.
+     *
+     * @param key   The key representing the resource (ItemStackWrapper or FluidKey).
+     * @param delta The amount to insert (positive) or extract (negative).
+     * @return The amount successfully updated.
+     */
+    default <T extends InventoryKey> long updateContents(T key, int delta) {
         return key instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) key, delta)
             : updateFluids((FluidKey) key, delta);
     }
 
     /**
      * Inserts (positive {@code delta}) or extracts (negative {@code delta})
-     * the given item across the distributed inventory.
+     * the given item across the distributed inventory respecting priority logic.
      *
      * @return the amount actually transferred, always in {@code [0, |delta|]}.
      *         A return value less than {@code |delta|} means the operation was
@@ -265,11 +311,15 @@ public interface IDistributedInventory {
 
     private long insertItems(ItemStackWrapper item, int target) {
         long transferred = 0;
-        List<IInventory> inventories = getInventories();
+        List<IInventory> priorityInventories = getInventoriesWithPriority();
         ItemStack template = item.toStack(1);
-        for (int i = 0; i < inventories.size() && transferred < target; i++) {
-            IInventory inv = inventories.get(i);
-            if (inv == null || !getItemFilter(i).test(item)) continue;
+
+        for (int i = 0; i < priorityInventories.size() && transferred < target; i++) {
+            IInventory inv = priorityInventories.get(i);
+            if (inv == null) continue;
+            if (!getItemFilterWithPriority(i).test(item)) continue;
+
+            long transferredBeforeThisInv = transferred;
             for (int s = 0; s < inv.getSizeInventory() && transferred < target; s++) {
                 ItemStack stack = inv.getStackInSlot(s);
                 if (stack == null) continue;
@@ -293,14 +343,18 @@ public interface IDistributedInventory {
                 inv.setInventorySlotContents(s, newStack);
                 transferred += toAdd;
             }
-            if (transferred > 0) inv.markDirty();
+
+            // Only mark dirty if we ACTUALLY put items into THIS specific inventory during this loop
+            if (transferred > transferredBeforeThisInv) inv.markDirty();
         }
         return transferred;
     }
 
     private long extractItems(ItemStackWrapper item, int target) {
         long transferred = 0;
-        for (IInventory inv : getInventories()) {
+        List<IInventory> inventories = getInventoriesWithPriority();
+        for (int i = inventories.size(); i-- > 0;) {
+            IInventory inv = inventories.get(i);
             if (inv == null || transferred >= target) continue;
             boolean dirty = false;
             for (int s = 0; s < inv.getSizeInventory() && transferred < target; s++) {
@@ -339,10 +393,14 @@ public interface IDistributedInventory {
 
     private long insertFluids(FluidKey fluid, int target) {
         long transferred = 0;
-        List<IFluidTank> tanks = getFluidTanks();
-        for (int i = 0; i < tanks.size() && transferred < target; i++) {
-            IFluidTank tank = tanks.get(i);
-            if (tank == null || !getFluidFilter(i).test(fluid)) continue;
+        List<IFluidTank> baseTanks = getFluidTanks();
+        List<IFluidTank> priorityTanks = getFluidTanksWithPriority();
+
+        for (int i = 0; i < priorityTanks.size() && transferred < target; i++) {
+            IFluidTank tank = priorityTanks.get(i);
+            if (tank == null) continue;
+            if (!getFluidFilterWithPriority(i).test(fluid)) continue;
+
             int amount = (int) Math.min(target - transferred, Integer.MAX_VALUE);
             FluidStack fs = fluid.toStack(amount);
             int filled = tank.fill(fs, true);
@@ -353,8 +411,8 @@ public interface IDistributedInventory {
 
     private long extractFluids(FluidKey fluid, int target) {
         long transferred = 0;
-        List<IFluidTank> tanks = getFluidTanks();
-        for (int i = 0; i < tanks.size() && transferred < target; i++) {
+        List<IFluidTank> tanks = getFluidTanksWithPriority();
+        for (int i = tanks.size(); i-- > 0 && transferred < target;) {
             IFluidTank tank = tanks.get(i);
             if (tank == null) continue;
             FluidStack contents = tank.getFluid();
@@ -372,7 +430,8 @@ public interface IDistributedInventory {
      * or network sync pass on all backing stores.
      */
     default void markDirty() {
-        for (IInventory inv : getInventories()) {
+        List<IInventory> invs = getInventories();
+        for (IInventory inv : invs) {
             if (inv != null) inv.markDirty();
         }
     }
@@ -459,11 +518,13 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Returns the item slot fill ratio in {@code [0.0, 1.0]}.
-     * Returns {@code 0.0} if total item slot capacity is zero.
+     * Returns the item fill ratio in {@code [0.0, 1.0]}.
+     * Returns {@code 0.0} if total item capacity is zero.
+     * <p>
+     * Note: Evaluates total items stored against absolute slot capacity limits.
      */
-    default double itemSlotFillFactor() {
+    default double itemFillFactor() {
         long capacity = totalItemCapacity();
-        return capacity == 0L ? 0.0 : (double) totalItemSlots() / capacity;
+        return capacity == 0L ? 0.0 : (double) totalItemsStored() / capacity;
     }
 }
