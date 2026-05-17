@@ -18,7 +18,7 @@ final class PlanetaryFeatureOverlayRendererTest {
             List.of(
                 PlanetaryFeatureRegistry.STABLE_BEDROCK,
                 PlanetaryFeatureRegistry.MINERAL_VEIN,
-                PlanetaryFeatureRegistry.GEOTHERMAL_VENT));
+                PlanetaryFeatureRegistry.MAGMA_POOL));
 
         assertEquals(3, markers.size());
         assertEquals(
@@ -57,7 +57,7 @@ final class PlanetaryFeatureOverlayRendererTest {
                 PlanetaryFeatureRegistry.STABLE_BEDROCK,
                 PlanetaryFeatureRegistry.MINERAL_VEIN,
                 PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET,
-                PlanetaryFeatureRegistry.GEOTHERMAL_VENT));
+                PlanetaryFeatureRegistry.MAGMA_POOL));
 
         assertEquals(4, markers.size());
     }

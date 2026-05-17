@@ -48,7 +48,7 @@ public class ModuleInstance implements Buildable {
     }
 
     private void tickOperational(AutomatedFacility outpost) {
-        long powerDraw = this.powerDrawEuPerTick();
+        long powerDraw = outpost.effectivePowerDrawEuPerTick(this);
 
         if (!outpost.tryConsumeEnergy(powerDraw)) {
             ticks = 0;

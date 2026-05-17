@@ -223,7 +223,7 @@ final class ModuleBuildPickerModelTest {
     }
 
     @Test
-    void geothermalGeneratorRequiresVentUnderCenterAnchor() {
+    void geothermalGeneratorRequiresMagmaPoolUnderCenterAnchor() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
@@ -254,9 +254,9 @@ final class ModuleBuildPickerModelTest {
         for (long salt = 0; salt < 100_000L; salt++) {
             facility.setStationFeatureSalt(salt);
             boolean hasVent = facility.planetaryFeaturesAt(coord)
-                .contains(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key());
+                .contains(PlanetaryFeatureRegistry.MAGMA_POOL.key());
             if (hasVent == required) return;
         }
-        throw new AssertionError("Could not find geothermal vent salt for " + coord);
+        throw new AssertionError("Could not find magma pool salt for " + coord);
     }
 }

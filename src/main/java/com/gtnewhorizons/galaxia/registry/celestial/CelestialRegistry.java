@@ -189,7 +189,7 @@ public final class CelestialRegistry {
                         .metadata("surface", "undefined")
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
                 .featureTileChance(0.26)
-                .feature(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 3.0)
+                .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 3.0)
                 .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 2.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));

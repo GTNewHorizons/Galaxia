@@ -6,9 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 public record ModuleFeatureModifiers(int buildSpeedModifierPercent, int upkeepMultiplierPercent,
-    Map<PlanetaryFeatureKey, Integer> coveredTiles, List<FeatureContribution> contributions) {
+    int powerDrawMultiplierPercent, Map<PlanetaryFeatureKey, Integer> coveredTiles,
+    List<FeatureContribution> contributions) {
 
-    public static final ModuleFeatureModifiers EMPTY = new ModuleFeatureModifiers(0, 100, Map.of(), List.of());
+    public static final ModuleFeatureModifiers EMPTY = new ModuleFeatureModifiers(0, 100, 100, Map.of(), List.of());
 
     public ModuleFeatureModifiers {
         coveredTiles = coveredTiles.isEmpty() ? Map.of()

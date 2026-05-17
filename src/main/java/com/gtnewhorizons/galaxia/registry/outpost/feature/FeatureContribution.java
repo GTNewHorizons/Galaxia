@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature;
 public record FeatureContribution(PlanetaryFeatureKey key, byte coveredTiles, byte totalTiles, String effectLine) {
 
     public static final int STABLE_BEDROCK_UPKEEP_MULTIPLIER_PERCENT = 80;
+    public static final int ICE_POCKET_POWER_DRAW_MULTIPLIER_PERCENT = 90;
     public static final int REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT = 20;
     public static final int STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT = 20;
 

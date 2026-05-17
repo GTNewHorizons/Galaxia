@@ -115,11 +115,11 @@ final class PlanetaryFeatureGeneratorTest {
         PlanetaryFeatureDefinition bedrock = PlanetaryFeatureRegistry
             .get(PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
         PlanetaryFeatureDefinition vein = PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
-        PlanetaryFeatureDefinition geothermal = PlanetaryFeatureRegistry
-            .get(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key());
+        PlanetaryFeatureDefinition geothermal = PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.MAGMA_POOL.key());
 
         assertSame(PlanetaryFeatureLayer.TERRAIN, bedrock.layer());
         assertSame(PlanetaryFeatureLayer.RESOURCE, vein.layer());
+        assertEquals("Magma Pool", geothermal.displayName());
         assertFalse(
             bedrock.placement()
                 .isIsolated());
@@ -149,15 +149,15 @@ final class PlanetaryFeatureGeneratorTest {
     }
 
     @Test
-    void isolatedGeothermalVentsRejectNearbySecondVent() {
+    void isolatedMagmaPoolsRejectNearbySecondPool() {
         CelestialObject body = CelestialObject.builder()
             .id(CelestialObjectId.EGORA)
             .featureProfile(
                 p -> p.featureTileChance(1.0)
-                    .weight(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 1.0))
+                    .weight(PlanetaryFeatureRegistry.MAGMA_POOL, 1.0))
             .build();
 
-        StationTileCoord vent = findTileWith(99887766L, body, PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key());
+        StationTileCoord vent = findTileWith(99887766L, body, PlanetaryFeatureRegistry.MAGMA_POOL.key());
 
         for (int dx = -6; dx <= 6; dx++) {
             for (int dy = -6; dy <= 6; dy++) {
@@ -168,8 +168,8 @@ final class PlanetaryFeatureGeneratorTest {
                 if (y < StationTileCoord.MIN || y > StationTileCoord.MAX) continue;
                 assertFalse(
                     PlanetaryFeatureGenerator.featuresAt(99887766L, StationTileCoord.of(x, y), body)
-                        .contains(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key()),
-                    "Geothermal vent generated too close to " + vent);
+                        .contains(PlanetaryFeatureRegistry.MAGMA_POOL.key()),
+                    "Magma pool generated too close to " + vent);
             }
         }
     }

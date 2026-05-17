@@ -3,9 +3,15 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -16,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -257,7 +264,8 @@ final class ModuleMinerTest {
     void mineralVeinBonusRollsUseCoveredTiles() {
         AutomatedFacility facility = createFacility();
         facility.setStationFeatureSalt(987654321L);
-        ModuleInstance miner = createMiner(findMinerAnchorWithMineralVein(facility));
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.MINERAL_VEIN.key()));
 
         int expectedCoveredTiles = facility.featureContributions(miner)
             .stream()
@@ -271,10 +279,59 @@ final class ModuleMinerTest {
         assertEquals(expectedCoveredTiles, ModuleMiner.mineralVeinBonusRolls(miner, facility));
     }
 
+    @Test
+    void icePocketCanReplaceOreRollWithIce() {
+        AutomatedFacility facility = createFeatureFacility();
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()));
+
+        assertTrue(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(0)));
+        assertFalse(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(1)));
+        assertNotNull(ModuleMiner.icePocketStack());
+    }
+
+    @Test
+    void rareCrystalAddsGemMiningCandidates() {
+        AutomatedFacility facility = createFeatureFacility();
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()));
+        List<ItemStack> candidates = new java.util.ArrayList<>();
+        candidates.add(new ItemStack(Items.iron_ingot));
+
+        ModuleMiner.addFeatureMiningCandidates(miner, facility, candidates);
+
+        assertTrue(
+            candidates.stream()
+                .anyMatch(stack -> stack.getItem() == Items.diamond || stack.getItem() == Items.emerald));
+    }
+
+    @Test
+    void volatileDepositAddsFuelMiningCandidates() {
+        AutomatedFacility facility = createFeatureFacility();
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.key()));
+        List<ItemStack> candidates = new java.util.ArrayList<>();
+        candidates.add(new ItemStack(Items.iron_ingot));
+
+        ModuleMiner.addFeatureMiningCandidates(miner, facility, candidates);
+
+        assertTrue(
+            candidates.stream()
+                .anyMatch(stack -> stack.getItem() == Items.gunpowder || stack.getItem() == Items.coal));
+    }
+
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+    }
+
+    private static AutomatedFacility createFeatureFacility() {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }
@@ -294,7 +351,8 @@ final class ModuleMinerTest {
         return miner;
     }
 
-    private static StationTileCoord findMinerAnchorWithMineralVein(AutomatedFacility facility) {
+    private static StationTileCoord findMinerAnchorWithFeature(AutomatedFacility facility,
+        PlanetaryFeatureKey feature) {
         for (int dx = StationTileCoord.MIN; dx < StationTileCoord.MAX; dx++) {
             for (int dy = StationTileCoord.MIN; dy < StationTileCoord.MAX; dy++) {
                 StationTileCoord anchor = StationTileCoord.of(dx, dy);
@@ -303,11 +361,21 @@ final class ModuleMinerTest {
                     .stream()
                     .anyMatch(
                         c -> c.key()
-                            .equals(PlanetaryFeatureRegistry.MINERAL_VEIN.key()))) {
+                            .equals(feature))) {
                     return anchor;
                 }
             }
         }
-        throw new AssertionError("No deterministic mineral vein found for miner test");
+        throw new AssertionError("No deterministic feature found for miner test: " + feature);
+    }
+
+    private static java.util.Random randomReturning(int value) {
+        return new java.util.Random(0L) {
+
+            @Override
+            public int nextInt(int bound) {
+                return value;
+            }
+        };
     }
 }

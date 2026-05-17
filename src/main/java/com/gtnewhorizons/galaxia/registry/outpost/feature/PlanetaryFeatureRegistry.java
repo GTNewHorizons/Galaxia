@@ -41,12 +41,11 @@ public final class PlanetaryFeatureRegistry {
         .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_SUBSURFACE_ICE_POCKET.getColor())
         .build();
 
-    public static final PlanetaryFeatureDefinition GEOTHERMAL_VENT = feature("geothermal_vent")
-        .displayName("Geothermal Vent")
+    public static final PlanetaryFeatureDefinition MAGMA_POOL = feature("magma_pool").displayName("Magma Pool")
         .description("Natural heat source")
         .layer(PlanetaryFeatureLayer.ENVIRONMENT)
         .placement(PlanetaryFeaturePlacement.isolated(6))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_GEOTHERMAL_VENT.getColor())
+        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_MAGMA_POOL.getColor())
         .build();
 
     public static final PlanetaryFeatureDefinition VOLATILE_DEPOSIT = feature("volatile_deposit")
@@ -85,7 +84,7 @@ public final class PlanetaryFeatureRegistry {
         register(STABLE_BEDROCK);
         register(MINERAL_VEIN);
         register(SUBSURFACE_ICE_POCKET);
-        register(GEOTHERMAL_VENT);
+        register(MAGMA_POOL);
         register(VOLATILE_DEPOSIT);
         register(RARE_CRYSTAL_FORMATION);
         register(THERMAL_SINK_ZONE);

@@ -166,7 +166,7 @@ final class FacilityModuleRegistryTest {
     }
 
     @Test
-    void geothermalGeneratorIsThreeByThreePowerModuleAnchoredOnVent() {
+    void geothermalGeneratorIsThreeByThreePowerModuleAnchoredOnMagmaPool() {
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry
             .get(FacilityModuleKind.GEOTHERMAL_GENERATOR);
 
@@ -174,7 +174,7 @@ final class FacilityModuleRegistryTest {
         assertEquals(ModuleTier.HV, FacilityModuleKind.GEOTHERMAL_GENERATOR.defaultTier());
         assertEquals(StationModuleCategory.POWER, FacilityModuleKind.GEOTHERMAL_GENERATOR.getCategory());
         assertEquals(
-            PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key(),
+            PlanetaryFeatureRegistry.MAGMA_POOL.key(),
             FacilityModuleKind.GEOTHERMAL_GENERATOR.requiredAnchorFeature());
         assertEquals(
             -8192L,

@@ -972,6 +972,16 @@ public final class AutomatedFacility extends CelestialAsset {
         return 100 - featureModifiers(module).upkeepMultiplierPercent();
     }
 
+    public long effectivePowerDrawEuPerTick(ModuleInstance module) {
+        long powerDraw = module.powerDrawEuPerTick();
+        if (powerDraw <= 0L || !module.kind()
+            .isProductionModule()) {
+            return powerDraw;
+        }
+        int multiplier = featureModifiers(module).powerDrawMultiplierPercent();
+        return (powerDraw * multiplier + 99L) / 100L;
+    }
+
     public ModuleFeatureModifiers featureModifiers(ModuleInstance module) {
         if (module == null || module.anchorOrNull() == null) return ModuleFeatureModifiers.EMPTY;
         refreshFeatureModifierCache();
@@ -1001,6 +1011,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         int buildSpeedModifierPercent = 0;
         int upkeepMultiplierPercent = 100;
+        int powerDrawMultiplierPercent = 100;
         if (counts.containsKey(PlanetaryFeatureRegistry.REGOLITH_FLATS.key())) {
             buildSpeedModifierPercent += FeatureContribution.REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT;
         }
@@ -1009,15 +1020,36 @@ public final class AutomatedFacility extends CelestialAsset {
             upkeepMultiplierPercent = Math
                 .min(upkeepMultiplierPercent, FeatureContribution.STABLE_BEDROCK_UPKEEP_MULTIPLIER_PERCENT);
         }
+        if (module.kind()
+            .isProductionModule() && counts.containsKey(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key())) {
+            powerDrawMultiplierPercent = Math
+                .min(powerDrawMultiplierPercent, FeatureContribution.ICE_POCKET_POWER_DRAW_MULTIPLIER_PERCENT);
+        }
         for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
             FeatureContribution contribution = module.component()
                 .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
+            if (contribution == null && module.kind()
+                .isProductionModule()
+                && PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()
+                    .equals(entry.getKey())) {
+                contribution = new FeatureContribution(
+                    entry.getKey(),
+                    entry.getValue()
+                        .byteValue(),
+                    (byte) tiles.length,
+                    "Power draw -10%");
+            }
             if (contribution == null) {
                 contribution = FeatureContribution.generic(entry.getKey(), entry.getValue(), tiles.length);
             }
             if (contribution != null) contributions.add(contribution);
         }
-        return new ModuleFeatureModifiers(buildSpeedModifierPercent, upkeepMultiplierPercent, counts, contributions);
+        return new ModuleFeatureModifiers(
+            buildSpeedModifierPercent,
+            upkeepMultiplierPercent,
+            powerDrawMultiplierPercent,
+            counts,
+            contributions);
     }
 
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
