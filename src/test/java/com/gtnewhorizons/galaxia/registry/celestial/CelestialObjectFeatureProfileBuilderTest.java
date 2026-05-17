@@ -2,8 +2,13 @@ package com.gtnewhorizons.galaxia.registry.celestial;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 
 final class CelestialObjectFeatureProfileBuilderTest {
@@ -31,5 +36,24 @@ final class CelestialObjectFeatureProfileBuilderTest {
             object.featureProfile()
                 .weights()
                 .get(PlanetaryFeatureRegistry.MINERAL_VEIN.key()));
+    }
+
+    @Test
+    void panspiraHasAllPlanetaryFeaturesForTestingWithRareHazards() {
+        CelestialRegistry.freezeAndBake();
+
+        CelestialObject panspira = CelestialRegistry.findByDimension(DimensionEnum.PANSPIRA)
+            .orElseThrow();
+        Map<PlanetaryFeatureKey, Double> weights = panspira.featureProfile()
+            .weights();
+
+        assertEquals(
+            PlanetaryFeatureRegistry.all()
+                .stream()
+                .map(definition -> definition.key())
+                .collect(Collectors.toSet()),
+            weights.keySet());
+        assertEquals(0.5, weights.get(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.key()));
+        assertEquals(0.4, weights.get(PlanetaryFeatureRegistry.MAGMA_POOL.key()));
     }
 }
