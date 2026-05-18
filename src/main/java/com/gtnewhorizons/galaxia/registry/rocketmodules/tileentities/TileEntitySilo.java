@@ -31,7 +31,6 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
@@ -250,27 +249,22 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     private void enterRocket(PosGuiData data) {
-        if (blueprint.isEmpty()) return;
+        if (blueprint.isEmpty() || !blueprint.analyze()
+            .viable()) {
+            return;
+        }
 
         EntityRocket rocket = getOrCreateEntityRocket();
         if (rocket == null) return;
 
         rocket.setBlueprint(blueprint.copy());
         rocket.setDestination(destination);
-        GALAXIA_NETWORK.sendToServer(new RocketDestinationSyncPacket(rocket.getEntityId(), destination));
 
         shouldRender = false;
         sync();
 
         rocket.interactFirst(data.getPlayer());
         if (!rocket.shouldRender()) rocket.launch();
-    }
-
-    public void requestModuleFromAssembler(int moduleId) {
-        if (moduleAssembler == null || worldObj.isRemote) return;
-        moduleAssembler.removeModule(moduleId);
-        GantryAPI.injectModule(null, moduleAssembler, this, false); // TODO: migrate to blueprint parts
-        sync();
     }
 
     public boolean receiveModulePart(RocketPartInstance part) {

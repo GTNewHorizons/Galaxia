@@ -9,7 +9,11 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 public class EntityRocket extends Entity {
@@ -18,45 +22,17 @@ public class EntityRocket extends Entity {
     public static final double TERMINAL_FALL_SPEED = -0.5;
 
     private TileEntitySilo targetSilo;
-    private List<Integer> modules = new ArrayList<>();
-
     private RocketBlueprint blueprint = new RocketBlueprint();
     private boolean launched = false;
     private int destination = -1;
     private int capsuleIndex = 0;
 
+    private final List<EntityRocketSeat> passengerSeats = new ArrayList<>();
+
     public EntityRocket(World world) {
         super(world);
         setSize(3f, 10f);
         noClip = true;
-    }
-
-    public void setModules(List<Integer> modules) {
-        this.modules = modules != null ? new ArrayList<>(modules) : new ArrayList<>();
-        // TODO: В будущем конвертировать в blueprint
-    }
-
-    public void setTargetSilo(TileEntitySilo silo) {
-        this.targetSilo = silo;
-    }
-
-    public void turnToLanderAndCache() {
-        // TODO: Реализовать логику превращения в лендер (оставляем заглушкой)
-        // Сейчас просто оставляем blueprint как есть
-    }
-
-    public void initializeSeats() {
-        // TODO: Создание EntityRocketSeat для пассажиров
-    }
-
-    public void beginLanding(double x, double z) {
-        // TODO: Начать процесс посадки
-        this.motionY = TERMINAL_FALL_SPEED;
-    }
-
-    public List<EntityRocketSeat> getPassengerSeats() {
-        // TODO: Вернуть список пассажирских мест
-        return new ArrayList<>();
     }
 
     public void setBlueprint(RocketBlueprint bp) {
@@ -65,6 +41,10 @@ public class EntityRocket extends Entity {
 
     public RocketBlueprint getBlueprint() {
         return blueprint;
+    }
+
+    public void setTargetSilo(TileEntitySilo silo) {
+        this.targetSilo = silo;
     }
 
     public void setDestination(int destination) {
@@ -87,9 +67,43 @@ public class EntityRocket extends Entity {
         launched = true;
     }
 
-    public boolean interactFirst(EntityPlayer player) {
-        // TODO: open rocket GUI / mount a player etc, temporary placeholder
-        return true;
+    public void turnToLanderAndCache() {
+        List<RocketPartInstance> toKeep = new ArrayList<>();
+        for (RocketPartInstance part : blueprint.getParts()) {
+            IRocketPartDef def = part.def();
+            if (def instanceof LanderPartDef || def instanceof RiderPartDef || def instanceof CapsulePartDef) {
+                toKeep.add(part);
+            }
+        }
+        blueprint.clear();
+        for (RocketPartInstance p : toKeep) {
+            blueprint.addPart(p);
+        }
+    }
+
+    public void initializeSeats() {
+        passengerSeats.clear();
+
+        int riderCount = 0;
+        for (RocketPartInstance part : blueprint.getParts()) {
+            if (part.def() instanceof RiderPartDef rider) {
+                for (int i = 0; i < rider.riderCapacity(); i++) {
+                    EntityRocketSeat seat = new EntityRocketSeat(worldObj, this, riderCount++, 0.0, 1.5 + i * 0.8, 0.0);
+                    worldObj.spawnEntityInWorld(seat);
+                    passengerSeats.add(seat);
+                }
+            }
+        }
+    }
+
+    public List<EntityRocketSeat> getPassengerSeats() {
+        return passengerSeats;
+    }
+
+    public void beginLanding(double x, double z) {
+        this.motionY = TERMINAL_FALL_SPEED;
+        this.motionX = (worldObj.rand.nextDouble() - 0.5) * 0.05;
+        this.motionZ = (worldObj.rand.nextDouble() - 0.5) * 0.05;
     }
 
     @Override
@@ -98,19 +112,27 @@ public class EntityRocket extends Entity {
         if (worldObj.isRemote || !launched) return;
 
         motionY += 0.08;
-        moveEntity(0, motionY, 0);
+        moveEntity(motionX, motionY, motionZ);
 
-        if (posY > 600) {
+        if (posY < 0) {
             setDead();
         }
     }
 
     @Override
-    protected void entityInit() {}
+    public boolean interactFirst(EntityPlayer player) {
+        if (!worldObj.isRemote && !passengerSeats.isEmpty()) {
+            player.mountEntity(this);
+            return true;
+        }
+        return false;
+    }
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound tag) {
-        blueprint = RocketBlueprint.deserializeNBT(tag.getCompoundTag("blueprint"), RocketPartRegistry.instance());
+        blueprint = RocketBlueprint.deserializeNBT(
+            tag.getCompoundTag("blueprint"),
+            com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry.instance());
         destination = tag.getInteger("destination");
         capsuleIndex = tag.getInteger("capsuleIndex");
         launched = tag.getBoolean("launched");
@@ -123,4 +145,7 @@ public class EntityRocket extends Entity {
         tag.setInteger("capsuleIndex", capsuleIndex);
         tag.setBoolean("launched", launched);
     }
+
+    @Override
+    protected void entityInit() {}
 }
