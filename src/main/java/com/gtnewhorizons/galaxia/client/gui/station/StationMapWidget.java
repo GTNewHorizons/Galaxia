@@ -294,6 +294,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             panX,
             panY);
 
+        drawFeatureOverlay(facility);
+
         for (StationTileCoord slot : expansionSlots) {
             int sx = tileLocalX(slot);
             int sy = tileLocalY(slot);
@@ -306,8 +308,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             int ty = tileLocalY(coord);
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
-
-        drawFeatureOverlay(facility);
 
         drawPickerOverlay(context, tiles);
 
