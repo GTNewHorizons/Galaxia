@@ -284,9 +284,19 @@ final class ModuleMinerTest {
         AutomatedFacility facility = createFeatureFacility();
         ModuleInstance miner = createMiner(
             findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()));
+        int coveredTiles = facility.featureContributions(miner)
+            .stream()
+            .filter(
+                c -> c.key()
+                    .equals(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()))
+            .findFirst()
+            .orElseThrow()
+            .coveredTiles();
+        int chancePercent = coveredTiles * 20;
 
-        assertTrue(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(0)));
-        assertFalse(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(1)));
+        assertEquals(chancePercent, ModuleMiner.iceRollChancePercent(miner, facility));
+        assertTrue(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(chancePercent - 1)));
+        assertFalse(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(chancePercent)));
         assertNotNull(ModuleMiner.icePocketStack());
     }
 

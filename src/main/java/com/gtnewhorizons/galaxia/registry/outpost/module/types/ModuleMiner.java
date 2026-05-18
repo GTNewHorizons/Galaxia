@@ -6,14 +6,13 @@ import java.util.Random;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
-import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
@@ -40,6 +39,8 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     private int focusAlignmentProgress;
 
     private static final Random RANDOM = new java.util.Random();
+    private static final int ICE_ROLL_CHANCE_PER_TILE_PERCENT = 20;
+    private static final int ICE_ROLL_CHANCE_DENOMINATOR = 100;
     private static final String[] RARE_CRYSTAL_MATERIALS = { "Diamond", "Emerald", "Ruby", "Sapphire" };
     private static final String[] VOLATILE_MATERIALS = { "Sulfur", "Saltpeter", "Naquadah" };
 
@@ -101,13 +102,19 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
 
     public static boolean shouldRollIceInsteadOfOre(@Nonnull ModuleInstance module, @Nonnull AutomatedFacility outpost,
         @Nonnull Random random) {
-        return hasCoveredFeature(module, outpost, PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key())
-            && random.nextInt(2) == 0;
+        int chancePercent = iceRollChancePercent(module, outpost);
+        return chancePercent > 0 && random.nextInt(ICE_ROLL_CHANCE_DENOMINATOR) < chancePercent;
+    }
+
+    public static int iceRollChancePercent(@Nonnull ModuleInstance module, @Nonnull AutomatedFacility outpost) {
+        return Math.min(
+            coveredFeatureTiles(module, outpost, PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key())
+                * ICE_ROLL_CHANCE_PER_TILE_PERCENT,
+            ICE_ROLL_CHANCE_DENOMINATOR);
     }
 
     public static ItemStack icePocketStack() {
-        Item ice = GalaxiaItemList.MARS_ICE_CUBES.getItem();
-        return new ItemStack(ice != null ? ice : Items.snowball);
+        return new ItemStack(Blocks.ice);
     }
 
     private static boolean hasCoveredFeature(ModuleInstance module, AutomatedFacility outpost,
@@ -235,7 +242,12 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         int totalTiles) {
         if (PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()
             .equals(feature)) {
-            return new FeatureContribution(feature, (byte) coveredTiles, (byte) totalTiles, "50% ice roll chance");
+            return new FeatureContribution(
+                feature,
+                (byte) coveredTiles,
+                (byte) totalTiles,
+                Math.min(coveredTiles * ICE_ROLL_CHANCE_PER_TILE_PERCENT, ICE_ROLL_CHANCE_DENOMINATOR)
+                    + "% ice roll chance");
         }
         if (PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()
             .equals(feature)) {
