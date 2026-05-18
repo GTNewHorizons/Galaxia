@@ -85,7 +85,9 @@ public class Station extends CelestialAsset {
         if (graph == null) return result;
         graph.getAttachments(TileHammerCannon.class)
             .filter(TileHammerCannon::isStructureValid)
-            .flatMap(c -> c.getChestInventories().stream())
+            .flatMap(
+                c -> c.getChestInventories()
+                    .stream())
             .filter(Objects::nonNull)
             .forEach(inv -> {
                 for (int s = 0; s < inv.getSizeInventory(); s++) {
