@@ -34,12 +34,13 @@ public record RocketPartInstance(IRocketPartDef def, int x, int y, int z, boolea
 
     public boolean overlaps(RocketPartInstance other) {
         if (this == other) return true;
-        int right1 = x + def.getWidthCells();
-        int right2 = other.x + other.def.getWidthCells();
-        int top1 = y + def.getHeightCells();
-        int top2 = other.y + other.def.getHeightCells();
-        boolean xOverlap = x < right2 && right1 > other.x;
-        boolean yOverlap = y < top2 && top1 > other.y;
-        return xOverlap && yOverlap && z == other.z && isRadial == other.isRadial;
+        if (z != other.z || isRadial != other.isRadial) return false;
+
+        int left1 = x, right1 = x + def.width();
+        int left2 = other.x, right2 = other.x + other.def.width();
+        int top1 = y, bottom1 = y + def.height();
+        int top2 = other.y, bottom2 = other.y + other.def.height();
+
+        return !(right1 <= left2 || right2 <= left1 || bottom1 <= top2 || bottom2 <= top1);
     }
 }

@@ -46,18 +46,18 @@ public class RocketPartRegistry {
             new CapsulePartDef(
                 id++,
                 "Basic Capsule",
-                3.0,
-                2.5,
-                450.0,
+                3,
+                3,
+                450,
                 "capsule_1"));
 
         register(
             new FuelTankPartDef(
                 id++,
                 "Basic Fuel Tank",
-                3.0,
-                5.0,
-                1200.0,
+                3,
+                5,
+                1200,
                 8000.0,
                 "fuel_tank_1"));
 
@@ -65,9 +65,9 @@ public class RocketPartRegistry {
             new EnginePartDef(
                 id++,
                 "Basic Engine",
-                3.0,
-                3.5,
-                250.0,
+                3,
+                4,
+                250,
                 6000.0,
                 "engine_1"));
 
@@ -75,9 +75,9 @@ public class RocketPartRegistry {
             new DecouplerPartDef(
                 id++,
                 "Basic Decoupler",
-                3.0,
-                1.0,
-                100.0,
+                3,
+                1,
+                100,
                 1,
                 "decoupler_1"));
 
@@ -85,18 +85,18 @@ public class RocketPartRegistry {
             new LanderPartDef(
                 id++,
                 "Basic Lander",
-                3.0,
-                2.5,
-                250.0,
+                3,
+                3,
+                250,
                 null));
 
         register(
             new RiderPartDef(
                 id++,
                 "Basic Rider",
-                3.0,
-                5.0,
-                250.0,
+                3,
+                5,
+                250,
                 6,
                 null));
 
@@ -104,9 +104,9 @@ public class RocketPartRegistry {
             new FunctionalPartDef(
                 id++,
                 "Basic Storage",
-                3.0,
-                4.0,
-                900.0,
+                3,
+                4,
+                900,
                 "storage_unit_1"));
     }
     // spotless:on

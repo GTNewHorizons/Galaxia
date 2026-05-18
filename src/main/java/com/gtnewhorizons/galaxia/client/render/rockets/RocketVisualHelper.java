@@ -42,7 +42,7 @@ public final class RocketVisualHelper {
     private static void renderPart(RocketPartInstance part) {
         GL11.glPushMatrix();
 
-        GL11.glTranslated(part.x(), part.y(), part.z());
+        GL11.glTranslated(-part.x(), -part.y(), part.z());
 
         IRocketPartDef def = part.def();
 

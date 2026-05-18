@@ -12,11 +12,11 @@ public interface IRocketPartDef {
 
     String name();
 
-    double width();
+    int width();
 
-    double height();
+    int height();
 
-    double weight();
+    int weight();
 
     String assetFolder();
 
@@ -30,13 +30,5 @@ public interface IRocketPartDef {
 
     default ResourceLocation textureLocation() {
         return LocationGalaxia(MODULE_DOMAIN + assetFolder() + "/texture.png");
-    }
-
-    default int getWidthCells() {
-        return (int) Math.ceil(width() / 3.0);
-    }
-
-    default int getHeightCells() {
-        return (int) Math.ceil(height() / 3.0);
     }
 }

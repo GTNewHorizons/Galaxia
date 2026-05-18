@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,11 @@ public final class RocketAnalyzer {
     private static Map<RocketPartInstance, Integer> buildStageMap(List<RocketPartInstance> parts) {
         Map<RocketPartInstance, Integer> stage = new HashMap<>();
         int currentStage = 0;
-        for (RocketPartInstance p : parts) {
+
+        List<RocketPartInstance> sorted = new ArrayList<>(parts);
+        sorted.sort(Comparator.comparingInt(RocketPartInstance::y));
+
+        for (RocketPartInstance p : sorted) {
             if (p.def() instanceof DecouplerPartDef def) {
                 currentStage = Math.max(currentStage, def.decouplerStage());
             }

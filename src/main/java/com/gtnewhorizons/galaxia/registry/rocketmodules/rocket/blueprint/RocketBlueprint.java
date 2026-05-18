@@ -15,31 +15,16 @@ public class RocketBlueprint {
 
     private final List<RocketPartInstance> parts = new ArrayList<>();
     private String name = "";
-    private int width = 9;
-    private int height = 15;
 
     public RocketBlueprint() {}
 
-    public RocketBlueprint(int width, int height) {
-        this.width = width;
-        this.height = height;
-    }
-
     public RocketBlueprint copy() {
-        RocketBlueprint copy = new RocketBlueprint(width, height);
+        RocketBlueprint copy = new RocketBlueprint();
         copy.name = this.name;
         for (RocketPartInstance part : parts) {
             copy.parts.add(part.copy());
         }
         return copy;
-    }
-
-    public void replaceWith(RocketBlueprint other) {
-        this.parts.clear();
-        this.parts.addAll(other.parts);
-        this.name = other.name;
-        this.width = other.width;
-        this.height = other.height;
     }
 
     public void clear() {
@@ -58,33 +43,17 @@ public class RocketBlueprint {
     }
 
     public boolean canPlacePart(RocketPartInstance candidate) {
-        if (candidate.x() < 0 || candidate.y() < 0
-            || candidate.x() + candidate.def()
-                .getWidthCells() > width
-            || candidate.y() + candidate.def()
-                .getHeightCells() > height) {
-            return false;
-        }
         for (RocketPartInstance existing : parts) {
-            if (existing.overlaps(candidate)) return false;
-        }
-        return true;
-    }
-
-    public RocketPartInstance partAt(int x, int y, int z) {
-        for (RocketPartInstance part : parts) {
-            if (part.x() == x && part.y() == y && part.z() == z) {
-                return part;
+            if (existing.overlaps(candidate)) {
+                return false;
             }
         }
-        return null;
+        return true;
     }
 
     public NBTTagCompound serializeNBT() {
         NBTTagCompound tag = new NBTTagCompound();
         tag.setString("name", name);
-        tag.setInteger("width", width);
-        tag.setInteger("height", height);
 
         NBTTagList partList = new NBTTagList();
         for (RocketPartInstance part : parts) {
@@ -97,7 +66,7 @@ public class RocketBlueprint {
     public static RocketBlueprint deserializeNBT(NBTTagCompound tag, RocketPartRegistry registry) {
         if (tag == null) return new RocketBlueprint();
 
-        RocketBlueprint bp = new RocketBlueprint(tag.getInteger("width"), tag.getInteger("height"));
+        RocketBlueprint bp = new RocketBlueprint();
         bp.name = tag.getString("name");
 
         NBTTagList list = tag.getTagList("parts", Constants.NBT.TAG_COMPOUND);
@@ -121,11 +90,25 @@ public class RocketBlueprint {
     }
 
     public int getWidth() {
-        return width;
+        int max = 0;
+        for (RocketPartInstance part : parts) {
+            max = Math.max(
+                max,
+                part.x() + part.def()
+                    .width());
+        }
+        return max;
     }
 
     public int getHeight() {
-        return height;
+        int max = 0;
+        for (RocketPartInstance part : parts) {
+            max = Math.max(
+                max,
+                part.y() + part.def()
+                    .height());
+        }
+        return max;
     }
 
     public RocketAssembly analyze() {

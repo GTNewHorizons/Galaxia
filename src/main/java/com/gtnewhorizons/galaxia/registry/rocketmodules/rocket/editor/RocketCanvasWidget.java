@@ -148,30 +148,41 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     }
 
     private void drawGrid() {
-        int gridW = effectiveGridW();
-        int gridH = effectiveGridH();
-
         Tessellator tes = Tessellator.instance;
 
+        double invScale = 1.0 / scale;
+
+        double worldLeft = -panX * invScale;
+        double worldTop = -panY * invScale;
+
+        double worldRight = worldLeft + getArea().width * invScale;
+        double worldBottom = worldTop + getArea().height * invScale;
+
+        int startX = (int) Math.floor(worldLeft / CELL) - 1;
+        int endX = (int) Math.ceil(worldRight / CELL) + 1;
+
+        int startY = (int) Math.floor(worldTop / CELL) - 1;
+        int endY = (int) Math.ceil(worldBottom / CELL) + 1;
+
         GlStateManager.disableTexture2D();
+
         GL11.glColor4f(0.30f, 0.33f, 0.36f, 1.0f);
+        GL11.glLineWidth(1.0f);
 
-        tes.startDrawingQuads();
+        tes.startDrawing(GL11.GL_LINES);
 
-        for (int x = 0; x <= gridW; x++) {
+        for (int x = startX; x <= endX; x++) {
             int px = x * CELL;
-            tes.addVertex(px, 0, 0);
-            tes.addVertex(px + 1, 0, 0);
-            tes.addVertex(px + 1, gridH * CELL, 0);
-            tes.addVertex(px, gridH * CELL, 0);
+
+            tes.addVertex(px, startY * CELL, 0);
+            tes.addVertex(px, endY * CELL, 0);
         }
 
-        for (int y = 0; y <= gridH; y++) {
+        for (int y = startY; y <= endY; y++) {
             int py = y * CELL;
-            tes.addVertex(0, py, 0);
-            tes.addVertex(gridW * CELL, py, 0);
-            tes.addVertex(gridW * CELL, py + 1, 0);
-            tes.addVertex(0, py + 1, 0);
+
+            tes.addVertex(startX * CELL, py, 0);
+            tes.addVertex(endX * CELL, py, 0);
         }
 
         tes.draw();
@@ -187,12 +198,12 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
             int px = part.x() * CELL;
             int py = part.y() * CELL;
-            int pw = def.getWidthCells() * CELL;
-            int ph = def.getHeightCells() * CELL;
+            int pw = def.width() * CELL;
+            int ph = def.height() * CELL;
 
             if (def.assetFolder() != null) {
                 GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-                mc.renderEngine.bindTexture(def.textureLocation());
+                mc.renderEngine.bindTexture(def.spriteLocation());
 
                 tes.startDrawingQuads();
                 tes.addVertexWithUV(px, py + ph, 0, 0, 1);
@@ -224,8 +235,6 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         int cellX = mouseToCellX();
         int cellY = mouseToCellY();
 
-        if (!inGrid(cellX, cellY)) return;
-
         IRocketPartDef sel = selectedPartSupplier.get();
 
         int spanW;
@@ -239,8 +248,8 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
             g = 0.8f;
             b = 1.0f;
         } else {
-            spanW = sel.getWidthCells();
-            spanH = sel.getHeightCells();
+            spanW = sel.width();
+            spanH = sel.height();
 
             boolean canPlace = blueprint.canPlacePart(new RocketPartInstance(sel, cellX, cellY, 0, false));
             r = canPlace ? 0.2f : 1.0f;
@@ -296,7 +305,6 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         int cellX = mouseToCellX();
         int cellY = mouseToCellY();
-        if (!inGrid(cellX, cellY)) return;
 
         RocketPartInstance part = new RocketPartInstance(def, cellX, cellY, 0, false);
         if (blueprint.addPart(part)) {
@@ -307,7 +315,6 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private void removePart() {
         int cellX = mouseToCellX();
         int cellY = mouseToCellY();
-        if (!inGrid(cellX, cellY)) return;
 
         blueprint.removePartAt(cellX, cellY, 0);
         silo.sync();
@@ -322,23 +329,13 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     }
 
     private int mouseToCellX() {
-        return (int) Math.floor((localMouseX() - panX) / (CELL * scale));
+        double worldX = (localMouseX() - panX) / (CELL * scale);
+        return (int) Math.floor(worldX + 1e-9);
     }
 
     private int mouseToCellY() {
-        return (int) Math.floor((localMouseY() - panY) / (CELL * scale));
-    }
-
-    private int effectiveGridW() {
-        return Math.max(blueprint.getWidth(), DEFAULT_GRID_W);
-    }
-
-    private int effectiveGridH() {
-        return Math.max(blueprint.getHeight(), DEFAULT_GRID_H);
-    }
-
-    private boolean inGrid(int x, int y) {
-        return x >= 0 && y >= 0 && x < effectiveGridW() && y < effectiveGridH();
+        double worldY = (localMouseY() - panY) / (CELL * scale);
+        return (int) Math.floor(worldY + 1e-9);
     }
 
     private static String shortLabel(IRocketPartDef def) {

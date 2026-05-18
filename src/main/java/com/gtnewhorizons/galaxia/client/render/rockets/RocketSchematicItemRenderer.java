@@ -86,13 +86,13 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         int maxX = parts.stream()
             .mapToInt(
                 p -> p.x() + p.def()
-                    .getWidthCells())
+                    .width())
             .max()
             .orElse(1);
         int maxY = parts.stream()
             .mapToInt(
                 p -> p.y() + p.def()
-                    .getHeightCells())
+                    .height())
             .max()
             .orElse(1);
 
@@ -110,11 +110,11 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
             float y = SIZE - PADDING
                 - ((part.y() - minY) + part.def()
-                    .getHeightCells()) * pixelsPerCell;
+                    .height()) * pixelsPerCell;
             float w = part.def()
-                .getWidthCells() * pixelsPerCell;
+                .width() * pixelsPerCell;
             float h = part.def()
-                .getHeightCells() * pixelsPerCell;
+                .height() * pixelsPerCell;
 
             drawQuad(textureManager, tex, x, y, w, h, -0.02f);
         }

@@ -43,6 +43,7 @@ public class RocketEditorUI {
             .size(720, 440);
 
         RocketCanvasWidget canvas = new RocketCanvasWidget(workingBlueprint, silo);
+        canvas.resetView();
 
         canvas.setSelectedPartSupplier(() -> {
             int id = selectedPartId.getValue();
@@ -141,9 +142,7 @@ public class RocketEditorUI {
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .overlay(IKey.str(def.name()))
             .tooltip(
-                t -> {
-                    t.addLine(EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", def.height(), def.weight()));
-                })
+                t -> { t.addLine(EnumChatFormatting.GRAY + String.format("%sm | %skg", def.height(), def.weight())); })
             .onMousePressed(mouseButton -> {
 
                 if (mouseButton == 0) {
