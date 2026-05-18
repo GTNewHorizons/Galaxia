@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -112,6 +113,11 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     }
 
     @Override
+    public ResourceFilter<ItemStackWrapper> getItemFilter() {
+        return filter;
+    }
+
+    @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         NBTTagList filterList = new NBTTagList();
@@ -127,11 +133,11 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
         filter.clear();
         if (nbt.hasKey("filter")) {
             NBTTagList filterList = nbt.getTagList("filter", Constants.NBT.TAG_STRING);
-            java.util.ArrayList<String> keys = new java.util.ArrayList<>();
+            List<String> keys = new ArrayList<>();
             for (int i = 0; i < filterList.tagCount(); i++) {
                 keys.add(filterList.getStringTagAt(i));
             }
-            filter.setAll(keys);
+            filter.load(keys);
         }
     }
 

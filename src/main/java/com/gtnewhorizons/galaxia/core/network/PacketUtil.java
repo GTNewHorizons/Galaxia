@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -152,4 +154,32 @@ public final class PacketUtil {
         }
     }
 
+    /**
+     * @param keys Must all be of the same type
+     */
+    static void writeInventoryKeys(ByteBuf buf, List<InventoryKey> keys) {
+        if (keys.isEmpty()) return;
+        buf.writeBoolean(
+            keys.getFirst()
+                .isItem());
+        buf.writeInt(keys.size());
+        for (InventoryKey key : keys) {
+            writeString(buf, key.toKey());
+        }
+    }
+
+    static List<InventoryKey> readInventoryKeys(ByteBuf buf) {
+        final boolean item = buf.readBoolean();
+        final int size = buf.readInt();
+        final List<InventoryKey> ret = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            if (item) {
+                ret.add(ItemStackWrapper.fromKey(readString(buf)));
+            } else {
+                ret.add(FluidKey.fromName(readString(buf)));
+            }
+        }
+
+        return ret;
+    }
 }

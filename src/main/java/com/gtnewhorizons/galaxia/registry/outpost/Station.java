@@ -1,15 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
-import net.minecraftforge.fluids.IFluidTank;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
@@ -17,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
@@ -47,53 +43,11 @@ public class Station extends CelestialAsset {
     }
 
     @Override
-    public List<IInventory> getInventories() {
+    public List<IDistributedInventory> getChildren() {
         TileStationController teController = getTileController();
         if (teController == null) return List.of();
 
-        return teController.getConnectedInventories()
-            .stream()
-            .flatMap(
-                i -> i.getInventories()
-                    .stream())
-            .toList();
-    }
-
-    @Override
-    public List<IFluidTank> getFluidTanks() {
-        TileStationController teController = getTileController();
-        if (teController == null) return List.of();
-
-        return teController.getConnectedInventories()
-            .stream()
-            .flatMap(
-                i -> i.getFluidTanks()
-                    .stream())
-            .toList();
-    }
-
-    @Override
-    public Map<ItemStackWrapper, Long> aggregatedItems() {
-        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>(super.aggregatedItems());
-        TileStationController ctrl = getTileController();
-        if (ctrl == null) return result;
-        StationGraph graph = ctrl.getGraph();
-        if (graph == null) return result;
-        for (TileHammerCannon cannon : graph.getAttachments(TileHammerCannon.class).toList()) {
-            if (!cannon.isStructureValid()) continue;
-            for (IInventory inv : cannon.getChestInventories()) {
-                for (int s = 0; s < inv.getSizeInventory(); s++) {
-                    ItemStack stack = inv.getStackInSlot(s);
-                    if (stack != null) {
-                        ItemStackWrapper key = ItemStackWrapper.of(stack);
-                        if (key != null) {
-                            result.merge(key, (long) stack.stackSize, Long::sum);
-                        }
-                    }
-                }
-            }
-        }
-        return result;
+        return teController.getConnectedInventories();
     }
 
     @Override

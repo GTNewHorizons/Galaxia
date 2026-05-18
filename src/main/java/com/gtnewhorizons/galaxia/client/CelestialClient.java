@@ -9,7 +9,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
@@ -360,23 +359,23 @@ public final class CelestialClient {
 
     // ── Filter actions ──
 
-    public static void addFilter(CelestialAsset.ID assetId, int slot, ItemStack filter) {
-        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.addFilter(assetId, slot, filter);
+    public static void addFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.addFilter(assetId, isItem, filterKey);
         StarmapActionSyncHandler.sendFilterUpdate(packet);
     }
 
-    public static void removeFilter(CelestialAsset.ID assetId, int slot, ItemStack filter) {
-        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.removeFilter(assetId, slot, filter);
+    public static void removeFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.removeFilter(assetId, isItem, filterKey);
         StarmapActionSyncHandler.sendFilterUpdate(packet);
     }
 
-    public static void clearFilters(CelestialAsset.ID assetId, int slot) {
-        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.clearSlot(assetId, slot);
+    public static void clearFilters(CelestialAsset.ID assetId, boolean isItem) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.clearFilters(assetId, isItem);
         StarmapActionSyncHandler.sendFilterUpdate(packet);
     }
 
-    public static void setFilters(CelestialAsset.ID assetId, int slot, List<ItemStack> filters) {
-        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.setSlot(assetId, slot, filters);
+    public static void setFilters(CelestialAsset.ID assetId, boolean isItem, List<String> filterKeys) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.setFilters(assetId, isItem, filterKeys);
         StarmapActionSyncHandler.sendFilterUpdate(packet);
     }
 

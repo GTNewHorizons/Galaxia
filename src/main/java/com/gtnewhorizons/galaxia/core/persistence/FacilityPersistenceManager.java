@@ -367,7 +367,9 @@ public final class FacilityPersistenceManager {
                     .toKey(),
                 cj);
         }
-        json.filters = new LinkedHashMap<>(asset.filtersSnapshot());
+        if (asset instanceof AutomatedFacility af) {
+            json.filters = new LinkedHashMap<>(af.filtersSnapshot());
+        }
 
         return json;
     }
@@ -435,9 +437,9 @@ public final class FacilityPersistenceManager {
             asset.logisticsConfig.loadFromSnapshot(cfgSnapshot);
         }
 
-        if (json.filters != null) {
-            for (Map.Entry<Integer, List<String>> e : json.filters.entrySet()) {
-                asset.setFilters(e.getKey(), e.getValue(), true);
+        if (json.filters != null && asset instanceof AutomatedFacility af) {
+            for (Map.Entry<Boolean, List<String>> e : json.filters.entrySet()) {
+                af.setFilters(e.getValue(), e.getKey());
             }
         }
 
@@ -940,7 +942,7 @@ public final class FacilityPersistenceManager {
         Map<String, Map.Entry<Long, Long>> itemsBounds;
         Map<String, Map.Entry<Long, Long>> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
-        Map<Integer, List<String>> filters;
+        Map<Boolean, List<String>> filters;
     }
 
     static final class FacilityStateJson {

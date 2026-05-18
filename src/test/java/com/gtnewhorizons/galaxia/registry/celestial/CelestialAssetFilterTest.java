@@ -12,6 +12,7 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.TestFMLRegistry;
@@ -19,7 +20,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 
 final class CelestialAssetFilterTest {
 
@@ -29,7 +29,6 @@ final class CelestialAssetFilterTest {
     static void initRegistries() {
         TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
-        FacilityModuleRegistry.init();
         facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
@@ -37,122 +36,146 @@ final class CelestialAssetFilterTest {
             Buildable.Status.OPERATIONAL);
     }
 
+    @BeforeEach
+    void clearFilters() {
+        facility.getItemFilter()
+            .clear();
+        facility.getFluidFilter()
+            .clear();
+    }
+
     @Test
-    void addFilterAndGetFiltersFor() {
-        ItemStack stack = new ItemStack(Items.diamond, 1, 3);
-        facility.addFilter(0, stack);
-        List<ItemStack> filters = facility.getFiltersFor(0);
+    void addFilterAndGetFilters() {
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond, 1, 3));
+        facility.addFilter(
+            key.toItemStack()
+                .getUnlocalizedName(),
+            true);
+        List<String> filters = facility.getItemFilter()
+            .serialize();
         assertEquals(1, filters.size());
-        assertEquals(
-            3,
-            filters.get(0)
-                .getItemDamage());
-        facility.clearFilters(0);
     }
 
     @Test
     void removeFilter() {
-        ItemStack stack = new ItemStack(Items.diamond, 1, 5);
-        facility.addFilter(0, stack);
-        facility.removeFilter(0, stack);
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond, 1, 5));
+        String name = key.toItemStack()
+            .getUnlocalizedName();
+        facility.addFilter(name, true);
+        facility.removeFilter(name, true);
         assertTrue(
-            facility.getFiltersFor(0)
+            facility.getItemFilter()
                 .isEmpty());
     }
 
     @Test
-    void clearFilters() {
-        facility.addFilter(0, new ItemStack(Items.diamond));
+    void testClearFilters() {
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        facility.addFilter(
+            key.toItemStack()
+                .getUnlocalizedName(),
+            true);
         assertFalse(
-            facility.getFiltersFor(0)
+            facility.getItemFilter()
                 .isEmpty());
-        facility.clearFilters(0);
+        facility.getItemFilter()
+            .clear();
         assertTrue(
-            facility.getFiltersFor(0)
+            facility.getItemFilter()
                 .isEmpty());
     }
 
     @Test
     void setFiltersReplacesExisting() {
-        ItemStack a = new ItemStack(Items.diamond, 1, 1);
-        ItemStack b = new ItemStack(Items.diamond, 1, 2);
-        facility.addFilter(0, a);
-        facility.setFilters(0, List.of(b));
-        List<ItemStack> filters = facility.getFiltersFor(0);
+        ItemStackWrapper a = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        ItemStackWrapper b = ItemStackWrapper.of(new ItemStack(Items.stick));
+        String aName = a.toItemStack()
+            .getUnlocalizedName();
+        String bName = b.toItemStack()
+            .getUnlocalizedName();
+        facility.addFilter(aName, true);
+        facility.setFilters(List.of(bName), true);
+        List<String> filters = facility.getItemFilter()
+            .serialize();
         assertEquals(1, filters.size());
-        assertEquals(
-            2,
-            filters.get(0)
-                .getItemDamage());
-        facility.clearFilters(0);
+        assertEquals(bName, filters.get(0));
     }
 
     @Test
     void getItemFilterRespectsAddedItems() {
         ItemStack stack = new ItemStack(Items.diamond, 1, 7);
         ItemStackWrapper key = ItemStackWrapper.of(stack);
-        facility.addFilter(0, stack);
+        String name = key.toItemStack()
+            .getUnlocalizedName();
+        facility.addFilter(name, true);
         assertTrue(
-            facility.getItemFilter(0)
+            facility.getItemFilter()
                 .test(key));
         assertFalse(
-            facility.getItemFilter(0)
-                .test(ItemStackWrapper.of(new ItemStack(Items.diamond, 1, 99))));
-        facility.clearFilters(0);
+            facility.getItemFilter()
+                .test(ItemStackWrapper.of(new ItemStack(Items.stick))));
     }
 
     @Test
     void getItemFilterAcceptsAllWhenNoFilters() {
         assertTrue(
-            facility.getItemFilter(0)
+            facility.getItemFilter()
                 .test(ItemStackWrapper.of(new ItemStack(Items.diamond))));
     }
 
     @Test
     void filtersSnapshotContainsSerializedKeys() {
-        ItemStack stack = new ItemStack(Items.diamond, 1, 10);
-        facility.addFilter(0, stack);
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond, 1, 10));
+        facility.addFilter(
+            key.toItemStack()
+                .getUnlocalizedName(),
+            true);
         var snapshot = facility.filtersSnapshot();
         assertFalse(snapshot.isEmpty());
-        assertTrue(
-            snapshot.get(0)
-                .stream()
-                .anyMatch(k -> !k.startsWith("~:")));
-        facility.clearFilters(0);
+        assertTrue(snapshot.containsKey(true));
     }
 
     @Test
     void fluidFilterAddAndGet() {
         FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
-        facility.addFluidFilter(0, water);
+        facility.addFilter(
+            water.fluid()
+                .getName(),
+            false);
         assertEquals(
             1,
-            facility.getFluidFiltersFor(0)
+            facility.getFluidFilter()
+                .serialize()
                 .size());
         assertTrue(
-            facility.getFluidFilter(0)
+            facility.getFluidFilter()
                 .test(water));
-        facility.clearFluidFilters(0);
+        facility.getFluidFilter()
+            .clear();
     }
 
     @Test
     void fluidFilterRespectsAddedFluids() {
         FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
         FluidKey lava = FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1));
-        facility.addFluidFilter(0, water);
+        facility.addFilter(
+            water.fluid()
+                .getName(),
+            false);
         assertTrue(
-            facility.getFluidFilter(0)
+            facility.getFluidFilter()
                 .test(water));
         assertFalse(
-            facility.getFluidFilter(0)
+            facility.getFluidFilter()
                 .test(lava));
-        facility.clearFluidFilters(0);
+        facility.getFluidFilter()
+            .clear();
     }
 
     @Test
     void fluidFilterAcceptsAllWhenNoFilters() {
         assertTrue(
-            facility.getFluidFilter(0)
+            facility.getFluidFilter()
                 .test(FluidKey.of(new FluidStack(FluidRegistry.WATER, 1))));
     }
 }

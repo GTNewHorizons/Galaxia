@@ -5,11 +5,12 @@ import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -21,50 +22,51 @@ public final class AssetFilterUpdatePacket implements IMessage {
     public enum Action {
         ADD_FILTER,
         REMOVE_FILTER,
-        CLEAR_SLOT,
-        SET_SLOT
+        SET_FILTER
     }
 
     private CelestialAsset.ID assetId;
     private Action action;
-    private int slot;
-    private ItemStack filterItem;
-    private List<ItemStack> filterItems;
+    private boolean isItem;
+    private String filterKey;
+    private List<String> filterKeys;
 
     public AssetFilterUpdatePacket() {}
 
-    public static AssetFilterUpdatePacket addFilter(CelestialAsset.ID assetId, int slot, ItemStack filter) {
+    public static AssetFilterUpdatePacket addFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
         AssetFilterUpdatePacket pkt = new AssetFilterUpdatePacket();
         pkt.assetId = assetId;
         pkt.action = Action.ADD_FILTER;
-        pkt.slot = slot;
-        pkt.filterItem = filter;
+        pkt.isItem = isItem;
+        pkt.filterKey = filterKey;
         return pkt;
     }
 
-    public static AssetFilterUpdatePacket removeFilter(CelestialAsset.ID assetId, int slot, ItemStack filter) {
+    public static AssetFilterUpdatePacket removeFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
         AssetFilterUpdatePacket pkt = new AssetFilterUpdatePacket();
         pkt.assetId = assetId;
         pkt.action = Action.REMOVE_FILTER;
-        pkt.slot = slot;
-        pkt.filterItem = filter;
+        pkt.isItem = isItem;
+        pkt.filterKey = filterKey;
         return pkt;
     }
 
-    public static AssetFilterUpdatePacket clearSlot(CelestialAsset.ID assetId, int slot) {
+    public static AssetFilterUpdatePacket clearFilters(CelestialAsset.ID assetId, boolean isItem) {
         AssetFilterUpdatePacket pkt = new AssetFilterUpdatePacket();
         pkt.assetId = assetId;
-        pkt.action = Action.CLEAR_SLOT;
-        pkt.slot = slot;
+        pkt.action = Action.SET_FILTER;
+        pkt.isItem = isItem;
+        pkt.filterKeys = List.of();
         return pkt;
     }
 
-    public static AssetFilterUpdatePacket setSlot(CelestialAsset.ID assetId, int slot, List<ItemStack> filters) {
+    public static AssetFilterUpdatePacket setFilters(CelestialAsset.ID assetId, boolean isItem,
+        List<String> filterKeys) {
         AssetFilterUpdatePacket pkt = new AssetFilterUpdatePacket();
         pkt.assetId = assetId;
-        pkt.action = Action.SET_SLOT;
-        pkt.slot = slot;
-        pkt.filterItems = filters == null ? List.of() : filters;
+        pkt.action = Action.SET_FILTER;
+        pkt.isItem = isItem;
+        pkt.filterKeys = filterKeys == null ? List.of() : filterKeys;
         return pkt;
     }
 
@@ -72,16 +74,15 @@ public final class AssetFilterUpdatePacket implements IMessage {
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
         PacketUtil.writeEnum(buf, action);
-        buf.writeInt(slot);
+        buf.writeBoolean(isItem);
         switch (action) {
-            case ADD_FILTER, REMOVE_FILTER -> PacketUtil.writeItemStack(buf, filterItem);
-            case SET_SLOT -> {
-                buf.writeShort(filterItems.size());
-                for (ItemStack stack : filterItems) {
-                    PacketUtil.writeItemStack(buf, stack);
+            case ADD_FILTER, REMOVE_FILTER -> PacketUtil.writeString(buf, filterKey);
+            case SET_FILTER -> {
+                buf.writeShort(filterKeys.size());
+                for (String key : filterKeys) {
+                    PacketUtil.writeString(buf, key);
                 }
             }
-            case CLEAR_SLOT -> {}
         }
     }
 
@@ -89,17 +90,16 @@ public final class AssetFilterUpdatePacket implements IMessage {
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
         action = PacketUtil.readEnum(buf, Action.class);
-        slot = buf.readInt();
+        isItem = buf.readBoolean();
         switch (action) {
-            case ADD_FILTER, REMOVE_FILTER -> filterItem = PacketUtil.readItemStack(buf);
-            case SET_SLOT -> {
+            case ADD_FILTER, REMOVE_FILTER -> filterKey = PacketUtil.readString(buf);
+            case SET_FILTER -> {
                 int count = buf.readShort();
-                filterItems = new ArrayList<>(count);
+                filterKeys = new ArrayList<>(count);
                 for (int i = 0; i < count; i++) {
-                    filterItems.add(PacketUtil.readItemStack(buf));
+                    filterKeys.add(PacketUtil.readString(buf));
                 }
             }
-            case CLEAR_SLOT -> {}
         }
     }
 
@@ -125,33 +125,34 @@ public final class AssetFilterUpdatePacket implements IMessage {
             return null;
         }
 
+        if (!(asset instanceof AutomatedFacility facility)) {
+            return null;
+        }
+
         return switch (action) {
             case ADD_FILTER -> {
-                if (filterItem == null) yield null;
-                asset.addFilter(slot, filterItem);
-                yield AssetSyncPacket.filterUpdated(assetId, slot, asset.getFiltersFor(slot));
+                if (filterKey == null) yield null;
+                facility.addFilter(filterKey, isItem);
+                yield AssetSyncPacket.filterUpdated(assetId, isItem, List.of(filterKey));
             }
             case REMOVE_FILTER -> {
-                if (filterItem == null) yield null;
-                asset.removeFilter(slot, filterItem);
-                List<ItemStack> remaining = asset.getFiltersFor(slot);
-                if (remaining.isEmpty()) {
-                    yield AssetSyncPacket.filterRemoved(assetId, slot);
+                if (filterKey == null) yield null;
+                facility.removeFilter(filterKey, isItem);
+                ResourceFilter<?> filter = isItem ? facility.getItemFilter() : facility.getFluidFilter();
+                if (filter.isEmpty()) {
+                    yield AssetSyncPacket.filterRemoved(assetId, isItem);
                 } else {
-                    yield AssetSyncPacket.filterUpdated(assetId, slot, remaining);
+                    yield AssetSyncPacket.filterUpdated(assetId, isItem, filter.serialize());
                 }
             }
-            case CLEAR_SLOT -> {
-                asset.clearFilters(slot);
-                yield AssetSyncPacket.filterRemoved(assetId, slot);
-            }
-            case SET_SLOT -> {
-                asset.setFilters(slot, filterItems);
-                List<ItemStack> updated = asset.getFiltersFor(slot);
-                if (updated.isEmpty()) {
-                    yield AssetSyncPacket.filterRemoved(assetId, slot);
+            case SET_FILTER -> {
+                if (filterKeys == null) yield null;
+                facility.setFilters(filterKeys, isItem);
+                ResourceFilter<?> filter = isItem ? facility.getItemFilter() : facility.getFluidFilter();
+                if (filter.isEmpty()) {
+                    yield AssetSyncPacket.filterRemoved(assetId, isItem);
                 } else {
-                    yield AssetSyncPacket.filterUpdated(assetId, slot, updated);
+                    yield AssetSyncPacket.filterUpdated(assetId, isItem, filter.serialize());
                 }
             }
         };

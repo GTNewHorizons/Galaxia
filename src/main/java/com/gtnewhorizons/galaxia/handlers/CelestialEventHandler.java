@@ -25,10 +25,10 @@ import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoadTracker;
@@ -37,7 +37,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -160,15 +159,20 @@ public class CelestialEventHandler {
                 CelestialAsset requester = CelestialAssetStore.findAsset(request.outpostAssetId());
                 if (requester == null) continue;
 
-                if (handleDispatch(supplier, requester, request.resourceId(), orbitalTime, profileHammerTrajectoryLoad)) {
+                if (handleDispatch(
+                    supplier,
+                    requester,
+                    request.resourceId(),
+                    orbitalTime,
+                    profileHammerTrajectoryLoad)) {
                     break;
                 }
             }
         }
     }
 
-    private boolean handleDispatch(CelestialAsset supplier, CelestialAsset requester,
-        ItemStackWrapper resource, double orbitalTime, boolean profileHammerTrajectoryLoad) {
+    private boolean handleDispatch(CelestialAsset supplier, CelestialAsset requester, ItemStackWrapper resource,
+        double orbitalTime, boolean profileHammerTrajectoryLoad) {
 
         boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
 
@@ -178,18 +182,18 @@ public class CelestialEventHandler {
             StationGraph graph = ctrl != null ? ctrl.getGraph() : null;
             if (graph == null) return false;
             moduleCannon = new HashMap<>();
-            for (TileHammerCannon c : graph.getAttachments(TileHammerCannon.class).toList()) {
+            for (TileHammerCannon c : graph.getAttachments(TileHammerCannon.class)
+                .toList()) {
                 if (c.isStructureValid()) {
                     moduleCannon.put(c.getModuleInstance(), c);
                 }
             }
         }
 
-        UUID routeProfileTeamId = profileHammerTrajectoryLoad
-            ? CelestialAssetStore.getTeamId(supplier.assetId)
-            : null;
+        UUID routeProfileTeamId = profileHammerTrajectoryLoad ? CelestialAssetStore.getTeamId(supplier.assetId) : null;
 
-        for (ModuleInstance module : supplier.forEachModule().toList()) {
+        for (ModuleInstance module : supplier.forEachModule()
+            .toList()) {
             if (!module.isOperational()) continue;
             if (!(module.component() instanceof ModuleHammer hammer)) continue;
             if (!hammer.canFire()) continue;
@@ -204,15 +208,20 @@ public class CelestialEventHandler {
             }
 
             HammerDispatchPlanner.Result result = HammerDispatchPlanner.evaluate(
-                supplier, module, requester, resource,
-                LogisticStore.activeDeliveries(), orbitalTime, routeProfileTeamId);
+                supplier,
+                module,
+                requester,
+                resource,
+                LogisticStore.activeDeliveries(),
+                orbitalTime,
+                routeProfileTeamId);
 
             HammerDispatchPlanner.Plan plan = result.plan();
             if (result.code() != HammerDispatchStatus.Code.READY || plan == null) continue;
 
             if (supplier instanceof AutomatedFacility af) {
-                if (af.updateResource(
-                    plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true) <= 0L) continue;
+                if (af.updateResource(plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true)
+                    <= 0L) continue;
                 if (!hammer.trySpendShotEnergy(module, af, plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");
                 }
@@ -222,7 +231,8 @@ public class CelestialEventHandler {
                     for (IInventory inv : c.getChestInventories()) {
                         for (int slot = 0; slot < inv.getSizeInventory() && remaining > 0; slot++) {
                             ItemStack stack = inv.getStackInSlot(slot);
-                            if (stack != null && resource.item() == stack.getItem() && resource.meta() == stack.getItemDamage()) {
+                            if (stack != null && resource.item() == stack.getItem()
+                                && resource.meta() == stack.getItemDamage()) {
                                 long deduct = Math.min(remaining, stack.stackSize);
                                 stack.stackSize -= (int) deduct;
                                 if (stack.stackSize <= 0) inv.setInventorySlotContents(slot, null);
@@ -241,10 +251,17 @@ public class CelestialEventHandler {
             hammer.markShotDispatched(module);
 
             LogisticsDelivery task = LogisticsDelivery.createWithTrajectory(
-                supplier.assetId, requester.assetId, plan.resource(), plan.sendAmount(),
-                plan.travelTimeTicks(), plan.deliveryScope(),
-                supplier.celestialObjectId, requester.celestialObjectId,
-                orbitalTime, plan.tofOrbitalSeconds(), plan.route());
+                supplier.assetId,
+                requester.assetId,
+                plan.resource(),
+                plan.sendAmount(),
+                plan.travelTimeTicks(),
+                plan.deliveryScope(),
+                supplier.celestialObjectId,
+                requester.celestialObjectId,
+                orbitalTime,
+                plan.tofOrbitalSeconds(),
+                plan.route());
             LogisticStore.addDelivery(task);
             return true;
         }

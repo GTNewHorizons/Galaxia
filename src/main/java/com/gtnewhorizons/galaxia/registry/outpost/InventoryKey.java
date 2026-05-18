@@ -11,5 +11,4 @@ public sealed interface InventoryKey permits ItemStackWrapper,FluidKey {
     default boolean isItem() {
         return this instanceof ItemStackWrapper;
     }
-
 }

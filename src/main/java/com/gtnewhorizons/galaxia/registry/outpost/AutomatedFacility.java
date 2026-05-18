@@ -66,6 +66,9 @@ public final class AutomatedFacility extends CelestialAsset {
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
 
+    private final ResourceFilter<ItemStackWrapper> itemFilter = ResourceFilter.forItems();
+    private final ResourceFilter<FluidKey> fluidFilter = ResourceFilter.forFluids();
+
     public static final long MAX_ENERGY = 8_000_000L;
     public static final long BASE_ITEM_CAPACITY = 1000L;
 
@@ -972,6 +975,16 @@ public final class AutomatedFacility extends CelestialAsset {
         return Long.MAX_VALUE;
     }
 
+    @Override
+    public ResourceFilter<ItemStackWrapper> getItemFilter() {
+        return itemFilter;
+    }
+
+    @Override
+    public ResourceFilter<FluidKey> getFluidFilter() {
+        return fluidFilter;
+    }
+
     public long updateResource(InventoryKey item, int delta, boolean sync) {
         final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
             : updateFluids((FluidKey) item, delta);
@@ -981,7 +994,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public long updateItems(ItemStackWrapper item, int delta) {
-        if (item == null) return 0L;
+        if (item == null || delta == 0) return 0L;
+        if (!getItemFilter().test(item)) return 0L;
 
         long current = amounts.getOrDefault(item, 0L);
         long actualDelta = Math.clamp(delta, -current, remainingItemInventoryCapacity());
@@ -999,7 +1013,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     @Override
     public long updateFluids(FluidKey fluid, int delta) {
-        if (fluid == null) return 0L;
+        if (fluid == null || delta == 0) return 0L;
+        if (!getFluidFilter().test(fluid)) return 0L;
 
         long current = fluidAmounts.getOrDefault(fluid, 0L);
         long actualDelta = Math.clamp(delta, -current, remainingFluidInventoryCapacity());
@@ -1102,8 +1117,39 @@ public final class AutomatedFacility extends CelestialAsset {
         totalItemAmount = 0L;
     }
 
-    /// ----------------------------------------------------------------------------------
-    /// Internal helpers used by facility logic
-    /// ----------------------------------------------------------------------------------
+    public void addFilter(String key, boolean item) {
+        if (key == null) return;
+        if (item) itemFilter.add(key);
+        else fluidFilter.add(key);
+        markDirty();
+    }
 
+    public void removeFilter(String key, boolean item) {
+        if (key == null) return;
+        if (item) itemFilter.remove(key);
+        else fluidFilter.remove(key);
+        markDirty();
+    }
+
+    public Map<Boolean, List<String>> filtersSnapshot() {
+        Map<Boolean, List<String>> result = new LinkedHashMap<>();
+        List<String> itemSerialized = itemFilter.serialize();
+        if (!itemSerialized.isEmpty()) result.put(true, itemSerialized);
+        List<String> fluidSerialized = fluidFilter.serialize();
+        if (!fluidSerialized.isEmpty()) result.put(false, fluidSerialized);
+        return result;
+    }
+
+    public void setFilters(List<String> filters, boolean item) {
+        if (filters == null) return;
+        if (item) itemFilter.load(filters);
+        else fluidFilter.load(filters);
+        markDirty();
+    }
+
+    public void clearFilters(boolean item) {
+        if (item) itemFilter.clear();
+        else fluidFilter.clear();
+        markDirty();
+    }
 }

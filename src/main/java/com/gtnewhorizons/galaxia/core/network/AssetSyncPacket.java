@@ -138,8 +138,8 @@ public final class AssetSyncPacket implements IMessage {
     private boolean settingsGroupJoinable;
     private ModuleSettings settingsGroupSettings;
 
-    private int filterSlot;
-    private List<ItemStack> filterItems;
+    private boolean filterItem;
+    private List<String> filterItems;
 
     public AssetSyncPacket() {}
 
@@ -164,10 +164,6 @@ public final class AssetSyncPacket implements IMessage {
         pkt.stationControllerPos = state.getController();
 
         pkt.fullSyncDeltas = new ArrayList<>();
-        for (Map.Entry<Integer, List<String>> e : state.filtersSnapshot()
-            .entrySet()) {
-            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), identityStacks(e.getValue())));
-        }
         for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
             .entrySet()) {
             LogisticsResourceConfig cfg = e.getValue();
@@ -208,9 +204,9 @@ public final class AssetSyncPacket implements IMessage {
             .sorted(java.util.Comparator.comparingInt(SettingsGroup::id))
             .forEach(group -> pkt.fullSyncDeltas.add(settingsGroupUpdated(state.assetId, group)));
 
-        for (Map.Entry<Integer, List<String>> e : state.filtersSnapshot()
+        for (Map.Entry<Boolean, List<String>> e : state.filtersSnapshot()
             .entrySet()) {
-            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), identityStacks(e.getValue())));
+            pkt.fullSyncDeltas.add(filterUpdated(state.assetId, e.getKey(), e.getValue()));
         }
 
         List<ModuleInstance> modules = state.modules();
@@ -413,31 +409,21 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
-    public static AssetSyncPacket filterUpdated(CelestialAsset.ID assetId, int slot, List<ItemStack> filters) {
+    public static AssetSyncPacket filterUpdated(CelestialAsset.ID assetId, boolean item, List<String> filters) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = FILTER_UPDATED;
-        pkt.filterSlot = slot;
+        pkt.filterItem = item;
         pkt.filterItems = filters == null ? List.of() : filters;
         return pkt;
     }
 
-    public static AssetSyncPacket filterRemoved(CelestialAsset.ID assetId, int slot) {
+    public static AssetSyncPacket filterRemoved(CelestialAsset.ID assetId, boolean item) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
         pkt.syncType = FILTER_REMOVED;
-        pkt.filterSlot = slot;
+        pkt.filterItem = item;
         return pkt;
-    }
-
-    private static List<ItemStack> identityStacks(List<String> serializedKeys) {
-        List<ItemStack> stacks = new ArrayList<>();
-        for (String key : serializedKeys) {
-            if (key.startsWith("~:")) continue;
-            ItemStackWrapper w = ItemStackWrapper.fromKey(key);
-            if (w != null) stacks.add(w.toStack(1));
-        }
-        return stacks;
     }
 
     /**
@@ -636,13 +622,13 @@ public final class AssetSyncPacket implements IMessage {
                 writeSettingsGroupPayload(buf, settingsGroupKind, settingsGroupSettings);
             }
             case FILTER_UPDATED -> {
-                buf.writeInt(filterSlot);
+                buf.writeBoolean(filterItem);
                 buf.writeShort(filterItems.size());
-                for (ItemStack stack : filterItems) {
-                    PacketUtil.writeItemStack(buf, stack);
+                for (String key : filterItems) {
+                    PacketUtil.writeString(buf, key);
                 }
             }
-            case FILTER_REMOVED -> buf.writeInt(filterSlot);
+            case FILTER_REMOVED -> buf.writeBoolean(filterItem);
         }
     }
 
@@ -688,14 +674,14 @@ public final class AssetSyncPacket implements IMessage {
                     "settingsGroup=" + settingsGroupId);
             }
             case FILTER_UPDATED -> {
-                filterSlot = buf.readInt();
+                filterItem = buf.readBoolean();
                 int count = buf.readShort();
                 filterItems = new ArrayList<>(count);
                 for (int i = 0; i < count; i++) {
-                    filterItems.add(PacketUtil.readItemStack(buf));
+                    filterItems.add(PacketUtil.readString(buf));
                 }
             }
-            case FILTER_REMOVED -> filterSlot = buf.readInt();
+            case FILTER_REMOVED -> filterItem = buf.readBoolean();
         }
     }
 
@@ -1339,8 +1325,8 @@ public final class AssetSyncPacket implements IMessage {
                         copySettingsGroupPayload(packet.settingsGroupSettings));
                 state.applySettingsGroupsToModules();
             }
-            case FILTER_UPDATED -> state.setFilters(packet.filterSlot, packet.filterItems);
-            case FILTER_REMOVED -> state.clearFilters(packet.filterSlot);
+            case FILTER_UPDATED -> state.setFilters(packet.filterItems, packet.filterItem);
+            case FILTER_REMOVED -> state.clearFilters(packet.filterItem);
         }
     }
 
@@ -1372,11 +1358,7 @@ public final class AssetSyncPacket implements IMessage {
                         handleDelta(state, packet);
                         state.setSyncRevision(Math.max(state.getSyncRevision(), packet.syncRevision));
                     } else if (asset instanceof Station station) {
-                        if (packet.syncType == FILTER_UPDATED) {
-                            station.setFilters(packet.filterSlot, packet.filterItems);
-                        } else if (packet.syncType == FILTER_REMOVED) {
-                            station.clearFilters(packet.filterSlot);
-                        } else if (packet.syncType == LOGISTICS_CONFIG_UPDATED) {
+                        if (packet.syncType == LOGISTICS_CONFIG_UPDATED) {
                             ItemStackWrapper wrapper = ItemStackWrapper.fromKey(packet.resourceKey);
                             if (wrapper != null) {
                                 station.logisticsConfig.set(wrapper, packet.logConfig);
@@ -1552,8 +1534,12 @@ public final class AssetSyncPacket implements IMessage {
                             copySettingsGroupPayload(packet.settingsGroupSettings));
                     state.applySettingsGroupsToModules();
                 }
-                case FILTER_UPDATED -> asset.setFilters(packet.filterSlot, packet.filterItems);
-                case FILTER_REMOVED -> asset.clearFilters(packet.filterSlot);
+                case FILTER_UPDATED -> {
+                    if (asset instanceof AutomatedFacility af) af.setFilters(packet.filterItems, packet.filterItem);
+                }
+                case FILTER_REMOVED -> {
+                    if (asset instanceof AutomatedFacility af) af.clearFilters(packet.filterItem);
+                }
             }
         }
 

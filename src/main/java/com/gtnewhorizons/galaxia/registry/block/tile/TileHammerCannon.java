@@ -189,7 +189,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
             for (int i = 0; i < filterList.tagCount(); i++) {
                 keys.add(filterList.getStringTagAt(i));
             }
-            filter.setAll(keys);
+            filter.load(keys);
         }
         if (nbt.hasKey(NBT_HAMMER_VARIANT)) {
             try {

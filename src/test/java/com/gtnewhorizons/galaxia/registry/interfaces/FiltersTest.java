@@ -35,8 +35,8 @@ final class FiltersTest {
     }
 
     @Test
-    void nameRegexMatchesUsingProvidedNameGetter() {
-        Predicate<String> p = ResourceFilter.nameRegex(".*oo.*", s -> s);
+    void matchesRegexPattern() {
+        Predicate<String> p = ResourceFilter.matches(".*oo.*");
         assertTrue(p.test("foo"));
         assertTrue(p.test("foobar"));
         assertFalse(p.test("bar"));

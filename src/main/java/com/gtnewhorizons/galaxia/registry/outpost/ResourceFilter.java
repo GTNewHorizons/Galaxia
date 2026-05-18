@@ -6,130 +6,185 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+
 public final class ResourceFilter<T> implements Predicate<T> {
 
-    private final List<T> identities = new ArrayList<>();
-    private final List<Pattern> namePatterns = new ArrayList<>();
-    private final List<String> serializedKeys = new ArrayList<>();
-    private final Function<T, String> keyEncoder;
-    private final Function<String, T> keyDecoder;
-    private final Function<T, String> nameGetter;
+    private static final String REGEX_PREFIX = "~r:";
+    private static final String CONTAINS_PREFIX = "~c:";
+    private static final String STARTS_WITH_PREFIX = "~s:";
+    private static final String ENDS_WITH_PREFIX = "~e:";
 
-    private ResourceFilter(Function<T, String> keyEncoder, Function<String, T> keyDecoder,
-        Function<T, String> nameGetter) {
-        this.keyEncoder = keyEncoder;
-        this.keyDecoder = keyDecoder;
-        this.nameGetter = nameGetter;
+    private final List<Predicate<String>> stringPredicates = new ArrayList<>();
+    private final List<String> serialized = new ArrayList<>();
+
+    private final Function<T, String> encoder;
+
+    private ResourceFilter(Function<T, String> encoder) {
+        this.encoder = encoder;
     }
 
-    public void addIdentity(T key) {
-        identities.add(key);
-        serializedKeys.add(keyEncoder.apply(key));
+    /** Exact match against the encoded form of a typed value. */
+    public void add(T value) {
+        add(encoder.apply(value));
     }
 
-    public void addNameRegex(String regex) {
-        namePatterns.add(Pattern.compile(regex, Pattern.CASE_INSENSITIVE));
-        serializedKeys.add("~:" + regex);
+    /** Exact match against a raw string. */
+    public void add(String value) {
+        stringPredicates.add(s -> s.equals(value));
+        serialized.add(value);
     }
 
-    public void remove(T key) {
-        String encoded = keyEncoder.apply(key);
-        serializedKeys.remove(encoded);
-        identities.remove(key);
+    public void addRegex(String regex) {
+        stringPredicates.add(matches(regex));
+        serialized.add(REGEX_PREFIX + regex);
     }
 
-    public void clear() {
-        identities.clear();
-        namePatterns.clear();
-        serializedKeys.clear();
+    public void addContains(String text) {
+        stringPredicates.add(contains(text));
+        serialized.add(CONTAINS_PREFIX + text);
     }
 
-    public void setAll(List<String> keys) {
+    public void addStartsWith(String prefix) {
+        stringPredicates.add(startsWith(prefix));
+        serialized.add(STARTS_WITH_PREFIX + prefix);
+    }
+
+    public void addEndsWith(String suffix) {
+        stringPredicates.add(endsWith(suffix));
+        serialized.add(ENDS_WITH_PREFIX + suffix);
+    }
+
+    public void remove(T value) {
+        remove(encoder.apply(value));
+    }
+
+    /**
+     * Removes the first entry whose serialized form equals {@code value}.
+     * Both parallel lists are updated atomically so they stay in sync.
+     */
+    public void remove(String value) {
+        int index = serialized.indexOf(value);
+        if (index >= 0) {
+            serialized.remove(index);
+            stringPredicates.remove(index); // Bug fix: was missing entirely
+        }
+    }
+
+    /**
+     * Replaces the current state with the entries produced by a previous
+     * {@link #serialize()} call, reconstructing all predicates from their
+     * serialized prefix.
+     */
+    public void load(List<String> entries) {
         clear();
-        for (String raw : keys) {
-            if (raw.startsWith("~:")) {
-                String regex = raw.substring(2);
-                namePatterns.add(Pattern.compile(regex, Pattern.CASE_INSENSITIVE));
-                serializedKeys.add(raw);
+        for (String entry : entries) {
+            if (entry.startsWith(REGEX_PREFIX)) {
+                stringPredicates.add(matches(entry.substring(REGEX_PREFIX.length())));
+            } else if (entry.startsWith(CONTAINS_PREFIX)) {
+                stringPredicates.add(contains(entry.substring(CONTAINS_PREFIX.length())));
+            } else if (entry.startsWith(STARTS_WITH_PREFIX)) {
+                stringPredicates.add(startsWith(entry.substring(STARTS_WITH_PREFIX.length())));
+            } else if (entry.startsWith(ENDS_WITH_PREFIX)) {
+                stringPredicates.add(endsWith(entry.substring(ENDS_WITH_PREFIX.length())));
             } else {
-                T decoded = keyDecoder.apply(raw);
-                if (decoded != null) {
-                    identities.add(decoded);
-                    serializedKeys.add(raw);
-                }
+                stringPredicates.add(s -> s.equals(entry));
             }
+            serialized.add(entry);
         }
     }
 
-    public boolean test(T t) {
-        if (identities.isEmpty() && namePatterns.isEmpty()) return true;
+    public List<String> serialize() {
+        return List.copyOf(serialized);
+    }
 
-        for (T identity : identities) {
-            if (identity.equals(t)) return true;
+    @Override
+    public boolean test(T value) {
+        if (isEmpty()) {
+            return true;
         }
-        for (Pattern pattern : namePatterns) {
-            if (pattern.matcher(nameGetter.apply(t))
-                .matches()) return true;
+        String text = encoder.apply(value);
+        for (Predicate<String> predicate : stringPredicates) {
+            if (predicate.test(text)) {
+                return true;
+            }
         }
         return false;
     }
 
+    public void clear() {
+        stringPredicates.clear();
+        serialized.clear();
+    }
+
+    /**
+     * Returns {@code true} when no filters have been added.
+     * Bug fix: was {@code stringPredicates.isEmpty()}, which returned {@code true}
+     * even after plain {@link #add} calls, because those never populated
+     * {@code stringPredicates}. Since the lists are always kept in sync,
+     * either one is a valid check; {@code serialized} is the canonical source.
+     */
     public boolean isEmpty() {
-        return identities.isEmpty() && namePatterns.isEmpty();
-    }
-
-    public List<T> identities() {
-        return List.copyOf(identities);
-    }
-
-    public List<String> serialize() {
-        return List.copyOf(serializedKeys);
+        return serialized.isEmpty();
     }
 
     public static ResourceFilter<ItemStackWrapper> forItems() {
         return new ResourceFilter<>(
-            ItemStackWrapper::toKey,
-            ItemStackWrapper::fromKey,
-            w -> w.toStack(1)
+            item -> item.toItemStack()
                 .getUnlocalizedName());
     }
 
     public static ResourceFilter<FluidKey> forFluids() {
         return new ResourceFilter<>(
-            fk -> fk.fluid()
-                .getName(),
-            FluidKey::fromName,
-            fk -> fk.fluid()
+            fluid -> fluid.fluid()
                 .getName());
     }
 
     @SafeVarargs
-    public static <T> Predicate<T> anyOf(Predicate<T>... predicates) {
-        return t -> {
-            for (Predicate<T> p : predicates) if (p.test(t)) return true;
+    public static <T> Predicate<T> anyOf(@Nonnull Predicate<T>... predicates) {
+        return value -> {
+            for (Predicate<T> p : predicates) if (p.test(value)) return true;
             return false;
         };
     }
 
     @SafeVarargs
-    public static <T> Predicate<T> allOf(Predicate<T>... predicates) {
-        return t -> {
-            for (Predicate<T> p : predicates) if (!p.test(t)) return false;
+    public static <T> Predicate<T> allOf(@Nonnull Predicate<T>... predicates) {
+        return value -> {
+            for (Predicate<T> p : predicates) if (!p.test(value)) return false;
             return true;
         };
     }
 
     @SafeVarargs
-    public static <T> Predicate<T> noneOf(Predicate<T>... predicates) {
-        return t -> {
-            for (Predicate<T> p : predicates) if (p.test(t)) return false;
+    public static <T> Predicate<T> noneOf(@Nonnull Predicate<T>... predicates) {
+        return value -> {
+            for (Predicate<T> p : predicates) if (p.test(value)) return false;
             return true;
         };
     }
 
-    public static <T> Predicate<T> nameRegex(String regex, Function<T, String> nameGetter) {
+    public static Predicate<String> matches(String regex) {
         Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-        return t -> pattern.matcher(nameGetter.apply(t))
+        return value -> pattern.matcher(value)
             .matches();
+    }
+
+    public static Predicate<String> contains(String text) {
+        String lowered = text.toLowerCase();
+        return value -> value.toLowerCase()
+            .contains(lowered);
+    }
+
+    public static Predicate<String> startsWith(String prefix) {
+        String lowered = prefix.toLowerCase();
+        return value -> value.toLowerCase()
+            .startsWith(lowered);
+    }
+
+    public static Predicate<String> endsWith(String suffix) {
+        String lowered = suffix.toLowerCase();
+        return value -> value.toLowerCase()
+            .endsWith(lowered);
     }
 }
