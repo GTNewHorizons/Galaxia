@@ -1,8 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
@@ -71,6 +75,27 @@ public class Station extends CelestialAsset {
         return graph.getAttachments(TileHammerCannon.class)
             .filter(TileHammerCannon::isStructureValid)
             .map(TileHammerCannon::getModuleInstance);
+    }
+
+    public Map<ItemStackWrapper, Long> getCannonChestItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        TileStationController ctrl = getTileController();
+        if (ctrl == null) return result;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return result;
+        graph.getAttachments(TileHammerCannon.class)
+            .filter(TileHammerCannon::isStructureValid)
+            .flatMap(c -> c.getChestInventories().stream())
+            .filter(Objects::nonNull)
+            .forEach(inv -> {
+                for (int s = 0; s < inv.getSizeInventory(); s++) {
+                    ItemStack stack = inv.getStackInSlot(s);
+                    if (stack == null) continue;
+                    ItemStackWrapper key = ItemStackWrapper.of(stack);
+                    if (key != null) result.merge(key, (long) stack.stackSize, Long::sum);
+                }
+            });
+        return result;
     }
 
     /** Public so network handlers can route filter mutations. */

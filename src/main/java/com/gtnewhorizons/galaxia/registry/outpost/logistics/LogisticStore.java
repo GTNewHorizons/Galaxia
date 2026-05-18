@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 public final class LogisticStore {
 
@@ -90,6 +91,11 @@ public final class LogisticStore {
         Map<ItemStackWrapper, Long> snapshot = asset instanceof AutomatedFacility af ? af.aggregatedItems()
             : asset.aggregatedItems();
 
+        Map<ItemStackWrapper, Long> cannonItems = null;
+        if (asset instanceof Station station) {
+            cannonItems = station.getCannonChestItems();
+        }
+
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
             .computeIfAbsent(assetId, k -> new LinkedHashMap<>());
 
@@ -115,8 +121,14 @@ public final class LogisticStore {
 
             if (cfg.isImportEnabled() && stock < cfg.minReserve()) {
                 newAmount = -(cfg.minReserve() - stock);
-            } else if (cfg.isSupplyEnabled() && stock > cfg.minReserve()) {
-                newAmount = stock - cfg.minReserve();
+            } else if (cfg.isSupplyEnabled()) {
+                long supplyStock = stock;
+                if (cannonItems != null) {
+                    supplyStock += cannonItems.getOrDefault(resource, 0L);
+                }
+                if (supplyStock > cfg.minReserve()) {
+                    newAmount = supplyStock - cfg.minReserve();
+                }
             }
 
             if (newAmount == 0) {
