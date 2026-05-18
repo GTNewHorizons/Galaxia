@@ -21,8 +21,8 @@ public class RocketBlueprint {
     public RocketBlueprint() {}
 
     public RocketBlueprint(int width, int height) {
-        this.width = Math.max(5, width);
-        this.height = Math.max(8, height);
+        this.width = width;
+        this.height = height;
     }
 
     public RocketBlueprint copy() {

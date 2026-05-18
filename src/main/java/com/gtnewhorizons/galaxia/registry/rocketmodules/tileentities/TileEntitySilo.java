@@ -268,7 +268,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     public void requestModuleFromAssembler(int moduleId) {
         if (moduleAssembler == null || worldObj.isRemote) return;
-        moduleAssembler.removeModule(moduleId); // old method — will be migrated later
+        moduleAssembler.removeModule(moduleId);
         GantryAPI.injectModule(null, moduleAssembler, this, false); // TODO: migrate to blueprint parts
         sync();
     }

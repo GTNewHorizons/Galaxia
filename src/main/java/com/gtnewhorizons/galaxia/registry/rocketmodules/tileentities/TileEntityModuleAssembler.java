@@ -108,7 +108,6 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      * Compatibility method for transition period (called from Silo)
      */
     public void removeModule(int id) {
-        // TODO: После полного перехода на Blueprint — удалить этот метод
         markDirty();
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }

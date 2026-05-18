@@ -14,6 +14,9 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPa
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderPartDef;
 
+/**
+ * Registers rocket modules and their properties from {@link IRocketPartDef} implementations.
+ */
 public class RocketPartRegistry {
 
     private static final RocketPartRegistry INSTANCE = new RocketPartRegistry();
