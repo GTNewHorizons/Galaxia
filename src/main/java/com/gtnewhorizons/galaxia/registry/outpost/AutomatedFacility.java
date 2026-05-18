@@ -19,7 +19,10 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifiers;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -1001,7 +1004,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private ModuleFeatureModifiers computeFeatureModifiers(ModuleInstance module) {
         Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        List<FeatureContribution> contributions = new ArrayList<>();
         StationTileCoord[] tiles = module.shape()
             .tiles(module.anchor());
         for (StationTileCoord tile : tiles) {
@@ -1009,47 +1011,15 @@ public final class AutomatedFacility extends CelestialAsset {
                 counts.merge(feature, 1, Integer::sum);
             }
         }
-        int buildSpeedModifierPercent = 0;
-        int upkeepMultiplierPercent = 100;
-        int powerDrawMultiplierPercent = 100;
-        if (counts.containsKey(PlanetaryFeatureRegistry.REGOLITH_FLATS.key())) {
-            buildSpeedModifierPercent += FeatureContribution.REGOLITH_FLATS_BUILD_SPEEDUP_PERCENT;
-        }
-        if (counts.containsKey(PlanetaryFeatureRegistry.STABLE_BEDROCK.key())) {
-            buildSpeedModifierPercent -= FeatureContribution.STABLE_BEDROCK_BUILD_SLOWDOWN_PERCENT;
-            upkeepMultiplierPercent = Math
-                .min(upkeepMultiplierPercent, FeatureContribution.STABLE_BEDROCK_UPKEEP_MULTIPLIER_PERCENT);
-        }
-        if (module.kind()
-            .isProductionModule() && counts.containsKey(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key())) {
-            powerDrawMultiplierPercent = Math
-                .min(powerDrawMultiplierPercent, FeatureContribution.ICE_POCKET_POWER_DRAW_MULTIPLIER_PERCENT);
-        }
+        ModuleFeatureModifierBuilder builder = new ModuleFeatureModifierBuilder();
         for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
-            FeatureContribution contribution = module.component()
-                .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
-            if (contribution == null && module.kind()
-                .isProductionModule()
-                && PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()
-                    .equals(entry.getKey())) {
-                contribution = new FeatureContribution(
-                    entry.getKey(),
-                    entry.getValue()
-                        .byteValue(),
-                    (byte) tiles.length,
-                    "Power draw -10%");
-            }
-            if (contribution == null) {
-                contribution = FeatureContribution.generic(entry.getKey(), entry.getValue(), tiles.length);
-            }
-            if (contribution != null) contributions.add(contribution);
+            PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(entry.getKey());
+            if (feature == null) continue;
+            feature.applyModuleModifiers(
+                new FeatureModuleContext(module, entry.getKey(), entry.getValue(), tiles.length),
+                builder);
         }
-        return new ModuleFeatureModifiers(
-            buildSpeedModifierPercent,
-            upkeepMultiplierPercent,
-            powerDrawMultiplierPercent,
-            counts,
-            contributions);
+        return builder.build(counts);
     }
 
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {

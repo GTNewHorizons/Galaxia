@@ -1,21 +1,22 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
 import javax.annotation.Nonnull;
 
-import net.minecraft.init.Blocks;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -39,10 +40,6 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     private int focusAlignmentProgress;
 
     private static final Random RANDOM = new java.util.Random();
-    private static final int ICE_ROLL_CHANCE_PER_TILE_PERCENT = 20;
-    private static final int ICE_ROLL_CHANCE_DENOMINATOR = 100;
-    private static final String[] RARE_CRYSTAL_MATERIALS = { "Diamond", "Emerald", "Ruby", "Sapphire" };
-    private static final String[] VOLATILE_MATERIALS = { "Sulfur", "Saltpeter", "Naquadah" };
 
     public ModuleMiner(@Nonnull FacilityModuleKind kind) {
         this.kind = kind;
@@ -60,16 +57,15 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 List<ItemStack> candidates = new java.util.ArrayList<>(ores.size() + veinOres.size());
                 candidates.addAll(ores);
                 candidates.addAll(veinOres);
-                addFeatureMiningCandidates(instance, outpost, candidates);
-                boolean canRollIce = hasCoveredFeature(
-                    instance,
-                    outpost,
-                    PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key());
-                if (candidates.isEmpty() && !canRollIce) return;
+                MiningFeatureEffects featureEffects = featureMiningEffects(instance, outpost);
+                candidates.addAll(featureEffects.candidates());
+                if (candidates.isEmpty() && featureEffects.replacementRolls()
+                    .isEmpty()) return;
                 miner.advanceFocusAlignment();
-                int rolls = 1 + mineralVeinBonusRolls(instance, outpost);
+                int rolls = 1 + featureEffects.bonusRolls();
                 for (int i = 0; i < rolls; i++) {
-                    ItemStack chosen = shouldRollIceInsteadOfOre(instance, outpost, RANDOM) ? icePocketStack()
+                    ItemStack replacement = featureEffects.rollReplacement(RANDOM);
+                    ItemStack chosen = replacement != null ? replacement
                         : candidates.isEmpty() ? null : chooseFocusedOre(miner, candidates);
                     if (chosen == null) continue;
                     String oreKey = ItemStackWrapper.of(chosen)
@@ -82,97 +78,26 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             });
     }
 
-    public static int mineralVeinBonusRolls(ModuleInstance module, AutomatedFacility outpost) {
-        if (module == null || outpost == null || module.anchorOrNull() == null) return 0;
-        return outpost.featureModifiers(module)
-            .coveredTiles(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
-    }
-
-    public static void addFeatureMiningCandidates(@Nonnull ModuleInstance module, @Nonnull AutomatedFacility outpost,
-        @Nonnull List<ItemStack> candidates) {
-        addFeaturePool(
-            candidates,
-            rareCrystalMiningPool(),
-            coveredFeatureTiles(module, outpost, PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()));
-        addFeaturePool(
-            candidates,
-            volatileDepositMiningPool(),
-            coveredFeatureTiles(module, outpost, PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.key()));
-    }
-
-    public static boolean shouldRollIceInsteadOfOre(@Nonnull ModuleInstance module, @Nonnull AutomatedFacility outpost,
-        @Nonnull Random random) {
-        int chancePercent = iceRollChancePercent(module, outpost);
-        return chancePercent > 0 && random.nextInt(ICE_ROLL_CHANCE_DENOMINATOR) < chancePercent;
-    }
-
-    public static int iceRollChancePercent(@Nonnull ModuleInstance module, @Nonnull AutomatedFacility outpost) {
-        return Math.min(
-            coveredFeatureTiles(module, outpost, PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key())
-                * ICE_ROLL_CHANCE_PER_TILE_PERCENT,
-            ICE_ROLL_CHANCE_DENOMINATOR);
-    }
-
-    public static ItemStack icePocketStack() {
-        return new ItemStack(Blocks.ice);
-    }
-
-    private static boolean hasCoveredFeature(ModuleInstance module, AutomatedFacility outpost,
-        PlanetaryFeatureKey key) {
-        return coveredFeatureTiles(module, outpost, key) > 0;
-    }
-
-    private static int coveredFeatureTiles(ModuleInstance module, AutomatedFacility outpost, PlanetaryFeatureKey key) {
-        if (module == null || outpost == null || module.anchorOrNull() == null) return 0;
-        return outpost.featureModifiers(module)
-            .coveredTiles(key);
-    }
-
-    private static void addFeaturePool(List<ItemStack> candidates, List<ItemStack> pool, int repeats) {
-        if (repeats <= 0 || pool.isEmpty()) return;
-        for (int i = 0; i < repeats; i++) {
-            for (ItemStack stack : pool) {
-                ItemStack copy = stack.copy();
-                copy.stackSize = 1;
-                candidates.add(copy);
+    public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
+        @Nonnull AutomatedFacility outpost) {
+        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
+        for (var tile : module.shape()
+            .tiles(module.anchor())) {
+            for (PlanetaryFeatureKey feature : outpost.planetaryFeaturesAt(tile)) {
+                counts.merge(feature, 1, Integer::sum);
             }
         }
-    }
-
-    private static List<ItemStack> rareCrystalMiningPool() {
-        List<ItemStack> pool = rawOrePool(RARE_CRYSTAL_MATERIALS);
-        if (pool.isEmpty()) {
-            pool.add(new ItemStack(Items.diamond));
-            pool.add(new ItemStack(Items.emerald));
+        MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
+        int totalTiles = module.shape()
+            .tileCount();
+        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
+            PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(entry.getKey());
+            if (feature == null) continue;
+            feature.applyMiningEffects(
+                new FeatureMiningContext(module, entry.getKey(), entry.getValue(), totalTiles),
+                builder);
         }
-        return pool;
-    }
-
-    private static List<ItemStack> volatileDepositMiningPool() {
-        List<ItemStack> pool = rawOrePool(VOLATILE_MATERIALS);
-        if (pool.isEmpty()) {
-            pool.add(new ItemStack(Items.gunpowder));
-            pool.add(new ItemStack(Items.coal));
-            pool.add(new ItemStack(Items.redstone));
-        }
-        return pool;
-    }
-
-    private static List<ItemStack> rawOrePool(String[] materials) {
-        List<ItemStack> pool = new java.util.ArrayList<>(materials.length);
-        for (String material : materials) {
-            ItemStack stack;
-            try {
-                stack = GTUtility.getRawOreStack(material);
-            } catch (ClassCastException ignored) {
-                stack = null;
-            }
-            if (stack == null) continue;
-            stack = stack.copy();
-            stack.stackSize = 1;
-            pool.add(stack);
-        }
-        return pool;
+        return builder.build();
     }
 
     private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {
@@ -235,35 +160,6 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
         }
         targetMiner.setFocusOre(sourceMiner.focusOreKeyOrNull());
-    }
-
-    @Override
-    public FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature, int coveredTiles,
-        int totalTiles) {
-        if (PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()
-            .equals(feature)) {
-            return new FeatureContribution(
-                feature,
-                (byte) coveredTiles,
-                (byte) totalTiles,
-                Math.min(coveredTiles * ICE_ROLL_CHANCE_PER_TILE_PERCENT, ICE_ROLL_CHANCE_DENOMINATOR)
-                    + "% ice roll chance");
-        }
-        if (PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()
-            .equals(feature)) {
-            return new FeatureContribution(feature, (byte) coveredTiles, (byte) totalTiles, "Gem ore pool");
-        }
-        if (PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.key()
-            .equals(feature)) {
-            return new FeatureContribution(feature, (byte) coveredTiles, (byte) totalTiles, "Volatile resource pool");
-        }
-        if (!PlanetaryFeatureRegistry.MINERAL_VEIN.key()
-            .equals(feature)) return null;
-        return new FeatureContribution(
-            feature,
-            (byte) coveredTiles,
-            (byte) totalTiles,
-            "Mining yield +" + coveredTiles + " roll/t");
     }
 
     public MinerFocusTier focusTier() {

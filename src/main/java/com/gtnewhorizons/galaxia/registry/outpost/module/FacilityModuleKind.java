@@ -133,7 +133,7 @@ public enum FacilityModuleKind {
     }
 
     public PlanetaryFeatureKey requiredAnchorFeature() {
-        return this == GEOTHERMAL_GENERATOR ? PlanetaryFeatureRegistry.MAGMA_POOL.key() : null;
+        return PlanetaryFeatureRegistry.requiredAnchorFeature(this);
     }
 
     public boolean isCapacityModule() {

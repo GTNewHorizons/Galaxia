@@ -22,6 +22,10 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
@@ -246,13 +250,20 @@ final class ModuleMinerTest {
     void mineralVeinContributionScalesAgainstTwoByTwoFootprint() {
         ModuleInstance miner = createMiner();
 
-        FeatureContribution contribution = miner.component()
-            .featureContribution(
+        PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
+        ModuleFeatureModifierBuilder builder = new ModuleFeatureModifierBuilder();
+        feature.applyModuleModifiers(
+            new FeatureModuleContext(
                 miner,
                 PlanetaryFeatureRegistry.MINERAL_VEIN.key(),
                 2,
                 miner.shape()
-                    .tileCount());
+                    .tileCount()),
+            builder);
+        FeatureContribution contribution = builder
+            .build(java.util.Map.of(PlanetaryFeatureRegistry.MINERAL_VEIN.key(), 2))
+            .contributions()
+            .get(0);
 
         assertEquals(ModuleShape.QUAD_2x2, miner.shape());
         assertEquals(2, contribution.coveredTiles());
@@ -276,7 +287,10 @@ final class ModuleMinerTest {
             .orElseThrow()
             .coveredTiles();
 
-        assertEquals(expectedCoveredTiles, ModuleMiner.mineralVeinBonusRolls(miner, facility));
+        assertEquals(
+            expectedCoveredTiles,
+            ModuleMiner.featureMiningEffects(miner, facility)
+                .bonusRolls());
     }
 
     @Test
@@ -293,11 +307,15 @@ final class ModuleMinerTest {
             .orElseThrow()
             .coveredTiles();
         int chancePercent = coveredTiles * 20;
+        MiningFeatureEffects effects = ModuleMiner.featureMiningEffects(miner, facility);
 
-        assertEquals(chancePercent, ModuleMiner.iceRollChancePercent(miner, facility));
-        assertTrue(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(chancePercent - 1)));
-        assertFalse(ModuleMiner.shouldRollIceInsteadOfOre(miner, facility, randomReturning(chancePercent)));
-        assertNotNull(ModuleMiner.icePocketStack());
+        assertEquals(
+            chancePercent,
+            effects.replacementRolls()
+                .get(0)
+                .chancePercent());
+        assertNotNull(effects.rollReplacement(randomReturning(chancePercent - 1)));
+        assertNull(effects.rollReplacement(randomReturning(chancePercent)));
     }
 
     @Test
@@ -308,7 +326,9 @@ final class ModuleMinerTest {
         List<ItemStack> candidates = new java.util.ArrayList<>();
         candidates.add(new ItemStack(Items.iron_ingot));
 
-        ModuleMiner.addFeatureMiningCandidates(miner, facility, candidates);
+        candidates.addAll(
+            ModuleMiner.featureMiningEffects(miner, facility)
+                .candidates());
 
         assertTrue(
             candidates.stream()
@@ -323,7 +343,9 @@ final class ModuleMinerTest {
         List<ItemStack> candidates = new java.util.ArrayList<>();
         candidates.add(new ItemStack(Items.iron_ingot));
 
-        ModuleMiner.addFeatureMiningCandidates(miner, facility, candidates);
+        candidates.addAll(
+            ModuleMiner.featureMiningEffects(miner, facility)
+                .candidates());
 
         assertTrue(
             candidates.stream()
