@@ -70,4 +70,5 @@ final class PlanetaryFeatureBehaviorTest {
             builder.build()
                 .bonusRolls());
     }
+
 }

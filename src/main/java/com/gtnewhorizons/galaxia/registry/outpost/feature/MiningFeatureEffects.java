@@ -7,7 +7,8 @@ import java.util.Random;
 
 import net.minecraft.item.ItemStack;
 
-public record MiningFeatureEffects(List<ItemStack> candidates, int bonusRolls, List<ChanceStack> replacementRolls) {
+public record MiningFeatureEffects(List<ItemStack> candidates, int bonusRolls, int outputMultiplierPercent,
+    List<ChanceStack> replacementRolls) {
 
     public MiningFeatureEffects {
         candidates = candidates.isEmpty() ? List.of() : List.copyOf(candidates);
@@ -28,6 +29,12 @@ public record MiningFeatureEffects(List<ItemStack> candidates, int bonusRolls, L
         return null;
     }
 
+    public boolean shouldKeepOutput(Random random) {
+        if (outputMultiplierPercent >= 100) return true;
+        if (outputMultiplierPercent <= 0) return false;
+        return random.nextInt(100) < outputMultiplierPercent;
+    }
+
     public record ChanceStack(int chancePercent, ItemStack stack) {
 
         public ChanceStack {
@@ -45,6 +52,7 @@ public record MiningFeatureEffects(List<ItemStack> candidates, int bonusRolls, L
         private final List<ItemStack> candidates = new ArrayList<>();
         private final List<ChanceStack> replacementRolls = new ArrayList<>();
         private int bonusRolls;
+        private int outputMultiplierPercent = 100;
 
         public void addCandidates(Collection<ItemStack> stacks, int repeats) {
             if (repeats <= 0 || stacks.isEmpty()) return;
@@ -61,12 +69,16 @@ public record MiningFeatureEffects(List<ItemStack> candidates, int bonusRolls, L
             if (rolls > 0) bonusRolls += rolls;
         }
 
+        public void multiplyOutputMultiplierPercent(int multiplierPercent) {
+            outputMultiplierPercent = outputMultiplierPercent * Math.clamp(multiplierPercent, 0, 100) / 100;
+        }
+
         public void addReplacementRoll(int chancePercent, ItemStack stack) {
             replacementRolls.add(new ChanceStack(chancePercent, stack));
         }
 
         public MiningFeatureEffects build() {
-            return new MiningFeatureEffects(candidates, bonusRolls, replacementRolls);
+            return new MiningFeatureEffects(candidates, bonusRolls, outputMultiplierPercent, replacementRolls);
         }
     }
 }

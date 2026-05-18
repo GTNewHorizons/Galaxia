@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature;
 
 public enum PlanetaryFeatureLayer {
+
     TERRAIN(0),
     ENVIRONMENT(100),
     RESOURCE(200);

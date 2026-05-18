@@ -977,8 +977,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public long effectivePowerDrawEuPerTick(ModuleInstance module) {
         long powerDraw = module.powerDrawEuPerTick();
-        if (powerDraw <= 0L || !module.kind()
-            .isProductionModule()) {
+        if (powerDraw <= 0L) {
             return powerDraw;
         }
         int multiplier = featureModifiers(module).powerDrawMultiplierPercent();

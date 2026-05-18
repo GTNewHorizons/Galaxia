@@ -71,6 +71,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                     String oreKey = ItemStackWrapper.of(chosen)
                         .toKey();
                     if (shouldVoidOre(instance, outpost, oreKey)) continue;
+                    if (!featureEffects.shouldKeepOutput(RANDOM)) continue;
                     ItemStack ore = chosen.copy();
                     ore.stackSize = 1;
                     outpost.insertInventory(ItemStackWrapper.of(ore), 1);

@@ -39,8 +39,10 @@ public final class PlanetaryFeatureOverlayRenderer {
             PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
             if (definition != null) definitions.add(definition);
         }
-        definitions.sort(Comparator.comparingInt(definition -> definition.layer()
-            .drawOrder()));
+        definitions.sort(
+            Comparator.comparingInt(
+                definition -> definition.layer()
+                    .drawOrder()));
         for (PlanetaryFeatureDefinition definition : definitions) {
             drawFeatureOverlay(tileX, tileY, definition.texture());
         }

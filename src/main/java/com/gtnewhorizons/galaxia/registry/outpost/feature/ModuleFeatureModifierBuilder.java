@@ -8,7 +8,8 @@ public final class ModuleFeatureModifierBuilder {
 
     private int buildSpeedModifierPercent;
     private int upkeepMultiplierPercent = 100;
-    private int powerDrawMultiplierPercent = 100;
+    private int powerDrawReductionMultiplierPercent = 100;
+    private int powerDrawIncreaseMultiplierPercent = 100;
     private final List<FeatureContribution> contributions = new ArrayList<>();
 
     public void addBuildSpeedModifierPercent(int modifierPercent) {
@@ -20,7 +21,11 @@ public final class ModuleFeatureModifierBuilder {
     }
 
     public void minPowerDrawMultiplierPercent(int multiplierPercent) {
-        powerDrawMultiplierPercent = Math.min(powerDrawMultiplierPercent, multiplierPercent);
+        powerDrawReductionMultiplierPercent = Math.min(powerDrawReductionMultiplierPercent, multiplierPercent);
+    }
+
+    public void multiplyPowerDrawMultiplierPercent(int multiplierPercent) {
+        powerDrawIncreaseMultiplierPercent = powerDrawIncreaseMultiplierPercent * Math.max(0, multiplierPercent) / 100;
     }
 
     public void addContribution(FeatureContribution contribution) {
@@ -31,8 +36,12 @@ public final class ModuleFeatureModifierBuilder {
         return new ModuleFeatureModifiers(
             buildSpeedModifierPercent,
             upkeepMultiplierPercent,
-            powerDrawMultiplierPercent,
+            powerDrawMultiplierPercent(),
             coveredTiles,
             contributions);
+    }
+
+    private int powerDrawMultiplierPercent() {
+        return (powerDrawReductionMultiplierPercent * powerDrawIncreaseMultiplierPercent + 99) / 100;
     }
 }
