@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureLayer;
@@ -15,7 +14,6 @@ public final class ThermalSinkZoneFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/thermal_sink_zone.png"))
         .layer(PlanetaryFeatureLayer.ENVIRONMENT)
         .placement(PlanetaryFeaturePlacement.patch(12.0, 5.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_THERMAL_SINK_ZONE.getColor())
         .build();
 
     @Override

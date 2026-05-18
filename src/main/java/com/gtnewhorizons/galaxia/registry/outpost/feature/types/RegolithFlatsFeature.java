@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
@@ -20,7 +19,6 @@ public final class RegolithFlatsFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/regolith_flats.png"))
         .layer(PlanetaryFeatureLayer.TERRAIN)
         .placement(PlanetaryFeaturePlacement.patch(42.0, 14.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_REGOLITH_FLATS.getColor())
         .build();
 
     @Override

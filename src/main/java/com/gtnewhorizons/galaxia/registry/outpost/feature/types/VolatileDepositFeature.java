@@ -7,7 +7,6 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
@@ -30,7 +29,6 @@ public final class VolatileDepositFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/volatile_deposit.png"))
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.clusteredPatch(5.0, 2.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_VOLATILE_DEPOSIT.getColor())
         .build();
 
     @Override

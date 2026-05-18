@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
@@ -21,7 +20,6 @@ public final class StableBedrockFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/stable_bedrock.png"))
         .layer(PlanetaryFeatureLayer.TERRAIN)
         .placement(PlanetaryFeaturePlacement.patch(30.0, 10.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_STABLE_BEDROCK.getColor())
         .build();
 
     @Override

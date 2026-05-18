@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureLayer;
@@ -16,7 +15,6 @@ public final class MagmaPoolFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/magma_pool.png"))
         .layer(PlanetaryFeatureLayer.ENVIRONMENT)
         .placement(PlanetaryFeaturePlacement.isolated(6))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_MAGMA_POOL.getColor())
         .build();
 
     @Override

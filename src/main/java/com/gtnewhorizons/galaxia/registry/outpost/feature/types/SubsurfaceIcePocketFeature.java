@@ -4,7 +4,6 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
@@ -28,7 +27,6 @@ public final class SubsurfaceIcePocketFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/subsurface_ice_pocket.png"))
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.patch(3.0, 1.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_SUBSURFACE_ICE_POCKET.getColor())
         .build();
 
     @Override

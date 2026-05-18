@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
@@ -21,7 +20,6 @@ public final class MineralVeinFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/mineral_vein.png"))
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.patch(14.0, 6.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_MINERAL_VEIN.getColor())
         .build();
 
     @Override

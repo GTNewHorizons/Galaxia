@@ -7,7 +7,6 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
@@ -31,7 +30,6 @@ public final class RareCrystalFormationFeature implements PlanetaryFeature {
         .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/rare_crystal_formation.png"))
         .layer(PlanetaryFeatureLayer.RESOURCE)
         .placement(PlanetaryFeaturePlacement.line(5.0, 1.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_RARE_CRYSTAL_FORMATION.getColor())
         .build();
 
     @Override
