@@ -37,7 +37,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerTarget> {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition

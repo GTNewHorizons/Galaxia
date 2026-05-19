@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
@@ -20,7 +21,7 @@ public final class StationGraph {
 
     private final TileStationController controller;
     private final Object2ObjectOpenHashMap<BlockPos, TileStationBase<?>> pieces = new Object2ObjectOpenHashMap<>();
-    private final Object2ObjectOpenHashMap<BlockPos, IStationAttachment> attachments = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<BlockPos, IStationAttachment<?>> attachments = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, ObjectArrayList<BlockPos>> adjacency = new Object2ObjectOpenHashMap<>();
     private final ObjectOpenHashSet<BlockPos> visited = new ObjectOpenHashSet<>();
     private final ObjectArrayList<BlockPos> queue = new ObjectArrayList<>();
@@ -39,9 +40,16 @@ public final class StationGraph {
             .iterator();
     }
 
-    public <T extends IStationAttachment> Stream<T> getAttachments(Class<T> type) {
+    public Stream<? extends IStationAttachment<?>> getAttachments() {
         return attachments.values()
             .stream()
+            .filter(IStationAttachment::isReady);
+    }
+
+    public <T extends GalaxiaBootableMultiblock<T> & IStationAttachment<T>> Stream<T> getAttachments(Class<T> type) {
+        return attachments.values()
+            .stream()
+            .filter(IStationAttachment::isReady)
             .filter(type::isInstance)
             .map(type::cast);
     }
@@ -55,7 +63,7 @@ public final class StationGraph {
             .map(te -> (IDistributedInventory) te);
     }
 
-    public void registerAttachment(BlockPos parent, BlockPos pos, IStationAttachment attachment) {
+    public void registerAttachment(BlockPos parent, BlockPos pos, IStationAttachment<?> attachment) {
         if (!pieces.containsKey(parent)) return;
         if (attachments.containsKey(pos)) return;
 
@@ -66,7 +74,7 @@ public final class StationGraph {
     }
 
     public void removeAttachment(BlockPos pos) {
-        IStationAttachment attachment = attachments.remove(pos);
+        IStationAttachment<?> attachment = attachments.remove(pos);
         adjacency.values()
             .forEach(list -> list.remove(pos));
 

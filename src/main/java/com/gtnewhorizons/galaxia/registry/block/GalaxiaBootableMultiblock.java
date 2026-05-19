@@ -23,6 +23,10 @@ public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultibl
 
     protected void tickPostBoot() {}
 
+    public boolean booted() {
+        return bootState == BootState.BOOTED;
+    }
+
     @Override
     protected boolean shouldCheckStructure() {
         return bootState != BootState.STRUCTURE_VALID;

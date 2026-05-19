@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
@@ -45,7 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerCannon> {
 
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
@@ -106,6 +107,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         // TODO: Figure out tiering system
         this.moduleInstance = FacilityModuleKind.HAMMER
             .create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.EV);
+        moduleInstance.updateStatus(Buildable.Status.DISABLED);
         this.hammer = (ModuleHammer) this.moduleInstance.component();
     }
 
@@ -140,6 +142,16 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     @Override
     protected boolean attemptBoot() {
         return graph != null;
+    }
+
+    @Override
+    protected void onBootComplete() {
+        moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
+    }
+
+    @Override
+    protected void onBootFailed() {
+        moduleInstance.updateStatus(Buildable.Status.DISABLED);
     }
 
     @Override

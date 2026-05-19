@@ -119,7 +119,7 @@ public class TileStationDock extends TileStationSecondary<TileStationDock> imple
         if (graph == null) return;
 
         for (BlockPos pos : attachments) {
-            if (pos.getTE(worldObj) instanceof IStationAttachment attachment) {
+            if (pos.getTE(worldObj) instanceof IStationAttachment<?> attachment) {
                 graph.registerAttachment(here, pos, attachment);
             }
         }

@@ -172,10 +172,10 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
                 }
 
                 onStructureChecked();
-                mCheckTimer = 100;
-            } else {
-                mCheckTimer--;
             }
+            mCheckTimer = 100;
+        } else {
+            mCheckTimer--;
         }
     }
 

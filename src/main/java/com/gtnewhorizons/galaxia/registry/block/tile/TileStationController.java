@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 import java.util.List;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -166,6 +167,8 @@ public class TileStationController extends TileStationBase<TileStationController
             for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
                 secondary.tick();
             }
+
+            graph.getAttachments().forEach(IStationAttachment::tick);
         }
     }
 

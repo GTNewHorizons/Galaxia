@@ -43,6 +43,15 @@ public class Station extends CelestialAsset {
         if (teController == null) return;
 
         teController.tick();
+
+        // TODO: Make this happen only when contents change or something, otherwise performance will be horrible
+        getCannonChestItems().forEach(
+            (item, amount) -> logisticsConfig.set(
+                item,
+                LogisticsResourceConfig.DEFAULT
+                    .withOrderSize((int) (long) amount)
+                    .withSupplyEnabled(true)));
+
         LogisticStore.updateSignalsForFacility(this);
     }
 

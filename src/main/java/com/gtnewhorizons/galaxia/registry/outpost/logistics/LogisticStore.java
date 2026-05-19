@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -91,9 +90,7 @@ public final class LogisticStore {
 
     public static void updateSignalsForFacility(CelestialAsset asset) {
         CelestialAsset.ID assetId = asset.assetId;
-        Map<ItemStackWrapper, Long> snapshot = asset instanceof AutomatedFacility af ? af.aggregatedItems()
-            : asset.aggregatedItems();
-
+        Map<ItemStackWrapper, Long> snapshot = asset.aggregatedItems();
         Map<ItemStackWrapper, Long> cannonItems = null;
         if (asset instanceof Station station) {
             cannonItems = station.getCannonChestItems();
