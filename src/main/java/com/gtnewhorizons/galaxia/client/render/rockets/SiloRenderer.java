@@ -12,7 +12,7 @@ public class SiloRenderer extends TileEntitySpecialRenderer {
     public void renderTileEntityAt(TileEntity te, double x, double y, double z, float partialTicks) {
         if (!(te instanceof TileEntitySilo silo)) return;
 
-        RocketBlueprint blueprint = silo.getBlueprint();
+        RocketBlueprint blueprint = silo.getBuiltBlueprint();
         if (blueprint == null || blueprint.isEmpty()) return;
 
         final int[] offset = TileEntitySilo.getRotatedOffset(

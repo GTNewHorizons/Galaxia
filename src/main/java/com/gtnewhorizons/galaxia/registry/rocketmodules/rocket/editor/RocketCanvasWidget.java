@@ -70,7 +70,8 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
                     return true;
                 }
                 case 1 -> {
-                    removePart();
+                    // Right-click: remove only while editable
+                    if (isEditable()) removePart();
                     return true;
                 }
             }
@@ -81,7 +82,8 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         listenGuiAction((IGuiAction.MouseReleased) button -> {
             if (button == 0) {
                 if (lmbDown && !isDragging) {
-                    placePart();
+                    // Left-click place only while editable
+                    if (isEditable()) placePart();
                 }
                 lmbDown = false;
                 isDragging = false;
@@ -104,6 +106,12 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
             return true;
         });
+    }
+
+    /** True only when the silo's build state permits canvas modifications. */
+    private boolean isEditable() {
+        return silo.getBuildStatus()
+            .canEdit();
     }
 
     public void setSelectedPartSupplier(Supplier<IRocketPartDef> supplier) {
@@ -139,9 +147,18 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         drawGrid();
         drawParts();
-        drawHoverPreview();
+        // Only show placement preview when the canvas is editable
+        if (isEditable()) drawHoverPreview();
 
         GlStateManager.popMatrix();
+
+        // Draw a subtle locked overlay when not editable
+        if (!isEditable()) {
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            Gui.drawRect(0, 0, getArea().width, getArea().height, 0x44000000);
+            return;
+        }
 
         GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
@@ -151,21 +168,17 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         Tessellator tes = Tessellator.instance;
 
         double invScale = 1.0 / scale;
-
         double worldLeft = -panX * invScale;
         double worldTop = -panY * invScale;
-
         double worldRight = worldLeft + getArea().width * invScale;
         double worldBottom = worldTop + getArea().height * invScale;
 
         int startX = (int) Math.floor(worldLeft / CELL) - 1;
         int endX = (int) Math.ceil(worldRight / CELL) + 1;
-
         int startY = (int) Math.floor(worldTop / CELL) - 1;
         int endY = (int) Math.ceil(worldBottom / CELL) + 1;
 
         GlStateManager.disableTexture2D();
-
         GL11.glColor4f(0.30f, 0.33f, 0.36f, 1.0f);
         GL11.glLineWidth(1.0f);
 
@@ -173,14 +186,11 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         for (int x = startX; x <= endX; x++) {
             int px = x * CELL;
-
             tes.addVertex(px, startY * CELL, 0);
             tes.addVertex(px, endY * CELL, 0);
         }
-
         for (int y = startY; y <= endY; y++) {
             int py = y * CELL;
-
             tes.addVertex(startX * CELL, py, 0);
             tes.addVertex(endX * CELL, py, 0);
         }
@@ -315,11 +325,8 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         IRocketPartDef def = selectedPartSupplier.get();
         if (def == null) return;
 
-        int cellX = mouseToCellX();
-        int cellY = mouseToCellY();
-
-        int originX = centeredOrigin(cellX, def.width());
-        int originY = centeredOrigin(cellY, def.height());
+        int originX = centeredOrigin(mouseToCellX(), def.width());
+        int originY = centeredOrigin(mouseToCellY(), def.height());
 
         RocketPartInstance part = new RocketPartInstance(def, originX, originY, 0, false);
         if (blueprint.addPart(part)) {
@@ -328,10 +335,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     }
 
     private void removePart() {
-        int cellX = mouseToCellX();
-        int cellY = mouseToCellY();
-
-        RocketPartInstance hit = findPartAt(cellX, cellY);
+        RocketPartInstance hit = findPartAt(mouseToCellX(), mouseToCellY());
         if (hit != null) {
             blueprint.removePartAt(hit.x(), hit.y(), hit.z());
             silo.sync();
@@ -345,10 +349,8 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
                 .get(i);
             IRocketPartDef def = part.def();
 
-            int x1 = part.x();
-            int y1 = part.y();
-            int x2 = x1 + def.width();
-            int y2 = y1 + def.height();
+            int x1 = part.x(), y1 = part.y();
+            int x2 = x1 + def.width(), y2 = y1 + def.height();
 
             if (cellX >= x1 && cellX < x2 && cellY >= y1 && cellY < y2) {
                 return part;
@@ -370,12 +372,10 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     }
 
     private int mouseToCellX() {
-        double worldX = (localMouseX() - panX) / (CELL * scale);
-        return (int) Math.floor(worldX + 1e-9);
+        return (int) Math.floor((localMouseX() - panX) / (CELL * scale) + 1e-9);
     }
 
     private int mouseToCellY() {
-        double worldY = (localMouseY() - panY) / (CELL * scale);
-        return (int) Math.floor(worldY + 1e-9);
+        return (int) Math.floor((localMouseY() - panY) / (CELL * scale) + 1e-9);
     }
 }

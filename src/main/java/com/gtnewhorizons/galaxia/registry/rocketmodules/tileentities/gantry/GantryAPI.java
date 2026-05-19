@@ -295,4 +295,10 @@ public final class GantryAPI {
     public static boolean isTerminal(TileEntityGantry gantry) {
         return gantry instanceof TileEntityGantryTerminal;
     }
+
+    public static void requestProduction(RocketPartInstance part, TileEntityModuleAssembler assembler,
+        TileEntitySilo targetSilo) {
+        if (assembler == null || targetSilo == null) return;
+        assembler.enqueueProduction(part.copy(), targetSilo);
+    }
 }

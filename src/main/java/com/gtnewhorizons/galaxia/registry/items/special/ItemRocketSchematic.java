@@ -44,11 +44,11 @@ public class ItemRocketSchematic extends Item {
     }
 
     public static ItemStack captureFromSilo(TileEntitySilo silo, String schematicName) {
-        if (silo == null || silo.getBlueprint()
+        if (silo == null || silo.getBuiltBlueprint()
             .isEmpty()) return null;
 
         ItemStack stack = new ItemStack(new ItemRocketSchematic());
-        RocketBlueprint bp = silo.getBlueprint()
+        RocketBlueprint bp = silo.getBuiltBlueprint()
             .copy();
 
         setBlueprint(stack, bp);

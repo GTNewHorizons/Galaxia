@@ -35,6 +35,9 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildOrder;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
@@ -45,10 +48,6 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.Tile
 
 public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     implements IGuiHolder<PosGuiData>, IRocketControllerTE {
-
-    // TODO add blueprint saving after leaving world
-
-    private RocketBlueprint blueprint = new RocketBlueprint();
 
     private EntityRocket entityRocket;
     public boolean shouldRender = true;
@@ -75,14 +74,120 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
+    /** What the player has drawn in the editor. Mutable only while canEdit(). */
+    private RocketBlueprint designBlueprint = new RocketBlueprint();
+
+    /**
+     * Immutable snapshot created at order time. Drives the assembler's work list.
+     * Null when not in ORDERED/ASSEMBLING state.
+     */
+    private RocketBuildOrder currentBuildOrder = null;
+
+    /**
+     * Accumulated result of confirmed deliveries. Only updated in receiveModulePart.
+     * Becomes authoritative source for the EntityRocket once READY.
+     */
+    private RocketBlueprint assembledBlueprint = new RocketBlueprint();
+
+    private RocketBuildStatus buildStatus = RocketBuildStatus.IDLE;
+
+    public RocketBlueprint getDesignBlueprint() {
+        return designBlueprint;
+    }
+
+    public RocketBuildOrder getCurrentBuildOrder() {
+        return currentBuildOrder;
+    }
+
+    /**
+     * Returns the assembled blueprint only when the rocket is actually built or
+     * launched. Returns an empty blueprint otherwise so callers can't render a
+     * half-built rocket.
+     */
+    public RocketBlueprint getBuiltBlueprint() {
+        return buildStatus == RocketBuildStatus.READY || buildStatus == RocketBuildStatus.LAUNCHED ? assembledBlueprint
+            : new RocketBlueprint();
+    }
+
+    public RocketBuildStatus getBuildStatus() {
+        return buildStatus;
+    }
+
+    /**
+     * Called by the editor UI on close. Only applies the new design when editing
+     * is allowed — prevents the open editor from overwriting a live build order.
+     */
+    public void setDesignBlueprint(RocketBlueprint bp) {
+        if (!buildStatus.canEdit()) return;
+        this.designBlueprint = bp != null ? bp.copy() : new RocketBlueprint();
+        this.buildStatus = this.designBlueprint.isEmpty() ? RocketBuildStatus.IDLE : RocketBuildStatus.DESIGNED;
+        sync();
+    }
+
+    /**
+     * Create an immutable build order from the current design and begin production.
+     * Guards: status must be DESIGNED, assembler must be present, design must be viable.
+     */
+    public void orderModules() {
+        if (!buildStatus.canOrder() || !hasAssembler || moduleAssembler == null) return;
+
+        RocketAssembly analysis = designBlueprint.analyze();
+        if (!analysis.viable()) return;
+
+        this.currentBuildOrder = new RocketBuildOrder(designBlueprint);
+        this.buildStatus = RocketBuildStatus.ORDERED;
+        this.assembledBlueprint.clear();
+
+        requestNextPart();
+        sync();
+    }
+
+    private void requestNextPart() {
+        if (currentBuildOrder == null || currentBuildOrder.isComplete()) return;
+
+        RocketPartInstance next = currentBuildOrder.getNextUndelivered();
+        if (next != null) {
+            GantryAPI.requestProduction(next, moduleAssembler, this);
+            buildStatus = RocketBuildStatus.ASSEMBLING;
+        }
+    }
+
+    /**
+     * Called by TileEntityGantryTerminal when a part physically arrives at the silo.
+     * This is the only place that writes to assembledBlueprint.
+     */
+    public boolean receiveModulePart(RocketPartInstance part) {
+        if (currentBuildOrder == null) return false;
+
+        boolean accepted = currentBuildOrder.markDelivered(part);
+        if (accepted) {
+            assembledBlueprint.addPart(part.copy());
+
+            if (currentBuildOrder.isComplete()) {
+                buildStatus = RocketBuildStatus.READY;
+                currentBuildOrder = null;
+            } else {
+                requestNextPart();
+            }
+            sync();
+        }
+        return accepted;
+    }
+
     private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntitySilo>builder()
         .addShape(
             STRUCTURE_PIECE_MAIN,
+            // spotless:off
             StructureUtility.transpose(
-                new String[][] { { "  T  ", "     ", "T   T", "     ", "  T  " },
-                    { "  T  ", "     ", "T   T", "     ", "  T  " }, { "  C  ", "     ", "C   C", "     ", "  C  " },
-                    { " CCC ", "C   C", "C   C", "C   C", " CCC " }, { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " } }))
+                new String[][] {
+                    { "  T  ", "     ", "T   T", "     ", "  T  " },
+                    { "  T  ", "     ", "T   T", "     ", "  T  " },
+                    { "  C  ", "     ", "C   C", "     ", "  C  " },
+                    { " CCC ", "C   C", "C   C", "C   C", " CCC " },
+                    { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " }
+                }))
+        // spotless:on
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
         .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, te) -> {
             if (te instanceof TileEntityGantryTerminal terminal) {
@@ -200,7 +305,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
                     .pos(10, 120)
                     .overlay(
                         IKey.dynamic(
-                            () -> (EnumChatFormatting.GREEN) // removed validators for now
+                            () -> (EnumChatFormatting.GREEN)
                                 + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
                                 + EnumChatFormatting.RESET)
                             .alignment(Alignment.CENTER))
@@ -251,44 +356,36 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     private void enterRocket(PosGuiData data) {
-        if (blueprint.isEmpty() || !blueprint.analyze()
-            .viable()) {
-            return;
-        }
+        if (!buildStatus.canLaunch() || assembledBlueprint.isEmpty()) return;
 
         EntityRocket rocket = getOrCreateEntityRocket();
         if (rocket == null) return;
 
-        rocket.setBlueprint(blueprint.copy());
+        rocket.setBlueprint(assembledBlueprint.copy());
         rocket.setDestination(destination);
 
         shouldRender = false;
+        buildStatus = RocketBuildStatus.LAUNCHED;
         sync();
 
         rocket.interactFirst(data.getPlayer());
         if (!rocket.shouldRender()) rocket.launch();
     }
 
-    public boolean receiveModulePart(RocketPartInstance part) {
-        if (part == null) return false;
-
-        if (blueprint.addPart(part.copy())) {
-            sync();
-            return true;
-        }
-        return false;
-    }
-
     public void returnModules() {
         if (moduleAssembler == null || worldObj.isRemote) return;
-        // TODO: Inject blueprint parts back via gantry
-        blueprint = new RocketBlueprint();
-        shouldRender = true;
+
+        // TODO: physically return modules via gantry rather than resetting state
+        this.designBlueprint.clear();
+        this.assembledBlueprint.clear();
+        this.currentBuildOrder = null;
+        this.buildStatus = RocketBuildStatus.IDLE;
+        this.shouldRender = true;
         sync();
     }
 
     public void captureSchematic(EntityPlayer player) {
-        if (worldObj.isRemote || blueprint.isEmpty()) return;
+        if (worldObj.isRemote || designBlueprint.isEmpty()) return;
         ItemStack schematic = ItemRocketSchematic.captureFromSilo(this, pendingSchematicName);
         if (schematic != null) {
             player.inventory.addItemStackToInventory(schematic);
@@ -309,15 +406,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         return entityRocket;
     }
 
-    public RocketBlueprint getBlueprint() {
-        return blueprint;
-    }
-
-    public void setBlueprint(RocketBlueprint bp) {
-        this.blueprint = bp != null ? bp.copy() : new RocketBlueprint();
-        markDirty();
-    }
-
     public void sync() {
         markDirty();
         if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -328,10 +416,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         super.updateEntity();
         if (worldObj.isRemote) return;
 
-        if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid && !blueprint.isEmpty()) {
+        // Spawn the rocket entity once assembly is complete
+        if (shouldRender && (entityRocket == null || entityRocket.isDead)
+            && structureValid
+            && buildStatus == RocketBuildStatus.READY) {
             getOrCreateEntityRocket();
         }
 
+        // Lazy-load assembler reference after world load
         if (pendingAssemblerCoords != null) {
             TileEntity te = worldObj
                 .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
@@ -348,21 +440,29 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
     }
 
-    // ==================== NBT ====================
-
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
-        nbt.setBoolean("shouldRender", shouldRender);
-        nbt.setTag("blueprint", blueprint.serializeNBT());
 
+        nbt.setBoolean("shouldRender", shouldRender);
+
+        // Build state — all three layers persisted independently
+        nbt.setInteger("buildStatus", buildStatus.ordinal());
+        nbt.setTag("designBlueprint", designBlueprint.serializeNBT());
+        nbt.setTag("assembledBlueprint", assembledBlueprint.serializeNBT());
+
+        if (currentBuildOrder != null) {
+            nbt.setTag("buildOrder", currentBuildOrder.serializeNBT());
+        }
+
+        // Assembler coordinates for lazy reload
         if (moduleAssembler != null) {
             nbt.setInteger("assemblerX", moduleAssembler.xCoord);
             nbt.setInteger("assemblerY", moduleAssembler.yCoord);
             nbt.setInteger("assemblerZ", moduleAssembler.zCoord);
         }
-
         nbt.setBoolean("hasAssembler", hasAssembler);
+
         nbt.setInteger("facing", currentFacing.getIndex());
         nbt.setInteger("placedFacing", placedFacing.ordinal());
         nbt.setInteger("destination", destination);
@@ -372,9 +472,28 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
-        blueprint = RocketBlueprint.deserializeNBT(nbt.getCompoundTag("blueprint"), RocketPartRegistry.instance());
 
         shouldRender = nbt.getBoolean("shouldRender");
+
+        // Build status
+        if (nbt.hasKey("buildStatus")) {
+            int ordinal = nbt.getInteger("buildStatus");
+            RocketBuildStatus[] values = RocketBuildStatus.values();
+            buildStatus = ordinal >= 0 && ordinal < values.length ? values[ordinal] : RocketBuildStatus.IDLE;
+        }
+
+        // Blueprints
+        designBlueprint = RocketBlueprint
+            .deserializeNBT(nbt.getCompoundTag("designBlueprint"), RocketPartRegistry.instance());
+        assembledBlueprint = RocketBlueprint
+            .deserializeNBT(nbt.getCompoundTag("assembledBlueprint"), RocketPartRegistry.instance());
+
+        // Active build order (null-safe)
+        if (nbt.hasKey("buildOrder")) {
+            currentBuildOrder = RocketBuildOrder
+                .deserializeNBT(nbt.getCompoundTag("buildOrder"), RocketPartRegistry.instance());
+        }
+
         hasAssembler = nbt.getBoolean("hasAssembler");
         destination = nbt.getInteger("destination");
         pendingSchematicName = nbt.getString("pendingSchematicName");
@@ -409,6 +528,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     // IRocketControllerTE
+
     @Override
     public ForgeDirection getPlacedFacing() {
         return placedFacing;
