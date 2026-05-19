@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -430,10 +431,15 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         return rowIndex >= 0 && rowIndex < rows.size() ? rows.get(rowIndex) : null;
     }
 
+    @SuppressWarnings("Convert2Diamond")
     private List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows(CelestialAsset asset) {
-        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = new ArrayList<>(
-            asset.logisticsConfig.snapshot()
-                .entrySet());
+        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = new ArrayList<>();
+        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : asset.logisticsConfig.snapshot()
+            .entrySet()) {
+            if (e.getKey() instanceof ItemStackWrapper item) {
+                rows.add(new java.util.AbstractMap.SimpleEntry<>(item, e.getValue()));
+            }
+        }
         rows.sort(
             Comparator.comparing(
                 entry -> entry.getKey()

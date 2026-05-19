@@ -815,7 +815,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             controller.moduleIndex(),
             AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
             kind,
-            resourceKeyString(key),
+            key,
             amount);
     }
 
@@ -832,7 +832,7 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
             controller.moduleIndex(),
             AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
             kind,
-            resourceKeyString(key),
+            key,
             0L);
     }
 
@@ -842,12 +842,6 @@ final class RecipeConfigModalWidget extends ParentWidget<RecipeConfigModalWidget
         }
         FluidStack stack = fluidStack(target);
         return stack != null ? FluidKey.of(stack) : null;
-    }
-
-    private static String resourceKeyString(InventoryKey key) {
-        return key instanceof ItemStackWrapper item ? item.toKey()
-            : ((FluidKey) key).fluid()
-                .getName();
     }
 
     private static BoundKind boundKind(BoundTarget target) {

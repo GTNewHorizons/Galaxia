@@ -43,6 +43,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
@@ -1897,12 +1898,15 @@ public final class AssetManagementSystem {
             activeScrollWidget = scroll;
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f);
 
-            Map<ItemStackWrapper, LogisticsResourceConfig> configSnapshot = outpost.logisticsConfig.snapshot();
+            Map<InventoryKey, LogisticsResourceConfig> configSnapshot = outpost.logisticsConfig.snapshot();
 
             int rowY = 0;
-            for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry : configSnapshot.entrySet()) {
-                final ItemStackWrapper wrapper = entry.getKey();
+            for (Map.Entry<InventoryKey, LogisticsResourceConfig> entry : configSnapshot.entrySet()) {
+                final InventoryKey key = entry.getKey();
                 final LogisticsResourceConfig cfg = entry.getValue();
+                // TODO: Show also fluids
+                if (!key.isItem()) continue;
+                final ItemStackWrapper wrapper = (ItemStackWrapper) key;
                 final ItemStack displayStack = wrapper.toStack(1);
                 long currentAmount = outpost.getItemAmount(wrapper);
 

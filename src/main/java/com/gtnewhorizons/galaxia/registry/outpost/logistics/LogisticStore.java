@@ -14,10 +14,13 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
+// TODO: Make store work with fluids as well, there is already a half implementation throughout the codebase. Use
+// InventoryKey for the refactor
 public final class LogisticStore {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
@@ -99,9 +102,13 @@ public final class LogisticStore {
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
             .computeIfAbsent(assetId, k -> new LinkedHashMap<>());
 
-        List<ItemStackWrapper> allResources = new ArrayList<>(
-            asset.logisticsConfig.snapshot()
-                .keySet());
+        List<ItemStackWrapper> allResources = new ArrayList<>();
+        for (InventoryKey key : asset.logisticsConfig.snapshot()
+            .keySet()) {
+            if (key instanceof ItemStackWrapper item) {
+                allResources.add(item);
+            }
+        }
         for (ItemStackWrapper r : snapshot.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }

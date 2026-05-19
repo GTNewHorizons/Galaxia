@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -62,29 +61,25 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         return pkt;
     }
 
-    public static AssetInventoryUpdatePacket setBound(CelestialAsset.ID assetId, BoundKind kind, String resourceKey,
+    public static AssetInventoryUpdatePacket setBound(CelestialAsset.ID assetId, BoundKind kind, InventoryKey resource,
         long amount) {
         AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
         pkt.assetId = assetId;
         pkt.operation = Operation.SET_BOUND;
         pkt.boundKind = kind;
+        pkt.resource = resource;
         pkt.delta = amount;
         pkt.creativeOnly = false;
         return pkt;
     }
 
-    public static AssetInventoryUpdatePacket setBound(CelestialAsset.ID assetId, BoundKind kind,
-        ItemStackWrapper resource, long amount) {
-        AssetInventoryUpdatePacket pkt = setBound(assetId, kind, resource.toKey(), amount);
-        pkt.resource = resource;
-        return pkt;
-    }
-
-    public static AssetInventoryUpdatePacket clearBound(CelestialAsset.ID assetId, BoundKind kind, String resourceKey) {
+    public static AssetInventoryUpdatePacket clearBound(CelestialAsset.ID assetId, BoundKind kind,
+        InventoryKey resource) {
         AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
         pkt.assetId = assetId;
         pkt.operation = Operation.CLEAR_BOUND;
         pkt.boundKind = kind;
+        pkt.resource = resource;
         pkt.delta = 0L;
         pkt.creativeOnly = false;
         return pkt;
@@ -165,42 +160,37 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         if (applied == 0L) return null;
 
         asset.bumpSyncRevision();
-        String resourceKey = resourceKeyString(resource);
-        LOG.info("[Logistics] Inventory update: {} x {} on {}", applied, resourceKey, assetId);
-        return AssetSyncPacket.inventoryUpdate(assetId, resourceKey, applied)
+        LOG.info("[Logistics] Inventory update: {} x {} on {}", applied, resource.toKey(), assetId);
+        return AssetSyncPacket.inventoryUpdate(assetId, resource, applied)
             .withSyncRevision(asset.getSyncRevision());
     }
 
     private AssetSyncPacket applyBoundUpdate(AutomatedFacility state) {
         if (boundKind == null) return null;
-        String resourceKey = resourceKeyString(resource);
-        if (resourceKey == null) return null;
         if (operation == Operation.SET_BOUND) {
             final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
             state.setBound(resource, delta, low);
 
             state.markInventoryBoundDelta(boundKind, resource, true, delta);
-            LOG.info("[Logistics] Inventory bound set: {} {}={} on outpost {}", boundKind, resourceKey, delta, assetId);
-            return AssetSyncPacket.inventoryBoundUpdate(assetId, boundKind, resourceKey, true, delta)
+            LOG.info(
+                "[Logistics] Inventory bound set: {} {}={} on outpost {}",
+                boundKind,
+                resource.toKey(),
+                delta,
+                assetId);
+            return AssetSyncPacket.inventoryBoundUpdate(assetId, boundKind, resource, true, delta)
                 .withSyncRevision(state.getSyncRevision());
         } else if (operation == Operation.CLEAR_BOUND) {
             state.clearBound(resource);
 
             state.markInventoryBoundDelta(boundKind, resource, false, 0L);
-            LOG.info("[Logistics] Inventory bound cleared: {} {} on outpost {}", boundKind, resourceKey, assetId);
-            return AssetSyncPacket.inventoryBoundUpdate(assetId, boundKind, resourceKey, false, 0L)
+            LOG.info("[Logistics] Inventory bound cleared: {} {} on outpost {}", boundKind, resource.toKey(), assetId);
+            return AssetSyncPacket.inventoryBoundUpdate(assetId, boundKind, resource, false, 0L)
                 .withSyncRevision(state.getSyncRevision());
 
         } else {
             throw new IllegalStateException("[Logistics] Received malformed bound update");
         }
-    }
-
-    private static String resourceKeyString(InventoryKey key) {
-        if (key == null) return null;
-        return key instanceof ItemStackWrapper item ? item.toKey()
-            : ((FluidKey) key).fluid()
-                .getName();
     }
 
     private enum Operation {

@@ -379,8 +379,7 @@ public interface IDistributedInventory {
      * @return the amount actually transferred
      */
     default <T extends InventoryKey> long updateContents(T key, int delta) {
-        return key instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) key, delta)
-            : updateFluids((FluidKey) key, delta);
+        return key.isItem() ? updateItems((ItemStackWrapper) key, delta) : updateFluids((FluidKey) key, delta);
     }
 
     /**

@@ -277,7 +277,7 @@ final class StationPacketRoundTripTest {
 
         // Generate MODULE_ADDED delta and apply to client via the production code path
         AssetSyncPacket delta = AssetSyncPacket.moduleAdded(server.assetId, idx, m2);
-        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
 
         // CRITICAL: client must now have the layout tile for the new module
         assertTrue(
@@ -307,7 +307,7 @@ final class StationPacketRoundTripTest {
 
         // Send MODULE_REMOVED delta to client
         AssetSyncPacket delta = AssetSyncPacket.moduleRemoved(server.assetId, 0, module.id);
-        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
 
         assertEquals(
             0,
@@ -339,7 +339,7 @@ final class StationPacketRoundTripTest {
         module.updateStatus(Buildable.Status.DISABLED);
 
         AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
-        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
 
         ModuleInstance updatedModule = client.modules()
             .get(0);
@@ -403,7 +403,7 @@ final class StationPacketRoundTripTest {
         if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
         for (AssetSyncPacket d : packet.fullSyncDeltas()) {
-            AssetSyncPacket.applyDeltaToFacility(client, d);
+            AssetSyncPacket.Handler.handleDelta(client, d);
         }
         client.setSyncRevision(packet.syncRevision());
     }

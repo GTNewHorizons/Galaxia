@@ -10,6 +10,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
@@ -80,7 +81,7 @@ public final class HammerDispatchPlanner {
             return new Result(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, 0L, 0L, 0L, 0, null);
         }
 
-        Map<ItemStackWrapper, LogisticsResourceConfig> supplierConfigs = supplier.logisticsConfig.snapshot();
+        Map<InventoryKey, LogisticsResourceConfig> supplierConfigs = supplier.logisticsConfig.snapshot();
         boolean hasExportConfig = supplierConfigs.values()
             .stream()
             .anyMatch(LogisticsResourceConfig::isSupplyEnabled);
@@ -90,11 +91,11 @@ public final class HammerDispatchPlanner {
         boolean sawAnyRequest = false;
         Result bestBlockedStatus = null;
 
-        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> supplierEntry : supplierConfigs.entrySet()) {
+        for (Map.Entry<InventoryKey, LogisticsResourceConfig> supplierEntry : supplierConfigs.entrySet()) {
             LogisticsResourceConfig supplierCfg = supplierEntry.getValue();
             if (!supplierCfg.isSupplyEnabled()) continue;
 
-            ItemStackWrapper resource = supplierEntry.getKey();
+            if (!(supplierEntry.getKey() instanceof ItemStackWrapper resource)) continue;
             long availableSurplus = supplier.getItemAmount(resource) - supplierCfg.minReserve();
             if (availableSurplus <= 0L) {
                 sawSurplusBlocked = true;

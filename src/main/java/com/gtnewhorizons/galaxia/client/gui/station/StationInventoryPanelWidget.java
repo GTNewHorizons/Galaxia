@@ -36,6 +36,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget>
@@ -563,22 +564,16 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         long amount = parseAmount(text);
         BoundKind kind = selectedBoundItem != null ? (low ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (low ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
-        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey()
-            : selectedBoundFluid.fluid()
-                .getName();
+        InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
         AutomatedFacility af = af();
         if (af != null) {
-            if (selectedBoundItem != null) {
-                af.setBound(selectedBoundItem, amount, low);
-            } else {
-                af.setBound(selectedBoundFluid, amount, low);
-            }
+            af.setBound(resource, amount, low);
         }
         CelestialClient.updateInventoryBound(
             assetId,
             AssetModuleUpdatePacket.ConfigAction.SET_INVENTORY_BOUND,
             kind,
-            resourceKey,
+            resource,
             amount);
     }
 
@@ -586,22 +581,16 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (assetId == null || !isBoundEditorOpen()) return;
         BoundKind kind = selectedBoundItem != null ? (low ? BoundKind.ITEM_LOWER : BoundKind.ITEM_UPPER)
             : (low ? BoundKind.FLUID_LOWER : BoundKind.FLUID_UPPER);
-        String resourceKey = selectedBoundItem != null ? selectedBoundItem.toKey()
-            : selectedBoundFluid.fluid()
-                .getName();
+        InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
         AutomatedFacility af = af();
         if (af != null) {
-            if (selectedBoundItem != null) {
-                af.clearBound(selectedBoundItem, low);
-            } else {
-                af.clearBound(selectedBoundFluid, low);
-            }
+            af.clearBound(resource, low);
         }
         CelestialClient.updateInventoryBound(
             assetId,
             AssetModuleUpdatePacket.ConfigAction.CLEAR_INVENTORY_BOUND,
             kind,
-            resourceKey,
+            resource,
             0L);
         if (low) {
             inputBoundAmount = "";

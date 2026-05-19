@@ -100,6 +100,9 @@ public final class FacilityPersistenceManager {
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
 
+    private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
+    private static final String INVENTORY_KEY_FLUID_PREFIX = "F";
+
     public FacilityPersistenceManager() {
         gson = new GsonBuilder().setPrettyPrinting()
             .serializeNulls()
@@ -351,7 +354,7 @@ public final class FacilityPersistenceManager {
         json.itemsBounds = encodeBoundsMap(asset.getBounds(true));
         json.fluidsBounds = encodeBoundsMap(asset.getBounds(false));
         json.logisticsConfig = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : asset.logisticsConfig.snapshot()
+        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : asset.logisticsConfig.snapshot()
             .entrySet()) {
             LogisticsConfigJson cj = new LogisticsConfigJson();
             cj.minReserve = e.getValue()
@@ -363,8 +366,9 @@ public final class FacilityPersistenceManager {
             cj.isSupplyEnabled = e.getValue()
                 .isSupplyEnabled();
             json.logisticsConfig.put(
-                e.getKey()
-                    .toKey(),
+                (e.getKey()
+                    .isItem() ? INVENTORY_KEY_ITEM_PREFIX : INVENTORY_KEY_FLUID_PREFIX) + e.getKey()
+                        .toKey(),
                 cj);
         }
         if (asset instanceof AutomatedFacility af) {
@@ -420,9 +424,16 @@ public final class FacilityPersistenceManager {
             }
         }
         if (json.logisticsConfig != null) {
-            Map<ItemStackWrapper, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
+            Map<InventoryKey, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
             for (Map.Entry<String, LogisticsConfigJson> e : json.logisticsConfig.entrySet()) {
-                ItemStackWrapper key = ItemStackWrapper.fromKey(e.getKey());
+                InventoryKey key = e.getKey()
+                    .startsWith(INVENTORY_KEY_ITEM_PREFIX)
+                        ? ItemStackWrapper.fromKey(
+                            e.getKey()
+                                .substring(1))
+                        : FluidKey.fromName(
+                            e.getKey()
+                                .substring(1));
                 if (key != null) {
                     LogisticsConfigJson cj = e.getValue();
                     cfgSnapshot.put(

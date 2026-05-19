@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -119,26 +116,6 @@ public final class PacketUtil {
     }
 
     // ── ItemStack helpers ──────────────────────────────────────────────
-
-    /**
-     * Writes an ItemStack to the buffer. Does NOT write NBT data — matches the
-     * existing pattern in {@code AssetModuleUpdatePacket.writeItemStacks}.
-     */
-    static void writeItemStack(ByteBuf buf, ItemStack stack) {
-        buf.writeBoolean(stack != null);
-        if (stack == null) return;
-        buf.writeInt(Item.getIdFromItem(stack.getItem()));
-        buf.writeInt(stack.getItemDamage());
-        buf.writeInt(stack.stackSize);
-    }
-
-    static ItemStack readItemStack(ByteBuf buf) {
-        if (!buf.readBoolean()) return null;
-        Item item = Item.getItemById(buf.readInt());
-        int damage = buf.readInt();
-        int size = buf.readInt();
-        return item != null ? new ItemStack(item, size, damage) : null;
-    }
 
     static void writeInventoryKey(ByteBuf buf, InventoryKey key) {
         buf.writeBoolean(key.isItem());
