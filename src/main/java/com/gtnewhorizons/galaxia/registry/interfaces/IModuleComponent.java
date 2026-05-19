@@ -1,8 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
@@ -42,11 +40,6 @@ public interface IModuleComponent {
     default void validateSettingsCopyTarget(ModuleInstance source, ModuleInstance target) {}
 
     default void afterSettingsCopied(ModuleInstance source, ModuleInstance target) {}
-
-    default FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature,
-        int coveredTiles, int totalTiles) {
-        return null;
-    }
 
     default void tickOperational(ModuleInstance module, AutomatedFacility outpost) {}
 

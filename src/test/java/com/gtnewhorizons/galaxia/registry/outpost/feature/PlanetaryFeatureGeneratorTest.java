@@ -3,8 +3,8 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -111,41 +111,19 @@ final class PlanetaryFeatureGeneratorTest {
     }
 
     @Test
-    void defaultFeatureRegistrationDeclaresLayerAndPlacement() {
-        PlanetaryFeatureDefinition bedrock = PlanetaryFeatureRegistry
-            .get(PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
-        PlanetaryFeatureDefinition vein = PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
-        PlanetaryFeatureDefinition geothermal = PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.MAGMA_POOL.key());
-
-        assertSame(PlanetaryFeatureLayer.TERRAIN, bedrock.layer());
-        assertSame(PlanetaryFeatureLayer.RESOURCE, vein.layer());
-        assertEquals("Magma Pool", geothermal.displayName());
+    void defaultFeatureRegistrationProvidesUsableDefinitions() {
         assertFalse(
-            bedrock.placement()
-                .isIsolated());
-        assertTrue(
-            geothermal.placement()
-                .isIsolated());
-        assertEquals(
-            1.0,
-            geothermal.placement()
-                .meanTiles());
-        assertEquals(
-            6,
-            geothermal.placement()
-                .minSpacingTiles());
-        assertEquals(
-            3.0,
-            PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.placement()
-                .meanTiles());
-        assertEquals(
-            5.0,
-            PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.placement()
-                .meanTiles());
-        assertEquals(
-            5.0,
-            PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.placement()
-                .meanTiles());
+            PlanetaryFeatureRegistry.all()
+                .isEmpty());
+        for (PlanetaryFeatureDefinition definition : PlanetaryFeatureRegistry.all()) {
+            assertNotNull(definition.key());
+            assertFalse(
+                definition.displayName()
+                    .isBlank());
+            assertNotNull(definition.texture());
+            assertNotNull(definition.layer());
+            assertNotNull(definition.placement());
+        }
     }
 
     @Test

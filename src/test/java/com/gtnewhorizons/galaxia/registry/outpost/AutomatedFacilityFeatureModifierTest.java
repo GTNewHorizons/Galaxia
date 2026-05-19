@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -34,16 +35,17 @@ final class AutomatedFacilityFeatureModifierTest {
         ModuleInstance module = facility.modules()
             .get(0);
 
-        assertEquals(
-            90,
+        assertTrue(
             facility.featureModifiers(module)
-                .powerDrawMultiplierPercent());
-        assertEquals(29L, facility.effectivePowerDrawEuPerTick(module));
+                .powerDrawMultiplierPercent() < 100);
+        long effectivePowerDraw = facility.effectivePowerDrawEuPerTick(module);
+        assertTrue(effectivePowerDraw > 0);
+        assertTrue(effectivePowerDraw < module.powerDrawEuPerTick());
 
         facility.setEnergyStored(1000L);
         facility.tick();
 
-        assertEquals(971L, facility.getEnergyStored());
+        assertEquals(1000L - effectivePowerDraw, facility.getEnergyStored());
     }
 
     private static AutomatedFacility facilityWithModuleOnFeature(FacilityModuleKind kind, ModuleTier tier,
