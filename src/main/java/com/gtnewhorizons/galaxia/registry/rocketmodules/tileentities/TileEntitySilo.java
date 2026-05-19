@@ -61,9 +61,9 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     private String pendingSchematicName = "";
 
     private TileEntityGantryTerminal gantryTerminal;
-    private TileEntityModuleAssembler moduleAssembler;
+    public TileEntityModuleAssembler moduleAssembler;
     private int[] pendingAssemblerCoords;
-    private boolean hasAssembler = false;
+    public boolean hasAssembler = false;
 
     public ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     private ForgeDirection placedFacing = ForgeDirection.NORTH;
@@ -120,7 +120,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     public void setDesignBlueprint(RocketBlueprint bp) {
         if (!buildStatus.canEdit()) return;
         this.designBlueprint = bp != null ? bp.copy() : new RocketBlueprint();
-        this.buildStatus = this.designBlueprint.isEmpty() ? RocketBuildStatus.IDLE : RocketBuildStatus.DESIGNED;
+        updateBuildStatusAfterEdit();
         sync();
     }
 
@@ -131,17 +131,75 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
      * request-per-delivery loop.
      */
     public void orderModules() {
-        if (!buildStatus.canOrder() || !hasAssembler || moduleAssembler == null) return;
+        if (worldObj.isRemote) return;
+
+        System.out.println("[SILO] orderModules() called - Status: " + buildStatus);
+
+        if (designBlueprint.isEmpty()) {
+            System.out.println("[SILO] cannot order - empty blueprint");
+            return;
+        }
+
+        if (buildStatus == RocketBuildStatus.IDLE) {
+            buildStatus = RocketBuildStatus.DESIGNED;
+        }
+
+        if (!buildStatus.canOrder()) {
+            System.out.println("[SILO] cannot order - wrong status");
+            return;
+        }
+
+        updateLinkedAssembler();
+        System.out.println(
+            "[SILO] hasAssembler=" + hasAssembler
+                + ", moduleAssembler="
+                + (moduleAssembler != null)
+                + ", gantryTerminal="
+                + (gantryTerminal != null));
+
+        if (!hasAssembler || moduleAssembler == null || gantryTerminal == null) {
+            System.out.println("[SILO] No assembler or gantry terminal connected");
+            return;
+        }
+
+        boolean graphValid = gantryTerminal.checkValidGraph() && moduleAssembler.checkValidGraph();
+        System.out.println("[SILO] Gantry graph valid: " + graphValid);
+
+        if (!graphValid) {
+            System.out.println("[SILO] Gantry graph is invalid");
+            return;
+        }
 
         RocketAssembly analysis = designBlueprint.analyze();
-        if (!analysis.viable()) return;
+        System.out.println("[SILO] Blueprint viable: " + analysis.viable());
+
+        if (!analysis.viable()) {
+            System.out.println("[SILO] Blueprint not viable");
+            return;
+        }
 
         this.currentBuildOrder = new RocketBuildOrder(designBlueprint);
         this.buildStatus = RocketBuildStatus.ASSEMBLING;
         this.assembledBlueprint.clear();
 
+        System.out.println("[SILO] Ordering " + currentBuildOrder.totalCount() + " parts...");
+
         for (RocketPartInstance part : currentBuildOrder.getParts()) {
+            System.out.println(
+                "[SILO] Requesting production: " + part.def()
+                    .name());
             GantryAPI.requestProduction(part.copy(), moduleAssembler, this);
+        }
+
+        sync();
+        System.out.println("[SILO] Order completed successfully!");
+    }
+
+    public void updateBuildStatusAfterEdit() {
+        if (designBlueprint.isEmpty()) {
+            buildStatus = RocketBuildStatus.IDLE;
+        } else {
+            buildStatus = RocketBuildStatus.DESIGNED;
         }
         sync();
     }
@@ -262,6 +320,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             if (terminal.getAssembler() != null) {
                 moduleAssembler = terminal.getAssembler();
                 hasAssembler = true;
+                markDirty();
                 return;
             }
         }

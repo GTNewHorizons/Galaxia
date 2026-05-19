@@ -117,9 +117,10 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
      * arrives.
      */
     private void tryStartNextTask() {
-        if (productionQueue.isEmpty()) return;
+        if (productionQueue.isEmpty() || activeTask != null) return;
 
-        for (ProductionTask task : productionQueue) {
+        // copying the queue to avoid concurrent modification exceptions
+        for (ProductionTask task : new ArrayList<>(productionQueue)) {
             if (hasInStock(
                 task.part()
                     .def())) {
@@ -394,5 +395,10 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     public ExtendedFacing getCurrentFacing() {
         return currentFacing;
+    }
+
+    public boolean checkValidGraph() {
+        if (gantryTerminal == null) return false;
+        return gantryTerminal.checkValidGraph();
     }
 }

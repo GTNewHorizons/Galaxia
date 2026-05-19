@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
+import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
+
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.world.World;
@@ -9,14 +11,13 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.IntSyncValue;
-import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
@@ -26,15 +27,12 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityS
 public class RocketEditorUI {
 
     public static ModularPanel build(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-
         TileEntitySilo silo = getSilo(data);
 
         if (silo == null) {
             return buildErrorPanel("Silo not found!");
         }
 
-        // We always work on a copy of the design blueprint.
-        // The copy is only written back to the silo on close IF editing is still allowed.
         RocketBlueprint workingBlueprint = silo.getDesignBlueprint()
             .copy();
 
@@ -42,14 +40,13 @@ public class RocketEditorUI {
         IntSyncValue selectedPartId = new IntSyncValue(() -> selectedId[0], val -> selectedId[0] = val);
         syncManager.syncValue("selected_part_id", selectedPartId);
 
-        BooleanSyncValue canOrderSync = new BooleanSyncValue(
+        IntSyncValue buildStatusSync = new IntSyncValue(
             () -> silo.getBuildStatus()
-                .canOrder(),
+                .ordinal(),
             v -> {});
-        syncManager.syncValue("can_order", canOrderSync);
-
+        syncManager.syncValue("build_status", buildStatusSync);
         ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_editor")
-            .size(720, 440);
+            .size(720, 640);
 
         RocketCanvasWidget canvas = new RocketCanvasWidget(workingBlueprint, silo);
         canvas.resetView();
@@ -65,7 +62,7 @@ public class RocketEditorUI {
         panel.child(createResetViewButton(canvas).pos(548, 368));
         panel.child(createClearSelectionButton(selectedPartId).pos(548, 396));
         panel.child(createClearBlueprintButton(workingBlueprint, selectedPartId, silo).pos(548, 424));
-        panel.child(createOrderModulesButton(silo, canOrderSync).pos(548, 452));
+        panel.child(createOrderModulesButton(silo, workingBlueprint, buildStatusSync).pos(548, 452));
 
         panel.onCloseAction(() -> {
             if (silo.getBuildStatus()
@@ -189,29 +186,47 @@ public class RocketEditorUI {
             });
     }
 
-    private static ButtonWidget<?> createOrderModulesButton(TileEntitySilo silo, BooleanSyncValue canOrderSync) {
+    private static ButtonWidget<?> createOrderModulesButton(TileEntitySilo silo, RocketBlueprint workingBlueprint,
+        IntSyncValue buildStatusSync) {
         return new ButtonWidget<>().size(160, 20)
             .background(EnumTextures.SELECTION_FRAME.getImage())
             .overlay(IKey.dynamic(() -> {
-                RocketBuildStatus status = silo.getBuildStatus();
-                String label = "Order Modules";
-                int progress = Math.round(
-                    silo.getCurrentBuildOrder() != null ? (float) silo.getCurrentBuildOrder()
-                        .getProgress() * 100 : 100);
+                RocketBuildStatus status = RocketBuildStatus.values()[buildStatusSync.getValue()];
+
                 return switch (status) {
-                    case IDLE -> EnumChatFormatting.DARK_GRAY + label;
-                    case DESIGNED -> EnumChatFormatting.YELLOW + label;
-                    case ASSEMBLING -> EnumChatFormatting.AQUA + "Assembling... (" + progress + "%)";
+                    case IDLE -> workingBlueprint.isEmpty() ? EnumChatFormatting.DARK_GRAY + "Order Modules"
+                        : EnumChatFormatting.YELLOW + "Order Modules";
+
+                    case DESIGNED -> EnumChatFormatting.YELLOW + "Order Modules";
+
+                    case ASSEMBLING -> EnumChatFormatting.AQUA + "Assembling... ("
+                        + (silo.getCurrentBuildOrder() != null ? Math.round(
+                            silo.getCurrentBuildOrder()
+                                .getProgress() * 100)
+                            + "%" : "0%")
+                        + ")";
+
                     case READY -> EnumChatFormatting.GREEN + "Ready to Launch";
+
                     case LAUNCHED -> EnumChatFormatting.GRAY + "Launched";
                 };
             })
                 .alignment(Alignment.Center))
-            .syncHandler(new InteractionSyncHandler().setOnMousePressed(md -> {
-                if (md.mouseButton == 0) {
-                    silo.orderModules();
+            .onMousePressed(mouseButton -> {
+
+                if (mouseButton != 0) {
+                    return false;
                 }
-            }));
+
+                GALAXIA_NETWORK.sendToServer(
+                    new CommitBlueprintAndOrderPacket(
+                        silo.xCoord,
+                        silo.yCoord,
+                        silo.zCoord,
+                        workingBlueprint.serializeNBT()));
+
+                return true;
+            });
     }
 
     private static ParentWidget<?> createStatusLabel(IntSyncValue selectedPartId) {
