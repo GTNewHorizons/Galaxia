@@ -4,8 +4,7 @@ public enum RocketBuildStatus {
 
     IDLE, // nothing designed
     DESIGNED, // designed but not ordered
-    ORDERED, // ordered and being assembled
-    ASSEMBLING, // parts moving through gantry
+    ASSEMBLING, // ordered and being assembled
     READY, // fully assembled and ready for start
     LAUNCHED; // rocket departed
 

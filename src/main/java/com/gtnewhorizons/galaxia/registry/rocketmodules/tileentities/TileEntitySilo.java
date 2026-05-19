@@ -79,7 +79,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     /**
      * Immutable snapshot created at order time. Drives the assembler's work list.
-     * Null when not in ORDERED/ASSEMBLING state.
+     * Null when not in ASSEMBLING state.
      */
     private RocketBuildOrder currentBuildOrder = null;
 
@@ -125,8 +125,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     /**
-     * Create an immutable build order from the current design and begin production.
-     * Guards: status must be DESIGNED, assembler must be present, design must be viable.
+     * Creates an immutable build order from the current design and enqueues all parts
+     * to the assembler at once. The assembler immediately begins work on any part it
+     * has in stock and holds the rest until stock is replenished — no serial
+     * request-per-delivery loop.
      */
     public void orderModules() {
         if (!buildStatus.canOrder() || !hasAssembler || moduleAssembler == null) return;
@@ -135,21 +137,13 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         if (!analysis.viable()) return;
 
         this.currentBuildOrder = new RocketBuildOrder(designBlueprint);
-        this.buildStatus = RocketBuildStatus.ORDERED;
+        this.buildStatus = RocketBuildStatus.ASSEMBLING;
         this.assembledBlueprint.clear();
 
-        requestNextPart();
-        sync();
-    }
-
-    private void requestNextPart() {
-        if (currentBuildOrder == null || currentBuildOrder.isComplete()) return;
-
-        RocketPartInstance next = currentBuildOrder.getNextUndelivered();
-        if (next != null) {
-            GantryAPI.requestProduction(next, moduleAssembler, this);
-            buildStatus = RocketBuildStatus.ASSEMBLING;
+        for (RocketPartInstance part : currentBuildOrder.getParts()) {
+            GantryAPI.requestProduction(part.copy(), moduleAssembler, this);
         }
+        sync();
     }
 
     /**
@@ -166,8 +160,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             if (currentBuildOrder.isComplete()) {
                 buildStatus = RocketBuildStatus.READY;
                 currentBuildOrder = null;
-            } else {
-                requestNextPart();
             }
             sync();
         }
@@ -416,14 +408,12 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         super.updateEntity();
         if (worldObj.isRemote) return;
 
-        // Spawn the rocket entity once assembly is complete
         if (shouldRender && (entityRocket == null || entityRocket.isDead)
             && structureValid
             && buildStatus == RocketBuildStatus.READY) {
             getOrCreateEntityRocket();
         }
 
-        // Lazy-load assembler reference after world load
         if (pendingAssemblerCoords != null) {
             TileEntity te = worldObj
                 .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
@@ -455,7 +445,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             nbt.setTag("buildOrder", currentBuildOrder.serializeNBT());
         }
 
-        // Assembler coordinates for lazy reload
         if (moduleAssembler != null) {
             nbt.setInteger("assemblerX", moduleAssembler.xCoord);
             nbt.setInteger("assemblerY", moduleAssembler.yCoord);
@@ -475,20 +464,17 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
         shouldRender = nbt.getBoolean("shouldRender");
 
-        // Build status
         if (nbt.hasKey("buildStatus")) {
             int ordinal = nbt.getInteger("buildStatus");
             RocketBuildStatus[] values = RocketBuildStatus.values();
             buildStatus = ordinal >= 0 && ordinal < values.length ? values[ordinal] : RocketBuildStatus.IDLE;
         }
 
-        // Blueprints
         designBlueprint = RocketBlueprint
             .deserializeNBT(nbt.getCompoundTag("designBlueprint"), RocketPartRegistry.instance());
         assembledBlueprint = RocketBlueprint
             .deserializeNBT(nbt.getCompoundTag("assembledBlueprint"), RocketPartRegistry.instance());
 
-        // Active build order (null-safe)
         if (nbt.hasKey("buildOrder")) {
             currentBuildOrder = RocketBuildOrder
                 .deserializeNBT(nbt.getCompoundTag("buildOrder"), RocketPartRegistry.instance());

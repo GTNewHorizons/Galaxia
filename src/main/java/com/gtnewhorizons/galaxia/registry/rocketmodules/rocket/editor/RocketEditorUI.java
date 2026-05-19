@@ -42,7 +42,6 @@ public class RocketEditorUI {
         IntSyncValue selectedPartId = new IntSyncValue(() -> selectedId[0], val -> selectedId[0] = val);
         syncManager.syncValue("selected_part_id", selectedPartId);
 
-        // Sync whether the Order button should be active (server-authoritative)
         BooleanSyncValue canOrderSync = new BooleanSyncValue(
             () -> silo.getBuildStatus()
                 .canOrder(),
@@ -68,8 +67,6 @@ public class RocketEditorUI {
         panel.child(createClearBlueprintButton(workingBlueprint, selectedPartId, silo).pos(548, 424));
         panel.child(createOrderModulesButton(silo, canOrderSync).pos(548, 452));
 
-        // Only persist the working blueprint when the silo can still accept edits.
-        // This prevents an open editor from silently overwriting a live build order.
         panel.onCloseAction(() -> {
             if (silo.getBuildStatus()
                 .canEdit()) {
@@ -198,14 +195,13 @@ public class RocketEditorUI {
             .overlay(IKey.dynamic(() -> {
                 RocketBuildStatus status = silo.getBuildStatus();
                 String label = "Order Modules";
+                int progress = Math.round(
+                    silo.getCurrentBuildOrder() != null ? (float) silo.getCurrentBuildOrder()
+                        .getProgress() * 100 : 100);
                 return switch (status) {
                     case IDLE -> EnumChatFormatting.DARK_GRAY + label;
                     case DESIGNED -> EnumChatFormatting.YELLOW + label;
-                    case ORDERED, ASSEMBLING -> EnumChatFormatting.AQUA + "Assembling... ("
-                        + Math.round(
-                            silo.getCurrentBuildOrder() != null ? silo.getCurrentBuildOrder()
-                                .getProgress() * 100 : 100)
-                        + "%)";
+                    case ASSEMBLING -> EnumChatFormatting.AQUA + "Assembling... (" + progress + "%)";
                     case READY -> EnumChatFormatting.GREEN + "Ready to Launch";
                     case LAUNCHED -> EnumChatFormatting.GRAY + "Launched";
                 };
