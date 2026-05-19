@@ -70,8 +70,10 @@ public final class LogisticStore {
                         ticked.data.toAssetId());
                     return;
                 }
-                long accepted = destination
-                    .updateContents(ticked.data.resourceId(), (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE), true);
+                long accepted = destination.updateContents(
+                    ticked.data.resourceId(),
+                    (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE),
+                    true);
                 long remaining = ticked.data.amount() - accepted;
                 if (remaining > 0L) {
                     ticked.setAmount(remaining);
