@@ -15,6 +15,6 @@ public interface IStationAttachment<T extends GalaxiaBootableMultiblock<T>> {
     void tick();
 
     default boolean isReady() {
-        return ((T)this).booted();
+        return ((T) this).booted();
     }
 }

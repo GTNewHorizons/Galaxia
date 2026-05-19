@@ -70,6 +70,10 @@ public final class CelestialClient {
         return result;
     }
 
+    public static List<CelestialAsset> allAssets() {
+        return CelestialAssetStore.CLIENT.allAssetsInternal();
+    }
+
     public static List<AutomatedFacility> allOutposts() {
         List<AutomatedFacility> result = new ArrayList<>();
         for (CelestialAsset asset : CelestialAssetStore.CLIENT.allAssetsInternal()) {

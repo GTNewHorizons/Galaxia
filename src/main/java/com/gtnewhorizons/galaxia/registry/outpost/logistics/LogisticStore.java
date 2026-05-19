@@ -71,7 +71,7 @@ public final class LogisticStore {
                     return;
                 }
                 long accepted = destination
-                    .updateItems(ticked.data.resourceId(), (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE));
+                    .updateContents(ticked.data.resourceId(), (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE), true);
                 long remaining = ticked.data.amount() - accepted;
                 if (remaining > 0L) {
                     ticked.setAmount(remaining);

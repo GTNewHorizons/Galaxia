@@ -80,7 +80,7 @@ final class HammerDispatchStatusTest {
         ModuleInstance hammerModule = hammerModule(hammer);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule, List.of(requester), List.of(), 0.0);
+            .evaluate(supplier, hammerModule, List.of(requester), 0.0);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         HammerDispatchPlanner.Plan plan = result.plan();

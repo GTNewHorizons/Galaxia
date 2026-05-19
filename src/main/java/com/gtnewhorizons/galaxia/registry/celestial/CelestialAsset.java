@@ -223,6 +223,8 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         dirty = false;
     }
 
+    public abstract long updateContents(InventoryKey item, int delta, boolean sync);
+
     /// ----------------------------------------------------------------------------------
     /// Inventory Bounds
     /// ----------------------------------------------------------------------------------

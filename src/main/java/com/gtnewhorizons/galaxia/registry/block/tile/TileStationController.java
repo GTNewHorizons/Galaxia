@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.registry.block.tile;
 import java.util.List;
 import java.util.UUID;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -28,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 public class TileStationController extends TileStationBase<TileStationController> {
@@ -168,7 +168,8 @@ public class TileStationController extends TileStationBase<TileStationController
                 secondary.tick();
             }
 
-            graph.getAttachments().forEach(IStationAttachment::tick);
+            graph.getAttachments()
+                .forEach(IStationAttachment::tick);
         }
     }
 

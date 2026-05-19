@@ -122,7 +122,7 @@ final class StationPacketRoundTripTest {
         AssetSyncPacket.figureOutWhatToSend(server, playerId);
         ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
 
-        server.updateResource(resource, 42, true);
+        server.updateContents(resource, 42, true);
 
         List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
         assertEquals(1, deltas.size());

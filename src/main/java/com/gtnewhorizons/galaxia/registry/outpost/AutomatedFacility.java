@@ -12,9 +12,6 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.inventory.IInventory;
-import net.minecraftforge.fluids.IFluidTank;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -379,7 +376,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (updateResource(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true)
+            if (updateContents(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true)
                 <= 0L) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
@@ -414,7 +411,7 @@ public final class AutomatedFacility extends CelestialAsset {
             long available = getItemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (updateResource(material.getKey(), -(int) Math.min(reserved, Integer.MAX_VALUE), true) <= 0L) {
+            if (updateContents(material.getKey(), -(int) Math.min(reserved, Integer.MAX_VALUE), true) <= 0L) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
@@ -919,17 +916,6 @@ public final class AutomatedFacility extends CelestialAsset {
             .buildTicks();
     }
 
-    /// Stub methods until we have a proper distributed inventory for the automated station
-    @Override
-    public List<IInventory> getInventories() {
-        return List.of();
-    }
-
-    @Override
-    public List<IFluidTank> getFluidTanks() {
-        return List.of();
-    }
-
     @Override
     public Map<ItemStackWrapper, Long> aggregatedItems() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
@@ -985,7 +971,7 @@ public final class AutomatedFacility extends CelestialAsset {
         return fluidFilter;
     }
 
-    public long updateResource(InventoryKey item, int delta, boolean sync) {
+    public long updateContents(InventoryKey item, int delta, boolean sync) {
         final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
             : updateFluids((FluidKey) item, delta);
         if (actual != 0L && sync) markInventoryDelta(item, delta);

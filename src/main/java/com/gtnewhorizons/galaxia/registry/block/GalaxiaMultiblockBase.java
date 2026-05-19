@@ -30,7 +30,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;
-    private boolean reloadHappened = false;
+    protected boolean reloadHappened = false;
 
     public abstract IStructureDefinition<T> getStructureDefinition();
 

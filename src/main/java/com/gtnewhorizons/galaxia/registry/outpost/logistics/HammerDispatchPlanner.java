@@ -13,6 +13,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
@@ -62,21 +63,16 @@ public final class HammerDispatchPlanner {
     }
 
     public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, double orbitalTime) {
-        return evaluate(
-            supplier,
-            hammerModule,
-            CelestialAssetStore.allAssets(),
-            LogisticStore.activeDeliveries(),
-            orbitalTime);
+        return evaluate(supplier, hammerModule, CelestialAssetStore.allAssets(), orbitalTime);
     }
 
     public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        Iterable<LogisticsDelivery> deliveries, double orbitalTime) {
-        return evaluate(supplier, hammerModule, assets, deliveries, orbitalTime, null);
+        double orbitalTime) {
+        return evaluate(supplier, hammerModule, assets, orbitalTime, null);
     }
 
     public static Result evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        Iterable<LogisticsDelivery> deliveries, double orbitalTime, UUID routeProfileTeamId) {
+        double orbitalTime, UUID routeProfileTeamId) {
         if (supplier == null || hammerModule == null || !(hammerModule.component() instanceof ModuleHammer hammer)) {
             return new Result(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, 0L, 0L, 0L, 0, null);
         }
@@ -88,7 +84,6 @@ public final class HammerDispatchPlanner {
         if (!hasExportConfig) return Result.simple(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, hammer);
 
         boolean sawSurplusBlocked = false;
-        boolean sawAnyRequest = false;
         Result bestBlockedStatus = null;
 
         for (Map.Entry<InventoryKey, LogisticsResourceConfig> supplierEntry : supplierConfigs.entrySet()) {
@@ -115,7 +110,6 @@ public final class HammerDispatchPlanner {
                 long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
                 if (requestedAmount <= 0L) continue;
 
-                sawAnyRequest = true;
                 Result result = evaluateCandidateFor(
                     supplier,
                     requester,
@@ -138,8 +132,7 @@ public final class HammerDispatchPlanner {
     }
 
     public static Result evaluate(CelestialAsset supplier, ModuleInstance hammerModule, CelestialAsset requester,
-        ItemStackWrapper resource, Iterable<LogisticsDelivery> deliveries, double orbitalTime,
-        UUID routeProfileTeamId) {
+        ItemStackWrapper resource, double orbitalTime, UUID routeProfileTeamId) {
         if (supplier == null || requester == null
             || resource == null
             || hammerModule == null
@@ -155,7 +148,8 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.NO_EXPORT_CONFIG, hammer);
         }
 
-        long availableSurplus = supplier.getItemAmount(resource) - supplierCfg.minReserve();
+        long availableSurplus = (supplier instanceof Station station ? station.getCannonChestItems()
+            .getOrDefault(resource, 0L) : supplier.getItemAmount(resource)) - supplierCfg.minReserve();
         if (availableSurplus <= 0L) return Result.simple(HammerDispatchStatus.Code.NO_SURPLUS_AFTER_RESERVE, hammer);
 
         LogisticsResourceConfig requesterCfg = requester.logisticsConfig.get(resource);
@@ -163,7 +157,7 @@ public final class HammerDispatchPlanner {
             return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);
         }
 
-        long requesterStock = CelestialAsset.getItemAmount(requester, resource);
+        long requesterStock = requester.getItemAmount(resource);
         long inboundInTransit = LogisticStore.inboundInTransitAmount(requester.assetId, resource);
         long requestedAmount = Math.max(0L, requesterCfg.minReserve() - requesterStock - inboundInTransit);
         if (requestedAmount <= 0L) return Result.simple(HammerDispatchStatus.Code.WAITING_FOR_REQUEST, hammer);

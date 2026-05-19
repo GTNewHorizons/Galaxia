@@ -78,25 +78,25 @@ public final class ProductionModuleHelper {
 
         // Consume inputs
         for (Map.Entry<ItemStackWrapper, Long> e : requiredInputs.entrySet()) {
-            outpost.updateItems(e.getKey(), -(int) Math.min(e.getValue(), Integer.MAX_VALUE));
+            outpost.updateContents(e.getKey(), -(int) Math.min(e.getValue(), Integer.MAX_VALUE), true);
         }
 
         if (fluidInputs != null) {
             for (FluidStack fluid : fluidInputs) {
-                outpost.updateFluids(FluidKey.of(fluid), -fluid.amount);
+                outpost.updateContents(FluidKey.of(fluid), -fluid.amount, true);
             }
         }
 
         // Produce outputs
         for (Map.Entry<ItemStackWrapper, Long> e : selectedItemOutputs.totals()
             .entrySet()) {
-            outpost.updateItems(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE));
+            outpost.updateContents(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE), true);
         }
 
         if (fluidOutputs != null) {
             for (Map.Entry<FluidKey, Long> e : selectedFluidOutputs.totals()
                 .entrySet()) {
-                outpost.updateFluids(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE));
+                outpost.updateContents(e.getKey(), (int) Math.min(e.getValue(), Integer.MAX_VALUE), true);
             }
         }
 

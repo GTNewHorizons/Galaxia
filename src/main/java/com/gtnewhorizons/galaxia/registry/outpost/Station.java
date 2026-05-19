@@ -48,11 +48,15 @@ public class Station extends CelestialAsset {
         getCannonChestItems().forEach(
             (item, amount) -> logisticsConfig.set(
                 item,
-                LogisticsResourceConfig.DEFAULT
-                    .withOrderSize((int) (long) amount)
+                LogisticsResourceConfig.DEFAULT.withOrderSize((int) (long) amount)
                     .withSupplyEnabled(true)));
 
         LogisticStore.updateSignalsForFacility(this);
+    }
+
+    @Override
+    public long updateContents(InventoryKey item, int delta, boolean sync) {
+        return updateContents(item, delta);
     }
 
     @Override

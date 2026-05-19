@@ -66,7 +66,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 ItemStack ore = chosen.copy();
                 ore.stackSize = 1;
                 ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
-                if (oreWrapper != null) outpost.updateItems(oreWrapper, 1);
+                if (oreWrapper != null) outpost.updateContents(oreWrapper, 1, true);
             });
     }
 

@@ -207,20 +207,14 @@ public class CelestialEventHandler {
                 if (!filter.isEmpty() && !filter.test(resource)) continue;
             }
 
-            HammerDispatchPlanner.Result result = HammerDispatchPlanner.evaluate(
-                supplier,
-                module,
-                requester,
-                resource,
-                LogisticStore.activeDeliveries(),
-                orbitalTime,
-                routeProfileTeamId);
+            HammerDispatchPlanner.Result result = HammerDispatchPlanner
+                .evaluate(supplier, module, requester, resource, orbitalTime, routeProfileTeamId);
 
             HammerDispatchPlanner.Plan plan = result.plan();
             if (result.code() != HammerDispatchStatus.Code.READY || plan == null) continue;
 
             if (supplier instanceof AutomatedFacility af) {
-                if (af.updateResource(plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true)
+                if (af.updateContents(plan.resource(), -(int) Math.min(plan.sendAmount(), Integer.MAX_VALUE), true)
                     <= 0L) continue;
                 if (!hammer.trySpendShotEnergy(module, af, plan.requiredEnergy())) {
                     throw new IllegalStateException("HAMMER shot energy became inconsistent");

@@ -15,7 +15,6 @@ import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fluids.IFluidTank;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -105,11 +104,6 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     @Override
     public List<IInventory> getInventories() {
         return this.inventory;
-    }
-
-    @Override
-    public List<IFluidTank> getFluidTanks() {
-        return List.of();
     }
 
     @Override

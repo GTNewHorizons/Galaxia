@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import net.minecraft.inventory.IInventory;
-import net.minecraftforge.fluids.IFluidTank;
-
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -153,16 +150,6 @@ final class SystemAssetPanelStressTest {
 
         @Override
         public void tick() {}
-
-        @Override
-        public List<IInventory> getInventories() {
-            return java.util.Collections.emptyList();
-        }
-
-        @Override
-        public List<IFluidTank> getFluidTanks() {
-            return List.of();
-        }
 
         public String getInventoryName() {
             return "fake";

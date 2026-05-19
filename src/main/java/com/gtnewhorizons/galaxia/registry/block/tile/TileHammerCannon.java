@@ -5,7 +5,6 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
@@ -16,7 +15,6 @@ import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fluids.IFluidTank;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -33,6 +31,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -106,9 +105,10 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         here = new BlockPos(xCoord, yCoord, zCoord);
         // TODO: Figure out tiering system
         this.moduleInstance = FacilityModuleKind.HAMMER
-            .create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.EV);
+            .create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.UV);
         moduleInstance.updateStatus(Buildable.Status.DISABLED);
         this.hammer = (ModuleHammer) this.moduleInstance.component();
+        this.hammer.setVariant(HammerVariant.BIG);
     }
 
     @Override
@@ -166,11 +166,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
 
     @Override
     public List<IInventory> getInventories() {
-        return List.of();
-    }
-
-    @Override
-    public List<IFluidTank> getFluidTanks() {
         return List.of();
     }
 

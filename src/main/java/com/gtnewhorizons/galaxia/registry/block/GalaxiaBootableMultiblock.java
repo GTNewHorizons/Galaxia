@@ -74,8 +74,19 @@ public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultibl
     }
 
     @Override
+    public void writeToNBT(NBTTagCompound nbt) {
+        super.writeToNBT(nbt);
+        nbt.setInteger("bootState", bootState.ordinal());
+    }
+
+    @Override
     public void readFromNBT(NBTTagCompound nbt) {
-        bootState = BootState.UNINITIALIZED;
+        if (nbt.hasKey("bootState")) {
+            bootState = BootState.values()[nbt.getInteger("bootState")];
+        }
+        if (!reloadHappened && needsFormationOnReload()) {
+            bootState = BootState.UNINITIALIZED;
+        }
         super.readFromNBT(nbt);
     }
 }
