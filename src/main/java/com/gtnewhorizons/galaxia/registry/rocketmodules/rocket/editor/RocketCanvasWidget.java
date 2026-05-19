@@ -28,8 +28,6 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private static final double MAX_SCALE = 6.0;
     private static final double ZOOM_FACTOR_IN = 1.18;
     private static final double ZOOM_FACTOR_OUT = 0.85;
-    private static final int DEFAULT_GRID_W = 8;
-    private static final int DEFAULT_GRID_H = 24;
     private static final int DRAG_THRESHOLD = 5;
 
     private final RocketBlueprint blueprint;
@@ -81,7 +79,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         listenGuiAction((IGuiAction.MouseReleased) button -> {
             if (button == 0) {
-                if (!isDragging) {
+                if (lmbDown && !isDragging) {
                     placePart();
                 }
                 lmbDown = false;
@@ -224,8 +222,6 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
                 GlStateManager.enableTexture2D();
             }
-
-            mc.fontRenderer.drawStringWithShadow(shortLabel(def), px + 2, py + 2, 0xFFFFFF);
         }
     }
 
@@ -336,12 +332,5 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private int mouseToCellY() {
         double worldY = (localMouseY() - panY) / (CELL * scale);
         return (int) Math.floor(worldY + 1e-9);
-    }
-
-    private static String shortLabel(IRocketPartDef def) {
-        String name = def.name();
-        if (name == null || name.isEmpty()) return "?";
-        return name.substring(0, Math.min(2, name.length()))
-            .toUpperCase();
     }
 }

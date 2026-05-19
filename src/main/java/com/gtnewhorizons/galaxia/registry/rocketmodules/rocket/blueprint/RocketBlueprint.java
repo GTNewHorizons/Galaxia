@@ -48,7 +48,18 @@ public class RocketBlueprint {
                 return false;
             }
         }
-        return true;
+
+        if (parts.isEmpty()) {
+            return true;
+        }
+
+        for (RocketPartInstance existing : parts) {
+            if (candidate.isAdjacentTo(existing)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public NBTTagCompound serializeNBT() {

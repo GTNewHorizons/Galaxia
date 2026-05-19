@@ -46,6 +46,8 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.Tile
 public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
+    // TODO add blueprint saving after leaving world
+
     private RocketBlueprint blueprint = new RocketBlueprint();
 
     private EntityRocket entityRocket;

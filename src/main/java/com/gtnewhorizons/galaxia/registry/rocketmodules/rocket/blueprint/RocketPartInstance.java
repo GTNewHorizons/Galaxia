@@ -43,4 +43,21 @@ public record RocketPartInstance(IRocketPartDef def, int x, int y, int z, boolea
 
         return !(right1 <= left2 || right2 <= left1 || bottom1 <= top2 || bottom2 <= top1);
     }
+
+    public boolean isAdjacentTo(RocketPartInstance other) {
+        if (z != other.z || isRadial != other.isRadial) return false;
+        boolean xOverlap = x < other.x + other.def()
+            .width() && x + def().width() > other.x;
+        boolean yOverlap = y < other.y + other.def()
+            .height() && y + def().height() > other.y;
+
+        boolean touchTop = (y + def().height() == other.y) && xOverlap;
+        boolean touchBottom = (other.y + other.def()
+            .height() == y) && xOverlap;
+        boolean touchRight = (x + def().width() == other.x) && yOverlap;
+        boolean touchLeft = (other.x + other.def()
+            .width() == x) && yOverlap;
+
+        return touchTop || touchBottom || touchRight || touchLeft;
+    }
 }
