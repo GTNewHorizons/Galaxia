@@ -9,6 +9,7 @@ import net.minecraft.item.ItemStack;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.compat.GTUtility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContributionFormatter;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -51,7 +52,7 @@ public final class RareCrystalFormationFeature implements PlanetaryFeature {
                 key(),
                 (byte) context.coveredTiles(),
                 (byte) context.totalTiles(),
-                "Gem pool weight x" + gemPoolWeight(context.coveredTiles())));
+                FeatureContributionFormatter.bonus("Gem pool weight", gemPoolWeight(context.coveredTiles()))));
     }
 
     private static int gemPoolWeight(int coveredTiles) {

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContributionFormatter;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
@@ -34,6 +35,6 @@ public final class RegolithFlatsFeature implements PlanetaryFeature {
                 key(),
                 (byte) context.coveredTiles(),
                 (byte) context.totalTiles(),
-                "Build speed +" + BUILD_SPEEDUP_PERCENT + "%"));
+                FeatureContributionFormatter.percentDelta("Build speed", BUILD_SPEEDUP_PERCENT)));
     }
 }

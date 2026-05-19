@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContributionFormatter;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -41,6 +42,6 @@ public final class MineralVeinFeature implements PlanetaryFeature {
                 key(),
                 (byte) context.coveredTiles(),
                 (byte) context.totalTiles(),
-                "Mining yield +" + context.coveredTiles() + " roll/t"));
+                FeatureContributionFormatter.perTickBonus("Mining rolls", context.coveredTiles())));
     }
 }

@@ -5,6 +5,7 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContributionFormatter;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -45,7 +46,7 @@ public final class SubsurfaceIcePocketFeature implements PlanetaryFeature {
                     key(),
                     (byte) context.coveredTiles(),
                     (byte) context.totalTiles(),
-                    "Power draw -10%"));
+                    FeatureContributionFormatter.percentMultiplierDelta("Power draw", POWER_DRAW_MULTIPLIER_PERCENT)));
             return;
         }
         if (context.module()
@@ -55,7 +56,8 @@ public final class SubsurfaceIcePocketFeature implements PlanetaryFeature {
                     key(),
                     (byte) context.coveredTiles(),
                     (byte) context.totalTiles(),
-                    iceRollChancePercent(context.coveredTiles()) + "% ice roll chance"));
+                    FeatureContributionFormatter
+                        .chance("Ice roll chance", iceRollChancePercent(context.coveredTiles()))));
         }
     }
 

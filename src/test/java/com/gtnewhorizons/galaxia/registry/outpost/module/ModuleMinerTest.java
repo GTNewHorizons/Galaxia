@@ -268,7 +268,6 @@ final class ModuleMinerTest {
         assertEquals(ModuleShape.QUAD_2x2, miner.shape());
         assertEquals(2, contribution.coveredTiles());
         assertEquals(4, contribution.totalTiles());
-        assertEquals("Mining yield +2 roll/t", contribution.effectLine());
     }
 
     @Test

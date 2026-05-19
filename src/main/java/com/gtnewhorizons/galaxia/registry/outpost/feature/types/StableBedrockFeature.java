@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContributionFormatter;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
@@ -64,11 +65,12 @@ public final class StableBedrockFeature implements PlanetaryFeature {
     private static String effectLine(FeatureModuleContext context) {
         if (context.module()
             .kind() == FacilityModuleKind.MINER) {
-            return "Mining output x" + minerOutputMultiplierPercent(context.coveredTiles())
-                + "%, power draw +"
-                + context.coveredTiles() * MINER_POWER_DRAW_INCREASE_PER_TILE_PERCENT
-                + "%";
+            return FeatureContributionFormatter
+                .percentMultiplierDelta("Mining output", minerOutputMultiplierPercent(context.coveredTiles())) + ", "
+                + FeatureContributionFormatter
+                    .percentDelta("power draw", context.coveredTiles() * MINER_POWER_DRAW_INCREASE_PER_TILE_PERCENT);
         }
-        return "Upkeep x0.8, build speed -" + BUILD_SLOWDOWN_PERCENT + "%";
+        return FeatureContributionFormatter.percentMultiplierDelta("Upkeep", UPKEEP_MULTIPLIER_PERCENT) + ", "
+            + FeatureContributionFormatter.percentDelta("build speed", -BUILD_SLOWDOWN_PERCENT);
     }
 }
