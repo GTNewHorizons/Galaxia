@@ -29,6 +29,7 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
     private static final double ZOOM_FACTOR_IN = 1.18;
     private static final double ZOOM_FACTOR_OUT = 0.85;
     private static final int DRAG_THRESHOLD = 5;
+    private static final float PREVIEW_ALPHA = 0.30f;
 
     private final RocketBlueprint blueprint;
     private final TileEntitySilo silo;
@@ -138,10 +139,11 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
 
         drawGrid();
         drawParts();
-        drawHoverHighlight();
+        drawHoverPreview();
 
         GlStateManager.popMatrix();
 
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
     }
 
@@ -184,90 +186,104 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         }
 
         tes.draw();
-
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GlStateManager.enableTexture2D();
     }
 
     private void drawParts() {
-        Tessellator tes = Tessellator.instance;
-
         for (RocketPartInstance part : blueprint.getParts()) {
-            IRocketPartDef def = part.def();
-
-            int px = part.x() * CELL;
-            int py = part.y() * CELL;
-            int pw = def.width() * CELL;
-            int ph = def.height() * CELL;
-
-            if (def.assetFolder() != null) {
-                GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-                mc.renderEngine.bindTexture(def.spriteLocation());
-
-                tes.startDrawingQuads();
-                tes.addVertexWithUV(px, py + ph, 0, 0, 1);
-                tes.addVertexWithUV(px + pw, py + ph, 0, 1, 1);
-                tes.addVertexWithUV(px + pw, py, 0, 1, 0);
-                tes.addVertexWithUV(px, py, 0, 0, 0);
-                tes.draw();
-            } else {
-                GlStateManager.disableTexture2D();
-                GL11.glColor4f(0.85f, 0.55f, 0.15f, 1.0f);
-
-                tes.startDrawingQuads();
-                tes.addVertex(px, py + ph, 0);
-                tes.addVertex(px + pw, py + ph, 0);
-                tes.addVertex(px + pw, py, 0);
-                tes.addVertex(px, py, 0);
-                tes.draw();
-
-                GlStateManager.enableTexture2D();
-            }
+            drawPartAt(part.def(), part.x(), part.y(), 1.0f);
         }
     }
 
-    private void drawHoverHighlight() {
+    private void drawHoverPreview() {
         if (isDragging) return;
 
-        int cellX = mouseToCellX();
-        int cellY = mouseToCellY();
-
         IRocketPartDef sel = selectedPartSupplier.get();
+        double localX = getContext().getMouseX();
+        double localY = getContext().getMouseY();
 
-        int spanW;
-        int spanH;
-        float r, g, b;
+        double worldX = (localX - panX) / (CELL * scale);
+        double worldY = (localY - panY) / (CELL * scale);
+
+        int cellX = (int) Math.floor(worldX + 1e-9);
+        int cellY = (int) Math.floor(worldY + 1e-9);
+
+        int originX = cellX;
+        int originY = cellY;
+
+        if (sel != null) {
+            originX = centeredOrigin(cellX, sel.width());
+            originY = centeredOrigin(cellY, sel.height());
+        }
+
+        boolean canPlace = sel == null
+            || blueprint.canPlacePart(new RocketPartInstance(sel, originX, originY, 0, false));
 
         if (sel == null) {
-            spanW = 1;
-            spanH = 1;
-            r = 0.4f;
-            g = 0.8f;
-            b = 1.0f;
-        } else {
-            spanW = sel.width();
-            spanH = sel.height();
+            GlStateManager.disableTexture2D();
+            GL11.glColor4f(0.4f, 0.8f, 1.0f, PREVIEW_ALPHA);
 
-            boolean canPlace = blueprint.canPlacePart(new RocketPartInstance(sel, cellX, cellY, 0, false));
-            r = canPlace ? 0.2f : 1.0f;
-            g = canPlace ? 1.0f : 0.2f;
-            b = 0.3f;
+            int px = cellX * CELL;
+            int py = cellY * CELL;
+
+            Tessellator tes = Tessellator.instance;
+            tes.startDrawingQuads();
+            tes.addVertex(px, py, 0);
+            tes.addVertex(px + CELL, py, 0);
+            tes.addVertex(px + CELL, py + CELL, 0);
+            tes.addVertex(px, py + CELL, 0);
+            tes.draw();
+
+            GlStateManager.enableTexture2D();
+            return;
+        }
+
+        drawPartAt(sel, originX, originY, PREVIEW_ALPHA, canPlace);
+    }
+
+    private void drawPartAt(IRocketPartDef def, int partX, int partY, float alpha) {
+        drawPartAt(def, partX, partY, alpha, true);
+    }
+
+    private void drawPartAt(IRocketPartDef def, int partX, int partY, float alpha, boolean valid) {
+        int px = partX * CELL;
+        int py = partY * CELL;
+        int pw = def.width() * CELL;
+        int ph = def.height() * CELL;
+
+        float r = 1.0f;
+        float g = valid ? 1.0f : 0.35f;
+        float b = valid ? 1.0f : 0.35f;
+
+        if (def.assetFolder() != null) {
+            GL11.glColor4f(r, g, b, alpha);
+            mc.renderEngine.bindTexture(def.spriteLocation());
+
+            Tessellator tes = Tessellator.instance;
+            tes.startDrawingQuads();
+            tes.addVertexWithUV(px, py + ph, 0, 0, 1);
+            tes.addVertexWithUV(px + pw, py + ph, 0, 1, 1);
+            tes.addVertexWithUV(px + pw, py, 0, 1, 0);
+            tes.addVertexWithUV(px, py, 0, 0, 0);
+            tes.draw();
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+            return;
         }
 
         GlStateManager.disableTexture2D();
-        GL11.glColor4f(r, g, b, 0.35f);
-
-        int px = cellX * CELL;
-        int py = cellY * CELL;
+        GL11.glColor4f(valid ? 0.85f : 1.0f, valid ? 0.55f : 0.35f, valid ? 0.15f : 0.35f, alpha);
 
         Tessellator tes = Tessellator.instance;
         tes.startDrawingQuads();
+        tes.addVertex(px, py + ph, 0);
+        tes.addVertex(px + pw, py + ph, 0);
+        tes.addVertex(px + pw, py, 0);
         tes.addVertex(px, py, 0);
-        tes.addVertex(px + spanW * CELL, py, 0);
-        tes.addVertex(px + spanW * CELL, py + spanH * CELL, 0);
-        tes.addVertex(px, py + spanH * CELL, 0);
         tes.draw();
 
         GlStateManager.enableTexture2D();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 
     private void pollDrag() {
@@ -302,7 +318,10 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         int cellX = mouseToCellX();
         int cellY = mouseToCellY();
 
-        RocketPartInstance part = new RocketPartInstance(def, cellX, cellY, 0, false);
+        int originX = centeredOrigin(cellX, def.width());
+        int originY = centeredOrigin(cellY, def.height());
+
+        RocketPartInstance part = new RocketPartInstance(def, originX, originY, 0, false);
         if (blueprint.addPart(part)) {
             silo.sync();
         }
@@ -312,8 +331,34 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         int cellX = mouseToCellX();
         int cellY = mouseToCellY();
 
-        blueprint.removePartAt(cellX, cellY, 0);
-        silo.sync();
+        RocketPartInstance hit = findPartAt(cellX, cellY);
+        if (hit != null) {
+            blueprint.removePartAt(hit.x(), hit.y(), hit.z());
+            silo.sync();
+        }
+    }
+
+    private RocketPartInstance findPartAt(int cellX, int cellY) {
+        for (int i = blueprint.getParts()
+            .size() - 1; i >= 0; i--) {
+            RocketPartInstance part = blueprint.getParts()
+                .get(i);
+            IRocketPartDef def = part.def();
+
+            int x1 = part.x();
+            int y1 = part.y();
+            int x2 = x1 + def.width();
+            int y2 = y1 + def.height();
+
+            if (cellX >= x1 && cellX < x2 && cellY >= y1 && cellY < y2) {
+                return part;
+            }
+        }
+        return null;
+    }
+
+    private int centeredOrigin(int cell, int size) {
+        return (int) Math.round(cell - (size / 2.0));
     }
 
     private double localMouseX() {
