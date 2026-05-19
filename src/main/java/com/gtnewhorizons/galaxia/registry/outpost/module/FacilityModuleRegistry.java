@@ -35,7 +35,7 @@ public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, AutomatedFacility> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-        List<ModulePanelAction> panelActions) {
+        List<ModulePanelAction> panelActions, boolean settingsGroups) {
 
         public Definition {
             if (tierData == null || tierData.isEmpty()) {
@@ -93,6 +93,7 @@ public class FacilityModuleRegistry {
                     .build())
             .configButton()
             .upgradeButton()
+            .settingsGroups()
             .behavior(ModuleMiner::generateOre)
             .factory(() -> new ModuleMiner(FacilityModuleKind.MINER))
             .register();
@@ -252,6 +253,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleMacerator::processRecipe)
                 .factory(ModuleMacerator::new)
                 .register();
@@ -262,6 +264,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleCentrifuge::processRecipe)
                 .factory(ModuleCentrifuge::new)
                 .register();
@@ -272,6 +275,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleElectrolyzer::processRecipe)
                 .factory(ModuleElectrolyzer::new)
                 .register();
@@ -282,6 +286,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleChemicalReactor::processRecipe)
                 .factory(ModuleChemicalReactor::new)
                 .register();
@@ -292,6 +297,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleAssembler::processRecipe)
                 .factory(ModuleAssembler::new)
                 .register();
@@ -302,6 +308,7 @@ public class FacilityModuleRegistry {
                         .add(ModuleTier.IV, 32000L, 512L, 20, Map.of(new ItemStack(Items.iron_ingot), 128L))
                         .build())
                 .configButton()
+                .settingsGroups()
                 .behavior(ModuleDistillery::processRecipe)
                 .factory(ModuleDistillery::new)
                 .register();
@@ -310,13 +317,14 @@ public class FacilityModuleRegistry {
 
     public static void register(FacilityModuleKind kind, ModuleTierData data,
         BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        DEFINITIONS
-            .put(kind, new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of()));
+        DEFINITIONS.put(
+            kind,
+            new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of(), false));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, AutomatedFacility> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        DEFINITIONS.put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of()));
+        DEFINITIONS.put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false));
     }
 
     public static ModuleDefinitionBuilder builder(FacilityModuleKind kind) {
@@ -458,6 +466,7 @@ public class FacilityModuleRegistry {
         private BiConsumer<ModuleInstance, AutomatedFacility> behavior;
         private Supplier<IModuleComponent> factory;
         private final java.util.ArrayList<ModulePanelAction> panelActions = new java.util.ArrayList<>();
+        private boolean settingsGroups;
 
         private ModuleDefinitionBuilder(FacilityModuleKind kind) {
             if (kind == null) {
@@ -494,6 +503,11 @@ public class FacilityModuleRegistry {
             return panelAction(ModulePanelAction.UPGRADE);
         }
 
+        public ModuleDefinitionBuilder settingsGroups() {
+            this.settingsGroups = true;
+            return this;
+        }
+
         public ModuleDefinitionBuilder panelAction(ModulePanelAction action) {
             if (action == null) {
                 throw new IllegalArgumentException("action must not be null");
@@ -514,7 +528,7 @@ public class FacilityModuleRegistry {
             if (factory == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: factory must be set for " + kind);
             }
-            DEFINITIONS.put(kind, new Definition(kind, tierData, behavior, factory, panelActions));
+            DEFINITIONS.put(kind, new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups));
         }
     }
 }

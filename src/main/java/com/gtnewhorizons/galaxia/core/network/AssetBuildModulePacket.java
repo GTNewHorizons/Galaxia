@@ -132,6 +132,9 @@ public final class AssetBuildModulePacket implements IMessage {
             .contains(tier)) {
             return null;
         }
+        if (shape != moduleKind.defaultShape()) {
+            return null;
+        }
 
         List<StationTileCoord> anchors = tileCoords;
         if (anchors == null) {

@@ -29,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import cpw.mods.fml.relauncher.Side;
@@ -155,7 +156,8 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 if (mouseButton != 0) return false;
                 CelestialAsset.ID assetId = pendingAssetId;
                 StationTileCoord coord = pendingCoord;
-                if (assetId != null && pendingMultipleBuild) {
+                boolean needsBuildPicker = pendingMultipleBuild || kind.defaultShape() != ModuleShape.SINGLE;
+                if (assetId != null && needsBuildPicker) {
                     StationManagementScreen.openBuildPicker(assetId, kind, pendingInstantBuild);
                 } else if (assetId != null && coord != null) {
                     CelestialClient.createModule(assetId, kind, pendingInstantBuild, coord);

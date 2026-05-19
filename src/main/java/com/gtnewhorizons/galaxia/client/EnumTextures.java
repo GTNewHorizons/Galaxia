@@ -60,6 +60,7 @@ public enum EnumTextures {
     ICON_CAP_DECONSTRUCTION("textures/gui/outpost_destroying.png"),
     ICON_WARN_POWERFAIL("textures/gui/outpost_powerfail.png"),
     ICON_WARN_GENERIC("textures/gui/outpost_warning.png"),
+    ICON_STATION_CORE_DIRECTION("textures/gui/station/core_direction_arrow.png"),
     ICON_MISSING("textures/gui/asset_panel/missing.png"),
     ICON_TRANSFER_HAMMER("textures/items/module/item_hammer_package.png"),
 

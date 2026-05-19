@@ -3,9 +3,11 @@ package com.gtnewhorizons.galaxia.registry.outpost;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -16,21 +18,28 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.LayoutCacheBundle;
 import com.gtnewhorizons.galaxia.registry.outpost.station.MutationKind;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
+import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
 
@@ -54,13 +63,19 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private final SettingsGroupRegistry settingsGroups;
 
+    private long stationFeatureSalt;
+
     private long energyStored;
 
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
+    private final Map<ItemStackWrapper, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
+    private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
+    private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
 
     public static final long MAX_ENERGY = 8_000_000L;
+    public static final long BASE_ITEM_CAPACITY = 1000L;
 
     public AutomatedFacility(CelestialAsset.ID assetId, CelestialObjectId celestialBodyId, Kind kind, Status status) {
         super(assetId, celestialBodyId, kind, status, null);
@@ -78,7 +93,22 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
+        this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
+    }
+
+    private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectId bodyId) {
+        long value = assetId == null || assetId.id() == null ? 0L
+            : assetId.id()
+                .getMostSignificantBits()
+                ^ assetId.id()
+                    .getLeastSignificantBits();
+        value ^= bodyId == null ? 0L : ((long) bodyId.ordinal() << 32);
+        value ^= 0xD1B54A32D192ED03L;
+        value ^= value >>> 33;
+        value *= 0xff51afd7ed558ccdL;
+        value ^= value >>> 33;
+        return value;
     }
 
     public static boolean ownsStationLayout(Kind kind) {
@@ -95,6 +125,77 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public SettingsGroupRegistry settingsGroups() {
         return settingsGroups;
+    }
+
+    public long stationFeatureSalt() {
+        return stationFeatureSalt;
+    }
+
+    public void setStationFeatureSalt(long stationFeatureSalt) {
+        this.stationFeatureSalt = stationFeatureSalt;
+    }
+
+    public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
+        return firstPlanetaryFeature(planetaryFeaturesAt(tile));
+    }
+
+    public PlanetaryFeatureKey planetaryFeatureAt(int dx, int dy) {
+        return firstPlanetaryFeature(planetaryFeaturesAt(dx, dy));
+    }
+
+    public List<PlanetaryFeatureKey> planetaryFeaturesAt(StationTileCoord tile) {
+        if (tile == null) return Collections.emptyList();
+        return planetaryFeaturesAt(tile.dx(), tile.dy());
+    }
+
+    public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
+        return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
+            .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
+            .orElse(Collections.emptyList());
+    }
+
+    private static PlanetaryFeatureKey firstPlanetaryFeature(List<PlanetaryFeatureKey> features) {
+        return features.isEmpty() ? null : features.get(0);
+    }
+
+    public List<FeatureContribution> featureContributions(ModuleInstance module) {
+        if (module == null || module.anchorOrNull() == null) return Collections.emptyList();
+        List<FeatureContribution> contributions = new ArrayList<>();
+        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
+        StationTileCoord[] tiles = module.shape()
+            .tiles(module.anchor());
+        for (StationTileCoord tile : tiles) {
+            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
+                counts.merge(feature, 1, Integer::sum);
+            }
+        }
+        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
+            FeatureContribution contribution = module.component()
+                .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
+            if (contribution != null) contributions.add(contribution);
+        }
+        return contributions;
+    }
+
+    public void applySettingsGroupsToModules() {
+        for (SettingsGroup group : settingsGroups.groups()
+            .values()) {
+            applyRecipeSettingsToGroup(group);
+        }
+    }
+
+    public void syncRecipeSettingsGroupsFromModules() {
+        for (SettingsGroup group : settingsGroups.groups()
+            .values()) {
+            if (!(group.settings() instanceof RecipeModuleSettings recipeSettings)) continue;
+            for (StationTileCoord coord : group.members()) {
+                ModuleInstance module = moduleAtAnchor(coord);
+                if (module != null && module.component() instanceof IRecipeModule recipeModule) {
+                    recipeSettings.setConfig(recipeModule.getRecipeConfig());
+                    break;
+                }
+            }
+        }
     }
 
     public LayoutCacheBundle layoutCache() {
@@ -115,8 +216,9 @@ public final class AutomatedFacility extends CelestialAsset {
             return;
         }
         modules.add(module);
-        if (module.component() instanceof ModuleMiner && module.groupId() == 0) {
-            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new MinerSettings()));
+        if (FacilityModuleRegistry.get(module.kind())
+            .settingsGroups() && module.groupId() == 0) {
+            attachToSettingsGroup(module, settingsGroups.create(module.kind(), privateSettingsFor(module)));
         }
         dirtyModuleIds.add(module.id);
         bumpSyncRevision();
@@ -163,6 +265,14 @@ public final class AutomatedFacility extends CelestialAsset {
         return -1;
     }
 
+    private @Nullable ModuleInstance moduleAtAnchor(StationTileCoord coord) {
+        if (coord == null) return null;
+        for (ModuleInstance module : modules) {
+            if (coord.equals(module.anchorOrNull())) return module;
+        }
+        return null;
+    }
+
     public void clearModules() {
         modules.clear();
         markDirty();
@@ -202,28 +312,74 @@ public final class AutomatedFacility extends CelestialAsset {
         }
     }
 
-    public void copyMinerRuntimeSettings(ModuleInstance source, ModuleInstance target) {
-        if (!(source.component() instanceof ModuleMiner sourceMiner)) {
-            throw new IllegalStateException("Miner settings copy source is not a miner: " + source.id);
+    public RecipeConfig recipeConfig(ModuleInstance module) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            throw new IllegalStateException("Recipe config requested for non-recipe module " + module.id);
         }
-        if (!(target.component() instanceof ModuleMiner targetMiner)) {
-            throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            RecipeConfig config = recipeModule.getRecipeConfig();
+            return config != null ? config : RecipeConfig.empty();
+        }
+        if (module.groupId() == 0) {
+            throw new IllegalStateException("Recipe module " + module.id + " has no settings group");
+        }
+        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        if (!(group.settings() instanceof RecipeModuleSettings settings)) {
+            throw new IllegalStateException(
+                "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
+        }
+        RecipeConfig config = settings.config();
+        return config != null ? config : RecipeConfig.empty();
+    }
+
+    public void setRecipeConfig(ModuleInstance module, RecipeConfig config) {
+        if (!(module.component() instanceof IRecipeModule recipeModule)) {
+            throw new IllegalStateException("Recipe config update requested for non-recipe module " + module.id);
+        }
+        RecipeConfig normalized = RecipeModuleSettings.copyConfig(config);
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            recipeModule.setRecipeConfig(normalized);
+            markModuleDirty(module.id);
+            return;
+        }
+        if (module.groupId() == 0) {
+            attachToSettingsGroup(module, settingsGroups.create(module.kind(), new RecipeModuleSettings(normalized)));
+        }
+        SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+        if (!(group.settings() instanceof RecipeModuleSettings settings)) {
+            throw new IllegalStateException(
+                "Recipe settings group " + module.groupId() + " has non-recipe settings for module " + module.id);
+        }
+        settings.setConfig(normalized);
+        applyRecipeSettingsToGroup(group);
+        markSettingsGroupMembersDirty(group);
+    }
+
+    public void copyModuleRuntimeSettings(ModuleInstance source, ModuleInstance target) {
+        requireSettingsGroupsSupported(source);
+        requireSettingsGroupsSupported(target);
+        if (source.kind() != target.kind()) {
+            throw new IllegalStateException(
+                "Module settings copy target kind mismatch: " + source.kind() + " -> " + target.kind());
         }
         if (source.id.equals(target.id)) {
-            throw new IllegalStateException("Miner settings copy target must be different from source: " + source.id);
+            throw new IllegalStateException("Module settings copy target must be different from source: " + source.id);
         }
-        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), FacilityModuleKind.MINER);
-        String sourceFocusOreKey = sourceMiner.focusOreKeyOrNull();
-        if (sourceFocusOreKey != null && targetMiner.focusTier() == MinerFocusTier.NONE) {
-            throw new IllegalStateException(
-                "Miner settings copy target " + target.id + " has no focus tier for ore " + sourceFocusOreKey);
-        }
+        SettingsGroup sourceGroup = settingsGroups.require(source.groupId(), source.kind());
+        source.component()
+            .validateSettingsCopyTarget(source, target);
         if (sourceGroup.isJoinable()) {
             assignSettingsGroup(target, sourceGroup.id());
         } else {
-            setPrivateMinerSettings(target, ((MinerSettings) sourceGroup.settings()).copy());
+            setPrivateModuleSettings(
+                target,
+                source.component()
+                    .copySettings(source, sourceGroup.settings()));
         }
-        targetMiner.setFocusOre(sourceFocusOreKey);
+        source.component()
+            .afterSettingsCopied(source, target);
         markModuleDirty(target.id);
     }
 
@@ -235,7 +391,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (!inventory.tryConsume(material.getKey(), material.getValue())) {
+            if (!tryConsumeInventory(material.getKey(), material.getValue())) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
@@ -250,6 +406,66 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
         markModuleDirty(module.id);
+        return true;
+    }
+
+    public long itemInventoryCapacity() {
+        long capacity = BASE_ITEM_CAPACITY;
+        for (CapacityCluster cluster : layoutCache.getCapacityClusters(FacilityModuleKind.STORAGE)) {
+            capacity += cluster.effectiveCapacity();
+        }
+        return capacity;
+    }
+
+    public long usedItemInventoryCapacity() {
+        return inventory.totalItems();
+    }
+
+    public long remainingItemInventoryCapacity() {
+        return Math.max(0L, itemInventoryCapacity() - usedItemInventoryCapacity());
+    }
+
+    public boolean isItemInventoryFull() {
+        return remainingItemInventoryCapacity() <= 0L;
+    }
+
+    public long insertInventory(ItemStackWrapper item, long amount) {
+        return insertInventory(item, amount, true);
+    }
+
+    public long insertInventoryWithoutSync(ItemStackWrapper item, long amount) {
+        return insertInventory(item, amount, false);
+    }
+
+    private long insertInventory(ItemStackWrapper item, long amount, boolean trackSync) {
+        if (item == null || amount <= 0L) return 0L;
+        long accepted = Math.min(amount, remainingItemInventoryCapacity());
+        if (accepted <= 0L) return 0L;
+        inventory.add(item, accepted);
+        if (trackSync) markInventoryDelta(item, accepted);
+        return accepted;
+    }
+
+    public long addInventory(ItemStackWrapper item, long delta) {
+        return addInventory(item, delta, true);
+    }
+
+    public long addInventoryWithoutSync(ItemStackWrapper item, long delta) {
+        return addInventory(item, delta, false);
+    }
+
+    private long addInventory(ItemStackWrapper item, long delta, boolean trackSync) {
+        if (item == null || delta == 0L) return 0L;
+        long actual = inventory.add(item, delta);
+        if (actual != 0L && trackSync) markInventoryDelta(item, actual);
+        return actual;
+    }
+
+    public boolean tryConsumeInventory(ItemStackWrapper item, long amount) {
+        if (item == null) return false;
+        if (amount <= 0L) return true;
+        if (!inventory.tryConsume(item, amount)) return false;
+        markInventoryDelta(item, -amount);
         return true;
     }
 
@@ -269,7 +485,7 @@ public final class AutomatedFacility extends CelestialAsset {
             long available = inventory.getAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (!inventory.tryConsume(material.getKey(), reserved)) {
+            if (!tryConsumeInventory(material.getKey(), reserved)) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
@@ -316,11 +532,20 @@ public final class AutomatedFacility extends CelestialAsset {
     public boolean flushModuleOperationRefund(ModuleInstance module) {
         ModuleOperationState operation = requireOperation(module);
         if (operation.phase() != ModuleOperationPhase.REFUNDING) return false;
+        Map<String, Long> remaining = new java.util.LinkedHashMap<>();
+        boolean changed = false;
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
-            inventory.add(requireItemKey(entry.getKey(), module), entry.getValue());
+            ItemStackWrapper item = requireItemKey(entry.getKey(), module);
+            long accepted = insertInventory(item, entry.getValue());
+            if (accepted > 0L) changed = true;
+            long leftover = entry.getValue() - accepted;
+            if (leftover > 0L) remaining.put(entry.getKey(), leftover);
         }
-        if (isCompletionRefund(operation)) {
+        if (!changed) return false;
+        if (!remaining.isEmpty()) {
+            module.setOperation(operation.withRefundBuffer(remaining));
+        } else if (isCompletionRefund(operation)) {
             module.clearOperation();
         } else {
             module.setOperation(operation.finishRefunding());
@@ -330,6 +555,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public SettingsGroup createSettingsGroupForModule(ModuleInstance module, String displayName) {
+        requireSettingsGroupsSupported(module);
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (current.members()
@@ -351,7 +577,26 @@ public final class AutomatedFacility extends CelestialAsset {
         return group;
     }
 
+    public void renameSettingsGroupForModule(ModuleInstance module, short groupId, String displayName) {
+        if (module == null) {
+            throw new IllegalArgumentException("renameSettingsGroupForModule: module must not be null");
+        }
+        requireSettingsGroupsSupported(module);
+        SettingsGroup group = settingsGroups.require(groupId, module.kind());
+        if (!group.isJoinable()) {
+            throw new IllegalStateException("Settings group " + groupId + " is private and cannot be renamed");
+        }
+        group.setDisplayName(displayName);
+        markSettingsGroupMembersDirty(group);
+        if (group.members()
+            .isEmpty()) {
+            bumpSyncRevision();
+            markDirty();
+        }
+    }
+
     public void assignSettingsGroup(ModuleInstance module, short groupId) {
+        requireSettingsGroupsSupported(module);
         if (module.groupId() == groupId) return;
         if (groupId == 0) {
             leaveSettingsGroup(module);
@@ -366,6 +611,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void leaveSettingsGroup(ModuleInstance module) {
+        requireSettingsGroupsSupported(module);
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (current.members()
@@ -382,30 +628,56 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void setPrivateMinerSettings(ModuleInstance module, MinerSettings settings) {
+        setPrivateModuleSettings(module, settings);
+    }
+
+    private void setPrivateModuleSettings(ModuleInstance module, ModuleSettings settings) {
         if (module.groupId() != 0) {
             SettingsGroup current = settingsGroups.require(module.groupId(), module.kind());
             if (!current.isJoinable() && current.members()
                 .size() == 1) {
                 current.setSettings(settings);
+                applySettingsToModule(settings, module);
                 markModuleDirty(module.id);
                 return;
             }
         }
         detachFromSettingsGroup(module);
-        attachToSettingsGroup(module, settingsGroups.create(FacilityModuleKind.MINER, settings));
+        attachToSettingsGroup(module, settingsGroups.create(module.kind(), settings));
     }
 
     private ModuleSettings copySettings(ModuleInstance module) {
-        if (module.component() instanceof ModuleMiner) {
-            return minerSettings(module).copy();
+        requireSettingsGroupsSupported(module);
+        if (module.groupId() != 0) {
+            SettingsGroup group = settingsGroups.require(module.groupId(), module.kind());
+            return module.component()
+                .copySettings(module, group.settings());
         }
-        throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+        return module.component()
+            .createPrivateSettings(module);
+    }
+
+    private ModuleSettings privateSettingsFor(ModuleInstance module) {
+        requireSettingsGroupsSupported(module);
+        return module.component()
+            .createPrivateSettings(module);
+    }
+
+    private static void requireSettingsGroupsSupported(ModuleInstance module) {
+        if (module == null) {
+            throw new IllegalArgumentException("Settings group module must not be null");
+        }
+        if (!FacilityModuleRegistry.get(module.kind())
+            .settingsGroups()) {
+            throw new IllegalStateException("Settings groups are not supported for module kind " + module.kind());
+        }
     }
 
     private void attachToSettingsGroup(ModuleInstance module, SettingsGroup group) {
         settingsGroups.require(group.id(), module.kind());
         settingsGroups.addMember(group.id(), module.anchor());
         module.setGroupId(group.id());
+        applySettingsToModule(group.settings(), module);
         markModuleDirty(module.id);
     }
 
@@ -424,6 +696,21 @@ public final class AutomatedFacility extends CelestialAsset {
                 }
             }
         }
+    }
+
+    private void applyRecipeSettingsToGroup(SettingsGroup group) {
+        for (StationTileCoord coord : group.members()) {
+            for (ModuleInstance module : modules) {
+                if (coord.equals(module.anchorOrNull())) {
+                    applySettingsToModule(group.settings(), module);
+                }
+            }
+        }
+    }
+
+    private static void applySettingsToModule(ModuleSettings settings, ModuleInstance module) {
+        module.component()
+            .applySettings(module, settings);
     }
 
     private ModuleOperationState requireWaitingOperation(ModuleInstance module) {
@@ -486,6 +773,24 @@ public final class AutomatedFacility extends CelestialAsset {
         markDirty();
     }
 
+    @Override
+    public boolean isDirty() {
+        return super.isDirty() || !dirtyModuleIds.isEmpty()
+            || !dirtyRemovedIds.isEmpty()
+            || !dirtyInventoryDeltas.isEmpty()
+            || !dirtyInventoryBoundDeltas.isEmpty();
+    }
+
+    @Override
+    public boolean needsFullSyncFor(UUID playerId) {
+        return !syncedPlayerIds.contains(playerId);
+    }
+
+    @Override
+    public void markSyncedFor(UUID playerId) {
+        syncedPlayerIds.add(playerId);
+    }
+
     public List<ModuleInstance> drainDirtyModules() {
         List<ModuleInstance> result = new ArrayList<>(dirtyModuleIds.size());
         for (ModuleInstance.ID id : dirtyModuleIds) {
@@ -496,11 +801,43 @@ public final class AutomatedFacility extends CelestialAsset {
         return result;
     }
 
+    public Map<ItemStackWrapper, Long> drainDirtyInventoryDeltas() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>(dirtyInventoryDeltas);
+        dirtyInventoryDeltas.clear();
+        return result;
+    }
+
+    public List<InventoryBoundDelta> drainDirtyInventoryBoundDeltas() {
+        List<InventoryBoundDelta> result = new ArrayList<>(dirtyInventoryBoundDeltas);
+        dirtyInventoryBoundDeltas.clear();
+        return result;
+    }
+
     public List<ModuleInstance.ID> drainRemovedIds() {
         List<ModuleInstance.ID> result = new ArrayList<>(dirtyRemovedIds);
         dirtyRemovedIds.clear();
         return result;
     }
+
+    private void markInventoryDelta(ItemStackWrapper item, long delta) {
+        if (item == null || delta == 0L) return;
+        dirtyInventoryDeltas.merge(item, delta, Long::sum);
+        if (dirtyInventoryDeltas.getOrDefault(item, 0L) == 0L) {
+            dirtyInventoryDeltas.remove(item);
+        }
+        bumpSyncRevision();
+    }
+
+    public void markInventoryBoundDelta(AutomatedFacilityInventory.BoundKind kind, String resourceKey, boolean present,
+        long amount) {
+        if (kind == null || resourceKey == null || resourceKey.isEmpty()) return;
+        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resourceKey, present, amount));
+        bumpSyncRevision();
+        markDirty();
+    }
+
+    public record InventoryBoundDelta(AutomatedFacilityInventory.BoundKind kind, String resourceKey, boolean present,
+        long amount) {}
 
     public long getEnergyStored() {
         return energyStored;

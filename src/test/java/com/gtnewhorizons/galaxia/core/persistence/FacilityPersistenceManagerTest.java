@@ -59,9 +59,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
@@ -207,6 +207,57 @@ final class FacilityPersistenceManagerTest {
             .get(0)
             .component();
         assertEquals(234_567L, decodedHammer.energyStored());
+    }
+
+    @Test
+    void hammerDispatchCooldownsRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleInstance module = station.modules()
+            .get(0);
+        module.setTier(ModuleTier.IV);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        hammer.markShotDispatched(module);
+        hammer.markRouteProbeAttempted();
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleHammer decodedHammer = (ModuleHammer) decoded.modules()
+            .get(0)
+            .component();
+        assertEquals(hammer.shotCooldownTicks(), decodedHammer.shotCooldownTicks());
+        assertEquals(hammer.routeProbeCooldownTicks(), decodedHammer.routeProbeCooldownTicks());
+    }
+
+    @Test
+    void minerFocusTierWithoutOreRoundTripsThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = createStationWithFullLayout();
+        ModuleMiner miner = (ModuleMiner) station.modules()
+            .get(1)
+            .component();
+        miner.setFocus(MinerFocusTier.II, null, 1200);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        ModuleMiner decodedMiner = (ModuleMiner) decoded.modules()
+            .get(1)
+            .component();
+        assertEquals(MinerFocusTier.II, decodedMiner.focusTier());
+        assertNull(decodedMiner.focusOreKeyOrNull());
+        assertEquals(0, decodedMiner.focusAlignmentProgress());
     }
 
     @Test
@@ -1208,7 +1259,7 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void recipeSlotSnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
+    void savedRecipesnapshotsRoundTripFluidStacksAndRecipeStats() throws Exception {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -1242,8 +1293,10 @@ final class FacilityPersistenceManagerTest {
             fluidOutputChances,
             320,
             480);
-        RecipeSlotList slots = new RecipeSlotList();
-        slots.add(new RecipeSlot(snapshot, true, 11, 22, (byte) 3, (byte) 4));
+        SavedRecipeList slots = new SavedRecipeList();
+        station.inventory.setFluidLowerBound("galaxia.persistence.input", 11);
+        station.inventory.setFluidUpperBound("galaxia.persistence.output", 22);
+        slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
         recipeModule.setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
@@ -1262,7 +1315,7 @@ final class FacilityPersistenceManagerTest {
             .orElseThrow();
         RecipeConfig decodedConfig = ((IRecipeModule) decodedMacerator.component()).getRecipeConfig();
         assertNotNull(decodedConfig);
-        RecipeSlot decodedSlot = decodedConfig.slots()
+        SavedRecipe decodedSlot = decodedConfig.savedRecipes()
             .get(0);
         RecipeSnapshot decodedSnapshot = decodedSlot.recipe();
         assertEquals(320, decodedSnapshot.duration());
@@ -1274,8 +1327,9 @@ final class FacilityPersistenceManagerTest {
         assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
         assertEquals("galaxia.persistence.output", fluidName(decodedSnapshot.fluidOutputs()[0]));
         assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
-        assertEquals(11, decodedSlot.inputGuard());
-        assertEquals(22, decodedSlot.outputGuard());
+        assertEquals(12L, decodedSlot.requestAmount());
+        assertEquals(11, decoded.inventory.fluidLowerBoundOrDefault("galaxia.persistence.input"));
+        assertEquals(22, decoded.inventory.fluidUpperBoundOrDefault("galaxia.persistence.output"));
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
     }

@@ -38,9 +38,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperati
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlot;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSlotList;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -76,11 +77,10 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotAdd_encodeDecode_roundTrip() {
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipe slot = new SavedRecipe(
             RecipeSnapshot.unresolved((byte) 1, 42, 12345L),
             true,
-            10,
-            100,
+            0L,
             (byte) 5,
             (byte) 8);
         AssetModuleUpdatePacket original = AssetModuleUpdatePacket.recipeSlotPayload(
@@ -102,8 +102,7 @@ final class AssetModuleUpdatePacketTest {
         assertNotNull(decoded.getRawPayload());
         assertTrue(decoded.getRawPayload().length > 25);
 
-        // Decode payload manually: slotIndex=3, recipeMapOrdinal=1, recipeIndex=42, contentHash=12345,
-        // enabled=true, inputGuard=10, outputGuard=100, priority=5, orderSize=8
+        // Decode payload manually: slotIndex=3, recipeMapOrdinal=1, recipeIndex=42, contentHash=12345.
         ByteBuf payloadBuf = Unpooled.wrappedBuffer(decoded.getRawPayload());
         assertEquals((byte) 3, payloadBuf.readByte()); // slotIndex
         assertEquals((byte) 1, payloadBuf.readByte()); // recipeMapOrdinal
@@ -118,8 +117,7 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(-1, payloadBuf.readInt()); // fluid outputs
         assertEquals(-1, payloadBuf.readInt()); // fluid output chances
         assertTrue(payloadBuf.readBoolean()); // enabled
-        assertEquals(10, payloadBuf.readInt()); // inputGuard
-        assertEquals(100, payloadBuf.readInt()); // outputGuard
+        assertEquals(0L, payloadBuf.readLong()); // requestAmount
         assertEquals((byte) 5, payloadBuf.readByte()); // priority
         assertEquals((byte) 8, payloadBuf.readByte()); // orderSize
     }
@@ -129,7 +127,7 @@ final class AssetModuleUpdatePacketTest {
         Item itemOutput = new Item();
         FluidStack fluidInput = fluidStack("galaxia_packet_input_fluid", 144);
         FluidStack fluidOutput = fluidStack("galaxia_packet_output_fluid", 72);
-        RecipeSlot slot = new RecipeSlot(
+        SavedRecipe slot = new SavedRecipe(
             new RecipeSnapshot(
                 (byte) 1,
                 42,
@@ -143,8 +141,7 @@ final class AssetModuleUpdatePacketTest {
                 200,
                 512),
             true,
-            10,
-            100,
+            0L,
             (byte) 5,
             (byte) 8);
 
@@ -198,8 +195,7 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(7500, payloadBuf.readInt());
 
         assertTrue(payloadBuf.readBoolean());
-        assertEquals(10, payloadBuf.readInt());
-        assertEquals(100, payloadBuf.readInt());
+        assertEquals(0L, payloadBuf.readLong());
         assertEquals((byte) 5, payloadBuf.readByte());
         assertEquals((byte) 8, payloadBuf.readByte());
     }
@@ -230,13 +226,7 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotUpdate_encodeDecode_roundTrip() {
-        RecipeSlot slot = new RecipeSlot(
-            RecipeSnapshot.unresolved((byte) 2, 7, 999L),
-            false,
-            5,
-            50,
-            (byte) 1,
-            (byte) 3);
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 2, 7, 999L), false, 0L, (byte) 1, (byte) 3);
         AssetModuleUpdatePacket original = AssetModuleUpdatePacket.recipeSlotPayload(
             ASSET_ID,
             0,
@@ -268,8 +258,7 @@ final class AssetModuleUpdatePacketTest {
         assertEquals(-1, payloadBuf.readInt()); // fluid outputs
         assertEquals(-1, payloadBuf.readInt()); // fluid output chances
         assertFalse(payloadBuf.readBoolean()); // enabled
-        assertEquals(5, payloadBuf.readInt()); // inputGuard
-        assertEquals(50, payloadBuf.readInt()); // outputGuard
+        assertEquals(0L, payloadBuf.readLong()); // requestAmount
         assertEquals((byte) 1, payloadBuf.readByte()); // priority
         assertEquals((byte) 3, payloadBuf.readByte()); // orderSize
     }
@@ -605,22 +594,22 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void copyMinerSettingsPayload_roundTripsTargetTiles() {
+    void copyModuleSettingsPayload_roundTripsTargetTiles() {
         AssetModuleUpdatePacket decoded = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(
+            AssetModuleUpdatePacket.copyModuleSettings(
                 ASSET_ID,
                 0,
                 MODULE_ID,
                 List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1))));
 
-        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MINER_SETTINGS, decoded.getConfigAction());
+        assertEquals(AssetModuleUpdatePacket.ConfigAction.COPY_MODULE_SETTINGS, decoded.getConfigAction());
         assertEquals(
             List.of(StationTileCoord.of(2, 0), StationTileCoord.of(3, -1)),
             AssetModuleUpdatePacket.decodeTileCoordPayload(decoded.getRawPayload()));
     }
 
     @Test
-    void applyCopyMinerSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
+    void applyCopyModuleSettingsCopiesRuntimeConfigWithoutPhysicalFocusTier() {
         AutomatedFacility facility = addTwoMinerFacilityToServer();
         ModuleInstance source = facility.modules()
             .get(0);
@@ -634,7 +623,7 @@ final class AssetModuleUpdatePacketTest {
         facility.createSettingsGroupForModule(source, "Shared miners");
 
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         packet.apply(TEAM);
 
@@ -646,7 +635,7 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyCopyMinerSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
+    void applyCopyModuleSettingsRejectsFocusedSourceForTargetWithoutFocusTier() {
         AutomatedFacility facility = addTwoMinerFacilityToServer();
         ModuleInstance source = facility.modules()
             .get(0);
@@ -656,12 +645,61 @@ final class AssetModuleUpdatePacketTest {
         ModuleMiner targetMiner = (ModuleMiner) target.component();
         sourceMiner.setFocus(MinerFocusTier.I, "ore:iron", 0);
         targetMiner.setFocus(MinerFocusTier.NONE, null, 0);
+        short originalTargetGroupId = target.groupId();
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.copyMinerSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
 
         assertThrows(IllegalStateException.class, () -> packet.apply(TEAM));
+        assertEquals(originalTargetGroupId, target.groupId());
         assertEquals(MinerFocusTier.NONE, targetMiner.focusTier());
         assertNull(targetMiner.focusOreKeyOrNull());
+    }
+
+    @Test
+    void applyCopyModuleSettingsCopiesRecipeConfig() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(FacilityModuleKind.MACERATOR.isAvailable());
+        AutomatedFacility facility = addTwoModuleFacilityToServer(FacilityModuleKind.MACERATOR, ModuleTier.EV);
+        ModuleInstance source = facility.modules()
+            .get(0);
+        ModuleInstance target = facility.modules()
+            .get(1);
+        RecipeConfig config = RecipeConfig.empty();
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 7, 42L), true, 0L, (byte) 3, (byte) 2);
+        config.savedRecipes()
+            .add(slot);
+        facility.setRecipeConfig(source, config);
+
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.copyModuleSettings(facility.assetId, 0, source.id, List.of(target.anchor())));
+
+        packet.apply(TEAM);
+
+        RecipeConfig copied = ((IRecipeModule) target.component()).getRecipeConfig();
+        assertNotNull(copied);
+        assertEquals(config.mode(), copied.mode());
+        assertEquals(config.notDoablePolicy(), copied.notDoablePolicy());
+        assertEquals(
+            config.savedRecipes()
+                .size(),
+            copied.savedRecipes()
+                .size());
+        assertEquals(
+            slot.recipe()
+                .contentHash(),
+            copied.savedRecipes()
+                .get(0)
+                .recipe()
+                .contentHash());
+        assertEquals(
+            slot.priority(),
+            copied.savedRecipes()
+                .get(0)
+                .priority());
+        assertEquals(
+            slot.orderSize(),
+            copied.savedRecipes()
+                .get(0)
+                .orderSize());
     }
 
     @Test
@@ -914,17 +952,22 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyCreateMinerSettingsGroupCopiesCurrentMinerBlacklist() {
+    void applyCreateModuleSettingsGroupCopiesCurrentMinerBlacklist() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         facility.setMinerOreBlacklisted(module, "ore:iron", true);
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.createMinerSettingsGroup(facility.assetId, 0, module.id));
+            AssetModuleUpdatePacket.createModuleSettingsGroup(facility.assetId, 0, module.id, "  Priority miners  "));
 
         packet.apply(TEAM);
 
         assertNotEquals(0, module.groupId());
+        assertEquals(
+            "Priority miners",
+            facility.settingsGroups()
+                .require(module.groupId())
+                .displayName());
         assertEquals(
             1,
             facility.settingsGroups()
@@ -934,14 +977,37 @@ final class AssetModuleUpdatePacketTest {
     }
 
     @Test
-    void applyMinerSettingsGroupZeroLeavesGroupWithCopiedSettings() {
+    void applyRenameModuleSettingsGroupUpdatesJoinableGroup() {
+        AutomatedFacility facility = addMinerFacilityToServer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        short groupId = facility.createSettingsGroupForModule(module, "Old miners")
+            .id();
+        AssetModuleUpdatePacket packet = roundTrip(
+            AssetModuleUpdatePacket.renameModuleSettingsGroup(facility.assetId, 0, module.id, groupId, "New miners"));
+
+        AssetSyncPacket sync = packet.apply(TEAM);
+
+        assertEquals(
+            "New miners",
+            facility.settingsGroups()
+                .require(groupId)
+                .displayName());
+        assertNotNull(sync);
+        assertFalse(
+            sync.fullSyncDeltas()
+                .isEmpty());
+    }
+
+    @Test
+    void applyModuleSettingsGroupZeroLeavesGroupWithCopiedSettings() {
         AutomatedFacility facility = addMinerFacilityToServer();
         ModuleInstance module = facility.modules()
             .get(0);
         facility.setMinerOreBlacklisted(module, "ore:iron", true);
         facility.createSettingsGroupForModule(module, null);
         AssetModuleUpdatePacket packet = roundTrip(
-            AssetModuleUpdatePacket.minerSettingsGroup(facility.assetId, 0, module.id, (short) 0));
+            AssetModuleUpdatePacket.moduleSettingsGroup(facility.assetId, 0, module.id, (short) 0));
 
         packet.apply(TEAM);
 
@@ -985,8 +1051,8 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void applyRecipeSlotMutation_addOnEmptyList_appendsAtZero() {
-        RecipeSlotList slots = new RecipeSlotList();
-        RecipeSlot slot = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0, 0, (byte) 1, (byte) 1);
+        SavedRecipeList slots = new SavedRecipeList();
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0L, (byte) 1, (byte) 1);
 
         boolean changed = AssetModuleUpdatePacket
             .applyRecipeSlotMutation(slots, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT, 0, slot);
@@ -998,8 +1064,8 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void applyRecipeSlotMutation_addWithGapIndexIsRejected() {
-        RecipeSlotList slots = new RecipeSlotList();
-        RecipeSlot slot = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0, 0, (byte) 1, (byte) 1);
+        SavedRecipeList slots = new SavedRecipeList();
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0L, (byte) 1, (byte) 1);
 
         boolean changed = AssetModuleUpdatePacket
             .applyRecipeSlotMutation(slots, AssetModuleUpdatePacket.ConfigAction.ADD_RECIPE_SLOT, 1, slot);
@@ -1010,14 +1076,32 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void applyRecipeSlotMutation_updateMissingSlotIsRejected() {
-        RecipeSlotList slots = new RecipeSlotList();
-        RecipeSlot slot = new RecipeSlot(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0, 0, (byte) 1, (byte) 1);
+        SavedRecipeList slots = new SavedRecipeList();
+        SavedRecipe slot = new SavedRecipe(RecipeSnapshot.unresolved((byte) 1, 0, 1L), true, 0L, (byte) 1, (byte) 1);
 
         boolean changed = AssetModuleUpdatePacket
             .applyRecipeSlotMutation(slots, AssetModuleUpdatePacket.ConfigAction.UPDATE_RECIPE_SLOT, 0, slot);
 
         assertFalse(changed);
         assertTrue(slots.isEmpty());
+    }
+
+    @Test
+    void recipeForSlotMutation_updatePreservesExistingServerRecipe() {
+        RecipeSnapshot existingRecipe = RecipeSnapshot.unresolved((byte) 1, 0, 1L);
+        RecipeSnapshot clientRecipe = RecipeSnapshot.unresolved((byte) 2, 7, 999L);
+        RecipeConfig config = RecipeConfig.empty();
+        config.savedRecipes()
+            .add(new SavedRecipe(existingRecipe, true, 0L, (byte) 1, (byte) 1));
+
+        RecipeSnapshot resolved = AssetModuleUpdatePacket.recipeForSlotMutation(
+            AssetModuleUpdatePacket.ConfigAction.UPDATE_RECIPE_SLOT,
+            config,
+            0,
+            null,
+            clientRecipe);
+
+        assertSame(existingRecipe, resolved);
     }
 
     private static AutomatedFacility addRecipeFacilityToServer() {

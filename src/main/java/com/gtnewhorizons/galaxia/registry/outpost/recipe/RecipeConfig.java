@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
-public record RecipeConfig(RecipeSlotList slots, RecipeSchedulerMode mode, NotDoablePolicy notDoablePolicy,
+public record RecipeConfig(SavedRecipeList savedRecipes, RecipeSchedulerMode mode, NotDoablePolicy notDoablePolicy,
     byte orderCursor, byte orderRemaining) {
 
     public RecipeConfig {
@@ -11,7 +11,7 @@ public record RecipeConfig(RecipeSlotList slots, RecipeSchedulerMode mode, NotDo
 
     public static RecipeConfig empty() {
         return new RecipeConfig(
-            new RecipeSlotList(),
+            new SavedRecipeList(),
             RecipeSchedulerMode.PRIORITY,
             NotDoablePolicy.SKIP,
             (byte) 0,

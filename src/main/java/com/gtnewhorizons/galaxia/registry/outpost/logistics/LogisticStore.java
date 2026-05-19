@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.gtnewhorizons.galaxia.core.Galaxia;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -17,6 +19,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
 public final class LogisticStore {
+
+    private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private static final List<LogisticsDelivery> activeDeliveries = new ArrayList<>();
     private static final Map<CelestialAsset.ID, Map<ItemStackWrapper, LogisticSignal>> outpostSignals = new LinkedHashMap<>();
@@ -35,6 +39,16 @@ public final class LogisticStore {
         activeDeliveries.clear();
     }
 
+    public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
+        long total = 0L;
+        for (LogisticsDelivery task : activeDeliveries) {
+            if (!toAssetId.equals(task.data.toAssetId())) continue;
+            if (!resource.equals(task.data.resourceId())) continue;
+            total += task.data.amount();
+        }
+        return total;
+    }
+
     public static void tickDeliveries() {
         for (int i = activeDeliveries.size() - 1; i >= 0; i--) {
             LogisticsDelivery current = activeDeliveries.get(i);
@@ -45,26 +59,32 @@ public final class LogisticStore {
             }
             LogisticsDelivery ticked = current.tick();
             if (ticked.isArrived()) {
-                activeDeliveries.remove(i);
                 CelestialAsset destination = CelestialAssetStore.findAsset(ticked.data.toAssetId());
                 if (destination == null) {
-                    Galaxia.LOG.warn(
+                    activeDeliveries.remove(i);
+                    LOG.warn(
                         "[Logistics] Task {} arrived but destination outpost {} not found; resources lost.",
                         ticked.deliveryId,
                         ticked.data.toAssetId());
                     return;
                 }
                 if (destination instanceof AutomatedFacility outpost) {
-                    outpost.inventory.add(ticked.data.resourceId(), ticked.data.amount());
-                    Galaxia.LOG.debug(
+                    long accepted = outpost.insertInventory(ticked.data.resourceId(), ticked.data.amount());
+                    long remaining = ticked.data.amount() - accepted;
+                    if (remaining > 0L) {
+                        ticked.setAmount(remaining);
+                    } else {
+                        activeDeliveries.remove(i);
+                    }
+                    LOG.debug(
                         "[Logistics] Task {} delivered {} x {} to {}",
                         ticked.deliveryId,
-                        ticked.data.amount(),
+                        accepted,
                         ticked.data.resourceId(),
                         ticked.data.toAssetId());
+                } else {
+                    activeDeliveries.remove(i);
                 }
-            } else {
-                activeDeliveries.set(i, ticked);
             }
         }
     }

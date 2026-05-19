@@ -50,6 +50,28 @@ public final class ModuleLayerRenderer {
         drawDashedBorder(x, y, size, EnumColors.MAP_COLOR_STATION_TILE_EMPTY_BORDER.getColor());
     }
 
+    public static void drawPreview(GuiContext ctx, int x, int y, FacilityModuleKind kind) {
+        int size = StationMapViewport.TILE_SIZE;
+        if (!drawModuleTexture(x, y, size, kind, 0.55f, 0.55f, 0.55f, 0.7f)) {
+            Gui.drawRect(x, y, x + size, y + size, EnumColors.MAP_COLOR_STATION_TILE_PREVIEW_FALLBACK_FILL.getColor());
+            drawLabel(
+                ctx,
+                x,
+                y,
+                size,
+                kind == null ? "?"
+                    : kind.name()
+                        .substring(0, 1));
+        }
+        Gui.drawRect(x, y, x + size, y + size, EnumColors.MAP_COLOR_STATION_TILE_PREVIEW_DIM.getColor());
+        drawBorder(x, y, size, EnumColors.MAP_COLOR_STATION_PICKER_COMPATIBLE.getColor());
+    }
+
+    public static boolean drawModuleTextureRegion(int x, int y, int w, int h, FacilityModuleKind kind, float u0,
+        float v0, float u1, float v1) {
+        return drawModuleTextureRegion(x, y, w, h, kind, u0, v0, u1, v1, 1f, 1f, 1f, 1f);
+    }
+
     private static StationModuleCategory categoryOf(PlacedTile tile) {
         if (tile == null) return StationModuleCategory.COMMAND;
         FacilityModuleKind kind = moduleKindOf(tile);
@@ -96,6 +118,16 @@ public final class ModuleLayerRenderer {
     }
 
     private static boolean drawModuleTexture(int x, int y, int size, FacilityModuleKind kind) {
+        return drawModuleTexture(x, y, size, kind, 1f, 1f, 1f, 1f);
+    }
+
+    private static boolean drawModuleTexture(int x, int y, int size, FacilityModuleKind kind, float red, float green,
+        float blue, float alpha) {
+        return drawModuleTextureRegion(x, y, size, size, kind, 0f, 0f, 1f, 1f, red, green, blue, alpha);
+    }
+
+    private static boolean drawModuleTextureRegion(int x, int y, int w, int h, FacilityModuleKind kind, float u0,
+        float v0, float u1, float v1, float red, float green, float blue, float alpha) {
         if (kind == null) return false;
         ResourceLocation texture = StationTextureRegistry.moduleTexture(kind);
         if (!StationTextureRegistry.hasTexture(texture)) return false;
@@ -105,15 +137,16 @@ public final class ModuleLayerRenderer {
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glColor4f(red, green, blue, alpha);
 
         Tessellator tess = Tessellator.instance;
         tess.startDrawingQuads();
-        tess.addVertexWithUV(x, y + size, 0, 0, 1);
-        tess.addVertexWithUV(x + size, y + size, 0, 1, 1);
-        tess.addVertexWithUV(x + size, y, 0, 1, 0);
-        tess.addVertexWithUV(x, y, 0, 0, 0);
+        tess.addVertexWithUV(x, y + h, 0, u0, v1);
+        tess.addVertexWithUV(x + w, y + h, 0, u1, v1);
+        tess.addVertexWithUV(x + w, y, 0, u1, v0);
+        tess.addVertexWithUV(x, y, 0, u0, v0);
         tess.draw();
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         return true;
     }
 

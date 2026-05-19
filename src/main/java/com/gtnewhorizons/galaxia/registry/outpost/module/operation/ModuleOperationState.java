@@ -72,6 +72,12 @@ public final class ModuleOperationState {
         return this;
     }
 
+    public ModuleOperationState withRefundBuffer(@Nonnull Map<String, Long> updatedRefundBuffer) {
+        this.refundBuffer = sanitizeItemAmounts(updatedRefundBuffer, "refundBuffer");
+        validatePhaseDataConsistency();
+        return this;
+    }
+
     public ModuleOperationState beginBuilding() {
         if (phase != ModuleOperationPhase.WAITING_FOR_MATERIALS) {
             throw new IllegalStateException("beginBuilding requires WAITING_FOR_MATERIALS phase, got " + phase);

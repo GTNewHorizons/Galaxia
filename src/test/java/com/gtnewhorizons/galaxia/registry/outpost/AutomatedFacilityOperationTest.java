@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
+import java.util.BitSet;
 import java.util.Map;
 
 import net.minecraft.item.Item;
@@ -37,10 +38,17 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
+import cpw.mods.fml.common.registry.GameData;
+
 final class AutomatedFacilityOperationTest {
 
+    private static final Item TEST_FILLER_ITEM = new Item();
+    private static final Item TEST_REFUND_ITEM = new Item();
+
     @BeforeAll
-    static void initRegistries() {
+    static void initRegistries() throws ReflectiveOperationException {
+        registerTestItem(31000, "galaxia:test_filler_item", TEST_FILLER_ITEM);
+        registerTestItem(31001, "galaxia:test_refund_item", TEST_REFUND_ITEM);
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -136,6 +144,123 @@ final class AutomatedFacilityOperationTest {
             module.operationOrNull()
                 .refundBuffer()
                 .get(key.toKey()));
+    }
+
+    @Test
+    void itemInventoryCapacityStartsAtBaseLimit() {
+        AutomatedFacility facility = facilityWithHammer();
+
+        assertEquals(1000L, facility.itemInventoryCapacity());
+        assertEquals(1000L, facility.remainingItemInventoryCapacity());
+    }
+
+    @Test
+    void storageModulesIncreaseItemInventoryCapacity() {
+        AutomatedFacility facility = facilityWithStorage();
+        ModuleInstance storage = facility.modules()
+            .get(0);
+        facility.stationLayout()
+            .place(storage);
+
+        assertEquals(2024L, facility.itemInventoryCapacity());
+    }
+
+    @Test
+    void insertInventoryAcceptsOnlyRemainingCapacity() {
+        AutomatedFacility facility = facilityWithHammer();
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(new Item()));
+
+        assertEquals(1000L, facility.insertInventory(key, 1200L));
+
+        assertEquals(1000L, facility.inventory.getAmount(key));
+        assertEquals(0L, facility.remainingItemInventoryCapacity());
+    }
+
+    @Test
+    void refundFlushKeepsRemainderWhenInventoryIsFull() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
+        ItemStackWrapper refund = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
+        facility.insertInventory(filler, 998L);
+        module.setOperation(
+            ModuleOperationState
+                .restore(plan(), ModuleOperationPhase.REFUNDING, 0, Map.of(), Map.of(refund.toKey(), 5L)));
+
+        assertTrue(facility.flushModuleOperationRefund(module));
+
+        assertEquals(2L, facility.inventory.getAmount(refund));
+        assertNotNull(module.operationOrNull());
+        assertEquals(
+            ModuleOperationPhase.REFUNDING,
+            module.operationOrNull()
+                .phase());
+        assertEquals(
+            3L,
+            module.operationOrNull()
+                .refundBuffer()
+                .get(refund.toKey()));
+    }
+
+    @Test
+    void refundingModuleBlocksNextUpgradeUntilBufferEmpties() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
+        ItemStackWrapper refund = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
+        facility.insertInventory(filler, 1000L);
+        module.setOperation(
+            ModuleOperationState
+                .restore(plan(), ModuleOperationPhase.REFUNDING, 0, Map.of(), Map.of(refund.toKey(), 1L)));
+
+        facility.tick();
+
+        assertEquals(
+            ModuleOperationPhase.REFUNDING,
+            module.operationOrNull()
+                .phase());
+
+        facility.inventory.add(filler, -1L);
+        facility.tick();
+
+        assertEquals(
+            ModuleOperationPhase.CANCELLED,
+            module.operationOrNull()
+                .phase());
+        assertEquals(1L, facility.inventory.getAmount(refund));
+    }
+
+    @Test
+    void completedRefundTricklesThroughRefundBufferWhenInventoryHasLimitedSpace() {
+        AutomatedFacility facility = facilityWithHammer();
+        ModuleInstance module = facility.modules()
+            .get(0);
+        ItemStackWrapper filler = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
+        ItemStackWrapper refund = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
+        facility.insertInventory(filler, 999L);
+        module.setOperation(
+            ModuleOperationState.waiting(hammerUpgradePlan(2, false, refund))
+                .beginBuilding());
+
+        facility.tick();
+        facility.tick();
+
+        assertEquals(ModuleTier.LuV, module.tier());
+        assertEquals(
+            ModuleOperationPhase.REFUNDING,
+            module.operationOrNull()
+                .phase());
+
+        facility.tick();
+
+        assertEquals(1L, facility.inventory.getAmount(refund));
+        assertEquals(
+            5L,
+            module.operationOrNull()
+                .refundBuffer()
+                .get(refund.toKey()));
     }
 
     @Test
@@ -372,4 +497,22 @@ final class AutomatedFacilityOperationTest {
     private static ItemStack material() {
         return new ItemStack(new Item());
     }
+
+    private static void registerTestItem(int id, String key, Item item) throws ReflectiveOperationException {
+        Object registry = GameData.getItemRegistry();
+        for (Method method : registry.getClass()
+            .getDeclaredMethods()) {
+            Class<?>[] parameters = method.getParameterTypes();
+            if (parameters.length == 4 && parameters[0] == int.class
+                && parameters[1] == String.class
+                && parameters[2].isAssignableFrom(Item.class)
+                && parameters[3] == BitSet.class) {
+                method.setAccessible(true);
+                method.invoke(registry, id, key, item, new BitSet());
+                return;
+            }
+        }
+        throw new NoSuchMethodException("Item registry raw add method");
+    }
+
 }

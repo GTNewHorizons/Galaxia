@@ -10,7 +10,9 @@ import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.UnknownNullability;
 
 import com.gtnewhorizons.galaxia.client.CelestialClient;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
@@ -83,6 +85,7 @@ public final class LogisticsSyncPacket implements IMessage {
             PacketUtil.writeEnum(buf, d.toBodyId());
             buf.writeDouble(d.departureOrbitalTime());
             buf.writeDouble(d.tofOrbitalSeconds());
+            writeTransferRoute(buf, d.transferRoute());
         }
 
         writeAggMap(buf, bySystem);
@@ -94,19 +97,32 @@ public final class LogisticsSyncPacket implements IMessage {
         int deliveryCount = buf.readInt();
         deliveries = new ArrayList<>(deliveryCount);
         for (int i = 0; i < deliveryCount; i++) {
+            LogisticsDelivery.ID deliveryId = PacketUtil.readDeliveryId(buf);
+            CelestialAsset.ID fromAssetId = PacketUtil.readAssetId(buf);
+            CelestialAsset.ID toAssetId = PacketUtil.readAssetId(buf);
+            ItemStackWrapper resourceId = ItemStackWrapper.fromKey(PacketUtil.readString(buf));
+            long amount = buf.readLong();
+            int remainingTicks = buf.readInt();
+            LogisticSignal.Scope scope = PacketUtil.readEnum(buf, LogisticSignal.Scope.class);
+            CelestialObjectId fromBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            CelestialObjectId toBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+            double departureOrbitalTime = buf.readDouble();
+            double tofOrbitalSeconds = buf.readDouble();
+            OrbitalTransferPlanner.TransferRoute transferRoute = readTransferRoute(buf);
             deliveries.add(
                 LogisticsDelivery.createWithTrajectory(
-                    PacketUtil.readDeliveryId(buf),
-                    PacketUtil.readAssetId(buf),
-                    PacketUtil.readAssetId(buf),
-                    ItemStackWrapper.fromKey(PacketUtil.readString(buf)),
-                    buf.readLong(),
-                    buf.readInt(),
-                    PacketUtil.readEnum(buf, LogisticSignal.Scope.class),
-                    PacketUtil.readEnum(buf, CelestialObjectId.class),
-                    PacketUtil.readEnum(buf, CelestialObjectId.class),
-                    buf.readDouble(),
-                    buf.readDouble()));
+                    deliveryId,
+                    fromAssetId,
+                    toAssetId,
+                    resourceId,
+                    amount,
+                    remainingTicks,
+                    scope,
+                    fromBodyId,
+                    toBodyId,
+                    departureOrbitalTime,
+                    tofOrbitalSeconds,
+                    transferRoute));
         }
 
         bySystem = readAggMap(buf);
@@ -125,6 +141,55 @@ public final class LogisticsSyncPacket implements IMessage {
                 });
             return null;
         }
+    }
+
+    private static void writeTransferRoute(ByteBuf buf, OrbitalTransferPlanner.TransferRoute route) {
+        if (route == null || !route.hasTrajectoryGeometry()) {
+            buf.writeBoolean(false);
+            return;
+        }
+        buf.writeBoolean(true);
+        buf.writeDouble(route.tofOsu());
+        buf.writeDouble(route.totalDv());
+        buf.writeDouble(route.departureDv());
+        buf.writeDouble(route.captureDv());
+        PacketUtil.writeEnum(buf, route.attractorBodyId());
+        buf.writeDouble(route.anchorX());
+        buf.writeDouble(route.anchorY());
+        buf.writeDouble(route.r1x());
+        buf.writeDouble(route.r1y());
+        buf.writeDouble(route.departureVelocityX());
+        buf.writeDouble(route.departureVelocityY());
+        buf.writeBoolean(route.prograde());
+    }
+
+    private static OrbitalTransferPlanner.TransferRoute readTransferRoute(ByteBuf buf) {
+        if (!buf.readBoolean()) return null;
+        double tofOsu = buf.readDouble();
+        double totalDv = buf.readDouble();
+        double departureDv = buf.readDouble();
+        double captureDv = buf.readDouble();
+        CelestialObjectId attractorBodyId = PacketUtil.readEnum(buf, CelestialObjectId.class);
+        double anchorX = buf.readDouble();
+        double anchorY = buf.readDouble();
+        double r1x = buf.readDouble();
+        double r1y = buf.readDouble();
+        double departureVelocityX = buf.readDouble();
+        double departureVelocityY = buf.readDouble();
+        boolean prograde = buf.readBoolean();
+        return new OrbitalTransferPlanner.TransferRoute(
+            tofOsu,
+            totalDv,
+            departureDv,
+            captureDv,
+            attractorBodyId,
+            anchorX,
+            anchorY,
+            r1x,
+            r1y,
+            departureVelocityX,
+            departureVelocityY,
+            prograde);
     }
 
     private static void writeAggMap(ByteBuf buf, @UnknownNullability Map<CelestialObjectId, Map<String, Long>> map) {

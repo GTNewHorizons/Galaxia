@@ -23,8 +23,8 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.orbital.LambertTransfer;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 
 // ---------------------------------------------------------------------------
 // Package-level records
@@ -92,18 +92,36 @@ record InterplanetaryTransferJob(String transferId, String displayName, String i
 
 public final class InterplanetaryTransferSystem {
 
+    private static final int MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT = 16;
+    private static final double TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION = 0.03;
+
     private static final int PREVIEW_TRAJECTORY_SAMPLES = 96;
 
     private InterplanetaryTransferSystem() {}
 
     public record LambertStressReport(int requestedSimulations, int executedSimulations, int candidatePlanetCount,
-        int successfulTransfers, double averageTotalDv, double bestTotalDv, double worstTotalDv) {
+        int successfulTransfers, int trajectoryFailures, long totalNanos, long routeScanNanos, long hohmannNanos,
+        long departureResolveNanos, long arrivalResolveNanos, long geometryNanos, long lambertNanos, long acceptNanos,
+        long trajectorySampleNanos, int scanCandidateCount, int lambertPairCount, double averageTotalDv,
+        double bestTotalDv, double worstTotalDv) {
 
         public LambertStressReport {
             requestedSimulations = Math.max(0, requestedSimulations);
             executedSimulations = Math.max(0, executedSimulations);
             candidatePlanetCount = Math.max(0, candidatePlanetCount);
             successfulTransfers = Math.max(0, successfulTransfers);
+            trajectoryFailures = Math.max(0, trajectoryFailures);
+            totalNanos = Math.max(0L, totalNanos);
+            routeScanNanos = Math.max(0L, routeScanNanos);
+            hohmannNanos = Math.max(0L, hohmannNanos);
+            departureResolveNanos = Math.max(0L, departureResolveNanos);
+            arrivalResolveNanos = Math.max(0L, arrivalResolveNanos);
+            geometryNanos = Math.max(0L, geometryNanos);
+            lambertNanos = Math.max(0L, lambertNanos);
+            acceptNanos = Math.max(0L, acceptNanos);
+            trajectorySampleNanos = Math.max(0L, trajectorySampleNanos);
+            scanCandidateCount = Math.max(0, scanCandidateCount);
+            lambertPairCount = Math.max(0, lambertPairCount);
         }
 
         public int failedTransfers() {
@@ -116,6 +134,25 @@ public final class InterplanetaryTransferSystem {
 
         public boolean hasSuccesses() {
             return successfulTransfers > 0;
+        }
+
+        public boolean hasTrajectoryFailures() {
+            return trajectoryFailures > 0;
+        }
+
+        public long otherNanos() {
+            return Math.max(0L, totalNanos - routeScanNanos - trajectorySampleNanos);
+        }
+
+        public long scanOverheadNanos() {
+            return Math.max(
+                0L,
+                routeScanNanos - hohmannNanos
+                    - departureResolveNanos
+                    - arrivalResolveNanos
+                    - geometryNanos
+                    - lambertNanos
+                    - acceptNanos);
         }
     }
 
@@ -210,20 +247,19 @@ public final class InterplanetaryTransferSystem {
      */
     static int sampleTransferArcInto(double ax, double ay, double rx1, double ry1, double vx1, double vy1, double tof,
         double mu, double[] outXs, double[] outYs, int n) {
-        if (outXs == null || outYs == null) return 0;
-        int sampleCount = Math.max(2, Math.min(n, Math.min(outXs.length, outYs.length)));
-        if (sampleCount <= 0) return 0;
-        OrbitalMechanics.OrbitalState state = new OrbitalMechanics.OrbitalState(rx1, ry1, vx1, vy1);
-        double dt = tof / (sampleCount - 1);
-        for (int i = 0; i < sampleCount; i++) {
-            if (i > 0) {
-                state = OrbitalMechanics.propagateTwoBodyState(state, mu, dt);
-                if (state == null) return i;
-            }
-            outXs[i] = ax + state.x();
-            outYs[i] = ay + state.y();
+        return OrbitalTransferPlanner.sampleTransferArcInto(ax, ay, rx1, ry1, vx1, vy1, tof, mu, outXs, outYs, n);
+    }
+
+    private static int trajectoryIntegrationSubsteps(OrbitalMechanics.OrbitalState state, double mu, double segmentDt) {
+        if (state == null || mu <= 0.0 || segmentDt <= 0.0) return 1;
+        double radius = Math.hypot(state.x(), state.y());
+        if (radius <= 1e-9) return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
+        double localTimeScale = Math.sqrt(radius * radius * radius / mu);
+        if (!Double.isFinite(localTimeScale) || localTimeScale <= 1e-9) {
+            return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
         }
-        return sampleCount;
+        int substeps = (int) Math.ceil(segmentDt / (localTimeScale * TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION));
+        return Math.max(1, Math.min(MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT, substeps));
     }
 
     // -----------------------------------------------------------------------
@@ -238,21 +274,27 @@ public final class InterplanetaryTransferSystem {
         int simulations, double maxDvLimit) {
         int requested = Math.max(0, simulations);
         if (requested == 0 || root == null || star == null || star.objectClass() != CelestialObject.Class.STAR) {
-            return new LambertStressReport(requested, 0, 0, 0, 0.0, 0.0, 0.0);
+            return emptyStressReport(requested, 0, 0L);
         }
 
+        long benchmarkStartNanos = System.nanoTime();
         List<CelestialObject> candidatePlanets = new ArrayList<>();
         collectStressPlanets(star, candidatePlanets);
         if (candidatePlanets.size() < 2) {
-            return new LambertStressReport(requested, 0, candidatePlanets.size(), 0, 0.0, 0.0, 0.0);
+            return emptyStressReport(requested, candidatePlanets.size(), System.nanoTime() - benchmarkStartNanos);
         }
 
         ThreadLocalRandom random = ThreadLocalRandom.current();
         int successCount = 0;
+        int trajectoryFailureCount = 0;
+        long routeScanNanos = 0L;
+        long trajectorySampleNanos = 0L;
+        TransferScanner.ScanProfiler profiler = new TransferScanner.ScanProfiler();
         double sumDv = 0.0;
         double bestDv = Double.POSITIVE_INFINITY;
         double worstDv = 0.0;
         double dvLimit = Math.max(0.0, maxDvLimit);
+        double mu = Math.max(1e-6, star.mu());
 
         for (int i = 0; i < requested; i++) {
             int sourceIndex = random.nextInt(candidatePlanets.size());
@@ -264,13 +306,26 @@ public final class InterplanetaryTransferSystem {
 
             double departureOffset = random.nextDouble(0.0, 600.0);
             double departureTime = globalTime + departureOffset;
-            double solvedDv = findBestLambertWithinDvLimit(root, star, source, destination, departureTime, dvLimit);
-            if (solvedDv < 0.0) continue;
+            long routeScanStartNanos = System.nanoTime();
+            TransferScanner.ScanResult result = findBestLambertWithinDvLimit(
+                root,
+                star,
+                source,
+                destination,
+                departureTime,
+                dvLimit,
+                profiler);
+            routeScanNanos += System.nanoTime() - routeScanStartNanos;
+            if (!result.isValid()) continue;
 
             successCount++;
-            sumDv += solvedDv;
-            if (solvedDv < bestDv) bestDv = solvedDv;
-            if (solvedDv > worstDv) worstDv = solvedDv;
+            long trajectorySampleStartNanos = System.nanoTime();
+            boolean trajectoryHitsEndpoint = stressTrajectoryHitsEndpoint(result, mu);
+            trajectorySampleNanos += System.nanoTime() - trajectorySampleStartNanos;
+            if (!trajectoryHitsEndpoint) trajectoryFailureCount++;
+            sumDv += result.totalDv();
+            if (result.totalDv() < bestDv) bestDv = result.totalDv();
+            if (result.totalDv() > worstDv) worstDv = result.totalDv();
         }
 
         double avgDv = successCount > 0 ? sumDv / successCount : 0.0;
@@ -281,9 +336,44 @@ public final class InterplanetaryTransferSystem {
             requested,
             candidatePlanets.size(),
             successCount,
+            trajectoryFailureCount,
+            System.nanoTime() - benchmarkStartNanos,
+            routeScanNanos,
+            profiler.hohmannNanos(),
+            profiler.departureResolveNanos(),
+            profiler.arrivalResolveNanos(),
+            profiler.geometryNanos(),
+            profiler.lambertNanos(),
+            profiler.acceptNanos(),
+            trajectorySampleNanos,
+            profiler.candidateCount(),
+            profiler.lambertPairCount(),
             avgDv,
             clampedBestDv,
             clampedWorstDv);
+    }
+
+    private static LambertStressReport emptyStressReport(int requested, int candidatePlanetCount, long totalNanos) {
+        return new LambertStressReport(
+            requested,
+            0,
+            candidatePlanetCount,
+            0,
+            0,
+            totalNanos,
+            0L,
+            0L,
+            0L,
+            0L,
+            0L,
+            0L,
+            0L,
+            0L,
+            0,
+            0,
+            0.0,
+            0.0,
+            0.0);
     }
 
     private static void collectStressPlanets(CelestialObject current, List<CelestialObject> out) {
@@ -297,22 +387,52 @@ public final class InterplanetaryTransferSystem {
         }
     }
 
-    private static double findBestLambertWithinDvLimit(CelestialObject root, CelestialObject star,
-        CelestialObject origin, CelestialObject destination, double departureTime, double dvLimit) {
-        if (root == null || star == null || origin == null || destination == null || origin == destination) return -1.0;
+    private static TransferScanner.ScanResult findBestLambertWithinDvLimit(CelestialObject root, CelestialObject star,
+        CelestialObject origin, CelestialObject destination, double departureTime, double dvLimit,
+        TransferScanner.ScanProfiler profiler) {
+        if (root == null || star == null || origin == null || destination == null || origin == destination) {
+            return TransferScanner.ScanResult.invalid();
+        }
 
         double minPeriapsis = Math.max(0.05, star.spriteSize() * 0.5);
 
-        TransferScanner.ScanResult result = TransferScanner.scan(
+        return TransferScanner.scan(
             root,
             origin,
             destination,
             star,
             departureTime,
             minPeriapsis,
-            (current, best) -> current.totalDv() <= dvLimit && current.tof() < best.tof());
+            (current, best) -> current.totalDv() <= dvLimit && (!best.isValid() || current.tof() < best.tof()),
+            TransferScanner.DEFAULT_SCAN_COUNT,
+            profiler);
+    }
 
-        return result.isValid() ? result.totalDv() : -1.0;
+    private static boolean stressTrajectoryHitsEndpoint(TransferScanner.ScanResult result, double mu) {
+        if (result == null || !result.isValid()) return false;
+        double[] xs = new double[PREVIEW_TRAJECTORY_SAMPLES];
+        double[] ys = new double[PREVIEW_TRAJECTORY_SAMPLES];
+        int pointCount = sampleTransferArcInto(
+            result.anchorX(),
+            result.anchorY(),
+            result.r1x(),
+            result.r1y(),
+            result.solution()
+                .dvx1(),
+            result.solution()
+                .dvy1(),
+            result.tof(),
+            mu,
+            xs,
+            ys,
+            PREVIEW_TRAJECTORY_SAMPLES);
+        if (pointCount != PREVIEW_TRAJECTORY_SAMPLES) return false;
+
+        double expectedX = result.anchorX() + result.r2x();
+        double expectedY = result.anchorY() + result.r2y();
+        double error = Math.hypot(xs[pointCount - 1] - expectedX, ys[pointCount - 1] - expectedY);
+        double tolerance = 0.005 * Math.max(1.0, Math.hypot(result.r2x(), result.r2y()));
+        return error <= tolerance;
     }
 
     // -----------------------------------------------------------------------
@@ -427,6 +547,20 @@ public final class InterplanetaryTransferSystem {
             return transfers;
         }
 
+        List<InterplanetaryTransferJob> transfersForSystem(CelestialObject orbitAnchorBody) {
+            if (orbitAnchorBody == null || transfers.isEmpty()) return java.util.Collections.emptyList();
+            List<InterplanetaryTransferJob> visibleTransfers = new ArrayList<>();
+            for (InterplanetaryTransferJob transfer : transfers) {
+                if (isSameOrbitAnchor(transfer.orbitAnchorBody(), orbitAnchorBody)) visibleTransfers.add(transfer);
+            }
+            return visibleTransfers;
+        }
+
+        private static boolean isSameOrbitAnchor(CelestialObject transferAnchor, CelestialObject visibleSystem) {
+            return transferAnchor == visibleSystem
+                || (transferAnchor != null && visibleSystem != null && transferAnchor.id() == visibleSystem.id());
+        }
+
         int version() {
             return version;
         }
@@ -507,64 +641,46 @@ public final class InterplanetaryTransferSystem {
             if (star == null || star != destStar) return null;
 
             double tof = Math.max(1.0, duration);
-            double mu = Math.max(1e-6, star.mu());
+            OrbitalTransferPlanner.TransferRoute route = OrbitalTransferPlanner
+                .computeFixedRoute(root, star, sourceBody, destinationBody, departureTime, tof);
+            return createTransferJob(
+                root,
+                sourceBody,
+                destinationBody,
+                transferName,
+                inventorySummary,
+                departureTime,
+                tof,
+                route);
+        }
 
-            OrbitalMechanics.OrbitalState starAtDep = OrbitalMechanics.resolveWorldState(root, star, departureTime);
-            OrbitalMechanics.OrbitalState srcState = OrbitalMechanics
-                .resolveWorldState(root, sourceBody, departureTime);
-            OrbitalMechanics.OrbitalState dstState = OrbitalMechanics
-                .resolveWorldState(root, destinationBody, departureTime + tof);
-            OrbitalMechanics.OrbitalState starAtArr = OrbitalMechanics
-                .resolveWorldState(root, star, departureTime + tof);
-            if (starAtDep == null || srcState == null || dstState == null || starAtArr == null) return null;
-
-            double r1x = srcState.x() - starAtDep.x();
-            double r1y = srcState.y() - starAtDep.y();
-            double r2x = dstState.x() - starAtArr.x();
-            double r2y = dstState.y() - starAtArr.y();
-
-            LambertTransfer.Solution sol = LambertTransfer.between(r1x, r1y, r2x, r2y)
-                .mu(mu)
-                .timeOfFlight(tof)
-                .prograde(true)
-                .solve();
-            if (!sol.valid()) {
-                sol = LambertTransfer.between(r1x, r1y, r2x, r2y)
-                    .mu(mu)
-                    .timeOfFlight(tof)
-                    .prograde(false)
-                    .solve();
+        InterplanetaryTransferJob createTransferJob(CelestialObject root, CelestialObject sourceBody,
+            CelestialObject destinationBody, String transferName, String inventorySummary, double departureTime,
+            double displayDuration, OrbitalTransferPlanner.TransferRoute route) {
+            if (root == null || sourceBody == null
+                || destinationBody == null
+                || route == null
+                || !route.hasTrajectoryGeometry()) {
+                return null;
             }
+            CelestialObject attractor = GalaxiaCelestialAPI.findBodyById(root, route.attractorBodyId());
+            if (attractor == null) return null;
 
-            double[] trajectoryXs;
-            double[] trajectoryYs;
-            int trajectoryPointCount;
-            if (sol.valid()) {
-                trajectoryXs = new double[TRAJECTORY_SAMPLES];
-                trajectoryYs = new double[TRAJECTORY_SAMPLES];
-                trajectoryPointCount = sampleTransferArcInto(
-                    starAtDep.x(),
-                    starAtDep.y(),
-                    r1x,
-                    r1y,
-                    sol.dvx1(),
-                    sol.dvy1(),
-                    tof,
-                    mu,
-                    trajectoryXs,
-                    trajectoryYs,
-                    TRAJECTORY_SAMPLES);
-            } else {
-                // Fallback: linear interpolation
-                trajectoryXs = new double[TRAJECTORY_SAMPLES];
-                trajectoryYs = new double[TRAJECTORY_SAMPLES];
-                trajectoryPointCount = TRAJECTORY_SAMPLES;
-                for (int i = 0; i < TRAJECTORY_SAMPLES; i++) {
-                    double frac = i / (double) (TRAJECTORY_SAMPLES - 1);
-                    trajectoryXs[i] = srcState.x() + (dstState.x() - srcState.x()) * frac;
-                    trajectoryYs[i] = srcState.y() + (dstState.y() - srcState.y()) * frac;
-                }
-            }
+            double[] trajectoryXs = new double[TRAJECTORY_SAMPLES];
+            double[] trajectoryYs = new double[TRAJECTORY_SAMPLES];
+            int trajectoryPointCount = sampleTransferArcInto(
+                route.anchorX(),
+                route.anchorY(),
+                route.r1x(),
+                route.r1y(),
+                route.departureVelocityX(),
+                route.departureVelocityY(),
+                route.tofOsu(),
+                Math.max(1e-6, attractor.mu()),
+                trajectoryXs,
+                trajectoryYs,
+                TRAJECTORY_SAMPLES);
+            if (trajectoryPointCount < 2) return null;
 
             String id = sourceBody.id() + "->" + destinationBody.id() + "@" + Math.round(departureTime * 1000.0);
             String inv = (inventorySummary == null || inventorySummary.isEmpty()) ? "Empty" : inventorySummary;
@@ -575,9 +691,9 @@ public final class InterplanetaryTransferSystem {
                 root,
                 sourceBody,
                 destinationBody,
-                star,
+                attractor,
                 departureTime,
-                departureTime + tof,
+                departureTime + Math.max(1e-6, displayDuration),
                 trajectoryXs,
                 trajectoryYs,
                 trajectoryPointCount,
@@ -614,6 +730,8 @@ public final class InterplanetaryTransferSystem {
             double[] getWorldPosition(CelestialObject body);
 
             double getServerOrbitalTime();
+
+            boolean isBodyRendered(CelestialObject body);
         }
 
         private static final int PATH_COLOR = EnumColors.MAP_COLOR_TRANSFER_PATH.getColor();
@@ -628,28 +746,34 @@ public final class InterplanetaryTransferSystem {
             this.callbacks = callbacks;
         }
 
-        void drawTransferPaths(OrbitalTransferState state, double currentTime, float alpha) {
-            if (state.transfers()
-                .isEmpty() || alpha <= 0.01f) return;
+        void drawTransferPaths(OrbitalTransferState state, CelestialObject visibleSystem, double currentTime,
+            float alpha) {
+            if (alpha <= 0.01f) return;
             state.pruneFinishedTransfers(currentTime, callbacks.getServerOrbitalTime());
+            List<InterplanetaryTransferJob> visibleTransfers = state.transfersForSystem(visibleSystem);
+            if (visibleTransfers.isEmpty()) return;
             GlStateManager.disableTexture2D();
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            for (InterplanetaryTransferJob transfer : state.transfers()) {
+            for (InterplanetaryTransferJob transfer : visibleTransfers) {
+                if (!shouldRenderTransferForEndpointVisibility(transfer, callbacks)) continue;
                 drawTransferPath(transfer, alpha);
             }
             GlStateManager.color(1f, 1f, 1f, 1f);
             GlStateManager.enableTexture2D();
         }
 
-        void drawTransferDots(OrbitalTransferState state, double currentTime, float alpha) {
-            if (state.transfers()
-                .isEmpty() || alpha <= 0.01f) return;
+        void drawTransferDots(OrbitalTransferState state, CelestialObject visibleSystem, double currentTime,
+            float alpha) {
+            if (alpha <= 0.01f) return;
+            List<InterplanetaryTransferJob> visibleTransfers = state.transfersForSystem(visibleSystem);
+            if (visibleTransfers.isEmpty()) return;
             GlStateManager.disableDepth();
             GlStateManager.enableTexture2D();
             GlStateManager.enableBlend();
             GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            for (InterplanetaryTransferJob transfer : state.transfers()) {
+            for (InterplanetaryTransferJob transfer : visibleTransfers) {
+                if (!shouldRenderTransferForEndpointVisibility(transfer, callbacks)) continue;
                 drawTransferDot(
                     transfer,
                     effectiveTransferTime(transfer, currentTime, callbacks.getServerOrbitalTime()),
@@ -682,12 +806,12 @@ public final class InterplanetaryTransferSystem {
             GlStateManager.enableTexture2D();
         }
 
-        InterplanetaryTransferJob findHoveredTransfer(OrbitalTransferState state, double currentTime, float mouseX,
-            float mouseY) {
-            for (int i = state.transfers()
-                .size() - 1; i >= 0; i--) {
-                InterplanetaryTransferJob transfer = state.transfers()
-                    .get(i);
+        InterplanetaryTransferJob findHoveredTransfer(OrbitalTransferState state, CelestialObject visibleSystem,
+            double currentTime, float mouseX, float mouseY) {
+            List<InterplanetaryTransferJob> visibleTransfers = state.transfersForSystem(visibleSystem);
+            for (int i = visibleTransfers.size() - 1; i >= 0; i--) {
+                InterplanetaryTransferJob transfer = visibleTransfers.get(i);
+                if (!shouldRenderTransferForEndpointVisibility(transfer, callbacks)) continue;
                 double effectiveTime = effectiveTransferTime(transfer, currentTime, callbacks.getServerOrbitalTime());
                 if (!writeCurrentTransferPoint(transfer, effectiveTime, transferPoint) || !transferPoint.valid()) {
                     continue;
@@ -699,6 +823,15 @@ public final class InterplanetaryTransferSystem {
                 if (dx * dx + dy * dy <= DOT_HIT_RADIUS * DOT_HIT_RADIUS) return transfer;
             }
             return null;
+        }
+
+        static boolean shouldRenderTransferForEndpointVisibility(InterplanetaryTransferJob transfer,
+            Callbacks callbacks) {
+            if (transfer == null || callbacks == null) return false;
+            CelestialObject sourceBody = transfer.sourceBody();
+            CelestialObject destinationBody = transfer.destinationBody();
+            if (sourceBody == null || destinationBody == null) return true;
+            return callbacks.isBodyRendered(sourceBody) || callbacks.isBodyRendered(destinationBody);
         }
 
         private void drawTransferPath(InterplanetaryTransferJob transfer, float alpha) {

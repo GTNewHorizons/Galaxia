@@ -14,7 +14,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -54,6 +53,11 @@ public class ModuleInstance implements Buildable {
         if (!outpost.tryConsumeEnergy(powerDraw)) {
             ticks = 0;
             return;
+        }
+
+        IModuleComponent component = this.component;
+        if (component != null) {
+            component.tickOperational(this, outpost);
         }
 
         this.ticks += 1;
@@ -246,12 +250,9 @@ public class ModuleInstance implements Buildable {
 
     public int cooldownTicks() {
         ModuleTierData data = currentTierData();
-        if (component instanceof ModuleHammer hammer && data.variantCooldowns() != null) {
-            Integer override = data.variantCooldowns()
-                .get(
-                    hammer.variant()
-                        .name());
-            if (override != null) return override;
+        IModuleComponent component = this.component;
+        if (component != null) {
+            return component.cooldownTicks(this, data);
         }
         return data.cooldownTicks();
     }

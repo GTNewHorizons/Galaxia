@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.lang.reflect.Field;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class AssetInventoryUpdatePacketTest {
@@ -63,6 +65,34 @@ final class AssetInventoryUpdatePacketTest {
 
         AssetSyncPacket sync = packet.apply(TEAM, true);
 
+        assertEquals(1, facility.getSyncRevision());
+        assertEquals(1, sync.syncRevision());
+    }
+
+    @Test
+    void removePacketRemovesAllMatchingInventory() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        facility.inventory.add(resource, 32);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
+
+        AssetSyncPacket sync = packet.apply(TEAM, false);
+
+        assertEquals(0, facility.inventory.getAmount(resource));
+        assertEquals(1, facility.getSyncRevision());
+        assertEquals(1, sync.syncRevision());
+    }
+
+    @Test
+    void boundPacketSetsInventoryBoundForNonCreativePlayer() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
+            .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 48);
+
+        AssetSyncPacket sync = packet.apply(TEAM, false);
+
+        assertEquals(48, facility.inventory.itemLowerBoundOrDefault(resource));
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
     }

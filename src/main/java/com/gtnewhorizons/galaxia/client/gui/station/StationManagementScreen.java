@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
@@ -72,21 +73,26 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationVisionLayer visionLayer = pendingVisionLayer;
         StationTilePickerController tilePickerController = new StationTilePickerController();
+        StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
+        int overlayX = LEFT_PANEL_WIDTH + PADDING * 2;
+        int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
         ModuleConfigModalController configController = new ModuleConfigModalController(
             panel,
             assetId,
-            LEFT_PANEL_WIDTH + PADDING * 2,
-            PADDING * 2,
-            tilePickerController);
+            overlayX,
+            overlayY,
+            tilePickerController,
+            overlayCoordinator);
+        StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
         StationMapWidget map = new StationMapWidget(
             assetId,
             coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
-            tile -> configController.retargetTo(tile.isCore() ? null : tile.module()),
+            tile -> configController.requestRetargetTo(tile.isCore() ? null : tile.module()),
             LEFT_PANEL_WIDTH + PADDING,
             PADDING,
             PADDING,
             visionLayer,
-            (mouseX, mouseY) -> configController.isOpen() && configController.containsMouse(mouseX, mouseY),
+            overlayCoordinator::containsMouse,
             tilePickerController);
 
         panel.child(
@@ -105,7 +111,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.55f, -PADDING * 2));
         panel.child(
-            new ModuleDetailPanel(map, configController, tilePickerController).left(PADDING)
+            new ModuleDetailPanel(map, tilePickerController).left(PADDING)
                 .width(LEFT_PANEL_WIDTH - PADDING)
                 .heightRelOffset(0.45f, -PADDING)
                 .bottom(PADDING));
@@ -115,7 +121,12 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                 .width(StationTilePickerControlsWidget.WIDTH)
                 .height(StationTilePickerControlsWidget.HEIGHT));
         panel.child(
-            new ModalInputBlocker(configController).left(0)
+            inventoryPanel.left(overlayX)
+                .top(PADDING)
+                .width(StationInventoryPanelWidget.PANEL_WIDTH)
+                .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
+        panel.child(
+            new ModalInputBlocker(overlayCoordinator).left(0)
                 .top(0)
                 .widthRel(1f)
                 .heightRel(1f));
@@ -134,15 +145,18 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             return;
         }
         FacilityModuleKind kind = request.kind();
+        ModuleShape shape = kind.defaultShape();
         controller.start(
             "Build " + kind.getDisplayName(),
             "Confirm",
             (coord, selected) -> ModuleBuildPickerModel
-                .isCompatibleTarget(facility, kind, ModuleShape.SINGLE, kind.defaultTier(), coord, selected),
+                .isCompatibleTarget(facility, kind, shape, kind.defaultTier(), coord, selected),
             coord -> coord,
             targets -> com.gtnewhorizons.galaxia.client.CelestialClient
                 .createModules(assetId, kind, request.creativeBuildMode(), targets),
-            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets));
+            targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
+        controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);
+        controller.setPreviewModuleKind(kind);
     }
 
     private static final class StationScreenBackground extends ParentWidget<StationScreenBackground> {
@@ -159,23 +173,29 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
 
         @Override
         public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-            BorderedRect.draw(0, 0, getArea().width, getArea().height, 0xFF08101B, 0xFF17283C);
+            BorderedRect.draw(
+                0,
+                0,
+                getArea().width,
+                getArea().height,
+                EnumColors.MAP_COLOR_STATION_SCREEN_BG.getColor(),
+                EnumColors.MAP_COLOR_STATION_SCREEN_BORDER.getColor());
         }
     }
 
     private static final class ModalInputBlocker extends ParentWidget<ModalInputBlocker> {
 
-        private final ModuleConfigModalController controller;
+        private final StationOverlayCoordinator overlayCoordinator;
         private boolean listenersRegistered;
 
-        private ModalInputBlocker(ModuleConfigModalController controller) {
-            this.controller = controller;
+        private ModalInputBlocker(StationOverlayCoordinator overlayCoordinator) {
+            this.overlayCoordinator = overlayCoordinator;
         }
 
         @Override
         public void onUpdate() {
             super.onUpdate();
-            controller.closeIfTargetMissing();
+            overlayCoordinator.processDeferredActions();
         }
 
         @Override
@@ -184,25 +204,24 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
             if (listenersRegistered) return;
             listenersRegistered = true;
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> controller.isOpen()
-                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MousePressed) button -> overlayCoordinator
+                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> controller.isOpen()
-                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseReleased) button -> overlayCoordinator
+                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
             listenGuiAction(
-                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> controller.isOpen()
-                    && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY()));
+                (com.cleanroommc.modularui.api.widget.IGuiAction.MouseDrag) (mouseButton, time) -> overlayCoordinator
+                    .blocksInputAt(getContext().getMouseX(), getContext().getMouseY()));
         }
 
         @Override
         public boolean canHover() {
-            return controller.isOpen() && controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
+            return overlayCoordinator.blocksInputAt(getContext().getMouseX(), getContext().getMouseY());
         }
 
         @Override
         public boolean canHoverThrough() {
-            return !controller.isOpen()
-                || !controller.containsMouse(getContext().getMouseX(), getContext().getMouseY());
+            return !overlayCoordinator.blocksInputAt(getContext().getMouseX(), getContext().getMouseY());
         }
     }
 

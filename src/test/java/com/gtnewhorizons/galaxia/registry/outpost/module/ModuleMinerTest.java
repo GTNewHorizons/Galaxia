@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,6 +15,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -64,6 +67,17 @@ final class ModuleMinerTest {
 
         assertTrue(ModuleMiner.shouldVoidOre(miner, facility, "ore:iron"));
         assertFalse(ModuleMiner.shouldVoidOre(miner, facility, "ore:copper"));
+    }
+
+    @Test
+    void activeFocusTierCanExistWithoutSelectedOre() {
+        ModuleMiner miner = (ModuleMiner) createMiner().component();
+
+        miner.setFocus(MinerFocusTier.II, null, 1200);
+
+        assertEquals(MinerFocusTier.II, miner.focusTier());
+        assertNull(miner.focusOreKeyOrNull());
+        assertEquals(0, miner.focusAlignmentProgress());
     }
 
     @Test
@@ -152,11 +166,40 @@ final class ModuleMinerTest {
 
         assertTrue(group.isJoinable());
         assertEquals(originalGroupId, group.id());
+        assertEquals("Public miners", group.displayName());
         assertEquals(
             1,
             facility.settingsGroups()
                 .groups()
                 .size());
+    }
+
+    @Test
+    void renameSettingsGroupRequiresJoinableGroupOfSameKind() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> facility.renameSettingsGroupForModule(miner, miner.groupId(), "Hidden miners"));
+
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+        facility.renameSettingsGroupForModule(miner, group.id(), "  Priority miners  ");
+
+        assertEquals("Priority miners", group.displayName());
+    }
+
+    @Test
+    void renameSettingsGroupRejectsBlankName() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance miner = createMiner();
+        facility.addModule(miner);
+        SettingsGroup group = facility.createSettingsGroupForModule(miner, "Public miners");
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> facility.renameSettingsGroupForModule(miner, group.id(), " "));
     }
 
     @Test
@@ -170,7 +213,7 @@ final class ModuleMinerTest {
         short targetGroupId = target.groupId();
         facility.setMinerOreBlacklisted(source, "ore:iron", true);
 
-        facility.copyMinerRuntimeSettings(source, target);
+        facility.copyModuleRuntimeSettings(source, target);
 
         assertEquals(sourceGroupId, source.groupId());
         assertEquals(targetGroupId, target.groupId());
@@ -192,6 +235,24 @@ final class ModuleMinerTest {
         assertThrows(IllegalStateException.class, () -> facility.assignSettingsGroup(target, source.groupId()));
     }
 
+    @Test
+    void mineralVeinContributionScalesAgainstTwoByTwoFootprint() {
+        ModuleInstance miner = createMiner();
+
+        FeatureContribution contribution = miner.component()
+            .featureContribution(
+                miner,
+                PlanetaryFeatureRegistry.MINERAL_VEIN.key(),
+                2,
+                miner.shape()
+                    .tileCount());
+
+        assertEquals(ModuleShape.QUAD_2x2, miner.shape());
+        assertEquals(2, contribution.coveredTiles());
+        assertEquals(4, contribution.totalTiles());
+        assertEquals("Mining yield bonus 2/4", contribution.effectLine());
+    }
+
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -205,8 +266,12 @@ final class ModuleMinerTest {
     }
 
     private static ModuleInstance createMiner(StationTileCoord anchor) {
-        ModuleInstance miner = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), FacilityModuleKind.MINER, anchor, ModuleShape.SINGLE, ModuleTier.EV);
+        ModuleInstance miner = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            anchor,
+            FacilityModuleKind.MINER.defaultShape(),
+            ModuleTier.EV);
         miner.updateStatus(Buildable.Status.OPERATIONAL);
         return miner;
     }

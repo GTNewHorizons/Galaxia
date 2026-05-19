@@ -194,6 +194,62 @@ final class ModuleHammerTest {
     }
 
     @Test
+    void shotCooldownBlocksRoutePlanningUntilTierCooldownCompletes() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.IV);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        hammer.setEnergyStored(hammer.energyCapacity());
+
+        assertTrue(hammer.canPlanRoute(module));
+
+        hammer.markShotDispatched(module);
+
+        assertFalse(hammer.canFire());
+        assertFalse(hammer.canPlanRoute(module));
+        for (int i = 1; i < hammer.chargeTicks(module); i++) {
+            hammer.tickDispatchCooldowns();
+            assertFalse(hammer.canPlanRoute(module));
+        }
+
+        hammer.tickDispatchCooldowns();
+
+        assertTrue(hammer.canFire());
+        assertTrue(hammer.canPlanRoute(module));
+    }
+
+    @Test
+    void failedRouteProbeBlocksRepeatedRoutePlanningForOneSecond() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.IV);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        ModuleHammer hammer = (ModuleHammer) module.component();
+        hammer.setEnergyStored(hammer.energyCapacity());
+
+        assertTrue(hammer.canPlanRoute(module));
+
+        hammer.markRouteProbeAttempted();
+
+        assertFalse(hammer.canPlanRoute(module));
+        for (int i = 1; i < ModuleHammer.ROUTE_PROBE_INTERVAL_TICKS; i++) {
+            hammer.tickDispatchCooldowns();
+            assertFalse(hammer.canPlanRoute(module));
+        }
+
+        hammer.tickDispatchCooldowns();
+
+        assertTrue(hammer.canPlanRoute(module));
+    }
+
+    @Test
     void bigHammerCanStoreEnoughEnergyForOneShot() {
         AutomatedFacility outpost = createOutpost();
 

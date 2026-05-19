@@ -17,6 +17,7 @@ import net.minecraft.init.Blocks;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 
 /*
  * TODO: Figure out if there is a need to merge this with SolarSystemRegistry, and if so, how to do it
@@ -42,6 +43,7 @@ public final class CelestialRegistry {
     public static void registerDefaults() {
         if (bootstrapped) return;
         bootstrapped = true;
+        PlanetaryFeatureRegistry.registerDefaults();
 
         register(
             CelestialObjectId.NOVA_CAELUM,
@@ -111,7 +113,12 @@ public final class CelestialRegistry {
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
                         .metadata("status", "placeholder_colony_world")
-                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.diamond_ore)));
+                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.diamond_ore))
+                .featureTileChance(0.18)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 3.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.5)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.6));
 
         register(
             CelestialObjectId.REMUS,
@@ -129,7 +136,11 @@ public final class CelestialRegistry {
                         .radiation(0.14)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.lapis_ore, Blocks.redstone_ore)));
+                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.lapis_ore, Blocks.redstone_ore))
+                .featureTileChance(0.24)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 4.0)
+                .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
         register(
             CelestialObjectId.EGORA,
@@ -154,7 +165,12 @@ public final class CelestialRegistry {
                             Blocks.iron_ore,
                             Blocks.gold_ore,
                             Blocks.redstone_ore,
-                            Blocks.diamond_ore)));
+                            Blocks.diamond_ore))
+                .featureTileChance(0.20)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.4));
         register(
             DimensionEnum.PANSPIRA,
             builder -> builder.parent(CelestialObjectId.VAEL)
@@ -171,7 +187,12 @@ public final class CelestialRegistry {
                         .radiation(0.20)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore)));
+                        .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
+                .featureTileChance(0.26)
+                .feature(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 3.0)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 2.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
         register(
             DimensionEnum.MARS,
@@ -189,12 +210,11 @@ public final class CelestialRegistry {
                         .radiation(0.10)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .ores(
-                            Blocks.coal_ore,
-                            Blocks.iron_ore,
-                            Blocks.gold_ore,
-                            Blocks.lapis_ore,
-                            Blocks.diamond_ore)));
+                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore, Blocks.lapis_ore, Blocks.diamond_ore))
+                .featureTileChance(0.16)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 4.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
 
         register(
             DimensionEnum.MOON,
@@ -212,7 +232,11 @@ public final class CelestialRegistry {
                         .radiation(0.18)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore)));
+                        .ores(Blocks.coal_ore, Blocks.iron_ore, Blocks.gold_ore))
+                .featureTileChance(0.14)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 5.0)
+                .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 0.8));
 
         register(
             CelestialObjectId.FROZEN_BELT,
@@ -230,7 +254,12 @@ public final class CelestialRegistry {
                         .radiation(0.28)
                         .oreProfile("undefined")
                         .metadata("surface", "undefined")
-                        .metadata("minorBodies", "enabled")));
+                        .metadata("minorBodies", "enabled"))
+                .featureTileChance(0.34)
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
+                .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 1.0)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.8));
 
         register(
             CelestialObjectId.AMBERGRIS_FRAGMENT,
