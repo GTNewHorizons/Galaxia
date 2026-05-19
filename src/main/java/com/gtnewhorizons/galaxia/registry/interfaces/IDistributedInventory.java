@@ -19,114 +19,58 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 /**
- * A virtual, <em>hierarchical</em>, distributed inventory that aggregates child
- * {@link IDistributedInventory} nodes and leaf-level {@link IInventory} /
- * {@link IFluidTank} sources behind a unified query and mutation API.
+ * A virtual, hierarchical distributed inventory aggregating child nodes and leaf
+ * stores (inventories/tanks) behind a unified query and mutation API.
  *
- * <h2>Tree model</h2>
- * <p>
- * Each node may hold:
+ * <p><b>Filtering:</b> Filters define what a subtree can store, pruning both
+ * insertion and extraction paths on mismatch.
+ *
+ * <p><b>Priority:</b> Sibling-relative. Higher values are preferred for insertion
+ * (fill first) and deferred for extraction (drain last).
+ *
+ * <p><b>Implementation Contract:</b>
  * <ul>
- * <li><b>Children</b> — other {@code IDistributedInventory} nodes, each
- * carrying their own filter and priority (see below).</li>
- * <li><b>Leaf stores</b> — flat {@link IInventory} / {@link IFluidTank} lists
- * directly owned by this node, sharing its filter and priority.</li>
- * </ul>
- * A node with no children and at least one leaf store is a <em>leaf node</em>.
- * A node whose {@link #getChildren()} returns the default empty list is
- * trivially a leaf node — existing flat implementations therefore require no
- * structural changes.
- *
- * <h2>Filter semantics</h2>
- * <p>
- * {@link #getItemFilter()} / {@link #getFluidFilter()} declare what this
- * node's subtree is <em>willing to store</em>. They serve two roles:
- * <ol>
- * <li>The <em>parent</em> checks a child's filter before delegating into
- * it, pruning the entire subtree when the filter rejects the resource.</li>
- * <li>Each node's own mutation methods check the filter at entry,
- * short-circuiting with {@code 0} on mismatch.</li>
- * </ol>
- * <p>
- * Assuming filters were correctly enforced during all prior insertions they
- * may also legitimately prune <em>extraction</em> paths (a node that only
- * stores iron cannot contain gold). Override {@link #updateItems} /
- * {@link #updateFluids} if your implementation needs looser extraction
- * semantics (e.g. the filter changed after items were already stored).
- *
- * <h2>Priority semantics</h2>
- * <p>
- * {@link #getPriority()} is a sibling-relative integer. Higher values are
- * preferred for <em>insertion</em> (fill the most-important node first) and
- * deferred for <em>extraction</em> (drain the least-important node first,
- * keeping high-priority stock intact).
- *
- * <h2>Implementation contract</h2>
- * <ul>
- * <li>{@link #getInventories()} and {@link #getFluidTanks()} may contain
- * {@code null} entries (e.g. unloaded chunks); all default methods guard
- * against this.</li>
- * <li>{@link #aggregatedItems()} and {@link #aggregatedFluids()} return
- * point-in-time snapshots; capture once rather than calling repeatedly
- * when applying multiple predicates.</li>
- * <li>{@link #getChildrenSortedByPriority()} <b>must be cached</b> by
- * implementations; the default re-sorts on every call and is unsuitable
- * for tick-rate code.</li>
+ * <li>Stores may contain nulls (e.g., unloaded chunks); default methods handle them.</li>
+ * <li>Aggregated methods return point-in-time snapshots; cache them if applying multiple predicates.</li>
+ * <li>{@link #getChildrenSortedByPriority()} must be cached by implementations to avoid tick-rate allocations.</li>
+ * <li>There is no cycle detection/escape, so make sure to keep the graph acyclic<li/>
  * </ul>
  */
 public interface IDistributedInventory {
 
-    // =========================================================================
-    // Tree structure
-    // =========================================================================
-
     /**
-     * Direct child sub-inventories of this node, in no particular order.
-     * <p>
-     * The default returns an empty list, making this node a <em>leaf</em>.
-     * Override to build composite nodes. {@code null} entries are tolerated.
+     * Direct child sub-inventories of this node. Default is empty (leaf node).
+     * May contain nulls.
      */
     default List<IDistributedInventory> getChildren() {
         return List.of();
     }
 
     /**
-     * Direct leaf-level item inventories owned by this node.
-     * <p>
-     * These are not children — they carry no independent filter or priority;
-     * they inherit this node's semantics. May contain {@code null} entries.
+     * Direct item inventories owned by this node. They inherit this node's filter
+     * and priority. May contain nulls.
      */
     default List<IInventory> getInventories() {
         return List.of();
     }
 
     /**
-     * Direct leaf-level fluid tanks owned by this node.
-     * May contain {@code null} entries.
+     * Direct fluid tanks owned by this node. May contain nulls.
      */
     default List<IFluidTank> getFluidTanks() {
         return List.of();
     }
 
-    // =========================================================================
-    // Node-level filter and priority
-    // =========================================================================
-
     /**
-     * Item filter for this node: declares what items this subtree is willing to
-     * store.
-     * <p>
-     * Checked by the parent before delegating and as a fast-exit guard at the
-     * top of every mutation path. Implementations should return a constant or
-     * cached value.
+     * Declares what items this subtree can store. Prunes traversal and guards mutations.
+     * Should return a constant or cached value.
      */
     default ResourceFilter<ItemStackWrapper> getItemFilter() {
         return ResourceFilter.forItems();
     }
 
     /**
-     * Fluid filter for this node.
-     *
+     * Declares what fluids this subtree can store.
      * @see #getItemFilter()
      */
     default ResourceFilter<FluidKey> getFluidFilter() {
@@ -134,46 +78,34 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Sibling-relative insertion/extraction priority.
-     * Higher values are preferred for insertion; lower values are preferred
-     * for extraction. Ties are broken by iteration order within
-     * {@link #getChildren()}.
+     * Sibling-relative priority. Higher = inserted first, extracted last.
+     * Ties follow iteration order in {@link #getChildren()}.
      */
     default int getPriority() {
         return 0;
     }
 
     /**
-     * Children sorted by <em>descending</em> priority (insertion order).
-     * <p>
-     * <b>Implementations must cache this list</b> to avoid sorting allocations
-     * on every tick. The default implementation re-sorts on every call.
+     * Children sorted by descending priority. Implementations must cache this
+     * list to avoid allocations on every tick.
      */
     default List<IDistributedInventory> getChildrenSortedByPriority() {
         List<IDistributedInventory> children = getChildren();
         if (children.isEmpty()) return children;
         return children.stream()
             .filter(Objects::nonNull)
-            .sorted(
-                Comparator.comparingInt(IDistributedInventory::getPriority)
-                    .reversed())
+            .sorted(Comparator.comparingInt(IDistributedInventory::getPriority).reversed())
             .collect(Collectors.toList());
     }
 
-    // =========================================================================
-    // Aggregation — recursive snapshots
-    // =========================================================================
-
     /**
-     * Returns a snapshot mapping each distinct item identity to its total
-     * stored count across this node and all descendants.
+     * Returns a snapshot mapping each distinct item to its total count in this subtree.
      */
     default Map<ItemStackWrapper, Long> aggregatedItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (IDistributedInventory child : getChildren()) {
             if (child == null) continue;
-            child.aggregatedItems()
-                .forEach((k, v) -> result.merge(k, v, Long::sum));
+            child.aggregatedItems().forEach((k, v) -> result.merge(k, v, Long::sum));
         }
         for (IInventory inv : getInventories()) {
             if (inv == null) continue;
@@ -189,18 +121,13 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Returns a snapshot mapping each distinct fluid identity to its total
-     * stored volume (mB) across this node and all descendants.
-     * <p>
-     * Uses {@link FluidKey} rather than {@link FluidStack} to ensure a
-     * stable, amount-independent key.
+     * Returns a snapshot mapping each distinct fluid to its total volume (mB) in this subtree.
      */
     default Map<FluidKey, Long> aggregatedFluids() {
         Map<FluidKey, Long> result = new LinkedHashMap<>();
         for (IDistributedInventory child : getChildren()) {
             if (child == null) continue;
-            child.aggregatedFluids()
-                .forEach((k, v) -> result.merge(k, v, Long::sum));
+            child.aggregatedFluids().forEach((k, v) -> result.merge(k, v, Long::sum));
         }
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null) continue;
@@ -210,11 +137,7 @@ public interface IDistributedInventory {
         return result;
     }
 
-    // =========================================================================
-    // Scalar queries — all recursive
-    // =========================================================================
-
-    /** Total stored count of {@code item} across this node and all descendants. */
+    /** Total count of the item in this subtree. */
     default long getItemAmount(ItemStackWrapper item) {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -230,7 +153,7 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /** Total stored volume (mB) of {@code fluid} across this node and all descendants. */
+    /** Total volume (mB) of the fluid in this subtree. */
     default long getFluidAmount(FluidKey fluid) {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -244,7 +167,7 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /** Total item slots across this node and all descendants. */
+    /** Total item slots in this subtree. */
     default long totalItemSlots() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -256,10 +179,7 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /**
-     * Total items stored (sum of stack sizes, not slot count) across this
-     * node and all descendants.
-     */
+    /** Total count of all items stored (sum of stack sizes) in this subtree. */
     default long totalItemsStored() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -275,7 +195,7 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /** Total fluid volume (mB) stored across this node and all descendants. */
+    /** Total fluid volume (mB) stored in this subtree. */
     default long totalFluidStored() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -287,10 +207,7 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /**
-     * Total item capacity (slots × stack-limit) across this node and all
-     * descendants.
-     */
+    /** Total max item capacity (slots * stack limit) in this subtree. */
     default long totalItemCapacity() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -302,7 +219,7 @@ public interface IDistributedInventory {
         return total;
     }
 
-    /** Total fluid capacity (mB) across this node and all descendants. */
+    /** Total fluid capacity (mB) in this subtree. */
     default long totalFluidCapacity() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -315,11 +232,8 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Returns how many additional units of {@code item} could be inserted
-     * into this node and all descendants right now.
-     * <p>
-     * Entire subtrees whose {@link #getItemFilter()} rejects {@code item}
-     * are skipped without traversal.
+     * Remaining capacity for the given item in this subtree. Subtrees rejecting
+     * the item are skipped.
      */
     default long getFreeItemSpace(ItemStackWrapper item) {
         if (!getItemFilter().test(item)) return 0L;
@@ -336,20 +250,17 @@ public interface IDistributedInventory {
                     space += Math.min(template.getMaxStackSize(), inv.getInventoryStackLimit());
                 } else if (stack.getItem() == item.item() && stack.getItemDamage() == item.meta()
                     && ItemStack.areItemStackTagsEqual(stack, template)) {
-                        int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
-                        space += Math.max(0, limit - stack.stackSize);
-                    }
+                    int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
+                    space += Math.max(0, limit - stack.stackSize);
+                }
             }
         }
         return space;
     }
 
     /**
-     * Returns how many additional mB of {@code fluid} could be inserted into
-     * this node and all descendants right now.
-     * <p>
-     * Entire subtrees whose {@link #getFluidFilter()} rejects {@code fluid}
-     * are skipped without traversal.
+     * Remaining capacity (mB) for the given fluid in this subtree. Subtrees
+     * rejecting the fluid are skipped.
      */
     default long getFreeFluidSpace(FluidKey fluid) {
         if (!getFluidFilter().test(fluid)) return 0L;
@@ -360,8 +271,9 @@ public interface IDistributedInventory {
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null) continue;
             FluidStack contents = tank.getFluid();
-            if (contents == null || FluidKey.of(contents)
-                .equals(fluid)) space += tank.getCapacity() - tank.getFluidAmount();
+            if (contents == null || FluidKey.of(contents).equals(fluid)) {
+                space += tank.getCapacity() - tank.getFluidAmount();
+            }
         }
         return space;
     }
@@ -371,36 +283,19 @@ public interface IDistributedInventory {
     // =========================================================================
 
     /**
-     * Dispatches to {@link #updateItems} or {@link #updateFluids} based on
-     * key type.
-     *
-     * @param key   the resource to modify
+     * Dispatches to item or fluid mutation based on key type.
      * @param delta positive to insert, negative to extract
-     * @return the amount actually transferred
+     * @return amount actually transferred
      */
     default <T extends InventoryKey> long updateContents(T key, int delta) {
         return key.isItem() ? updateItems((ItemStackWrapper) key, delta) : updateFluids((FluidKey) key, delta);
     }
 
     /**
-     * Inserts ({@code delta > 0}) or extracts ({@code delta < 0}) the given
-     * item across this node and its descendants, respecting priority and filter
-     * rules.
-     *
-     * <p>
-     * This node's {@link #getItemFilter()} is checked first; a mismatch
-     * short-circuits with {@code 0} without traversing the subtree.
-     *
-     * <p>
-     * <b>Insertion order:</b> children visited in descending-priority order,
-     * then this node's own leaf inventories (existing stacks topped up before
-     * empty slots are filled).
-     * <br>
-     * <b>Extraction order:</b> children visited in ascending-priority order
-     * (drain low-priority first, preserve high-priority stock), then this
-     * node's own leaf inventories.
-     *
-     * @return amount actually transferred, in {@code [0, |delta|]}.
+     * Inserts (delta > 0) or extracts (delta < 0) an item within this subtree.
+     * Inserts in descending priority; extracts in ascending priority. Mismatches
+     * short-circuit immediately.
+     * @return amount transferred, in [0, |delta|]
      */
     default long updateItems(ItemStackWrapper item, int delta) {
         if (item == null || delta == 0) return 0L;
@@ -412,19 +307,19 @@ public interface IDistributedInventory {
         long transferred = 0;
         ItemStack template = item.toStack(1);
 
-        // 1. Delegate to children in descending-priority order.
+        // 1. Child insertion (descending priority)
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
-            if (child == null || !child.getItemFilter()
-                .test(item)) continue;
+            if (child == null || !child.getItemFilter().test(item)) continue;
             transferred += child.updateItems(item, (int) (target - transferred));
         }
 
-        // 2. Fill leaf inventories owned by this node.
-        // Pass A: top-up existing matching stacks (avoids fragmentation).
+        // 2. Leaf insertion
         for (IInventory inv : getInventories()) {
             if (inv == null || transferred >= target) continue;
             boolean dirty = false;
+
+            // Pass A: Top-up matching stacks to prevent fragmentation
             for (int s = 0; s < inv.getSizeInventory() && transferred < target; s++) {
                 ItemStack stack = inv.getStackInSlot(s);
                 if (stack == null || stack.getItem() != item.item()
@@ -439,7 +334,8 @@ public interface IDistributedInventory {
                     dirty = true;
                 }
             }
-            // Pass B: fill empty slots.
+
+            // Pass B: Fill empty slots
             for (int s = 0; s < inv.getSizeInventory() && transferred < target; s++) {
                 if (inv.getStackInSlot(s) != null) continue;
                 int maxSize = Math.min(template.getMaxStackSize(), inv.getInventoryStackLimit());
@@ -456,7 +352,7 @@ public interface IDistributedInventory {
     private long extractItems(ItemStackWrapper item, int target) {
         long transferred = 0;
 
-        // 1. Delegate to children in ascending-priority order (reverse of insertion).
+        // 1. Child extraction (ascending priority)
         List<IDistributedInventory> sorted = getChildrenSortedByPriority();
         for (int i = sorted.size() - 1; i >= 0 && transferred < target; i--) {
             IDistributedInventory child = sorted.get(i);
@@ -464,7 +360,7 @@ public interface IDistributedInventory {
             transferred += child.updateItems(item, -(int) (target - transferred));
         }
 
-        // 2. Extract from leaf inventories owned by this node.
+        // 2. Leaf extraction
         for (IInventory inv : getInventories()) {
             if (inv == null || transferred >= target) continue;
             boolean dirty = false;
@@ -483,17 +379,9 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Inserts ({@code delta > 0}) or extracts ({@code delta < 0}) the given
-     * fluid across this node and its descendants, respecting priority and
-     * filter rules.
-     *
-     * <p>
-     * This node's {@link #getFluidFilter()} is checked first; a mismatch
-     * short-circuits with {@code 0} without traversing the subtree.
-     *
-     * @return volume actually transferred, in mB.
-     * @see #updateItems(ItemStackWrapper, int) for delta semantics and
-     *      priority/order guarantees
+     * Inserts (delta > 0) or extracts (delta < 0) a fluid within this subtree.
+     * @return volume transferred (mB)
+     * @see #updateItems(ItemStackWrapper, int) for priority and traversal semantics
      */
     default long updateFluids(FluidKey fluid, int delta) {
         if (fluid == null || delta == 0) return 0L;
@@ -506,16 +394,13 @@ public interface IDistributedInventory {
 
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
-            if (child == null || !child.getFluidFilter()
-                .test(fluid)) continue;
+            if (child == null || !child.getFluidFilter().test(fluid)) continue;
             transferred += child.updateFluids(fluid, (int) (target - transferred));
         }
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null || transferred >= target) continue;
             FluidStack contents = tank.getFluid();
-            // Skip tanks already holding a different fluid.
-            if (contents != null && !FluidKey.of(contents)
-                .equals(fluid)) continue;
+            if (contents != null && !FluidKey.of(contents).equals(fluid)) continue; // Fluid mismatch
             int amount = (int) Math.min(target - transferred, Integer.MAX_VALUE);
             transferred += tank.fill(fluid.toStack(amount), true);
         }
@@ -542,13 +427,8 @@ public interface IDistributedInventory {
         return transferred;
     }
 
-    // =========================================================================
-    // Dirty tracking
-    // =========================================================================
-
     /**
-     * Marks the entire tree dirty, scheduling persistence / network sync on
-     * all backing stores in this node and all descendants.
+     * Marks this node and all descendant stores dirty to schedule persistence or network sync.
      */
     default void markDirty() {
         for (IDistributedInventory child : getChildren()) {
@@ -559,13 +439,8 @@ public interface IDistributedInventory {
         }
     }
 
-    // =========================================================================
-    // Filter / search helpers
-    // =========================================================================
-
     /**
-     * Returns all non-null leaf inventories (across the entire tree) satisfying
-     * {@code condition}. Override with an indexed implementation if available.
+     * Finds all non-null leaf inventories matching the condition in this subtree.
      */
     default List<IInventory> filterInventories(ResourceFilter<IInventory> condition) {
         List<IInventory> result = new ArrayList<>();
@@ -579,8 +454,7 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Returns all non-null leaf tanks (across the entire tree) satisfying
-     * {@code condition}.
+     * Finds all non-null leaf tanks matching the condition in this subtree.
      */
     default List<IFluidTank> filterTanks(ResourceFilter<IFluidTank> condition) {
         List<IFluidTank> result = new ArrayList<>();
@@ -595,14 +469,9 @@ public interface IDistributedInventory {
 
     /**
      * Returns a filtered view of the aggregated item snapshot.
-     *
-     * <p>
-     * Captures the snapshot once; prefer calling {@link #aggregatedItems()}
-     * yourself when applying multiple predicates to avoid redundant snapshots.
      */
     default Map<ItemStackWrapper, Long> filterItems(ResourceFilter<ItemStackWrapper> predicate) {
-        return aggregatedItems().entrySet()
-            .stream()
+        return aggregatedItems().entrySet().stream()
             .filter(e -> predicate.test(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -611,32 +480,24 @@ public interface IDistributedInventory {
      * Returns a filtered view of the aggregated fluid snapshot.
      */
     default Map<FluidKey, Long> filterFluids(ResourceFilter<FluidKey> predicate) {
-        return aggregatedFluids().entrySet()
-            .stream()
+        return aggregatedFluids().entrySet().stream()
             .filter(e -> predicate.test(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
-     * Returns items whose stored amount is strictly below their threshold as
-     * defined in {@code thresholds}. Items absent from {@code thresholds} are
-     * <em>not</em> included — "no threshold" means "no alarm".
+     * Returns items with quantities strictly below their defined threshold.
+     * Items missing from the threshold map are omitted.
      */
     default Map<ItemStackWrapper, Long> getItemsBelowThreshold(Map<ItemStackWrapper, Long> thresholds) {
         Map<ItemStackWrapper, Long> snapshot = aggregatedItems();
-        return thresholds.entrySet()
-            .stream()
+        return thresholds.entrySet().stream()
             .filter(e -> snapshot.getOrDefault(e.getKey(), 0L) < e.getValue())
             .collect(Collectors.toMap(Map.Entry::getKey, e -> snapshot.getOrDefault(e.getKey(), 0L)));
     }
 
-    // =========================================================================
-    // Fill-factor utilities
-    // =========================================================================
-
     /**
-     * Fluid fill ratio in {@code [0.0, 1.0]}.
-     * Returns {@code 0.0} if total fluid capacity is zero.
+     * Fluid fill ratio in [0.0, 1.0]. Returns 0.0 if total capacity is zero.
      */
     default double fluidFillFactor() {
         long capacity = totalFluidCapacity();
@@ -644,10 +505,8 @@ public interface IDistributedInventory {
     }
 
     /**
-     * Item fill ratio in {@code [0.0, 1.0]}.
-     * Returns {@code 0.0} if total item capacity is zero.
-     * <p>
-     * Evaluated against absolute slot capacity, not distinct item count.
+     * Item fill ratio in [0.0, 1.0] evaluated against absolute slot capacity.
+     * Returns 0.0 if total capacity is zero.
      */
     default double itemFillFactor() {
         long capacity = totalItemCapacity();
