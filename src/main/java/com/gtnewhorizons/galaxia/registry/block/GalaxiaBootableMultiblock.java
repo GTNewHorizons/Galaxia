@@ -68,7 +68,6 @@ public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultibl
     public void onMachineBlockUpdate() {
         super.onMachineBlockUpdate();
         if (bootState != BootState.UNINITIALIZED) {
-            bootState = BootState.UNINITIALIZED;
             updated = true;
         }
     }
