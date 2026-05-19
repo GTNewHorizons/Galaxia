@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
@@ -150,6 +151,11 @@ final class SystemAssetPanelStressTest {
 
         @Override
         public void tick() {}
+
+        @Override
+        public long updateContents(InventoryKey item, int delta, boolean sync) {
+            return updateContents(item, delta);
+        }
 
         public String getInventoryName() {
             return "fake";
