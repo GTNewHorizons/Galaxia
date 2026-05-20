@@ -211,7 +211,6 @@ public final class OrbitalPinnedInfoContentBuilder {
         private static final int ICON_GAP = 2;
         private static final int INLINE_ICON_SIZE = 12;
         private static final int INLINE_ICON_GAP = 1;
-        private static final RenderItem GUI_ITEM_RENDERER = new RenderItem();
         private final Callbacks callbacks;
         private final StringBuilder sigBuf = new StringBuilder(256);
         private String lastSignature = "";
@@ -430,11 +429,10 @@ public final class OrbitalPinnedInfoContentBuilder {
             GL11.glEnable(GL11.GL_ALPHA_TEST);
             RenderHelper.enableGUIStandardItemLighting();
             GL11.glEnable(GL11.GL_DEPTH_TEST);
-            float previousZ = GUI_ITEM_RENDERER.zLevel;
+            final RenderItem GUI_ITEM_RENDERER = new RenderItem();
             GUI_ITEM_RENDERER.zLevel = 200f;
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
             GUI_ITEM_RENDERER.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-            GUI_ITEM_RENDERER.zLevel = previousZ;
             RenderHelper.disableStandardItemLighting();
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDisable(GL11.GL_COLOR_MATERIAL);

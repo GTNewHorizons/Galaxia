@@ -2,6 +2,9 @@ package com.gtnewhorizons.galaxia.client.gui;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.utils.GlStateManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
@@ -16,6 +19,7 @@ import com.cleanroommc.modularui.widget.ScrollWidget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
+
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
@@ -27,12 +31,14 @@ import com.gtnewhorizons.galaxia.core.network.TeamConfigPacket;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.entity.player.EntityPlayer;
 
 public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
 
     public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory(
         "galaxia_team_permissions",
-        TeamPermissionScreen::new);
+        TeamPermissionScreen::new
+    );
 
     private static final int PANEL_W = 300;
     private static final int ROW_H = 22;
@@ -52,9 +58,13 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
     private static final int ROW_LABEL_X = 8;
     private static final int EXTRA_BOTTOM_PAD = 40;
     private static final int MAX_PANEL_H = 360;
+    private static final int FONT_HEIGHT = 9;
+    private static final int ROW_LABEL_Y = (ROW_H - FONT_HEIGHT) / 2 + 1; // = 7
 
-    private static final int[] TEAM_COLORS = { EnumColors.MAP_COLOR_TEAM_ACCENT.getColor(),
-        EnumColors.MAP_MACHINE_BLUE.getColor(), };
+    private static final int[] TEAM_COLORS = {
+        EnumColors.MAP_COLOR_TEAM_ACCENT.getColor(),
+        EnumColors.MAP_MACHINE_BLUE.getColor()
+    };
 
     public static void open() {
         FACTORY.openClient();
@@ -79,21 +89,20 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
         ParentWidget<?> bg = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, panelH)
             .background((ctx, x, y, w, h, theme) -> {
-                com.cleanroommc.modularui.utils.GlStateManager.color(1f, 1f, 1f, 1f);
-                net.minecraft.client.gui.Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-                net.minecraft.client.gui.Gui
-                    .drawRect(x, y, x + w, y + HEADER_H, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
+                GlStateManager.color(1f, 1f, 1f, 1f);
+                Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor());
+                Gui.drawRect(x, y, x + w, y + HEADER_H, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
             });
-        panel.child(bg);
 
+        panel.child(bg);
         panel.child(
-            new TextWidget<>(com.cleanroommc.modularui.api.drawable.IKey.lang("galaxia.gui.team_config.title"))
+            new TextWidget<>(IKey.lang("galaxia.gui.team_config.title"))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(PAD, HEADER_TITLE_Y));
+                .pos(PAD, HEADER_TITLE_Y)
+        );
 
         int colorPickerY = HEADER_H + SECTION_GAP;
-
         for (int i = 0; i < TEAM_COLORS.length; i++) {
             int color = TEAM_COLORS[i];
             int sx = PAD + i * (SWATCH_SIZE + SWATCH_GAP);
@@ -105,36 +114,39 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
                     .orElse(TEAM_COLORS[0]);
                 Gui.drawRect(x, y, x + w, y + h, color);
                 if (current == color) {
-                    BorderedRect.drawBorderOnly(x, y, w, h, EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
+                    BorderedRect.drawBorderOnly(x, y, w, h,
+                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
                 } else {
-                    BorderedRect.drawBorderOnly(x, y, w, h, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
+                    BorderedRect.drawBorderOnly(x, y, w, h,
+                        EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor());
                 }
-            })
-                .onMousePressed(mb -> {
-                    GTTeamsCompat.getGalaxiaTeamData()
-                        .ifPresent(d -> d.setTeamColor(color));
-                    GALAXIA_NETWORK.sendToServer(TeamConfigPacket.color(color));
-                    return true;
-                });
-            panel.child(
-                swatch.pos(sx, sy)
-                    .size(SWATCH_SIZE, SWATCH_SIZE));
+            }).onMousePressed(mb -> {
+                GTTeamsCompat.getGalaxiaTeamData()
+                    .ifPresent(d -> d.setTeamColor(color));
+                GALAXIA_NETWORK.sendToServer(TeamConfigPacket.color(color));
+                return true;
+            });
 
+            panel.child(swatch.pos(sx, sy).size(SWATCH_SIZE, SWATCH_SIZE));
             if (i == 0) {
-                TextWidget<?> colorLabelWidget = new TextWidget<>(
-                    com.cleanroommc.modularui.api.drawable.IKey.lang("galaxia.gui.team_config.color"))
+                panel.child(
+                    new TextWidget<>(IKey.lang("galaxia.gui.team_config.color"))
                         .color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
                         .shadow(true)
-                        .pos(PAD, colorPickerY);
-                panel.child(colorLabelWidget);
+                        .pos(PAD, colorPickerY)
+                );
             }
         }
 
         VerticalScrollData scrollData = new VerticalScrollData();
-        ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(PAD, HEADER_H + SECTION_GAP + COLOR_PICKER_H)
+        ScrollWidget<?> scroll = new ScrollWidget<>(scrollData)
+            .pos(PAD, HEADER_H + SECTION_GAP + COLOR_PICKER_H)
             .size(PANEL_W - PAD * 2, Math.max(contentH, MIN_SCROLL_H));
-        ParentWidget<?> container = new ParentWidget<>().widthRel(1f)
+
+        ParentWidget<?> container = new ParentWidget<>()
+            .widthRel(1f)
             .height(contentH);
+
         scroll.child(container);
         panel.child(scroll);
 
@@ -142,51 +154,52 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
             TeamAction action = actions[i];
             int y = i * (ROW_H + ROW_GAP);
             container.child(
-                buildRow(action).pos(0, y)
-                    .size(PANEL_W - PAD * 2, ROW_H));
+                buildRow(action, guiData.getPlayer())
+                    .pos(0, y)
+                    .size(PANEL_W - PAD * 2, ROW_H)
+            );
         }
 
         return panel;
     }
 
-    private ParentWidget<?> buildRow(TeamAction action) {
+    private ParentWidget<?> buildRow(TeamAction action, EntityPlayer player) {
         ParentWidget<?> row = new ParentWidget<>();
-        row.background(
-            (ctx, x, y, w, h, theme) -> net.minecraft.client.gui.Gui
-                .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor()));
+        row.background((ctx, x, y, w, h, theme) ->
+            Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())
+        );
 
-        String key = "galaxia.gui.team_config.action." + action.name()
-            .toLowerCase();
+        String key = "galaxia.gui.team_config.action." + action.name().toLowerCase();
         row.child(
-            new TextWidget<>(com.cleanroommc.modularui.api.drawable.IKey.lang(key))
+            new TextWidget<>(IKey.lang(key))
                 .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                 .shadow(true)
-                .pos(
-                    ROW_LABEL_X,
-                    (ROW_H - net.minecraft.client.Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) / 2 + 1));
-
+                .pos(ROW_LABEL_X, ROW_LABEL_Y)
+        );
         TeamRole[] roles = TeamRole.values();
         ButtonWidget<?> cycleBtn = new ButtonWidget<>()
-            .background(
-                (ctx, x, y, w, h, theme) -> BorderedRect.draw(
-                    x,
-                    y,
-                    w,
-                    h,
+            .background((ctx, x, y, w, h, theme) ->
+                BorderedRect.draw(
+                    x, y, w, h,
                     EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()))
+                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
+                )
+            )
+            .setEnabledIf((w) -> GTTeamsCompat.isOwner(player))
             .overlay((ctx, x, y, w, h, theme) -> {
                 TeamRole cur = GTTeamsCompat.getGalaxiaTeamData()
                     .map(d -> d.getRequiredRole(action))
                     .orElse(action.getDefaultRole());
                 String text = cur.name();
-                net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft.getMinecraft().fontRenderer;
+
+                var fr = Minecraft.getMinecraft().fontRenderer;
                 int textW = fr.getStringWidth(text);
                 fr.drawStringWithShadow(
                     text,
                     x + (w - textW) / 2,
                     y + (h - fr.FONT_HEIGHT) / 2 + 1,
-                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor()
+                );
             })
             .onMousePressed(mb -> {
                 TeamRole cur = GTTeamsCompat.getGalaxiaTeamData()
@@ -195,13 +208,16 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
                 TeamRole next = roles[(cur.ordinal() + 1) % roles.length];
                 GTTeamsCompat.getGalaxiaTeamData()
                     .ifPresent(d -> d.setRequiredRole(action, next));
-                GALAXIA_NETWORK.sendToServer(TeamConfigPacket.permission(action, next));
+
+                GALAXIA_NETWORK.sendToServer(
+                    TeamConfigPacket.permission(action, next)
+                );
+
                 return true;
             });
-        row.child(
-            cycleBtn.right(CYCLE_BTN_RIGHT)
-                .size(CYCLE_BTN_W, ROW_H - CYCLE_BTN_H_INSET));
+        row.child(cycleBtn.right(CYCLE_BTN_RIGHT)
+            .size(CYCLE_BTN_W, ROW_H - CYCLE_BTN_H_INSET));
+
         return row;
     }
-
 }

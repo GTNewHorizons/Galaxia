@@ -60,10 +60,6 @@ public class ClientProxy extends CommonProxy {
 
         // GUI init
         GalaxiaSkyBootstrap.clientInit();
-        ItemPickerScreen.FACTORY.init();
-        ModulePickerScreen.FACTORY.init();
-        StationManagementScreen.FACTORY.init();
-        TeamPermissionScreen.FACTORY.init();
 
         // StructureLib hook
         IMCForNEI.IMCSender();
