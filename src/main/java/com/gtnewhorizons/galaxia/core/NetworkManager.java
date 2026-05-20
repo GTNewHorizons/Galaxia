@@ -27,10 +27,10 @@ import cpw.mods.fml.relauncher.Side;
 
 public final class NetworkManager {
 
-    private static int id = 0;
-
     // spotless:off
-    public static void registerServerPackets() {
+    public static void registerPackets() {
+        int id = 0;
+
         GALAXIA_NETWORK.registerMessage(TetherPacket.Handler.class, TetherPacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
@@ -57,9 +57,7 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
                 Side.SERVER);
-    }
 
-    public static void registerClientPackets() {
         GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++,
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++,
@@ -73,7 +71,7 @@ public final class NetworkManager {
         GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(TetherAnchorSyncPacket.Handler.class, TetherAnchorSyncPacket.class, id++,
-                Side.CLIENT);
+            Side.CLIENT);
     }
     // spotless:on
 }
