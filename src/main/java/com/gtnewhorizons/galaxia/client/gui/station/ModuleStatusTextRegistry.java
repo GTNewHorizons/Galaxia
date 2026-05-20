@@ -9,11 +9,17 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
+import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
+import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -23,7 +29,10 @@ final class ModuleStatusTextRegistry {
 
     static {
         register(ModuleStatusTextRegistry::appendSelectedTileText);
+        register(ModuleStatusTextRegistry::appendModuleRuntimeText);
+        register(ModuleStatusTextRegistry::appendMinerStatusText);
         register(ModuleStatusTextRegistry::appendHammerStatusText);
+        register(ModuleStatusTextRegistry::appendOperationStatusText);
     }
 
     private ModuleStatusTextRegistry() {}
@@ -89,34 +98,72 @@ final class ModuleStatusTextRegistry {
             hammerDispatchStatusLine(status),
             status.code() == HammerDispatchStatus.Code.READY ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
                 : EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+    }
 
-        if (module.operationOrNull() == null || module.operationOrNull()
-            .phase()
+    private static void appendModuleRuntimeText(Context context, Lines lines) {
+        ModuleInstance module = context.module();
+        if (module == null) return;
+
+        long basePower = module.powerDrawEuPerTick();
+        if (basePower > 0L) {
+            long effectivePower = context.facility()
+                .effectivePowerDrawEuPerTick(module);
+            String powerLine = "Power draw: " + formatEu(effectivePower) + " EU/t";
+            if (effectivePower != basePower) {
+                powerLine += " (base " + formatEu(basePower) + ")";
+            }
+            lines.line(powerLine, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        }
+
+        if (!module.enabled()) {
+            lines.line("Runtime: disabled", EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            return;
+        }
+        if (module.blocking() != BlockingReason.NONE) {
+            lines.line(
+                "Blocked: " + module.blocking()
+                    .name(),
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+        }
+    }
+
+    private static void appendMinerStatusText(Context context, Lines lines) {
+        ModuleInstance module = context.module();
+        if (module == null || !(module.component() instanceof ModuleMiner miner)) return;
+
+        String focusLine = "Focus: " + miner.focusTier()
+            .name();
+        if (miner.focusOreKeyOrNull() != null) {
+            focusLine += " " + miner.focusOreKeyOrNull();
+            focusLine += " (+" + currentFocusBonusPercent(miner) + "%)";
+        }
+        lines.line(focusLine, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        if (miner.focusOreKeyOrNull() != null) {
+            lines.line("Alignment: " + focusAlignmentPercent(miner) + "%", EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        }
+    }
+
+    private static void appendOperationStatusText(Context context, Lines lines) {
+        ModuleInstance module = context.module();
+        if (module == null) return;
+
+        ModuleOperationState operation = module.operationOrNull();
+        if (operation == null || operation.phase()
             .isTerminal()) {
             return;
         }
 
         String operationLine = context.facility()
-            .isItemInventoryFull()
-            && module.operationOrNull()
-                .phase() == ModuleOperationPhase.REFUNDING
-                    ? "Operation: refund paused"
-                    : "Operation: " + module.operationOrNull()
-                        .phase()
-                        .name();
+            .isItemInventoryFull() && operation.phase() == ModuleOperationPhase.REFUNDING ? "Operation: refund paused"
+                : "Operation: " + operation.phase()
+                    .name();
         lines.line(operationLine, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
 
-        IModuleOperation activeSpec = module.operationOrNull()
-            .plan()
-            .spec();
-        if (activeSpec instanceof HammerModuleOperation hammerSpec) {
-            lines.line(
-                "Target: " + hammerSpec.targetVariantKey()
-                    + " "
-                    + hammerSpec.targetTier()
-                        .name(),
-                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        }
+        lines.line(
+            operationTargetLine(
+                operation.plan()
+                    .spec()),
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     private static String moduleDisplayName(ModuleInstance module) {
@@ -139,6 +186,38 @@ final class ModuleStatusTextRegistry {
     private static String cooldownText(int ticks) {
         if (ticks <= 0) return "ready";
         return ((ticks + 19) / 20) + "s";
+    }
+
+    private static int focusAlignmentPercent(ModuleMiner miner) {
+        return miner.focusAlignmentProgress() * 100 / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
+    }
+
+    private static int currentFocusBonusPercent(ModuleMiner miner) {
+        return miner.focusTier()
+            .bonusPercent() * miner.focusAlignmentProgress()
+            / MinerFocusTier.ALIGNMENT_REQUIRED_TICKS;
+    }
+
+    private static String operationTargetLine(IModuleOperation spec) {
+        if (spec instanceof HammerModuleOperation hammerSpec) {
+            return "Target: " + hammerSpec.targetVariantKey()
+                + " "
+                + hammerSpec.targetTier()
+                    .name();
+        }
+        if (spec instanceof MinerFocusOperation minerSpec) {
+            String line = "Target focus: " + minerSpec.targetFocusTierKey();
+            if (minerSpec.targetFocusOreKey() != null) {
+                line += " " + minerSpec.targetFocusOreKey();
+            }
+            return line;
+        }
+        if (spec instanceof ModuleTierOperation tierSpec) {
+            return "Target tier: " + tierSpec.targetTier()
+                .name();
+        }
+        return "Target tier: " + spec.targetTier()
+            .name();
     }
 
     private static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
