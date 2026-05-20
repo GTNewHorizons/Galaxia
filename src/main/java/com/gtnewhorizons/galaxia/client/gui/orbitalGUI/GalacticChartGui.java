@@ -10,18 +10,18 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import net.minecraft.entity.player.EntityPlayer;
 
 public class GalacticChartGui {
 
     private static final int LEFT_PANEL_WIDTH = 216;
 
-    public ModularPanel build(PanelSyncManager syncManager) {
+    public ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
         syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         ModularPanel panel = ModularPanel.defaultPanel("galactic_orbital_map")
             .fullScreenInvisible();
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();
-        int currentDimension = Minecraft.getMinecraft().thePlayer == null ? 0
-            : Minecraft.getMinecraft().thePlayer.dimension;
+        int currentDimension = player.dimension;
         CelestialObject currentStar = GalaxiaCelestialAPI.findCurrentStar(currentDimension)
             .orElseGet(
                 () -> GalaxiaCelestialAPI.getPrimaryStar()
