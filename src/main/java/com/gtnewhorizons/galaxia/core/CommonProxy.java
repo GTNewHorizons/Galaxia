@@ -11,10 +11,13 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.B
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
+import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
+import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
@@ -50,6 +53,10 @@ public class CommonProxy {
 
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager());
+        ForgeBusRegister(new TeamEventHandler());
+
+        // GTNH Teams custom data
+        TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
 
         // Registration
         GalaxiaItemList.registerAll();

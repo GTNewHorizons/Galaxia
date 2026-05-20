@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
+import com.gtnewhorizons.galaxia.core.network.TeamConfigPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 
@@ -49,6 +50,8 @@ public final class NetworkManager {
         GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
+            Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(TeamConfigPacket.Handler.class, TeamConfigPacket.class, id++,
             Side.SERVER);
     }
 

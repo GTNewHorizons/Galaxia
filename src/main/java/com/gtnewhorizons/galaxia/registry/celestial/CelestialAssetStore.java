@@ -117,6 +117,14 @@ public final class CelestialAssetStore {
         return SERVER.isOwnedByInternal(teamId, id);
     }
 
+    public static void removeTeam(UUID teamId) {
+        SERVER.removeTeamInternal(teamId);
+    }
+
+    public static void transferTeamAssets(UUID fromTeamId, UUID toTeamId) {
+        SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
+    }
+
     // ── Instance methods ──
 
     public void registerAssetInternal(UUID teamId, CelestialAsset asset) {
@@ -264,10 +272,41 @@ public final class CelestialAssetStore {
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {
+        if (teamId == null) return false;
         UUID owner = teamById.get(id);
-        if (owner == null) return false;
+        return teamId.equals(owner);
+    }
 
-        return owner.equals(teamId);
+    public void removeTeamInternal(UUID teamId) {
+        Map<CelestialObjectId, Set<CelestialAsset>> byBody = stateByBody.remove(teamId);
+        if (byBody == null) return;
+        for (Set<CelestialAsset> assets : byBody.values()) {
+            for (CelestialAsset asset : assets) {
+                byId.remove(asset.assetId);
+                teamById.remove(asset.assetId);
+            }
+        }
+    }
+
+    public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
+        Map<CelestialObjectId, Set<CelestialAsset>> fromAssets = stateByBody.remove(fromTeamId);
+        if (fromAssets == null || fromAssets.isEmpty()) return;
+
+        for (Map.Entry<CelestialObjectId, Set<CelestialAsset>> entry : fromAssets.entrySet()) {
+            for (CelestialAsset asset : entry.getValue()) {
+                teamById.put(asset.assetId, toTeamId);
+            }
+        }
+
+        stateByBody.merge(toTeamId, fromAssets, (existing, incoming) -> {
+            for (Map.Entry<CelestialObjectId, Set<CelestialAsset>> entry : incoming.entrySet()) {
+                existing.merge(entry.getKey(), entry.getValue(), (a, b) -> {
+                    a.addAll(b);
+                    return a;
+                });
+            }
+            return existing;
+        });
     }
 
     private static Map<ItemStack, Long> mergeIntoConstructionInventory(Map<ItemStack, Long> constructionInventory,

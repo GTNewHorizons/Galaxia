@@ -5,7 +5,8 @@ import java.util.UUID;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -99,7 +100,9 @@ public final class AssetCreateRequestPacket implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
 
-            var teamId = TempTeamCompat.getTeam(player);
+            if (!GTTeamsCompat.hasPermission(player, TeamAction.CREATE_ASSET)) return null;
+
+            UUID teamId = GTTeamsCompat.getTeam(player);
             return packet.apply(teamId);
         }
     }

@@ -24,6 +24,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class OrbitalPinnedInfoContentBuilder {
@@ -33,6 +34,8 @@ public final class OrbitalPinnedInfoContentBuilder {
         // TODO: Localize
         rows.add(new PinnedInfoRow("Name", body.displayName()));
         rows.add(new PinnedInfoRow("Type", formatObjectClass(body.objectClass())));
+        GTTeamsCompat.getTeamName()
+            .ifPresent(teamName -> rows.add(new PinnedInfoRow("Team", teamName)));
         rows.add(new PinnedInfoRow("Landable", isLandable(body) ? "Yes" : "No"));
         rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
@@ -156,7 +159,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         StringBuilder out = new StringBuilder();
         for (String part : parts) {
             if (part.isEmpty()) continue;
-            if (out.length() > 0) out.append(' ');
+            if (!out.isEmpty()) out.append(' ');
             out.append(Character.toUpperCase(part.charAt(0)))
                 .append(part.substring(1));
         }
@@ -179,7 +182,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         for (String oreDictKey : oreDictKeys) {
             List<ItemStack> matches = OreDictionary.getOres(oreDictKey, false);
             if (matches == null || matches.isEmpty()) continue;
-            ItemStack match = matches.get(0);
+            ItemStack match = matches.getFirst();
             if (match != null) return match.copy();
         }
         return null;

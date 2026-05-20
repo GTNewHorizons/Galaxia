@@ -11,7 +11,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
@@ -79,7 +79,7 @@ public class CelestialEventHandler {
             .getConfigurationManager().playerEntityList) {
             if (player == null) continue;
 
-            UUID playerTeam = TempTeamCompat.getTeam(player);
+            UUID playerTeam = GTTeamsCompat.getTeam(player);
             UUID playerId = player.getUniqueID();
             Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
@@ -122,7 +122,7 @@ public class CelestialEventHandler {
             .getConfigurationManager().playerEntityList) {
             if (player == null || !player.capabilities.isCreativeMode) continue;
 
-            UUID playerTeam = TempTeamCompat.getTeam(player);
+            UUID playerTeam = GTTeamsCompat.getTeam(player);
             HammerTrajectoryLoadTracker.Snapshot snapshot = HammerTrajectoryLoadTracker.snapshot(playerTeam);
             Galaxia.GALAXIA_NETWORK.sendTo(
                 ProfilerSyncPacket.hammerTrajectoryLoad(snapshot.ownMsPerTick(), snapshot.allMsPerTick()),
