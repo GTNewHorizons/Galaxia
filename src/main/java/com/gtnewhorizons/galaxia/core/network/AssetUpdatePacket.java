@@ -100,6 +100,10 @@ public final class AssetUpdatePacket implements IMessage {
         };
         if (!authorized) return null;
 
+        return mutateNoChecks(teamId, asset);
+    }
+
+    public AssetSyncPacket mutateNoChecks(UUID teamId, CelestialAsset asset) {
         return switch (action) {
             case DESTROY_ASSET -> {
                 boolean destroyed = CelestialAssetStore.destroyAsset(assetId);
