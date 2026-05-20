@@ -19,6 +19,8 @@ import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
+import com.gtnewhorizons.galaxia.core.network.TetherAnchorSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.TetherPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 
 import cpw.mods.fml.relauncher.Side;
@@ -29,6 +31,8 @@ public final class NetworkManager {
 
     // spotless:off
     public static void registerServerPackets() {
+        GALAXIA_NETWORK.registerMessage(TetherPacket.Handler.class, TetherPacket.class, id++,
+            Side.SERVER);
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
@@ -68,6 +72,8 @@ public final class NetworkManager {
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(TetherAnchorSyncPacket.Handler.class, TetherAnchorSyncPacket.class, id++,
+                Side.CLIENT);
     }
     // spotless:on
 }

@@ -15,12 +15,14 @@ import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
+import com.gtnewhorizons.galaxia.handlers.TetherEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
@@ -47,9 +49,11 @@ public class CommonProxy {
         FMLBusRegister(new DimensionEventHandler());
         FMLBusRegister(new CelestialEventHandler());
         FMLBusRegister(new ServerTickTaskQueue());
+        FMLBusRegister(new TetherEventHandler());
 
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager());
+        ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
 
         // Registration
         GalaxiaItemList.registerAll();
