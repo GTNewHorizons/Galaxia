@@ -6,31 +6,28 @@ layout(std430, binding = 3) buffer w {
     restrict int W[];
 };
 
-layout(std430, binding = 10) buffer ww {
-    restrict readonly int WW[];
+layout(std430, binding = 4) buffer s {
+    restrict readonly uint S[];
 };
 
 uniform int maxWidth;
 uniform int maxHeight;
 uniform int wxh; // maxWidth * maxHeight
-
-const float exponent = 10000000.0;
-const int zero = 0;
+uniform int maxWidthDPos; // maxWidth + 1
 
 void main() {
     int y = int(gl_GlobalInvocationID.y);
     int z = int(gl_GlobalInvocationID.z);
     int x = int(gl_GlobalInvocationID.x);
 
-    if (x >= maxWidth || y >= maxHeight || z >= maxWidth + 1) return;
+    if (x >= maxWidth || y >= maxHeight || z >= maxWidthDPos) return;
 
     int yxw = y * maxWidth;
     int zxwxh = z * wxh;
     int current = x + yxw + zxwxh;
 
-    int weight = WW[current];
+    int adjacentPos = x + (y * maxWidth) + (min(z, maxWidth - 1) * wxh);
+    int adjacentNeg = max(adjacentPos - wxh, 0);
 
-    if (!(weight > zero)) return;
-
-    W[current] = int(float(W[current]) / float(weight) * exponent);
+    W[current] *= int((min(1u, S[adjacentPos]) * min(1u, S[adjacentNeg])));
 }

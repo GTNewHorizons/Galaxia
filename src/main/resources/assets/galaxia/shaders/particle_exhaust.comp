@@ -36,17 +36,16 @@ void main() {
         for (int y = 0; y < maskSize.y; y++) {
             vec4 pixel = imageLoad(mask, ivec2(x, y));
 
-            if (sin(pixel.a * seed * mult) > 0.975) {
+            if (sin(pixel.a * seed * mult) > 0.995) {
                 // maybe i should add a bit of random lateral in later if its too laminar
                 // real exhaust bounces off the nozzle slightly and comes out in a spread angle
                 // this could be calculated using distance from center of the texture so it comes out in a sphere
 
                 // pos is already adjusted, this is originating from the corner of the entitypos, to be tweaked later
                 // the magnitude of the exhaust velocity is the alpha of the respective pixel (moves downwards)
-                P[index] = Particle((xPos + x) / 4, yPos / 4, (zPos + y) / 4, 0.0, 0.0 - pixel.a * 11.0, 0.0);
+                P[index] = Particle(xPos + (float(x)), yPos, zPos + (float(y) + seed), 0.0, 0.0 - pixel.a * 20.0, 0.0);
                 index = index + 1;
             }
-
         }
     }
 }

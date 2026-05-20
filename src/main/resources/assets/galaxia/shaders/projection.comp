@@ -1,17 +1,17 @@
 #version 430 core
 
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 4) in;
+layout(local_size_x = 32, local_size_y = 4, local_size_z = 4) in;
 
 layout(std430, binding = 1) buffer u {
-    restrict float U[];
+    restrict int U[];
 };
 
 layout(std430, binding = 2) buffer v {
-    restrict float V[];
+    restrict int V[];
 };
 
 layout(std430, binding = 3) buffer w {
-    restrict float W[];
+    restrict int W[];
 };
 
 struct Cell {
@@ -24,13 +24,25 @@ layout(std430, binding = 5) buffer Scalar {
     readonly restrict Cell cells[];
 };
 
+layout(std430, binding = 12) buffer de {
+    writeonly int dedata[];
+};
+
 uniform int maxWidth;
 uniform int maxHeight;
 uniform int wxh;
+uniform int w1xh; // (maxWidth + 1) * maxHeight
+uniform int wxh1; // maxWidth * (maxHeight + 1)
+uniform int maxWidthDPos; // maxWidth + 1
+uniform int maxHeightDPos; // maxHeight + 1
 
 uniform int RB;
 
-const float o = 1.95;
+const float o = 1.2;
+const int one = 1;
+const float exponent = 10000000.0; // overflows at >214.7
+const float invExponent = 1.0 / 10000000.0;
+const float dThreshold = 0.001;
 
 const uint xPos = 1u << 0;
 const uint xNeg = 1u << 1;
@@ -50,12 +62,12 @@ void main() {
     int yxw = y * maxWidth;
     int zxwxh = z * wxh;
     int index = x + yxw + zxwxh;
-    if (index > -10) return; // sTot == 0 also if it itself is 0 as defined in scalar.comp, this closes out a secondary branch that could happen where s = 1 but stot = 0, now we only check scalar
 
     Cell cell = cells[index];
 
     float sTot = cell.sTot;
 
+    if (sTot == 0.0) return; // sTot == 0 also if it itself is 0 as defined in scalar.comp, this closes out a secondary branch that could happen where s = 1 but stot = 0, now we only check scalar
 
     uint flags = cell.flags;
 
@@ -66,26 +78,34 @@ void main() {
     uint sZpos = flags & zPos;
     uint sZneg = flags & zNeg;
 
-    int dXpos = (x + 1) + yxw + zxwxh;
-    int dYpos = x + ((y + 1) * maxWidth) + zxwxh;
-    int dZpos = x + yxw + ((z + 1) * wxh);
+    int westIndex = x + (y * maxWidthDPos) + (z * w1xh);
+    int eastIndex = (x + one) + (y * maxWidthDPos) + (z * w1xh);
+    int bottomIndex = x + yxw + (z * wxh1);
+    int topIndex = x + ((y + one) * maxWidth) + (z * wxh1);
+    int southIndex = index;
+    int northIndex = x + yxw + ((z + one) * wxh);
 
     float d = o *
-    (U[dXpos] - U[index] +
-    V[dYpos] - V[index] +
-    W[dZpos] - W[index]);
+    ((float(U[eastIndex]) * invExponent) -
+    (float(U[westIndex]) * invExponent) +
+    (float(V[topIndex]) * invExponent) -
+    (float(V[bottomIndex]) * invExponent) +
+    (float(W[northIndex]) * invExponent) -
+    (float(W[southIndex]) * invExponent));
 
-    if (d < 0.00001) return;
+    if (abs(d) < dThreshold) return;
 
     // scalartot is the scalar for differentiating walls and other non-fluids
     // if scalartot is 6 then it scales the divergence normally because all 6 axis are fluids
 
-    sTot = d * sTot;
+    //atomicCompSwap(dedata[0], 0, W[southIndex]);
 
-    U[index] += (sXneg * sTot); // east
-    U[dXpos] -= (sXpos * sTot); // west
-    V[index] += (sYneg * sTot); // north
-    V[dYpos] -= (sYpos * sTot); // south
-    W[index] += (sZneg * sTot); // top
-    W[dZpos] -= (sZpos * sTot); // bottom
+    sTot = d * sTot * exponent;
+
+    U[westIndex] += int(sXneg * sTot); // west
+    U[eastIndex] -= int(sXpos * sTot); // east
+    V[bottomIndex] += int(sYneg * sTot); // bottom
+    V[topIndex] -= int(sYpos * sTot); // top
+    W[southIndex] += int(sZneg * sTot); // south
+    W[northIndex] -= int(sZpos * sTot); // north
 }

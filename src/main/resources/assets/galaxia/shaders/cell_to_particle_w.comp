@@ -12,20 +12,16 @@ struct Particle {
     float w;
 };
 
-layout(std430, binding = 2) buffer vbuffer {
-    coherent restrict int V[];
+layout(std430, binding = 3) buffer wbuffer {
+    readonly restrict int W[];
 };
 
 layout(std430, binding = 6) buffer p {
-    readonly restrict Particle P[];
+    restrict Particle P[];
 };
 
 layout(std430, binding = 7) buffer n {
     readonly restrict int index;
-};
-
-layout(std430, binding = 9) buffer vw {
-    coherent restrict int VW[];
 };
 
 uniform uint width;
@@ -37,13 +33,13 @@ uniform int maxHeight;
 // precompute various things outside the looping section
 uniform float maxWidthDNeg; // maxWidth - 1
 uniform float maxHeightDNeg; // maxHeight - 1
-uniform float maxHeightDPos; // maxHeight + 1
-uniform float wxh; // maxWidth * (maxHeight + 1)
+uniform float wxh; // maxWidth * maxHeight
 
 const float h = 1.0;
 const float h2 = 1.0 / 2.0; // h = 1
 const float one = 1.0;
 const float exponent = 10000000.0; // overflows at >214.7
+const float invExponent = 1.0 / 10000000.0;
 
 // all of this uses h = 1 for the sake of simplicity, and all of my real world calculations will
 
@@ -57,26 +53,24 @@ void main() {
     // comments in here will be written from the perspective of 2d for the most part, as it simplfies the concepts
     // and is how i initially mentally parsed the algorithm
 
-    // this algorithm turns particles and their velocities into velocities on a MAC grid
-
     Particle particle = P[current];
 
     // clamp particle coords to max grid size (to be clear, this is identical to particle.[axis] most of the time)
-    float xClamp = clamp(particle.x, h * 2.0, maxWidth);
-    float yClamp = clamp(particle.y, h * 2.0, maxHeight);
-    float zClamp = clamp(particle.z, h * 2.0, maxWidth);
+    float xClamp = clamp(particle.x, h, maxWidth);
+    float yClamp = clamp(particle.y, h, maxHeight);
+    float zClamp = clamp(particle.z, h, maxWidth);
 
     // we need to find the 4 u (or whichever vel were processing) values in basically a square grid around the particle
 
     // when we are looking at u, the y of the 4 u values are adjusted for the MAC grid by half the grid size (yClamp - h2)
     // but the x does not need to be adjusted (look at a model of a mac grid if thats confusing)
 
-    float vX1 = min(floor(xClamp - h2), maxWidthDNeg);
-    float vX2 = min(vX1 + one, maxWidthDNeg); // X2 is just one unit forward, but we min to constrain it
-    float vY1 = min(floor(yClamp), maxHeightDNeg);
-    float vY2 = min(vY1 + one, maxHeightDNeg);
-    float vZ1 = min(floor(zClamp - h2), maxWidthDNeg);
-    float vZ2 = min(vZ1 + one, maxWidthDNeg);
+    float wX1 = min(floor(xClamp - h2), maxWidthDNeg);
+    float wX2 = min(wX1 + one, maxWidthDNeg); // X2 is just one unit forward, but we min to constrain it
+    float wY1 = min(floor(yClamp - h2), maxHeightDNeg);
+    float wY2 = min(wY1 + one, maxHeightDNeg);
+    float wZ1 = min(floor(zClamp), maxWidthDNeg);
+    float wZ2 = min(wZ1 + one, maxWidthDNeg);
 
     // the dists are fraction percents that say how far the particle is from each axis's edge of the square
     // these are very simple in a unit length grid because 0.5Y distance from the southern edge is already
@@ -85,18 +79,18 @@ void main() {
     // the distances are used oppositely, e.g, if my distance from west is 0.1, i cant do 0.1 * value. that would result
     // in the closer the distance the lower the weight, so for the west U value i use 0.9 * value, semantically speaking
 
-    float distWest = (xClamp - h2) - vX1;
-    float distDown = yClamp - vY1;
-    float distSouth = (zClamp - h2) - vZ1;
+    float distWest = (xClamp - h2) - wX1;
+    float distDown = (yClamp - h2) - wY1;
+    float distSouth = zClamp - wZ1;
     // the distances to the opposite edges are just the remaining percentages out of 1.0
     float distEast = one - distWest;
     float distUp = one - distDown;
     float distNorth = one - distSouth;
 
-    float uxn = distUp * distNorth * exponent;
-    float dxn = distDown * distNorth * exponent;
-    float uxs = distUp * distSouth * exponent;
-    float dxs = distDown * distSouth * exponent;
+    float uxn = distUp * distNorth;
+    float dxn = distDown * distNorth;
+    float uxs = distUp * distSouth;
+    float dxs = distDown * distSouth;
 
     // we start with east*up because of the afformentioned opposite usage of the distances
     // likewise weights are from corners not from edges and use more than 1 dimension, therefore east*up
@@ -110,41 +104,36 @@ void main() {
     float weight7 = distWest * dxs;
     float weight8 = distEast * dxs;
 
-    float z1xwxh = vZ1 * wxh;
-    float z2xwxh = vZ2 * wxh;
-    float y1xw = vY1 * maxWidth;
-    float y2xw = vY2 * maxWidth;
+    float z1xwxh = wZ1 * wxh;
+    float z2xwxh = wZ2 * wxh;
+    float y1xw = wY1 * maxWidth;
+    float y2xw = wY2 * maxWidth;
 
     // converting coordinates to 1D indexes
     // consider that width and height are different depending on u,v or w, e.g in u, maxwidth is one larger
-    int index1 = int(vX1 + y1xw + z1xwxh);
-    int index2 = int(vX2 + y1xw + z1xwxh);
-    int index3 = int(vX2 + y2xw + z1xwxh);
-    int index4 = int(vX1 + y2xw + z1xwxh);
-    int index5 = int(vX1 + y1xw + z2xwxh);
-    int index6 = int(vX2 + y1xw + z2xwxh);
-    int index7 = int(vX2 + y2xw + z2xwxh);
-    int index8 = int(vX1 + y2xw + z2xwxh);
+    int index1 = int(wX1 + y1xw + z1xwxh);
+    int index2 = int(wX2 + y1xw + z1xwxh);
+    int index3 = int(wX2 + y2xw + z1xwxh);
+    int index4 = int(wX1 + y2xw + z1xwxh);
+    int index5 = int(wX1 + y1xw + z2xwxh);
+    int index6 = int(wX2 + y1xw + z2xwxh);
+    int index7 = int(wX2 + y2xw + z2xwxh);
+    int index8 = int(wX1 + y2xw + z2xwxh);
 
-    // add velocity adjusted for weight to each value
-    atomicAdd(V[index1], int(particle.v * weight1));
-    atomicAdd(V[index2], int(particle.v * weight2));
-    atomicAdd(V[index3], int(particle.v * weight3));
-    atomicAdd(V[index4], int(particle.v * weight4));
-    atomicAdd(V[index5], int(particle.v * weight5));
-    atomicAdd(V[index6], int(particle.v * weight6));
-    atomicAdd(V[index7], int(particle.v * weight7));
-    atomicAdd(V[index8], int(particle.v * weight8));
+    // add weighted velocities together
+    // the velocities of each particle were already normalised going into the cells, therefore converting them back does not require normalisation
 
-    // add the weights used for them to an array that keeps track of the weight for every single velocity
-    // we use this later when we loop through each cell and evenly distribute the weight
-    // because in bilinear interpolation (what were doing) all surrounding weights of need to add up to 1
-    atomicAdd(VW[index1], int(weight1));
-    atomicAdd(VW[index2], int(weight2));
-    atomicAdd(VW[index3], int(weight3));
-    atomicAdd(VW[index4], int(weight4));
-    atomicAdd(VW[index5], int(weight5));
-    atomicAdd(VW[index6], int(weight6));
-    atomicAdd(VW[index7], int(weight7));
-    atomicAdd(VW[index8], int(weight8));
+    float w =
+        float(W[index1]) * weight1 +
+        float(W[index2]) * weight2 +
+        float(W[index3]) * weight3 +
+        float(W[index4]) * weight4 +
+        float(W[index5]) * weight5 +
+        float(W[index6]) * weight6 +
+        float(W[index7]) * weight7 +
+        float(W[index8]) * weight8;
+
+    particle.w = w * invExponent;
+
+    P[current] = particle;
 }

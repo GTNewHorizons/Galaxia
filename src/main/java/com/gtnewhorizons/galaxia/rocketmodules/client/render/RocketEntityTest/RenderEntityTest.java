@@ -35,6 +35,13 @@ public class RenderEntityTest extends Render {
                 "/assets/galaxia/shaders/test.geom",
                 "/assets/galaxia/shaders/test.frag");
         }
+/*
+        GL11.glEnable(GL43.GL_DEBUG_OUTPUT);
+        GL11.glEnable(GL43.GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
+        org.lwjgl.opengl.KHRDebug.glDebugMessageCallback(new org.lwjgl.opengl.KHRDebugCallback((source, type, id, severity, message) -> {
+            if (severity != GL43.GL_DEBUG_SEVERITY_NOTIFICATION) System.err.println("GL Debug: " + message + "\nfrom " + source);
+        }));*/
 
         GL20.glUseProgram(program);
 

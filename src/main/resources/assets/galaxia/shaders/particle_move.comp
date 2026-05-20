@@ -1,6 +1,6 @@
 #version 430 core
 
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 4) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 struct Particle {
     float x;
@@ -24,6 +24,7 @@ uniform uint width;
 uniform uint height;
 
 const float dT = 0.05; // standard minecraft tick delta time
+const float gravity = -9.81;
 
 void main() {
     // width and height are given through uniforms for optimsation's sake
@@ -33,8 +34,9 @@ void main() {
 
     if (current < index) {
         Particle particle = P[current];
+        particle.v += gravity * dT;
         particle.x += particle.u * dT;
-        particle.y += particle.v * dT;
+        particle.y += ((particle.v) * dT);
         particle.z += particle.w * dT;
         P[current] = particle;
     }

@@ -18,6 +18,7 @@ tasks.register<Exec>("run + RenderDoc") {
         "-Xms64m",
         "-Dorg.gradle.appname=gradlew",
         "-Dorg.gradle.java.home=$javaHome",
+        "-Dorg.lwjgl.util.Debug=true",
         "-classpath",
         "gradle/wrapper/gradle-wrapper.jar",
         "org.gradle.wrapper.GradleWrapperMain",

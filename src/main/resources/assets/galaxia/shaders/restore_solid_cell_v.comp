@@ -1,0 +1,34 @@
+#version 430 core
+
+layout(local_size_x = 32, local_size_y = 4, local_size_z = 4) in;
+
+layout(std430, binding = 2) buffer v {
+    restrict int V[];
+};
+
+layout(std430, binding = 4) buffer s {
+    restrict readonly uint S[];
+};
+
+uniform int maxWidth;
+uniform int maxHeight;
+uniform int wxh; // maxWidth * maxHeight
+uniform int wxh1; // maxWidth * (maxHeight + 1)
+uniform int maxHeightDPos; // maxHeight + 1
+
+void main() {
+    int y = int(gl_GlobalInvocationID.y);
+    int z = int(gl_GlobalInvocationID.z);
+    int x = int(gl_GlobalInvocationID.x);
+
+    if (x >= maxWidth || y >= maxHeightDPos || z >= maxWidth) return;
+
+    int yxw = y * maxWidth;
+    int zxwxh = z * wxh1;
+    int current = x + yxw + zxwxh;
+
+    int adjacentPos = x + (min(y, maxHeight - 1) * maxWidth) + (z * wxh);
+    int adjacentNeg = max(adjacentPos - maxWidth, 0);
+
+    V[current] *= int((min(1u, S[adjacentPos]) * min(1u, S[adjacentNeg])));
+}

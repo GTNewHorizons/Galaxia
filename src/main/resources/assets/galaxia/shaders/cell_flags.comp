@@ -1,6 +1,6 @@
 #version 430 core
 
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 2, local_size_z = 2) in;
 
 layout(std430, binding = 4) buffer s {
     restrict readonly uint S[];
@@ -31,6 +31,8 @@ void main() {
     int x = id.x;
     int y = id.y;
     int z = id.z;
+
+    if (x <= 0 || y <= 0 || z <= 0 || x >= maxWidth - 1 || y >= maxHeight - 1 || z >= maxWidth - 1) return;
 
     int zxwxh = z * wxh;
 
@@ -80,7 +82,7 @@ void main() {
     (sYneg << 3) |
     (sZpos << 4) |
     (sZneg << 5) |
-    (thisS << 6);
+    ((thisS >> 1) << 6);
 
     cells[index] = Cell(flags, onef / float(tot));
 }

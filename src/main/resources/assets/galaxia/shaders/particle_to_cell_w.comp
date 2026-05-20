@@ -1,6 +1,6 @@
 #version 430 core
 
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 4) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 struct Particle {
     float x;
@@ -61,9 +61,9 @@ void main() {
     Particle particle = P[current];
 
     // clamp particle coords to max grid size (to be clear, this is identical to particle.[axis] most of the time)
-    float xClamp = clamp(particle.x, h, maxWidth);
-    float yClamp = clamp(particle.y, h, maxHeight);
-    float zClamp = clamp(particle.z, h, maxWidth);
+    float xClamp = clamp(particle.x, h * 2.0, maxWidth);
+    float yClamp = clamp(particle.y, h * 2.0, maxHeight);
+    float zClamp = clamp(particle.z, h * 2.0, maxWidth);
 
     // we need to find the 4 u (or whichever vel were processing) values in basically a square grid around the particle
 
