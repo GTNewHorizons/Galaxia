@@ -23,7 +23,7 @@ import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 
@@ -63,7 +63,8 @@ public class CommonProxy {
 
         if (Loader.isModLoaded("Baubles|Expanded")) registerBaublesSlots();
 
-        ModuleRegistry.registerAllModules();
+        RocketPartRegistry.instance()
+            .registerAll();
     }
 
     // load "Do your mod setup. Build whatever data structures you care about.

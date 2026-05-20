@@ -24,15 +24,13 @@ public class RocketTeleportHelper {
 
     /**
      * Executes the teleportation of players and handles spawning the landing rocket
-     * in the new dimension.
-     * Must be called on the server side.
+     * in the new dimension. Must be called on the server side.
      */
     public static void teleportPlayers(int targetDim, double x, double y, double z, boolean hasRocket, int capsuleIndex,
         List<Integer> modules, List<UUID> passengerUUIDs) {
 
         MinecraftServer server = MinecraftServer.getServer();
         WorldServer targetWorld = server.worldServerForDimension(targetDim);
-
         if (targetWorld == null) return;
 
         List<EntityPlayerMP> players = new ArrayList<>();
@@ -48,16 +46,14 @@ public class RocketTeleportHelper {
 
         if (players.isEmpty() && !hasRocket) return;
 
-        // 2. Spawn the rocket ONCE in the target dimension
         EntityRocket lander = null;
         if (hasRocket) {
-            lander = spawnLandingRocket(targetWorld, x, z, capsuleIndex, modules);
+            lander = spawnLandingRocket(targetWorld, x, z, capsuleIndex);
         }
 
-        // 3. Teleport and Remount everyone
         for (int i = 0; i < players.size(); i++) {
             EntityPlayerMP p = players.get(i);
-            p.mountEntity(null); // Ensure dismounted before dimension transfer
+            p.mountEntity(null);
 
             if (p.dimension != targetDim) {
                 server.getConfigurationManager()
@@ -77,7 +73,6 @@ public class RocketTeleportHelper {
                 placePlayer(p, x, y, z, hasRocket);
             }
 
-            // Schedule them to be put back into the seats
             if (lander != null) {
                 scheduleMount(p, lander, i, targetDim);
             }
@@ -93,35 +88,19 @@ public class RocketTeleportHelper {
         entity.motionY = fallingMotionY;
     }
 
-    private static EntityRocket spawnLandingRocket(WorldServer world, double x, double z, int capsuleIndex,
-        List<Integer> modules) {
+    private static EntityRocket spawnLandingRocket(WorldServer world, double x, double z, int capsuleIndex) {
         TileEntitySilo targetSilo = findNearbySilo(world, x, z);
         boolean inSilo = targetSilo != null;
 
-        // Calculate landing coordinates (center of silo if found, otherwise raw coords)
-        double landX = inSilo ? targetSilo.xCoord + TileEntitySilo.getRotatedOffset(
-            TileEntitySilo.SILO_DEFAULT_X_OFFSET,
-            TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
-            TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
-            targetSilo.currentFacing)[0] + 0.5 : x;
-
-        double landZ = inSilo ? targetSilo.zCoord + TileEntitySilo.getRotatedOffset(
-            TileEntitySilo.SILO_DEFAULT_X_OFFSET,
-            TileEntitySilo.SILO_DEFAULT_Y_OFFSET,
-            TileEntitySilo.SILO_DEFAULT_Z_OFFSET,
-            targetSilo.currentFacing)[2] + 0.5 : z;
+        double landX = inSilo ? targetSilo.xCoord + 0.5 : x;
+        double landZ = inSilo ? targetSilo.zCoord + 0.5 : z;
 
         EntityRocket lander = new EntityRocket(world);
-        lander.setModules(modules);
-
         if (!inSilo) {
-            // Strip everything except Lander & Rider Modules
             lander.turnToLanderAndCache();
-            lander.setCapsuleIndex(0);
-        } else {
-            lander.setCapsuleIndex(capsuleIndex);
         }
 
+        lander.setCapsuleIndex(capsuleIndex);
         lander.setPosition(landX, EntityRocket.SPAWN_ALTITUDE, landZ);
         lander.setTargetSilo(targetSilo);
         world.spawnEntityInWorld(lander);
@@ -136,12 +115,9 @@ public class RocketTeleportHelper {
         int[] ticksWaited = { 0 };
         ServerTickTaskQueue.scheduleWhen(() -> {
             ticksWaited[0]++;
-            // Wait for player dimension sync and ensure they are ready to mount
             return player.dimension == targetDim && !player.isDead && !lander.isDead && ticksWaited[0] >= 5;
         }, () -> {
-            Entity targetSeat = lander; // Pilot (index 0) gets main entity
-
-            // Passengers get extra seats
+            Entity targetSeat = lander;
             if (riderIndex > 0) {
                 int seatIndex = riderIndex - 1;
                 List<EntityRocketSeat> seats = lander.getPassengerSeats();
@@ -149,9 +125,7 @@ public class RocketTeleportHelper {
                     targetSeat = seats.get(seatIndex);
                 }
             }
-
             player.mountEntity(targetSeat);
-            // Force client update immediately
             player.playerNetServerHandler.sendPacket(new S1BPacketEntityAttach(0, player, targetSeat));
         });
     }
@@ -160,12 +134,15 @@ public class RocketTeleportHelper {
         int groundY = world.getTopSolidOrLiquidBlock((int) x, (int) z);
         int searchX = (int) x;
         int searchZ = (int) z;
+
         for (int dx = -SILO_SEARCH_RADIUS; dx <= SILO_SEARCH_RADIUS; dx++) {
             for (int dz = -SILO_SEARCH_RADIUS; dz <= SILO_SEARCH_RADIUS; dz++) {
                 for (int dy = -SILO_SEARCH_HEIGHT; dy <= SILO_SEARCH_HEIGHT; dy++) {
                     TileEntity te = world.getTileEntity(searchX + dx, groundY + dy, searchZ + dz);
+                    // Prefer an empty silo (ready to receive the landing rocket)
                     if (te instanceof TileEntitySilo silo && silo.isStructureValid()
-                        && silo.getModules()
+                        && silo.getDesignBlueprint()
+                            .getParts()
                             .isEmpty()) {
                         return silo;
                     }

@@ -9,6 +9,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
+import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
@@ -50,6 +51,8 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
             Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
+                Side.SERVER);
     }
 
     public static void registerClientPackets() {

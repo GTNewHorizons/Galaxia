@@ -33,7 +33,8 @@ public class WailaRocketProvider implements IWailaEntityProvider {
         IWailaConfigHandler config) {
         if (entity instanceof EntityRocket rocket) {
             tip.clear(); // Remove default name
-            if (rocket.isLander()) {
+            // re add landers
+            if (false) {
                 tip.add(StatCollector.translateToLocal("entity.galaxia.EntityRocket.lander"));
             } else {
                 tip.add(StatCollector.translateToLocal("entity.galaxia.EntityRocket.name"));

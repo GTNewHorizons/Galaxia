@@ -20,7 +20,7 @@ import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
 import net.minecraftforge.common.util.Constants.NBT;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.TransitModule;
 
 import cpw.mods.fml.relauncher.Side;
@@ -376,7 +376,7 @@ public class TileEntityGantry extends TileEntity {
 
     }
 
-    public RocketModule getModule() {
+    public RocketPartInstance getModule() {
         if (containedTransitModule == null) return null;
         return containedTransitModule.module();
     }
@@ -528,7 +528,8 @@ public class TileEntityGantry extends TileEntity {
             tag.setInteger(
                 "moduleId",
                 containedTransitModule.module()
-                    .getId());
+                    .def()
+                    .id());
         }
 
         return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);

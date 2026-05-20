@@ -5,6 +5,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.util.Vec3;
 
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
@@ -54,16 +55,20 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
     public void passModuleToConsumer() {
         if (worldObj.isRemote) return;
 
-        if (connectedSilo != null && connectedSilo.receiveModule(getModule().getId())) {
-            clearModule();
-            return;
-        } else if (connectedAssembler != null) {
-            connectedAssembler.addModule(getModule().getId());
-            connectedAssembler.sync();
+        RocketPartInstance part = getModule();
+
+        if (part == null) {
             clearModule();
             return;
         }
-        return;
+
+        if (connectedSilo != null) {
+            connectedSilo.receiveModulePart(part);
+            clearModule();
+        } else if (connectedAssembler != null) {
+            connectedAssembler.addPart(part.def(), part.x(), part.y(), part.z());
+            clearModule();
+        }
     }
 
     @Override

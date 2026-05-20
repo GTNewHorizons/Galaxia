@@ -22,18 +22,22 @@ import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
  * A virtual, hierarchical distributed inventory aggregating child nodes and leaf
  * stores (inventories/tanks) behind a unified query and mutation API.
  *
- * <p><b>Filtering:</b> Filters define what a subtree can store, pruning both
+ * <p>
+ * <b>Filtering:</b> Filters define what a subtree can store, pruning both
  * insertion and extraction paths on mismatch.
  *
- * <p><b>Priority:</b> Sibling-relative. Higher values are preferred for insertion
+ * <p>
+ * <b>Priority:</b> Sibling-relative. Higher values are preferred for insertion
  * (fill first) and deferred for extraction (drain last).
  *
- * <p><b>Implementation Contract:</b>
+ * <p>
+ * <b>Implementation Contract:</b>
  * <ul>
  * <li>Stores may contain nulls (e.g., unloaded chunks); default methods handle them.</li>
  * <li>Aggregated methods return point-in-time snapshots; cache them if applying multiple predicates.</li>
  * <li>{@link #getChildrenSortedByPriority()} must be cached by implementations to avoid tick-rate allocations.</li>
- * <li>There is no cycle detection/escape, so make sure to keep the graph acyclic<li/>
+ * <li>There is no cycle detection/escape, so make sure to keep the graph acyclic
+ * <li/>
  * </ul>
  */
 public interface IDistributedInventory {
@@ -71,6 +75,7 @@ public interface IDistributedInventory {
 
     /**
      * Declares what fluids this subtree can store.
+     * 
      * @see #getItemFilter()
      */
     default ResourceFilter<FluidKey> getFluidFilter() {
@@ -94,7 +99,9 @@ public interface IDistributedInventory {
         if (children.isEmpty()) return children;
         return children.stream()
             .filter(Objects::nonNull)
-            .sorted(Comparator.comparingInt(IDistributedInventory::getPriority).reversed())
+            .sorted(
+                Comparator.comparingInt(IDistributedInventory::getPriority)
+                    .reversed())
             .collect(Collectors.toList());
     }
 
@@ -105,7 +112,8 @@ public interface IDistributedInventory {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
         for (IDistributedInventory child : getChildren()) {
             if (child == null) continue;
-            child.aggregatedItems().forEach((k, v) -> result.merge(k, v, Long::sum));
+            child.aggregatedItems()
+                .forEach((k, v) -> result.merge(k, v, Long::sum));
         }
         for (IInventory inv : getInventories()) {
             if (inv == null) continue;
@@ -127,7 +135,8 @@ public interface IDistributedInventory {
         Map<FluidKey, Long> result = new LinkedHashMap<>();
         for (IDistributedInventory child : getChildren()) {
             if (child == null) continue;
-            child.aggregatedFluids().forEach((k, v) -> result.merge(k, v, Long::sum));
+            child.aggregatedFluids()
+                .forEach((k, v) -> result.merge(k, v, Long::sum));
         }
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null) continue;
@@ -250,9 +259,9 @@ public interface IDistributedInventory {
                     space += Math.min(template.getMaxStackSize(), inv.getInventoryStackLimit());
                 } else if (stack.getItem() == item.item() && stack.getItemDamage() == item.meta()
                     && ItemStack.areItemStackTagsEqual(stack, template)) {
-                    int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
-                    space += Math.max(0, limit - stack.stackSize);
-                }
+                        int limit = Math.min(stack.getMaxStackSize(), inv.getInventoryStackLimit());
+                        space += Math.max(0, limit - stack.stackSize);
+                    }
             }
         }
         return space;
@@ -271,7 +280,8 @@ public interface IDistributedInventory {
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null) continue;
             FluidStack contents = tank.getFluid();
-            if (contents == null || FluidKey.of(contents).equals(fluid)) {
+            if (contents == null || FluidKey.of(contents)
+                .equals(fluid)) {
                 space += tank.getCapacity() - tank.getFluidAmount();
             }
         }
@@ -284,6 +294,7 @@ public interface IDistributedInventory {
 
     /**
      * Dispatches to item or fluid mutation based on key type.
+     * 
      * @param delta positive to insert, negative to extract
      * @return amount actually transferred
      */
@@ -295,6 +306,7 @@ public interface IDistributedInventory {
      * Inserts (delta > 0) or extracts (delta < 0) an item within this subtree.
      * Inserts in descending priority; extracts in ascending priority. Mismatches
      * short-circuit immediately.
+     * 
      * @return amount transferred, in [0, |delta|]
      */
     default long updateItems(ItemStackWrapper item, int delta) {
@@ -310,7 +322,8 @@ public interface IDistributedInventory {
         // 1. Child insertion (descending priority)
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
-            if (child == null || !child.getItemFilter().test(item)) continue;
+            if (child == null || !child.getItemFilter()
+                .test(item)) continue;
             transferred += child.updateItems(item, (int) (target - transferred));
         }
 
@@ -380,6 +393,7 @@ public interface IDistributedInventory {
 
     /**
      * Inserts (delta > 0) or extracts (delta < 0) a fluid within this subtree.
+     * 
      * @return volume transferred (mB)
      * @see #updateItems(ItemStackWrapper, int) for priority and traversal semantics
      */
@@ -394,13 +408,15 @@ public interface IDistributedInventory {
 
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
-            if (child == null || !child.getFluidFilter().test(fluid)) continue;
+            if (child == null || !child.getFluidFilter()
+                .test(fluid)) continue;
             transferred += child.updateFluids(fluid, (int) (target - transferred));
         }
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null || transferred >= target) continue;
             FluidStack contents = tank.getFluid();
-            if (contents != null && !FluidKey.of(contents).equals(fluid)) continue; // Fluid mismatch
+            if (contents != null && !FluidKey.of(contents)
+                .equals(fluid)) continue; // Fluid mismatch
             int amount = (int) Math.min(target - transferred, Integer.MAX_VALUE);
             transferred += tank.fill(fluid.toStack(amount), true);
         }
@@ -471,7 +487,8 @@ public interface IDistributedInventory {
      * Returns a filtered view of the aggregated item snapshot.
      */
     default Map<ItemStackWrapper, Long> filterItems(ResourceFilter<ItemStackWrapper> predicate) {
-        return aggregatedItems().entrySet().stream()
+        return aggregatedItems().entrySet()
+            .stream()
             .filter(e -> predicate.test(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -480,7 +497,8 @@ public interface IDistributedInventory {
      * Returns a filtered view of the aggregated fluid snapshot.
      */
     default Map<FluidKey, Long> filterFluids(ResourceFilter<FluidKey> predicate) {
-        return aggregatedFluids().entrySet().stream()
+        return aggregatedFluids().entrySet()
+            .stream()
             .filter(e -> predicate.test(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -491,7 +509,8 @@ public interface IDistributedInventory {
      */
     default Map<ItemStackWrapper, Long> getItemsBelowThreshold(Map<ItemStackWrapper, Long> thresholds) {
         Map<ItemStackWrapper, Long> snapshot = aggregatedItems();
-        return thresholds.entrySet().stream()
+        return thresholds.entrySet()
+            .stream()
             .filter(e -> snapshot.getOrDefault(e.getKey(), 0L) < e.getValue())
             .collect(Collectors.toMap(Map.Entry::getKey, e -> snapshot.getOrDefault(e.getKey(), 0L)));
     }
