@@ -9,6 +9,7 @@ import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.BeamEffectPacket;
+import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
@@ -18,6 +19,8 @@ import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
+import com.gtnewhorizons.galaxia.core.network.TetherAnchorSyncPacket;
+import com.gtnewhorizons.galaxia.core.network.TetherPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 
 import cpw.mods.fml.relauncher.Side;
@@ -28,6 +31,8 @@ public final class NetworkManager {
 
     // spotless:off
     public static void registerServerPackets() {
+        GALAXIA_NETWORK.registerMessage(TetherPacket.Handler.class, TetherPacket.class, id++,
+            Side.SERVER);
         GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
@@ -50,6 +55,8 @@ public final class NetworkManager {
             Side.SERVER);
         GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
             Side.SERVER);
+        GALAXIA_NETWORK.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
+                Side.SERVER);
     }
 
     public static void registerClientPackets() {
@@ -65,6 +72,8 @@ public final class NetworkManager {
             Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);
+        GALAXIA_NETWORK.registerMessage(TetherAnchorSyncPacket.Handler.class, TetherAnchorSyncPacket.class, id++,
+                Side.CLIENT);
     }
     // spotless:on
 }

@@ -27,6 +27,8 @@ import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
+import com.gtnewhorizons.galaxia.registry.items.tether.TetherRenderer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
@@ -47,6 +49,7 @@ public class ClientProxy extends CommonProxy {
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
         ConfigMain.RegisterGalaxiaConfig();
+        ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
         FMLBusRegister(new KeyHandler());
     }
 
@@ -86,6 +89,7 @@ public class ClientProxy extends CommonProxy {
             .registerItemRenderer(Item.getItemFromBlock(GalaxiaBlocksEnum.GANTRY.get()), new GantryItemRenderer());
         MinecraftForgeClient
             .registerItemRenderer(GalaxiaItemList.ITEM_ROCKET_SCHEMATIC.getItem(), new RocketSchematicItemRenderer());
+        ForgeBusRegister(new TetherRenderer());
 
     }
 

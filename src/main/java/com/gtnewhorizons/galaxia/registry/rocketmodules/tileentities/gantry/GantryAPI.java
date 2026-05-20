@@ -14,7 +14,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.TransitModule;
@@ -77,8 +77,8 @@ public final class GantryAPI {
      * @param returning       Determines which consumer is the start point (True =>
      *                        Silo start)
      */
-    public static void injectModule(RocketModule module, TileEntityModuleAssembler moduleAssembler, TileEntitySilo silo,
-        boolean returning) {
+    public static void injectModule(RocketPartInstance module, TileEntityModuleAssembler moduleAssembler,
+        TileEntitySilo silo, boolean returning) {
         TileEntityGantryTerminal start, dest;
         // Determine start point and accept
         if (returning) {
@@ -294,5 +294,11 @@ public final class GantryAPI {
      */
     public static boolean isTerminal(TileEntityGantry gantry) {
         return gantry instanceof TileEntityGantryTerminal;
+    }
+
+    public static void requestProduction(RocketPartInstance part, TileEntityModuleAssembler assembler,
+        TileEntitySilo targetSilo) {
+        if (assembler == null || targetSilo == null) return;
+        assembler.enqueueProduction(part.copy(), targetSilo);
     }
 }
