@@ -23,7 +23,7 @@ public final class GTTeamsCompat {
     }
 
     public static UUID getTeam(EntityPlayer player) {
-        return getTeamOptional(player).orElse(null);
+        return getTeamOptional(player).orElse(new UUID(0, 0));
     }
 
     public static Optional<UUID> getTeamOptional(EntityPlayer player) {
