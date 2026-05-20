@@ -38,18 +38,11 @@ uniform int maxHeightDPos; // maxHeight + 1
 
 uniform int RB;
 
-const float o = 1.2;
+const float o = 1;
 const int one = 1;
-const float exponent = 10000000.0; // overflows at >214.7
-const float invExponent = 1.0 / 10000000.0;
+const float exponent = 1000000.0; // overflows at >2147
+const float invExponent = 1.0 / 1000000.0;
 const float dThreshold = 0.001;
-
-const uint xPos = 1u << 0;
-const uint xNeg = 1u << 1;
-const uint yPos = 1u << 2;
-const uint yNeg = 1u << 3;
-const uint zPos = 1u << 4;
-const uint zNeg = 1u << 5;
 
 void main() {
 
@@ -71,12 +64,12 @@ void main() {
 
     uint flags = cell.flags;
 
-    uint sXpos = flags & xPos;
-    uint sXneg = flags & xNeg;
-    uint sYpos = flags & yPos;
-    uint sYneg = flags & yNeg;
-    uint sZpos = flags & zPos;
-    uint sZneg = flags & zNeg;
+    uint sXpos = (flags >> 0) & 1u;
+    uint sXneg = (flags >> 1) & 1u;
+    uint sYpos = (flags >> 2) & 1u;
+    uint sYneg = (flags >> 3) & 1u;
+    uint sZpos = (flags >> 4) & 1u;
+    uint sZneg = (flags >> 5) & 1u;
 
     int westIndex = x + (y * maxWidthDPos) + (z * w1xh);
     int eastIndex = (x + one) + (y * maxWidthDPos) + (z * w1xh);

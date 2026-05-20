@@ -61,6 +61,10 @@ public class EntityTest extends Entity {
     final int maxHeight = height * cubeLength;
     final int wxh = maxWidth * maxHeight;
 
+    final int[] powers = {
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288
+    };
+
     public static final ByteBuffer zero = BufferUtils.createByteBuffer(4);
 
     float time = 0;
@@ -254,7 +258,7 @@ public class EntityTest extends Entity {
         GL20.glUniform1i(GL20.glGetUniformLocation(projectionProgram, "w1xh"), ((maxWidth) + 1) * (maxHeight));
         GL20.glUniform1i(GL20.glGetUniformLocation(projectionProgram, "wxh1"), (maxWidth) * ((maxHeight) + 1));
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 30; i++) {
             GL20.glUniform1i(rb, 0);
 
             GL43.glDispatchCompute(maxWidth / localX, maxHeight / localY, maxWidth / localZ);
@@ -458,9 +462,9 @@ public class EntityTest extends Entity {
         GL20.glUseProgram(exhaustProgram);
 
         // currently arbitrary 50, when the movement tracking is added based on a start pos, this needs to move with it
-        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "xPos"), 20);
-        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "yPos"), 40);
-        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "zPos"), 20);
+        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "xPos"), 50);
+        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "yPos"), 80);
+        GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "zPos"), 50);
 
         GL20.glUniform1f(GL20.glGetUniformLocation(exhaustProgram, "seed"), (float)Math.random());
 
@@ -587,7 +591,7 @@ public class EntityTest extends Entity {
             uProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/uinit.comp");
         }
         if (vProgram == 0) {
-            vProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/winit.comp");
+            vProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/vinit.comp");
         }
         if (wProgram == 0) {
             wProgram = ShaderHelper.createComputeProgram("/assets/galaxia/shaders/winit.comp");

@@ -53,14 +53,12 @@ void main() {
     int dYneg = index - maxWidth;
     int dZneg = index - wxh;
 
-    // by bitshifting by 1, either 0 or 1 (air or wall) returns 0 but 2 (fluid) returns 1! isnt it neat!
-
-    uint sXpos = S[dXpos] >> 1;
-    uint sXneg = S[dXneg] >> 1;
-    uint sYpos = S[dYpos] >> 1;
-    uint sYneg = S[dYneg] >> 1;
-    uint sZpos = S[dZpos] >> 1;
-    uint sZneg = S[dZneg] >> 1;
+    uint sXpos = uint(S[dXpos] > 0u);
+    uint sXneg = uint(S[dXneg] > 0u);
+    uint sYpos = uint(S[dYpos] > 0u);
+    uint sYneg = uint(S[dYneg] > 0u);
+    uint sZpos = uint(S[dZpos] > 0u);
+    uint sZneg = uint(S[dZneg] > 0u);
 
     uint tot =
     sXpos +

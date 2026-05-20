@@ -24,7 +24,12 @@ uniform uint width;
 uniform uint height;
 
 const float dT = 0.05; // standard minecraft tick delta time
-const float gravity = -9.81;
+const float gravity = -0.81;
+
+const float dens = 1.22;
+const float dragCoeff = 0.47;
+const float crossSection = 0.2;
+const float form = 0.5 * dens * crossSection * dragCoeff;
 
 void main() {
     // width and height are given through uniforms for optimsation's sake
@@ -34,7 +39,10 @@ void main() {
 
     if (current < index) {
         Particle particle = P[current];
-        particle.v += gravity * dT;
+        particle.u -= (abs(particle.u) * particle.u) * form * dT;
+        particle.v -= (abs(particle.v) * particle.v) * form * dT;
+        particle.w -= (abs(particle.w) * particle.w) * form * dT;
+        //particle.v += gravity * dT;
         particle.x += particle.u * dT;
         particle.y += ((particle.v) * dT);
         particle.z += particle.w * dT;

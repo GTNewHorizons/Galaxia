@@ -21,6 +21,7 @@ void main() {
     int z = int(gl_GlobalInvocationID.z);
     int x = int(gl_GlobalInvocationID.x);
 
+
     if (x >= maxWidth || y >= maxHeightDPos || z >= maxWidth) return;
 
     int yxw = y * maxWidth;

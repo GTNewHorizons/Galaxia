@@ -43,7 +43,7 @@ uniform float wxh; // (maxWidth + 1) * maxHeight
 const float h = 1.0;
 const float h2 = 1.0 / 2.0; // h = 1
 const float one = 1.0;
-const float exponent = 10000000.0; // overflows at >214.7
+const float exponent = 1000000.0; // overflows at >2147
 
 // all of this uses h = 1 for the sake of simplicity, and all of my real world calculations will
 

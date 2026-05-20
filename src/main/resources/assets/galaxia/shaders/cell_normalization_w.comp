@@ -14,7 +14,7 @@ uniform int maxWidth;
 uniform int maxHeight;
 uniform int wxh; // maxWidth * maxHeight
 
-const float exponent = 10000000.0;
+const float exponent = 1000000.0;
 const int zero = 0;
 
 void main() {
