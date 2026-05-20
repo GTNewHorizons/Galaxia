@@ -22,7 +22,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
-import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
@@ -53,7 +52,6 @@ public class CommonProxy {
 
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager());
-        ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
 
         // Registration
         GalaxiaItemList.registerAll();
