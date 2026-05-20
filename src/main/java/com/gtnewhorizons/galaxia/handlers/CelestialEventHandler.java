@@ -81,6 +81,12 @@ public class CelestialEventHandler {
 
             UUID playerTeam = GTTeamsCompat.getTeam(player);
             UUID playerId = player.getUniqueID();
+            final boolean toClear = TeamEventHandler.playersToClear.remove(playerId);
+            if (toClear) {
+                Galaxia.GALAXIA_NETWORK.sendTo(AssetSyncPacket.clear(), player);
+                // Wait until next sync just to be sure this gets first, otherwise it could easily become a race
+                continue;
+            }
             Map<CelestialObjectId, Set<CelestialAsset>> teamAssets = CelestialAssetStore.getTeamAssets(playerTeam);
             if (teamAssets == null) continue;
             Set<CelestialAsset> aggregatedAssets = teamAssets.values()

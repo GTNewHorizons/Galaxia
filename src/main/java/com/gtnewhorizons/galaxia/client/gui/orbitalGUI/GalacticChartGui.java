@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayer;
 
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -10,7 +10,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import net.minecraft.entity.player.EntityPlayer;
 
 public class GalacticChartGui {
 

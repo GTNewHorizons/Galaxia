@@ -2,18 +2,24 @@ package com.gtnewhorizons.galaxia.compat.teams;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.UUID;
 
 import net.minecraft.nbt.NBTTagCompound;
 
 import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
 import com.gtnewhorizon.gtnhlib.teams.Team;
+import com.gtnewhorizon.gtnhlib.teams.TeamDataCopyReason;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
+
+import lombok.Getter;
 
 public class GalaxiaTeamData implements INetworkTeamData {
 
     public static final String ID = "GALAXIA";
 
+    @Getter
     private int teamColor = EnumColors.MAP_COLOR_TEAM_ACCENT.getColor();
     private transient boolean dirty;
 
@@ -64,16 +70,29 @@ public class GalaxiaTeamData implements INetworkTeamData {
             this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
+
+            TeamEventHandler.playersToClear.addAll(consumed.getMembers());
+            TeamEventHandler.playersToClear.addAll(consumed.getOfficers());
+            TeamEventHandler.playersToClear.addAll(consumed.getOwners());
+        }
+    }
+
+    @Override
+    public void copyData(Team oldTeam, Team newTeam, UUID playerId, ITeamData oldTeamData, TeamDataCopyReason reason) {
+        if (oldTeamData instanceof GalaxiaTeamData other) {
+            this.teamColor = other.teamColor;
+            this.permissions.clear();
+            this.permissions.putAll(other.permissions);
+
+            TeamEventHandler.playersToClear.addAll(oldTeam.getMembers());
+            TeamEventHandler.playersToClear.addAll(oldTeam.getOfficers());
+            TeamEventHandler.playersToClear.addAll(oldTeam.getOwners());
         }
     }
 
     @Override
     public void markSyncedToClient() {
         dirty = false;
-    }
-
-    public int getTeamColor() {
-        return teamColor;
     }
 
     public void setTeamColor(int color) {
