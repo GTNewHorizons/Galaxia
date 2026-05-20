@@ -45,6 +45,9 @@ dependencies {
     compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
     devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.507:dev")
+    // GT5 currently resolves ChunkAPI 0.8.1, whose S26 bulk chunk packet mixins leave
+    // the read/write packet formats out of sync in this dev runtime.
+    devOnlyNonPublishable("com.falsepattern:chunkapi-mc1.7.10:0.8.2:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.22:dev') { transitive = false }
     devOnlyNonPublishable(files("libs/supernova-0.1.0-dev.jar"))
 

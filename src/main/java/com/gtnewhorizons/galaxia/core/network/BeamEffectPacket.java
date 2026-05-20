@@ -46,15 +46,16 @@ public class BeamEffectPacket implements IMessage {
         buf.writeInt(playerZ100);
     }
 
-    @SideOnly(Side.CLIENT)
     public static class Handler implements IMessageHandler<BeamEffectPacket, IMessage> {
 
         @Override
+        @SideOnly(Side.CLIENT)
         public IMessage onMessage(final BeamEffectPacket msg, MessageContext ctx) {
             spawnBeamParticles(msg);
             return null;
         }
 
+        @SideOnly(Side.CLIENT)
         private void spawnBeamParticles(BeamEffectPacket msg) {
 
             Minecraft mc = Minecraft.getMinecraft();
