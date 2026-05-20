@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
@@ -36,6 +37,7 @@ public enum GalaxiaItemList {
     ITEM_TELEPORTER("tool/teleporter", ItemTeleporter::new, 1),
     ITEM_GALACTIC_MAP("tool/galactic_map", ItemGalacticMap::new, 1),
     ITEM_ROCKET_SCHEMATIC("tool/schematic", ItemRocketSchematic::new, 1),
+    ITEM_KINETIC_TETHER("tool/kinetic_tether", ItemKineticTether::new, 1),
 
     // Worldgen dust & ores
     DUST_MOON("ore/moon_dust"),
