@@ -2,15 +2,10 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
 import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -23,14 +18,11 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.IntValue;
-import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.StringSyncValue;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.PageButton;
-import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
@@ -38,27 +30,19 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.DestinationSetPacket;
-import com.gtnewhorizons.galaxia.core.network.RocketDestinationSyncPacket;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
-import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.planets.BasePlanet;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.ModuleRegistry;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketAssembly;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.RocketModule;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildOrder;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.assembly.RocketBuildStatus;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor.RocketEditorUI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsuleModule;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.CapsuleRequiredValidator;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.EngineToTankRatioValidator;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.IRocketValidator;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.ModulesFitInCoreValidator;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.SingleRocketCoreValidator;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.TierMatchesDestinationValidator;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.ValidationResult;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.validators.WeightLimitValidator;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
@@ -66,18 +50,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     implements IGuiHolder<PosGuiData>, IRocketControllerTE {
 
     private EntityRocket entityRocket;
-    private RocketAssembly assembly;
-    // Modules currently in the rendering stack
-    private final List<Integer> modules = new ArrayList<>();
     public boolean shouldRender = true;
-    // Validation rules for rocket systems
-    private final List<IRocketValidator> validators = Arrays.asList(
-        new CapsuleRequiredValidator(),
-        new EngineToTankRatioValidator(),
-        new WeightLimitValidator(),
-        new TierMatchesDestinationValidator(),
-        new SingleRocketCoreValidator(),
-        new ModulesFitInCoreValidator());
+
     private int destination = -1;
     private final IntValue.Dynamic selectedDim = new IntValue.Dynamic(() -> destination, v -> {
         destination = v;
@@ -87,10 +61,10 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     private String pendingSchematicName = "";
 
     private TileEntityGantryTerminal gantryTerminal;
-    private TileEntityModuleAssembler moduleAssembler;
+    public TileEntityModuleAssembler moduleAssembler;
     private int[] pendingAssemblerCoords;
-    private boolean hasAssembler = false;
-    private int foundTerminalCount = 0;
+    public boolean hasAssembler = false;
+
     public ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
     private ForgeDirection placedFacing = ForgeDirection.NORTH;
 
@@ -100,18 +74,170 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     private static final String STRUCTURE_PIECE_MAIN = "main";
 
+    /** What the player has drawn in the editor. Mutable only while canEdit(). */
+    private RocketBlueprint designBlueprint = new RocketBlueprint();
+
+    /**
+     * Immutable snapshot created at order time. Drives the assembler's work list.
+     * Null when not in ASSEMBLING state.
+     */
+    private RocketBuildOrder currentBuildOrder = null;
+
+    /**
+     * Accumulated result of confirmed deliveries. Only updated in receiveModulePart.
+     * Becomes authoritative source for the EntityRocket once READY.
+     */
+    private RocketBlueprint assembledBlueprint = new RocketBlueprint();
+
+    private RocketBuildStatus buildStatus = RocketBuildStatus.IDLE;
+
+    public RocketBlueprint getDesignBlueprint() {
+        return designBlueprint;
+    }
+
+    public RocketBuildOrder getCurrentBuildOrder() {
+        return currentBuildOrder;
+    }
+
+    /**
+     * Returns the assembled blueprint only when the rocket is actually built or
+     * launched. Returns an empty blueprint otherwise so callers can't render a
+     * half-built rocket.
+     */
+    public RocketBlueprint getBuiltBlueprint() {
+        return buildStatus == RocketBuildStatus.READY || buildStatus == RocketBuildStatus.LAUNCHED ? assembledBlueprint
+            : new RocketBlueprint();
+    }
+
+    public RocketBuildStatus getBuildStatus() {
+        return buildStatus;
+    }
+
+    /**
+     * Called by the editor UI on close. Only applies the new design when editing
+     * is allowed — prevents the open editor from overwriting a live build order.
+     */
+    public void setDesignBlueprint(RocketBlueprint bp) {
+        if (!buildStatus.canEdit()) return;
+        this.designBlueprint = bp != null ? bp.copy() : new RocketBlueprint();
+        updateBuildStatusAfterEdit();
+        sync();
+    }
+
+    /**
+     * Creates an immutable build order from the current design and enqueues all parts
+     * to the assembler at once. The assembler immediately begins work on any part it
+     * has in stock and holds the rest until stock is replenished — no serial
+     * request-per-delivery loop.
+     */
+    public void orderModules() {
+        if (worldObj.isRemote) return;
+
+        System.out.println("[SILO] orderModules() called - Status: " + buildStatus);
+
+        if (designBlueprint.isEmpty()) {
+            System.out.println("[SILO] cannot order - empty blueprint");
+            return;
+        }
+
+        if (buildStatus == RocketBuildStatus.IDLE) {
+            buildStatus = RocketBuildStatus.DESIGNED;
+        }
+
+        if (!buildStatus.canOrder()) {
+            System.out.println("[SILO] cannot order - wrong status");
+            return;
+        }
+
+        updateLinkedAssembler();
+        System.out.println(
+            "[SILO] hasAssembler=" + hasAssembler
+                + ", moduleAssembler="
+                + (moduleAssembler != null)
+                + ", gantryTerminal="
+                + (gantryTerminal != null));
+
+        if (!hasAssembler || moduleAssembler == null || gantryTerminal == null) {
+            System.out.println("[SILO] No assembler or gantry terminal connected");
+            return;
+        }
+
+        boolean graphValid = gantryTerminal.checkValidGraph() && moduleAssembler.checkValidGraph();
+        System.out.println("[SILO] Gantry graph valid: " + graphValid);
+
+        if (!graphValid) {
+            System.out.println("[SILO] Gantry graph is invalid");
+            return;
+        }
+
+        RocketAssembly analysis = designBlueprint.analyze();
+        System.out.println("[SILO] Blueprint viable: " + analysis.viable());
+
+        if (!analysis.viable()) {
+            System.out.println("[SILO] Blueprint not viable");
+            return;
+        }
+
+        this.currentBuildOrder = new RocketBuildOrder(designBlueprint);
+        this.buildStatus = RocketBuildStatus.ASSEMBLING;
+        this.assembledBlueprint.clear();
+
+        System.out.println("[SILO] Ordering " + currentBuildOrder.totalCount() + " parts...");
+
+        for (RocketPartInstance part : currentBuildOrder.getParts()) {
+            System.out.println(
+                "[SILO] Requesting production: " + part.def()
+                    .name());
+            GantryAPI.requestProduction(part.copy(), moduleAssembler, this);
+        }
+
+        sync();
+        System.out.println("[SILO] Order completed successfully!");
+    }
+
+    public void updateBuildStatusAfterEdit() {
+        if (designBlueprint.isEmpty()) {
+            buildStatus = RocketBuildStatus.IDLE;
+        } else {
+            buildStatus = RocketBuildStatus.DESIGNED;
+        }
+        sync();
+    }
+
+    /**
+     * Called by TileEntityGantryTerminal when a part physically arrives at the silo.
+     * This is the only place that writes to assembledBlueprint.
+     */
+    public boolean receiveModulePart(RocketPartInstance part) {
+        if (currentBuildOrder == null) return false;
+
+        boolean accepted = currentBuildOrder.markDelivered(part);
+        if (accepted) {
+            assembledBlueprint.addPart(part.copy());
+
+            if (currentBuildOrder.isComplete()) {
+                buildStatus = RocketBuildStatus.READY;
+                currentBuildOrder = null;
+            }
+            sync();
+        }
+        return accepted;
+    }
+
     private static final IStructureDefinition<TileEntitySilo> STRUCTURE_DEFINITION = StructureDefinition
         .<TileEntitySilo>builder()
-        // spotless:off
-            .addShape(STRUCTURE_PIECE_MAIN, StructureUtility.transpose(new String[][] {
+        .addShape(
+            STRUCTURE_PIECE_MAIN,
+            // spotless:off
+            StructureUtility.transpose(
+                new String[][] {
                     { "  T  ", "     ", "T   T", "     ", "  T  " },
                     { "  T  ", "     ", "T   T", "     ", "  T  " },
                     { "  C  ", "     ", "C   C", "     ", "  C  " },
                     { " CCC ", "C   C", "C   C", "C   C", " CCC " },
                     { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " }
-
-            }))
-            // spotless:on
+                }))
+        // spotless:on
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
         .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, te) -> {
             if (te instanceof TileEntityGantryTerminal terminal) {
@@ -128,50 +254,26 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         super();
     }
 
-    /**
-     * Gets the structure definition of the Silo multi
-     *
-     * @return The structure definition for the multi
-     */
     @Override
     public IStructureDefinition<TileEntitySilo> getStructureDefinition() {
         return STRUCTURE_DEFINITION;
     }
 
-    /**
-     * Gets the x offset from the origin of the multi to the controller block
-     *
-     * @return X offset
-     */
     @Override
     protected int getControllerOffsetX() {
         return 2;
     }
 
-    /**
-     * Gets the y offset from the origin of the multi to the controller block
-     *
-     * @return Y offset
-     */
     @Override
     protected int getControllerOffsetY() {
         return 4;
     }
 
-    /**
-     * Gets the z offset from the origin of the multi to the controller block
-     *
-     * @return Z offset
-     */
     @Override
     protected int getControllerOffsetZ() {
         return 0;
     }
 
-    /**
-     * Runs whenever the structure forms - here updates the assembler linking and
-     * sets the rendering
-     */
     @Override
     protected void onStructureFormed() {
         super.onStructureFormed();
@@ -179,10 +281,6 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         shouldRender = true;
     }
 
-    /**
-     * Runs whenever a previously formed structure disforms - updates assembler and
-     * removes rendering
-     */
     @Override
     protected void onStructureDisformed() {
         super.onStructureDisformed();
@@ -190,329 +288,112 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         shouldRender = false;
     }
 
-    /**
-     * Helper method to get rotation offsets based on multi direction
-     *
-     * @param localX        The x offset local to the controller
-     * @param localY        The y offset local to the controller
-     * @param localZ        The z offset local to the controller
-     * @param currentFacing The direction the multi is currently facing
-     * @return Array of offsets based on direction and local coordinates
-     */
     public static int[] getRotatedOffset(int localX, int localY, int localZ, ExtendedFacing currentFacing) {
-        switch (currentFacing.getDirection()) {
-            case SOUTH:
-                return new int[] { localX, localY, -localZ };
-            case NORTH:
-                return new int[] { -localX, localY, localZ };
-            case EAST:
-                return new int[] { -localZ, localY, -localX };
-            case WEST:
-                return new int[] { localZ, localY, localX };
-            default:
-                return new int[] { localX, localY, -localZ };
-        }
+        return switch (currentFacing.getDirection()) {
+            case SOUTH -> new int[] { localX, localY, -localZ };
+            case NORTH -> new int[] { -localX, localY, localZ };
+            case EAST -> new int[] { -localZ, localY, -localX };
+            case WEST -> new int[] { localZ, localY, localX };
+            default -> new int[] { localX, localY, -localZ };
+        };
     }
 
-    /**
-     * Gets the controller block to be used
-     *
-     * @return The block to be used as the block for this TE/multi controller
-     */
     @Override
     public Block getControllerBlock() {
         return GalaxiaBlocksEnum.SILO_CONTROLLER.get();
     }
 
-    /**
-     * Updates the linked module assembler by searching endpoint terminals of linked
-     * gantry
-     */
     public void updateLinkedAssembler() {
-        if (worldObj.isRemote) return;
-        // If no gantry terminal, no graph to check
-        if (gantryTerminal == null) {
+        if (worldObj.isRemote || gantryTerminal == null) {
             moduleAssembler = null;
             hasAssembler = false;
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             return;
         }
-        // If not a valid graph, cannot walk it
+
         if (!gantryTerminal.checkValidGraph()) {
             moduleAssembler = null;
             hasAssembler = false;
-            if (worldObj != null) {
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
             return;
         }
-        // Iterate through endpoints to find one with a linked assembler
-        List<TileEntityGantryTerminal> endpoints = GantryAPI.findEndpointTerminals(gantryTerminal);
-        for (TileEntityGantryTerminal terminal : endpoints) {
-            TileEntityModuleAssembler testAssembler = terminal.getAssembler();
-            if (testAssembler != null) {
-                moduleAssembler = testAssembler;
+
+        for (TileEntityGantryTerminal terminal : GantryAPI.findEndpointTerminals(gantryTerminal)) {
+            if (terminal.getAssembler() != null) {
+                moduleAssembler = terminal.getAssembler();
                 hasAssembler = true;
-                if (worldObj != null) {
-                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-                }
+                markDirty();
                 return;
             }
         }
+
         moduleAssembler = null;
         hasAssembler = false;
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
     }
 
-    /**
-     * The UI builder for the tile entity
-     *
-     * @param data        information about the creation context
-     * @param syncManager sync handler where widget sync handlers should be
-     *                    registered
-     * @param settings    settings which apply to the whole ui and not just this
-     *                    panel
-     * @return The ModularPanel to display as UI
-     */
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        if (!worldObj.isRemote) {
-            markStructureDirty(); // only runs once on the server
-            updateLinkedAssembler();
-        }
-        BooleanSyncValue validSync = new BooleanSyncValue(() -> structureValid, v -> {});
-        BooleanSyncValue assemblerSync = new BooleanSyncValue(() -> hasAssembler, v -> {});
-        StringSyncValue nameSync = new StringSyncValue(this::getPendingSchematicName, this::setPendingSchematicName);
-
-        syncManager.syncValue("rocketSiloStructureValid", validSync);
-        syncManager.syncValue("rocketSiloModuleAssembler", assemblerSync);
-
-        PagedWidget.Controller tabController = new PagedWidget.Controller();
-
-        ModularPanel panel = ModularPanel.defaultPanel("galaxia:rocket_silo_main")
-            .size(350, 160);
-
-        panel.childIf(
-            !validSync.getBoolValue(),
-            () -> IKey
-                .str(
-                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.not_formed")
-                        + EnumChatFormatting.RESET)
-                .asWidget()
-                .pos(10, 35));
-
-        panel.childIf(
-            validSync.getBoolValue() && !assemblerSync.getBoolValue(),
-            () -> IKey
-                .str(
-                    EnumChatFormatting.RED + StatCollector.translateToLocal("galaxia.gui.rocket_silo.assembler_none")
-                        + EnumChatFormatting.RESET)
-                .asWidget()
-                .pos(10, 35));
-
-        panel
-            .childIf(
-                validSync.getBoolValue() && assemblerSync.getBoolValue(),
-                () -> new PageButton(0, tabController).size(120, 28)
-                    .pos(0, -28)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.build"))))
-            .childIf(
-                validSync.getBoolValue() && assemblerSync.getBoolValue(),
-                () -> new PageButton(1, tabController).size(120, 28)
-                    .pos(120, -28)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.launch"))))
-            .childIf(
-                validSync.getBoolValue() && assemblerSync.getBoolValue(),
-                () -> new PageButton(2, tabController).size(120, 28)
-                    .pos(240, -28)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.save"))));
-
-        // Title
-        panel.childIf(
-            validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> IKey
-                .str(
-                    EnumChatFormatting.BOLD + StatCollector.translateToLocal("galaxia.gui.rocket_silo.title")
-                        + EnumChatFormatting.RESET)
-                .asWidget()
-                .pos(8, 8));
-        // Module addition buttons
-        Flow moduleRow = Flow.row()
-            .coverChildren()
-            .pos(8, 35)
-            .padding(4);
-        for (RocketModule m : ModuleRegistry.getAll()) {
-            moduleRow.child(createModuleButton(m, moduleAssembler));
-        }
-
-        Flow destRow = Flow.row()
-            .coverChildren()
-            .pos(10, 35)
-            .padding(4);
-        // Add Overworld option if not there
-        if (worldObj.provider.dimensionId != 0) {
-            destRow.child(
-                new ToggleButton().size(48, 20)
-                    .overlay(IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.button.overworld")))
-                    .valueWrapped(selectedDim, 0));
-        }
-
-        for (BasePlanet dim : SolarSystemRegistry.getAllPlanets()) {
-            if (dim.getPlanetEnum()
-                .getId() != worldObj.provider.dimensionId) destRow.child(createDestinationButton(dim));
-        }
-
-        // Builder Page
-        panel.childIf(
-            validSync.getBoolValue() && assemblerSync.getBoolValue(),
-            () -> new PagedWidget<>().controller(tabController)
-                .addPage(
-                    new ParentWidget<>().size(240, 160)
-                        .child(moduleRow)
-                        .child(
-                            new ButtonWidget<>().size(220, 30)
-                                .pos(10, 80)
-                                .overlay(
-                                    IKey.str(
-                                        StatCollector
-                                            .translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
-                                        .alignment(Alignment.Center))
-                                .tooltip(
-                                    t -> t.addLine(
-                                        StatCollector
-                                            .translateToLocal("galaxia.tooltip.rocket_silo.builder.return_modules")))
-                                .syncHandler(
-                                    new InteractionSyncHandler().setOnMousePressed(
-                                        md -> {
-                                            if (md.mouseButton == 0 && !worldObj.isRemote)
-                                                returnModules(moduleAssembler);
-                                        }))))
-                // Launch Page
-                .addPage(
-                    new ParentWidget<>().size(240, 160)
-                        .child(destRow)
-                        .child(
-                            new ButtonWidget<>().size(220, 30)
-                                .pos(10, 120)
-                                .overlay(
-                                    IKey.dynamic(
-                                        () -> (isRocketValid() ? EnumChatFormatting.GREEN : EnumChatFormatting.RED)
-                                            + StatCollector
-                                                .translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
-                                            + EnumChatFormatting.RESET)
-                                        .alignment(Alignment.CENTER))
-                                .tooltipDynamic(t -> {
-                                    // Add tooltips for invalid setups
-                                    getAssembly().updateDestination(destination);
-                                    if (getAssembly().getModules()
-                                        .isEmpty()) {
-                                        t.addLine(
-                                            EnumChatFormatting.GRAY
-                                                + StatCollector.translateToLocal(
-                                                    "galaxia.tooltip.rocket_silo.builder.modules_none")
-                                                + EnumChatFormatting.RESET);
-                                        return;
-                                    }
-                                    for (IRocketValidator v : validators) {
-                                        ValidationResult r = v.validate(getAssembly());
-                                        if (!r.valid()) {
-                                            t.addLine(EnumChatFormatting.RED + r.message() + EnumChatFormatting.RESET);
-                                        }
-                                    }
-                                })
-                                .tooltipAutoUpdate(true)
-                                .syncHandler(
-                                    new InteractionSyncHandler().setOnMousePressed(
-                                        md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); }))))
-                // Schematic Page
-                .addPage(
-                    new ParentWidget<>().size(240, 160)
-                        .child(
-                            IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_text"))
-                                .asWidget()
-                                .pos(10, 40))
-                        .child(
-                            new TextFieldWidget().size(220, 30)
-                                .pos(10, 60)
-                                .setMaxLength(64)
-                                .value(nameSync)
-                                .autoUpdateOnChange(true))
-                        .child(
-                            new ButtonWidget<>().size(220, 30)
-                                .pos(10, 120)
-                                .overlay(
-                                    IKey.str(
-                                        EnumChatFormatting.GREEN
-                                            + StatCollector
-                                                .translateToLocal("galaxia.gui.rocket_silo.builder.schematic_save")
-                                            + EnumChatFormatting.RESET)
-                                        .alignment(Alignment.CENTER))
-                                .tooltipDynamic(t -> {
-                                    if (getAssembly().getModules()
-                                        .isEmpty()) {
-                                        t.addLine(
-                                            EnumChatFormatting.GRAY
-                                                + StatCollector.translateToLocal(
-                                                    "galaxia.tooltip.rocket_silo.builder.modules_none")
-                                                + EnumChatFormatting.RESET);
-                                        return;
-                                    }
-                                })
-                                .tooltipAutoUpdate(true)
-                                .syncHandler(
-                                    new InteractionSyncHandler().setOnMousePressed(
-                                        md -> {
-                                            if (md.mouseButton == 0 && !worldObj.isRemote)
-                                                captureSchematic(data.getPlayer());
-                                        })))));
-
-        return panel;
+        return RocketEditorUI.build(data, syncManager, settings);
     }
 
-    /**
-     * Determines whether a rocket on the silo is good to launch
-     *
-     * @return whether the rocket is formed and passes all validators
-     */
-    private boolean isRocketValid() {
-        getAssembly().updateDestination(destination);
-        return !getAssembly().getModules()
-            .isEmpty() && validators.stream()
-                .allMatch(
-                    v -> v.validate(getAssembly())
-                        .valid());
+    private ParentWidget<?> buildBuildPage(Flow moduleRow) {
+        return new ParentWidget<>().size(240, 160)
+            .child(moduleRow)
+            .child(
+                new ButtonWidget<>().size(220, 30)
+                    .pos(10, 80)
+                    .overlay(
+                        IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.return_modules"))
+                            .alignment(Alignment.Center))
+                    .syncHandler(
+                        new InteractionSyncHandler().setOnMousePressed(
+                            md -> { if (md.mouseButton == 0 && !worldObj.isRemote) returnModules(); })));
     }
 
-    /**
-     * Creates the button for adding a module
-     *
-     * @param module    The Rocket module this button is responsible for
-     * @param assembler The Module Assembler this is linked to
-     * @return ButtonWidget to add to the panel
-     */
-    private ButtonWidget<?> createModuleButton(RocketModule module, TileEntityModuleAssembler assembler) {
-        return new ButtonWidget<>().size(36, 20)
-            .overlay(IKey.str(module.getName()))
-            .tooltip(
-                t -> t.add(
-                    EnumChatFormatting.GRAY + String.format("%.1fm | %.0fkg", module.getHeight(), module.getWeight())
-                        + EnumChatFormatting.RESET))
-            .syncHandler(
-                new InteractionSyncHandler().setOnMousePressed(
-                    md -> {
-                        if (md.mouseButton == 0 && hasRemaining(module.getId(), assembler))
-                            requestModule(module.getId(), assembler);
-                    }));
+    private ParentWidget<?> buildLaunchPage(Flow destRow, PosGuiData data) {
+        return new ParentWidget<>().size(240, 160)
+            .child(destRow)
+            .child(
+                new ButtonWidget<>().size(220, 30)
+                    .pos(10, 120)
+                    .overlay(
+                        IKey.dynamic(
+                            () -> (EnumChatFormatting.GREEN)
+                                + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.enter_rocket")
+                                + EnumChatFormatting.RESET)
+                            .alignment(Alignment.CENTER))
+                    .tooltipAutoUpdate(true)
+                    .syncHandler(
+                        new InteractionSyncHandler().setOnMousePressed(
+                            md -> { if (md.mouseButton == 0 && !worldObj.isRemote) enterRocket(data); })));
     }
 
-    /**
-     * Creates the button for selecting a dimension to travel to
-     *
-     * @param dim The planet to add an option for
-     * @return ButtonWidget to add to the panel
-     */
+    private ParentWidget<?> buildSchematicPage(StringSyncValue nameSync, PosGuiData data) {
+        return new ParentWidget<>().size(240, 160)
+            .child(
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_text"))
+                    .asWidget()
+                    .pos(10, 40))
+            .child(
+                new TextFieldWidget().size(220, 30)
+                    .pos(10, 60)
+                    .setMaxLength(64)
+                    .value(nameSync)
+                    .autoUpdateOnChange(true))
+            .child(
+                new ButtonWidget<>().size(220, 30)
+                    .pos(10, 120)
+                    .overlay(
+                        IKey.str(
+                            EnumChatFormatting.GREEN
+                                + StatCollector.translateToLocal("galaxia.gui.rocket_silo.builder.schematic_save")
+                                + EnumChatFormatting.RESET)
+                            .alignment(Alignment.CENTER))
+                    .syncHandler(
+                        new InteractionSyncHandler().setOnMousePressed(
+                            md -> {
+                                if (md.mouseButton == 0 && !worldObj.isRemote) captureSchematic(data.getPlayer());
+                            })));
+    }
+
     private ToggleButton createDestinationButton(BasePlanet dim) {
         return new ToggleButton().size(48, 20)
             .overlay(
@@ -525,98 +406,162 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
                     .getId());
     }
 
-    /**
-     * Enters the rocket and starts launch cycle (cycle = GO currently)
-     *
-     * @param data The data from the GUI
-     */
     private void enterRocket(PosGuiData data) {
-        if (getAssembly().getModules()
-            .stream()
-            .noneMatch(m -> m instanceof CapsuleModule)) return;
+        if (!buildStatus.canLaunch() || assembledBlueprint.isEmpty()) return;
 
-        EntityRocket rocket = getEntityRocket();
-        if (rocket == null || rocket.isDead) return;
+        EntityRocket rocket = getOrCreateEntityRocket();
+        if (rocket == null) return;
 
-        rocket.setCapsuleIndex(getFirstCapsuleIndex());
+        rocket.setBlueprint(assembledBlueprint.copy());
         rocket.setDestination(destination);
-        Galaxia.GALAXIA_NETWORK.sendToServer(new RocketDestinationSyncPacket(rocket.getEntityId(), destination));
 
-        rocket.setModules(new ArrayList<>(modules));
-        this.shouldRender = false;
+        shouldRender = false;
+        buildStatus = RocketBuildStatus.LAUNCHED;
         sync();
 
         rocket.interactFirst(data.getPlayer());
         if (!rocket.shouldRender()) rocket.launch();
     }
 
-    /**
-     * Requests a new module to the silo from an assembler, and removes from
-     * assembler map
-     *
-     * @param id        The module ID to add
-     * @param assembler The linked Module Assembler
-     */
-    public void requestModule(int id, TileEntityModuleAssembler assembler) {
-        if (worldObj.isRemote) return;
-        assembler.removeModule(id);
-        assembler.sendModule(id, this);
-        assembly = null;
+    public void returnModules() {
+        if (moduleAssembler == null || worldObj.isRemote) return;
+
+        // TODO: physically return modules via gantry rather than resetting state
+        this.designBlueprint.clear();
+        this.assembledBlueprint.clear();
+        this.currentBuildOrder = null;
+        this.buildStatus = RocketBuildStatus.IDLE;
+        this.shouldRender = true;
         sync();
     }
 
-    /**
-     * Receives a new module and adds it to the current render stack
-     *
-     * @param id The module ID to add
-     * @return Boolean : True => Successful reception
-     */
-    public boolean receiveModule(int id) {
-        modules.add(id);
-        assembly = null;
-        if (entityRocket != null && !shouldRender) {
-            entityRocket.setModules(new ArrayList<>(modules));
-        }
-
-        sync();
-        return true;
-
-    }
-
-    /**
-     * Kills the rocket by clearing modules and settting dead
-     */
-    public void kill() {
-        modules.clear();
-        if (this.getEntityRocket() != null) {
-            this.getEntityRocket()
-                .setDead();
-        }
-    }
-
-    /**
-     * Checks to see if the linked assembler has the module requested
-     *
-     * @param id        The ID of the module to check
-     * @param assembler The linked assembler to check from
-     * @return Boolean : True -> has the module
-     */
-    public boolean hasRemaining(int id, TileEntityModuleAssembler assembler) {
-        if (assembler == null) return false;
-        return assembler.moduleMap.getOrDefault(id, 0) > 0;
-    }
-
-    /**
-     * Creates a schematic item stack containing the modules and name in the nbt
-     *
-     * @param player The player interacting with the silo
-     */
     public void captureSchematic(EntityPlayer player) {
-        if (worldObj.isRemote || modules.isEmpty()) return;
+        if (worldObj.isRemote || designBlueprint.isEmpty()) return;
         ItemStack schematic = ItemRocketSchematic.captureFromSilo(this, pendingSchematicName);
         if (schematic != null) {
             player.inventory.addItemStackToInventory(schematic);
         }
+    }
+
+    private EntityRocket getOrCreateEntityRocket() {
+        if (entityRocket != null && !entityRocket.isDead) return entityRocket;
+
+        entityRocket = new EntityRocket(worldObj);
+        int[] offset = getRotatedOffset(
+            SILO_DEFAULT_X_OFFSET,
+            SILO_DEFAULT_Y_OFFSET,
+            SILO_DEFAULT_Z_OFFSET,
+            currentFacing);
+        entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
+        worldObj.spawnEntityInWorld(entityRocket);
+        return entityRocket;
+    }
+
+    public void sync() {
+        markDirty();
+        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    public void updateEntity() {
+        super.updateEntity();
+        if (worldObj.isRemote) return;
+
+        if (shouldRender && (entityRocket == null || entityRocket.isDead)
+            && structureValid
+            && buildStatus == RocketBuildStatus.READY) {
+            getOrCreateEntityRocket();
+        }
+
+        if (pendingAssemblerCoords != null) {
+            TileEntity te = worldObj
+                .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
+            if (te instanceof TileEntityModuleAssembler assembler) {
+                moduleAssembler = assembler;
+            }
+            pendingAssemblerCoords = null;
+        }
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+        if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound nbt) {
+        super.writeToNBT(nbt);
+
+        nbt.setBoolean("shouldRender", shouldRender);
+
+        // Build state — all three layers persisted independently
+        nbt.setInteger("buildStatus", buildStatus.ordinal());
+        nbt.setTag("designBlueprint", designBlueprint.serializeNBT());
+        nbt.setTag("assembledBlueprint", assembledBlueprint.serializeNBT());
+
+        if (currentBuildOrder != null) {
+            nbt.setTag("buildOrder", currentBuildOrder.serializeNBT());
+        }
+
+        if (moduleAssembler != null) {
+            nbt.setInteger("assemblerX", moduleAssembler.xCoord);
+            nbt.setInteger("assemblerY", moduleAssembler.yCoord);
+            nbt.setInteger("assemblerZ", moduleAssembler.zCoord);
+        }
+        nbt.setBoolean("hasAssembler", hasAssembler);
+
+        nbt.setInteger("facing", currentFacing.getIndex());
+        nbt.setInteger("placedFacing", placedFacing.ordinal());
+        nbt.setInteger("destination", destination);
+        nbt.setString("pendingSchematicName", pendingSchematicName);
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound nbt) {
+        super.readFromNBT(nbt);
+
+        shouldRender = nbt.getBoolean("shouldRender");
+
+        if (nbt.hasKey("buildStatus")) {
+            int ordinal = nbt.getInteger("buildStatus");
+            RocketBuildStatus[] values = RocketBuildStatus.values();
+            buildStatus = ordinal >= 0 && ordinal < values.length ? values[ordinal] : RocketBuildStatus.IDLE;
+        }
+
+        designBlueprint = RocketBlueprint
+            .deserializeNBT(nbt.getCompoundTag("designBlueprint"), RocketPartRegistry.instance());
+        assembledBlueprint = RocketBlueprint
+            .deserializeNBT(nbt.getCompoundTag("assembledBlueprint"), RocketPartRegistry.instance());
+
+        if (nbt.hasKey("buildOrder")) {
+            currentBuildOrder = RocketBuildOrder
+                .deserializeNBT(nbt.getCompoundTag("buildOrder"), RocketPartRegistry.instance());
+        }
+
+        hasAssembler = nbt.getBoolean("hasAssembler");
+        destination = nbt.getInteger("destination");
+        pendingSchematicName = nbt.getString("pendingSchematicName");
+
+        if (nbt.hasKey("assemblerX")) {
+            pendingAssemblerCoords = new int[] { nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"),
+                nbt.getInteger("assemblerZ") };
+        }
+        if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
+        if (nbt.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
+    }
+
+    public void setDestination(int dim) {
+        this.destination = dim;
+        markDirty();
+    }
+
+    public void setGantryTerminal(TileEntityGantryTerminal terminal) {
+        this.gantryTerminal = terminal;
+    }
+
+    public TileEntityGantryTerminal getGantryTerminal() {
+        return gantryTerminal;
     }
 
     public String getPendingSchematicName() {
@@ -627,243 +572,25 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         this.pendingSchematicName = name;
     }
 
-    /**
-     * Sets the target dimension destination for the silo, based on selected planet
-     * in UI
-     *
-     * @param dim The ID of the selected dimension
-     */
-    public void setDesination(int dim) {
-        this.destination = dim;
-    }
+    // IRocketControllerTE
 
-    public TileEntityGantryTerminal getGantryTerminal() {
-        return this.gantryTerminal;
-    }
-
-    /**
-     * Returns the modules back to the linked assembler. Injects a module into the
-     * linked terminal with a return direction
-     *
-     * @param assembler The Module Assembler tile entity
-     */
-    public void returnModules(TileEntityModuleAssembler assembler) {
-        if (worldObj.isRemote) return;
-        for (int id : modules) {
-            GantryAPI.injectModule(ModuleRegistry.fromId(id), assembler, this, true);
-        }
-        modules.clear();
-
-        assembly = null;
-        if (entityRocket != null && !shouldRender) {
-            entityRocket.setModules(new ArrayList<>(modules));
-        }
-        this.shouldRender = true;
-        sync();
-    }
-
-    public void sync() {
-        markDirty();
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
-    }
-
-    /**
-     * Gets the RocketAssmebly for this silo or creates a new one
-     *
-     * @return RocketAssembly
-     */
-    public RocketAssembly getAssembly() {
-        if (assembly == null) assembly = new RocketAssembly(getModules());
-        return assembly;
-    }
-
-    /**
-     * Gets the first capsule index from the modules list
-     *
-     * @return The index of the first capsule
-     */
-    public int getFirstCapsuleIndex() {
-        List<RocketModule> list = getAssembly().getModules();
-        for (int i = 0; i < list.size(); i++) {
-            if (list.get(i) instanceof CapsuleModule) return i;
-        }
-        return -1;
-    }
-
-    /**
-     * Starts the launch sequence and updates states
-     */
-    public void launch() {
-        modules.clear();
-        shouldRender = true;
-        entityRocket = null;
-        assembly = null;
-        markDirty();
-        if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-    }
-
-    /**
-     * Spawns the rocket (used to switch from being a TE to an actual entity)
-     */
-    private void spawnRocket() {
-        entityRocket = new EntityRocket(worldObj);
-        entityRocket.bindSilo(this);
-        int[] offset = getRotatedOffset(
-            SILO_DEFAULT_X_OFFSET,
-            SILO_DEFAULT_Y_OFFSET,
-            SILO_DEFAULT_Z_OFFSET,
-            currentFacing);
-        entityRocket.setPosition(xCoord + offset[0] + 0.5, yCoord + offset[1], zCoord + offset[2] + 0.5);
-        worldObj.spawnEntityInWorld(entityRocket);
-    }
-
-    /**
-     * Receives a list of incoming modules and adds to the silo
-     *
-     * @param incomingModules The incoming module list
-     */
-    public void receiveLandingRocket(List<Integer> incomingModules) {
-        modules.clear();
-        modules.addAll(incomingModules);
-        assembly = null;
-
-        shouldRender = true;
-        entityRocket = null;
-
-        sync();
-    }
-
-    /**
-     * Getter for the rocket entity
-     *
-     * @return Rocket entity
-     */
-    public EntityRocket getEntityRocket() {
-        return entityRocket;
-    }
-
-    /**
-     * Gets all modules in the current stack
-     *
-     * @return ArrayList of modules
-     */
-    public ArrayList<Integer> getModules() {
-        return new ArrayList<>(modules);
-    }
-
-    /**
-     * Gets the number of modules in the stack
-     *
-     * @return Number of modules in stack
-     */
-    public int getNumModules() {
-        return modules.size();
-    }
-
-    /**
-     * Updates the entity once conditions met
-     */
     @Override
-    public void updateEntity() {
-        super.updateEntity();
-
-        if (!worldObj.isRemote) {
-            // TODO: Create a check of sorts to prevent the RocketEntity from uncoupling
-            // upon rejoin/server reload
-
-            // Don't create entity until modules present to avoid shadows from null entity
-            if (shouldRender && (entityRocket == null || entityRocket.isDead) && structureValid && !modules.isEmpty()) {
-                spawnRocket();
-            }
-
-            if (pendingAssemblerCoords != null) {
-                TileEntity te = worldObj
-                    .getTileEntity(pendingAssemblerCoords[0], pendingAssemblerCoords[1], pendingAssemblerCoords[2]);
-
-                if (te instanceof TileEntityModuleAssembler assembler) {
-                    moduleAssembler = assembler;
-                }
-
-                pendingAssemblerCoords = null;
-            }
-        }
+    public ForgeDirection getPlacedFacing() {
+        return placedFacing;
     }
 
-    /**
-     * Invalidation method based on entity state
-     */
     @Override
-    public void invalidate() {
-        super.invalidate();
-        if (entityRocket != null && !entityRocket.isDead) entityRocket.setDead();
-        // If modules exist, they shouldn't be cleared on breaking the silo structure,
-        // but if none exist then clear the rocket entirely
-        if (modules.isEmpty()) entityRocket = null;
+    public void setPlacedFacing(ForgeDirection dir) {
+        this.placedFacing = dir;
     }
 
-    /**
-     * Writes TE data to NBT taq
-     *
-     * @param nbt Tag to write to NBT
-     */
     @Override
-    public void writeToNBT(NBTTagCompound nbt) {
-        super.writeToNBT(nbt);
-        nbt.setBoolean("shouldRender", shouldRender);
-        // assembler
-        if (moduleAssembler != null) {
-            nbt.setInteger("assemblerX", moduleAssembler.xCoord);
-            nbt.setInteger("assemblerY", moduleAssembler.yCoord);
-            nbt.setInteger("assemblerZ", moduleAssembler.zCoord);
-        }
-        // modules list
-        NBTTagList list = new NBTTagList();
-        for (int type : modules) {
-            NBTTagCompound entry = new NBTTagCompound();
-            entry.setInteger("type", type);
-            list.appendTag(entry);
-        }
-        nbt.setTag("modules", list);
-        nbt.setBoolean("hasAssembler", hasAssembler);
-        nbt.setInteger("facing", currentFacing.getIndex());
-        nbt.setInteger("placedFacing", placedFacing.ordinal());
+    public boolean isStructureValid() {
+        return structureValid;
     }
 
-    /**
-     * Reads from NBT tag and updates TE state
-     *
-     * @param nbt Tag to read from
-     */
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
-        super.readFromNBT(nbt);
-        shouldRender = nbt.getBoolean("shouldRender");
-
-        modules.clear();
-        NBTTagList list = nbt.getTagList("modules", 10);
-        for (int i = 0; i < list.tagCount(); i++) {
-            modules.add(
-                list.getCompoundTagAt(i)
-                    .getInteger("type"));
-        }
-        assembly = null;
-
-        // Get Module Assembler
-        if (nbt.hasKey("assemblerX")) {
-            pendingAssemblerCoords = new int[] { nbt.getInteger("assemblerX"), nbt.getInteger("assemblerY"),
-                nbt.getInteger("assemblerZ") };
-        }
-        hasAssembler = nbt.getBoolean("hasAssembler");
-
-        if (nbt.hasKey("facing")) currentFacing = ExtendedFacing.byIndex(nbt.getInteger("facing"));
-        if (nbt.hasKey("placedFacing")) placedFacing = ForgeDirection.getOrientation(nbt.getInteger("placedFacing"));
-
-    }
-
-    public void setGantryTerminal(TileEntityGantryTerminal teg) {
-        this.gantryTerminal = teg;
-        foundTerminalCount++;
+    public ExtendedFacing getCurrentFacing() {
+        return currentFacing;
     }
 }

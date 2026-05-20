@@ -4,7 +4,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket.Phase;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -34,16 +33,15 @@ public class RocketLaunchPacket implements IMessage, IMessageHandler<RocketLaunc
     @Override
     public IMessage onMessage(RocketLaunchPacket message, MessageContext ctx) {
         EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-        if (player != null && player.worldObj != null) {
-            Entity entity = player.worldObj.getEntityByID(message.rocketId);
+        if (player == null || player.worldObj == null) return null;
 
-            if (entity instanceof EntityRocket rocket) {
-                if (rocket.riddenByEntity == player) {
-                    rocket.setPhase(Phase.LAUNCHING);
-                }
+        Entity entity = player.worldObj.getEntityByID(message.rocketId);
+        if (entity instanceof EntityRocket rocket) {
+            if (rocket.riddenByEntity == player) {
+                rocket.launch();
             }
-
         }
+
         return null;
     }
 }

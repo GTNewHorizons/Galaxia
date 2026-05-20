@@ -3,7 +3,7 @@ package com.gtnewhorizons.galaxia.registry.dimension.planets;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.DimensionBuilder;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.EnumTiers;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 public class Overworld extends BasePlanet {
 

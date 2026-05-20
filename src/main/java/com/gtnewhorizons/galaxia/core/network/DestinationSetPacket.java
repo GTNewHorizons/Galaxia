@@ -48,7 +48,7 @@ public class DestinationSetPacket implements IMessage {
             if (player == null) return null;
             TileEntitySilo te = (TileEntitySilo) player.worldObj.getTileEntity(message.x, message.y, message.z);
             if (te != null) {
-                te.setDesination(message.destination);
+                te.setDestination(message.destination);
             }
 
             return null;
