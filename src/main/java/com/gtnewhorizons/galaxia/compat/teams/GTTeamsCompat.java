@@ -33,11 +33,6 @@ public final class GTTeamsCompat {
     }
 
     @SideOnly(Side.CLIENT)
-    public static boolean isInTeam() {
-        return TeamManagerClient.GetTeam() != null;
-    }
-
-    @SideOnly(Side.CLIENT)
     public static Optional<String> getTeamName() {
         return Optional.ofNullable(TeamManagerClient.GetTeam())
             .map(Team::getTeamName);

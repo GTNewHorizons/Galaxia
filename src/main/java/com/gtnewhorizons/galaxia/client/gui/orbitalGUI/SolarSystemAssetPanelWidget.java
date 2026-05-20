@@ -117,10 +117,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             if (panelRoot.isEnabled()) hidePanel();
             return;
         }
-        if (!GTTeamsCompat.isInTeam()) {
-            if (panelRoot.isEnabled()) hidePanel();
-            return;
-        }
+        if (panelRoot.isEnabled()) hidePanel();
         refreshRowsIfNeeded(viewRoot);
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot

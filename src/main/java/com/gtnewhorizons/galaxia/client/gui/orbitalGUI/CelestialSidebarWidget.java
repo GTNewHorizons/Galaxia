@@ -173,7 +173,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         if (handleTransferSimulatorButtonClick(localX, localYAbsolute)) return true;
         if (handleSupplyDebugButtonClick(localX, localYAbsolute)) return true;
         if (supplyDebugPanelOpen && handleSupplyDebugPanelClick(localX, localYAbsolute)) return true;
-        if (shouldShowPermissionsButton() && handlePermissionsButtonClick(localX, localYAbsolute)) return true;
+        if (handlePermissionsButtonClick(localX, localYAbsolute)) return true;
         if (activeLayer == root) return false;
         VisibleEntry entry = findVisibleRowAt(localX, localYAbsolute);
         if (entry == null) return false;
@@ -337,10 +337,6 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return true;
         }
         return false;
-    }
-
-    private boolean shouldShowPermissionsButton() {
-        return GTTeamsCompat.isInTeam();
     }
 
     private boolean handlePermissionsButtonClick(int localX, int localY) {
@@ -720,17 +716,15 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             "Supply Debug",
             supplyDebugPanelOpen);
         updateSupplyDebugFieldPositions();
-        if (shouldShowPermissionsButton()) {
-            int btnLeft = getPermissionsButtonLeft();
-            int btnTop = getPermissionsButtonTop();
-            drawInlineButton(
-                btnLeft,
-                btnTop,
-                PERMISSIONS_BTN_WIDTH,
-                PERMISSIONS_BTN_HEIGHT,
-                StatCollector.translateToLocal("galaxia.gui.team_config.button"),
-                true);
-        }
+        int btnLeft = getPermissionsButtonLeft();
+        int btnTop = getPermissionsButtonTop();
+        drawInlineButton(
+            btnLeft,
+            btnTop,
+            PERMISSIONS_BTN_WIDTH,
+            PERMISSIONS_BTN_HEIGHT,
+            StatCollector.translateToLocal("galaxia.gui.team_config.button"),
+            true);
         if (supplyDebugPanelOpen) {
             drawSupplyDebugPanel(context, widgetTheme);
             return;
