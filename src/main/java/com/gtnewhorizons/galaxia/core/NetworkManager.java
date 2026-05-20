@@ -21,53 +21,72 @@ import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
 import com.gtnewhorizons.galaxia.core.network.TeleportRequestPacket;
 import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.relauncher.Side;
 
 public final class NetworkManager {
 
-    private static int id = 0;
-
-    // spotless:off
-    public static void registerServerPackets() {
-        GALAXIA_NETWORK.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(RocketLaunchPacket.class, RocketLaunchPacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetUpdatePacket.Handler.class, AssetUpdatePacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetBuildModulePacket.Handler.class, AssetBuildModulePacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetCreateRequestPacket.Handler.class, AssetCreateRequestPacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetModuleUpdatePacket.Handler.class, AssetModuleUpdatePacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(AssetInventoryUpdatePacket.Handler.class, AssetInventoryUpdatePacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
-            Side.SERVER);
-        GALAXIA_NETWORK.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
-                Side.SERVER);
+    public static void registerPackets() {
+        registerPackets(GALAXIA_NETWORK::registerMessage);
     }
 
-    public static void registerClientPackets() {
-        GALAXIA_NETWORK.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++,
+    static void registerPackets(PacketRegistrar registrar) {
+        int id = 0;
+        id = registerServerPackets(registrar, id);
+        registerClientPackets(registrar, id);
+    }
+
+    @FunctionalInterface
+    interface PacketRegistrar {
+
+        <REQ extends IMessage, REPLY extends IMessage> void registerMessage(
+            Class<? extends IMessageHandler<REQ, REPLY>> handler, Class<REQ> packet, int discriminator, Side side);
+    }
+
+    // spotless:off
+    private static int registerServerPackets(PacketRegistrar registrar, int id) {
+        registrar.registerMessage(TeleportRequestPacket.Handler.class, TeleportRequestPacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(DestinationSetPacket.Handler.class, DestinationSetPacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(ToggleRCSPacket.Handler.class, ToggleRCSPacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(RocketLaunchPacket.class, RocketLaunchPacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(AssetUpdatePacket.Handler.class, AssetUpdatePacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(AssetBuildModulePacket.Handler.class, AssetBuildModulePacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(AssetCreateRequestPacket.Handler.class, AssetCreateRequestPacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(AssetModuleUpdatePacket.Handler.class, AssetModuleUpdatePacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(AssetInventoryUpdatePacket.Handler.class, AssetInventoryUpdatePacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(LogisticsConfigUpdatePacket.Handler.class, LogisticsConfigUpdatePacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(RocketDestinationSyncPacket.Handler.class, RocketDestinationSyncPacket.class, id++,
+            Side.SERVER);
+        registrar.registerMessage(CommitBlueprintAndOrderPacket.Handler.class, CommitBlueprintAndOrderPacket.class, id++,
+                Side.SERVER);
+        return id;
+    }
+
+    private static int registerClientPackets(PacketRegistrar registrar, int id) {
+        registrar.registerMessage(OxygenSyncPacket.Handler.class, OxygenSyncPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++,
+        registrar.registerMessage(HazardWarningPacket.Handler.class, HazardWarningPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++,
+        registrar.registerMessage(AssetSyncPacket.Handler.class, AssetSyncPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
+        registrar.registerMessage(LogisticsSyncPacket.Handler.class, LogisticsSyncPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(ProfilerSyncPacket.Handler.class, ProfilerSyncPacket.class, id++,
+        registrar.registerMessage(ProfilerSyncPacket.Handler.class, ProfilerSyncPacket.class, id++,
             Side.CLIENT);
-        GALAXIA_NETWORK.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
+        registrar.registerMessage(BeamEffectPacket.Handler.class, BeamEffectPacket.class, id++,
             Side.CLIENT);
+        return id;
     }
     // spotless:on
 }
