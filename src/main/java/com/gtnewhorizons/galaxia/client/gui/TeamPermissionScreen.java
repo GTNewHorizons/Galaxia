@@ -36,10 +36,22 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
 
     private static final int PANEL_W = 300;
     private static final int ROW_H = 22;
+    private static final int ROW_GAP = 2;
     private static final int PAD = 12;
     private static final int HEADER_H = 24;
+    private static final int HEADER_TITLE_Y = 7;
+    private static final int SECTION_GAP = 4;
     private static final int COLOR_PICKER_H = 40;
-    private static final int BOTTOM_PAD = 8;
+    private static final int SWATCH_SIZE = 20;
+    private static final int SWATCH_GAP = 6;
+    private static final int SWATCH_LABEL_TO_SWATCH_Y = 14;
+    private static final int MIN_SCROLL_H = 80;
+    private static final int CYCLE_BTN_RIGHT = 8;
+    private static final int CYCLE_BTN_W = 72;
+    private static final int CYCLE_BTN_H_INSET = 4;
+    private static final int ROW_LABEL_X = 8;
+    private static final int EXTRA_BOTTOM_PAD = 40;
+    private static final int MAX_PANEL_H = 360;
 
     private static final int[] TEAM_COLORS = { EnumColors.MAP_COLOR_TEAM_ACCENT.getColor(),
         EnumColors.MAP_MACHINE_BLUE.getColor(), };
@@ -58,11 +70,11 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
     public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings settings) {
         TeamAction[] actions = TeamAction.values();
         int rowCount = actions.length;
-        int contentH = rowCount * (ROW_H + 2);
-        int panelH = HEADER_H + COLOR_PICKER_H + contentH + BOTTOM_PAD + 40;
+        int contentH = rowCount * (ROW_H + ROW_GAP);
+        int panelH = HEADER_H + COLOR_PICKER_H + contentH + EXTRA_BOTTOM_PAD;
 
         ModularPanel panel = ModularPanel.defaultPanel("galaxia_team_permissions")
-            .size(PANEL_W, Math.min(panelH, 360));
+            .size(PANEL_W, Math.min(panelH, MAX_PANEL_H));
 
         ParentWidget<?> bg = new ParentWidget<>().pos(0, 0)
             .size(PANEL_W, panelH)
@@ -78,16 +90,14 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
             new TextWidget<>(com.cleanroommc.modularui.api.drawable.IKey.lang("galaxia.gui.team_config.title"))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
                 .shadow(true)
-                .pos(PAD, 7));
+                .pos(PAD, HEADER_TITLE_Y));
 
-        int colorPickerY = HEADER_H + 4;
-        int swatchSize = 20;
-        int swatchGap = 6;
+        int colorPickerY = HEADER_H + SECTION_GAP;
 
         for (int i = 0; i < TEAM_COLORS.length; i++) {
             int color = TEAM_COLORS[i];
-            int sx = PAD + i * (swatchSize + swatchGap);
-            int sy = colorPickerY + 14;
+            int sx = PAD + i * (SWATCH_SIZE + SWATCH_GAP);
+            int sy = colorPickerY + SWATCH_LABEL_TO_SWATCH_Y;
 
             ButtonWidget<?> swatch = new ButtonWidget<>().background((ctx, x, y, w, h, theme) -> {
                 int current = GTTeamsCompat.getGalaxiaTeamData()
@@ -108,7 +118,7 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
                 });
             panel.child(
                 swatch.pos(sx, sy)
-                    .size(swatchSize, swatchSize));
+                    .size(SWATCH_SIZE, SWATCH_SIZE));
 
             if (i == 0) {
                 TextWidget<?> colorLabelWidget = new TextWidget<>(
@@ -121,8 +131,8 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
         }
 
         VerticalScrollData scrollData = new VerticalScrollData();
-        ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(PAD, HEADER_H + 4 + COLOR_PICKER_H)
-            .size(PANEL_W - PAD * 2, Math.max(contentH, 80));
+        ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(PAD, HEADER_H + SECTION_GAP + COLOR_PICKER_H)
+            .size(PANEL_W - PAD * 2, Math.max(contentH, MIN_SCROLL_H));
         ParentWidget<?> container = new ParentWidget<>().widthRel(1f)
             .height(contentH);
         scroll.child(container);
@@ -130,7 +140,7 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
 
         for (int i = 0; i < rowCount; i++) {
             TeamAction action = actions[i];
-            int y = i * (ROW_H + 2);
+            int y = i * (ROW_H + ROW_GAP);
             container.child(
                 buildRow(action).pos(0, y)
                     .size(PANEL_W - PAD * 2, ROW_H));
@@ -151,7 +161,9 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
             new TextWidget<>(com.cleanroommc.modularui.api.drawable.IKey.lang(key))
                 .color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
                 .shadow(true)
-                .pos(8, (ROW_H - net.minecraft.client.Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) / 2 + 1));
+                .pos(
+                    ROW_LABEL_X,
+                    (ROW_H - net.minecraft.client.Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT) / 2 + 1));
 
         TeamRole[] roles = TeamRole.values();
         ButtonWidget<?> cycleBtn = new ButtonWidget<>()
@@ -187,8 +199,8 @@ public final class TeamPermissionScreen implements IGuiHolder<GuiData> {
                 return true;
             });
         row.child(
-            cycleBtn.right(8)
-                .size(72, ROW_H - 4));
+            cycleBtn.right(CYCLE_BTN_RIGHT)
+                .size(CYCLE_BTN_W, ROW_H - CYCLE_BTN_H_INSET));
         return row;
     }
 
