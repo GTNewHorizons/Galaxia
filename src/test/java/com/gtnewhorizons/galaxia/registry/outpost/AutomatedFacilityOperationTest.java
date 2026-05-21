@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
@@ -168,7 +167,7 @@ final class AutomatedFacilityOperationTest {
     @Test
     void insertInventoryAcceptsOnlyRemainingCapacity() {
         AutomatedFacility facility = facilityWithHammer();
-        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(Items.diamond));
+        ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
 
         assertEquals(1000L, facility.updateItems(key, 1200));
 
@@ -338,11 +337,11 @@ final class AutomatedFacilityOperationTest {
     }
 
     @Test
-    void completedHammerUpgradeRefundUsesPlanBuildTicks() throws Exception {
+    void completedHammerUpgradeRefundUsesPlanBuildTicks() {
         AutomatedFacility facility = facilityWithHammer();
         ModuleInstance module = facility.modules()
             .get(0);
-        ItemStackWrapper material = ItemStackWrapper.of(material());
+        ItemStackWrapper material = ItemStackWrapper.of(new ItemStack(TEST_REFUND_ITEM));
         module.setOperation(
             ModuleOperationState.waiting(hammerUpgradePlan(2, false, material))
                 .beginBuilding());
@@ -352,10 +351,12 @@ final class AutomatedFacilityOperationTest {
 
         ModuleOperationState operation = module.operationOrNull();
         assertNotNull(operation);
-        Method isCompletionRefund = AutomatedFacility.class
-            .getDeclaredMethod("isCompletionRefund", ModuleOperationState.class);
-        isCompletionRefund.setAccessible(true);
-        assertTrue((boolean) isCompletionRefund.invoke(null, operation));
+        assertEquals(ModuleOperationPhase.REFUNDING, operation.phase());
+
+        assertTrue(facility.flushModuleOperationRefund(module));
+
+        assertNull(module.operationOrNull());
+        assertEquals(6L, facility.getItemAmount(material));
     }
 
     @Test
@@ -606,6 +607,7 @@ final class AutomatedFacilityOperationTest {
     }
 
     private static ItemStack material() {
-        return new ItemStack(Items.diamond);
+        return new ItemStack(TEST_FILLER_ITEM);
     }
+
 }

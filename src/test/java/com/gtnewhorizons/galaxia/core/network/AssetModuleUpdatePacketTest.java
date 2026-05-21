@@ -9,7 +9,6 @@ import java.util.UUID;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.AfterEach;
@@ -45,10 +44,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import sun.misc.Unsafe;
 
 final class AssetModuleUpdatePacketTest {
 
@@ -1230,25 +1229,6 @@ final class AssetModuleUpdatePacketTest {
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) {
-        try {
-            FluidStack stack = (FluidStack) unsafe().allocateInstance(FluidStack.class);
-            var fluidField = FluidStack.class.getDeclaredField("fluid");
-            fluidField.setAccessible(true);
-            fluidField.set(stack, new Fluid(fluidName));
-            stack.amount = amount;
-            return stack;
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    private static Unsafe unsafe() {
-        try {
-            var field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            return (Unsafe) field.get(null);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
+        return TestFluidStacks.stack(fluidName, amount);
     }
 }

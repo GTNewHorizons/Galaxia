@@ -2,10 +2,8 @@ package com.gtnewhorizons.galaxia.registry.outpost.recipe;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -13,8 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
-
-import sun.misc.Unsafe;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class RecipeSnapshotTest {
 
@@ -75,7 +72,7 @@ final class RecipeSnapshotTest {
 
     @Test
     void contentHashIncludesItemOutputChances() {
-        Item outputItem = Items.diamond;
+        Item outputItem = new Item();
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
 
         long base = RecipeSnapshot.computeContentHash(null, outputs, null, null, new int[] { 5000 }, 100, 512);
@@ -120,25 +117,6 @@ final class RecipeSnapshotTest {
     }
 
     private static FluidStack fluidStack(String fluidName, int amount) {
-        try {
-            FluidStack stack = (FluidStack) unsafe().allocateInstance(FluidStack.class);
-            var fluidField = FluidStack.class.getDeclaredField("fluid");
-            fluidField.setAccessible(true);
-            fluidField.set(stack, new Fluid(fluidName));
-            stack.amount = amount;
-            return stack;
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    private static Unsafe unsafe() {
-        try {
-            var field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            return (Unsafe) field.get(null);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
+        return TestFluidStacks.stack(fluidName, amount);
     }
 }

@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,6 +68,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class FacilityPersistenceManagerTest {
 
@@ -492,7 +491,9 @@ final class FacilityPersistenceManagerTest {
         assets.add(station);
         assets.add(outpost);
 
-        File file = tempDir.resolve("_assets.json")
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        File file = dataDir.resolve("_assets.json")
             .toFile();
         Files.write(
             file.toPath(),
@@ -500,16 +501,11 @@ final class FacilityPersistenceManagerTest {
                 .getBytes(StandardCharsets.UTF_8));
 
         CelestialAssetStore.clear();
-        Method loadAssets = FacilityPersistenceManager.class.getDeclaredMethod("loadAssets", File.class);
-        loadAssets.setAccessible(true);
-
-        InvocationTargetException thrown = assertThrows(
-            InvocationTargetException.class,
-            () -> loadAssets.invoke(manager, file));
-        assertTrue(thrown.getCause() instanceof IllegalStateException);
+        IllegalStateException thrown = assertThrows(
+            IllegalStateException.class,
+            () -> manager.loadFromSaveDirectory(tempDir.toFile()));
         assertTrue(
-            thrown.getCause()
-                .getMessage()
+            thrown.getMessage()
                 .contains("malformed"));
     }
 
@@ -1475,9 +1471,12 @@ final class FacilityPersistenceManagerTest {
             .orElse(null);
     }
 
-    private static String fluidName(FluidStack stack) {
-        return stack.getFluid()
-            .getName();
+    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
+        return TestFluidStacks.stack(fluidName, amount);
+    }
+
+    private static String fluidName(FluidStack stack) throws Exception {
+        return TestFluidStacks.name(stack);
     }
 
     @Test

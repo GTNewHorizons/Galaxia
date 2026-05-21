@@ -116,7 +116,11 @@ public final class FacilityPersistenceManager {
         if (!(event.world instanceof WorldServer)) return;
         if (event.world.provider.dimensionId != 0) return;
         ISaveHandler saveHandler = event.world.getSaveHandler();
-        worldSaveDir = saveHandler.getWorldDirectory();
+        loadFromSaveDirectory(saveHandler.getWorldDirectory());
+    }
+
+    public void loadFromSaveDirectory(File worldSaveDir) {
+        this.worldSaveDir = worldSaveDir;
         CelestialAssetStore.clear();
         LogisticStore.clearDeliveries();
         HammerTrajectoryLoadTracker.reset();

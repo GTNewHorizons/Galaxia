@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+import com.gtnewhorizons.galaxia.testing.TestFluidStacks;
 
 final class ProductionModuleHelperTest {
 
@@ -448,5 +449,13 @@ final class ProductionModuleHelperTest {
         public int nextInt(int bound) {
             return value;
         }
+    }
+
+    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
+        return TestFluidStacks.stack(fluidName, amount);
+    }
+
+    private static String fluidName(FluidStack stack) {
+        return TestFluidStacks.name(stack);
     }
 }
