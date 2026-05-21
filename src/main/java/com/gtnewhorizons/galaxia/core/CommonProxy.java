@@ -15,6 +15,7 @@ import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
+import com.gtnewhorizons.galaxia.handlers.TetherEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
@@ -47,6 +48,7 @@ public class CommonProxy {
         FMLBusRegister(new DimensionEventHandler());
         FMLBusRegister(new CelestialEventHandler());
         FMLBusRegister(new ServerTickTaskQueue());
+        FMLBusRegister(new TetherEventHandler());
 
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager());
@@ -70,7 +72,7 @@ public class CommonProxy {
     // load "Do your mod setup. Build whatever data structures you care about.
     // Register recipes." (Remove if not needed)
     public void init(FMLInitializationEvent event) {
-        NetworkManager.registerServerPackets();
+        NetworkManager.registerPackets();
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
         EntityRegistry.registerModEntity(EntityRocketSeat.class, "RocketSeat", 1, Galaxia.instance, 64, 1, false);
     }
