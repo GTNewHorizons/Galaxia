@@ -37,7 +37,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
 public class TileStation extends TileStationBase<TileStation> {
 
-    private StationBehavior behavior = StationBehaviors.ROOM;
+    private StationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
     @Getter
     @Setter
@@ -234,7 +234,7 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         boolean isCtrl = controllerFlag == Role.MAIN;
-        List<StationBehavior> allBehaviors = StationBehaviors.getAll();
+        List<StationBehavior> allBehaviors = GalaxiaBehaviors.getAll();
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
@@ -320,7 +320,7 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
-        nbt.setString("behavior", behavior.getName());
+        nbt.setByte("behavior", (byte) GalaxiaBehaviors.of(behavior).getId());
         if (controllerFlag != null) {
             nbt.setByte("controllerFlag", controllerFlag.id);
         }
@@ -354,7 +354,7 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         if (nbt.hasKey("behavior")) {
-            behavior = StationBehaviors.byName(nbt.getString("behavior"));
+            behavior = GalaxiaBehaviors.byId(nbt.getByte("behavior")).get();
         }
 
         if (nbt.hasKey("ownerMost") && nbt.hasKey("ownerLeast")) {
@@ -367,8 +367,6 @@ public class TileStation extends TileStationBase<TileStation> {
 
         behavior.readFromNBT(this, nbt);
     }
-
-    // -- Invalidation --
 
     @Override
     public void invalidate() {

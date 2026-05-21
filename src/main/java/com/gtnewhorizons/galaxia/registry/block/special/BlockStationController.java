@@ -16,6 +16,7 @@ import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
+import com.gtnewhorizons.galaxia.registry.block.tile.GalaxiaBehaviors;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStation;
 
 public class BlockStationController extends BlockUpdatable implements ITileEntityProvider {
@@ -30,7 +31,7 @@ public class BlockStationController extends BlockUpdatable implements ITileEntit
     @Override
     public TileEntity createNewTileEntity(World worldIn, int meta) {
         TileStation te = new TileStation();
-        te.setBehavior(com.gtnewhorizons.galaxia.registry.block.tile.StationBehaviors.ROOM);
+        te.setBehavior(GalaxiaBehaviors.ROOM.get());
         return te;
     }
 

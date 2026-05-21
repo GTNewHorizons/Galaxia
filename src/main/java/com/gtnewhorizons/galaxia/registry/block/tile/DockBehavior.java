@@ -50,11 +50,6 @@ public class DockBehavior implements StationBehaviorWithAttachments {
         .build();
 
     @Override
-    public String getName() {
-        return "dock";
-    }
-
-    @Override
     public String getUnlocalizedName() {
         return "galaxia.behavior.dock";
     }

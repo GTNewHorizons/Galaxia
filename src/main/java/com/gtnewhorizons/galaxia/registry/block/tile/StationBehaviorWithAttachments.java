@@ -52,16 +52,12 @@ public interface StationBehaviorWithAttachments extends StationBehavior {
 
     @Override
     default void writeToNBT(TileStation station, NBTTagCompound nbt) {
-        NBTTagCompound sub = new NBTTagCompound();
-        sub.setTag("attachments", BlockPos.listToNBT(station.getAttachments()));
-        nbt.setTag(getName(), sub);
+        nbt.setTag("attachments", BlockPos.listToNBT(station.getAttachments()));
     }
 
     @Override
     default void readFromNBT(TileStation station, NBTTagCompound nbt) {
-        if (!nbt.hasKey(getName())) return;
-        NBTTagCompound sub = nbt.getCompoundTag(getName());
-        if (!sub.hasKey("attachments")) return;
-        station.setAttachments(BlockPos.listFromNBT(sub.getTagList("attachments", Constants.NBT.TAG_COMPOUND)));
+        if (!nbt.hasKey("attachments")) return;
+        station.setAttachments(BlockPos.listFromNBT(nbt.getTagList("attachments", Constants.NBT.TAG_COMPOUND)));
     }
 }

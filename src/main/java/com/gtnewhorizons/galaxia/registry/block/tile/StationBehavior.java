@@ -10,8 +10,6 @@ import java.util.List;
 
 public interface StationBehavior {
 
-    String getName();
-
     String getUnlocalizedName();
 
     IStructureDefinition<TileStation> getStructureDefinition();

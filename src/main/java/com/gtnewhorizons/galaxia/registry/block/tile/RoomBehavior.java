@@ -38,11 +38,6 @@ public class RoomBehavior implements StationBehavior {
         .build();
 
     @Override
-    public String getName() {
-        return "room";
-    }
-
-    @Override
     public String getUnlocalizedName() {
         return "galaxia.behavior.room";
     }
