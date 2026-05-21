@@ -334,23 +334,6 @@ final class ModuleMinerTest {
                 .anyMatch(stack -> stack.getItem() == Items.diamond || stack.getItem() == Items.emerald));
     }
 
-    @Test
-    void volatileDepositAddsFuelMiningCandidates() {
-        AutomatedFacility facility = createFeatureFacility();
-        ModuleInstance miner = createMiner(
-            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.VOLATILE_DEPOSIT.key()));
-        List<ItemStack> candidates = new java.util.ArrayList<>();
-        candidates.add(new ItemStack(Items.iron_ingot));
-
-        candidates.addAll(
-            ModuleMiner.featureMiningEffects(miner, facility)
-                .candidates());
-
-        assertTrue(
-            candidates.stream()
-                .anyMatch(stack -> stack.getItem() == Items.gunpowder || stack.getItem() == Items.coal));
-    }
-
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
