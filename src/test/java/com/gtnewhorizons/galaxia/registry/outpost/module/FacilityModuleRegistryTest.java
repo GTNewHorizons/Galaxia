@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleO
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilityModuleRegistryTest {
@@ -107,12 +108,12 @@ final class FacilityModuleRegistryTest {
             .build();
 
         assertEquals(
-            3L,
+            UpkeepAmount.ofWhole(3L),
             data.upkeepDemand()
                 .itemsPerMinute()
                 .get(ItemStackWrapper.of(upkeep)));
         assertEquals(
-            1000L,
+            UpkeepAmount.ofWhole(1000L),
             data.upkeepDemand()
                 .fluidsPerMinute()
                 .get("galaxia.test.coolant"));

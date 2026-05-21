@@ -7,7 +7,8 @@ import java.util.Objects;
 
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-public record UpkeepDemand(Map<ItemStackWrapper, Long> itemsPerMinute, Map<String, Long> fluidsPerMinute) {
+public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
+    Map<String, UpkeepAmount> fluidsPerMinute) {
 
     public static final UpkeepDemand EMPTY = new UpkeepDemand(Map.of(), Map.of());
 
@@ -45,63 +46,67 @@ public record UpkeepDemand(Map<ItemStackWrapper, Long> itemsPerMinute, Map<Strin
         if (percent == 0) return EMPTY;
 
         Builder builder = builder();
-        itemsPerMinute.forEach((item, amount) -> builder.item(item, scaleCeil(amount, percent)));
-        fluidsPerMinute.forEach((fluid, amount) -> builder.fluid(fluid, scaleCeil(amount, percent)));
+        itemsPerMinute.forEach((item, amount) -> builder.item(item, amount.multiplyPercent(percent)));
+        fluidsPerMinute.forEach((fluid, amount) -> builder.fluid(fluid, amount.multiplyPercent(percent)));
         return builder.build();
     }
 
-    private static long scaleCeil(long amount, int percent) {
-        return (amount * percent + 99L) / 100L;
-    }
-
-    private static Map<ItemStackWrapper, Long> normalizeItems(Map<ItemStackWrapper, Long> source) {
+    private static Map<ItemStackWrapper, UpkeepAmount> normalizeItems(Map<ItemStackWrapper, UpkeepAmount> source) {
         Objects.requireNonNull(source, "itemsPerMinute");
-        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> entry : source.entrySet()) {
+        Map<ItemStackWrapper, UpkeepAmount> result = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : source.entrySet()) {
             ItemStackWrapper item = Objects.requireNonNull(entry.getKey(), "upkeep item");
-            Long amount = Objects.requireNonNull(entry.getValue(), "upkeep item amount");
-            if (amount <= 0L) {
+            UpkeepAmount amount = Objects.requireNonNull(entry.getValue(), "upkeep item amount");
+            if (amount.isZero()) {
                 throw new IllegalArgumentException("upkeep item amount must be > 0 for " + item.toKey());
             }
-            result.merge(item, amount, Long::sum);
+            result.merge(item, amount, UpkeepAmount::plus);
         }
         return Collections.unmodifiableMap(result);
     }
 
-    private static Map<String, Long> normalizeFluids(Map<String, Long> source) {
+    private static Map<String, UpkeepAmount> normalizeFluids(Map<String, UpkeepAmount> source) {
         Objects.requireNonNull(source, "fluidsPerMinute");
-        Map<String, Long> result = new LinkedHashMap<>();
-        for (Map.Entry<String, Long> entry : source.entrySet()) {
+        Map<String, UpkeepAmount> result = new LinkedHashMap<>();
+        for (Map.Entry<String, UpkeepAmount> entry : source.entrySet()) {
             String fluid = Objects.requireNonNull(entry.getKey(), "upkeep fluid");
             if (fluid.isBlank()) {
                 throw new IllegalArgumentException("upkeep fluid name must not be blank");
             }
-            Long amount = Objects.requireNonNull(entry.getValue(), "upkeep fluid amount");
-            if (amount <= 0L) {
+            UpkeepAmount amount = Objects.requireNonNull(entry.getValue(), "upkeep fluid amount");
+            if (amount.isZero()) {
                 throw new IllegalArgumentException("upkeep fluid amount must be > 0 for " + fluid);
             }
-            result.merge(fluid, amount, Long::sum);
+            result.merge(fluid, amount, UpkeepAmount::plus);
         }
         return Collections.unmodifiableMap(result);
     }
 
     public static final class Builder {
 
-        private final Map<ItemStackWrapper, Long> itemsPerMinute = new LinkedHashMap<>();
-        private final Map<String, Long> fluidsPerMinute = new LinkedHashMap<>();
+        private final Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute = new LinkedHashMap<>();
+        private final Map<String, UpkeepAmount> fluidsPerMinute = new LinkedHashMap<>();
 
         private Builder() {}
 
         public Builder item(ItemStackWrapper item, long amount) {
-            if (amount > 0L) {
-                itemsPerMinute.merge(Objects.requireNonNull(item, "item"), amount, Long::sum);
+            return item(item, UpkeepAmount.ofWhole(amount));
+        }
+
+        public Builder item(ItemStackWrapper item, UpkeepAmount amount) {
+            if (amount != null && !amount.isZero()) {
+                itemsPerMinute.merge(Objects.requireNonNull(item, "item"), amount, UpkeepAmount::plus);
             }
             return this;
         }
 
         public Builder fluid(String fluidName, long amount) {
-            if (amount > 0L) {
-                fluidsPerMinute.merge(Objects.requireNonNull(fluidName, "fluidName"), amount, Long::sum);
+            return fluid(fluidName, UpkeepAmount.ofWhole(amount));
+        }
+
+        public Builder fluid(String fluidName, UpkeepAmount amount) {
+            if (amount != null && !amount.isZero()) {
+                fluidsPerMinute.merge(Objects.requireNonNull(fluidName, "fluidName"), amount, UpkeepAmount::plus);
             }
             return this;
         }

@@ -33,11 +33,11 @@ final class UpkeepDemandTest {
             .build();
 
         assertEquals(
-            10L,
+            UpkeepAmount.ofWhole(10L),
             demand.itemsPerMinute()
                 .get(REDSTONE));
         assertEquals(
-            350L,
+            UpkeepAmount.ofWhole(350L),
             demand.fluidsPerMinute()
                 .get("galaxia.test.fluid"));
     }
@@ -57,15 +57,15 @@ final class UpkeepDemandTest {
         UpkeepDemand result = first.plus(second);
 
         assertEquals(
-            10L,
+            UpkeepAmount.ofWhole(10L),
             result.itemsPerMinute()
                 .get(REDSTONE));
         assertEquals(
-            2L,
+            UpkeepAmount.ofWhole(2L),
             result.itemsPerMinute()
                 .get(GOLD));
         assertEquals(
-            150L,
+            UpkeepAmount.ofWhole(150L),
             result.fluidsPerMinute()
                 .get("galaxia.test.fluid"));
     }
@@ -80,11 +80,11 @@ final class UpkeepDemandTest {
         UpkeepDemand result = demand.multiplyPercent(80);
 
         assertEquals(
-            3L,
+            UpkeepAmount.parse("2.4"),
             result.itemsPerMinute()
                 .get(REDSTONE));
         assertEquals(
-            81L,
+            UpkeepAmount.parse("80.8"),
             result.fluidsPerMinute()
                 .get("galaxia.test.fluid"));
     }

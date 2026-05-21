@@ -45,8 +45,8 @@ public final class UpkeepLedger {
         }
     }
 
-    public record UpkeepSummary(Map<ItemStackWrapper, Long> itemsPerMinute, Map<String, Long> fluidsPerMinute,
-        List<ModuleDemand> moduleDemands) {
+    public record UpkeepSummary(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
+        Map<String, UpkeepAmount> fluidsPerMinute, List<ModuleDemand> moduleDemands) {
 
         public static final UpkeepSummary EMPTY = new UpkeepSummary(Map.of(), Map.of(), List.of());
 

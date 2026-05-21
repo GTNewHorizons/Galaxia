@@ -46,11 +46,11 @@ final class UpkeepLedgerTest {
         UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
 
         assertEquals(
-            5L,
+            UpkeepAmount.ofWhole(5L),
             summary.itemsPerMinute()
                 .get(itemKey));
         assertEquals(
-            250L,
+            UpkeepAmount.ofWhole(250L),
             summary.fluidsPerMinute()
                 .get("galaxia.test.coolant"));
         assertEquals(
