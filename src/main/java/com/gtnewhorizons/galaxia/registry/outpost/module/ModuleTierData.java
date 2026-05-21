@@ -6,13 +6,17 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
+
 public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks,
     @Nullable Long capacity, @Nullable Map<String, Integer> variantCooldowns, @Nullable Integer chargeTicks,
     @Nullable Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> constructionCost, int buildTicks,
-    int completionRefundPercent) {
+    int completionRefundPercent, UpkeepDemand upkeepDemand) {
 
     public ModuleTierData {
         constructionCost = Map.copyOf(constructionCost);
+        upkeepDemand = upkeepDemand == null ? UpkeepDemand.EMPTY : upkeepDemand;
         if (variantCooldowns != null) {
             variantCooldowns = Map.copyOf(variantCooldowns);
         }
@@ -40,7 +44,8 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
             null,
             constructionCost,
             200,
-            80);
+            80,
+            UpkeepDemand.EMPTY);
     }
 
     public ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, int cooldownTicks, @Nullable Long capacity,
@@ -56,7 +61,8 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
             null,
             constructionCost,
             buildTicks,
-            completionRefundPercent);
+            completionRefundPercent,
+            UpkeepDemand.EMPTY);
     }
 
     public static Builder builder() {
@@ -79,6 +85,7 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
         private Map<ItemStack, Long> cost;
         private int buildTicks = 200;
         private int refundPercent = 80;
+        private UpkeepDemand upkeepDemand = UpkeepDemand.EMPTY;
 
         private Builder() {}
 
@@ -132,6 +139,27 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
             return this;
         }
 
+        public Builder upkeep(UpkeepDemand upkeepDemand) {
+            this.upkeepDemand = require(upkeepDemand, "upkeepDemand");
+            return this;
+        }
+
+        public Builder upkeepItem(ItemStack item, long amountPerMinute) {
+            this.upkeepDemand = upkeepDemand.plus(
+                UpkeepDemand.builder()
+                    .item(ItemStackWrapper.of(require(item, "upkeepItem")), amountPerMinute)
+                    .build());
+            return this;
+        }
+
+        public Builder upkeepFluid(String fluidName, long amountPerMinute) {
+            this.upkeepDemand = upkeepDemand.plus(
+                UpkeepDemand.builder()
+                    .fluid(fluidName, amountPerMinute)
+                    .build());
+            return this;
+        }
+
         public ModuleTierData build() {
             return new ModuleTierData(
                 require(addedEnergyCapacity, "addedEnergyCapacity"),
@@ -143,7 +171,8 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
                 variantChargeTicks,
                 require(cost, "cost"),
                 buildTicks,
-                refundPercent);
+                refundPercent,
+                upkeepDemand);
         }
 
         private static <T> T require(T value, String fieldName) {

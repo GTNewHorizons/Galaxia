@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 
 public abstract class TieredModuleComponent implements IModuleComponent {
 
@@ -16,5 +17,10 @@ public abstract class TieredModuleComponent implements IModuleComponent {
             getClass().getSimpleName() + " does not support operation "
                 + spec.getClass()
                     .getSimpleName());
+    }
+
+    @Override
+    public UpkeepDemand upkeepFor(ModuleInstance module) {
+        return module.currentTierUpkeepDemand();
     }
 }
