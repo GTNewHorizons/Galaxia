@@ -13,6 +13,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 public final class LayoutCacheBundle {
@@ -40,7 +41,7 @@ public final class LayoutCacheBundle {
                 if (kind.isCapacityModule()) {
                     result.add(CacheKind.CAPACITY_CLUSTERS);
                 }
-                if (kind == FacilityModuleKind.MAINTENANCE_BAY) {
+                if (hasAreaEffects(kind)) {
                     result.add(CacheKind.MAINTENANCE_COVERAGE);
                 }
             }
@@ -50,7 +51,7 @@ public final class LayoutCacheBundle {
                 }
             }
             case SET_ENABLED -> {
-                if (kind == FacilityModuleKind.MAINTENANCE_BAY) {
+                if (hasAreaEffects(kind)) {
                     result.add(CacheKind.MAINTENANCE_COVERAGE);
                 }
             }
@@ -58,6 +59,12 @@ public final class LayoutCacheBundle {
             case SET_PARALLEL -> {}
         }
         return result;
+    }
+
+    private static boolean hasAreaEffects(FacilityModuleKind kind) {
+        FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
+        return definition != null && !definition.areaEffects()
+            .isEmpty();
     }
 
     public void applyMutation(MutationKind mutation, FacilityModuleKind kind) {
@@ -291,7 +298,7 @@ public final class LayoutCacheBundle {
         return Math.round(base * (1.0 + 0.5 * neighbors));
     }
 
-    // ── Maintenance coverage (unchanged) ──
+    // ── Maintenance coverage ──
 
     public Set<StationTileCoord> getMaintenanceCoverage() {
         if (maintenanceCoverageDirty) {
@@ -306,29 +313,12 @@ public final class LayoutCacheBundle {
             maintenanceCoverageDirty = false;
             return;
         }
-        layout.forEachAnchor((coord, module) -> {
-            if (module.kind() == FacilityModuleKind.MAINTENANCE_BAY && module.enabled()) {
-                addIfInBounds(coord, 0, -1);
-                addIfInBounds(coord, 1, -1);
-                addIfInBounds(coord, 1, 0);
-                addIfInBounds(coord, 1, 1);
-                addIfInBounds(coord, 0, 1);
-                addIfInBounds(coord, -1, 1);
-                addIfInBounds(coord, -1, 0);
-                addIfInBounds(coord, -1, -1);
-            }
-        });
+        layout.forEachAnchor(
+            (coord, module) -> {
+                module.areaEffects()
+                    .forEach(effect -> effect.collectAffectedTiles(module, maintenanceCoverage::add));
+            });
         maintenanceCoverageDirty = false;
-    }
-
-    private void addIfInBounds(StationTileCoord coord, int dx, int dy) {
-        int nx = coord.dx() + dx;
-        int ny = coord.dy() + dy;
-        if (nx >= StationTileCoord.MIN && nx <= StationTileCoord.MAX
-            && ny >= StationTileCoord.MIN
-            && ny <= StationTileCoord.MAX) {
-            maintenanceCoverage.add(StationTileCoord.of(nx, ny));
-        }
     }
 
     private void invalidate(EnumSet<CacheKind> caches, MutationKind mutation, FacilityModuleKind kind) {

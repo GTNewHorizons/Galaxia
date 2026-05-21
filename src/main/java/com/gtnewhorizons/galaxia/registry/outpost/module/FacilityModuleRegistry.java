@@ -37,7 +37,7 @@ public class FacilityModuleRegistry {
 
     public record Definition(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> applyBehavior, Supplier<IModuleComponent> defaultFactory,
-        List<ModulePanelAction> panelActions, boolean settingsGroups) {
+        List<ModulePanelAction> panelActions, boolean settingsGroups, List<ModuleAreaEffect> areaEffects) {
 
         public Definition {
             if (tierData == null || tierData.isEmpty()) {
@@ -47,6 +47,7 @@ public class FacilityModuleRegistry {
             copiedTiers.putAll(tierData);
             tierData = Collections.unmodifiableMap(copiedTiers);
             panelActions = List.copyOf(panelActions == null ? List.of() : panelActions);
+            areaEffects = List.copyOf(areaEffects == null ? List.of() : areaEffects);
         }
 
         public ModuleTierData getTierData(ModuleTier tier) {
@@ -255,7 +256,8 @@ public class FacilityModuleRegistry {
                 .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
                 .build(),
             (instance, outpost) -> {},
-            ModuleMaintenanceBay::new);
+            ModuleMaintenanceBay::new,
+            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
 
         if (FacilityModuleKind.MACERATOR.isAvailable()) {
             builder(FacilityModuleKind.MACERATOR)
@@ -329,14 +331,28 @@ public class FacilityModuleRegistry {
 
     public static void register(FacilityModuleKind kind, ModuleTierData data,
         BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
+        register(kind, data, tickFunction, defaultFactory, List.of());
+    }
+
+    public static void register(FacilityModuleKind kind, ModuleTierData data,
+        BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory,
+        List<ModuleAreaEffect> areaEffects) {
         DEFINITIONS.put(
             kind,
-            new Definition(kind, Map.of(ModuleTier.NONE, data), tickFunction, defaultFactory, List.of(), false));
+            new Definition(
+                kind,
+                Map.of(ModuleTier.NONE, data),
+                tickFunction,
+                defaultFactory,
+                List.of(),
+                false,
+                areaEffects));
     }
 
     public static void register(FacilityModuleKind kind, Map<ModuleTier, ModuleTierData> tierData,
         BiConsumer<ModuleInstance, CelestialAsset> tickFunction, Supplier<IModuleComponent> defaultFactory) {
-        DEFINITIONS.put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false));
+        DEFINITIONS
+            .put(kind, new Definition(kind, tierData, tickFunction, defaultFactory, List.of(), false, List.of()));
     }
 
     public static ModuleDefinitionBuilder builder(FacilityModuleKind kind) {
@@ -484,6 +500,7 @@ public class FacilityModuleRegistry {
         private BiConsumer<ModuleInstance, CelestialAsset> behavior;
         private Supplier<IModuleComponent> factory;
         private final java.util.ArrayList<ModulePanelAction> panelActions = new java.util.ArrayList<>();
+        private final java.util.ArrayList<ModuleAreaEffect> areaEffects = new java.util.ArrayList<>();
         private boolean settingsGroups;
 
         private ModuleDefinitionBuilder(FacilityModuleKind kind) {
@@ -536,6 +553,14 @@ public class FacilityModuleRegistry {
             return this;
         }
 
+        public ModuleDefinitionBuilder areaEffect(ModuleAreaEffect effect) {
+            if (effect == null) {
+                throw new IllegalArgumentException("effect must not be null");
+            }
+            areaEffects.add(effect);
+            return this;
+        }
+
         public void register() {
             if (tierData == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: tierData must be set for " + kind);
@@ -546,7 +571,9 @@ public class FacilityModuleRegistry {
             if (factory == null) {
                 throw new IllegalStateException("ModuleDefinitionBuilder: factory must be set for " + kind);
             }
-            DEFINITIONS.put(kind, new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups));
+            DEFINITIONS.put(
+                kind,
+                new Definition(kind, tierData, behavior, factory, panelActions, settingsGroups, areaEffects));
         }
     }
 }

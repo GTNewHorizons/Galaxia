@@ -116,7 +116,8 @@ final class AutomatedFacilityUpkeepTest {
             (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
-            false);
+            false,
+            List.of());
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,

@@ -20,8 +20,9 @@ public final class UpkeepLedger {
         List<ModuleDemand> moduleDemands = new java.util.ArrayList<>();
         for (ModuleInstance module : facility.modules()) {
             if (!countsForUpkeep(module)) continue;
-            UpkeepDemand demand = module.component()
+            UpkeepDemand baseDemand = module.component()
                 .upkeepFor(module);
+            UpkeepDemand demand = facility.effectiveUpkeepDemand(module, baseDemand);
             if (demand.isEmpty()) continue;
             aggregate = aggregate.plus(demand);
             moduleDemands.add(new ModuleDemand(module.id, module.kind(), module.priorityOverride(), demand));

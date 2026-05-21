@@ -49,6 +49,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
@@ -1033,7 +1034,16 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public int upkeepReductionPercent(ModuleInstance module) {
-        return 100 - featureModifiers(module).upkeepMultiplierPercent();
+        return 100 - upkeepMultiplierPercent(module);
+    }
+
+    public int upkeepMultiplierPercent(ModuleInstance module) {
+        return featureModifiers(module).upkeepMultiplierPercent();
+    }
+
+    public UpkeepDemand effectiveUpkeepDemand(ModuleInstance module, UpkeepDemand baseDemand) {
+        if (baseDemand == null || baseDemand.isEmpty()) return UpkeepDemand.EMPTY;
+        return baseDemand.multiplyPercent(upkeepMultiplierPercent(module));
     }
 
     public long effectivePowerDrawEuPerTick(ModuleInstance module) {
@@ -1078,6 +1088,10 @@ public final class AutomatedFacility extends CelestialAsset {
             feature.applyModuleModifiers(
                 new FeatureModuleContext(module, entry.getKey(), entry.getValue(), tiles.length),
                 builder);
+        }
+        for (ModuleInstance source : modules) {
+            source.areaEffects()
+                .forEach(effect -> effect.apply(source, module, builder));
         }
         return builder.build(counts);
     }

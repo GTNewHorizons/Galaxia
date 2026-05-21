@@ -95,6 +95,10 @@ public class ModuleInstance implements Buildable {
         return definition.tierData();
     }
 
+    public java.util.List<ModuleAreaEffect> areaEffects() {
+        return definition.areaEffects();
+    }
+
     @Override
     public void clearConsumedResources() {
         consumedResources.clear();

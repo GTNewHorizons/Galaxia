@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleAreaEffect;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -70,13 +71,47 @@ final class UpkeepLedgerTest {
                 .isEmpty());
     }
 
+    @Test
+    void summaryAppliesRegisteredAreaUpkeepModifier() {
+        Item item = new Item();
+        ItemStack itemStack = new ItemStack(item);
+        ItemStackWrapper itemKey = ItemStackWrapper.of(itemStack);
+        ModuleInstance source = moduleWithAreaEffect();
+        ModuleInstance target = moduleWithUpkeep(itemStack, 5L, "galaxia.test.coolant", 250L);
+        AutomatedFacility facility = facilityWithModule(source, target);
+
+        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
+
+        assertEquals(
+            UpkeepAmount.ofWhole(4L),
+            summary.itemsPerMinute()
+                .get(itemKey));
+        assertEquals(
+            UpkeepAmount.ofWhole(200L),
+            summary.fluidsPerMinute()
+                .get("galaxia.test.coolant"));
+        assertEquals(
+            UpkeepAmount.ofWhole(4L),
+            summary.moduleDemands()
+                .get(0)
+                .demand()
+                .itemsPerMinute()
+                .get(itemKey));
+    }
+
     private static AutomatedFacility facilityWithModule(ModuleInstance module) {
+        return facilityWithModule(new ModuleInstance[] { module });
+    }
+
+    private static AutomatedFacility facilityWithModule(ModuleInstance... modules) {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        facility.addModule(module);
+        for (ModuleInstance module : modules) {
+            facility.addModule(module);
+        }
         return facility;
     }
 
@@ -96,11 +131,38 @@ final class UpkeepLedgerTest {
             (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
-            false);
+            false,
+            List.of());
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,
             StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.NONE);
+        module.setComponent(new TestTieredModule());
+        module.completeConstruction();
+        return module;
+    }
+
+    private static ModuleInstance moduleWithAreaEffect() {
+        ModuleTierData tierData = ModuleTierData.builder()
+            .addedEnergyCapacity(0L)
+            .powerDraw(0L)
+            .cooldown(20)
+            .cost(Map.of(new ItemStack(new Item()), 1L))
+            .build();
+        FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
+            FacilityModuleKind.MAINTENANCE_BAY,
+            Map.of(ModuleTier.NONE, tierData),
+            (module, facility) -> {},
+            TestTieredModule::new,
+            List.<ModulePanelAction>of(),
+            false,
+            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
+        ModuleInstance module = new ModuleInstance(
+            ModuleInstance.ID.create(),
+            definition,
+            StationTileCoord.of(0, 0),
             ModuleShape.SINGLE,
             ModuleTier.NONE);
         module.setComponent(new TestTieredModule());
