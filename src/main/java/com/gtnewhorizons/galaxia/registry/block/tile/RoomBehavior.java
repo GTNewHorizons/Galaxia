@@ -18,8 +18,6 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 
 public class RoomBehavior implements StationBehavior {
 
-    public static final RoomBehavior INSTANCE = new RoomBehavior();
-
     private final ArbitraryShapeDefinition<TileStation> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStation>builder()
         .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())

@@ -24,6 +24,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
@@ -54,6 +55,10 @@ public class TileStation extends TileStationBase<TileStation> {
         if (newBehavior == behavior) return;
         if (structureValid && behavior != null) {
             behavior.onStructureDisformed(this);
+        }
+        if (!(newBehavior instanceof StationBehaviorWithAttachments) && !attachments.isEmpty()) {
+            attachments.clear();
+            markDirty();
         }
         this.behavior = newBehavior;
         markStructureDirty();
@@ -186,12 +191,19 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public int getVolume() {
-        int own = behavior.getVolume(this);
+        int own = 0;
+        var def = behavior.getStructureDefinition();
+        if (def instanceof ArbitraryShapeDefinition<?> asd) {
+            own = asd.getVolume();
+        }
         if (graph == null) return own;
         int sum = own;
         for (TileStationBase<?> s : graph.iterateOver(TileStationBase.class)) {
             if (s instanceof TileStation ts) {
-                sum += ts.behavior.getVolume(ts);
+                var tsDef = ts.behavior.getStructureDefinition();
+                if (tsDef instanceof ArbitraryShapeDefinition<?> asd) {
+                    sum += asd.getVolume();
+                }
             }
         }
         return sum;
@@ -399,20 +411,27 @@ public class TileStation extends TileStationBase<TileStation> {
             graph = controller.getGraph();
         }
         behavior.onGraphRebuilt(this);
+        if (behavior instanceof StationBehaviorWithAttachments attacher && graph != null) {
+            attacher.registerAttachments(this, graph);
+        }
     }
 
     @Override
     public void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {
+        if (!(behavior instanceof StationBehaviorWithAttachments attacher)) return;
         if (!attachments.contains(pos)) {
             attachments.add(pos);
             markDirty();
+            attacher.onAttachmentsChanged(this, pos, true);
         }
     }
 
     @Override
     public void onAttachmentDisconnected(BlockPos pos) {
+        if (!(behavior instanceof StationBehaviorWithAttachments attacher)) return;
         if (attachments.remove(pos)) {
             markDirty();
+            attacher.onAttachmentsChanged(this, pos, false);
         }
     }
 
