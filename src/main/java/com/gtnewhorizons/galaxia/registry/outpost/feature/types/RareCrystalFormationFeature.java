@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.outpost.feature.types;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.init.Items;
@@ -60,27 +59,10 @@ public final class RareCrystalFormationFeature implements PlanetaryFeature {
     }
 
     private static List<ItemStack> miningPool() {
-        List<ItemStack> pool = rawOrePool(MATERIALS);
+        List<ItemStack> pool = GTUtility.getRawOreStacks(MATERIALS);
         if (pool.isEmpty()) {
             pool.add(new ItemStack(Items.diamond));
             pool.add(new ItemStack(Items.emerald));
-        }
-        return pool;
-    }
-
-    private static List<ItemStack> rawOrePool(String[] materials) {
-        List<ItemStack> pool = new ArrayList<>(materials.length);
-        for (String material : materials) {
-            ItemStack stack;
-            try {
-                stack = GTUtility.getRawOreStack(material);
-            } catch (ClassCastException ignored) {
-                stack = null;
-            }
-            if (stack == null) continue;
-            stack = stack.copy();
-            stack.stackSize = 1;
-            pool.add(stack);
         }
         return pool;
     }
