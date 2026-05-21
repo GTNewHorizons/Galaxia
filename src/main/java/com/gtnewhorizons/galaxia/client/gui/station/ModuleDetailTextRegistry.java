@@ -2,8 +2,10 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -29,6 +31,8 @@ final class ModuleDetailTextRegistry {
 
     private static final int SECTION_GAP = 4;
     private static final int LINE_GAP = 3;
+    private static final String FEATURE_LINE_PREFIX = "  ";
+    private static final String FEATURE_EFFECT_PREFIX = "    ";
     private static final List<Provider> PROVIDERS = new ArrayList<>();
 
     static {
@@ -92,35 +96,73 @@ final class ModuleDetailTextRegistry {
     }
 
     private static void appendPlanetaryFeatureText(Context context, Lines lines) {
-        LinkedHashSet<PlanetaryFeatureKey> features = new LinkedHashSet<>();
+        Map<PlanetaryFeatureKey, Integer> coveredFeatures = new LinkedHashMap<>();
+        int totalTiles = 0;
         for (StationTileCoord coord : context.module()
             .shape()
             .tiles(
                 context.module()
                     .anchor())) {
-            features.addAll(
-                context.facility()
-                    .planetaryFeaturesAt(coord));
-        }
-        if (!features.isEmpty()) {
-            boolean first = true;
-            for (PlanetaryFeatureKey key : features) {
-                PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-                String name = definition != null ? definition.displayName() : key.toString();
-                if (first) {
-                    lines.sectionLine("Feature: " + name, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-                    first = false;
-                } else {
-                    lines.line("Feature: " + name, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-                }
+            totalTiles++;
+            for (PlanetaryFeatureKey key : context.facility()
+                .planetaryFeaturesAt(coord)) {
+                coveredFeatures.merge(key, 1, Integer::sum);
             }
         }
-        for (FeatureContribution contribution : context.facility()
-            .featureContributions(context.module())) {
-            if (contribution.effectLine()
-                .isBlank()) continue;
-            lines.sectionLine(contribution.effectLine(), EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+        appendFeatureLines(
+            lines,
+            coveredFeatures,
+            totalTiles,
+            context.facility()
+                .featureContributions(context.module()));
+    }
+
+    static void appendFeatureLines(Lines lines, Map<PlanetaryFeatureKey, Integer> coveredFeatures, int totalTiles,
+        List<FeatureContribution> contributions) {
+        Map<PlanetaryFeatureKey, List<FeatureContribution>> contributionsByFeature = new LinkedHashMap<>();
+        for (FeatureContribution contribution : contributions) {
+            contributionsByFeature.computeIfAbsent(contribution.key(), ignored -> new ArrayList<>())
+                .add(contribution);
         }
+
+        LinkedHashSet<PlanetaryFeatureKey> keys = new LinkedHashSet<>(coveredFeatures.keySet());
+        keys.addAll(contributionsByFeature.keySet());
+        if (keys.isEmpty()) return;
+
+        lines.sectionLine("Features:", EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        for (PlanetaryFeatureKey key : keys) {
+            List<FeatureContribution> featureContributions = contributionsByFeature.getOrDefault(key, List.of());
+            int covered = coveredFeatures.getOrDefault(
+                key,
+                featureContributions.isEmpty() ? 0
+                    : featureContributions.get(0)
+                        .coveredTiles() & 0xFF);
+            int total = totalTiles > 0 ? totalTiles
+                : featureContributions.isEmpty() ? covered
+                    : featureContributions.get(0)
+                        .totalTiles() & 0xFF;
+            boolean hasEffect = featureContributions.stream()
+                .anyMatch(
+                    contribution -> !contribution.effectLine()
+                        .isBlank());
+
+            lines.line(
+                FEATURE_LINE_PREFIX + featureDisplayName(
+                    key) + " " + covered + "/" + total + (hasEffect ? "" : " (no current effect)"),
+                hasEffect ? EnumColors.MAP_COLOR_TEXT_SECTION.getColor() : EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            for (FeatureContribution contribution : featureContributions) {
+                if (contribution.effectLine()
+                    .isBlank()) continue;
+                lines.line(
+                    FEATURE_EFFECT_PREFIX + contribution.effectLine(),
+                    EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            }
+        }
+    }
+
+    private static String featureDisplayName(PlanetaryFeatureKey key) {
+        PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
+        return definition != null ? definition.displayName() : key.toString();
     }
 
     private static void appendRecipeText(Context context, Lines lines) {
@@ -175,6 +217,16 @@ final class ModuleDetailTextRegistry {
                 if (entry instanceof TextEntry) size++;
             }
             return size;
+        }
+
+        List<String> texts() {
+            List<String> texts = new ArrayList<>();
+            for (Entry entry : entries) {
+                if (entry instanceof TextEntry text) {
+                    texts.add(text.text());
+                }
+            }
+            return texts;
         }
 
         private void section() {
