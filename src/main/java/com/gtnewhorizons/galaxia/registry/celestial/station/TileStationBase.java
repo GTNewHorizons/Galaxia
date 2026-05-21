@@ -7,7 +7,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import lombok.Getter;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -23,6 +22,8 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
+
+import lombok.Getter;
 
 public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {

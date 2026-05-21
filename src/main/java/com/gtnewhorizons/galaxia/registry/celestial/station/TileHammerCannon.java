@@ -5,7 +5,6 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import lombok.Getter;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
@@ -44,6 +43,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+
+import lombok.Getter;
 
 public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
     implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerCannon> {
