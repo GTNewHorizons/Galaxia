@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.gtnewhorizons.galaxia.client.render.sky.EnhancedSkyRender;
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 
 /**
  * A mixin used to add custom celestial objects to star renderer such as galaxies / nebulae etc
@@ -19,7 +20,9 @@ public abstract class RenderStarsMixin {
 
     @Inject(method = "renderSky(F)V", at = @At("RETURN"))
     private void galaxia$afterSky(float partialTicks, CallbackInfo ci) {
-        World world = Minecraft.getMinecraft().theWorld;
-        EnhancedSkyRender.renderBakedSkyLayers(world, partialTicks);
+        if (ConfigPlayer.ConfigPlayerGlobal.render_additional_stars) {
+            World world = Minecraft.getMinecraft().theWorld;
+            EnhancedSkyRender.renderBakedSkyLayers(world, partialTicks);
+        }
     }
 }
