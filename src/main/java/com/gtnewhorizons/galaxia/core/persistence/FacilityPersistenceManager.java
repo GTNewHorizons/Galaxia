@@ -84,6 +84,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.MinerSettings
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import sun.misc.Unsafe;
@@ -538,7 +540,12 @@ public final class FacilityPersistenceManager {
                 e.getValue());
         }
         out.fluidBuffer = toFluidBuffer(state);
-
+        out.upkeepItemCredits = encodeItemUpkeepAmountMap(
+            state.upkeepCredits()
+                .itemCredits());
+        out.upkeepFluidCredits = encodeFluidUpkeepAmountMap(
+            state.upkeepCredits()
+                .fluidCredits());
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         int anchorCount = 0;
@@ -735,6 +742,11 @@ public final class FacilityPersistenceManager {
         if (json.fluidBuffer != null) {
             state.loadFluidSnapshot(json.fluidBuffer);
         }
+        state.loadUpkeepCredits(
+            new UpkeepSettlement.Credits(
+                decodeItemUpkeepAmountMap(json.upkeepItemCredits),
+                decodeFluidUpkeepAmountMap(json.upkeepFluidCredits)));
+
         StationLayout layout = state.stationLayout();
         int tilesLoaded = 0;
         int tilesSkipped = 0;
@@ -933,6 +945,62 @@ public final class FacilityPersistenceManager {
         return result;
     }
 
+    private static Map<String, Long> encodeItemUpkeepAmountMap(Map<ItemStackWrapper, UpkeepAmount> amounts) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        if (amounts == null) return encoded;
+        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : amounts.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null
+                || entry.getValue()
+                    .isZero())
+                continue;
+            encoded.put(
+                entry.getKey()
+                    .toKey(),
+                entry.getValue()
+                    .microUnitsPerMinute());
+        }
+        return encoded;
+    }
+
+    private static Map<ItemStackWrapper, UpkeepAmount> decodeItemUpkeepAmountMap(Map<String, Long> encoded) {
+        Map<ItemStackWrapper, UpkeepAmount> decoded = new LinkedHashMap<>();
+        if (encoded == null || encoded.isEmpty()) return decoded;
+        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
+            ItemStackWrapper key = ItemStackWrapper.fromKey(entry.getKey());
+            if (key != null && entry.getValue() > 0L) decoded.put(key, UpkeepAmount.ofMicroUnits(entry.getValue()));
+        }
+        return decoded;
+    }
+
+    private static Map<String, Long> encodeFluidUpkeepAmountMap(Map<String, UpkeepAmount> amounts) {
+        Map<String, Long> encoded = new LinkedHashMap<>();
+        if (amounts == null) return encoded;
+        for (Map.Entry<String, UpkeepAmount> entry : amounts.entrySet()) {
+            if (entry.getKey() == null || entry.getKey()
+                .isEmpty()
+                || entry.getValue() == null
+                || entry.getValue()
+                    .isZero())
+                continue;
+            encoded.put(
+                entry.getKey(),
+                entry.getValue()
+                    .microUnitsPerMinute());
+        }
+        return encoded;
+    }
+
+    private static Map<String, UpkeepAmount> decodeFluidUpkeepAmountMap(Map<String, Long> encoded) {
+        Map<String, UpkeepAmount> decoded = new LinkedHashMap<>();
+        if (encoded == null || encoded.isEmpty()) return decoded;
+        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
+            if (entry.getKey() != null && !entry.getKey()
+                .isEmpty() && entry.getValue() > 0L)
+                decoded.put(entry.getKey(), UpkeepAmount.ofMicroUnits(entry.getValue()));
+        }
+        return decoded;
+    }
+
     static final class AssetJson {
 
         CelestialAsset.ID assetId;
@@ -965,6 +1033,8 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
+        Map<String, Long> upkeepItemCredits;
+        Map<String, Long> upkeepFluidCredits;
         List<StationTileJson> layoutTiles;
     }
 

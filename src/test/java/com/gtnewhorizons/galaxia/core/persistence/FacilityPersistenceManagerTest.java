@@ -67,6 +67,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilityPersistenceManagerTest {
@@ -1356,6 +1358,33 @@ final class FacilityPersistenceManagerTest {
                 .upperOrDefault());
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
+    }
+
+    @Test
+    void upkeepCreditsRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        station.loadUpkeepCredits(
+            new UpkeepSettlement.Credits(Map.of(), Map.of("galaxia.persistence.coolant", UpkeepAmount.parse("0.25"))));
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(
+            "0.25",
+            decoded.upkeepCredits()
+                .fluidCredits()
+                .get("galaxia.persistence.coolant")
+                .toDisplayString());
     }
 
     // ── Helpers ──
