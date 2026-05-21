@@ -7,6 +7,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import lombok.Getter;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -35,6 +36,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     protected List<BlockPos> airlocks = new ArrayList<>();
     protected BlockPos here;
 
+    @Getter
     private boolean oxygenated = false;
     protected int oxygenLevel = 100;
 
@@ -148,10 +150,6 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         oxygenated = checkOxygenLevels(new HashSet<>());
     }
 
-    public boolean isOxygenated() {
-        return oxygenated;
-    }
-
     private boolean checkOxygenLevels(Set<BlockPos> visited) {
         if (!structureValid) return false;
 
@@ -176,7 +174,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             for (BlockPos otherPos : airlock.getStationControllers()) {
                 if (otherPos.equals(here)) continue;
 
-                TileStationBase other = otherPos.getTE(worldObj);
+                TileStationBase<?> other = otherPos.getTE(worldObj);
                 if (other == null) continue;
 
                 if (other.checkOxygenLevels(visited)) {

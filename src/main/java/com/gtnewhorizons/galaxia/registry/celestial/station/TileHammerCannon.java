@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import lombok.Getter;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
@@ -77,26 +78,20 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
 
     // Internal inventory only available for firing hammer packages
     private final List<IInventory> inventory = new ArrayList<>();
+
+    @Getter
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private BlockPos here;
+
+    @Getter
     private final ModuleInstance moduleInstance;
+
+    @Getter
     private final ModuleHammer hammer;
-
-    public ModuleInstance getModuleInstance() {
-        return moduleInstance;
-    }
-
-    public ModuleHammer getHammer() {
-        return hammer;
-    }
 
     public List<IInventory> getChestInventories() {
         return inventory;
-    }
-
-    public ResourceFilter<ItemStackWrapper> getFilter() {
-        return filter;
     }
 
     public TileHammerCannon() {
@@ -162,11 +157,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     @Override
     public void onDetached(StationGraph graph) {
         this.graph = null;
-    }
-
-    @Override
-    public List<IInventory> getInventories() {
-        return List.of();
     }
 
     @Override

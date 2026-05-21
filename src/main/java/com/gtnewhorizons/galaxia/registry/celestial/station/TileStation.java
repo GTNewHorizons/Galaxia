@@ -315,8 +315,6 @@ public class TileStation extends TileStationBase<TileStation> {
         return panel;
     }
 
-    // -- NBT --
-
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
@@ -352,8 +350,6 @@ public class TileStation extends TileStationBase<TileStation> {
 
         if (nbt.hasKey("controllerFlag")) {
             controllerFlag = Role.fromId(nbt.getByte("controllerFlag"));
-        } else {
-            controllerFlag = null; // first placement
         }
 
         if (nbt.hasKey("behavior")) {
@@ -376,6 +372,10 @@ public class TileStation extends TileStationBase<TileStation> {
     public void invalidate() {
         if (graph != null) {
             if (graph.getController() == this) {
+                if (structureValid) {
+                    structureValid = false;
+                    behavior.onStructureDisformed(this);
+                }
                 graph.destroy();
                 graph = null;
                 if (backingStation != null) {
@@ -389,6 +389,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 graph.disconnectPiece(here);
             }
         }
+        attachments.clear();
         super.invalidate();
     }
 
@@ -403,7 +404,13 @@ public class TileStation extends TileStationBase<TileStation> {
 
     @Override
     public void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {
+        if (piece != this && neighbor != this) return;
+        if (structureValid) {
+            structureValid = false;
+            behavior.onStructureDisformed(this);
+        }
         graph = null;
+        controllerFlag = null;
     }
 
     @Override
