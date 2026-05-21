@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -15,18 +17,21 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
-public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extends GalaxiaMultiblockBase<T>
-    implements IGuiHolder<PosGuiData> {
+public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
+    implements IGuiHolder<PosGuiData>, IGraphListener {
 
     public static final List<Block> BASE_VALID_BLOCKS = List.of(
         GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
         GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
         GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
 
+    protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
     protected BlockPos here;
 
@@ -53,10 +58,14 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
         this.here = new BlockPos(xCoord, yCoord, zCoord);
 
         for (BlockPos airlock : airlocks) {
-            if (!(worldObj.getTileEntity(airlock.x(), airlock.y(), airlock.z()) instanceof TileEntityAirlock teLock))
-                continue;
+            if (!(airlock.getTE(worldObj) instanceof TileEntityAirlock teLock)) continue;
 
-            teLock.trackStationController(this.here);
+            if (!teLock.trackStationController(this.here)) {
+                Galaxia.LOG.warn(
+                    "Airlock at %s cannot track more than %d controllers",
+                    airlock,
+                    TileEntityAirlock.MAX_CONNECTIONS);
+            }
         }
     }
 
@@ -64,8 +73,7 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
     public void onStructureDisformed() {
         super.onStructureDisformed();
         for (BlockPos airlock : airlocks) {
-            if (!(worldObj.getTileEntity(airlock.x(), airlock.y(), airlock.z()) instanceof TileEntityAirlock teLock))
-                continue;
+            if (!(airlock.getTE(worldObj) instanceof TileEntityAirlock teLock)) continue;
 
             teLock.untrackStationController(this.here);
         }
@@ -104,8 +112,6 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
         }
     }
 
-    public abstract boolean tryRebuildControllersGraph();
-
     public abstract int getSearchRadius();
 
     @Override
@@ -113,7 +119,7 @@ public abstract class TileStationBase<T extends GalaxiaMultiblockBase<T>> extend
         super.invalidate();
         for (BlockPos b : airlocks) {
             TileEntityAirlock airlock = b.getTE(worldObj);
-            if (airlock == null) return;
+            if (airlock == null) continue;
 
             airlock.untrackStationController(this.here);
         }

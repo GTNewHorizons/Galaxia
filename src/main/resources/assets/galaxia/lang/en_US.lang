@@ -145,6 +145,7 @@ tile.silo_controller.name=Rocket Silo
 tile.module_assembler_controller.name=Module Assembler
 tile.tenebrae_fumarole.name=Fumarole
 tile.gantry_block.name=Gantry Shaft
+tile.hammer_cannon.name=Hammer Cannon
 tile.gantry_terminal.name=Gantry Terminal
 tile.rocket_trophy.name=Rocket Trophy
 
@@ -361,6 +362,18 @@ entity.galaxia.EntityRocket.name=Rocket
 
 
 #### Config
+
+# Config - "Structures"
+galaxia.config.category.structures=Structures
+galaxia.config.category.structures.tooltip=Settings for ArbitraryShapeDefinition structures
+galaxia.config.category.structures_enclosed=Enclosed
+galaxia.config.category.structures_enclosed.tooltip=Settings for enclosed structures (controllers, rooms)
+galaxia.config.structures.enclosed_radius=Search radius
+galaxia.config.structures.enclosed_radius.tooltip=Search radius for structure boundaries (be careful, large structures could become very laggy!)
+galaxia.config.category.structures_open=Open
+galaxia.config.category.structures_open.tooltip=Settings for open structures (docks)
+galaxia.config.structures.open_radius=Search radius
+galaxia.config.structures.open_radius.tooltip=Search radius for structure boundaries 
 
 # Config - "Player"
 galaxia.config.category.player=Player

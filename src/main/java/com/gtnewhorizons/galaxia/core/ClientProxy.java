@@ -23,6 +23,8 @@ import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.items.tether.TetherRenderer;
@@ -95,6 +97,8 @@ public class ClientProxy extends CommonProxy {
         // StructureLib registering
         GalaxiaMultiblockHandler.register(new TileEntitySilo());
         GalaxiaMultiblockHandler.register(new TileEntityModuleAssembler());
+        GalaxiaMultiblockHandler.register(new TileEntityAirlock());
+        GalaxiaMultiblockHandler.register(new TileHammerTarget());
 
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);

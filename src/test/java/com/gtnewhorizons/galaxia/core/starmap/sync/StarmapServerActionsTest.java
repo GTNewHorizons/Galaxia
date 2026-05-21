@@ -8,14 +8,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.UUID;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.core.network.AssetBuildModulePacket;
+import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.AssetUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsConfigUpdatePacket;
@@ -39,6 +41,7 @@ final class StarmapServerActionsTest {
 
     @BeforeAll
     static void init() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -319,12 +322,11 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = testResource();
 
-        AssetSyncPacket result = com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket
-            .add(facility.assetId, resource, 32)
+        AssetSyncPacket result = AssetInventoryUpdatePacket.add(facility.assetId, resource, 32)
             .apply(TEAM, true);
 
         assertNotNull(result);
-        assertEquals(32, facility.inventory.getAmount(resource));
+        assertEquals(32, facility.getItemAmount(resource));
         assertNull(CelestialAssetStore.CLIENT.findAssetInternal(facility.assetId));
     }
 
@@ -352,6 +354,6 @@ final class StarmapServerActionsTest {
     }
 
     private static ItemStackWrapper testResource() {
-        return new ItemStackWrapper(new Item(), 0, null);
+        return new ItemStackWrapper(Items.diamond, 0, null);
     }
 }

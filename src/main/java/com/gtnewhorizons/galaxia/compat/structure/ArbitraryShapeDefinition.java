@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.compat.structure;
 
+import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -8,7 +9,6 @@ import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -24,8 +24,9 @@ import com.gtnewhorizons.galaxia.compat.structure.util.DenseBitSet;
 import com.gtnewhorizons.galaxia.compat.structure.util.IntQueue;
 import com.gtnewhorizons.galaxia.compat.structure.util.LocalCoord;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 
-public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<T>> implements IStructureDefinition<T> {
+public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implements IStructureDefinition<T> {
 
     private static final int[] DIR_DX = { 0, 0, 0, 0, 1, -1 };
     private static final int[] DIR_DY = { 0, 0, 1, -1, 0, 0 };
@@ -42,6 +43,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     private final int searchRadius;
     private T tile;
     private int volume;
+    private final boolean enclosed;
 
     private final Map<Block, IStructureElement<T>> structureElements;
 
@@ -79,7 +81,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     private final DenseBitSet coarseVisited;
     private final DenseBitSet coarseInterior;
 
-    public static <T extends TileEntity & ArbitraryShapeTile<T>> Builder<T> builder() {
+    public static <T extends GalaxiaMultiblockBase<T>> Builder<T> builder() {
         return new Builder<>();
     }
 
@@ -92,22 +94,23 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     }
 
     @SuppressWarnings("unchecked")
-    private ArbitraryShapeDefinition(Map<Block, IStructureElement<T>> structureElement, int searchRadius) {
+    private ArbitraryShapeDefinition(Map<Block, IStructureElement<T>> structureElement, int searchRadius,
+        boolean enclosed) {
         if (searchRadius > LocalCoord.MAX_SEARCH_RADIUS) {
             throw new IllegalArgumentException("Search radius too large: " + searchRadius);
         }
         // spotless:off
-        this.searchRadius      = searchRadius;
-        this.structureElements = structureElement;
+        this.enclosed           = enclosed;
+        this.searchRadius       = searchRadius;
+        this.structureElements  = structureElement;
 
-        this.structureBlocks   = null;
-        this.enclosedVisited   = null;
-
-        this.coarseRadius       = (searchRadius >> CHUNK_SHIFT) + 2;
-        int crLen = 2 * coarseRadius + 1;
-        this.chunkHasBoundary = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
-        this.coarseVisited = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
-        this.coarseInterior = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
+        this.structureBlocks    = null;
+        this.enclosedVisited    = null;
+        this.coarseRadius       = enclosed ? (searchRadius >> CHUNK_SHIFT) + 2 : 0;
+        int crLen               = 2 * coarseRadius + 1;
+        this.chunkHasBoundary   = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
+        this.coarseVisited      = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
+        this.coarseInterior     = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
         // spotless:on
     }
 
@@ -122,7 +125,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
             Galaxia.LOG.error("Structure is not formed yet");
             return false;
         }
-        return enclosedVisited.containsChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord)
+        return enclosed && enclosedVisited.containsChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord)
             || isInCoarseInteriorChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord);
     }
 
@@ -138,37 +141,8 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     @Override
     public boolean check(T tile, String shapeName, World world, ExtendedFacing extendedFacing, int x, int y, int z,
         int offsetX, int offsetY, int offsetZ, boolean forceCheckAllBlocks) {
-        if (fastRevalidate(tile)) return true;
-        if (floodVisited == null) {
-            int sr = searchRadius;
-            int srLen = 2 * sr + 1;
-            this.floodVisited = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
-            this.validBoundaryBits = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
-        }
-        coarseInterior.clear();
-        coarseVisited.clear();
-        floodStructure(tile, world);
 
-        // Size (or reuse) the two persistent bitsets to exactly the discovered AABB,
-        // then clear them so checkEnclosed() starts fresh.
-        resizeOrClearEnclosedBitsets();
-
-        ForgeDirection placedFacing = tile.getPlacedFacing();
-        boolean enclosed = checkEnclosed(tile, world, placedFacing);
-        if (enclosed) {
-            this.tile = tile;
-            this.volume = (enclosedVisited.size() + coarseVisited.size() * coarseRadius * coarseRadius * coarseRadius)
-                - structureElements.size();
-
-            floodVisited = null;
-            validBoundaryBits = null;
-        } else {
-            // Discard all temporary state; enclosedVisited and structureBlocks are
-            // intentionally kept for isInsideStructure / fastRevalidate queries.
-            floodVisited.clear();
-            validBoundaryBits.clear();
-        }
-        return enclosed;
+        return enclosed ? enclosedCheck(tile, world, extendedFacing) : openCheck(tile, world);
     }
 
     @Override
@@ -210,14 +184,87 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
     public void iterate(String shapeName, World world, ExtendedFacing extendedFacing, int x, int y, int z, int offsetX,
         int offsetY, int offsetZ, IStructureWalker<T> walker) {}
 
+    private boolean openCheck(T tile, World world) {
+        if (fastRevalidate(tile, world)) return true;
+
+        int sr = searchRadius;
+        int srLen = 2 * sr + 1;
+        this.floodVisited = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
+        this.validBoundaryBits = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
+
+        floodStructure(tile, world);
+        if (canReuse()) {
+            structureBlocks.clear();
+        } else {
+            structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+        }
+
+        final boolean[] valid = { true };
+        this.validBoundaryBits.forEach((lx, ly, lz) -> {
+            if (!checkValidBoundary(
+                tile,
+                world,
+                LocalCoord.worldX(lx, tile.xCoord),
+                LocalCoord.worldY(ly, tile.yCoord),
+                LocalCoord.worldZ(lz, tile.zCoord))) {
+                valid[0] = false;
+                return;
+            }
+            this.structureBlocks.add(lx, ly, lz);
+        });
+
+        this.tile = tile;
+        this.floodVisited = null;
+        this.validBoundaryBits = null;
+        return valid[0];
+    }
+
+    private boolean enclosedCheck(T tile, World world, ExtendedFacing extendedFacing) {
+        if (fastRevalidate(tile, world)) return true;
+        if (floodVisited == null) {
+            int sr = searchRadius;
+            int srLen = 2 * sr + 1;
+            this.floodVisited = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
+            this.validBoundaryBits = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
+        }
+        coarseInterior.clear();
+        coarseVisited.clear();
+        floodStructure(tile, world);
+
+        // Size (or reuse) the two persistent bitsets to exactly the discovered AABB,
+        // then clear them so checkEnclosed() starts fresh.
+        if (canReuse()) {
+            structureBlocks.clear();
+            enclosedVisited.clear();
+        } else {
+            structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+            enclosedVisited = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+        }
+
+        ForgeDirection placedFacing = extendedFacing.getDirection();
+        boolean enclosed = checkEnclosed(tile, world, placedFacing);
+        if (enclosed) {
+            this.tile = tile;
+            this.volume = (enclosedVisited.size() + coarseVisited.size() * coarseRadius * coarseRadius * coarseRadius)
+                - structureElements.size();
+
+            floodVisited = null;
+            validBoundaryBits = null;
+        } else {
+            // Discard all temporary state; enclosedVisited and structureBlocks are
+            // intentionally kept for isInsideStructure / fastRevalidate queries.
+            floodVisited.clear();
+            validBoundaryBits.clear();
+        }
+        return enclosed;
+    }
+
     /**
      * Checks if any of the known boundary blocks are still valid. Also checks if any of the neighboring *air* blocks
      * are still invalid. If they aren't something might have changed in the structure shell, so needs full revalidation
      */
-    private boolean fastRevalidate(T tile) {
+    private boolean fastRevalidate(T tile, World world) {
         if (structureBlocks == null || !tile.isStructureValid() || structureBlocks.isEmpty()) return false;
-
-        World world = tile.worldObj();
         if (world == null || world.isRemote) return true;
 
         final boolean[] valid = { true };
@@ -265,7 +312,7 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
      * When the radius is unchanged from the previous check the existing arrays
      * are cleared in place, avoiding allocation churn on repeated validation.
      */
-    private void resizeOrClearEnclosedBitsets() {
+    private boolean canReuse() {
         int neededLenX = aabbMaxX - aabbMinX + 1;
         int neededLenY = aabbMaxY - aabbMinY + 1;
         int neededLenZ = aabbMaxZ - aabbMinZ + 1;
@@ -275,17 +322,15 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
             && aabbMinX == encMinX
             && aabbMinY == encMinY
             && aabbMinZ == encMinZ) {
-            structureBlocks.clear();
-            enclosedVisited.clear();
+            return true;
         } else {
-            structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, neededLenX, neededLenY, neededLenZ);
-            enclosedVisited = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, neededLenX, neededLenY, neededLenZ);
             encMinX = aabbMinX;
             encMinY = aabbMinY;
             encMinZ = aabbMinZ;
             encLenX = neededLenX;
             encLenY = neededLenY;
             encLenZ = neededLenZ;
+            return false;
         }
     }
 
@@ -557,12 +602,23 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
         }
     }
 
-    public static class Builder<T extends TileEntity & ArbitraryShapeTile<T>> {
+    public static class Builder<T extends GalaxiaMultiblockBase<T>> {
 
         private final Map<Block, IStructureElement<T>> elements = new HashMap<>();
         private int searchRadius = LocalCoord.SEARCH_RADIUS;
+        private int enclosed = -1;
 
         private Builder() {}
+
+        public Builder<T> enclosed() {
+            this.enclosed = 1;
+            return this;
+        }
+
+        public Builder<T> open() {
+            this.enclosed = 0;
+            return this;
+        }
 
         public Builder<T> withSearchRadius(int radius) {
             if (radius > LocalCoord.MAX_SEARCH_RADIUS) {
@@ -616,7 +672,10 @@ public class ArbitraryShapeDefinition<T extends TileEntity & ArbitraryShapeTile<
 
         @SuppressWarnings("unchecked")
         public ArbitraryShapeDefinition<T> build() {
-            return new ArbitraryShapeDefinition<>(elements, searchRadius);
+            if (enclosed == -1) {
+                throw new InvalidParameterException("Must specify if multiblock is open or enclosed");
+            }
+            return new ArbitraryShapeDefinition<>(elements, searchRadius, enclosed == 1);
         }
     }
 }

@@ -102,12 +102,8 @@ final class HammerConfigModalWidget extends ParentWidget<HammerConfigModalWidget
             return;
         }
         AutomatedFacility facility = ModuleConfigModalSupport.facility(assetId);
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluate(
-            facility,
-            module,
-            CelestialClient.allOutposts(),
-            CelestialClient.clientDeliveries(),
-            GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status status = HammerDispatchStatus
+            .evaluate(facility, module, CelestialClient.allOutposts(), GalaxiaCelestialAPI.currentOrbitalTime());
         int y = ModuleConfigModalSupport.drawTrimmedLine(
             dispatchStatusLine(status),
             ModuleConfigModalSupport.PANEL_PADDING,

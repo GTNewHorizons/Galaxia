@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
@@ -11,7 +11,7 @@ public class ModulePower extends TieredModuleComponent implements IParallelModul
 
     private byte parallel = 1;
 
-    public static void doNothing(ModuleInstance instance, AutomatedFacility outpost) {}
+    public static void doNothing(ModuleInstance instance, CelestialAsset outpost) {}
 
     @Override
     public byte getParallel() {

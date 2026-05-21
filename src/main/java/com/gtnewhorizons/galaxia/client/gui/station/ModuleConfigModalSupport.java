@@ -144,6 +144,10 @@ final class ModuleConfigModalSupport {
             : null;
     }
 
+    static @Nullable CelestialAsset celestialAsset(CelestialAsset.ID assetId) {
+        return assetId != null ? CelestialClient.getByAssetId(assetId) : null;
+    }
+
     static @Nullable ModuleInstance module(CelestialAsset.ID assetId, int moduleIndex) {
         AutomatedFacility facility = facility(assetId);
         if (facility == null || moduleIndex < 0

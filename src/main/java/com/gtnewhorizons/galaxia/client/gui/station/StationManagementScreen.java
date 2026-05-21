@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -72,65 +73,99 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
         CelestialAsset.ID assetId = pendingAssetId;
         boolean creativeBuildMode = pendingCreativeBuildMode;
         StationVisionLayer visionLayer = pendingVisionLayer;
-        StationTilePickerController tilePickerController = new StationTilePickerController();
+        boolean isAutomatedFacility = CelestialClient.getByAssetId(assetId) instanceof AutomatedFacility;
         StationOverlayCoordinator overlayCoordinator = new StationOverlayCoordinator();
         int overlayX = LEFT_PANEL_WIDTH + PADDING * 2;
-        int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
-        ModuleConfigModalController configController = new ModuleConfigModalController(
-            panel,
-            assetId,
-            overlayX,
-            overlayY,
-            tilePickerController,
-            overlayCoordinator);
-        StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
-        StationMapWidget map = new StationMapWidget(
-            assetId,
-            coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
-            tile -> configController.requestRetargetTo(tile.isCore() ? null : tile.module()),
-            LEFT_PANEL_WIDTH + PADDING,
-            PADDING,
-            PADDING,
-            visionLayer,
-            overlayCoordinator::containsMouse,
-            tilePickerController);
 
         panel.child(
             new StationScreenBackground().left(0)
                 .top(0)
                 .widthRel(1f)
                 .heightRel(1f));
-        panel.child(
-            map.left(0)
-                .top(0)
-                .widthRel(1f)
-                .heightRel(1f));
-        panel.child(
-            new StationSidePanelWidget(assetId, map, tilePickerController, configController).left(PADDING)
-                .top(PADDING)
-                .width(LEFT_PANEL_WIDTH - PADDING)
-                .heightRelOffset(0.55f, -PADDING * 2));
-        panel.child(
-            new ModuleDetailPanel(map, tilePickerController).left(PADDING)
-                .width(LEFT_PANEL_WIDTH - PADDING)
-                .heightRelOffset(0.45f, -PADDING)
-                .bottom(PADDING));
-        panel.child(
-            new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
-                .top(PADDING * 2)
-                .width(StationTilePickerControlsWidget.WIDTH)
-                .height(StationTilePickerControlsWidget.HEIGHT));
-        panel.child(
-            inventoryPanel.left(overlayX)
-                .top(PADDING)
-                .width(StationInventoryPanelWidget.PANEL_WIDTH)
-                .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
-        panel.child(
-            new ModalInputBlocker(overlayCoordinator).left(0)
-                .top(0)
-                .widthRel(1f)
-                .heightRel(1f));
-        startPendingBuildPicker(assetId, tilePickerController);
+
+        if (isAutomatedFacility) {
+            StationTilePickerController tilePickerController = new StationTilePickerController();
+            int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
+            ModuleConfigModalController configController = new ModuleConfigModalController(
+                panel,
+                assetId,
+                overlayX,
+                overlayY,
+                tilePickerController,
+                overlayCoordinator);
+            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
+            StationMapWidget map = new StationMapWidget(
+                assetId,
+                coord -> ModulePickerScreen.open(assetId, coord, creativeBuildMode),
+                tile -> configController.requestRetargetTo(tile.isCore() ? null : tile.module()),
+                LEFT_PANEL_WIDTH + PADDING,
+                PADDING,
+                PADDING,
+                visionLayer,
+                overlayCoordinator::containsMouse,
+                tilePickerController);
+
+            panel.child(
+                map.left(0)
+                    .top(0)
+                    .widthRel(1f)
+                    .heightRel(1f));
+            panel.child(
+                new StationSidePanelWidget(assetId, map, tilePickerController, configController).left(PADDING)
+                    .top(PADDING)
+                    .width(LEFT_PANEL_WIDTH - PADDING)
+                    .heightRelOffset(0.55f, -PADDING * 2));
+            panel.child(
+                new ModuleDetailPanel(map, tilePickerController).left(PADDING)
+                    .width(LEFT_PANEL_WIDTH - PADDING)
+                    .heightRelOffset(0.45f, -PADDING)
+                    .bottom(PADDING));
+            panel.child(
+                new StationTilePickerControlsWidget(tilePickerController).left(LEFT_PANEL_WIDTH + PADDING * 2)
+                    .top(PADDING * 2)
+                    .width(StationTilePickerControlsWidget.WIDTH)
+                    .height(StationTilePickerControlsWidget.HEIGHT));
+            panel.child(
+                inventoryPanel.left(overlayX)
+                    .top(PADDING)
+                    .width(StationInventoryPanelWidget.PANEL_WIDTH)
+                    .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
+            panel.child(
+                new ModalInputBlocker(overlayCoordinator).left(0)
+                    .top(0)
+                    .widthRel(1f)
+                    .heightRel(1f));
+            startPendingBuildPicker(assetId, tilePickerController);
+        } else {
+            int overlayY = PADDING + StationInventoryPanelWidget.BUTTON_HEIGHT + 4;
+            ModuleConfigModalController configController = new ModuleConfigModalController(
+                panel,
+                assetId,
+                overlayX,
+                overlayY,
+                null,
+                overlayCoordinator);
+            StationInventoryPanelWidget inventoryPanel = new StationInventoryPanelWidget(assetId, overlayCoordinator);
+            panel.child(
+                new StationSidePanelWidget(assetId, null).left(PADDING)
+                    .top(PADDING)
+                    .width(LEFT_PANEL_WIDTH - PADDING)
+                    .heightRelOffset(1f, -PADDING * 2));
+            panel.child(
+                inventoryPanel.left(overlayX)
+                    .top(PADDING)
+                    .width(StationInventoryPanelWidget.PANEL_WIDTH)
+                    .height(StationInventoryPanelWidget.PANEL_HEIGHT + StationInventoryPanelWidget.BUTTON_HEIGHT + 4));
+            panel.child(
+                ModuleConfigModalSupport.button("Items", () -> configController.openStationLogistics())
+                    .pos(PADDING, PADDING + 200)
+                    .size(88, 20));
+            panel.child(
+                new ModalInputBlocker(overlayCoordinator).left(0)
+                    .top(0)
+                    .widthRel(1f)
+                    .heightRel(1f));
+        }
         return panel;
     }
 

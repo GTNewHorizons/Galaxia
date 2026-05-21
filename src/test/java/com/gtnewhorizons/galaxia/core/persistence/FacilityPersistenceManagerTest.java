@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -33,6 +33,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -40,6 +41,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -68,16 +70,20 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
-import sun.misc.Unsafe;
-
 final class FacilityPersistenceManagerTest {
 
     private static final Gson GSON = new Gson();
     private static final Gson PERSISTENCE_GSON = new GsonBuilder().serializeNulls()
         .create();
 
+    private static Fluid TEST_FLUID_1;
+    private static Fluid TEST_FLUID_2;
+
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
+        TEST_FLUID_1 = FluidRegistry.WATER;
+        TEST_FLUID_2 = FluidRegistry.LAVA;
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -526,15 +532,11 @@ final class FacilityPersistenceManagerTest {
 
     private static FacilityPersistenceManager.FacilityStateJson malformedFacilityState() {
         FacilityPersistenceManager.FacilityStateJson facility = new FacilityPersistenceManager.FacilityStateJson();
-        facility.celestialBodyId = CelestialObjectId.PANSPIRA.toString();
-        facility.systemId = CelestialObjectId.NOVA_CAELUM.toString();
-        facility.planetaryAnchorBodyId = CelestialObjectId.PANSPIRA.toString();
         facility.settingsGroupsNextId = 1;
         facility.settingsGroups = new ArrayList<>();
         facility.modules = new ArrayList<>();
         facility.buffer = new LinkedHashMap<>();
         facility.fluidBuffer = new LinkedHashMap<>();
-        facility.logisticsConfig = new LinkedHashMap<>();
         facility.layoutTiles = new ArrayList<>();
 
         FacilityPersistenceManager.ModuleJson miner = new FacilityPersistenceManager.ModuleJson();
@@ -851,14 +853,15 @@ final class FacilityPersistenceManagerTest {
     }
 
     @Test
-    void fluidBufferRoundTripsThroughFacilityPersistence() throws Exception {
+    void fluidBufferRoundTripsThroughFacilityPersistence() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
         AutomatedFacility station = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        station.inventory.addFluid("galaxia.persistence.buffer", 4096);
+        FluidKey bufferKey = new FluidKey(TEST_FLUID_1, null);
+        station.updateFluids(bufferKey, 4096);
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -868,7 +871,7 @@ final class FacilityPersistenceManagerTest {
             station.status());
         manager.decodeFacilityState(decoded, encoded);
 
-        assertEquals(4096, decoded.inventory.getFluidAmount("galaxia.persistence.buffer"));
+        assertEquals(4096, decoded.getFluidAmount(bufferKey));
         assertEquals(GSON.toJson(encoded), GSON.toJson(manager.encodeFacilityState(decoded)));
     }
 
@@ -1275,8 +1278,8 @@ final class FacilityPersistenceManagerTest {
             ModuleTier.HV,
             StationTileCoord.of(2, 2));
         IRecipeModule recipeModule = (IRecipeModule) macerator.component();
-        FluidStack[] fluidInputs = { fluidStack("galaxia.persistence.input", 144) };
-        FluidStack[] fluidOutputs = { fluidStack("galaxia.persistence.output", 72) };
+        FluidStack[] fluidInputs = { new FluidStack(TEST_FLUID_1, 144) };
+        FluidStack[] fluidOutputs = { new FluidStack(TEST_FLUID_2, 72) };
         int[] outputChances = { 5000 };
         int[] fluidOutputChances = { 7500 };
         long contentHash = RecipeSnapshot
@@ -1294,18 +1297,15 @@ final class FacilityPersistenceManagerTest {
             320,
             480);
         SavedRecipeList slots = new SavedRecipeList();
-        station.inventory.setFluidLowerBound("galaxia.persistence.input", 11);
-        station.inventory.setFluidUpperBound("galaxia.persistence.output", 22);
+        station.setBound(new FluidKey(TEST_FLUID_1, null), 11, true);
+        station.setBound(new FluidKey(TEST_FLUID_2, null), 22, false);
         slots.add(new SavedRecipe(snapshot, true, 12L, (byte) 3, (byte) 4));
         recipeModule.setRecipeConfig(
             new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
 
+        FacilityPersistenceManager.AssetJson aencoded = manager.encodeAsset(station);
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(aencoded);
         manager.decodeFacilityState(decoded, encoded);
 
         ModuleInstance decodedMacerator = decoded.modules()
@@ -1323,13 +1323,25 @@ final class FacilityPersistenceManagerTest {
         assertEquals(contentHash, decodedSnapshot.contentHash());
         assertEquals(5000, decodedSnapshot.outputChances()[0]);
         assertEquals(7500, decodedSnapshot.fluidOutputChances()[0]);
-        assertEquals("galaxia.persistence.input", fluidName(decodedSnapshot.fluidInputs()[0]));
+        assertEquals(
+            new FluidKey(TEST_FLUID_1, null).fluid()
+                .getName(),
+            fluidName(decodedSnapshot.fluidInputs()[0]));
         assertEquals(144, decodedSnapshot.fluidInputs()[0].amount);
-        assertEquals("galaxia.persistence.output", fluidName(decodedSnapshot.fluidOutputs()[0]));
+        assertEquals(
+            new FluidKey(TEST_FLUID_2, null).fluid()
+                .getName(),
+            fluidName(decodedSnapshot.fluidOutputs()[0]));
         assertEquals(72, decodedSnapshot.fluidOutputs()[0].amount);
         assertEquals(12L, decodedSlot.requestAmount());
-        assertEquals(11, decoded.inventory.fluidLowerBoundOrDefault("galaxia.persistence.input"));
-        assertEquals(22, decoded.inventory.fluidUpperBoundOrDefault("galaxia.persistence.output"));
+        assertEquals(
+            11,
+            decoded.getBound(new FluidKey(TEST_FLUID_1, null))
+                .lowOrDefault());
+        assertEquals(
+            22,
+            decoded.getBound(new FluidKey(TEST_FLUID_2, null))
+                .upperOrDefault());
         assertEquals(3, decodedSlot.priority());
         assertEquals(4, decodedSlot.orderSize());
     }
@@ -1422,40 +1434,17 @@ final class FacilityPersistenceManagerTest {
             .orElse(null);
     }
 
-    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
-        Fluid fluid = new Fluid(fluidName);
-        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-        unsafeField.setAccessible(true);
-        Unsafe unsafe = (Unsafe) unsafeField.get(null);
-        FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
-        Field fluidField = FluidStack.class.getDeclaredField("fluid");
-        fluidField.setAccessible(true);
-        fluidField.set(stack, fluid);
-        stack.amount = amount;
-        return stack;
-    }
-
-    private static String fluidName(FluidStack stack) throws Exception {
-        try {
-            return stack.getFluid()
-                .getName();
-        } catch (RuntimeException e) {
-            Field fluidField = FluidStack.class.getDeclaredField("fluid");
-            fluidField.setAccessible(true);
-            Fluid fluid = (Fluid) fluidField.get(stack);
-            return fluid != null ? fluid.getName() : null;
-        }
+    private static String fluidName(FluidStack stack) {
+        return stack.getFluid()
+            .getName();
     }
 
     @Test
-    void unknownModuleKindCrashesOnLoad() throws Exception {
+    void unknownModuleKindCrashesOnLoad() {
         FacilityPersistenceManager manager = new FacilityPersistenceManager();
 
         // Simulate a save with a module that has an unresolvable kind (unknown enum value)
         FacilityPersistenceManager.FacilityStateJson legacy = new FacilityPersistenceManager.FacilityStateJson();
-        legacy.celestialBodyId = "PANSPIRA";
-        legacy.systemId = "NOVA_CAELUM";
-        legacy.planetaryAnchorBodyId = "PANSPIRA";
         legacy.energyStored = 0L;
         legacy.settingsGroupsNextId = 1;
         legacy.settingsGroups = new ArrayList<>();
@@ -1507,7 +1496,6 @@ final class FacilityPersistenceManagerTest {
         legacy.layoutTiles.add(orphanTj);
 
         legacy.buffer = new LinkedHashMap<>();
-        legacy.logisticsConfig = new LinkedHashMap<>();
         AutomatedFacility decoded = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,

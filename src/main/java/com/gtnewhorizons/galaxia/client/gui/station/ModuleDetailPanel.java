@@ -243,12 +243,8 @@ public final class ModuleDetailPanel extends ParentWidget<ModuleDetailPanel> {
             panelX,
             lineY,
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        HammerDispatchStatus.Status dispatchStatus = HammerDispatchStatus.evaluate(
-            facility,
-            module,
-            CelestialClient.allOutposts(),
-            CelestialClient.clientDeliveries(),
-            GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status dispatchStatus = HammerDispatchStatus
+            .evaluate(facility, module, CelestialClient.allOutposts(), GalaxiaCelestialAPI.currentOrbitalTime());
         lineY = drawLine(
             hammerDispatchStatusLine(dispatchStatus),
             panelX,

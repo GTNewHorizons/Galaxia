@@ -1,56 +1,77 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.nbt.NBTTagCompound;
-
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 
 public abstract class TileStationSecondary<T extends TileStationBase<T>> extends TileStationBase<T> {
-
-    protected @Nullable BlockPos mainController;
 
     public TileStationSecondary() {
         super();
     }
 
-    public void collectGraph(TileStationController controller, List<BlockPos> monitors) {
-        mainController = controller.here;
-
-        for (BlockPos pos : airlocks) {
-            TileEntityAirlock airlock = pos.getTE(worldObj);
-            if (airlock == null) continue;
-
-            airlock.collectGraph(controller, monitors);
-        }
+    @Override
+    public void onStructureFormed() {
+        super.onStructureFormed();
     }
 
-    public boolean tryRebuildControllersGraph() {
-        if (mainController != null) {
-            TileStationController controller = mainController.getTE(worldObj);
-            if (controller == null) return false;
-
-            return controller.tryRebuildControllersGraph();
+    @Override
+    protected boolean attemptBoot() {
+        for (BlockPos pos : airlocks) {
+            if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
+            for (BlockPos other : airlock.getStationControllers()) {
+                if (other.equals(here)) continue;
+                if (!(other.getTE(worldObj) instanceof TileStationBase<?>base)) continue;
+                if (base.graph != null) {
+                    this.graph = base.graph;
+                    graph.connectPiece(here);
+                    return true;
+                }
+            }
         }
-
         return false;
     }
 
     @Override
-    public void writeToNBT(NBTTagCompound nbt) {
-        super.writeToNBT(nbt);
-        if (mainController != null) {
-            nbt.setTag("mainController", mainController.toNBT());
+    public void onStructureDisformed() {
+        if (graph != null) {
+            graph.disconnectPiece(here);
+        }
+        super.onStructureDisformed();
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+        if (graph != null) {
+            graph.disconnectPiece(here);
         }
     }
 
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
-        super.readFromNBT(nbt);
-        if (nbt.hasKey("mainController")) {
-            mainController = BlockPos.fromNBT(nbt.getCompoundTag("mainController"));
+    public void onPieceConnected(TileStationBase<?> piece, TileStationBase<?> neighbor, BlockPos controllerPos) {
+        if ((piece == this || neighbor == this) && controllerPos != null) {
+            if (controllerPos.getTE(worldObj) instanceof TileStationController controller) {
+                graph = controller.getGraph();
+            }
         }
+    }
+
+    @Override
+    public void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {
+        graph = null;
+    }
+
+    @Override
+    public void onGraphRebuilt(TileStationController controller) {
+        if (!structureValid || controller.getGraph() == null) return;
+        graph = controller.getGraph();
+    }
+
+    public int getVolume() {
+        if (getStructureDefinition() instanceof ArbitraryShapeDefinition<?>def) {
+            return def.getVolume();
+        }
+
+        return 0;
     }
 }

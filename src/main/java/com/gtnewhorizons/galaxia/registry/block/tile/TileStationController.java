@@ -1,13 +1,11 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
-import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -20,79 +18,71 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
-import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
-public class TileStationController extends TileStationBase<TileStationController>
-    implements ArbitraryShapeTile<TileStationController> {
+public class TileStationController extends TileStationBase<TileStationController> {
 
     private UUID owner;
     private CelestialAsset.ID backingStation;
 
-    // Always call `clearBrokenSecondaries` before accessing it
-    private final List<BlockPos> secondaries = new ArrayList<>();
-
     public final ArbitraryShapeDefinition<TileStationController> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStationController>builder()
-        .withSearchRadius(16)
         .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
         .addElements(
             BASE_VALID_BLOCKS.stream()
                 .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((_, tileEntity) -> {
+        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((stationController, tileEntity) -> {
             if (tileEntity instanceof TileEntityAirlock airlock) {
                 if (!airlock.isStructureValid()) return false;
 
-                registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                stationController.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
                 return true;
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+        .withSearchRadius(ConfigStructures.enclosed.searchRadius)
+        .enclosed()
         .build();
 
     @Override
     public void onStructureFormed() {
         super.onStructureFormed();
 
-        tryRebuildControllersGraph();
-        // Avoid registering potentially duplicate station on reload
-        if (backingStation == null) {
-            CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(this.worldObj.provider.dimensionId);
-            Station station = (Station) CelestialAsset.create(objectId, CelestialAsset.Kind.STATION, true);
-            station.setController(this.here);
-            backingStation = station.assetId;
+        graph = new StationGraph(this);
+        graph.addListener(this);
+        graph.rebuild();
 
-            CelestialAssetStore.registerAsset(owner, station);
-        } else {
+        if (backingStation != null) {
             CelestialAssetStore.enableAsset(backingStation);
-        }
-    }
+            if (CelestialAssetStore.findAsset(backingStation) instanceof Station station) {
+                // Re
+                if (station.getController() == null) {
+                    station.setController(this.here);
+                }
 
-    @Override
-    public boolean tryRebuildControllersGraph() {
-        List<BlockPos> newMonitors = new ArrayList<>();
-        for (BlockPos pos : airlocks) {
-            TileEntityAirlock airlock = pos.getTE(worldObj);
-            if (airlock == null) continue;
+                return;
+            }
 
-            airlock.collectGraph(this, newMonitors);
+            // Station either not found or not station (weird?), register a new one
         }
 
-        if (!newMonitors.isEmpty()) {
-            secondaries.clear();
-            secondaries.addAll(newMonitors);
-            return true;
-        }
-        return false;
+        CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(this.worldObj.provider.dimensionId);
+        Station station = (Station) CelestialAsset.create(objectId, CelestialAsset.Kind.STATION, true);
+        station.setController(this.here);
+        backingStation = station.assetId;
+
+        CelestialAssetStore.registerAsset(owner, station);
     }
 
     @Override
@@ -102,31 +92,39 @@ public class TileStationController extends TileStationBase<TileStationController
 
     @Override
     public void onStructureDisformed() {
+        if (graph != null) {
+            graph.destroy();
+            graph = null;
+        }
         super.onStructureDisformed();
         if (backingStation != null) {
             CelestialAssetStore.disableAsset(backingStation);
         }
-        secondaries.clear();
     }
 
-    @Override
+    public StationGraph getGraph() {
+        return graph;
+    }
+
     public int getVolume() {
-        int own = ArbitraryShapeTile.super.getVolume();
-        clearBrokenSecondaries();
-        return secondaries.stream()
-            .map(pos -> (TileStationRoom) pos.getTE(worldObj))
-            .mapToInt(ArbitraryShapeTile::getVolume)
-            .sum() + own;
+        int own = STRUCTURE_DEFINITION.getVolume();
+        if (graph == null) return own;
+        int sum = own;
+        for (TileStationSecondary<?> s : graph.iterateOver(TileStationSecondary.class)) {
+            sum += s.getVolume();
+        }
+        return sum;
+    }
+
+    public List<IDistributedInventory> getConnectedInventories() {
+        if (graph == null) return List.of();
+        return graph.connectedInventories()
+            .toList();
     }
 
     @Override
     public ForgeDirection getPlacedFacing() {
         return placedFacing;
-    }
-
-    @Override
-    public boolean isStructureValid() {
-        return structureValid;
     }
 
     @Override
@@ -152,39 +150,26 @@ public class TileStationController extends TileStationBase<TileStationController
     public boolean hasOxygen(int x, int y, int z) {
         if (isInside(x, y, z)) return isOxygenated();
 
-        clearBrokenSecondaries();
-        for (BlockPos pos : secondaries) {
-            TileStationSecondary<?> secondary = pos.getTE(worldObj);
-            if (secondary.isInside(x, y, z)) return secondary.isOxygenated();
+        if (graph != null) {
+            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
+                if (secondary.isInside(x, y, z)) return secondary.isOxygenated();
+            }
         }
 
         return false;
-    }
-
-    private void clearBrokenSecondaries() {
-        for (int i = secondaries.size() - 1; i > 0; i--) {
-            BlockPos pos = secondaries.get(i);
-            if (pos == null) {
-                secondaries.remove(i);
-                continue;
-            }
-            TileStationSecondary<?> secondary = pos.getTE(worldObj);
-            if (secondary == null) {
-                secondaries.remove(i);
-            }
-        }
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        clearBrokenSecondaries();
-        for (BlockPos pos : secondaries) {
-            TileStationRoom monitor = pos.getTE(worldObj);
-            if (monitor == null) continue;
+        if (graph != null) {
+            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
+                secondary.tick();
+            }
 
-            monitor.tick();
+            graph.getAttachments()
+                .forEach(IStationAttachment::tick);
         }
     }
 
@@ -228,10 +213,10 @@ public class TileStationController extends TileStationBase<TileStationController
                     .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
                         if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
                         markStructureDirty();
-                        for (BlockPos b : secondaries) {
-                            TileStationRoom monitor = b.getTE(worldObj);
-                            if (monitor != null) {
-                                System.out.println(monitor.here);
+                        if (graph != null) {
+                            graph.rebuild();
+                            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
+                                System.out.println(secondary.here);
                             }
                         }
                     })));
@@ -254,7 +239,6 @@ public class TileStationController extends TileStationBase<TileStationController
                 backingStation.id()
                     .getLeastSignificantBits());
         }
-        nbt.setTag("secondaries", BlockPos.listToNBT(secondaries));
     }
 
     @Override
@@ -267,11 +251,6 @@ public class TileStationController extends TileStationBase<TileStationController
         if (nbt.hasKey("backingStationMost") && nbt.hasKey("backingStationLeast")) {
             backingStation = CelestialAsset.ID
                 .from(new UUID(nbt.getLong("backingStationMost"), nbt.getLong("backingStationLeast")));
-        }
-
-        if (nbt.hasKey("secondaries")) {
-            secondaries.clear();
-            secondaries.addAll(BlockPos.listFromNBT(nbt.getTagList("secondaries", Constants.NBT.TAG_COMPOUND)));
         }
     }
 
@@ -289,6 +268,10 @@ public class TileStationController extends TileStationBase<TileStationController
 
     @Override
     public void invalidate() {
+        if (graph != null) {
+            graph.destroy();
+            graph = null;
+        }
         super.invalidate();
         if (backingStation != null) {
             if (isChunkUnloading) {
@@ -297,6 +280,11 @@ public class TileStationController extends TileStationBase<TileStationController
                 CelestialAssetStore.destroyAsset(backingStation);
             }
         }
+    }
+
+    @Override
+    public void onGraphRebuilt(TileStationController controller) {
+        markDirty();
     }
 
 }

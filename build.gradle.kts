@@ -10,6 +10,13 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+
+    jvmArgs.plus( "--add-opens")
+    jvmArgs.plus("java.base/jdk.internal.loader=ALL-UNNAMED")
+    jvmArgs.plus( "--add-opens")
+    jvmArgs.plus("java.base/java.lang=ALL-UNNAMED")
+    jvmArgs.plus( "--add-opens")
+    jvmArgs.plus("java.base/java.lang.reflect=ALL-UNNAMED")
 }
 
 tasks.register("printRuntimeClasspath") {

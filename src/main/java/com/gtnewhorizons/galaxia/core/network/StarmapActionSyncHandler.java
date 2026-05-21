@@ -33,6 +33,7 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     private static final int REQUEST_MODULE_UPDATE = 4;
     private static final int REQUEST_INVENTORY_UPDATE = 5;
     private static final int REQUEST_LOGISTICS_CONFIG = 6;
+    private static final int REQUEST_FILTER_UPDATE = 7;
 
     private static final int RESPONSE_SYNC = 100;
 
@@ -142,6 +143,14 @@ public final class StarmapActionSyncHandler extends SyncHandler {
         return true;
     }
 
+    @SideOnly(Side.CLIENT)
+    public static boolean sendFilterUpdate(AssetFilterUpdatePacket packet) {
+        StarmapActionSyncHandler handler = activeClientHandler;
+        if (handler == null || !handler.isValid()) return false;
+        handler.syncToServer(REQUEST_FILTER_UPDATE, packet::toBytes);
+        return true;
+    }
+
     @Override
     @SideOnly(Side.CLIENT)
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
@@ -191,6 +200,11 @@ public final class StarmapActionSyncHandler extends SyncHandler {
             case REQUEST_LOGISTICS_CONFIG -> {
                 if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
                 LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
+                packet.fromBytes(buf);
+                syncPacket(packet.apply(teamId));
+            }
+            case REQUEST_FILTER_UPDATE -> {
+                AssetFilterUpdatePacket packet = new AssetFilterUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));
             }

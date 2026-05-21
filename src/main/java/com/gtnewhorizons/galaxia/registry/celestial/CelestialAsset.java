@@ -1,63 +1,41 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
-public abstract class CelestialAsset implements Buildable {
-
-    public enum Kind {
-
-        STATION, // Not Implemented yet
-        AUTOMATED_STATION, // Not implemented yet
-        AUTOMATED_OUTPOST,
-
-        ;
-
-        public String getDisplayName() {
-            return StatCollector.translateToLocal(
-                "galaxia.outpost.module.kind." + this.name()
-                    .toLowerCase());
-        }
-    }
-
-    public enum Location {
-
-        ORBIT,
-        SURFACE,
-
-        ;
-
-        public String getDisplayName() {
-            return StatCollector.translateToLocal(
-                "galaxia.outpost.module.location." + this.name()
-                    .toLowerCase());
-        }
-
-        public static Location ofKind(Kind kind) {
-            return switch (kind) {
-                case STATION, AUTOMATED_STATION -> ORBIT;
-                case AUTOMATED_OUTPOST -> SURFACE;
-            };
-        }
-    }
+public abstract class CelestialAsset implements Buildable, IDistributedInventory {
 
     public final ID assetId;
     public final CelestialObjectId celestialObjectId;
+    public final CelestialObjectId systemId;
+    public final CelestialObjectId planetaryAnchorBodyId;
     public final Kind kind;
     public final Location location;
 
@@ -69,6 +47,18 @@ public abstract class CelestialAsset implements Buildable {
     private int syncRevision;
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private boolean dirty = true;
+
+    private final Map<ItemStackWrapper, InventoryBounds> itemBounds = new LinkedHashMap<>();
+    private final Map<FluidKey, InventoryBounds> fluidBounds = new LinkedHashMap<>();
+
+    private final List<InventoryBoundDelta> dirtyInventoryBoundDeltas = new ArrayList<>();
+
+    public final LogisticsConfiguration logisticsConfig;
+
+    public static long getItemAmount(CelestialAsset asset, ItemStackWrapper resource) {
+        return asset.aggregatedItems()
+            .getOrDefault(resource, 0L);
+    }
 
     public static CelestialAsset create(CelestialObjectId celestialObjectId, Kind kind, boolean operational) {
         return create(celestialObjectId, kind, operational ? Status.OPERATIONAL : Status.CONSTRUCTION_SITE);
@@ -98,13 +88,24 @@ public abstract class CelestialAsset implements Buildable {
         this.assetId = assetId;
         this.status = status;
         this.celestialObjectId = celestialObjectId;
+        this.systemId = GalaxiaCelestialAPI.findStar(celestialObjectId)
+            .id();
+        this.planetaryAnchorBodyId = GalaxiaCelestialAPI.findPlanetaryAnchor(celestialObjectId)
+            .id();
         this.displayName = celestialObjectId.displayName() + ":" + kind.getDisplayName();
         this.kind = kind;
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
         this.constructionInventory = constructionInventory == null ? Collections.emptyMap() : constructionInventory;
         this.syncRevision = 0;
+        this.logisticsConfig = new LogisticsConfiguration();
     }
+
+    public abstract boolean tryConsumeEnergy(long powerDraw);
+
+    public abstract long getEnergyStored();
+
+    public abstract Stream<ModuleInstance> forEachModule();
 
     public Map<ItemStack, Long> requiredResources() {
         return requiredResources;
@@ -202,7 +203,7 @@ public abstract class CelestialAsset implements Buildable {
     }
 
     public boolean needsFullSyncFor(UUID playerId) {
-        return isDirty() || !syncedPlayerIds.contains(playerId);
+        return isDirty() || !syncedPlayerIds.contains(playerId) || !dirtyInventoryBoundDeltas.isEmpty();
     }
 
     public void markSyncedFor(UUID playerId) {
@@ -222,6 +223,115 @@ public abstract class CelestialAsset implements Buildable {
         dirty = false;
     }
 
+    public abstract long updateContents(InventoryKey item, int delta, boolean sync);
+
+    /// ----------------------------------------------------------------------------------
+    /// Inventory Bounds
+    /// ----------------------------------------------------------------------------------
+
+    private <T extends InventoryKey> Map<T, InventoryBounds> getBoundsMap(T key) {
+        return key instanceof ItemStackWrapper ? (Map<T, InventoryBounds>) itemBounds
+            : (Map<T, InventoryBounds>) fluidBounds;
+    }
+
+    public boolean hasLowerBound(InventoryKey key) {
+        return getBound(key).hasLow();
+    }
+
+    public boolean hasUpperBound(InventoryKey key) {
+        return getBound(key).hasUpper();
+    }
+
+    public InventoryBounds getBound(InventoryKey key) {
+        return getBoundsMap(key).getOrDefault(key, InventoryBounds.invalid());
+    }
+
+    public void setBound(InventoryKey key, long low, long upper) {
+        getBoundsMap(key).put(key, new InventoryBounds(low, upper));
+    }
+
+    public void setBound(InventoryKey key, long amount, boolean low) {
+        InventoryBounds bound = getBoundsMap(key).computeIfAbsent(key, k -> InventoryBounds.invalid());
+        if (low) {
+            bound.setLow(amount);
+        } else {
+            bound.setUppper(amount);
+        }
+    }
+
+    public void clearBound(InventoryKey key) {
+        getBoundsMap(key).remove(key);
+    }
+
+    public void clearBound(InventoryKey key, boolean low) {
+        InventoryBounds bound = getBoundsMap(key).remove(key);
+        if (low) {
+            bound.removeLow();
+        } else {
+            bound.removeUpper();
+        }
+        if (!bound.isInvalid()) getBoundsMap(key).put(key, bound);
+    }
+
+    private <T extends InventoryKey> long getResourceAmount(T key) {
+        return key instanceof ItemStackWrapper ? getItemAmount((ItemStackWrapper) key) : getFluidAmount((FluidKey) key);
+    }
+
+    public boolean isBelowUpper(InventoryKey key) {
+        return getResourceAmount(key) < getBound(key).upperOrDefault();
+    }
+
+    public boolean isAboveLow(InventoryKey key) {
+        return getResourceAmount(key) >= getBound(key).lowOrDefault();
+    }
+
+    public boolean isAboveLow(InventoryKey key, long amount) {
+        return (getResourceAmount(key) - amount) >= getBound(key).lowOrDefault();
+    }
+
+    public boolean isInBounds(InventoryKey key) {
+        return getBound(key).inBounds(getResourceAmount(key));
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Bound Snapshots & Loads (for persistence)
+    /// ----------------------------------------------------------------------------------
+
+    public <T extends InventoryKey> Map<T, InventoryBounds> getBounds(boolean items) {
+        return items ? (Map<T, InventoryBounds>) itemBounds : (Map<T, InventoryBounds>) fluidBounds;
+    }
+
+    public void markInventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
+        if (kind == null || resource == null) return;
+        dirtyInventoryBoundDeltas.add(new InventoryBoundDelta(kind, resource, present, amount));
+        bumpSyncRevision();
+        markDirty();
+    }
+
+    public record InventoryBoundDelta(BoundKind kind, InventoryKey resource, boolean present, long amount) {
+
+        public String resourceKey() {
+            return resource instanceof ItemStackWrapper item ? item.toKey()
+                : ((FluidKey) resource).fluid()
+                    .getName();
+        }
+    }
+
+    public List<InventoryBoundDelta> drainDirtyInventoryBoundDeltas() {
+        List<InventoryBoundDelta> result = new ArrayList<>(dirtyInventoryBoundDeltas);
+        dirtyInventoryBoundDeltas.clear();
+        return result;
+    }
+
+    /// ----------------------------------------------------------------------------------
+    /// Clear all inventory state
+    /// ----------------------------------------------------------------------------------
+
+    public void clear() {
+        itemBounds.clear();
+        fluidBounds.clear();
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
@@ -233,6 +343,42 @@ public abstract class CelestialAsset implements Buildable {
     @Override
     public int hashCode() {
         return Objects.hash(assetId);
+    }
+
+    public enum Kind {
+
+        STATION,
+        AUTOMATED_STATION, // Not implemented yet
+        AUTOMATED_OUTPOST,
+
+        ;
+
+        public String getDisplayName() {
+            return StatCollector.translateToLocal(
+                "galaxia.outpost.module.kind." + this.name()
+                    .toLowerCase());
+        }
+    }
+
+    public enum Location {
+
+        ORBIT,
+        SURFACE,
+
+        ;
+
+        public String getDisplayName() {
+            return StatCollector.translateToLocal(
+                "galaxia.outpost.module.location." + this.name()
+                    .toLowerCase());
+        }
+
+        public static Location ofKind(Kind kind) {
+            return switch (kind) {
+                case STATION, AUTOMATED_STATION -> ORBIT;
+                case AUTOMATED_OUTPOST -> SURFACE;
+            };
+        }
     }
 
     public record ID(UUID id) implements WithUUID {

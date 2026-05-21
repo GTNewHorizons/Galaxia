@@ -11,8 +11,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -33,8 +32,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
     private CelestialAsset.ID assetId;
-    private String resourceKey;
-    private ItemStackWrapper resource;
+    private InventoryKey resource;
     private int minReserve;
     private int orderSize;
     private boolean isImportEnabled;
@@ -43,10 +41,9 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
 
     public LogisticsConfigUpdatePacket() {}
 
-    public LogisticsConfigUpdatePacket(CelestialAsset.ID assetId, ItemStackWrapper resource,
+    public LogisticsConfigUpdatePacket(CelestialAsset.ID assetId, InventoryKey resource,
         LogisticsResourceConfig config) {
         this.assetId = assetId;
-        this.resourceKey = resource.toKey();
         this.resource = resource;
         this.minReserve = config.minReserve();
         this.orderSize = config.orderSize();
@@ -55,10 +52,9 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         this.removeEntry = false;
     }
 
-    public static LogisticsConfigUpdatePacket remove(CelestialAsset.ID assetId, ItemStackWrapper resource) {
+    public static LogisticsConfigUpdatePacket remove(CelestialAsset.ID assetId, InventoryKey resource) {
         LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
         packet.assetId = assetId;
-        packet.resourceKey = resource.toKey();
         packet.resource = resource;
         packet.minReserve = 0;
         packet.orderSize = 1;
@@ -71,7 +67,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
-        PacketUtil.writeString(buf, resourceKey);
+        PacketUtil.writeInventoryKey(buf, resource);
         buf.writeInt(minReserve);
         buf.writeInt(orderSize);
         buf.writeBoolean(isImportEnabled);
@@ -82,7 +78,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
     @Override
     public void fromBytes(ByteBuf buf) {
         assetId = PacketUtil.readAssetId(buf);
-        resourceKey = PacketUtil.readString(buf);
+        resource = PacketUtil.readInventoryKey(buf);
         minReserve = buf.readInt();
         orderSize = buf.readInt();
         isImportEnabled = buf.readBoolean();
@@ -102,8 +98,8 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
     }
 
     public AssetSyncPacket apply(UUID teamId) {
-        AutomatedFacility state = CelestialAssetStore.findAsset(assetId) instanceof AutomatedFacility o ? o : null;
-        if (state == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
+        CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
+        if (asset == null || !CelestialAssetStore.isOwnedBy(teamId, assetId)) {
             LOG.warn("[Logistics] LogisticsConfigUpdate: unknown or unauthorized assetId {}", assetId);
             return null;
         }
@@ -117,30 +113,29 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
             return null;
         }
 
-        ItemStackWrapper resource = this.resource != null ? this.resource : ItemStackWrapper.fromKey(resourceKey);
         if (resource == null) return null;
         if (removeEntry) {
-            state.logisticsConfig.reset(resource);
-            state.bumpSyncRevision();
-            return AssetSyncPacket.logisticsConfigRemoved(assetId, resourceKey)
-                .withSyncRevision(state.getSyncRevision());
+            asset.logisticsConfig.reset(resource);
+            asset.bumpSyncRevision();
+            return AssetSyncPacket.logisticsConfigRemoved(assetId, resource)
+                .withSyncRevision(asset.getSyncRevision());
         } else {
             LogisticsResourceConfig config = new LogisticsResourceConfig(
                 minReserve,
                 orderSize,
                 isImportEnabled,
                 isSupplyEnabled);
-            state.logisticsConfig.set(resource, config);
-            state.bumpSyncRevision();
+            asset.logisticsConfig.set(resource, config);
+            asset.bumpSyncRevision();
             return AssetSyncPacket
                 .logisticsConfigUpdated(
                     assetId,
-                    resourceKey,
+                    resource,
                     config.minReserve(),
                     config.orderSize(),
                     config.isImportEnabled(),
                     config.isSupplyEnabled())
-                .withSyncRevision(state.getSyncRevision());
+                .withSyncRevision(asset.getSyncRevision());
         }
     }
 }

@@ -99,6 +99,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     @Override
     public void onUpdate() {
         super.onUpdate();
+        if (map == null) return;
         StationTileCoord selected = map.selection();
         if (armedDestroySelection != null && !armedDestroySelection.equals(selected)) {
             armedDestroySelection = null;

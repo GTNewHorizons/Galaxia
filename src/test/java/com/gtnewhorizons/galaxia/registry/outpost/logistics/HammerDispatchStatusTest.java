@@ -6,11 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
@@ -32,6 +33,7 @@ final class HammerDispatchStatusTest {
 
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -70,15 +72,15 @@ final class HammerDispatchStatusTest {
     void plannerReturnsReadyDispatchPlanForServerExecution() {
         AutomatedFacility supplier = facility(CelestialObjectId.PANSPIRA);
         AutomatedFacility requester = facility(CelestialObjectId.PANSPIRA);
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         supplier.logisticsConfig.set(resource, new LogisticsResourceConfig(32, 32, false, true));
         requester.logisticsConfig.set(resource, new LogisticsResourceConfig(64, 32, true, false));
-        supplier.addInventoryWithoutSync(resource, 96L);
+        supplier.updateItems(resource, 96);
         ModuleHammer hammer = hammer(AllowShootingConfig.ALWAYS, HammerVariant.BASE, 1_000_000L);
         ModuleInstance hammerModule = hammerModule(hammer);
 
         HammerDispatchPlanner.Result result = HammerDispatchPlanner
-            .evaluate(supplier, hammerModule, List.of(requester), List.of(), 0.0);
+            .evaluate(supplier, hammerModule, List.of(requester), 0.0);
 
         assertEquals(HammerDispatchStatus.Code.READY, result.code());
         HammerDispatchPlanner.Plan plan = result.plan();

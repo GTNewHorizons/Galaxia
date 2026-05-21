@@ -2,23 +2,26 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Random;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
@@ -27,27 +30,32 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipeList;
 
-import sun.misc.Unsafe;
-
 final class ProductionModuleHelperTest {
+
+    private static Fluid TEST_FLUID_1;
+    private static Fluid TEST_FLUID_2;
 
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
+
+        TEST_FLUID_1 = FluidRegistry.WATER;
+        TEST_FLUID_2 = FluidRegistry.LAVA;
     }
 
     @Test
     void executeKeepsPerItemInputLowerBoundAfterCombinedRecipeCost() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(inputResource, 105);
+        station.updateItems(inputResource, 105);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 2, 0), new ItemStack(inputItem, 4, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
-        station.inventory.setItemLowerBound(inputResource, 100);
+        station.setBound(inputResource, 100, true);
         SavedRecipeList slots = new SavedRecipeList();
         slots.add(
             new SavedRecipe(
@@ -61,23 +69,23 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(105, station.inventory.getAmount(inputResource));
-        assertEquals(0, station.inventory.getAmount(outputResource));
+        assertEquals(105, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
     }
 
     @Test
     void executeAllowsOutputUpperBoundOvershootWhenCurrentInventoryIsBelowTarget() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(inputResource, 1);
-        station.inventory.add(outputResource, 95);
+        station.updateItems(inputResource, 1);
+        station.updateItems(outputResource, 95);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 4, 0), new ItemStack(outputItem, 5, 0) };
-        station.inventory.setItemUpperBound(outputResource, 100);
+        station.setBound(outputResource, 100, false);
         SavedRecipeList slots = new SavedRecipeList();
         slots.add(
             new SavedRecipe(
@@ -91,23 +99,23 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(0, station.inventory.getAmount(inputResource));
-        assertEquals(104, station.inventory.getAmount(outputResource));
+        assertEquals(0, station.getItemAmount(inputResource));
+        assertEquals(104, station.getItemAmount(outputResource));
     }
 
     @Test
     void executeUsesCanonicalOutputBoundWhenDuplicateSecondSlotProduces() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(inputResource, 1);
-        station.inventory.add(outputResource, 99);
+        station.updateItems(inputResource, 1);
+        station.updateItems(outputResource, 99);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0), new ItemStack(outputItem, 2, 0) };
-        station.inventory.setItemUpperBound(outputResource, 100);
+        station.setBound(outputResource, 100, false);
         SavedRecipeList slots = new SavedRecipeList();
         slots.add(
             new SavedRecipe(
@@ -121,8 +129,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(0, station.inventory.getAmount(inputResource));
-        assertEquals(101, station.inventory.getAmount(outputResource));
+        assertEquals(0, station.getItemAmount(inputResource));
+        assertEquals(101, station.getItemAmount(outputResource));
     }
 
     @Test
@@ -132,10 +140,11 @@ final class ProductionModuleHelperTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        station.inventory.addFluid("galaxia.production.input", 1000);
+        FluidKey inputKey = new FluidKey(TEST_FLUID_1, null);
+        station.updateFluids(inputKey, 1000);
 
-        FluidStack[] fluidInputs = { fluidStack("galaxia.production.input", 144) };
-        FluidStack[] fluidOutputs = { fluidStack("galaxia.production.output", 72) };
+        FluidStack[] fluidInputs = { new FluidStack(TEST_FLUID_1, 144) };
+        FluidStack[] fluidOutputs = { new FluidStack(TEST_FLUID_2, 72) };
         RecipeSnapshot snapshot = new RecipeSnapshot(
             (byte) 1,
             0,
@@ -153,8 +162,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(856, station.inventory.getFluidAmount("galaxia.production.input"));
-        assertEquals(72, station.inventory.getFluidAmount("galaxia.production.output"));
+        assertEquals(856, station.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
+        assertEquals(72, station.getFluidAmount(new FluidKey(TEST_FLUID_2, null)));
     }
 
     @Test
@@ -164,11 +173,11 @@ final class ProductionModuleHelperTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(inputResource, 1);
+        station.updateItems(inputResource, 1);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0), new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
@@ -180,8 +189,8 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(1, station.inventory.getAmount(inputResource));
-        assertEquals(0, station.inventory.getAmount(outputResource));
+        assertEquals(1, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
     }
 
     @Test
@@ -191,16 +200,16 @@ final class ProductionModuleHelperTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(inputResource, 64);
+        station.updateItems(inputResource, 64);
 
         ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
         RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
-        station.inventory.setItemLowerBound(inputResource, 64);
+        station.setBound(inputResource, 64, true);
         SavedRecipeList slots = new SavedRecipeList();
         slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
         StubRecipeModule module = new StubRecipeModule(
@@ -208,38 +217,38 @@ final class ProductionModuleHelperTest {
 
         ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
 
-        assertEquals(64, station.inventory.getAmount(inputResource));
-        assertEquals(0, station.inventory.getAmount(outputResource));
+        assertEquals(64, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
     }
 
     @Test
     void executeConsumesInputWhenChancedItemOutputMisses() {
         AutomatedFacility station = station();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(inputResource, 1);
+        station.updateItems(inputResource, 1);
 
         StubRecipeModule module = itemOutputModule(inputItem, outputItem, 1);
 
         ProductionModuleHelper.execute(null, station, module, new FixedRandom(5000), new HashMap<>(), new HashMap<>());
 
-        assertEquals(0, station.inventory.getAmount(inputResource));
-        assertEquals(0, station.inventory.getAmount(outputResource));
+        assertEquals(0, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
     }
 
     @Test
     void executeUsesOutputUpperBoundAsCurrentInventoryTargetForItems() {
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
 
         AutomatedFacility atGuard = station();
-        atGuard.inventory.add(inputResource, 1);
-        atGuard.inventory.add(outputResource, 1);
-        atGuard.inventory.setItemUpperBound(outputResource, 1);
+        atGuard.updateItems(inputResource, 1);
+        atGuard.updateItems(outputResource, 1);
+        atGuard.setBound(outputResource, 1, false);
         ProductionModuleHelper.execute(
             null,
             atGuard,
@@ -248,12 +257,12 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(1, atGuard.inventory.getAmount(inputResource));
-        assertEquals(1, atGuard.inventory.getAmount(outputResource));
+        assertEquals(1, atGuard.getItemAmount(inputResource));
+        assertEquals(1, atGuard.getItemAmount(outputResource));
 
         AutomatedFacility belowGuard = station();
-        belowGuard.inventory.add(inputResource, 1);
-        belowGuard.inventory.setItemUpperBound(outputResource, 1);
+        belowGuard.updateItems(inputResource, 1);
+        belowGuard.setBound(outputResource, 1, false);
         ProductionModuleHelper.execute(
             null,
             belowGuard,
@@ -262,56 +271,57 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(0, belowGuard.inventory.getAmount(inputResource));
-        assertEquals(1, belowGuard.inventory.getAmount(outputResource));
+        assertEquals(0, belowGuard.getItemAmount(inputResource));
+        assertEquals(1, belowGuard.getItemAmount(outputResource));
     }
 
     @Test
     void executeUsesOutputUpperBoundAsCurrentInventoryTargetForFluids() throws Exception {
-        Item inputItem = new Item();
+        Item inputItem = Items.diamond;
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
 
         AutomatedFacility atGuard = station();
-        atGuard.inventory.add(inputResource, 1);
-        atGuard.inventory.addFluid("galaxia.production.chanced_output", 72);
-        atGuard.inventory.setFluidUpperBound("galaxia.production.chanced_output", 72);
+        atGuard.updateItems(inputResource, 1);
+        FluidKey outputKey = new FluidKey(TEST_FLUID_1, null);
+        atGuard.updateFluids(outputKey, 72);
+        atGuard.setBound(outputKey, 72, false);
         ProductionModuleHelper.execute(
             null,
             atGuard,
-            fluidOutputModule(inputItem, fluidStack("galaxia.production.chanced_output", 72)),
+            fluidOutputModule(inputItem, new FluidStack(TEST_FLUID_1, 72)),
             new FixedRandom(4999),
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(1, atGuard.inventory.getAmount(inputResource));
-        assertEquals(72, atGuard.inventory.getFluidAmount("galaxia.production.chanced_output"));
+        assertEquals(1, atGuard.getItemAmount(inputResource));
+        assertEquals(72, atGuard.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
 
         AutomatedFacility belowGuard = station();
-        belowGuard.inventory.add(inputResource, 1);
-        belowGuard.inventory.setFluidUpperBound("galaxia.production.chanced_output", 72);
+        belowGuard.updateItems(inputResource, 1);
+        belowGuard.setBound(new FluidKey(TEST_FLUID_1, null), 72, false);
         ProductionModuleHelper.execute(
             null,
             belowGuard,
-            fluidOutputModule(inputItem, fluidStack("galaxia.production.chanced_output", 72)),
+            fluidOutputModule(inputItem, new FluidStack(TEST_FLUID_1, 72)),
             new FixedRandom(4999),
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(0, belowGuard.inventory.getAmount(inputResource));
-        assertEquals(72, belowGuard.inventory.getFluidAmount("galaxia.production.chanced_output"));
+        assertEquals(0, belowGuard.getItemAmount(inputResource));
+        assertEquals(72, belowGuard.getFluidAmount(new FluidKey(TEST_FLUID_1, null)));
     }
 
     @Test
     void executeDoesNotConsumeInputsWhenSelectedItemOutputsWouldOverflowInventory() {
         AutomatedFacility station = station();
-        Item fillerItem = new Item();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item fillerItem = Items.diamond;
+        Item inputItem = Items.iron_ingot;
+        Item outputItem = Items.gold_ingot;
         ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(fillerResource, 999);
-        station.inventory.add(inputResource, 1);
+        station.updateItems(fillerResource, 999);
+        station.updateItems(inputResource, 1);
 
         ProductionModuleHelper.execute(
             null,
@@ -321,22 +331,22 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(999, station.inventory.getAmount(fillerResource));
-        assertEquals(1, station.inventory.getAmount(inputResource));
-        assertEquals(0, station.inventory.getAmount(outputResource));
+        assertEquals(999, station.getItemAmount(fillerResource));
+        assertEquals(1, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
     }
 
     @Test
     void executeCanUseFreedInputCapacityForSelectedItemOutputs() {
         AutomatedFacility station = station();
-        Item fillerItem = new Item();
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item fillerItem = Items.diamond;
+        Item inputItem = Items.iron_ingot;
+        Item outputItem = Items.gold_ingot;
         ItemStackWrapper fillerResource = new ItemStackWrapper(fillerItem, 0, null);
         ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
         ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
-        station.inventory.add(fillerResource, 999);
-        station.inventory.add(inputResource, 1);
+        station.updateItems(fillerResource, 999);
+        station.updateItems(inputResource, 1);
 
         ProductionModuleHelper.execute(
             null,
@@ -346,9 +356,9 @@ final class ProductionModuleHelperTest {
             new HashMap<>(),
             new HashMap<>());
 
-        assertEquals(999, station.inventory.getAmount(fillerResource));
-        assertEquals(0, station.inventory.getAmount(inputResource));
-        assertEquals(1, station.inventory.getAmount(outputResource));
+        assertEquals(999, station.getItemAmount(fillerResource));
+        assertEquals(0, station.getItemAmount(inputResource));
+        assertEquals(1, station.getItemAmount(outputResource));
     }
 
     private static AutomatedFacility station() {
@@ -439,35 +449,6 @@ final class ProductionModuleHelperTest {
         @Override
         public int nextInt(int bound) {
             return value;
-        }
-    }
-
-    private static FluidStack fluidStack(String fluidName, int amount) throws Exception {
-        Fluid fluid = new Fluid(fluidName);
-        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-        unsafeField.setAccessible(true);
-        Unsafe unsafe = (Unsafe) unsafeField.get(null);
-        FluidStack stack = (FluidStack) unsafe.allocateInstance(FluidStack.class);
-        Field fluidField = FluidStack.class.getDeclaredField("fluid");
-        fluidField.setAccessible(true);
-        fluidField.set(stack, fluid);
-        stack.amount = amount;
-        return stack;
-    }
-
-    private static String fluidName(FluidStack stack) {
-        try {
-            Fluid fluid = stack.getFluid();
-            return fluid != null ? fluid.getName() : null;
-        } catch (RuntimeException ignored) {
-            try {
-                Field fluidField = FluidStack.class.getDeclaredField("fluid");
-                fluidField.setAccessible(true);
-                Fluid fluid = (Fluid) fluidField.get(stack);
-                return fluid != null ? fluid.getName() : null;
-            } catch (ReflectiveOperationException e) {
-                return null;
-            }
         }
     }
 }

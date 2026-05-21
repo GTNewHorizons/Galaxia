@@ -132,23 +132,15 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 
-    public void trackStationController(BlockPos pos) {
+    public boolean trackStationController(BlockPos pos) {
         if (stationControllers.size() >= MAX_CONNECTIONS) {
-            Galaxia.LOG.error("Too many station controllers to track");
-            return;
+            return false;
         }
 
-        if (stationControllers.contains(pos)) return;
+        if (stationControllers.contains(pos)) return true;
         stationControllers.add(pos);
         markDirty();
-
-        if (stationControllers.size() >= MAX_CONNECTIONS) {
-            for (BlockPos controllerPos : stationControllers) {
-                TileStationBase<?> base = controllerPos.getTE(worldObj);
-                if (base == null) continue;
-                if (base.tryRebuildControllersGraph()) return;
-            }
-        }
+        return true;
     }
 
     public void untrackStationController(BlockPos pos) {
@@ -156,18 +148,6 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
             Galaxia.LOG.error("Invalid station controller to untrack");
         }
         markDirty();
-    }
-
-    public void collectGraph(TileStationController controller, List<BlockPos> controllers) {
-        for (BlockPos pos : stationControllers) {
-            if (controllers.contains(pos)) continue;
-
-            TileStationBase<?> te = pos.getTE(worldObj);
-            if (te instanceof TileStationSecondary<?>secondary) {
-                controllers.add(pos);
-                secondary.collectGraph(controller, controllers);
-            }
-        }
     }
 
     @Override

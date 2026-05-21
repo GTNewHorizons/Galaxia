@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -58,6 +60,7 @@ final class StationPacketRoundTripTest {
 
     @BeforeAll
     static void init() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -117,9 +120,9 @@ final class StationPacketRoundTripTest {
         AutomatedFacility server = createFacility();
         UUID playerId = UUID.randomUUID();
         AssetSyncPacket.figureOutWhatToSend(server, playerId);
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
 
-        server.insertInventory(resource, 42);
+        server.updateContents(resource, 42, true);
 
         List<AssetSyncPacket> deltas = AssetSyncPacket.figureOutWhatToSend(server, playerId);
         assertEquals(1, deltas.size());
@@ -222,8 +225,8 @@ final class StationPacketRoundTripTest {
     void fullSyncRoundTripPreservesRecipeSnapshotPayload() {
         AutomatedFacility server = createFacility();
         ModuleInstance centrifuge = buildModule(server, FacilityModuleKind.CENTRIFUGE, StationTileCoord.of(1, 0));
-        Item inputItem = new Item();
-        Item outputItem = new Item();
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.diamond;
         RecipeSnapshot snapshot = RecipeSnapshot.resolved(
             (byte) 1,
             832,
@@ -274,7 +277,7 @@ final class StationPacketRoundTripTest {
 
         // Generate MODULE_ADDED delta and apply to client via the production code path
         AssetSyncPacket delta = AssetSyncPacket.moduleAdded(server.assetId, idx, m2);
-        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
 
         // CRITICAL: client must now have the layout tile for the new module
         assertTrue(
@@ -304,7 +307,7 @@ final class StationPacketRoundTripTest {
 
         // Send MODULE_REMOVED delta to client
         AssetSyncPacket delta = AssetSyncPacket.moduleRemoved(server.assetId, 0, module.id);
-        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
 
         assertEquals(
             0,
@@ -336,7 +339,7 @@ final class StationPacketRoundTripTest {
         module.updateStatus(Buildable.Status.DISABLED);
 
         AssetSyncPacket delta = AssetSyncPacket.moduleUpdated(server.assetId, 0, module);
-        AssetSyncPacket.applyDeltaToFacility(client, roundTrip(delta));
+        AssetSyncPacket.Handler.handleDelta(client, roundTrip(delta));
 
         ModuleInstance updatedModule = client.modules()
             .get(0);
@@ -394,13 +397,13 @@ final class StationPacketRoundTripTest {
         client.clearModules();
         client.settingsGroups()
             .clear();
-        client.inventory.clear();
+        client.clear();
         client.logisticsConfig.clear();
         StationLayout layout = client.stationLayout();
         if (layout != null) layout.loadFromSnapshot(java.util.Collections.emptyMap());
 
         for (AssetSyncPacket d : packet.fullSyncDeltas()) {
-            AssetSyncPacket.applyDeltaToFacility(client, d);
+            AssetSyncPacket.Handler.handleDelta(client, d);
         }
         client.setSyncRevision(packet.syncRevision());
     }

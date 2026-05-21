@@ -40,6 +40,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryBounds;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -96,6 +99,9 @@ public final class FacilityPersistenceManager {
     private final Gson gson;
     private static final Gson PURE_GSON = new GsonBuilder().create();
     private File worldSaveDir;
+
+    private static final String INVENTORY_KEY_ITEM_PREFIX = "I";
+    private static final String INVENTORY_KEY_FLUID_PREFIX = "F";
 
     public FacilityPersistenceManager() {
         gson = new GsonBuilder().setPrettyPrinting()
@@ -324,11 +330,11 @@ public final class FacilityPersistenceManager {
         }
     }
 
-    private AssetJson encodeAsset(CelestialAsset asset) {
+    AssetJson encodeAsset(CelestialAsset asset) {
         AssetJson json = new AssetJson();
         json.teamId = String.valueOf(CelestialAssetStore.getTeamId(asset.assetId));
         json.assetId = asset.assetId;
-        json.celestialObjectId = asset.celestialObjectId.toString();
+        json.celestialObjectId = String.valueOf(asset.celestialObjectId);
         json.displayName = asset.displayName();
         json.kind = asset.kind.name();
         json.location = asset.location.name();
@@ -344,10 +350,35 @@ public final class FacilityPersistenceManager {
             json.controllerZ = station.getController()
                 .z();
         }
+
+        json.itemsBounds = encodeBoundsMap(asset.getBounds(true));
+        json.fluidsBounds = encodeBoundsMap(asset.getBounds(false));
+        json.logisticsConfig = new LinkedHashMap<>();
+        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : asset.logisticsConfig.snapshot()
+            .entrySet()) {
+            LogisticsConfigJson cj = new LogisticsConfigJson();
+            cj.minReserve = e.getValue()
+                .minReserve();
+            cj.orderSize = e.getValue()
+                .orderSize();
+            cj.isImportEnabled = e.getValue()
+                .isImportEnabled();
+            cj.isSupplyEnabled = e.getValue()
+                .isSupplyEnabled();
+            json.logisticsConfig.put(
+                (e.getKey()
+                    .isItem() ? INVENTORY_KEY_ITEM_PREFIX : INVENTORY_KEY_FLUID_PREFIX) + e.getKey()
+                        .toKey(),
+                cj);
+        }
+        if (asset instanceof AutomatedFacility af) {
+            json.filters = new LinkedHashMap<>(af.filtersSnapshot());
+        }
+
         return json;
     }
 
-    private CelestialAsset decodeAsset(AssetJson json) {
+    CelestialAsset decodeAsset(AssetJson json) {
         if (json == null || json.teamId == null
             || json.assetId == null
             || json.celestialObjectId == null
@@ -369,14 +400,65 @@ public final class FacilityPersistenceManager {
             && json.controllerZ != null) {
             station.setController(new BlockPos(json.controllerX, json.controllerY, json.controllerZ));
         }
+
+        if (json.itemsBounds != null) {
+            var boundsMap = decodeBoundsMap(json.itemsBounds, true);
+            for (var bound : boundsMap.entrySet()) {
+                asset.setBound(
+                    bound.getKey(),
+                    bound.getValue()
+                        .low(),
+                    bound.getValue()
+                        .upper());
+            }
+        }
+        if (json.fluidsBounds != null) {
+            var boundsMap = decodeBoundsMap(json.fluidsBounds, false);
+            for (var bound : boundsMap.entrySet()) {
+                asset.setBound(
+                    bound.getKey(),
+                    bound.getValue()
+                        .low(),
+                    bound.getValue()
+                        .upper());
+            }
+        }
+        if (json.logisticsConfig != null) {
+            Map<InventoryKey, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
+            for (Map.Entry<String, LogisticsConfigJson> e : json.logisticsConfig.entrySet()) {
+                InventoryKey key = e.getKey()
+                    .startsWith(INVENTORY_KEY_ITEM_PREFIX)
+                        ? ItemStackWrapper.fromKey(
+                            e.getKey()
+                                .substring(1))
+                        : FluidKey.fromName(
+                            e.getKey()
+                                .substring(1));
+                if (key != null) {
+                    LogisticsConfigJson cj = e.getValue();
+                    cfgSnapshot.put(
+                        key,
+                        new LogisticsResourceConfig(
+                            cj.minReserve,
+                            cj.orderSize,
+                            cj.isImportEnabled,
+                            cj.isSupplyEnabled));
+                }
+            }
+            asset.logisticsConfig.loadFromSnapshot(cfgSnapshot);
+        }
+
+        if (json.filters != null && asset instanceof AutomatedFacility af) {
+            for (Map.Entry<Boolean, List<String>> e : json.filters.entrySet()) {
+                af.setFilters(e.getValue(), e.getKey());
+            }
+        }
+
         return asset;
     }
 
     FacilityStateJson encodeFacilityState(AutomatedFacility state) {
         FacilityStateJson out = new FacilityStateJson();
-        out.celestialBodyId = String.valueOf(state.celestialObjectId);
-        out.systemId = String.valueOf(state.systemId);
-        out.planetaryAnchorBodyId = String.valueOf(state.planetaryAnchorBodyId);
         out.energyStored = state.getEnergyStored();
         out.stationFeatureSalt = state.stationFeatureSalt();
         state.syncRecipeSettingsGroupsFromModules();
@@ -448,35 +530,15 @@ public final class FacilityPersistenceManager {
         LOG.info("[PERSIST] SAVE ENCODE: facility {} has {} module(s) in state", state.assetId, moduleCount);
 
         out.buffer = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> e : state.inventory.snapshot()
+        for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
             .entrySet()) {
             out.buffer.put(
                 e.getKey()
                     .toKey(),
                 e.getValue());
         }
-        out.fluidBuffer = new LinkedHashMap<>(state.inventory.fluidSnapshot());
-        out.itemLowerBounds = encodeItemAmountMap(state.inventory.itemLowerBoundsSnapshot());
-        out.itemUpperBounds = encodeItemAmountMap(state.inventory.itemUpperBoundsSnapshot());
-        out.fluidLowerBounds = new LinkedHashMap<>(state.inventory.fluidLowerBoundsSnapshot());
-        out.fluidUpperBounds = new LinkedHashMap<>(state.inventory.fluidUpperBoundsSnapshot());
-        out.logisticsConfig = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> e : state.logisticsConfig.snapshot()
-            .entrySet()) {
-            LogisticsConfigJson cj = new LogisticsConfigJson();
-            cj.minReserve = e.getValue()
-                .minReserve();
-            cj.orderSize = e.getValue()
-                .orderSize();
-            cj.isImportEnabled = e.getValue()
-                .isImportEnabled();
-            cj.isSupplyEnabled = e.getValue()
-                .isSupplyEnabled();
-            out.logisticsConfig.put(
-                e.getKey()
-                    .toKey(),
-                cj);
-        }
+        out.fluidBuffer = toFluidBuffer(state);
+
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         int anchorCount = 0;
@@ -510,7 +572,7 @@ public final class FacilityPersistenceManager {
     }
 
     AutomatedFacility decodeFacilityState(CelestialAsset asset, FacilityStateJson json) {
-        if (asset == null || json == null || json.systemId == null) return null;
+        if (asset == null || json == null || asset.systemId == null) return null;
         if (!(asset instanceof AutomatedFacility state)) return null;
         state.setEnergyStored(json.energyStored);
         state.setStationFeatureSalt(json.stationFeatureSalt);
@@ -668,42 +730,11 @@ public final class FacilityPersistenceManager {
                     bufferSnapshot.put(key, e.getValue());
                 }
             }
-            state.inventory.loadFromSnapshot(bufferSnapshot);
+            state.loadFromSnapshot(bufferSnapshot);
         }
         if (json.fluidBuffer != null) {
-            state.inventory.loadFluidSnapshot(json.fluidBuffer);
+            state.loadFluidSnapshot(json.fluidBuffer);
         }
-        if (json.itemLowerBounds != null) {
-            state.inventory.loadItemLowerBounds(decodeItemAmountMap(json.itemLowerBounds));
-        }
-        if (json.itemUpperBounds != null) {
-            state.inventory.loadItemUpperBounds(decodeItemAmountMap(json.itemUpperBounds));
-        }
-        if (json.fluidLowerBounds != null) {
-            state.inventory.loadFluidLowerBounds(json.fluidLowerBounds);
-        }
-        if (json.fluidUpperBounds != null) {
-            state.inventory.loadFluidUpperBounds(json.fluidUpperBounds);
-        }
-
-        if (json.logisticsConfig != null) {
-            Map<ItemStackWrapper, LogisticsResourceConfig> cfgSnapshot = new LinkedHashMap<>();
-            for (Map.Entry<String, LogisticsConfigJson> e : json.logisticsConfig.entrySet()) {
-                ItemStackWrapper key = ItemStackWrapper.fromKey(e.getKey());
-                if (key != null) {
-                    LogisticsConfigJson cj = e.getValue();
-                    cfgSnapshot.put(
-                        key,
-                        new LogisticsResourceConfig(
-                            cj.minReserve,
-                            cj.orderSize,
-                            cj.isImportEnabled,
-                            cj.isSupplyEnabled));
-                }
-            }
-            state.logisticsConfig.loadFromSnapshot(cfgSnapshot);
-        }
-
         StationLayout layout = state.stationLayout();
         int tilesLoaded = 0;
         int tilesSkipped = 0;
@@ -851,26 +882,55 @@ public final class FacilityPersistenceManager {
         return requirements;
     }
 
-    private static Map<String, Long> encodeItemAmountMap(Map<ItemStackWrapper, Long> amounts) {
-        Map<String, Long> encoded = new LinkedHashMap<>();
+    private static Map<String, Map.Entry<Long, Long>> encodeBoundsMap(Map<InventoryKey, InventoryBounds> amounts) {
+        Map<String, Map.Entry<Long, Long>> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
-        for (Map.Entry<ItemStackWrapper, Long> entry : amounts.entrySet()) {
-            if (entry.getKey() != null && entry.getValue() >= 0L) encoded.put(
+        for (Map.Entry<InventoryKey, InventoryBounds> entry : amounts.entrySet()) {
+            if (entry.getKey() == null) continue;
+            encoded.put(
                 entry.getKey()
                     .toKey(),
-                entry.getValue());
+                Map.entry(
+                    entry.getValue()
+                        .low(),
+                    entry.getValue()
+                        .upper()));
         }
         return encoded;
     }
 
-    private static Map<ItemStackWrapper, Long> decodeItemAmountMap(Map<String, Long> encoded) {
-        Map<ItemStackWrapper, Long> decoded = new LinkedHashMap<>();
+    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, Map.Entry<Long, Long>> encoded,
+        boolean items) {
+        Map<InventoryKey, InventoryBounds> decoded = new LinkedHashMap<>();
         if (encoded == null || encoded.isEmpty()) return decoded;
-        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
-            ItemStackWrapper key = ItemStackWrapper.fromKey(entry.getKey());
-            if (key != null && entry.getValue() >= 0L) decoded.put(key, entry.getValue());
+        for (Map.Entry<String, Map.Entry<Long, Long>> entry : encoded.entrySet()) {
+            InventoryKey key = items ? ItemStackWrapper.fromKey(entry.getKey()) : FluidKey.fromName(entry.getKey());
+            if (key == null) continue;
+            decoded.put(
+                key,
+                new InventoryBounds(
+                    entry.getValue()
+                        .getKey(),
+                    entry.getValue()
+                        .getValue()));
         }
         return decoded;
+    }
+
+    private static Map<String, Long> toFluidBuffer(AutomatedFacility state) {
+        return new LinkedHashMap<>(state.fluidSnapshot());
+    }
+
+    private static Map<String, Long> toFluidBounds(Map<FluidKey, Long> bounds) {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, Long> e : bounds.entrySet()) {
+            result.put(
+                e.getKey()
+                    .fluid()
+                    .getName(),
+                e.getValue());
+        }
+        return result;
     }
 
     static final class AssetJson {
@@ -878,6 +938,8 @@ public final class FacilityPersistenceManager {
         CelestialAsset.ID assetId;
         String teamId;
         String celestialObjectId;
+        String systemId;
+        String planetaryAnchorBodyId;
         String displayName;
         String kind;
         String location;
@@ -888,13 +950,14 @@ public final class FacilityPersistenceManager {
         Integer controllerX;
         Integer controllerY;
         Integer controllerZ;
+        Map<String, Map.Entry<Long, Long>> itemsBounds;
+        Map<String, Map.Entry<Long, Long>> fluidsBounds;
+        Map<String, LogisticsConfigJson> logisticsConfig;
+        Map<Boolean, List<String>> filters;
     }
 
     static final class FacilityStateJson {
 
-        String celestialBodyId;
-        String systemId;
-        String planetaryAnchorBodyId;
         long energyStored;
         long stationFeatureSalt;
         short settingsGroupsNextId;
@@ -902,11 +965,6 @@ public final class FacilityPersistenceManager {
         List<ModuleJson> modules;
         Map<String, Long> buffer;
         Map<String, Long> fluidBuffer;
-        Map<String, Long> itemLowerBounds;
-        Map<String, Long> itemUpperBounds;
-        Map<String, Long> fluidLowerBounds;
-        Map<String, Long> fluidUpperBounds;
-        Map<String, LogisticsConfigJson> logisticsConfig;
         List<StationTileJson> layoutTiles;
     }
 

@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -48,7 +48,7 @@ public interface IModuleComponent {
         return null;
     }
 
-    default void tickOperational(ModuleInstance module, AutomatedFacility outpost) {}
+    default void tickOperational(ModuleInstance module, CelestialAsset outpost) {}
 
     default IllegalStateException unsupportedSettingsGroups(ModuleInstance module) {
         return new IllegalStateException(

@@ -158,13 +158,11 @@ public final class DenseBitSet {
 
     public void clear() {
         Arrays.fill(slab, 0, slabUsed << WORD_SHIFT, 0L);
+        cachedPageIdx = -1;
         size = 0;
     }
 
     public void forEach(CoordConsumer consumer) {
-        final long sx = strideX;
-        final long sy = strideY;
-
         for (int bi = 0; bi < pageTable.length; bi++) {
             short[] block = pageTable[bi];
             if (block == null) continue;
@@ -176,21 +174,22 @@ public final class DenseBitSet {
                 long baseIdx = (((long) bi << BLOCK_SHIFT) | pi) << PAGE_SHIFT;
                 int slabBase = (rawIdx & 0xFFFF) << WORD_SHIFT;
 
-                // Sequential scan of one 512-byte page — always cache-friendly,
-                // and neighbouring pages in the same block are likely adjacent
-                // in the slab (because of batch allocation).
                 for (int wi = 0; wi < WORDS_PER_PAGE; wi++) {
                     long word = slab[slabBase + wi];
                     while (word != 0L) {
                         int bit = Long.numberOfTrailingZeros(word);
-                        long idx = baseIdx + (wi << 6) + bit;
+                        long idx = baseIdx + ((long) wi << 6) + bit;
 
-                        if (idx >= totalBits) return;
+                        int lx = (int) compact(idx) + minX;
+                        int ly = (int) compact(idx >>> 1) + minY;
+                        int lz = (int) compact(idx >>> 2) + minZ;
 
-                        consumer.accept(
-                            (int) compact(idx) + minX,
-                            (int) compact(idx >> 1) + minY,
-                            (int) compact(idx >> 2) + minZ);
+                        // Guard against Morton slots that fall outside the declared grid.
+                        // Cannot use idx >= totalBits: Morton indices of valid coords can
+                        // greatly exceed lenX*lenY*lenZ for non-cubic grids.
+                        if (lx < minX + lenX && ly < minY + lenY && lz < minZ + lenZ) {
+                            consumer.accept(lx, ly, lz);
+                        }
                         word &= word - 1L;
                     }
                 }

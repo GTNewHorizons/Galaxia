@@ -12,7 +12,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -41,29 +40,29 @@ public class ModuleInstance implements Buildable {
         return definition.getTierData(this.tier);
     }
 
-    public void tick(AutomatedFacility outpost) {
+    public void tick(CelestialAsset outpost) {
         if (this.status() == Buildable.Status.OPERATIONAL) {
             tickOperational(outpost);
         }
     }
 
-    private void tickOperational(AutomatedFacility outpost) {
+    private void tickOperational(CelestialAsset asset) {
         long powerDraw = this.powerDrawEuPerTick();
 
-        if (!outpost.tryConsumeEnergy(powerDraw)) {
+        if (!asset.tryConsumeEnergy(powerDraw)) {
             ticks = 0;
             return;
         }
 
         IModuleComponent component = this.component;
         if (component != null) {
-            component.tickOperational(this, outpost);
+            component.tickOperational(this, asset);
         }
 
         this.ticks += 1;
         if (this.ticks >= this.cooldownTicks()) {
             this.definition.applyBehavior()
-                .accept(this, outpost);
+                .accept(this, asset);
             this.setTicks(this.ticks - this.cooldownTicks());
         }
     }

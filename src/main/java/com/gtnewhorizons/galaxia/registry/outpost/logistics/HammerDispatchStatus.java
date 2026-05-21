@@ -44,17 +44,12 @@ public final class HammerDispatchStatus {
     }
 
     public static Status evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, double orbitalTime) {
-        return evaluate(
-            supplier,
-            hammerModule,
-            CelestialAssetStore.allAssets(),
-            LogisticStore.activeDeliveries(),
-            orbitalTime);
+        return evaluate(supplier, hammerModule, CelestialAssetStore.allAssets(), orbitalTime);
     }
 
     public static Status evaluate(AutomatedFacility supplier, ModuleInstance hammerModule, Iterable<?> assets,
-        Iterable<LogisticsDelivery> deliveries, double orbitalTime) {
-        return HammerDispatchPlanner.evaluate(supplier, hammerModule, assets, deliveries, orbitalTime)
+        double orbitalTime) {
+        return HammerDispatchPlanner.evaluate(supplier, hammerModule, assets, orbitalTime)
             .toStatus();
     }
 

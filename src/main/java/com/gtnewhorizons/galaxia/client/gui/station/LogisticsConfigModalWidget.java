@@ -28,6 +28,7 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -120,8 +121,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     public void drawBackground(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
         if (!controller.isLogisticsOpen()) return;
         ModuleConfigModalSupport.drawFrame(title(), WIDTH, HEIGHT);
-        AutomatedFacility facility = facility();
-        if (facility == null) {
+        CelestialAsset asset = asset();
+        if (asset == null) {
             ModuleConfigModalSupport.drawLine(
                 "No station selected",
                 ModuleConfigModalSupport.PANEL_PADDING,
@@ -130,7 +131,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             return;
         }
         drawHeaders();
-        if (rows(facility).isEmpty()) {
+        if (rows(asset).isEmpty()) {
             ModuleConfigModalSupport.drawLine(
                 "No tracked items",
                 SCROLL_X + ModuleConfigModalSupport.PANEL_PADDING,
@@ -140,24 +141,24 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private void refreshRows() {
-        AutomatedFacility facility = facility();
-        if (facility == null || !controller.isLogisticsOpen()) {
+        CelestialAsset asset = asset();
+        if (asset == null || !controller.isLogisticsOpen()) {
             rowSignature = "";
-            setRows(List.of(), facility);
+            setRows(List.of(), asset);
             return;
         }
-        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(facility);
+        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(asset);
         String signature = rowSignature(rows);
         if (signature.equals(rowSignature)) return;
         rowSignature = signature;
-        setRows(rows, facility);
+        setRows(rows, asset);
     }
 
-    private void setRows(List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows, AutomatedFacility facility) {
+    private void setRows(List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows, CelestialAsset asset) {
         scrollContent.removeAll();
         int y = 0;
         for (int i = 0; i < rows.size(); i++) {
-            scrollContent.child(rowWidget(i, rows.get(i), facility).pos(0, y));
+            scrollContent.child(rowWidget(i, rows.get(i), asset).pos(0, y));
             y += ROW_HEIGHT + ROW_GAP;
         }
         int contentHeight = Math.max(SCROLL_HEIGHT, y + ROW_GAP);
@@ -168,14 +169,14 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private ParentWidget<?> rowWidget(int rowIndex, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
-        AutomatedFacility facility) {
+        CelestialAsset asset) {
         ParentWidget<?> row = new ParentWidget<>().widthRelOffset(1f, -SCROLLBAR_GAP)
             .height(ROW_HEIGHT)
             .background(
                 ModuleConfigModalSupport.drawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
         row.child(
-            ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawRowText(facility, entry, x, y, w))
+            ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawRowText(asset, entry, x, y, w))
                 .asWidget()
                 .pos(0, 0)
                 .widthRel(1f)
@@ -258,8 +259,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
-    private void drawRowText(AutomatedFacility facility, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry,
-        int x, int y, int width) {
+    private void drawRowText(CelestialAsset asset, Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry, int x,
+        int y, int width) {
         ItemStackWrapper wrapper = entry.getKey();
         ItemStack stack = wrapper.toStack(1);
         renderItemIcon(stack, x + ICON_X, y + ICON_Y);
@@ -270,11 +271,19 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             Math.min(NAME_WIDTH, STOCK_X - NAME_X - 8),
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         ModuleConfigModalSupport.drawTrimmedLine(
-            formatAmount(facility.inventory.getAmount(wrapper)),
+            formatAmount(stockAmount(asset, wrapper)),
             x + STOCK_X,
             y + 11,
             RESERVE_X - STOCK_X - 8,
             EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+    }
+
+    private static long stockAmount(CelestialAsset asset, ItemStackWrapper wrapper) {
+        if (asset instanceof AutomatedFacility af) {
+            return af.getItemAmount(wrapper);
+        }
+        return asset.aggregatedItems()
+            .getOrDefault(wrapper, 0L);
     }
 
     private TextFieldWidget amountField(int rowIndex, boolean reserve) {
@@ -315,8 +324,8 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
 
     private void setAmount(int rowIndex, boolean reserve, String text) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
-        AutomatedFacility facility = facility();
-        if (row == null || facility == null) return;
+        CelestialAsset asset = asset();
+        if (row == null || asset == null) return;
         int min = reserve ? 0 : 1;
         int parsed = min;
         if (text != null && !text.isEmpty()) {
@@ -329,7 +338,7 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
         int clamped = Math.max(min, Math.min(MAX_LOGISTICS_AMOUNT, parsed));
         LogisticsResourceConfig current = row.getValue();
         LogisticsResourceConfig updated = reserve ? current.withMinReserve(clamped) : current.withOrderSize(clamped);
-        update(facility, row.getKey(), updated);
+        update(asset, row.getKey(), updated);
     }
 
     private void openItemPicker() {
@@ -344,63 +353,63 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
             return;
         }
         ItemStack stack = ItemPickerScreen.pollPendingPickForOutpost();
-        AutomatedFacility facility = facility();
-        if (stack == null || facility == null) return;
+        CelestialAsset asset = asset();
+        if (stack == null || asset == null) return;
         ItemStackWrapper wrapper = ItemStackWrapper.of(stack);
         if (wrapper == null) return;
-        LogisticsResourceConfig existing = facility.logisticsConfig.get(wrapper);
+        LogisticsResourceConfig existing = asset.logisticsConfig.get(wrapper);
         LogisticsResourceConfig config = existing == LogisticsResourceConfig.DEFAULT
             ? new LogisticsResourceConfig(0, 64, false, false)
             : existing;
-        facility.logisticsConfig.set(wrapper, config);
-        CelestialClient.updateLogisticsConfig(facility.assetId, wrapper, config);
+        asset.logisticsConfig.set(wrapper, config);
+        CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config);
     }
 
     private void shiftReserve(int rowIndex, int delta) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
-        AutomatedFacility facility = facility();
-        if (row == null || facility == null) return;
+        CelestialAsset asset = asset();
+        if (row == null || asset == null) return;
         LogisticsResourceConfig cfg = row.getValue();
-        update(facility, row.getKey(), cfg.withMinReserve(Math.max(0, cfg.minReserve() + delta)));
+        update(asset, row.getKey(), cfg.withMinReserve(Math.max(0, cfg.minReserve() + delta)));
     }
 
     private void shiftPackage(int rowIndex, int delta) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
-        AutomatedFacility facility = facility();
-        if (row == null || facility == null) return;
+        CelestialAsset asset = asset();
+        if (row == null || asset == null) return;
         LogisticsResourceConfig cfg = row.getValue();
-        update(facility, row.getKey(), cfg.withOrderSize(Math.max(1, cfg.orderSize() + delta)));
+        update(asset, row.getKey(), cfg.withOrderSize(Math.max(1, cfg.orderSize() + delta)));
     }
 
     private void toggleImport(int rowIndex) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
-        AutomatedFacility facility = facility();
-        if (row == null || facility == null) return;
+        CelestialAsset asset = asset();
+        if (row == null || asset == null) return;
         LogisticsResourceConfig cfg = row.getValue();
-        update(facility, row.getKey(), cfg.withImportEnabled(!cfg.isImportEnabled()));
+        update(asset, row.getKey(), cfg.withImportEnabled(!cfg.isImportEnabled()));
     }
 
     private void toggleExport(int rowIndex) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
-        AutomatedFacility facility = facility();
-        if (row == null || facility == null) return;
+        CelestialAsset asset = asset();
+        if (row == null || asset == null) return;
         LogisticsResourceConfig cfg = row.getValue();
-        update(facility, row.getKey(), cfg.withSupplyEnabled(!cfg.isSupplyEnabled()));
+        update(asset, row.getKey(), cfg.withSupplyEnabled(!cfg.isSupplyEnabled()));
     }
 
     private void removeEntry(int rowIndex) {
         Map.Entry<ItemStackWrapper, LogisticsResourceConfig> row = rowEntry(rowIndex);
-        AutomatedFacility facility = facility();
-        if (row == null || facility == null) return;
-        facility.logisticsConfig.reset(row.getKey());
-        CelestialClient.removeLogisticsConfig(facility.assetId, row.getKey());
+        CelestialAsset asset = asset();
+        if (row == null || asset == null) return;
+        asset.logisticsConfig.reset(row.getKey());
+        CelestialClient.removeLogisticsConfig(asset.assetId, row.getKey());
         rowSignature = "";
         refreshRows();
     }
 
-    private void update(AutomatedFacility facility, ItemStackWrapper wrapper, LogisticsResourceConfig config) {
-        facility.logisticsConfig.set(wrapper, config);
-        CelestialClient.updateLogisticsConfig(facility.assetId, wrapper, config);
+    private void update(CelestialAsset asset, ItemStackWrapper wrapper, LogisticsResourceConfig config) {
+        asset.logisticsConfig.set(wrapper, config);
+        CelestialClient.updateLogisticsConfig(asset.assetId, wrapper, config);
     }
 
     private String importLabel(int rowIndex) {
@@ -416,16 +425,21 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private Map.Entry<ItemStackWrapper, LogisticsResourceConfig> rowEntry(int rowIndex) {
-        AutomatedFacility facility = facility();
-        if (facility == null) return null;
-        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(facility);
+        CelestialAsset asset = asset();
+        if (asset == null) return null;
+        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = rows(asset);
         return rowIndex >= 0 && rowIndex < rows.size() ? rows.get(rowIndex) : null;
     }
 
-    private List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows(AutomatedFacility facility) {
-        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = new ArrayList<>(
-            facility.logisticsConfig.snapshot()
-                .entrySet());
+    @SuppressWarnings("Convert2Diamond")
+    private List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows(CelestialAsset asset) {
+        List<Map.Entry<ItemStackWrapper, LogisticsResourceConfig>> rows = new ArrayList<>();
+        for (Map.Entry<InventoryKey, LogisticsResourceConfig> e : asset.logisticsConfig.snapshot()
+            .entrySet()) {
+            if (e.getKey() instanceof ItemStackWrapper item) {
+                rows.add(new java.util.AbstractMap.SimpleEntry<>(item, e.getValue()));
+            }
+        }
         rows.sort(
             Comparator.comparing(
                 entry -> entry.getKey()
@@ -447,22 +461,26 @@ final class LogisticsConfigModalWidget extends ParentWidget<LogisticsConfigModal
     }
 
     private void back() {
-        int moduleIndex = controller.moduleIndex();
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
-        if (module != null && module.component() instanceof ModuleHammer) {
-            controller.openHammer(moduleIndex);
-            return;
+        ModuleInstance.ID modId = controller.moduleId();
+        if (modId != null) {
+            int moduleIndex = controller.moduleIndex();
+            ModuleInstance module = ModuleConfigModalSupport.module(assetId, modId);
+            if (module != null && module.component() instanceof ModuleHammer) {
+                controller.openHammer(moduleIndex);
+                return;
+            }
         }
         controller.close();
     }
 
     private String title() {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, controller.moduleId());
+        ModuleInstance.ID modId = controller.moduleId();
+        ModuleInstance module = modId != null ? ModuleConfigModalSupport.module(assetId, modId) : null;
         return module == null ? "Logistics" : ModuleConfigModalSupport.moduleTitle(module, "Logistics");
     }
 
-    private AutomatedFacility facility() {
-        return ModuleConfigModalSupport.facility(assetId);
+    private CelestialAsset asset() {
+        return ModuleConfigModalSupport.celestialAsset(assetId);
     }
 
     private void addHeaderTooltip(int x, int width, String text) {

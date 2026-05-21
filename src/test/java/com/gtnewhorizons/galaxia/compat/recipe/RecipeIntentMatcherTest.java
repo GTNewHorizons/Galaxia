@@ -5,19 +5,27 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.lang.reflect.Field;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 
 import gregtech.api.util.GTRecipe;
 import sun.misc.Unsafe;
 
 final class RecipeIntentMatcherTest {
+
+    @BeforeAll
+    static void initRegistries() {
+        TestFMLRegistry.init();
+    }
 
     @Test
     void singleFluidInputMatchCreatesResolvedSnapshot() throws Exception {
@@ -115,7 +123,7 @@ final class RecipeIntentMatcherTest {
 
     @Test
     void singleItemOutputMatchCopiesOutputChancesIntoSnapshot() throws Exception {
-        Item outputItem = new Item();
+        Item outputItem = Items.diamond;
         ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
         GTRecipe recipe = recipe(null, outputs, null, null, new int[] { 5000 }, 320, 480);
 

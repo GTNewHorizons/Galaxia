@@ -31,6 +31,10 @@ public class ConfigPlayer {
         @Config.LangKey("galaxia.config.player.rcs_zerog_recoil")
         @Config.DefaultBoolean(true)
         public boolean recoil_with_zerog_capabilities;
+
+        @Config.LangKey("galaxia.config.player.render_additional_stars")
+        @Config.DefaultBoolean(true)
+        public boolean render_additional_stars;
     }
 
     @Config.LangKey("galaxia.config.category.player_tether")

@@ -13,11 +13,13 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsConfiguration;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 
+// TODO: Make store work with fluids as well, there is already a half implementation throughout the codebase. Use
+// InventoryKey for the refactor
 public final class LogisticStore {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
@@ -68,49 +70,55 @@ public final class LogisticStore {
                         ticked.data.toAssetId());
                     return;
                 }
-                if (destination instanceof AutomatedFacility outpost) {
-                    long accepted = outpost.insertInventory(ticked.data.resourceId(), ticked.data.amount());
-                    long remaining = ticked.data.amount() - accepted;
-                    if (remaining > 0L) {
-                        ticked.setAmount(remaining);
-                    } else {
-                        activeDeliveries.remove(i);
-                    }
-                    LOG.debug(
-                        "[Logistics] Task {} delivered {} x {} to {}",
-                        ticked.deliveryId,
-                        accepted,
-                        ticked.data.resourceId(),
-                        ticked.data.toAssetId());
+                long accepted = destination.updateContents(
+                    ticked.data.resourceId(),
+                    (int) Math.min(ticked.data.amount(), Integer.MAX_VALUE),
+                    true);
+                long remaining = ticked.data.amount() - accepted;
+                if (remaining > 0L) {
+                    ticked.setAmount(remaining);
                 } else {
                     activeDeliveries.remove(i);
                 }
+                LOG.debug(
+                    "[Logistics] Task {} delivered {} x {} to {}",
+                    ticked.deliveryId,
+                    accepted,
+                    ticked.data.resourceId(),
+                    ticked.data.toAssetId());
             }
         }
     }
 
-    public static void updateSignalsForFacility(AutomatedFacility outpost) {
-        CelestialAsset.ID outpostAssetId = outpost.assetId;
-        Map<ItemStackWrapper, Long> snapshot = outpost.inventory.snapshot();
-        LogisticsConfiguration config = outpost.logisticsConfig;
+    public static void updateSignalsForFacility(CelestialAsset asset) {
+        CelestialAsset.ID assetId = asset.assetId;
+        Map<ItemStackWrapper, Long> snapshot = asset.aggregatedItems();
+        Map<ItemStackWrapper, Long> cannonItems = null;
+        if (asset instanceof Station station) {
+            cannonItems = station.getCannonChestItems();
+        }
 
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
-            .computeIfAbsent(outpostAssetId, k -> new LinkedHashMap<>());
+            .computeIfAbsent(assetId, k -> new LinkedHashMap<>());
 
-        List<ItemStackWrapper> allResources = new ArrayList<>(
-            config.snapshot()
-                .keySet());
+        List<ItemStackWrapper> allResources = new ArrayList<>();
+        for (InventoryKey key : asset.logisticsConfig.snapshot()
+            .keySet()) {
+            if (key instanceof ItemStackWrapper item) {
+                allResources.add(item);
+            }
+        }
         for (ItemStackWrapper r : snapshot.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
 
-        CelestialObjectId bodyId = outpost.celestialObjectId;
-        CelestialObjectId systemId = outpost.systemId;
-        CelestialObjectId planetaryAnchorBodyId = outpost.planetaryAnchorBodyId;
+        CelestialObjectId bodyId = asset.celestialObjectId;
+        CelestialObjectId systemId = asset.systemId;
+        CelestialObjectId planetaryAnchorBodyId = asset.planetaryAnchorBodyId;
 
         for (ItemStackWrapper resource : allResources) {
-            long stock = outpost.inventory.getAmount(resource);
-            LogisticsResourceConfig cfg = config.get(resource);
+            long stock = snapshot.getOrDefault(resource, 0L);
+            LogisticsResourceConfig cfg = asset.logisticsConfig.get(resource);
 
             LogisticSignal oldSignal = currentSignals.get(resource);
 
@@ -119,8 +127,14 @@ public final class LogisticStore {
 
             if (cfg.isImportEnabled() && stock < cfg.minReserve()) {
                 newAmount = -(cfg.minReserve() - stock);
-            } else if (cfg.isSupplyEnabled() && stock > cfg.minReserve()) {
-                newAmount = stock - cfg.minReserve();
+            } else if (cfg.isSupplyEnabled()) {
+                long supplyStock = stock;
+                if (cannonItems != null) {
+                    supplyStock += cannonItems.getOrDefault(resource, 0L);
+                }
+                if (supplyStock > cfg.minReserve()) {
+                    newAmount = supplyStock - cfg.minReserve();
+                }
             }
 
             if (newAmount == 0) {
@@ -129,7 +143,7 @@ public final class LogisticStore {
                 }
             } else {
                 LogisticSignal newSignal = new LogisticSignal(
-                    outpostAssetId,
+                    assetId,
                     systemId,
                     resource,
                     newAmount,

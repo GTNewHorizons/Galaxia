@@ -7,13 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.WarningPriority;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
 final class SystemAssetPanelStressTest {
 
@@ -148,5 +151,29 @@ final class SystemAssetPanelStressTest {
 
         @Override
         public void tick() {}
+
+        @Override
+        public long updateContents(InventoryKey item, int delta, boolean sync) {
+            return updateContents(item, delta);
+        }
+
+        public String getInventoryName() {
+            return "fake";
+        }
+
+        @Override
+        public boolean tryConsumeEnergy(long powerDraw) {
+            return false;
+        }
+
+        @Override
+        public long getEnergyStored() {
+            return 0;
+        }
+
+        @Override
+        public Stream<ModuleInstance> forEachModule() {
+            return Stream.of();
+        }
     }
 }

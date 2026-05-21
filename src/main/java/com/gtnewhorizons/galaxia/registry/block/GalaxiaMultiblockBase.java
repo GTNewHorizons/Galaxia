@@ -25,12 +25,12 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected ForgeDirection placedFacing = ForgeDirection.NORTH;
     protected ExtendedFacing currentFacing = ExtendedFacing.DEFAULT;
-    private int mCheckTimer = 0;
-    private boolean updated = true;
+    protected int mCheckTimer = 0;
+    protected boolean updated = true;
 
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;
-    private boolean reloadHappened = false;
+    protected boolean reloadHappened = false;
 
     public abstract IStructureDefinition<T> getStructureDefinition();
 
@@ -51,6 +51,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     }
 
     public void markStructureDirty() {
+        updated = true;
         mCheckTimer = 0;
     }
 
@@ -140,6 +141,12 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
 
     protected void onStructureDisformed() {}
 
+    protected boolean shouldCheckStructure() {
+        return true;
+    }
+
+    protected void onStructureChecked() {}
+
     @Override
     public void updateEntity() {
         super.updateEntity();
@@ -150,15 +157,21 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
             if (!GalaxiaAPI.isGregTechLoaded()) this.updated = true;
 
             if (this.updated) {
-                final boolean valid = checkStructure();
-                if (valid != structureValid) {
-                    structureValid = valid;
-                    if (valid) onStructureFormed();
-                    else onStructureDisformed();
-                    markDirty();
-                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-                }
                 this.updated = false;
+
+                if (shouldCheckStructure()) {
+                    final boolean valid = checkStructure();
+                    if (valid != structureValid) {
+                        structureValid = valid;
+                        if (valid) onStructureFormed();
+                        else onStructureDisformed();
+
+                        markDirty();
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    }
+                }
+
+                onStructureChecked();
             }
             mCheckTimer = 100;
         } else {
