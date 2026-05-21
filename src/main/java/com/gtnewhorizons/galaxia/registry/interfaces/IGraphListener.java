@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationBase;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStation;
 
 public interface IGraphListener {
 
@@ -10,7 +10,7 @@ public interface IGraphListener {
 
     default void onPieceDisconnected(TileStationBase<?> piece, TileStationBase<?> neighbor) {}
 
-    default void onGraphRebuilt(TileStationController controller) {}
+    default void onGraphRebuilt(TileStation controller) {}
 
     default void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {}
 

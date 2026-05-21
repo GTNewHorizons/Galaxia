@@ -21,7 +21,7 @@ import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStation;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -178,7 +178,7 @@ public class CelestialEventHandler {
 
         Map<ModuleInstance, TileHammerCannon> moduleCannon = null;
         if (supplier instanceof Station station) {
-            TileStationController ctrl = station.getTileController();
+            TileStation ctrl = station.getTileController();
             StationGraph graph = ctrl != null ? ctrl.getGraph() : null;
             if (graph == null) return false;
             moduleCannon = new HashMap<>();
