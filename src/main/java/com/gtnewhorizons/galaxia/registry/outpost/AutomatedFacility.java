@@ -47,6 +47,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 
 public final class AutomatedFacility extends CelestialAsset {
 
@@ -60,6 +61,9 @@ public final class AutomatedFacility extends CelestialAsset {
     private final StationLayout layout;
     private final LayoutCacheBundle layoutCache;
     private final SettingsGroupRegistry settingsGroups;
+
+    private final UpkeepLedger upkeepLedger;
+
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
     private long featureModifiersLayoutVersion = Long.MIN_VALUE;
@@ -89,6 +93,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.layout = ownsStationLayout(kind) ? new StationLayout() : null;
         this.layoutCache = new LayoutCacheBundle(layout);
         this.settingsGroups = new SettingsGroupRegistry();
+        this.upkeepLedger = new UpkeepLedger();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
         this.ticks = 0;
@@ -184,6 +189,10 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public LayoutCacheBundle layoutCache() {
         return layoutCache;
+    }
+
+    public UpkeepLedger.UpkeepSummary upkeepSummary() {
+        return upkeepLedger.summary(this);
     }
 
     public List<ModuleInstance> modules() {
