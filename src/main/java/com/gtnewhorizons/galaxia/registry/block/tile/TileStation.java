@@ -4,12 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
-import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -19,21 +16,22 @@ import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.InteractionSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
+import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
+
+import lombok.Getter;
+import lombok.Setter;
 
 public class TileStation extends TileStationBase<TileStation> {
 
@@ -119,7 +117,7 @@ public class TileStation extends TileStationBase<TileStation> {
             if (!(pos.getTE(worldObj) instanceof TileEntityAirlock airlock)) continue;
             for (BlockPos other : airlock.getStationControllers()) {
                 if (other.equals(here)) continue;
-                if (!(other.getTE(worldObj) instanceof TileStationBase<?> base)) continue;
+                if (!(other.getTE(worldObj) instanceof TileStationBase<?>base)) continue;
                 if (base.graph != null) {
                     this.graph = base.graph;
                     graph.connectPiece(here);
@@ -193,7 +191,7 @@ public class TileStation extends TileStationBase<TileStation> {
     public int getVolume() {
         int own = 0;
         var def = behavior.getStructureDefinition();
-        if (def instanceof ArbitraryShapeDefinition<?> asd) {
+        if (def instanceof ArbitraryShapeDefinition<?>asd) {
             own = asd.getVolume();
         }
         if (graph == null) return own;
@@ -201,7 +199,7 @@ public class TileStation extends TileStationBase<TileStation> {
         for (TileStationBase<?> s : graph.iterateOver(TileStationBase.class)) {
             if (s instanceof TileStation ts) {
                 var tsDef = ts.behavior.getStructureDefinition();
-                if (tsDef instanceof ArbitraryShapeDefinition<?> asd) {
+                if (tsDef instanceof ArbitraryShapeDefinition<?>asd) {
                     sum += asd.getVolume();
                 }
             }
@@ -263,7 +261,9 @@ public class TileStation extends TileStationBase<TileStation> {
                     .overlay(IKey.dynamic(() -> {
                         int idx = Math.max(0, behaviorIdx.getIntValue());
                         if (idx < allBehaviors.size()) {
-                            return StatCollector.translateToLocal(allBehaviors.get(idx).getUnlocalizedName());
+                            return StatCollector.translateToLocal(
+                                allBehaviors.get(idx)
+                                    .getUnlocalizedName());
                         }
                         return "???";
                     }))
@@ -320,7 +320,10 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
-        nbt.setByte("behavior", (byte) GalaxiaBehaviors.of(behavior).getId());
+        nbt.setByte(
+            "behavior",
+            (byte) GalaxiaBehaviors.of(behavior)
+                .getId());
         if (controllerFlag != null) {
             nbt.setByte("controllerFlag", controllerFlag.id);
         }
@@ -354,7 +357,8 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         if (nbt.hasKey("behavior")) {
-            behavior = GalaxiaBehaviors.byId(nbt.getByte("behavior")).get();
+            behavior = GalaxiaBehaviors.byId(nbt.getByte("behavior"))
+                .get();
         }
 
         if (nbt.hasKey("ownerMost") && nbt.hasKey("ownerLeast")) {
@@ -449,6 +453,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public enum Role {
+
         UNDEFINED(0),
         MAIN(1),
         SECONDARY(2);

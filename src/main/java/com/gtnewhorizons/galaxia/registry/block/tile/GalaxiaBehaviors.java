@@ -1,12 +1,13 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
-import lombok.Getter;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+import lombok.Getter;
+
 public enum GalaxiaBehaviors {
+
     ROOM(0, new RoomBehavior()),
     DOCK(1, new DockBehavior());
 

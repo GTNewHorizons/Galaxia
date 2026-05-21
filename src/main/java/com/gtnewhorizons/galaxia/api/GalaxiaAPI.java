@@ -366,8 +366,7 @@ public final class GalaxiaAPI {
                 BlockPos pos = station.getController();
                 if (pos == null) continue;
 
-                TileStation controller = (TileStation) player.worldObj
-                    .getTileEntity(pos.x(), pos.y(), pos.z());
+                TileStation controller = (TileStation) player.worldObj.getTileEntity(pos.x(), pos.y(), pos.z());
 
                 if (controller.hasOxygen((int) player.posX, (int) player.posY, (int) player.posZ)) {
                     return true;

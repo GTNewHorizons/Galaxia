@@ -1,12 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
+import java.util.List;
+
 import net.minecraft.nbt.NBTTagCompound;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
-
-import java.util.List;
 
 public interface StationBehavior {
 

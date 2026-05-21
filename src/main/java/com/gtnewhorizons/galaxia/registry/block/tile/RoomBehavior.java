@@ -1,15 +1,15 @@
 package com.gtnewhorizons.galaxia.registry.block.tile;
 
+import java.util.List;
+
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
-
-import java.util.List;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widget.Widget;
+import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
@@ -62,8 +62,7 @@ public class RoomBehavior implements StationBehavior {
         return List.of(new TextWidget<>(IKey.dynamic(() -> {
             boolean oxy = oxygenatedSync.getBoolValue();
             String oxygen = StatCollector.translateToLocal("galaxia.gui.station_controller.oxygen");
-            String status = StatCollector
-                .translateToLocal(oxy ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
+            String status = StatCollector.translateToLocal(oxy ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
             EnumChatFormatting color = oxy ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
             return oxygen + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, yOffset));

@@ -16,14 +16,14 @@ public interface StationBehaviorWithAttachments extends StationBehavior {
         if (!added) return;
         StationGraph graph = station.getGraph();
         if (graph == null) return;
-        if (pos.getTE(station.getWorldObj()) instanceof IStationAttachment<?> attachment) {
+        if (pos.getTE(station.getWorldObj()) instanceof IStationAttachment<?>attachment) {
             graph.registerAttachment(station.getHere(), pos, attachment);
         }
     }
 
     default void registerAttachments(TileStation station, StationGraph graph) {
         for (BlockPos pos : station.getAttachments()) {
-            if (pos.getTE(station.getWorldObj()) instanceof IStationAttachment<?> attachment) {
+            if (pos.getTE(station.getWorldObj()) instanceof IStationAttachment<?>attachment) {
                 graph.registerAttachment(station.getHere(), pos, attachment);
             }
         }
@@ -35,12 +35,13 @@ public interface StationBehaviorWithAttachments extends StationBehavior {
         if (graph == null) return;
 
         boolean changed = false;
-        Iterator<BlockPos> it = station.getAttachments().iterator();
+        Iterator<BlockPos> it = station.getAttachments()
+            .iterator();
         while (it.hasNext()) {
             BlockPos pos = it.next();
             TileEntity te = pos.getTE(station.getWorldObj());
             if (!(te instanceof IStationAttachment)
-                || (te instanceof GalaxiaBootableMultiblock<?> base && !base.isStructureValid())) {
+                || (te instanceof GalaxiaBootableMultiblock<?>base && !base.isStructureValid())) {
                 graph.removeAttachment(pos);
                 it.remove();
                 changed = true;
