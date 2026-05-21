@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.outpost;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,12 +11,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStation;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 

@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public record LogisticSignal(CelestialAsset.ID outpostAssetId, CelestialObjectId systemId, ItemStackWrapper resourceId,

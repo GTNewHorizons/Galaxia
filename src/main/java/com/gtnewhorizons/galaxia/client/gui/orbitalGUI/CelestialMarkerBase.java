@@ -9,8 +9,8 @@ import java.util.Map;
 import net.minecraft.util.ResourceLocation;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
 
 public class CelestialMarkerBase {
 

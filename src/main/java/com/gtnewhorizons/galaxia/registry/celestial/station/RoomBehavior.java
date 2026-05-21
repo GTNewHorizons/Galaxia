@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.List;
 
@@ -15,8 +15,9 @@ import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 
-public class RoomBehavior implements StationBehavior {
+public class RoomBehavior implements IStationBehavior {
 
     private final ArbitraryShapeDefinition<TileStation> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStation>builder()

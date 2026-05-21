@@ -16,8 +16,8 @@ import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
-import com.gtnewhorizons.galaxia.registry.block.tile.GalaxiaBehaviors;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.GalaxiaBehaviors;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 
 public class BlockStationController extends BlockUpdatable implements ITileEntityProvider {
 

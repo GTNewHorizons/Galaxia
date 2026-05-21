@@ -1,8 +1,10 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 
 import lombok.Getter;
 
@@ -13,10 +15,10 @@ public enum GalaxiaBehaviors {
 
     @Getter
     private final int id;
-    private final StationBehavior behavior;
+    private final IStationBehavior behavior;
 
     private static final GalaxiaBehaviors[] BY_ID = new GalaxiaBehaviors[values().length];
-    private static final List<StationBehavior> ALL;
+    private static final List<IStationBehavior> ALL;
 
     static {
         for (var b : values()) {
@@ -28,12 +30,12 @@ public enum GalaxiaBehaviors {
             .toList();
     }
 
-    GalaxiaBehaviors(int id, StationBehavior behavior) {
+    GalaxiaBehaviors(int id, IStationBehavior behavior) {
         this.id = id;
         this.behavior = behavior;
     }
 
-    public StationBehavior get() {
+    public IStationBehavior get() {
         return behavior;
     }
 
@@ -41,14 +43,14 @@ public enum GalaxiaBehaviors {
         return BY_ID[id];
     }
 
-    public static GalaxiaBehaviors of(StationBehavior behavior) {
+    public static GalaxiaBehaviors of(IStationBehavior behavior) {
         for (var b : values()) {
             if (b.behavior == behavior) return b;
         }
         return ROOM;
     }
 
-    public static List<StationBehavior> getAll() {
+    public static List<IStationBehavior> getAll() {
         return ALL;
     }
 }

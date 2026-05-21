@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import java.util.List;
 
@@ -7,8 +7,9 @@ import net.minecraft.nbt.NBTTagCompound;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 
-public interface StationBehavior {
+public interface IStationBehavior {
 
     String getUnlocalizedName();
 

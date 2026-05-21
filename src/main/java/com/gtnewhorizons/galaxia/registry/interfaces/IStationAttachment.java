@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 
 public interface IStationAttachment<T extends GalaxiaBootableMultiblock<T>> {
 

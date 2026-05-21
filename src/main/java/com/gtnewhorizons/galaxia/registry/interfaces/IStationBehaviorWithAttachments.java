@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import java.util.Iterator;
 
@@ -8,9 +8,10 @@ import net.minecraftforge.common.util.Constants;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 
-public interface StationBehaviorWithAttachments extends StationBehavior {
+public interface IStationBehaviorWithAttachments extends IStationBehavior {
 
     default void onAttachmentsChanged(TileStation station, BlockPos pos, boolean added) {
         if (!added) return;

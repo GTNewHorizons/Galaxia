@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import net.minecraft.util.StatCollector;
 
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
 
 public enum SystemAssetFilter {
 

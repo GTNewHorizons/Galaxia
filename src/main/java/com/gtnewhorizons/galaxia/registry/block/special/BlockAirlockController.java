@@ -12,7 +12,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
 public class BlockAirlockController extends BlockOpenable implements ITileEntityProvider {
 

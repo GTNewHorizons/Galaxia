@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 
 /**

@@ -1,8 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStation;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStationBase;
 
 public interface IGraphListener {
 

@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,19 +23,19 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
-import com.gtnewhorizons.galaxia.registry.outpost.Station;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 import lombok.Getter;
 import lombok.Setter;
 
 public class TileStation extends TileStationBase<TileStation> {
 
-    private StationBehavior behavior = GalaxiaBehaviors.ROOM.get();
+    private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
     @Getter
     @Setter
@@ -49,12 +49,12 @@ public class TileStation extends TileStationBase<TileStation> {
     @Getter
     private List<BlockPos> attachments = new ArrayList<>();
 
-    public void setBehavior(StationBehavior newBehavior) {
+    public void setBehavior(IStationBehavior newBehavior) {
         if (newBehavior == behavior) return;
         if (structureValid && behavior != null) {
             behavior.onStructureDisformed(this);
         }
-        if (!(newBehavior instanceof StationBehaviorWithAttachments) && !attachments.isEmpty()) {
+        if (!(newBehavior instanceof IStationBehaviorWithAttachments) && !attachments.isEmpty()) {
             attachments.clear();
             markDirty();
         }
@@ -232,7 +232,7 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         boolean isCtrl = controllerFlag == Role.MAIN;
-        List<StationBehavior> allBehaviors = GalaxiaBehaviors.getAll();
+        List<IStationBehavior> allBehaviors = GalaxiaBehaviors.getAll();
 
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
@@ -413,14 +413,14 @@ public class TileStation extends TileStationBase<TileStation> {
             graph = controller.getGraph();
         }
         behavior.onGraphRebuilt(this);
-        if (behavior instanceof StationBehaviorWithAttachments attacher && graph != null) {
+        if (behavior instanceof IStationBehaviorWithAttachments attacher && graph != null) {
             attacher.registerAttachments(this, graph);
         }
     }
 
     @Override
     public void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {
-        if (!(behavior instanceof StationBehaviorWithAttachments attacher)) return;
+        if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
         if (!attachments.contains(pos)) {
             attachments.add(pos);
             markDirty();
@@ -430,7 +430,7 @@ public class TileStation extends TileStationBase<TileStation> {
 
     @Override
     public void onAttachmentDisconnected(BlockPos pos) {
-        if (!(behavior instanceof StationBehaviorWithAttachments attacher)) return;
+        if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
         if (attachments.remove(pos)) {
             markDirty();
             attacher.onAttachmentsChanged(this, pos, false);
