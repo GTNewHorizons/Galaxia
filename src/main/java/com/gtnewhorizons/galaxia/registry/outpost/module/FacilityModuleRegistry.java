@@ -8,6 +8,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
@@ -58,12 +59,12 @@ public class FacilityModuleRegistry {
     }
 
     private static final Map<FacilityModuleKind, Definition> DEFINITIONS = new EnumMap<>(FacilityModuleKind.class);
+    private static final long PLACEHOLDER_UPKEEP_PER_MINUTE = 1L;
 
     public static void init() {
         register(
             FacilityModuleKind.POWER,
-            ModuleTierData.builder()
-                .addedEnergyCapacity(1500L)
+            tierDataBuilder().addedEnergyCapacity(1500L)
                 .powerDraw(-ModulePower.EU_TICK)
                 .cooldown(1)
                 .cost(Map.of(new ItemStack(Items.redstone), 8L, new ItemStack(Items.gold_ingot), 64L))
@@ -74,8 +75,7 @@ public class FacilityModuleRegistry {
             FacilityModuleKind.GEOTHERMAL_GENERATOR,
             Map.of(
                 ModuleTier.HV,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(2000L)
+                tierDataBuilder().addedEnergyCapacity(2000L)
                     .powerDraw(-ModuleGeothermalGenerator.EU_TICK)
                     .cooldown(1)
                     .cost(Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 64L))
@@ -249,8 +249,7 @@ public class FacilityModuleRegistry {
             ModuleBattery::new);
         register(
             FacilityModuleKind.MAINTENANCE_BAY,
-            ModuleTierData.builder()
-                .addedEnergyCapacity(500L)
+            tierDataBuilder().addedEnergyCapacity(500L)
                 .powerDraw(0L)
                 .cooldown(100)
                 .cost(Map.of(new ItemStack(Items.iron_ingot), 8L, new ItemStack(Items.gold_ingot), 16L))
@@ -393,6 +392,16 @@ public class FacilityModuleRegistry {
         return DEFINITIONS.containsKey(kind);
     }
 
+    private static ModuleTierData.Builder tierDataBuilder() {
+        return ModuleTierData.builder()
+            .upkeepItem(placeholderUpkeepStack(), PLACEHOLDER_UPKEEP_PER_MINUTE);
+    }
+
+    private static ItemStack placeholderUpkeepStack() {
+        Item item = Items.iron_ingot == null ? new Item() : Items.iron_ingot;
+        return new ItemStack(item);
+    }
+
     public static class TierMapBuilder {
 
         private final EnumMap<ModuleTier, ModuleTierData> map = new EnumMap<>(ModuleTier.class);
@@ -400,8 +409,7 @@ public class FacilityModuleRegistry {
         public TierMapBuilder add(ModuleTier tier, long energy, long power, int cooldown, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .cost(cost)
@@ -416,8 +424,7 @@ public class FacilityModuleRegistry {
             Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .capacity(capacity)
@@ -433,8 +440,7 @@ public class FacilityModuleRegistry {
             Map<String, Integer> variantCooldowns, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .variantCooldowns(variantCooldowns)
@@ -450,8 +456,7 @@ public class FacilityModuleRegistry {
             Map<String, Integer> variantChargeTicks, Map<ItemStack, Long> cost) {
             if (map.put(
                 tier,
-                ModuleTierData.builder()
-                    .addedEnergyCapacity(energy)
+                tierDataBuilder().addedEnergyCapacity(energy)
                     .powerDraw(power)
                     .cooldown(cooldown)
                     .chargeTicks(chargeTicks)
