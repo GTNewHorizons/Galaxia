@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -57,6 +59,7 @@ final class AssetModuleUpdatePacketTest {
 
     @BeforeAll
     static void initRegistries() {
+        TestFMLRegistry.init();
         CelestialRegistry.freezeAndBake();
         FacilityModuleRegistry.init();
     }
@@ -124,7 +127,7 @@ final class AssetModuleUpdatePacketTest {
 
     @Test
     void recipeSlotAdd_fullSnapshotPayload_roundTripIncludesFluidsRecipeStatsAndOutputChances() {
-        Item itemOutput = new Item();
+        Item itemOutput = Items.diamond;
         FluidStack fluidInput = fluidStack("galaxia_packet_input_fluid", 144);
         FluidStack fluidOutput = fluidStack("galaxia_packet_output_fluid", 72);
         SavedRecipe slot = new SavedRecipe(

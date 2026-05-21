@@ -4,82 +4,71 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Field;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import net.minecraft.init.Items;
+import net.minecraftforge.fluids.FluidRegistry;
 
-import net.minecraft.item.Item;
-
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 
 final class AutomatedFacilityInventoryTest {
 
-    @Test
-    void totalItemsTracksMutationsAndClearsState() throws Exception {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        ItemStackWrapper first = resource();
-        ItemStackWrapper second = resource();
+    private static FluidKey INPUT_KEY;
+    private static FluidKey OUTPUT_KEY;
 
-        inventory.add(first, 5);
-        inventory.add(second, 7);
-        inventory.tryConsume(first, 2);
-        inventory.setAmount(second, 3);
-        inventory.add(first, -3);
-
-        assertEquals(3L, inventory.totalItems());
-        assertEquals(3L, trackedTotalItems(inventory));
-        assertEquals(0L, inventory.getAmount(first));
-        assertEquals(3L, inventory.getAmount(second));
-
-        Map<ItemStackWrapper, Long> snapshot = new LinkedHashMap<>();
-        snapshot.put(first, 4L);
-        snapshot.put(second, 9L);
-        inventory.loadFromSnapshot(snapshot);
-
-        assertEquals(13L, inventory.totalItems());
-        assertEquals(13L, trackedTotalItems(inventory));
-
-        inventory.clear();
-
-        assertEquals(0L, inventory.totalItems());
-        assertEquals(0L, trackedTotalItems(inventory));
+    @BeforeAll
+    static void initRegistries() {
+        TestFMLRegistry.init();
+        INPUT_KEY = new FluidKey(FluidRegistry.LAVA, null);
+        OUTPUT_KEY = new FluidKey(FluidRegistry.WATER, null);
+        CelestialRegistry.freezeAndBake();
     }
 
     @Test
     void recipeBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        ItemStackWrapper input = resource();
-        ItemStackWrapper output = resource();
-        inventory.add(input, 40);
-        inventory.add(output, 990);
+        AutomatedFacility outpost = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper input = new ItemStackWrapper(Items.diamond, 0, null);
+        ItemStackWrapper output = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        outpost.updateItems(input, 40);
+        outpost.updateItems(output, 990);
+        // Hits capacity limit
+        assertEquals(960, outpost.getItemAmount(output));
+        outpost.updateItems(output, -470);
+        outpost.setBound(input, 32L, true);
+        outpost.setBound(output, 500L, false);
 
-        assertTrue(inventory.keepsItemLowerBoundAfterConsume(input, 8L, 32L));
-        assertFalse(inventory.keepsItemLowerBoundAfterConsume(input, 9L, 32L));
-        assertTrue(inventory.isItemBelowUpperBound(output, 1000L));
-        inventory.add(output, 10);
-        assertFalse(inventory.isItemBelowUpperBound(output, 1000L));
+        assertTrue(outpost.isAboveLow(input, 8));
+        assertFalse(outpost.isAboveLow(input, 9));
+        assertTrue(outpost.isBelowUpper(input));
+        outpost.updateItems(output, 10);
+        assertFalse(outpost.isBelowUpper(output));
     }
 
     @Test
     void recipeFluidBoundsCheckLowerReserveAndUpperTargetInventoryAmounts() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.addFluid("input", 1000);
-        inventory.addFluid("output", 900);
+        AutomatedFacility outpost = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PROXIMA_CENTAURI,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        outpost.updateFluids(INPUT_KEY, 1000);
+        outpost.updateFluids(OUTPUT_KEY, 900);
+        outpost.setBound(INPUT_KEY, 800L, true);
+        outpost.setBound(OUTPUT_KEY, 1000L, false);
 
-        assertTrue(inventory.keepsFluidLowerBoundAfterConsume("input", 200L, 800L));
-        assertFalse(inventory.keepsFluidLowerBoundAfterConsume("input", 201L, 800L));
-        assertTrue(inventory.isFluidBelowUpperBound("output", 1000L));
-        inventory.addFluid("output", 100);
-        assertFalse(inventory.isFluidBelowUpperBound("output", 1000L));
-    }
-
-    private static ItemStackWrapper resource() {
-        return new ItemStackWrapper(new Item(), 0, null);
-    }
-
-    private static long trackedTotalItems(AutomatedFacilityInventory inventory) throws Exception {
-        Field field = AutomatedFacilityInventory.class.getDeclaredField("totalItemAmount");
-        field.setAccessible(true);
-        return field.getLong(inventory);
+        assertTrue(outpost.isAboveLow(INPUT_KEY, 200L));
+        assertFalse(outpost.isAboveLow(INPUT_KEY, 201L));
+        assertTrue(outpost.isBelowUpper(OUTPUT_KEY));
+        outpost.updateFluids(OUTPUT_KEY, 100);
+        assertFalse(outpost.isBelowUpper(OUTPUT_KEY));
     }
 }

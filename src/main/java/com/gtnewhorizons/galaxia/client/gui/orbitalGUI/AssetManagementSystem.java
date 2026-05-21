@@ -43,6 +43,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
@@ -319,7 +320,8 @@ public final class AssetManagementSystem {
         void openPendingAssetManagement(OrbitalAssetUiState state, CelestialAsset asset) {
             if (asset == null || !assetSupport.isManageableStationAsset(asset)) return;
             if (asset.kind == CelestialAsset.Kind.AUTOMATED_STATION
-                || asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST) {
+                || asset.kind == CelestialAsset.Kind.AUTOMATED_OUTPOST
+                || asset.kind == CelestialAsset.Kind.STATION) {
                 StationManagementScreen.open(asset.assetId, callbacks.isCreativeBuildModeEnabled());
                 return;
             }
@@ -1647,7 +1649,7 @@ public final class AssetManagementSystem {
 
         private List<Map.Entry<ItemStackWrapper, Long>> getSortedInventoryEntries(AutomatedFacility outpost) {
             List<Map.Entry<ItemStackWrapper, Long>> entries = new ArrayList<>(
-                outpost.inventory.snapshot()
+                outpost.aggregatedItems()
                     .entrySet());
             Comparator<Map.Entry<ItemStackWrapper, Long>> comparator;
             if (state.inventorySortMode == InventorySortMode.AMOUNT) {
@@ -1896,14 +1898,17 @@ public final class AssetManagementSystem {
             activeScrollWidget = scroll;
             ParentWidget<?> content = new ParentWidget<>().widthRel(1f);
 
-            Map<ItemStackWrapper, LogisticsResourceConfig> configSnapshot = outpost.logisticsConfig.snapshot();
+            Map<InventoryKey, LogisticsResourceConfig> configSnapshot = outpost.logisticsConfig.snapshot();
 
             int rowY = 0;
-            for (Map.Entry<ItemStackWrapper, LogisticsResourceConfig> entry : configSnapshot.entrySet()) {
-                final ItemStackWrapper wrapper = entry.getKey();
+            for (Map.Entry<InventoryKey, LogisticsResourceConfig> entry : configSnapshot.entrySet()) {
+                final InventoryKey key = entry.getKey();
                 final LogisticsResourceConfig cfg = entry.getValue();
+                // TODO: Show also fluids
+                if (!key.isItem()) continue;
+                final ItemStackWrapper wrapper = (ItemStackWrapper) key;
                 final ItemStack displayStack = wrapper.toStack(1);
-                long currentAmount = outpost.inventory.getAmount(wrapper);
+                long currentAmount = outpost.getItemAmount(wrapper);
 
                 ParentWidget<?> row = new ParentWidget<>().pos(4, rowY)
                     .widthRelOffset(1f, -8)

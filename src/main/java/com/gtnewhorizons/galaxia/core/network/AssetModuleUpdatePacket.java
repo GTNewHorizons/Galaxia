@@ -27,7 +27,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.AllowShootingConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -378,11 +379,11 @@ public final class AssetModuleUpdatePacket implements IMessage {
     }
 
     public static AssetModuleUpdatePacket inventoryBoundPayload(CelestialAsset.ID assetId, int moduleIndex,
-        ModuleInstance.ID moduleId, ConfigAction action, BoundKind kind, String resourceKey, long amount) {
+        ModuleInstance.ID moduleId, ConfigAction action, BoundKind kind, InventoryKey resource, long amount) {
         AssetModuleUpdatePacket pkt = config(assetId, moduleIndex, moduleId, action);
         io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.buffer();
         PacketUtil.writeEnum(payloadBuf, kind);
-        PacketUtil.writeString(payloadBuf, resourceKey);
+        PacketUtil.writeInventoryKey(payloadBuf, resource);
         payloadBuf.writeLong(amount);
         pkt.rawPayload = new byte[payloadBuf.writerIndex()];
         payloadBuf.readBytes(pkt.rawPayload);
@@ -1002,15 +1003,17 @@ public final class AssetModuleUpdatePacket implements IMessage {
         if (packet.rawPayload == null) throw new IllegalArgumentException("missing inventory bound payload");
         io.netty.buffer.ByteBuf payloadBuf = io.netty.buffer.Unpooled.wrappedBuffer(packet.rawPayload);
         BoundKind kind = PacketUtil.readEnum(payloadBuf, BoundKind.class);
-        String resourceKey = PacketUtil.readString(payloadBuf);
+        InventoryKey key = PacketUtil.readInventoryKey(payloadBuf);
         long amount = payloadBuf.readLong();
         if (kind == null) throw new IllegalArgumentException("invalid inventory bound kind");
+        if (key == null) throw new IllegalArgumentException("unresolvable resource key");
+        boolean isLow = kind == BoundKind.ITEM_LOWER || kind == BoundKind.FLUID_LOWER;
         if (packet.getConfigAction() == ConfigAction.SET_INVENTORY_BOUND) {
-            state.inventory.setBound(kind, resourceKey, amount);
-            state.markInventoryBoundDelta(kind, resourceKey, true, amount);
+            state.setBound(key, amount, isLow);
+            state.markInventoryBoundDelta(kind, key, true, amount);
         } else {
-            state.inventory.clearBound(kind, resourceKey);
-            state.markInventoryBoundDelta(kind, resourceKey, false, amount);
+            state.clearBound(key, isLow);
+            state.markInventoryBoundDelta(kind, key, false, amount);
         }
     }
 

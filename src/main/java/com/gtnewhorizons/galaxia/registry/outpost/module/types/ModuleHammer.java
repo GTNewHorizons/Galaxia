@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -55,11 +56,14 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         setEnergyStored(energyStored);
     }
 
-    public static void charge(ModuleInstance instance, AutomatedFacility outpost) {
+    public static void charge(ModuleInstance instance, CelestialAsset asset) {
         ModuleHammer hammer = (ModuleHammer) instance.component();
         long charge = hammer.chargeRate(instance) * Math.max(1, instance.cooldownTicks());
-        if (hammer.chargeFrom(outpost, charge)) {
-            outpost.markModuleDirty(instance.id);
+        if (hammer.chargeFrom(asset, charge)) {
+            // This only makes sense for the facility since station save everything to nbt
+            if (asset instanceof AutomatedFacility facility) {
+                facility.markModuleDirty(instance.id);
+            }
         }
     }
 
@@ -122,7 +126,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
     }
 
     @Override
-    public void tickOperational(ModuleInstance module, AutomatedFacility outpost) {
+    public void tickOperational(ModuleInstance module, CelestialAsset asset) {
         tickDispatchCooldowns();
     }
 
@@ -212,7 +216,7 @@ public final class ModuleHammer implements IModuleComponent, IParallelModule {
         return true;
     }
 
-    private boolean chargeFrom(AutomatedFacility outpost, long amount) {
+    private boolean chargeFrom(CelestialAsset outpost, long amount) {
         long missing = energyCapacity() - energyStored;
         if (amount <= 0L || missing <= 0L) return false;
         long drawn = Math.min(Math.min(amount, missing), outpost.getEnergyStored());

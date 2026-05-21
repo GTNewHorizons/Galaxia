@@ -11,6 +11,7 @@ import javax.annotation.Nonnull;
 import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -45,9 +46,12 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         this.kind = kind;
     }
 
-    public static void generateOre(ModuleInstance instance, AutomatedFacility outpost) {
+    public static void generateOre(ModuleInstance instance, CelestialAsset outpost) {
         if (!(instance.component() instanceof ModuleMiner miner)) {
             throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
+        }
+        if (!(outpost instanceof AutomatedFacility facility)) {
+            throw new IllegalStateException("Miner should be only created in the AutomatedFacility");
         }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
@@ -57,7 +61,7 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 List<ItemStack> candidates = new java.util.ArrayList<>(ores.size() + veinOres.size());
                 candidates.addAll(ores);
                 candidates.addAll(veinOres);
-                MiningFeatureEffects featureEffects = featureMiningEffects(instance, outpost);
+                MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
                 candidates.addAll(featureEffects.candidates());
                 if (candidates.isEmpty() && featureEffects.replacementRolls()
                     .isEmpty()) return;
@@ -70,11 +74,12 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                     if (chosen == null) continue;
                     String oreKey = ItemStackWrapper.of(chosen)
                         .toKey();
-                    if (shouldVoidOre(instance, outpost, oreKey)) continue;
+                    if (shouldVoidOre(instance, facility, oreKey)) continue;
                     if (!featureEffects.shouldKeepOutput(RANDOM)) continue;
                     ItemStack ore = chosen.copy();
                     ore.stackSize = 1;
-                    outpost.insertInventory(ItemStackWrapper.of(ore), 1);
+                    ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
+                    if (oreWrapper != null) facility.updateContents(oreWrapper, 1, true);
                 }
             });
     }

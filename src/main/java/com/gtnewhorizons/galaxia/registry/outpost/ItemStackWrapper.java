@@ -13,7 +13,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
  * NBT-aware wrapper for ItemStack to be used as a key in HashMaps.
  */
 
-public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
+public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) implements InventoryKey {
 
     private static final Logger LOG = LogManager.getLogger("Galaxia");
 
@@ -91,5 +91,9 @@ public record ItemStackWrapper(Item item, int meta, NBTTagCompound nbt) {
         result = 31 * result + meta;
         result = 31 * result + (nbt != null ? nbt.hashCode() : 0);
         return result;
+    }
+
+    public ItemStack toItemStack() {
+        return new ItemStack(item, 1, meta);
     }
 }

@@ -28,9 +28,9 @@ import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
 
 /**
@@ -310,7 +310,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
         return ViewScope.PLANETARY;
     }
 
-    private boolean isOutpostInScope(AutomatedFacility outpost, ViewScope scope, CelestialObject viewRoot) {
+    private boolean isOutpostInScope(CelestialAsset outpost, ViewScope scope, CelestialObject viewRoot) {
         switch (scope) {
             case GALACTIC:
                 return true;
@@ -450,7 +450,7 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
         private void refresh(SignalRow row, ViewScope scope, CelestialObject viewRoot) {
             this.displayStack = item.toStack(1);
-            String fullName = displayStack != null ? displayStack.getDisplayName() : item.toKey();
+            String fullName = displayStack.getDisplayName();
             this.trimmedName = trimToPixels(fullName, NAME_W - 6);
             this.netText = (row.net() >= 0 ? "+" : "") + formatAmount(row.net());
             this.transitText = row.inTransit() > 0 ? formatAmount(row.inTransit()) : "\u2014";
@@ -459,17 +459,17 @@ public final class LogisticsSignalsWidget extends ParentWidget<LogisticsSignalsW
 
             tooltipLines.clear();
             tooltipLines.add(fullName);
-            for (AutomatedFacility outpost : CelestialClient.allOutposts()) {
+            for (CelestialAsset outpost : CelestialClient.allAssets()) {
                 if (!isOutpostInScope(outpost, scope, viewRoot)) continue;
-                CelestialAsset asset = outpost;
-                if (asset == null) continue;
-                long stock = outpost.inventory.getAmount(item);
+                if (outpost == null) continue;
+                long stock = outpost instanceof Station station ? station.getCannonChestItems()
+                    .getOrDefault(item, 0L) : outpost.getItemAmount(item);
                 LogisticsResourceConfig cfg = outpost.logisticsConfig.get(item);
                 if (stock == 0 && cfg.minReserve() == 0 && !cfg.isImportEnabled() && !cfg.isSupplyEnabled()) continue;
                 long localNet = stock - cfg.minReserve();
                 String flags = (cfg.isImportEnabled() ? "I" : "-") + (cfg.isSupplyEnabled() ? "E" : "-");
                 tooltipLines.add(
-                    asset.displayName() + " ["
+                    outpost.displayName() + " ["
                         + flags
                         + "] "
                         + stock

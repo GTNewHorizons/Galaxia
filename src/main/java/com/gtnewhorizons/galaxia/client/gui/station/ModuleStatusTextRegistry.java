@@ -92,7 +92,6 @@ final class ModuleStatusTextRegistry {
             context.facility(),
             module,
             CelestialClient.allOutposts(),
-            CelestialClient.clientDeliveries(),
             GalaxiaCelestialAPI.currentOrbitalTime());
         lines.line(
             hammerDispatchStatusLine(status),

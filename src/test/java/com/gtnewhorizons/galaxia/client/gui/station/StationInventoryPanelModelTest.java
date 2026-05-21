@@ -6,14 +6,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.item.Item;
+import net.minecraft.init.Items;
+import net.minecraftforge.fluids.Fluid;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
+import com.gtnewhorizons.galaxia.TestFMLRegistry;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModelTest {
+
+    @BeforeAll
+    static void init() {
+        TestFMLRegistry.init();
+    }
 
     @Test
     void allModeVoidsFullRowAmount() {
@@ -36,12 +46,12 @@ final class StationInventoryPanelModelTest {
     }
 
     @Test
-    void inventoryRowsIncludeItemsWithBoundsButNoStock() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        ItemStackWrapper tracked = new ItemStackWrapper(new Item(), 0, null);
-        inventory.setItemLowerBound(tracked, 32);
+    void inventoryRowsShowAllItems() {
+        IDistributedInventory distributed = distributed();
+        ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
+        setAmount(distributed, tracked, 5);
 
-        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(inventory);
+        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
@@ -49,46 +59,65 @@ final class StationInventoryPanelModelTest {
             rows.get(0)
                 .getKey());
         assertEquals(
-            0L,
+            5L,
             rows.get(0)
                 .getValue());
     }
 
     @Test
-    void inventoryRowsHideZeroStockItemsWithoutBounds() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.setAmount(new ItemStackWrapper(new Item(), 0, null), 0);
+    void inventoryRowsHideZeroStockItems() {
+        IDistributedInventory distributed = distributed();
+        ItemStackWrapper tracked = new ItemStackWrapper(Items.diamond, 0, null);
+        setAmount(distributed, tracked, 0);
 
         assertTrue(
-            StationInventoryPanelModel.inventoryRows(inventory)
+            StationInventoryPanelModel.inventoryRows(distributed)
                 .isEmpty());
     }
 
-    @Test
-    void fluidRowsIncludeFluidsWithBoundsButNoStoredAmount() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.setFluidUpperBound("galaxia.test.fluid", 1000);
+    private static void setAmount(IDistributedInventory distributed, ItemStackWrapper item, int amount) {
+        if (distributed instanceof AutomatedFacility af) {
+            af.updateItems(item, amount);
+        }
+    }
 
-        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(inventory);
+    private static IDistributedInventory distributed() {
+        return new AutomatedFacility(
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID.create(),
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.PROXIMA_CENTAURI,
+            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            com.gtnewhorizons.galaxia.registry.interfaces.Buildable.Status.OPERATIONAL);
+    }
+
+    @Test
+    void fluidRowsShowStoredFluids() {
+        IDistributedInventory distributed = distributed();
+        FluidKey water = new FluidKey(new Fluid("water"), null);
+        addFluid(distributed, water, 1000);
+
+        List<StationInventoryPanelModel.FluidRow> rows = StationInventoryPanelModel.fluidRows(distributed);
 
         assertEquals(1, rows.size());
         assertEquals(
-            "galaxia.test.fluid",
-            rows.get(0)
-                .fluidName());
-        assertEquals(
-            0L,
+            1000L,
             rows.get(0)
                 .amount());
     }
 
     @Test
-    void fluidRowsHideZeroAmountFluidsWithoutBounds() {
-        AutomatedFacilityInventory inventory = new AutomatedFacilityInventory();
-        inventory.addFluid("galaxia.test.fluid", 0);
+    void fluidRowsHideZeroAmountFluids() {
+        IDistributedInventory distributed = distributed();
+        FluidKey water = new FluidKey(new Fluid("water"), null);
+        addFluid(distributed, water, 0);
 
         assertTrue(
-            StationInventoryPanelModel.fluidRows(inventory)
+            StationInventoryPanelModel.fluidRows(distributed)
                 .isEmpty());
+    }
+
+    private static void addFluid(IDistributedInventory distributed, FluidKey fluid, int amount) {
+        if (distributed instanceof AutomatedFacility af) {
+            af.updateFluids(fluid, amount);
+        }
     }
 }

@@ -13,35 +13,35 @@ import java.util.Map;
  */
 public final class LogisticsConfiguration {
 
-    private final Map<ItemStackWrapper, LogisticsResourceConfig> configs = new LinkedHashMap<>();
+    private final Map<InventoryKey, LogisticsResourceConfig> configs = new LinkedHashMap<>();
 
     /** Returns the config for a resource, or {@link LogisticsResourceConfig#DEFAULT} if absent. */
-    public LogisticsResourceConfig get(ItemStackWrapper item) {
-        LogisticsResourceConfig cfg = configs.get(item);
+    public LogisticsResourceConfig get(InventoryKey key) {
+        LogisticsResourceConfig cfg = configs.get(key);
         return cfg != null ? cfg : LogisticsResourceConfig.DEFAULT;
     }
 
     /** Sets (or replaces) the config for a resource. */
-    public void set(ItemStackWrapper item, LogisticsResourceConfig config) {
+    public void set(InventoryKey key, LogisticsResourceConfig config) {
         if (config == null) {
-            configs.remove(item);
+            configs.remove(key);
         } else {
-            configs.put(item, config);
+            configs.put(key, config);
         }
     }
 
     /** Removes any explicit config for the resource, reverting it to DEFAULT. */
-    public void reset(ItemStackWrapper item) {
+    public void reset(InventoryKey item) {
         configs.remove(item);
     }
 
     /** Returns an unmodifiable snapshot of all explicitly configured resources. */
-    public Map<ItemStackWrapper, LogisticsResourceConfig> snapshot() {
+    public Map<InventoryKey, LogisticsResourceConfig> snapshot() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(configs));
     }
 
     /** Replaces all configs from a deserialized snapshot or migration. */
-    public void loadFromSnapshot(Map<ItemStackWrapper, LogisticsResourceConfig> snapshot) {
+    public void loadFromSnapshot(Map<InventoryKey, LogisticsResourceConfig> snapshot) {
         configs.clear();
         configs.putAll(snapshot);
     }

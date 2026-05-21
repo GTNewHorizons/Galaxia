@@ -13,12 +13,17 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockSpaceStationGlass;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerCannon;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
+import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
@@ -50,17 +55,20 @@ public enum GalaxiaBlocksEnum {
     AIRLOCK_CONTROLLER(new BlockAirlockController(), TileEntityAirlock.class, "airlock_controller"),
     STATION_CONTROLLER(new BlockStationController(), TileStationController.class, "station_controller"),
     STATION_ROOM(new BlockStationRoom(), TileStationRoom.class, "station_room"),
+    STATION_DOCK(new BlockStationDock(), TileStationDock.class, "station_dock"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "tenebrae_fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),
     GANTRY_TERMINAL(new BlockGantryTerminal(), TileEntityGantryTerminal.class, "gantry_terminal"),
     ROCKET_TROPHY(new BlockRocketTrophy(), TileEntityRocketTrophy.class, "rocket_trophy"),
+    HAMMER_TARGET(new BlockHammerTarget(), TileHammerTarget.class, "hammer_target"),
+    HAMMER_CANNON(new BlockHammerCannon(), TileHammerCannon.class, "hammer_cannon"),
     OXYGEN_COLLECTOR(new BlockOxygenCollector(), TileEntityOxygenCollector.class, "oxygen_collector"),
     OXYGEN_FILLER(new BlockOxygenFiller(), TileEntityOxygenFiller.class, "oxygen_filler"),
     OXYGEN_PYLON(new BlockOxygenPylon(), TileEntityOxygenPylon.class, "oxygen_pylon"),
 
     // NON-TE
-    SPACE_STATION_GLASS(new BlockSpaceStationGlass(), "space_station_glass"),
+    SPACE_STATION_GLASS(new BlockCasing("space_station/space_station_glass").glass(), "space_station_glass"),
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
 
     // MISC
@@ -77,7 +85,7 @@ public enum GalaxiaBlocksEnum {
     LAUNCHPAD_CASING(new BlockConfigurable("machine/launchpad")),
 
     // MISC - MULTIBLOCK BLOCKS
-    RUSTY_SCAFFOLDING(new BlockCasing("rusty_scaffolding")),
+    RUSTY_SCAFFOLDING(new BlockCasing("rusty_scaffolding").transparent()),
     RUSTY_PANEL(new BlockCasing("rusty_panel")),
     RUSTY_SHEETMETAL(new BlockCasing("rusty_sheetmetal")),
     SPACE_STATION_PANEL(new BlockCasing("space_station/space_station_panel")),

@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,7 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class AssetInventoryUpdatePacketTest {
@@ -47,20 +46,20 @@ final class AssetInventoryUpdatePacketTest {
     @Test
     void applyRejectsPositiveDeltaFromNonCreativeEvenWhenPacketClearsCreativeOnly() throws Exception {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
         setCreativeOnly(packet, false);
 
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
         assertNull(sync);
-        assertEquals(0, facility.inventory.getAmount(resource));
+        assertEquals(0L, facility.getItemAmount(resource));
     }
 
     @Test
     void applyBumpsSyncRevisionForInventoryDelta() {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.add(facility.assetId, resource, 64);
 
         AssetSyncPacket sync = packet.apply(TEAM, true);
@@ -72,13 +71,13 @@ final class AssetInventoryUpdatePacketTest {
     @Test
     void removePacketRemovesAllMatchingInventory() {
         AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
-        facility.inventory.add(resource, 32);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        facility.updateItems(resource, 32);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.remove(facility.assetId, resource);
 
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
-        assertEquals(0, facility.inventory.getAmount(resource));
+        assertEquals(0L, facility.getItemAmount(resource));
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
     }
@@ -92,7 +91,10 @@ final class AssetInventoryUpdatePacketTest {
 
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
-        assertEquals(48, facility.inventory.itemLowerBoundOrDefault(resource));
+        assertEquals(
+            48,
+            facility.getBound(resource)
+                .lowOrDefault());
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
     }

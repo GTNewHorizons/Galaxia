@@ -74,15 +74,11 @@ public final class CelestialAssetStore {
     }
 
     public static boolean disableAsset(CelestialAsset.ID assetId) {
-        return SERVER.updateAssetStatusInternal(assetId, Buildable.Status.DISABLED);
+        return SERVER.disableAssetInternal(assetId);
     }
 
     public static boolean enableAsset(CelestialAsset.ID assetId) {
-        return SERVER.updateAssetStatusInternal(assetId, Buildable.Status.OPERATIONAL);
-    }
-
-    public static boolean updateAssetStatus(CelestialAsset.ID assetId, Buildable.Status newStatus) {
-        return SERVER.updateAssetStatusInternal(assetId, newStatus);
+        return SERVER.enableAssetInternal(assetId);
     }
 
     public static boolean destroyAsset(CelestialAsset.ID assetId) {
@@ -181,21 +177,16 @@ public final class CelestialAssetStore {
     }
 
     public boolean disableAssetInternal(CelestialAsset.ID assetId) {
-        return updateAssetStatusInternal(assetId, Buildable.Status.DISABLED);
+        CelestialAsset asset = byId.get(assetId);
+        if (asset == null || asset.status() != Buildable.Status.OPERATIONAL) return false;
+        asset.updateStatus(Buildable.Status.DISABLED);
+        return true;
     }
 
     public boolean enableAssetInternal(CelestialAsset.ID assetId) {
-        return updateAssetStatusInternal(assetId, Buildable.Status.OPERATIONAL);
-    }
-
-    public boolean updateAssetStatusInternal(CelestialAsset.ID assetId, Buildable.Status newStatus) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null) return false;
-
-        assert newStatus == Buildable.Status.DISABLED
-            && asset.status() == Buildable.Status.OPERATIONAL : "Can only disable already built asset";
-
-        asset.updateStatus(newStatus);
+        if (asset == null || asset.status() != Buildable.Status.DISABLED) return false;
+        asset.updateStatus(Buildable.Status.OPERATIONAL);
         return true;
     }
 

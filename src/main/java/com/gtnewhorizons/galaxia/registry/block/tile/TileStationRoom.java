@@ -15,35 +15,30 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeTile;
+import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 
-public class TileStationRoom extends TileStationSecondary<TileStationRoom>
-    implements ArbitraryShapeTile<TileStationRoom> {
+public class TileStationRoom extends TileStationSecondary<TileStationRoom> {
 
     public final ArbitraryShapeDefinition<TileStationRoom> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
         .<TileStationRoom>builder()
-        .withSearchRadius(16)
         .addControllerBlock(GalaxiaBlocksEnum.STATION_ROOM.get())
         .addElements(
             BASE_VALID_BLOCKS.stream()
                 .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((_, tileEntity) -> {
+        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((stationRoom, tileEntity) -> {
             if (tileEntity instanceof TileEntityAirlock airlock) {
                 if (!airlock.isStructureValid()) return false;
 
-                registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                stationRoom.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
                 return true;
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+        .withSearchRadius(ConfigStructures.enclosed.searchRadius)
+        .enclosed()
         .build();
-
-    @Override
-    public boolean isStructureValid() {
-        return structureValid;
-    }
 
     @Override
     public IStructureDefinition<TileStationRoom> getStructureDefinition() {

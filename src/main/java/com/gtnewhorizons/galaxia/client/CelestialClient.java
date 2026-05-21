@@ -13,6 +13,7 @@ import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.core.network.AssetFilterUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket.ConfigAction;
@@ -25,7 +26,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
@@ -66,6 +68,10 @@ public final class CelestialClient {
             }
         }
         return result;
+    }
+
+    public static List<CelestialAsset> allAssets() {
+        return CelestialAssetStore.CLIENT.allAssetsInternal();
     }
 
     public static List<AutomatedFacility> allOutposts() {
@@ -213,15 +219,15 @@ public final class CelestialClient {
     }
 
     public static void updateInventoryBound(ID assetId, int moduleIndex, ConfigAction configAction, BoundKind kind,
-        String resourceKey, long amount) {
-        updateInventoryBound(assetId, configAction, kind, resourceKey, amount);
+        InventoryKey resource, long amount) {
+        updateInventoryBound(assetId, configAction, kind, resource, amount);
     }
 
-    public static void updateInventoryBound(ID assetId, ConfigAction configAction, BoundKind kind, String resourceKey,
-        long amount) {
+    public static void updateInventoryBound(ID assetId, ConfigAction configAction, BoundKind kind,
+        InventoryKey resource, long amount) {
         AssetInventoryUpdatePacket packet = configAction == ConfigAction.CLEAR_INVENTORY_BOUND
-            ? AssetInventoryUpdatePacket.clearBound(assetId, kind, resourceKey)
-            : AssetInventoryUpdatePacket.setBound(assetId, kind, resourceKey, amount);
+            ? AssetInventoryUpdatePacket.clearBound(assetId, kind, resource)
+            : AssetInventoryUpdatePacket.setBound(assetId, kind, resource, amount);
         StarmapActionSyncHandler.sendInventoryUpdate(packet);
     }
 
@@ -354,6 +360,28 @@ public final class CelestialClient {
     public static void removeLogisticsConfig(CelestialAsset.ID assetId, ItemStackWrapper resource) {
         LogisticsConfigUpdatePacket packet = LogisticsConfigUpdatePacket.remove(assetId, resource);
         StarmapActionSyncHandler.sendLogisticsConfig(packet);
+    }
+
+    // ── Filter actions ──
+
+    public static void addFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.addFilter(assetId, isItem, filterKey);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
+    }
+
+    public static void removeFilter(CelestialAsset.ID assetId, boolean isItem, String filterKey) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.removeFilter(assetId, isItem, filterKey);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
+    }
+
+    public static void clearFilters(CelestialAsset.ID assetId, boolean isItem) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.clearFilters(assetId, isItem);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
+    }
+
+    public static void setFilters(CelestialAsset.ID assetId, boolean isItem, List<String> filterKeys) {
+        AssetFilterUpdatePacket packet = AssetFilterUpdatePacket.setFilters(assetId, isItem, filterKeys);
+        StarmapActionSyncHandler.sendFilterUpdate(packet);
     }
 
     // ── Signal mirror ──

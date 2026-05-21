@@ -6,7 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacilityInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class StationInventoryPanelModel {
@@ -27,20 +28,10 @@ final class StationInventoryPanelModel {
         return Math.min(parsed, availableAmount);
     }
 
-    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(AutomatedFacilityInventory inventory) {
-        Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.snapshot());
-        for (ItemStackWrapper item : inventory.itemLowerBoundsSnapshot()
-            .keySet()) {
-            rows.putIfAbsent(item, inventory.getAmount(item));
-        }
-        for (ItemStackWrapper item : inventory.itemUpperBoundsSnapshot()
-            .keySet()) {
-            rows.putIfAbsent(item, inventory.getAmount(item));
-        }
+    static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory) {
+        Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
         rows.entrySet()
-            .removeIf(
-                row -> row.getValue() <= 0L && !inventory.hasItemLowerBound(row.getKey())
-                    && !inventory.hasItemUpperBound(row.getKey()));
+            .removeIf(row -> row.getValue() <= 0L);
         List<Map.Entry<ItemStackWrapper, Long>> sorted = new ArrayList<>(rows.entrySet());
         sorted.sort(
             Comparator.comparing(
@@ -51,27 +42,28 @@ final class StationInventoryPanelModel {
         return sorted;
     }
 
-    static List<FluidRow> fluidRows(AutomatedFacilityInventory inventory) {
-        Map<String, Long> rows = new LinkedHashMap<>(inventory.fluidSnapshot());
-        for (String fluidName : inventory.fluidLowerBoundsSnapshot()
-            .keySet()) {
-            rows.putIfAbsent(fluidName, inventory.getFluidAmount(fluidName));
+    static List<FluidRow> fluidRows(IDistributedInventory distributed) {
+        List<FluidRow> result = new ArrayList<>();
+        for (Map.Entry<FluidKey, Long> e : distributed.aggregatedFluids()
+            .entrySet()) {
+            if (e.getValue() > 0L) {
+                result.add(
+                    new FluidRow(
+                        e.getKey()
+                            .fluid()
+                            .getName(),
+                        e.getKey(),
+                        e.getValue()));
+            }
         }
-        for (String fluidName : inventory.fluidUpperBoundsSnapshot()
-            .keySet()) {
-            rows.putIfAbsent(fluidName, inventory.getFluidAmount(fluidName));
-        }
-        rows.entrySet()
-            .removeIf(
-                row -> row.getValue() <= 0L && !inventory.hasFluidLowerBound(row.getKey())
-                    && !inventory.hasFluidUpperBound(row.getKey()));
-        List<FluidRow> sorted = new ArrayList<>(rows.size());
-        for (Map.Entry<String, Long> row : rows.entrySet()) {
-            sorted.add(new FluidRow(row.getKey(), row.getValue()));
-        }
-        sorted.sort(Comparator.comparing(FluidRow::fluidName, String.CASE_INSENSITIVE_ORDER));
-        return sorted;
+        result.sort(Comparator.comparing(FluidRow::fluidName, String.CASE_INSENSITIVE_ORDER));
+        return result;
     }
 
-    record FluidRow(String fluidName, long amount) {}
+    record FluidRow(String fluidName, FluidKey fluidKey, long amount) {
+
+        FluidRow withAmount(long amount) {
+            return new FluidRow(fluidName, fluidKey, amount);
+        }
+    }
 }
