@@ -260,42 +260,41 @@ public final class CelestialAssetStore {
     }
 
     public void removeTeamInternal(UUID teamId) {
-        Map<CelestialObjectId, Set<CelestialAsset>> byBody = stateByBody.remove(teamId);
-        if (byBody == null) return;
-        for (Set<CelestialAsset> assets : byBody.values()) {
-            for (CelestialAsset asset : assets) {
-                byId.remove(asset.assetId);
-                teamById.remove(asset.assetId);
+        Map<CelestialObjectId, Set<CelestialAsset.ID>> teamAssets = bodyIndex.remove(teamId);
+        if (teamAssets == null) return;
+        for (Set<CelestialAsset.ID> ids : teamAssets.values()) {
+            for (CelestialAsset.ID id : ids) {
+                byId.remove(id);
+                teamById.remove(id);
             }
         }
-    }
-        return teamId.equals(teamById.get(id));
     }
 
     public Set<CelestialAsset.ID> getAssetsOnBodyInternal(CelestialObjectId objectId) {
         return byBody.getOrDefault(objectId, Set.of());
     }
-    // ── Private helpers ──
 
     public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
-        Map<CelestialObjectId, Set<CelestialAsset>> fromAssets = stateByBody.remove(fromTeamId);
+        Map<CelestialObjectId, Set<CelestialAsset.ID>> fromAssets = bodyIndex.remove(fromTeamId);
         if (fromAssets == null || fromAssets.isEmpty()) return;
 
-        for (Map.Entry<CelestialObjectId, Set<CelestialAsset>> entry : fromAssets.entrySet()) {
-            for (CelestialAsset asset : entry.getValue()) {
-                teamById.put(asset.assetId, toTeamId);
+        for (Set<CelestialAsset.ID> ids : fromAssets.values()) {
+            for (CelestialAsset.ID id : ids) {
+                teamById.put(id, toTeamId);
             }
         }
 
-        stateByBody.merge(toTeamId, fromAssets, (existing, incoming) -> {
-            for (Map.Entry<CelestialObjectId, Set<CelestialAsset>> entry : incoming.entrySet()) {
-                existing.merge(entry.getKey(), entry.getValue(), (a, b) -> {
-                    a.addAll(b);
-                    return a;
+        bodyIndex.merge(toTeamId, fromAssets, (existing, incoming) -> {
+            for (var entry : incoming.entrySet()) {
+                existing.merge(entry.getKey(), entry.getValue(), (existingSet, incomingSet) -> {
+                    existingSet.addAll(incomingSet);
+                    return existingSet;
                 });
             }
             return existing;
         });
+    }
+
     private List<CelestialAsset> resolveIds(Set<CelestialAsset.ID> ids) {
         List<CelestialAsset> result = new ArrayList<>(ids.size());
         for (CelestialAsset.ID id : ids) {
