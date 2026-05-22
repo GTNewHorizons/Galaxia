@@ -378,11 +378,32 @@ public class TileStation extends TileStationBase<TileStation> {
     public void invalidate() {
         if (graph != null) {
             if (graph.getController() == this) {
+                // Find a successor to transfer ownership
+                TileStation successor = null;
+                for (TileStation ts : graph.iterateOver(TileStation.class)) {
+                    successor = ts;
+                    break;
+                }
+
                 if (structureValid) {
                     structureValid = false;
                     behavior.onStructureDisformed(this);
                 }
+
                 graph.destroy();
+                attachments.clear();
+
+                if (successor != null && backingStation != null && !isChunkUnloading) {
+                    CelestialAsset.ID assetId = this.backingStation;
+                    this.backingStation = null;
+                    successor.backingStation = assetId;
+                    CelestialAssetStore.enableAsset(assetId);
+                    if (CelestialAssetStore.findAsset(assetId) instanceof Station station) {
+                        station.setController(successor.here);
+                    }
+                    successor.controllerFlag = Role.MAIN;
+                }
+
                 graph = null;
                 if (backingStation != null) {
                     if (isChunkUnloading) {
@@ -395,7 +416,6 @@ public class TileStation extends TileStationBase<TileStation> {
                 graph.disconnectPiece(here);
             }
         }
-        attachments.clear();
         super.invalidate();
     }
 
@@ -414,9 +434,10 @@ public class TileStation extends TileStationBase<TileStation> {
         if (structureValid) {
             structureValid = false;
             behavior.onStructureDisformed(this);
+            bootState = BootState.UNINITIALIZED;
         }
         graph = null;
-        controllerFlag = null;
+        controllerFlag = Role.UNDEFINED;
     }
 
     @Override
