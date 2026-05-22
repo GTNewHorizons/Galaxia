@@ -25,12 +25,12 @@ import gregtech.api.enums.OrePrefixes;
 import gregtech.api.util.GTOreDictUnificator;
 import gregtech.common.OreMixBuilder;
 
-public final class GTUtility {
+public final class GTCompat {
 
     private static final Map<String, ItemStack> RAW_ORE_CACHE = new HashMap<>();
     private static final Set<String> RAW_ORE_FAILURES = new HashSet<>();
 
-    private GTUtility() {}
+    private GTCompat() {}
 
     public static List<String> getGtVeinOres(@Nonnull String veinId) {
         if (!isGregTechLoaded() || veinId.isEmpty()) return List.of();
@@ -72,10 +72,10 @@ public final class GTUtility {
     public static List<ItemStack> getRawOres(@Nonnull String... veinIDs) {
         return Arrays.stream(veinIDs)
             .filter(id -> id != null && !id.isEmpty())
-            .map(GTUtility::getGtVeinOres)
+            .map(GTCompat::getGtVeinOres)
             .flatMap(
                 ores -> ores.stream()
-                    .map(GTUtility::getRawOreStack))
+                    .map(GTCompat::getRawOreStack))
             .collect(Collectors.toList());
     }
 

@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 
-import com.gtnewhorizons.galaxia.compat.GTUtility;
+import com.gtnewhorizons.galaxia.compat.GTCompat;
 
 public record CelestialBodyProperties(boolean visitable, boolean canCreateStation, boolean canCreateOutpost,
     double standardGravitationalParameter, double sphereOfInfluenceRadius, double parkingOrbitRadius, String oreProfile,
@@ -48,7 +48,7 @@ public record CelestialBodyProperties(boolean visitable, boolean canCreateStatio
 
     public List<ItemStack> getResolvedGtVeinOreStacks() {
         if (gtOreVeinIds.isEmpty()) return List.of();
-        return GTUtility.getRawOres(gtOreVeinIds.toArray(new String[0]));
+        return GTCompat.getRawOres(gtOreVeinIds.toArray(new String[0]));
     }
 
     public Builder toBuilder() {
