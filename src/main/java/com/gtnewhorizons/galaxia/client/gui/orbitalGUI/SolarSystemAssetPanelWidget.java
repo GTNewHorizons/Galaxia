@@ -19,6 +19,7 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
@@ -179,7 +180,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
 
     private void refreshRows(CelestialObject viewRoot) {
         visibleRows.clear();
-        List<CelestialAsset> assets = GalaxiaCelestialAPI.listAssetsInSystem(viewRoot.id(), GTTeamsCompat.getTeam());
+        List<CelestialAsset> assets = CelestialClient.listAssetsInSystem(viewRoot.id());
         assets.sort(currentSort.comparator());
         for (CelestialAsset asset : assets) {
             if (currentFilter.accepts(asset)) visibleRows.add(new SystemAssetRowView(asset));

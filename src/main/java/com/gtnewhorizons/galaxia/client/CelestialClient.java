@@ -435,6 +435,10 @@ public final class CelestialClient {
         return hammerTrajectoryLoadSample;
     }
 
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId) {
+        return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
+    }
+
     // ── Helpers ──
 
     private static void collectTransferTargets(CelestialObject current, List<TransferTarget> targets) {

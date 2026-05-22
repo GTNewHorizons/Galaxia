@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 
 /**
@@ -121,6 +122,9 @@ public final class CelestialAssetStore {
         SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
     }
 
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId, UUID teamId) {
+        return SERVER.listAssetsInSystemInternal(systemId, teamId);
+    }
     // ── Instance methods ──
 
     public void registerAssetInternal(UUID teamId, CelestialAsset asset) {
@@ -306,4 +310,27 @@ public final class CelestialAssetStore {
         merged.merge(stack, amount, Long::sum);
         return merged;
     }
+
+    /**
+     * Returns every team-owned asset whose host body sits in the system rooted at {@code systemId}.
+     * Aggregates by walking descendants of the system root (a star) in the celestial hierarchy.
+     * Order: stable DFS by hierarchy. Caller owns the returned list.
+     */
+    public List<CelestialAsset> listAssetsInSystemInternal(CelestialObjectId systemId, UUID teamId) {
+        List<CelestialAsset> assets = new ArrayList<>();
+        if (systemId == null || teamId == null) return assets;
+        CelestialObject systemRoot = CelestialRegistry.findById(systemId)
+            .orElse(null);
+        if (systemRoot == null) return assets;
+        collectAssetsInSubtree(systemRoot, teamId, assets);
+        return assets;
+    }
+
+    private void collectAssetsInSubtree(CelestialObject body, UUID teamId, List<CelestialAsset> out) {
+        out.addAll(getState(teamId, body.id()));
+        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+            collectAssetsInSubtree(child, teamId, out);
+        }
+    }
+
 }
