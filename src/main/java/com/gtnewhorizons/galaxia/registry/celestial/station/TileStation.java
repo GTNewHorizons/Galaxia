@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
+import it.unimi.dsi.fastutil.longs.LongArraySet;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -19,13 +21,10 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -35,16 +34,10 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
-import it.unimi.dsi.fastutil.longs.LongArraySet;
 import lombok.Getter;
 import lombok.Setter;
 
 public class TileStation extends TileStationBase<TileStation> {
-
-    public static final int COIL_COOLING_FACTOR = 1;
-    public static final int COIL_HEATING_FACTOR = 1;
-    public static final int OXYGEN_FACTOR = 1;
-    public static final int OXYGEN_DECAY_RATE = 1;
 
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
@@ -60,54 +53,11 @@ public class TileStation extends TileStationBase<TileStation> {
     @Getter
     private List<BlockPos> attachments = new ArrayList<>();
 
-    private IStructureDefinition<TileStation> DEFINITION = null;
-
+    @Getter
     private final LongArraySet coolingCoils = new LongArraySet();
-    private final LongArraySet heatingCoils = new LongArraySet();
-    private final LongArraySet oxygenators = new LongArraySet();
-    private final LongArraySet sporeFilters = new LongArraySet();
-    private final LongArraySet witherBlockers = new LongArraySet();
-
-    private double oxygenLevel = 0;
-
-    public int getCoolingModifier() {
-        return isSealed() ? (coolingCoils.size() * COIL_COOLING_FACTOR) : 0;
-    }
 
     public void addCoolingCoil(int x, int y, int z) {
         coolingCoils.add(CoordinatePacker.pack(x, y, z));
-    }
-
-    public int getHeatingModifier() {
-        return isSealed() ? (heatingCoils.size() * COIL_HEATING_FACTOR) : 0;
-    }
-
-    public void addHeatingCoil(int x, int y, int z) {
-        heatingCoils.add(CoordinatePacker.pack(x, y, z));
-    }
-
-    public boolean isOxygenated() {
-        return isSealed() && oxygenLevel >= 100;
-    }
-
-    public void addOxygenator(int x, int y, int z) {
-        oxygenators.add(CoordinatePacker.pack(x, y, z));
-    }
-
-    public boolean hasSporeFilter() {
-        return isSealed() && !sporeFilters.isEmpty();
-    }
-
-    public void addSporeFilter(int x, int y, int z) {
-        sporeFilters.add(CoordinatePacker.pack(x, y, z));
-    }
-
-    public boolean hasWitherBlocker() {
-        return isSealed() && !witherBlockers.isEmpty();
-    }
-
-    public void addWitherBlocker(int x, int y, int z) {
-        witherBlockers.add(CoordinatePacker.pack(x, y, z));
     }
 
     public void setBehavior(IStationBehavior newBehavior) {
@@ -134,15 +84,12 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public boolean protectsAgainst(IEnvironmentalHazard hazard) {
-        return true;
+        return isSealed();
     }
 
     @Override
     public IStructureDefinition<TileStation> getStructureDefinition() {
-        if (DEFINITION != null) return DEFINITION;
-
-        DEFINITION = behavior.buildStructureDefinition(GalaxiaAPI.getEffects(worldObj.provider.dimensionId));
-        return DEFINITION;
+        return behavior.getStructureDefinition();
     }
 
     @Override
@@ -170,16 +117,8 @@ public class TileStation extends TileStationBase<TileStation> {
             }
         }
         behavior.onStructureDisformed(this);
-        clearAllFunctionalBlocks();
-        super.onStructureDisformed();
-    }
-
-    public void clearAllFunctionalBlocks() {
         coolingCoils.clear();
-        heatingCoils.clear();
-        oxygenators.clear();
-        sporeFilters.clear();
-        witherBlockers.clear();
+        super.onStructureDisformed();
     }
 
     @Override
@@ -224,7 +163,6 @@ public class TileStation extends TileStationBase<TileStation> {
                 if (station.getController() == null) {
                     station.setController(this.here);
                 }
-                this.owner = CelestialAssetStore.getTeamId(backingStation);
                 return;
             }
         }
@@ -244,12 +182,6 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void tick() {
         super.tick();
-        if (isSealed()) {
-            oxygenLevel = Math
-                .clamp(oxygenLevel + (double) (oxygenators.size() * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
-        } else {
-            oxygenLevel = Math.max(oxygenLevel - OXYGEN_DECAY_RATE, 0);
-        }
 
         if (!isMainController()) return;
 
@@ -273,19 +205,8 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public int getVolume() {
-        var def = getStructureDefinition();
-        if (def instanceof ArbitraryShapeDefinition<?>asd) {
-            return asd.getVolume();
-        }
-
-        Galaxia.LOG.warn("[Station] `getVolme` called on a sealed structure defined without volume");
-
-        return 1;
-    }
-
-    public int getTotalVolume() {
         int own = 0;
-        var def = getStructureDefinition();
+        var def = behavior.getStructureDefinition();
         if (def instanceof ArbitraryShapeDefinition<?>asd) {
             own = asd.getVolume();
         }
@@ -293,7 +214,7 @@ public class TileStation extends TileStationBase<TileStation> {
         int sum = own;
         for (TileStationBase<?> s : graph.iterateOver(TileStationBase.class)) {
             if (s instanceof TileStation ts) {
-                var tsDef = ts.getStructureDefinition();
+                var tsDef = ts.behavior.getStructureDefinition();
                 if (tsDef instanceof ArbitraryShapeDefinition<?>asd) {
                     sum += asd.getVolume();
                 }

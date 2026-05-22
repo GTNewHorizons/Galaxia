@@ -1,9 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -41,7 +39,6 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
     @Getter
     private boolean sealed = false;
-    private boolean sealedDirty = true;
 
     public TileStationBase() {
         super();
@@ -72,8 +69,6 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
                     TileEntityAirlock.MAX_CONNECTIONS);
             }
         }
-
-        markSealedDirty();
     }
 
     @Override
@@ -86,11 +81,6 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         }
         airlocks.clear();
         sealed = false;
-        sealedDirty = false;
-    }
-
-    public void markSealedDirty() {
-        sealedDirty = true;
     }
 
     public void registerAirlock(int x, int y, int z) {
@@ -157,49 +147,49 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     public void tick() {
-        if (!structureValid) return;
-        if (sealedDirty) {
-            recomputeNetworkSeal();
-        }
+        sealed = checkSealed(new HashSet<>());
     }
 
-    private void recomputeNetworkSeal() {
-        Set<TileStationBase<?>> component = new LinkedHashSet<>();
-        Deque<TileStationBase<?>> queue = new ArrayDeque<>();
-        component.add(this);
-        queue.add(this);
+    private boolean checkSealed(Set<BlockPos> visited) {
+        if (!structureValid) return false;
 
-        boolean breached = false;
+        // Prevent cycles
+        if (!visited.add(here)) {
+            return true;
+        }
 
-        while (!queue.isEmpty()) {
-            TileStationBase<?> room = queue.poll();
+        boolean hasOpenAirlock = false;
+        boolean foundOxygenPath = false;
 
-            for (BlockPos airlockPos : room.airlocks) {
-                TileEntityAirlock airlock = airlockPos.getTE(worldObj);
-                if (airlock == null || !airlock.isOpen()) continue;
+        for (BlockPos airlockPos : airlocks) {
+            TileEntityAirlock airlock = airlockPos.getTE(worldObj);
+            if (airlock == null) continue;
+            if (!airlock.isOpen()) continue;
 
-                if (airlock.isExternalConnection()) {
-                    breached = true;
-                    // Don't short-circuit — keep traversing so we find and
-                    // update every room in the component.
-                    continue;
-                }
+            // Open to outside = immediate failure
+            if (airlock.isExternalConnection()) return false;
 
-                for (BlockPos neighborPos : airlock.getStationControllers()) {
-                    if (neighborPos.equals(room.here)) continue;
-                    TileStationBase<?> neighbor = neighborPos.getTE(worldObj);
-                    if (neighbor == null || !neighbor.structureValid) continue;
-                    if (component.add(neighbor)) {
-                        queue.add(neighbor);
-                    }
+            hasOpenAirlock = true;
+
+            for (BlockPos otherPos : airlock.getStationControllers()) {
+                if (otherPos.equals(here)) continue;
+
+                TileStationBase<?> other = otherPos.getTE(worldObj);
+                if (other == null) continue;
+
+                if (other.checkSealed(visited)) {
+                    foundOxygenPath = true;
                 }
             }
         }
 
-        boolean newSealed = !breached;
-        for (TileStationBase<?> room : component) {
-            room.sealed = newSealed;
-            room.sealedDirty = false;
+        // Case 1: no open doors → sealed
+        if (!hasOpenAirlock) {
+            return true;
         }
+
+        // Case 2: doors open → rely on network
+        return foundOxygenPath;
     }
+
 }

@@ -15,7 +15,6 @@ import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 
 public class RoomBehavior implements IStationBehavior {
@@ -34,20 +33,8 @@ public class RoomBehavior implements IStationBehavior {
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addHeatingCoil, GalaxiaBlocksEnum.HEATING_COIL.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addSporeFilter, GalaxiaBlocksEnum.SPORE_FILTER.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addWitherBlocker, GalaxiaBlocksEnum.WITHER_BLOCKER.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility.ofBlockPosAdder(TileStation::addOxygenator, GalaxiaBlocksEnum.OXYGENATOR.get(), 0))
+        .addElement(GalaxiaStructureUtility.ofBlockPosAdder(
+            TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
         .withSearchRadius(ConfigStructures.enclosed.searchRadius)
         .enclosed()
@@ -59,7 +46,7 @@ public class RoomBehavior implements IStationBehavior {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def) {
+    public IStructureDefinition<TileStation> getStructureDefinition() {
         return STRUCTURE_DEFINITION;
     }
 
@@ -70,7 +57,9 @@ public class RoomBehavior implements IStationBehavior {
 
     @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        BooleanSyncValue sealedSync = new BooleanSyncValue(() -> station.isSealed(), () -> station.isSealed());
+        BooleanSyncValue sealedSync = new BooleanSyncValue(
+            () -> station.isSealed(),
+            () -> station.isSealed());
         syncManager.syncValue("sealed", 0, sealedSync);
 
         return List.of(new TextWidget<>(IKey.dynamic(() -> {
