@@ -387,9 +387,6 @@ public class TileStation extends TileStationBase<TileStation> {
                     behavior.onStructureDisformed(this);
                 }
 
-                graph.destroy();
-                attachments.clear();
-
                 if (successor != null && backingStation != null && !isChunkUnloading) {
                     CelestialAsset.ID assetId = this.backingStation;
                     this.backingStation = null;
@@ -399,8 +396,13 @@ public class TileStation extends TileStationBase<TileStation> {
                         station.setController(successor.here);
                     }
                     successor.controllerFlag = Role.MAIN;
+                    successor.markDirty();
+                    successor.markStructureDirty();
+                    successor.onMachineBlockUpdate();
                 }
 
+                graph.destroy();
+                attachments.clear();
                 graph = null;
                 if (backingStation != null) {
                     if (isChunkUnloading) {
