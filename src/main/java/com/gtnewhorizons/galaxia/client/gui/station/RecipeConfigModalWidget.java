@@ -33,7 +33,7 @@ import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeChance;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapId;
 import com.gtnewhorizons.galaxia.compat.recipe.GTRecipeMapLayout;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
-import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;

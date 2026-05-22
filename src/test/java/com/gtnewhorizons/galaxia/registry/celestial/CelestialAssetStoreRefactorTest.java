@@ -15,8 +15,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
  * Verifies that {@link CelestialAssetStore#SERVER} and {@link CelestialAssetStore#CLIENT}
@@ -32,7 +32,7 @@ final class CelestialAssetStoreRefactorTest {
 
     @BeforeAll
     static void init() {
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
     }
 
     // ── Instance isolation ──

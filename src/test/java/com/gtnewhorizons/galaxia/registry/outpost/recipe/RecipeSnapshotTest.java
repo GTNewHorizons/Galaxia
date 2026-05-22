@@ -11,8 +11,8 @@ import net.minecraftforge.fluids.FluidStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import sun.misc.Unsafe;
 
@@ -20,7 +20,7 @@ final class RecipeSnapshotTest {
 
     @BeforeAll
     static void init() {
-        TestFMLRegistry.init();
+        GalaxiaTestBootstrap.ensureMinecraft();
     }
 
     @Test

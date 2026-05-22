@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.orbital.LambertTransfer;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class OrbitalTransferClientStateTest {
 
@@ -79,7 +79,7 @@ final class OrbitalTransferClientStateTest {
 
     @Test
     void renderedLogisticsTransferUsesCheapestLambertBranchForFixedRouteTime() {
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         InterplanetaryTransferSystem.OrbitalTransferSupport support = new InterplanetaryTransferSystem.OrbitalTransferSupport();
         CelestialObject source = GalaxiaCelestialAPI.get(CelestialObjectId.EGORA)
@@ -113,7 +113,7 @@ final class OrbitalTransferClientStateTest {
 
     @Test
     void fixedTransferDoesNotRenderLinearFallbackWhenLambertIsInvalid() {
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         InterplanetaryTransferSystem.OrbitalTransferSupport support = new InterplanetaryTransferSystem.OrbitalTransferSupport();
         CelestialObject source = GalaxiaCelestialAPI.get(CelestialObjectId.EGORA)
@@ -127,7 +127,7 @@ final class OrbitalTransferClientStateTest {
 
     @Test
     void lambertStressReportAcceptsFirstValidTransferCandidate() {
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         CelestialObject star = GalaxiaCelestialAPI.get(CelestialObjectId.VAEL)
             .orElseThrow();

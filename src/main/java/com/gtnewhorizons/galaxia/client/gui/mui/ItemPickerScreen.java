@@ -14,7 +14,7 @@ import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
-import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 
 /**
  * A minimal MUI screen with a single phantom item slot and NEI enabled.

@@ -13,21 +13,18 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilityModuleRegistryTest {
 
     @BeforeAll
     static void initRegistries() {
-        TestFMLRegistry.init();
-        CelestialRegistry.freezeAndBake();
-        FacilityModuleRegistry.init();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @Test

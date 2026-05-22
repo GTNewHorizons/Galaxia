@@ -4,7 +4,7 @@ import java.util.EnumSet;
 
 import net.minecraft.util.StatCollector;
 
-import com.gtnewhorizons.galaxia.registry.celestial.station.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
