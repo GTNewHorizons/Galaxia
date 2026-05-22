@@ -167,13 +167,13 @@ public class TileStation extends TileStationBase<TileStation> {
     public void tick() {
         super.tick();
 
-        if (isMainController()) {
-            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
-                secondary.tick();
-            }
-            graph.getAttachments()
-                .forEach(IStationAttachment::tick);
+        if (!isMainController()) return;
+
+        for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
+            secondary.tick();
         }
+        graph.getAttachments()
+            .forEach(IStationAttachment::tick);
     }
 
     public boolean isMainController() {
@@ -246,11 +246,8 @@ public class TileStation extends TileStationBase<TileStation> {
 
         // Role indicator
         panel.child(new TextWidget<>(IKey.dynamic(() -> {
-            String roleKey = controllerFlag == Role.MAIN
-                ? "galaxia.gui.role.main"
-                : "galaxia.gui.role.secondary";
-            return StatCollector.translateToLocal("galaxia.gui.role") + ": "
-                + StatCollector.translateToLocal(roleKey);
+            String roleKey = controllerFlag == Role.MAIN ? "galaxia.gui.role.main" : "galaxia.gui.role.secondary";
+            return StatCollector.translateToLocal("galaxia.gui.role") + ": " + StatCollector.translateToLocal(roleKey);
         })).pos(10, 22));
 
         IntSyncValue behaviorIdx = new IntSyncValue(

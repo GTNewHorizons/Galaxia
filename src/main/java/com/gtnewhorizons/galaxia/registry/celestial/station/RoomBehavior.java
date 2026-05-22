@@ -54,6 +54,11 @@ public class RoomBehavior implements IStationBehavior {
     }
 
     @Override
+    public void onStructureFormed(TileStation station) {
+        station.oxygenLevel = TileStationBase.DEFAULT_OXYGEN_LEVEL;
+    }
+
+    @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
         BooleanSyncValue oxygenatedSync = new BooleanSyncValue(
             () -> station.isOxygenated(),
