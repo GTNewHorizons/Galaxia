@@ -7,15 +7,9 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.entity.RenderItem;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
-
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -58,8 +52,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int SCROLL_HEIGHT = PANEL_HEIGHT - SCROLL_Y - 8;
     private static final int ICON_X = 4;
     private static final int NAME_X = 24;
-    private static final int NAME_WIDTH = 104;
     private static final int AMOUNT_X = 136;
+    private static final int ITEM_INTERACTION_BUTTON_SIZE = 18;
+    private static final int ITEM_INTERACTION_BUTTON_X = AMOUNT_X - ITEM_INTERACTION_BUTTON_SIZE - 4;
+    private static final int NAME_WIDTH = ITEM_INTERACTION_BUTTON_X - NAME_X - 4;
     private static final int ROW_RIGHT_PADDING = 8;
     private static final int CONTROL_GAP = 4;
     private static final int BOUNDS_WIDTH = 54;
@@ -91,6 +87,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private final VerticalScrollData scrollData = new VerticalScrollData();
     private final ParentWidget<?> scrollContent = new ParentWidget<>().widthRel(1f);
     private final ParentWidget<?> boundEditorRoot = new ParentWidget<>();
+    private final ParentWidget<?> itemInteractionRoot = new ParentWidget<>();
     private final TextWidget<?> emptyInventoryText = new TextWidget<>(IKey.str("Inventory is empty."))
         .color(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
         .shadow(true)
@@ -106,18 +103,26 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private @Nullable TextFieldWidget inputBoundField;
     private @Nullable TextFieldWidget outputBoundField;
     private final StationOverlayCoordinator overlayCoordinator;
+    private final @Nullable ModuleConfigModalController configController;
     private boolean open;
     private String rowStructureSignature = "";
     private Map<ItemStackWrapper, Long> cachedItemAmounts = Map.of();
     private Map<FluidKey, Long> cachedFluidAmounts = Map.of();
+    private @Nullable ItemStackWrapper selectedInteractionItem;
 
     StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId) {
         this(assetId, new StationOverlayCoordinator());
     }
 
     StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, StationOverlayCoordinator overlayCoordinator) {
+        this(assetId, overlayCoordinator, null);
+    }
+
+    StationInventoryPanelWidget(@Nullable CelestialAsset.ID assetId, StationOverlayCoordinator overlayCoordinator,
+        @Nullable ModuleConfigModalController configController) {
         this.assetId = assetId;
         this.overlayCoordinator = overlayCoordinator;
+        this.configController = configController;
         overlayCoordinator.register(this);
         size(PANEL_WIDTH, PANEL_Y + PANEL_HEIGHT);
         child(
@@ -183,6 +188,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .pos(BOUND_EDITOR_X + BOUND_EDITOR_WIDTH - 62, BOUND_EDITOR_Y + BOUND_EDITOR_HEIGHT - 26)
                 .size(54, 18));
         panelRoot.child(boundEditorRoot);
+        itemInteractionRoot.pos(0, 0)
+            .size(PANEL_WIDTH, PANEL_HEIGHT)
+            .setEnabled(false);
+        panelRoot.child(itemInteractionRoot);
         child(panelRoot);
     }
 
@@ -193,6 +202,8 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             if (panelRoot.isEnabled()) {
                 panelRoot.setEnabled(false);
                 boundEditorRoot.setEnabled(false);
+                itemInteractionRoot.setEnabled(false);
+                selectedInteractionItem = null;
                 rowStructureSignature = "";
                 cachedItemAmounts = Map.of();
                 cachedFluidAmounts = Map.of();
@@ -215,6 +226,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             rowStructureSignature = nextSignature;
         }
         boundEditorRoot.setEnabled(isBoundEditorOpen());
+        itemInteractionRoot.setEnabled(isItemInteractionOpen());
     }
 
     @Override
@@ -241,6 +253,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (!open) return;
         open = false;
         closeBoundEditor();
+        closeItemInteractions();
     }
 
     @Override
@@ -334,7 +347,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 drawable(
                     (ctx, x, y, w, h) -> Gui.drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_ROW_BG.getColor())));
         rowWidget.child(drawable((ctx, x, y, w, h) -> {
-            renderItemIcon(displayStack, x, y + 4);
+            ModuleConfigModalSupport.renderItemIcon(displayStack, x, y + 4);
             renderBoundMarkers(wrapper, x, y + 4);
         }).asWidget()
             .pos(ICON_X, 0)
@@ -350,6 +363,15 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                     EnumColors.MAP_COLOR_TEXT_BODY.getColor())).asWidget()
                         .pos(NAME_X, 0)
                         .size(NAME_WIDTH, ROW_HEIGHT));
+        rowWidget.child(
+            ModuleConfigModalSupport
+                .iconButton(
+                    () -> af() != null,
+                    new ItemStack(Items.compass),
+                    "Interactions",
+                    () -> openItemInteractions(wrapper))
+                .pos(ITEM_INTERACTION_BUTTON_X, 3)
+                .size(ITEM_INTERACTION_BUTTON_SIZE, 18));
         rowWidget.child(
             new TextWidget<>(IKey.dynamic(() -> formatAmount(currentAmount(wrapper))))
                 .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
@@ -536,6 +558,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             overlayCoordinator.closeOthers(this);
         } else {
             closeBoundEditor();
+            closeItemInteractions();
         }
     }
 
@@ -543,6 +566,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (resourceMode == mode) return;
         resourceMode = mode;
         closeBoundEditor();
+        closeItemInteractions();
         rowStructureSignature = "";
     }
 
@@ -618,6 +642,29 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private void closeBoundEditor() {
         selectedBoundItem = null;
         selectedBoundFluid = null;
+    }
+
+    private boolean isItemInteractionOpen() {
+        return open && selectedInteractionItem != null;
+    }
+
+    private void openItemInteractions(ItemStackWrapper wrapper) {
+        AutomatedFacility af = af();
+        if (af == null) return;
+        closeBoundEditor();
+        selectedInteractionItem = wrapper;
+        itemInteractionRoot.removeAll();
+        itemInteractionRoot.child(
+            new StationItemInteractionModalWidget(assetId, configController, af, wrapper, this::closeItemInteractions)
+                .pos(48, 34)
+                .size(StationItemInteractionModalWidget.WIDTH, StationItemInteractionModalWidget.HEIGHT));
+        itemInteractionRoot.setEnabled(true);
+    }
+
+    private void closeItemInteractions() {
+        selectedInteractionItem = null;
+        itemInteractionRoot.setEnabled(false);
+        itemInteractionRoot.removeAll();
     }
 
     private void applyBound(boolean low) {
@@ -824,26 +871,6 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .append(';');
         }
         return signature.toString();
-    }
-
-    private static void renderItemIcon(ItemStack stack, int x, int y) {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc == null || mc.fontRenderer == null || mc.getTextureManager() == null) return;
-        com.cleanroommc.modularui.utils.GlStateManager.pushMatrix();
-        com.cleanroommc.modularui.utils.GlStateManager.translate(x, y, 200f);
-        GL11.glEnable(GL12.GL_RESCALE_NORMAL);
-        GL11.glEnable(GL11.GL_ALPHA_TEST);
-        RenderHelper.enableGUIStandardItemLighting();
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        RenderItem renderItem = RenderItem.getInstance();
-        float previousZ = renderItem.zLevel;
-        renderItem.zLevel = 200f;
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
-        renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-        renderItem.zLevel = previousZ;
-        RenderHelper.disableStandardItemLighting();
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        com.cleanroommc.modularui.utils.GlStateManager.popMatrix();
     }
 
     private void renderBoundMarkers(ItemStackWrapper wrapper, int x, int y) {
