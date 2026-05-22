@@ -4,6 +4,7 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
 import java.util.Optional;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;

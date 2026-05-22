@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
@@ -130,7 +131,8 @@ public class DimensionEventHandler {
         }
 
         this.batchedWarnings.clear();
-        Optional<TileStation> station = Optional.ofNullable(
+
+Optional<TileStation> station = Optional.ofNullable(
             GalaxiaAPI.getStationAround(
                 player.worldObj,
                 player.dimension,

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getRadiationProtection;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import java.util.Optional;
 
 import net.minecraft.entity.player.EntityPlayer;

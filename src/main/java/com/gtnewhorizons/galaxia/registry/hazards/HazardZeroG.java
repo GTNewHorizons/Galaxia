@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.hazards;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import java.util.Optional;
 
 import javax.annotation.Nullable;
