@@ -7,7 +7,8 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -73,12 +74,13 @@ public final class AssetUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            UUID teamId = TempTeamCompat.getTeam(player);
-            return message.apply(teamId);
+            if (player == null) return null;
+            UUID teamId = GTTeamsCompat.getTeam(player);
+            return message.apply(teamId, player);
         }
     }
 
-    public AssetSyncPacket apply(UUID teamId) {
+    public AssetSyncPacket apply(UUID teamId, EntityPlayerMP player) {
         if (teamId == null || assetId == null || action == null) {
             return null;
         }
@@ -90,6 +92,19 @@ public final class AssetUpdatePacket implements IMessage {
             return null;
         }
 
+        boolean authorized = switch (action) {
+            case REQUEST_FULL_SYNC -> true;
+            case DESTROY_ASSET -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.DESTROY_ASSET);
+            case START_DECONSTRUCTION -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.DECONSTRUCT_ASSET);
+            case CANCEL_CONSTRUCTION -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.BUILD_MODULE);
+            case RENAME_ASSET -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.RENAME_ASSET);
+        };
+        if (!authorized) return null;
+
+        return mutateNoChecks(teamId, asset);
+    }
+
+    public AssetSyncPacket mutateNoChecks(UUID teamId, CelestialAsset asset) {
         return switch (action) {
             case DESTROY_ASSET -> {
                 boolean destroyed = CelestialAssetStore.destroyAsset(assetId);

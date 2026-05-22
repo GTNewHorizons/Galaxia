@@ -8,9 +8,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
-import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
@@ -61,9 +58,6 @@ public class ClientProxy extends CommonProxy {
 
         // GUI init
         GalaxiaSkyBootstrap.clientInit();
-        ItemPickerScreen.FACTORY.init();
-        ModulePickerScreen.FACTORY.init();
-        StationManagementScreen.FACTORY.init();
 
         // StructureLib hook
         IMCForNEI.IMCSender();

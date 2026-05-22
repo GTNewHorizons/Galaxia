@@ -182,6 +182,7 @@ public enum EnumColors {
     MAP_COLOR_CONNECTOR_TANK(0xFF4444FF),
     MAP_COLOR_CONNECTOR_BATTERY(0xFFFFFF00),
     MAP_COLOR_CONNECTOR_DEFAULT(0xFFFFFFFF),
+    MAP_COLOR_TEAM_ACCENT(0xFF4488CC),
 
     // Add more colors here
     ; // leave trailing semicolon

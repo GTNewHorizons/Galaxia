@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
@@ -18,8 +19,10 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
@@ -115,6 +118,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
             if (panelRoot.isEnabled()) hidePanel();
             return;
         }
+        if (panelRoot.isEnabled()) hidePanel();
         refreshRowsIfNeeded(viewRoot);
         String signature = buildStructureSignature();
         boolean structureChanged = !signature.equals(lastStructureSignature) || viewRoot != lastViewRoot
@@ -176,7 +180,7 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
 
     private void refreshRows(CelestialObject viewRoot) {
         visibleRows.clear();
-        List<CelestialAsset> assets = GalaxiaCelestialAPI.listAssetsInSystem(viewRoot.id(), TempTeamCompat.getTeam());
+        List<CelestialAsset> assets = CelestialClient.listAssetsInSystem(viewRoot.id());
         assets.sort(currentSort.comparator());
         for (CelestialAsset asset : assets) {
             if (currentFilter.accepts(asset)) visibleRows.add(new SystemAssetRowView(asset));
@@ -212,8 +216,11 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
     }
 
     private void rebuildPanel(CelestialObject viewRoot) {
-        String title = "Assets \u2014 " + viewRoot.displayName() + " system";
-        int rowsToShow = Math.min(MAX_VISIBLE_ROWS, Math.max(1, visibleRows.size()));
+        String teamName = GTTeamsCompat.getTeamName()
+            .orElse(null);
+        String title = teamName != null ? teamName + " Assets \u2014 " + viewRoot.displayName() + " system"
+            : "Assets \u2014 " + viewRoot.displayName() + " system";
+        int rowsToShow = Math.clamp(visibleRows.size(), 1, MAX_VISIBLE_ROWS);
         int viewportH = visibleRows.isEmpty() ? EMPTY_VIEWPORT_H : rowsToShow * (ROW_H + ROW_GAP);
         int panelH = HEADER_H + CONTROLS_H + viewportH + PANEL_BOTTOM_PAD;
 
@@ -318,6 +325,19 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
                         "galaxia.system_asset.tooltip.construction",
                         Math.round(row.constructionProgress * 100f)));
             }
+            GTTeamsCompat.getTeamName()
+                .ifPresent(name -> {
+                    t.addLine(
+                        EnumChatFormatting.GRAY
+                            + StatCollector.translateToLocalFormatted("galaxia.gui.team_info.team", name));
+                    GTTeamsCompat.getTeamData()
+                        .ifPresent(
+                            team -> t.addLine(
+                                EnumChatFormatting.GRAY + StatCollector.translateToLocalFormatted(
+                                    "galaxia.gui.team_info.members",
+                                    team.getMembers()
+                                        .size())));
+                });
         });
         return button;
     }
@@ -332,6 +352,12 @@ public final class SolarSystemAssetPanelWidget extends ParentWidget<SolarSystemA
         net.minecraft.client.gui.FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         int textY = y + (h - fr.FONT_HEIGHT) / 2 + 1;
         int cursor = x + ROW_PAD_X;
+
+        int teamColor = GTTeamsCompat.getGalaxiaTeamData()
+            .map(GalaxiaTeamData::getTeamColor)
+            .orElse(EnumColors.MAP_COLOR_TEAM_ACCENT.getColor());
+        Gui.drawRect(cursor, y + 2, cursor + 3, y + h - 2, teamColor);
+        cursor += 5;
 
         fr.drawStringWithShadow(displayName, cursor, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
         cursor += NAME_W + ROW_PAD_X;

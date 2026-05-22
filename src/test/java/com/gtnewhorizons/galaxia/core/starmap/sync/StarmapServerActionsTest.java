@@ -264,7 +264,7 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
 
         AssetUpdatePacket packet = AssetUpdatePacket.rename(facility.assetId, "Renamed Station");
-        AssetSyncPacket result = packet.apply(TEAM);
+        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
 
         assertTrue(result != null);
         assertEquals(
@@ -280,7 +280,7 @@ final class StarmapServerActionsTest {
 
         AssetUpdatePacket packet = AssetUpdatePacket
             .create(facility.assetId, AssetUpdatePacket.Action.START_DECONSTRUCTION);
-        AssetSyncPacket result = packet.apply(TEAM);
+        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
 
         assertTrue(result != null);
         assertEquals(
@@ -296,7 +296,7 @@ final class StarmapServerActionsTest {
 
         AssetUpdatePacket packet = AssetUpdatePacket
             .create(facility.assetId, AssetUpdatePacket.Action.CANCEL_CONSTRUCTION);
-        AssetSyncPacket result = packet.apply(TEAM);
+        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
 
         assertTrue(result != null);
         assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));
@@ -307,7 +307,7 @@ final class StarmapServerActionsTest {
         AutomatedFacility facility = addFacilityToServer();
 
         AssetUpdatePacket packet = AssetUpdatePacket.create(facility.assetId, AssetUpdatePacket.Action.DESTROY_ASSET);
-        AssetSyncPacket result = packet.apply(TEAM);
+        AssetSyncPacket result = packet.mutateNoChecks(TEAM, facility);
 
         assertTrue(result != null);
         assertNull(CelestialAssetStore.SERVER.findAssetInternal(facility.assetId));

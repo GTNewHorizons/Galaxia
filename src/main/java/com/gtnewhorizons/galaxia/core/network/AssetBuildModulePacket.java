@@ -8,7 +8,8 @@ import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -103,7 +104,8 @@ public final class AssetBuildModulePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetBuildModulePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            UUID teamId = TempTeamCompat.getTeam(player);
+            if (!GTTeamsCompat.hasPermission(player, TeamAction.BUILD_MODULE)) return null;
+            UUID teamId = GTTeamsCompat.getTeam(player);
             boolean creative = player.capabilities.isCreativeMode;
             return message.apply(teamId, creative);
         }

@@ -24,7 +24,7 @@ import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
     name = Galaxia.NAME,
     version = Tags.VERSION,
     acceptedMinecraftVersions = "[1.7.10]",
-    dependencies = "after:gregtech")
+    dependencies = "after:gregtech;after:gtnhlib")
 public final class Galaxia {
 
     // spotless:off

@@ -21,7 +21,8 @@ import net.minecraftforge.fluids.FluidStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -1253,7 +1254,8 @@ public final class AssetModuleUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetModuleUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            UUID teamId = TempTeamCompat.getTeam(player);
+            if (!GTTeamsCompat.hasPermission(player, TeamAction.MODIFY_MODULE)) return null;
+            UUID teamId = GTTeamsCompat.getTeam(player);
             return message.apply(teamId);
         }
     }

@@ -24,6 +24,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 
 public final class OrbitalPinnedInfoContentBuilder {
@@ -33,6 +34,8 @@ public final class OrbitalPinnedInfoContentBuilder {
         // TODO: Localize
         rows.add(new PinnedInfoRow("Name", body.displayName()));
         rows.add(new PinnedInfoRow("Type", formatObjectClass(body.objectClass())));
+        GTTeamsCompat.getTeamName()
+            .ifPresent(teamName -> rows.add(new PinnedInfoRow("Team", teamName)));
         rows.add(new PinnedInfoRow("Landable", isLandable(body) ? "Yes" : "No"));
         rows.add(new PinnedInfoRow("Dangers", buildDangerSummary(body)));
         if (body.objectClass() != CelestialObject.Class.STAR && body.objectClass() != CelestialObject.Class.GALAXY) {
@@ -156,7 +159,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         StringBuilder out = new StringBuilder();
         for (String part : parts) {
             if (part.isEmpty()) continue;
-            if (out.length() > 0) out.append(' ');
+            if (!out.isEmpty()) out.append(' ');
             out.append(Character.toUpperCase(part.charAt(0)))
                 .append(part.substring(1));
         }
@@ -179,7 +182,7 @@ public final class OrbitalPinnedInfoContentBuilder {
         for (String oreDictKey : oreDictKeys) {
             List<ItemStack> matches = OreDictionary.getOres(oreDictKey, false);
             if (matches == null || matches.isEmpty()) continue;
-            ItemStack match = matches.get(0);
+            ItemStack match = matches.getFirst();
             if (match != null) return match.copy();
         }
         return null;
@@ -208,7 +211,6 @@ public final class OrbitalPinnedInfoContentBuilder {
         private static final int ICON_GAP = 2;
         private static final int INLINE_ICON_SIZE = 12;
         private static final int INLINE_ICON_GAP = 1;
-        private static final RenderItem GUI_ITEM_RENDERER = new RenderItem();
         private final Callbacks callbacks;
         private final StringBuilder sigBuf = new StringBuilder(256);
         private String lastSignature = "";
@@ -427,11 +429,10 @@ public final class OrbitalPinnedInfoContentBuilder {
             GL11.glEnable(GL11.GL_ALPHA_TEST);
             RenderHelper.enableGUIStandardItemLighting();
             GL11.glEnable(GL11.GL_DEPTH_TEST);
-            float previousZ = GUI_ITEM_RENDERER.zLevel;
+            final RenderItem GUI_ITEM_RENDERER = new RenderItem();
             GUI_ITEM_RENDERER.zLevel = 200f;
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f);
             GUI_ITEM_RENDERER.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), stack, 0, 0);
-            GUI_ITEM_RENDERER.zLevel = previousZ;
             RenderHelper.disableStandardItemLighting();
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDisable(GL11.GL_COLOR_MATERIAL);

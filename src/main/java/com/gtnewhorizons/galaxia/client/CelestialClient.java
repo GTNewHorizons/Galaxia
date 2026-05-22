@@ -12,7 +12,7 @@ import javax.annotation.Nullable;
 import net.minecraftforge.event.world.WorldEvent;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetFilterUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetInventoryUpdatePacket;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
@@ -101,7 +101,7 @@ public final class CelestialClient {
     }
 
     public static void add(CelestialAsset state) {
-        CelestialAssetStore.CLIENT.registerAssetInternal(TempTeamCompat.getTeam(), state);
+        CelestialAssetStore.CLIENT.registerAssetInternal(GTTeamsCompat.getTeam(), state);
     }
 
     public static void clear() {
@@ -433,6 +433,10 @@ public final class CelestialClient {
 
     public static HammerTrajectoryLoadSample hammerTrajectoryLoadSample() {
         return hammerTrajectoryLoadSample;
+    }
+
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId) {
+        return CelestialAssetStore.CLIENT.listAssetsInSystemInternal(systemId, GTTeamsCompat.getTeam());
     }
 
     // ── Helpers ──

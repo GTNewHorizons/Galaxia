@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 
 /**
@@ -113,6 +114,17 @@ public final class CelestialAssetStore {
         return SERVER.isOwnedByInternal(teamId, id);
     }
 
+    public static void removeTeam(UUID teamId) {
+        SERVER.removeTeamInternal(teamId);
+    }
+
+    public static void transferTeamAssets(UUID fromTeamId, UUID toTeamId) {
+        SERVER.transferTeamAssetsInternal(fromTeamId, toTeamId);
+    }
+
+    public static List<CelestialAsset> listAssetsInSystem(CelestialObjectId systemId, UUID teamId) {
+        return SERVER.listAssetsInSystemInternal(systemId, teamId);
+    }
     // ── Instance methods ──
 
     public void registerAssetInternal(UUID teamId, CelestialAsset asset) {
@@ -255,10 +267,41 @@ public final class CelestialAssetStore {
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {
+        if (teamId == null) return false;
         UUID owner = teamById.get(id);
-        if (owner == null) return false;
+        return teamId.equals(owner);
+    }
 
-        return owner.equals(teamId);
+    public void removeTeamInternal(UUID teamId) {
+        Map<CelestialObjectId, Set<CelestialAsset>> byBody = stateByBody.remove(teamId);
+        if (byBody == null) return;
+        for (Set<CelestialAsset> assets : byBody.values()) {
+            for (CelestialAsset asset : assets) {
+                byId.remove(asset.assetId);
+                teamById.remove(asset.assetId);
+            }
+        }
+    }
+
+    public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
+        Map<CelestialObjectId, Set<CelestialAsset>> fromAssets = stateByBody.remove(fromTeamId);
+        if (fromAssets == null || fromAssets.isEmpty()) return;
+
+        for (Map.Entry<CelestialObjectId, Set<CelestialAsset>> entry : fromAssets.entrySet()) {
+            for (CelestialAsset asset : entry.getValue()) {
+                teamById.put(asset.assetId, toTeamId);
+            }
+        }
+
+        stateByBody.merge(toTeamId, fromAssets, (existing, incoming) -> {
+            for (Map.Entry<CelestialObjectId, Set<CelestialAsset>> entry : incoming.entrySet()) {
+                existing.merge(entry.getKey(), entry.getValue(), (a, b) -> {
+                    a.addAll(b);
+                    return a;
+                });
+            }
+            return existing;
+        });
     }
 
     private static Map<ItemStack, Long> mergeIntoConstructionInventory(Map<ItemStack, Long> constructionInventory,
@@ -267,4 +310,27 @@ public final class CelestialAssetStore {
         merged.merge(stack, amount, Long::sum);
         return merged;
     }
+
+    /**
+     * Returns every team-owned asset whose host body sits in the system rooted at {@code systemId}.
+     * Aggregates by walking descendants of the system root (a star) in the celestial hierarchy.
+     * Order: stable DFS by hierarchy. Caller owns the returned list.
+     */
+    public List<CelestialAsset> listAssetsInSystemInternal(CelestialObjectId systemId, UUID teamId) {
+        List<CelestialAsset> assets = new ArrayList<>();
+        if (systemId == null || teamId == null) return assets;
+        CelestialObject systemRoot = CelestialRegistry.findById(systemId)
+            .orElse(null);
+        if (systemRoot == null) return assets;
+        collectAssetsInSubtree(systemRoot, teamId, assets);
+        return assets;
+    }
+
+    private void collectAssetsInSubtree(CelestialObject body, UUID teamId, List<CelestialAsset> out) {
+        out.addAll(getState(teamId, body.id()));
+        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(body)) {
+            collectAssetsInSubtree(child, teamId, out);
+        }
+    }
+
 }

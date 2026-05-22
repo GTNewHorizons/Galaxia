@@ -7,7 +7,8 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
@@ -90,7 +91,8 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(LogisticsConfigUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            UUID teamId = TempTeamCompat.getTeam(player);
+            if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return null;
+            UUID teamId = GTTeamsCompat.getTeam(player);
             return message.apply(teamId);
         }
     }
