@@ -237,46 +237,52 @@ public class TileStation extends TileStationBase<TileStation> {
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
 
-        int panelHeight = isCtrl ? 130 : 150;
+        int panelHeight = isCtrl ? 140 : 160;
         ModularPanel panel = new ModularPanel("galaxia:station_controller").size(210, panelHeight)
             .child(
                 IKey.str(StatCollector.translateToLocal("galaxia.gui.station_controller.title"))
                     .asWidget()
                     .pos(8, 8));
 
-        // Behavior selector (secondary only)
-        if (!isCtrl) {
-            IntSyncValue behaviorIdx = new IntSyncValue(
-                () -> allBehaviors.indexOf(TileStation.this.behavior),
-                () -> allBehaviors.indexOf(TileStation.this.behavior));
-            syncManager.syncValue("behaviorIdx", 0, behaviorIdx);
+        // Role indicator
+        panel.child(new TextWidget<>(IKey.dynamic(() -> {
+            String roleKey = controllerFlag == Role.MAIN
+                ? "galaxia.gui.role.main"
+                : "galaxia.gui.role.secondary";
+            return StatCollector.translateToLocal("galaxia.gui.role") + ": "
+                + StatCollector.translateToLocal(roleKey);
+        })).pos(10, 22));
 
-            panel.child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.behavior"))
-                    .asWidget()
-                    .pos(10, 28));
-            panel.child(
-                new ButtonWidget<>().size(120, 16)
-                    .pos(70, 26)
-                    .overlay(IKey.dynamic(() -> {
-                        int idx = Math.max(0, behaviorIdx.getIntValue());
-                        if (idx < allBehaviors.size()) {
-                            return StatCollector.translateToLocal(
-                                allBehaviors.get(idx)
-                                    .getUnlocalizedName());
-                        }
-                        return "???";
-                    }))
-                    .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
-                        if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
-                        int next = (behaviorIdx.getIntValue() + 1) % allBehaviors.size();
-                        setBehavior(allBehaviors.get(next));
-                        markStructureDirty();
-                    })));
-        }
+        IntSyncValue behaviorIdx = new IntSyncValue(
+            () -> allBehaviors.indexOf(TileStation.this.behavior),
+            () -> allBehaviors.indexOf(TileStation.this.behavior));
+        syncManager.syncValue("behaviorIdx", 0, behaviorIdx);
+
+        panel.child(
+            IKey.str(StatCollector.translateToLocal("galaxia.gui.behavior"))
+                .asWidget()
+                .pos(10, 38));
+        panel.child(
+            new ButtonWidget<>().size(120, 16)
+                .pos(70, 36)
+                .overlay(IKey.dynamic(() -> {
+                    int idx = Math.max(0, behaviorIdx.getIntValue());
+                    if (idx < allBehaviors.size()) {
+                        return StatCollector.translateToLocal(
+                            allBehaviors.get(idx)
+                                .getUnlocalizedName());
+                    }
+                    return "???";
+                }))
+                .syncHandler(new InteractionSyncHandler().setOnMousePressed(mouseData -> {
+                    if (mouseData.mouseButton != 0 || worldObj.isRemote) return;
+                    int next = (behaviorIdx.getIntValue() + 1) % allBehaviors.size();
+                    setBehavior(allBehaviors.get(next));
+                    markStructureDirty();
+                })));
 
         // Structure status
-        int structY = isCtrl ? 30 : 48;
+        int structY = isCtrl ? 40 : 58;
         panel.child(new TextWidget<>(IKey.dynamic(() -> {
             boolean valid = structureValidSync.getBoolValue();
             String structure = StatCollector.translateToLocal("galaxia.gui.station_controller.structure");
@@ -287,7 +293,7 @@ public class TileStation extends TileStationBase<TileStation> {
         })).pos(10, structY));
 
         // Behavior-specific widgets
-        int behaviorY = isCtrl ? 50 : 68;
+        int behaviorY = isCtrl ? 60 : 78;
         List<Widget<?>> behaviourWidgets = behavior.buildBehaviourWidgets(this, syncManager, behaviorY);
         if (behaviourWidgets != null) {
             for (Widget<?> w : behaviourWidgets) {
@@ -296,7 +302,7 @@ public class TileStation extends TileStationBase<TileStation> {
         }
 
         // Refresh button
-        int buttonY = isCtrl ? 85 : 120;
+        int buttonY = isCtrl ? 95 : 130;
         panel.child(
             new ButtonWidget<>().size(190, 30)
                 .pos(10, buttonY)

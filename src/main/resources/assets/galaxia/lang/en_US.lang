@@ -267,7 +267,13 @@ galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
 galaxia.gui.station_controller.title=Station Controller
 galaxia.gui.station_controller.oxygen=Oxygen
 galaxia.gui.station_controller.structure=Structure
+galaxia.gui.station_controller.targets=Targets
 galaxia.gui.station_controller.refresh=Refresh
+
+galaxia.gui.behavior=Behavior
+galaxia.gui.role=Role
+galaxia.gui.role.main=Main
+galaxia.gui.role.secondary=Secondary
 
 # Elements - GUI - "Station Monitor"
 galaxia.gui.station_monitor.title=Station Monitor
