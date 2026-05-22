@@ -1417,10 +1417,16 @@ public final class AssetSyncPacket implements IMessage {
                     }
                 }
                 case LOGISTICS_CONFIG_UPDATED -> {
-                    if (packet.resource != null) asset.logisticsConfig.set(packet.resource, packet.logConfig);
+                    if (packet.resource != null) {
+                        asset.logisticsConfig.set(packet.resource, packet.logConfig);
+                        syncUpkeepAutoOrderFromLogistics(asset, packet.resource, packet.logConfig);
+                    }
                 }
                 case LOGISTICS_CONFIG_REMOVED -> {
-                    if (packet.resource != null) asset.logisticsConfig.reset(packet.resource);
+                    if (packet.resource != null) {
+                        asset.logisticsConfig.reset(packet.resource);
+                        syncUpkeepAutoOrderFromLogistics(asset, packet.resource, null);
+                    }
                 }
                 case LAYOUT_TILE_UPDATED -> {
                     if (!(asset instanceof AutomatedFacility state)) {
@@ -1479,6 +1485,16 @@ public final class AssetSyncPacket implements IMessage {
                 .contains(module.anchorOrNull())) {
                 state.settingsGroups()
                     .addMember(module.groupId(), module.anchor());
+            }
+        }
+
+        private static void syncUpkeepAutoOrderFromLogistics(CelestialAsset asset, InventoryKey resource,
+            LogisticsResourceConfig config) {
+            if (!(asset instanceof AutomatedFacility state) || !(resource instanceof ItemStackWrapper item)) return;
+            if (config != null && config.isImportEnabled() && state.upkeepReserve(item) > 0L) {
+                state.setUpkeepAutoOrder(item, true);
+            } else if (config == null || !config.isImportEnabled()) {
+                state.setUpkeepAutoOrder(item, false);
             }
         }
     }

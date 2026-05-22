@@ -2,12 +2,12 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class LogisticStoreTest {
@@ -145,13 +146,27 @@ final class LogisticStoreTest {
     }
 
     @Test
-    void upkeepAutoOrderEmitsRequestUpToEffectiveLowerBound() {
+    void upkeepAutoOrderWithoutCoreImportDoesNotEmitVirtualRequest() {
         AutomatedFacility station = facility();
-        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         station.updateItems(resource, 3);
         station.setBound(resource, 5, true);
         station.setUpkeepReserve(resource, 10L);
         station.setUpkeepAutoOrder(resource, true);
+
+        LogisticStore.updateSignalsForFacility(station);
+
+        assertTrue(
+            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+                .isEmpty());
+    }
+
+    @Test
+    void coreImportConfigEmitsRequestUpToConfiguredReserve() {
+        AutomatedFacility station = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.updateItems(resource, 3);
+        station.logisticsConfig.set(resource, new LogisticsResourceConfig(15, 64, true, false));
 
         LogisticStore.updateSignalsForFacility(station);
 

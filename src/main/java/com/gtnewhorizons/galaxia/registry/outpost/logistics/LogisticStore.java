@@ -120,12 +120,6 @@ public final class LogisticStore {
         for (ItemStackWrapper r : currentSignals.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
-        if (automatedFacility != null) {
-            for (ItemStackWrapper r : automatedFacility.upkeepAutoOrderItems()) {
-                if (!allResources.contains(r)) allResources.add(r);
-            }
-        }
-
         CelestialObjectId bodyId = asset.celestialObjectId;
         CelestialObjectId systemId = asset.systemId;
         CelestialObjectId planetaryAnchorBodyId = asset.planetaryAnchorBodyId;
@@ -142,9 +136,6 @@ public final class LogisticStore {
             long supplyReserve = cfg.minReserve();
             if (automatedFacility != null) {
                 supplyReserve = Math.max(supplyReserve, automatedFacility.effectiveLowerBound(resource));
-                if (automatedFacility.isUpkeepAutoOrderEnabled(resource)) {
-                    importTarget = Math.max(importTarget, automatedFacility.effectiveLowerBound(resource));
-                }
             }
 
             if (importTarget > 0L && stock < importTarget) {

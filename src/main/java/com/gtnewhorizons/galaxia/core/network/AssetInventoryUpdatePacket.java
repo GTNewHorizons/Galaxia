@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -225,8 +226,16 @@ public final class AssetInventoryUpdatePacket implements IMessage {
     private AssetSyncPacket applyUpkeepSettingsUpdate(AutomatedFacility state, ItemStackWrapper item) {
         if (operation == Operation.SET_UPKEEP_RESERVE) {
             state.setUpkeepReserve(item, delta);
+            if (state.isUpkeepAutoOrderEnabled(item)) {
+                syncCoreImportForUpkeepAutoOrder(state, item);
+            }
         } else if (operation == Operation.SET_UPKEEP_AUTO_ORDER) {
             state.setUpkeepAutoOrder(item, delta != 0L);
+            if (delta != 0L) {
+                syncCoreImportForUpkeepAutoOrder(state, item);
+            } else {
+                disableCoreImportForUpkeepAutoOrder(state, item);
+            }
         } else {
             throw new IllegalStateException("[Logistics] Received malformed upkeep settings update");
         }
@@ -235,6 +244,22 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         return AssetSyncPacket
             .upkeepSettingsUpdate(assetId, item, state.upkeepReserve(item), state.isUpkeepAutoOrderEnabled(item))
             .withSyncRevision(state.getSyncRevision());
+    }
+
+    private static void syncCoreImportForUpkeepAutoOrder(AutomatedFacility state, ItemStackWrapper item) {
+        LogisticsResourceConfig current = state.logisticsConfig.get(item);
+        int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
+        int importTarget = (int) Math.min(Integer.MAX_VALUE, state.effectiveLowerBound(item));
+        state.logisticsConfig.set(item, new LogisticsResourceConfig(importTarget, orderSize, true, false));
+    }
+
+    private static void disableCoreImportForUpkeepAutoOrder(AutomatedFacility state, ItemStackWrapper item) {
+        LogisticsResourceConfig current = state.logisticsConfig.get(item);
+        if (current == LogisticsResourceConfig.DEFAULT) return;
+        state.logisticsConfig.set(
+            item,
+            current.withImportEnabled(false)
+                .withSupplyEnabled(false));
     }
 
     private enum Operation {

@@ -76,6 +76,23 @@ final class LogisticsConfigUpdatePacketTest {
         assertFalse(config.isSupplyEnabled());
     }
 
+    @Test
+    void disablingCoreImportClearsUpkeepAutoRequest() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        facility.setUpkeepAutoOrder(resource, true);
+        facility.logisticsConfig.set(resource, new LogisticsResourceConfig(12, 64, true, false));
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
+            facility.assetId,
+            resource,
+            new LogisticsResourceConfig(12, 64, false, false),
+            LogisticsConfigAccessMode.IMPORT_ONLY);
+
+        packet.apply(TEAM);
+
+        assertFalse(facility.isUpkeepAutoOrderEnabled(resource));
+    }
+
     private static AutomatedFacility addFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),

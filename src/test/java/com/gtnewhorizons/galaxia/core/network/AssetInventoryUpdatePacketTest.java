@@ -20,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
@@ -123,12 +124,17 @@ final class AssetInventoryUpdatePacketTest {
     void upkeepAutoOrderPacketSetsAutoOrderForNonCreativePlayer() {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        facility.setUpkeepReserve(resource, 21L);
         AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
             .setUpkeepAutoOrder(facility.assetId, resource, true);
 
         AssetSyncPacket sync = packet.apply(TEAM, false);
 
         assertEquals(true, facility.isUpkeepAutoOrderEnabled(resource));
+        LogisticsResourceConfig config = facility.logisticsConfig.get(resource);
+        assertEquals(21L, config.minReserve());
+        assertEquals(true, config.isImportEnabled());
+        assertEquals(false, config.isSupplyEnabled());
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
     }
