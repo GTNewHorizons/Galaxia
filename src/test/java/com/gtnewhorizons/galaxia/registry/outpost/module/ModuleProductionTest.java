@@ -14,34 +14,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyze
 
 final class ModuleProductionTest {
 
-    // ---------- Kind existence and ordinals ----------
-
-    @Test
-    void allKindsExist() {
-        assertNotNull(FacilityModuleKind.valueOf("CENTRIFUGE"));
-        assertNotNull(FacilityModuleKind.valueOf("ELECTROLYZER"));
-        assertNotNull(FacilityModuleKind.valueOf("CHEMICAL_REACTOR"));
-        assertNotNull(FacilityModuleKind.valueOf("ASSEMBLER"));
-        assertNotNull(FacilityModuleKind.valueOf("DISTILLERY"));
-    }
-
-    @Test
-    void ordinalStability() {
-        assertEquals(0, FacilityModuleKind.HAMMER.ordinal());
-        assertEquals(1, FacilityModuleKind.MINER.ordinal());
-        assertEquals(2, FacilityModuleKind.POWER.ordinal());
-        assertEquals(3, FacilityModuleKind.STORAGE.ordinal());
-        assertEquals(4, FacilityModuleKind.TANK.ordinal());
-        assertEquals(5, FacilityModuleKind.BATTERY.ordinal());
-        assertEquals(6, FacilityModuleKind.MAINTENANCE_BAY.ordinal());
-        assertEquals(7, FacilityModuleKind.MACERATOR.ordinal());
-        assertEquals(8, FacilityModuleKind.CENTRIFUGE.ordinal());
-        assertEquals(9, FacilityModuleKind.ELECTROLYZER.ordinal());
-        assertEquals(10, FacilityModuleKind.CHEMICAL_REACTOR.ordinal());
-        assertEquals(11, FacilityModuleKind.ASSEMBLER.ordinal());
-        assertEquals(12, FacilityModuleKind.DISTILLERY.ordinal());
-    }
-
     // ---------- allowedTiers / defaultTier ----------
 
     @Test

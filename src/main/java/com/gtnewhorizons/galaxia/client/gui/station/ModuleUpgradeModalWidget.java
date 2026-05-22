@@ -373,7 +373,7 @@ final class ModuleUpgradeModalWidget extends ParentWidget<ModuleUpgradeModalWidg
             ModuleTierData data = FacilityModuleRegistry.get(module.kind())
                 .getTierData(ModuleUpgradeUiModel.hammerTier(controller.moduleUpgradeSelection()));
             int chargeTicks = ModuleHammer.chargeTicks(targetVariant, data);
-            return "Effect: charge " + chargeTicks / 20
+            return "Effect: cooldown " + chargeTicks / 20
                 + "s, buffer "
                 + ModuleConfigModalSupport.formatEu(targetVariant.shotEnergyEu())
                 + " EU";

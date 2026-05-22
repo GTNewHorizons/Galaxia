@@ -306,6 +306,7 @@ galaxia.outpost.module.hammer=HAMMER
 galaxia.outpost.module.big_hammer=BIG HAMMER
 galaxia.outpost.module.miner=MINER
 galaxia.outpost.module.power=POWER
+galaxia.outpost.module.geothermal_generator=GEOTHERMAL GENERATOR
 galaxia.outpost.module.storage=STORAGE
 galaxia.outpost.module.tank=TANK
 galaxia.outpost.module.battery=BATTERY
@@ -373,7 +374,7 @@ galaxia.config.structures.enclosed_radius.tooltip=Search radius for structure bo
 galaxia.config.category.structures_open=Open
 galaxia.config.category.structures_open.tooltip=Settings for open structures (docks)
 galaxia.config.structures.open_radius=Search radius
-galaxia.config.structures.open_radius.tooltip=Search radius for structure boundaries 
+galaxia.config.structures.open_radius.tooltip=Search radius for structure boundaries
 
 # Config - "Player"
 galaxia.config.category.player=Player

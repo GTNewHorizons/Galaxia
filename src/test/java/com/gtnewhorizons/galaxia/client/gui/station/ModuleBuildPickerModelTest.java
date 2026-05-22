@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
@@ -219,5 +220,43 @@ final class ModuleBuildPickerModelTest {
         assertEquals(
             List.of(first),
             ModuleBuildPickerModel.connectedTargets(facility, List.of(first, third), ModuleShape.SINGLE));
+    }
+
+    @Test
+    void geothermalGeneratorRequiresMagmaPoolUnderCenterAnchor() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        StationTileCoord center = StationTileCoord.of(2, 0);
+
+        setSaltWithFeatureAt(facility, center, true);
+        assertTrue(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.GEOTHERMAL_GENERATOR,
+                ModuleShape.BLOCK_3x3,
+                ModuleTier.HV,
+                center));
+
+        setSaltWithFeatureAt(facility, center, false);
+        assertFalse(
+            ModuleBuildPickerModel.isCompatibleTarget(
+                facility,
+                FacilityModuleKind.GEOTHERMAL_GENERATOR,
+                ModuleShape.BLOCK_3x3,
+                ModuleTier.HV,
+                center));
+    }
+
+    private static void setSaltWithFeatureAt(AutomatedFacility facility, StationTileCoord coord, boolean required) {
+        for (long salt = 0; salt < 100_000L; salt++) {
+            facility.setStationFeatureSalt(salt);
+            boolean hasVent = facility.planetaryFeaturesAt(coord)
+                .contains(PlanetaryFeatureRegistry.MAGMA_POOL.key());
+            if (hasVent == required) return;
+        }
+        throw new AssertionError("Could not find magma pool salt for " + coord);
     }
 }

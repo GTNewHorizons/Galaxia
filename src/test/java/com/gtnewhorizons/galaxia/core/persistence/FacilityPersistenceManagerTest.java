@@ -907,6 +907,13 @@ final class FacilityPersistenceManagerTest {
             ModuleShape.SINGLE,
             ModuleTier.NONE,
             StationTileCoord.of(3, 0));
+        createAndPlaceModule(
+            station,
+            FacilityModuleKind.GEOTHERMAL_GENERATOR,
+            Buildable.Status.OPERATIONAL,
+            ModuleShape.BLOCK_3x3,
+            ModuleTier.HV,
+            StationTileCoord.of(5, 0));
         ModuleInstance storage = createAndPlaceModule(
             station,
             FacilityModuleKind.STORAGE,
@@ -993,8 +1000,8 @@ final class FacilityPersistenceManagerTest {
         System.out.println("Layout tile count: " + encoded.layoutTiles.size());
 
         // Verify module entries
-        assertEquals(13, encoded.modules.size());
-        assertEquals(13, encoded.layoutTiles.size());
+        assertEquals(14, encoded.modules.size());
+        assertEquals(14, encoded.layoutTiles.size());
 
         // Verify each kind appears in encoded modules
         assertTrue(
@@ -1006,6 +1013,9 @@ final class FacilityPersistenceManagerTest {
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "POWER".equals(mj.kind)));
+        assertTrue(
+            encoded.modules.stream()
+                .anyMatch(mj -> "GEOTHERMAL_GENERATOR".equals(mj.kind)));
         assertTrue(
             encoded.modules.stream()
                 .anyMatch(mj -> "STORAGE".equals(mj.kind)));
@@ -1039,7 +1049,9 @@ final class FacilityPersistenceManagerTest {
 
         // Verify shape bytes — SINGLE has ordinal 0
         for (FacilityPersistenceManager.ModuleJson mj : encoded.modules) {
-            assertEquals(0, mj.shape, "All modules in this test should be SINGLE (ordinal 0)");
+            int expectedShape = "GEOTHERMAL_GENERATOR".equals(mj.kind) ? ModuleShape.BLOCK_3x3.ordinal()
+                : ModuleShape.SINGLE.ordinal();
+            assertEquals(expectedShape, mj.shape, "Unexpected shape for " + mj.kind);
         }
 
         // Decode into fresh facility
@@ -1055,10 +1067,10 @@ final class FacilityPersistenceManagerTest {
         org.junit.jupiter.api.Assertions.assertAll(
             "fullRoundTripAllKinds",
             () -> assertEquals(
-                13,
+                14,
                 decoded.modules()
                     .size(),
-                "Expected 13 modules, got " + decoded.modules()
+                "Expected 14 modules, got " + decoded.modules()
                     .size() + dumpKinds(decoded)),
             () -> {
                 // Verify each kind is present
@@ -1075,6 +1087,9 @@ final class FacilityPersistenceManagerTest {
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 0), "HAMMER anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 0), "MINER anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 0), "POWER anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(5, 0), "GEOTHERMAL_GENERATOR anchor"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(4, -1), "GEOTHERMAL_GENERATOR child"),
+            () -> assertLayoutTilesExist(decoded, StationTileCoord.of(6, 1), "GEOTHERMAL_GENERATOR child"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(1, 1), "STORAGE anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(2, 1), "TANK anchor"),
             () -> assertLayoutTilesExist(decoded, StationTileCoord.of(3, 1), "BATTERY anchor"),

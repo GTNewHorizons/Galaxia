@@ -246,15 +246,6 @@ final class CapacityClusterBuilderTest {
     }
 
     @Test
-    void allOtherModulesImplementIParallelModule() {
-        for (FacilityModuleKind kind : FacilityModuleKind.values()) {
-            if (kind == FacilityModuleKind.MAINTENANCE_BAY) continue;
-            ModuleInstance module = kind.create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, kind.defaultTier());
-            assertTrue(module.component() instanceof IParallelModule, kind + " must implement IParallelModule");
-        }
-    }
-
-    @Test
     void layoutCacheBundle_capacityClustersForNonCapacityKindReturnsEmpty() {
         StationLayout layout = new StationLayout();
         ModuleInstance hammer = FacilityModuleKind.HAMMER

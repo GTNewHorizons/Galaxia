@@ -2122,6 +2122,7 @@ public final class AssetManagementSystem {
                 case HAMMER -> "Balances item reserves and exports excess inventory to other stations.";
                 case MINER -> "Generates one ore per second from this body's available deposits.";
                 case POWER -> "Adds extra power generation to support modules and logistics.";
+                case GEOTHERMAL_GENERATOR -> "Generates power from magma pools.";
                 case STORAGE -> "Increases station item storage capacity. Adjacent modules boost each other.";
                 case TANK -> "Increases station fluid storage capacity. Adjacent modules boost each other.";
                 case BATTERY -> "Increases station energy buffer capacity. Adjacent modules boost each other.";
@@ -2138,7 +2139,7 @@ public final class AssetManagementSystem {
         private String buildModuleStats(FacilityModuleKind kind) {
             FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(kind);
             ModuleTierData data = def.getTierData(kind.defaultTier());
-            String powerLine = kind == FacilityModuleKind.POWER ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
+            String powerLine = data.powerDrawEuPerTick() < 0 ? "Generates " + (-data.powerDrawEuPerTick()) + " EU/t"
                 : "Consumes " + data.powerDrawEuPerTick() + " EU/t";
             String restrictionLine = kind == FacilityModuleKind.MINER ? "Only on Automated Outposts" : "Buildable here";
             return powerLine + " | Cap " + data.baseEnergyCapacity() + " EU | " + restrictionLine;

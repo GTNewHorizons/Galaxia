@@ -19,8 +19,13 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifiers;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -56,12 +61,17 @@ public final class AutomatedFacility extends CelestialAsset {
     private final LayoutCacheBundle layoutCache;
     private final SettingsGroupRegistry settingsGroups;
     private long stationFeatureSalt;
+    private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
+    private long featureModifiersLayoutVersion = Long.MIN_VALUE;
+    private long featureModifiersStationFeatureSalt = Long.MIN_VALUE;
+
     private long energyStored;
     private final Set<ModuleInstance.ID> dirtyModuleIds = new HashSet<>();
     private final Set<ModuleInstance.ID> dirtyRemovedIds = new HashSet<>();
     private final Map<InventoryKey, Long> dirtyInventoryDeltas = new LinkedHashMap<>();
     private final Set<UUID> syncedPlayerIds = new HashSet<>();
     private final Set<String> dirtyMinerVoidChanceOreKeys = new HashSet<>();
+    private long ticks;
 
     private final ResourceFilter<ItemStackWrapper> itemFilter = ResourceFilter.forItems();
     private final ResourceFilter<FluidKey> fluidFilter = ResourceFilter.forFluids();
@@ -81,6 +91,7 @@ public final class AutomatedFacility extends CelestialAsset {
         this.settingsGroups = new SettingsGroupRegistry();
         this.stationFeatureSalt = createStationFeatureSalt(assetId, celestialBodyId);
         this.energyStored = 0;
+        this.ticks = 0;
     }
 
     private static long createStationFeatureSalt(CelestialAsset.ID assetId, CelestialObjectId bodyId) {
@@ -119,6 +130,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void setStationFeatureSalt(long stationFeatureSalt) {
         this.stationFeatureSalt = stationFeatureSalt;
+        featureModifiersByModule.clear();
+        featureModifiersStationFeatureSalt = Long.MIN_VALUE;
     }
 
     public PlanetaryFeatureKey planetaryFeatureAt(StationTileCoord tile) {
@@ -145,22 +158,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public List<FeatureContribution> featureContributions(ModuleInstance module) {
-        if (module == null || module.anchorOrNull() == null) return Collections.emptyList();
-        List<FeatureContribution> contributions = new ArrayList<>();
-        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
-        StationTileCoord[] tiles = module.shape()
-            .tiles(module.anchor());
-        for (StationTileCoord tile : tiles) {
-            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
-                counts.merge(feature, 1, Integer::sum);
-            }
-        }
-        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
-            FeatureContribution contribution = module.component()
-                .featureContribution(module, entry.getKey(), entry.getValue(), tiles.length);
-            if (contribution != null) contributions.add(contribution);
-        }
-        return contributions;
+        return featureModifiers(module).contributions();
     }
 
     public void applySettingsGroupsToModules() {
@@ -793,6 +791,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public void tick() {
+        ticks++;
         for (ModuleInstance module : modules) {
             boolean moduleTickBlocked = tickModuleOperation(module);
             if (!moduleTickBlocked) {
@@ -844,12 +843,91 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     private void tickBuildingOperation(ModuleInstance module, ModuleOperationState operation) {
-        ModuleOperationState next = operation.tickBuilding();
+        int progressTicks = featureModifiedBuildProgressTicks(module);
+        ModuleOperationState next = operation;
+        for (int i = 0; i < progressTicks && next.phase() == ModuleOperationPhase.BUILDING; i++) {
+            next = next.tickBuilding();
+        }
         module.setOperation(next);
         markModuleDirty(module.id);
         if (next.phase() == ModuleOperationPhase.COMPLETE) {
             applyCompletedModuleOperation(module, next);
         }
+    }
+
+    private int featureModifiedBuildProgressTicks(ModuleInstance module) {
+        int modifierPercent = buildSpeedModifierPercent(module);
+        if (modifierPercent == 0) return 1;
+
+        if (modifierPercent > 0) {
+            int extraProgressPercent = Math.min(100, modifierPercent);
+            return shouldApplyPercent(extraProgressPercent) ? 2 : 1;
+        }
+
+        int progressPercent = Math.max(20, 100 + modifierPercent);
+        return shouldApplyPercentFromCurrentTick(progressPercent) ? 1 : 0;
+    }
+
+    private boolean shouldApplyPercent(int percent) {
+        return Math.floorMod(ticks * percent, 100) < percent;
+    }
+
+    private boolean shouldApplyPercentFromCurrentTick(int percent) {
+        return Math.floorMod((ticks - 1) * percent, 100) < percent;
+    }
+
+    public int buildSpeedModifierPercent(ModuleInstance module) {
+        return featureModifiers(module).buildSpeedModifierPercent();
+    }
+
+    public int upkeepReductionPercent(ModuleInstance module) {
+        return 100 - featureModifiers(module).upkeepMultiplierPercent();
+    }
+
+    public long effectivePowerDrawEuPerTick(ModuleInstance module) {
+        long powerDraw = module.powerDrawEuPerTick();
+        if (powerDraw <= 0L) {
+            return powerDraw;
+        }
+        int multiplier = featureModifiers(module).powerDrawMultiplierPercent();
+        return (powerDraw * multiplier + 99L) / 100L;
+    }
+
+    public ModuleFeatureModifiers featureModifiers(ModuleInstance module) {
+        if (module == null || module.anchorOrNull() == null) return ModuleFeatureModifiers.EMPTY;
+        refreshFeatureModifierCache();
+        return featureModifiersByModule.computeIfAbsent(module.id, ignored -> computeFeatureModifiers(module));
+    }
+
+    private void refreshFeatureModifierCache() {
+        long layoutVersion = layout != null ? layout.version() : Long.MIN_VALUE;
+        if (featureModifiersLayoutVersion == layoutVersion
+            && featureModifiersStationFeatureSalt == stationFeatureSalt) {
+            return;
+        }
+        featureModifiersByModule.clear();
+        featureModifiersLayoutVersion = layoutVersion;
+        featureModifiersStationFeatureSalt = stationFeatureSalt;
+    }
+
+    private ModuleFeatureModifiers computeFeatureModifiers(ModuleInstance module) {
+        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
+        StationTileCoord[] tiles = module.shape()
+            .tiles(module.anchor());
+        for (StationTileCoord tile : tiles) {
+            for (PlanetaryFeatureKey feature : planetaryFeaturesAt(tile)) {
+                counts.merge(feature, 1, Integer::sum);
+            }
+        }
+        ModuleFeatureModifierBuilder builder = new ModuleFeatureModifierBuilder();
+        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
+            PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(entry.getKey());
+            if (feature == null) continue;
+            feature.applyModuleModifiers(
+                new FeatureModuleContext(module, entry.getKey(), entry.getValue(), tiles.length),
+                builder);
+        }
+        return builder.build(counts);
     }
 
     private void applyCompletedModuleOperation(ModuleInstance module, ModuleOperationState operation) {
