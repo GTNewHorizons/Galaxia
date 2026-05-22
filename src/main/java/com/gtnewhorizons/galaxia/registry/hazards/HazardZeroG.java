@@ -1,11 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.hazards;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 
-public class HazardZeroG extends EnvironmentalHazard {
+public class HazardZeroG implements IEnvironmentalHazard {
 
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {

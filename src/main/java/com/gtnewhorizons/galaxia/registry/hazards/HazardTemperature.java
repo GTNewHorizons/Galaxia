@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getThermalProtection;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
@@ -9,7 +10,7 @@ import net.minecraft.util.DamageSource;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 
-public class HazardTemperature extends EnvironmentalHazard {
+public class HazardTemperature implements IEnvironmentalHazard {
 
     private static DamageSource temperatureDamage = new DamageSource("galaxia.temperature").setDamageBypassesArmor()
         .setMagicDamage();

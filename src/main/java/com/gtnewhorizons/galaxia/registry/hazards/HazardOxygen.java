@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
@@ -10,7 +11,7 @@ import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 
-public class HazardOxygen extends EnvironmentalHazard {
+public class HazardOxygen implements IEnvironmentalHazard {
 
     public static final DamageSource noOxygenDamage = new DamageSource("galaxia.noOxygen").setDamageBypassesArmor()
         .setMagicDamage();

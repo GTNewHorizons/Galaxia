@@ -2,12 +2,13 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getRadiationProtection;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 
-public class HazardRadiation extends EnvironmentalHazard {
+public class HazardRadiation implements IEnvironmentalHazard {
 
     public static final int DEFAULT_MAX = 0;
     final public static DamageSource radiationDamage = new DamageSource("galaxia.radiation").setDamageBypassesArmor()

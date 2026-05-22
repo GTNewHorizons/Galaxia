@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
@@ -120,7 +121,17 @@ public class DimensionEventHandler {
      * @param player The player entity
      */
     private void applyEffects(EffectBuilder def, EntityPlayer player) {
+        if (player.capabilities.isCreativeMode && !ConfigPlayer.ConfigPlayerGlobal.applyDebuffsInCreative) {
+            if (!this.batchedWarnings.isEmpty()) {
+                this.batchedWarnings.clear();
+                Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(this.batchedWarnings), (EntityPlayerMP) player);
+            }
+
+            return;
+        }
+
         this.batchedWarnings.clear();
+
         for (EnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
             HazardWarnings w = h.applyTotal(def, player);
             if (w != HazardWarnings.FINE) {

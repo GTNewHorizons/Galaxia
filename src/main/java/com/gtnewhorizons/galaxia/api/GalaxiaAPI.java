@@ -24,7 +24,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
-import com.gtnewhorizons.galaxia.registry.capabilities.ZeroGMovementProvider;
+import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
@@ -226,13 +226,13 @@ public final class GalaxiaAPI {
             item -> highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow());
     }
 
-    private static ZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
+    private static IZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return null;
 
         for (int slot : Galaxia.rcsSlot) {
             ItemStack stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof ZeroGMovementProvider provider) {
+            if (stack != null && stack.getItem() instanceof IZeroGMovementProvider provider) {
                 return provider;
             }
         }
@@ -240,7 +240,7 @@ public final class GalaxiaAPI {
     }
 
     public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
-        ZeroGMovementProvider provider = getZeroGMovementProvider(player);
+        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
         if (provider != null) provider.setEnabled(enabled);
     }
 
@@ -248,7 +248,7 @@ public final class GalaxiaAPI {
         if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) {
             return true;
         }
-        ZeroGMovementProvider provider = getZeroGMovementProvider(player);
+        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
         return provider != null && provider.isEnabled();
     }
 

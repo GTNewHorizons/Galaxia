@@ -6,13 +6,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 
-public class HazardSpores extends EnvironmentalHazard {
+public class HazardSpores implements IEnvironmentalHazard {
 
     public static final List<Potion> possibleEffects = Arrays.asList(
         Potion.moveSlowdown,
