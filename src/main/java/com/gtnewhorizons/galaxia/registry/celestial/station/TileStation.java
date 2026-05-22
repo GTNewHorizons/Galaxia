@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
+import it.unimi.dsi.fastutil.longs.LongArraySet;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
@@ -51,6 +53,13 @@ public class TileStation extends TileStationBase<TileStation> {
     @Getter
     private List<BlockPos> attachments = new ArrayList<>();
 
+    @Getter
+    private final LongArraySet coolingCoils = new LongArraySet();
+
+    public void addCoolingCoil(int x, int y, int z) {
+        coolingCoils.add(CoordinatePacker.pack(x, y, z));
+    }
+
     public void setBehavior(IStationBehavior newBehavior) {
         if (newBehavior == behavior) return;
         if (structureValid && behavior != null) {
@@ -75,7 +84,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public boolean protectsAgainst(IEnvironmentalHazard hazard) {
-        return true;
+        return isSealed();
     }
 
     @Override
@@ -108,6 +117,7 @@ public class TileStation extends TileStationBase<TileStation> {
             }
         }
         behavior.onStructureDisformed(this);
+        coolingCoils.clear();
         super.onStructureDisformed();
     }
 
@@ -217,18 +227,6 @@ public class TileStation extends TileStationBase<TileStation> {
         if (graph == null) return List.of();
         return graph.connectedInventories()
             .toList();
-    }
-
-    public boolean hasOxygen(int x, int y, int z) {
-        if (isInside(x, y, z)) return isOxygenated();
-
-        if (graph != null) {
-            for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
-                if (secondary.isInside(x, y, z)) return secondary.isOxygenated();
-            }
-        }
-
-        return false;
     }
 
     @Override

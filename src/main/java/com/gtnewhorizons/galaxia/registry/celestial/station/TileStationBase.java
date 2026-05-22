@@ -38,10 +38,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     protected BlockPos here;
 
     @Getter
-    private boolean oxygenated = false;
-    protected int oxygenLevel = DEFAULT_OXYGEN_LEVEL;
-
-    public static final int DEFAULT_OXYGEN_LEVEL = 100;
+    private boolean sealed = false;
 
     public TileStationBase() {
         super();
@@ -83,7 +80,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             teLock.untrackStationController(this.here);
         }
         airlocks.clear();
-        oxygenated = false;
+        sealed = false;
     }
 
     public void registerAirlock(int x, int y, int z) {
@@ -102,7 +99,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         nbt.setTag("airlocks", BlockPos.listToNBT(airlocks));
-        nbt.setBoolean("oxygenated", oxygenated);
+        nbt.setBoolean("sealed", sealed);
     }
 
     @Override
@@ -112,8 +109,8 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         if (nbt.hasKey("airlocks")) {
             this.airlocks = BlockPos.listFromNBT(nbt.getTagList("airlocks", Constants.NBT.TAG_COMPOUND));
         }
-        if (nbt.hasKey("oxygenated")) {
-            this.oxygenated = nbt.getBoolean("oxygenated");
+        if (nbt.hasKey("sealed")) {
+            this.sealed = nbt.getBoolean("sealed");
         }
     }
 
@@ -150,15 +147,15 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     public void tick() {
-        oxygenated = checkOxygenLevels(new HashSet<>());
+        sealed = checkSealed(new HashSet<>());
     }
 
-    private boolean checkOxygenLevels(Set<BlockPos> visited) {
+    private boolean checkSealed(Set<BlockPos> visited) {
         if (!structureValid) return false;
 
         // Prevent cycles
         if (!visited.add(here)) {
-            return oxygenLevel > 0;
+            return true;
         }
 
         boolean hasOpenAirlock = false;
@@ -180,7 +177,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
                 TileStationBase<?> other = otherPos.getTE(worldObj);
                 if (other == null) continue;
 
-                if (other.checkOxygenLevels(visited)) {
+                if (other.checkSealed(visited)) {
                     foundOxygenPath = true;
                 }
             }
@@ -188,7 +185,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
         // Case 1: no open doors → sealed
         if (!hasOpenAirlock) {
-            return oxygenLevel > 0;
+            return true;
         }
 
         // Case 2: doors open → rely on network

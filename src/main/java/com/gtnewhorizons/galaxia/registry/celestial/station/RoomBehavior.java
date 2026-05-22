@@ -33,6 +33,8 @@ public class RoomBehavior implements IStationBehavior {
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
+        .addElement(GalaxiaStructureUtility.ofBlockPosAdder(
+            TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
         .withSearchRadius(ConfigStructures.enclosed.searchRadius)
         .enclosed()
@@ -54,23 +56,18 @@ public class RoomBehavior implements IStationBehavior {
     }
 
     @Override
-    public void onStructureFormed(TileStation station) {
-        station.oxygenLevel = TileStationBase.DEFAULT_OXYGEN_LEVEL;
-    }
-
-    @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        BooleanSyncValue oxygenatedSync = new BooleanSyncValue(
-            () -> station.isOxygenated(),
-            () -> station.isOxygenated());
-        syncManager.syncValue("oxygenated", 0, oxygenatedSync);
+        BooleanSyncValue sealedSync = new BooleanSyncValue(
+            () -> station.isSealed(),
+            () -> station.isSealed());
+        syncManager.syncValue("sealed", 0, sealedSync);
 
         return List.of(new TextWidget<>(IKey.dynamic(() -> {
-            boolean oxy = oxygenatedSync.getBoolValue();
-            String oxygen = StatCollector.translateToLocal("galaxia.gui.station_controller.oxygen");
-            String status = StatCollector.translateToLocal(oxy ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
-            EnumChatFormatting color = oxy ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-            return oxygen + ": " + color + status + EnumChatFormatting.RESET;
+            boolean sealed = sealedSync.getBoolValue();
+            String label = StatCollector.translateToLocal("galaxia.gui.station_controller.sealed");
+            String status = StatCollector.translateToLocal(sealed ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
+            EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
+            return label + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, yOffset));
     }
 }

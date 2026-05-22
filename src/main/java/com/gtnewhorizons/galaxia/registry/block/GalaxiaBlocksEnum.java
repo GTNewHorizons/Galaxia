@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.block.machine.BlockOxygenPylon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockCasing;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockController;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockAirlockDoor;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockCoolingCoil;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
@@ -64,6 +65,7 @@ public enum GalaxiaBlocksEnum {
     // NON-TE
     SPACE_STATION_GLASS(new BlockCasing("space_station/space_station_glass").glass(), "space_station_glass"),
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
+    COOLING_COIL(new BlockCoolingCoil(), "cooling_coil"),
 
     // MISC
     BLOCK_OF_PYRITE(new BlockConfigurable("resource/block_of_pyrite")),
