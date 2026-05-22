@@ -546,7 +546,7 @@ final class AutomatedFacilityOperationTest {
             AutomatedFacility facility = new AutomatedFacility(
                 CelestialAsset.ID.create(),
                 CelestialObjectId.MARS,
-                CelestialAsset.Kind.AUTOMATED_STATION,
+                CelestialAsset.Kind.AUTOMATED_OUTPOST,
                 Buildable.Status.OPERATIONAL);
             facility.setStationFeatureSalt(salt);
             for (int dx = StationTileCoord.MIN; dx <= StationTileCoord.MAX; dx++) {

@@ -162,6 +162,7 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     public List<PlanetaryFeatureKey> planetaryFeaturesAt(int dx, int dy) {
+        if (kind != Kind.AUTOMATED_OUTPOST) return Collections.emptyList();
         return GalaxiaCelestialAPI.get(planetaryAnchorBodyId)
             .map(body -> PlanetaryFeatureGenerator.featuresAt(stationFeatureSalt, dx, dy, body))
             .orElse(Collections.emptyList());
