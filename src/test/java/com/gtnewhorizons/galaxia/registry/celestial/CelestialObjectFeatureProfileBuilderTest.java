@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialObjectFeatureProfileBuilderTest {
 
@@ -40,7 +41,7 @@ final class CelestialObjectFeatureProfileBuilderTest {
 
     @Test
     void panspiraHasAllPlanetaryFeaturesForTestingWithRareHazards() {
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
 
         CelestialObject panspira = CelestialRegistry.findByDimension(DimensionEnum.PANSPIRA)
             .orElseThrow();

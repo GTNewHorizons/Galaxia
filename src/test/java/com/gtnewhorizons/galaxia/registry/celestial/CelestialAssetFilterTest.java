@@ -15,11 +15,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CelestialAssetFilterTest {
 
@@ -27,8 +27,7 @@ final class CelestialAssetFilterTest {
 
     @BeforeAll
     static void initRegistries() {
-        TestFMLRegistry.init();
-        CelestialRegistry.freezeAndBake();
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
         facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,

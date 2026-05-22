@@ -12,17 +12,17 @@ import net.minecraftforge.fluids.Fluid;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StationInventoryPanelModelTest {
 
     @BeforeAll
     static void init() {
-        TestFMLRegistry.init();
+        GalaxiaTestBootstrap.ensureMinecraft();
     }
 
     @Test

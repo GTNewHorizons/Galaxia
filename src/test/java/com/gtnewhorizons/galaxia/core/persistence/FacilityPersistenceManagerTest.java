@@ -33,12 +33,10 @@ import org.junit.jupiter.api.io.TempDir;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.core.network.PacketUtil;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
@@ -69,6 +67,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationLayout;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class FacilityPersistenceManagerTest {
 
@@ -81,11 +80,9 @@ final class FacilityPersistenceManagerTest {
 
     @BeforeAll
     static void initRegistries() {
-        TestFMLRegistry.init();
+        GalaxiaTestBootstrap.ensureFacilityModules();
         TEST_FLUID_1 = FluidRegistry.WATER;
         TEST_FLUID_2 = FluidRegistry.LAVA;
-        CelestialRegistry.freezeAndBake();
-        FacilityModuleRegistry.init();
     }
 
     @Test
