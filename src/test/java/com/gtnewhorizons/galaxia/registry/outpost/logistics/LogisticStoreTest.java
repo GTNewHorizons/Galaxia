@@ -3,9 +3,11 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -139,6 +141,27 @@ final class LogisticStoreTest {
                 0));
 
         assertEquals(12L, LogisticStore.inboundInTransitAmount(destination.assetId, resource));
+    }
+
+    @Test
+    void upkeepAutoOrderEmitsRequestUpToEffectiveLowerBound() {
+        AutomatedFacility station = facility();
+        ItemStackWrapper resource = new ItemStackWrapper(new Item(), 0, null);
+        station.updateItems(resource, 3);
+        station.setBound(resource, 5, true);
+        station.setUpkeepReserve(resource, 10L);
+        station.setUpkeepAutoOrder(resource, true);
+
+        LogisticStore.updateSignalsForFacility(station);
+
+        LogisticSignal signal = LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+            .values()
+            .stream()
+            .flatMap(List::stream)
+            .findFirst()
+            .orElseThrow();
+        assertEquals(resource, signal.resourceId());
+        assertEquals(-12L, signal.amount());
     }
 
     private static AutomatedFacility facility() {

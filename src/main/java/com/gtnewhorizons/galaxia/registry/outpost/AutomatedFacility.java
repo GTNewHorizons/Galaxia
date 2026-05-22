@@ -49,6 +49,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.settings.ModuleSetting
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.RecipeModuleSettings;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroupRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
@@ -68,6 +69,8 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private final UpkeepLedger upkeepLedger;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
+    private final Map<ItemStackWrapper, Long> upkeepItemReserves = new LinkedHashMap<>();
+    private final Set<ItemStackWrapper> upkeepAutoOrderItems = new HashSet<>();
 
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
@@ -199,6 +202,65 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public UpkeepLedger.UpkeepSummary upkeepSummary() {
         return upkeepLedger.summary(this);
+    }
+
+    public void setUpkeepReserve(ItemStackWrapper item, long amount) {
+        if (item == null) {
+            throw new IllegalArgumentException("item must not be null");
+        }
+        if (amount < 0L) {
+            throw new IllegalArgumentException("upkeep reserve must be >= 0");
+        }
+        upkeepItemReserves.put(item, amount);
+    }
+
+    public long upkeepReserve(ItemStackWrapper item) {
+        if (item == null) return 0L;
+        Long manual = upkeepItemReserves.get(item);
+        if (manual != null) return manual;
+        UpkeepAmount perMinute = upkeepSummary().itemsPerMinute()
+            .get(item);
+        if (perMinute == null || perMinute.isZero()) return 0L;
+        return UpkeepAmount.ofMicroUnits(Math.multiplyExact(perMinute.microUnitsPerMinute(), 10L))
+            .wholeUnitsToCoverDeficit();
+    }
+
+    public void setUpkeepAutoOrder(ItemStackWrapper item, boolean enabled) {
+        if (item == null) {
+            throw new IllegalArgumentException("item must not be null");
+        }
+        if (enabled) {
+            upkeepAutoOrderItems.add(item);
+        } else {
+            upkeepAutoOrderItems.remove(item);
+        }
+    }
+
+    public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
+        return item != null && upkeepAutoOrderItems.contains(item);
+    }
+
+    public Set<ItemStackWrapper> upkeepAutoOrderItems() {
+        return Collections.unmodifiableSet(upkeepAutoOrderItems);
+    }
+
+    public long effectiveLowerBound(InventoryKey key) {
+        long manualLowerBound = getBound(key).lowOrDefault();
+        if (key instanceof ItemStackWrapper item) {
+            return Math.addExact(manualLowerBound, upkeepReserve(item));
+        }
+        return manualLowerBound;
+    }
+
+    @Override
+    public boolean isAboveLow(InventoryKey key, long amount) {
+        return (resourceAmount(key) - amount) >= effectiveLowerBound(key);
+    }
+
+    private long resourceAmount(InventoryKey key) {
+        if (key instanceof ItemStackWrapper item) return getItemAmount(item);
+        if (key instanceof FluidKey fluid) return getFluidAmount(fluid);
+        return 0L;
     }
 
     public UpkeepSettlement.Credits upkeepCredits() {

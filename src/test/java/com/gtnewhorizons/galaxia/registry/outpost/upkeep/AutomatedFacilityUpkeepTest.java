@@ -42,6 +42,22 @@ final class AutomatedFacilityUpkeepTest {
     }
 
     @Test
+    void upkeepReserveDefaultsToTenMinutesOfCurrentDemand() {
+        AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
+
+        assertEquals(20L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
+    void manualUpkeepReserveOverridesDefaultDemandReserve() {
+        AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "2"));
+
+        facility.setUpkeepReserve(UPKEEP_ITEM, 7L);
+
+        assertEquals(7L, facility.upkeepReserve(UPKEEP_ITEM));
+    }
+
+    @Test
     void minuteTickConsumesWholeItemAndStoresFractionalCredit() {
         AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "0.1"));
         facility.addInventory(UPKEEP_ITEM, 1L);

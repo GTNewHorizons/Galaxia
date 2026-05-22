@@ -7,22 +7,33 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class StationInventoryPanelModelTest {
 
     @BeforeAll
     static void init() {
-        GalaxiaTestBootstrap.ensureMinecraft();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @Test
@@ -75,6 +86,26 @@ final class StationInventoryPanelModelTest {
                 .isEmpty());
     }
 
+    @Test
+    void inventoryRowsIncludeCurrentUpkeepItemsWithoutStock() {
+        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
+        ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
+        distributed.addModule(moduleWithUpkeep(upkeepStack, 1L));
+
+        List<Map.Entry<ItemStackWrapper, Long>> rows = StationInventoryPanelModel.inventoryRows(distributed);
+
+        assertEquals(1, rows.size());
+        assertEquals(
+            tracked,
+            rows.get(0)
+                .getKey());
+        assertEquals(
+            0L,
+            rows.get(0)
+                .getValue());
+    }
+
     private static void setAmount(IDistributedInventory distributed, ItemStackWrapper item, int amount) {
         if (distributed instanceof AutomatedFacility af) {
             af.updateItems(item, amount);
@@ -87,6 +118,33 @@ final class StationInventoryPanelModelTest {
             com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.PROXIMA_CENTAURI,
             com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Kind.AUTOMATED_OUTPOST,
             com.gtnewhorizons.galaxia.registry.interfaces.Buildable.Status.OPERATIONAL);
+    }
+
+    private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount) {
+        ModuleTierData tierData = ModuleTierData.builder()
+            .addedEnergyCapacity(0L)
+            .powerDraw(0L)
+            .cooldown(20)
+            .cost(Map.of(new ItemStack(new Item()), 1L))
+            .upkeepItem(upkeepItem, itemAmount)
+            .build();
+        FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
+            FacilityModuleKind.POWER,
+            Map.of(ModuleTier.NONE, tierData),
+            (module, facility) -> {},
+            TestTieredModule::new,
+            List.<ModulePanelAction>of(),
+            false,
+            List.of());
+        ModuleInstance module = new ModuleInstance(
+            ModuleInstance.ID.create(),
+            definition,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.NONE);
+        module.setComponent(new TestTieredModule());
+        module.completeConstruction();
+        return module;
     }
 
     @Test
@@ -119,5 +177,8 @@ final class StationInventoryPanelModelTest {
         if (distributed instanceof AutomatedFacility af) {
             af.updateFluids(fluid, amount);
         }
+    }
+
+    private static final class TestTieredModule extends TieredModuleComponent {
     }
 }

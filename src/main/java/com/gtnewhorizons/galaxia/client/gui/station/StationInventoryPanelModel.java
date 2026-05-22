@@ -5,8 +5,10 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
@@ -30,8 +32,18 @@ final class StationInventoryPanelModel {
 
     static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory) {
         Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
+        Set<ItemStackWrapper> upkeepItems = Set.of();
+        if (inventory instanceof AutomatedFacility facility) {
+            upkeepItems = facility.upkeepSummary()
+                .itemsPerMinute()
+                .keySet();
+            for (ItemStackWrapper item : upkeepItems) {
+                rows.putIfAbsent(item, 0L);
+            }
+        }
+        Set<ItemStackWrapper> visibleUpkeepItems = upkeepItems;
         rows.entrySet()
-            .removeIf(row -> row.getValue() <= 0L);
+            .removeIf(row -> row.getValue() <= 0L && !visibleUpkeepItems.contains(row.getKey()));
         List<Map.Entry<ItemStackWrapper, Long>> sorted = new ArrayList<>(rows.entrySet());
         sorted.sort(
             Comparator.comparing(

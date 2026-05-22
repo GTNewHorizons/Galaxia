@@ -221,6 +221,35 @@ final class ProductionModuleHelperTest {
     }
 
     @Test
+    void executeKeepsInputAboveManualLowerBoundPlusUpkeepReserve() {
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        Item inputItem = Items.diamond;
+        Item outputItem = Items.iron_ingot;
+        ItemStackWrapper inputResource = new ItemStackWrapper(inputItem, 0, null);
+        ItemStackWrapper outputResource = new ItemStackWrapper(outputItem, 0, null);
+        station.updateItems(inputResource, 11);
+        station.setBound(inputResource, 1, true);
+        station.setUpkeepReserve(inputResource, 10L);
+
+        ItemStack[] inputs = { new ItemStack(inputItem, 1, 0) };
+        ItemStack[] outputs = { new ItemStack(outputItem, 1, 0) };
+        RecipeSnapshot snapshot = RecipeSnapshot.resolved((byte) 1, 0, inputs, outputs, null, null, 20, 30);
+        SavedRecipeList slots = new SavedRecipeList();
+        slots.add(new SavedRecipe(snapshot, true, 0L, (byte) 1, (byte) 1));
+        StubRecipeModule module = new StubRecipeModule(
+            new RecipeConfig(slots, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0));
+
+        ProductionModuleHelper.execute(null, station, module, new Random(0), new HashMap<>(), new HashMap<>());
+
+        assertEquals(11, station.getItemAmount(inputResource));
+        assertEquals(0, station.getItemAmount(outputResource));
+    }
+
+    @Test
     void executeConsumesInputWhenChancedItemOutputMisses() {
         AutomatedFacility station = station();
         Item inputItem = Items.diamond;

@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -97,6 +98,7 @@ public final class LogisticStore {
         if (asset instanceof Station station) {
             cannonItems = station.getCannonChestItems();
         }
+        AutomatedFacility automatedFacility = asset instanceof AutomatedFacility facility ? facility : null;
 
         Map<ItemStackWrapper, LogisticSignal> currentSignals = outpostSignals
             .computeIfAbsent(assetId, k -> new LinkedHashMap<>());
@@ -111,6 +113,14 @@ public final class LogisticStore {
         for (ItemStackWrapper r : snapshot.keySet()) {
             if (!allResources.contains(r)) allResources.add(r);
         }
+        for (ItemStackWrapper r : currentSignals.keySet()) {
+            if (!allResources.contains(r)) allResources.add(r);
+        }
+        if (automatedFacility != null) {
+            for (ItemStackWrapper r : automatedFacility.upkeepAutoOrderItems()) {
+                if (!allResources.contains(r)) allResources.add(r);
+            }
+        }
 
         CelestialObjectId bodyId = asset.celestialObjectId;
         CelestialObjectId systemId = asset.systemId;
@@ -124,16 +134,24 @@ public final class LogisticStore {
 
             long newAmount = 0;
             LogisticSignal.Scope newScope = LogisticSignal.Scope.SYSTEM;
+            long importTarget = cfg.isImportEnabled() ? cfg.minReserve() : 0L;
+            long supplyReserve = cfg.minReserve();
+            if (automatedFacility != null) {
+                supplyReserve = Math.max(supplyReserve, automatedFacility.effectiveLowerBound(resource));
+                if (automatedFacility.isUpkeepAutoOrderEnabled(resource)) {
+                    importTarget = Math.max(importTarget, automatedFacility.effectiveLowerBound(resource));
+                }
+            }
 
-            if (cfg.isImportEnabled() && stock < cfg.minReserve()) {
-                newAmount = -(cfg.minReserve() - stock);
+            if (importTarget > 0L && stock < importTarget) {
+                newAmount = -(importTarget - stock);
             } else if (cfg.isSupplyEnabled()) {
                 long supplyStock = stock;
                 if (cannonItems != null) {
                     supplyStock += cannonItems.getOrDefault(resource, 0L);
                 }
-                if (supplyStock > cfg.minReserve()) {
-                    newAmount = supplyStock - cfg.minReserve();
+                if (supplyStock > supplyReserve) {
+                    newAmount = supplyStock - supplyReserve;
                 }
             }
 
