@@ -683,7 +683,7 @@ public final class FacilityPersistenceManager {
                         }
                         decodeMinerSettings(module, miner, data);
                     }
-                    case POWER -> {}
+                    case POWER, GEOTHERMAL_GENERATOR -> {}
                     case STORAGE, TANK, BATTERY, MAINTENANCE_BAY -> {}
                     case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> {
                         if (data.has("recipeMode")) {

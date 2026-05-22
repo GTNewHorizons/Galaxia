@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.drawable.IDrawable;
@@ -41,12 +42,13 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
         "galaxia_station_module_picker",
         ModulePickerScreen::new);
 
-    private static final int PANEL_WIDTH = 220;
-    private static final int PANEL_HEIGHT = 150;
+    private static final int PANEL_WIDTH = 640;
+    private static final int PANEL_HEIGHT = 430;
     private static final int HEADER_HEIGHT = 24;
     private static final int PANEL_PADDING = 8;
-    private static final int BUTTON_HEIGHT = 22;
+    private static final int BUTTON_HEIGHT = 72;
     private static final int BUTTON_GAP = 5;
+    private static final int BUTTON_COLUMNS = 3;
     private static final int BUTTON_TEXT_PADDING = 7;
     private static final int TEXT_BASELINE_OFFSET = 1;
     private static final int MULTIPLE_TOGGLE_WIDTH = 58;
@@ -103,13 +105,23 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
             return panel;
         }
 
+        int buttonWidth = (PANEL_WIDTH - PANEL_PADDING * 2 - BUTTON_GAP * (BUTTON_COLUMNS - 1)) / BUTTON_COLUMNS;
+        int x = PANEL_PADDING;
         int y = HEADER_HEIGHT + PANEL_PADDING;
+        int column = 0;
         for (FacilityModuleKind kind : FacilityModuleKind.values()) {
             if (!kind.isAllowedOn(facility.kind)) continue;
             panel.child(
-                createKindButton(kind).pos(PANEL_PADDING, y)
-                    .size(PANEL_WIDTH - PANEL_PADDING * 2, BUTTON_HEIGHT));
-            y += BUTTON_HEIGHT + BUTTON_GAP;
+                createKindButton(kind).pos(x, y)
+                    .size(buttonWidth, BUTTON_HEIGHT));
+            column++;
+            if (column >= BUTTON_COLUMNS) {
+                column = 0;
+                x = PANEL_PADDING;
+                y += BUTTON_HEIGHT + BUTTON_GAP;
+            } else {
+                x += buttonWidth + BUTTON_GAP;
+            }
         }
         return panel;
     }
@@ -198,22 +210,109 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
     private static void drawKindButton(FacilityModuleKind kind, int x, int y, int width, int height) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         String label = kind.getDisplayName();
-        int textY = y + (height - fr.FONT_HEIGHT) / 2 + TEXT_BASELINE_OFFSET;
-        fr.drawStringWithShadow(
-            label,
-            x + BUTTON_TEXT_PADDING,
-            textY,
-            EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
+        int textX = x + BUTTON_TEXT_PADDING;
+        int lineY = y + 5;
+        fr.drawStringWithShadow(label, textX, lineY, EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
 
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(kind);
         ModuleTierData data = definition == null ? null : definition.getTierData(kind.defaultTier());
-        String stats = (data == null ? 0L : data.powerDrawEuPerTick()) + " EU/t";
-        int statsWidth = fr.getStringWidth(stats);
+        String tier = kind.defaultTier()
+            .name();
+        int tierWidth = fr.getStringWidth(tier);
         fr.drawStringWithShadow(
-            stats,
-            x + width - statsWidth - BUTTON_TEXT_PADDING,
-            textY,
+            tier,
+            x + width - tierWidth - BUTTON_TEXT_PADDING,
+            lineY,
             EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+
+        lineY += fr.FONT_HEIGHT;
+        fr.drawStringWithShadow(
+            fr.trimStringToWidth(moduleDescription(kind), width - BUTTON_TEXT_PADDING * 2),
+            textX,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        if (data == null) return;
+
+        lineY += fr.FONT_HEIGHT;
+        fr.drawStringWithShadow(
+            fr.trimStringToWidth(energyAndUpkeepLine(data), width - BUTTON_TEXT_PADDING * 2),
+            textX,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+
+        lineY += fr.FONT_HEIGHT;
+        fr.drawStringWithShadow(
+            "Build Time: " + formatTicks(data.buildTicks()),
+            textX,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+
+        lineY += fr.FONT_HEIGHT;
+        fr.drawStringWithShadow(
+            fr.trimStringToWidth("Build Cost: " + formatCost(data.constructionCost()), width - BUTTON_TEXT_PADDING * 2),
+            textX,
+            lineY,
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+    }
+
+    private static String moduleDescription(FacilityModuleKind kind) {
+        return switch (kind) {
+            case HAMMER -> "Launches logistics packages";
+            case MINER -> "Extracts planetary ores";
+            case POWER -> "Adds station EU generation";
+            case GEOTHERMAL_GENERATOR -> "Generates EU from magma pools";
+            case STORAGE -> "Adds item inventory capacity";
+            case TANK -> "Adds fluid inventory capacity";
+            case BATTERY -> "Adds energy buffer capacity";
+            case MAINTENANCE_BAY -> "Reduces station upkeep";
+            case MACERATOR -> "Runs macerator recipes";
+            case CENTRIFUGE -> "Runs centrifuge recipes";
+            case ELECTROLYZER -> "Runs electrolyzer recipes";
+            case CHEMICAL_REACTOR -> "Runs chemical recipes";
+            case ASSEMBLER -> "Runs assembler recipes";
+            case DISTILLERY -> "Runs distillery recipes";
+        };
+    }
+
+    private static String energyAndUpkeepLine(ModuleTierData data) {
+        return "Energy (EU/t): " + formatPower(data.powerDrawEuPerTick()) + "  Upkeep (items/min): 0";
+    }
+
+    private static String formatTicks(int ticks) {
+        if (ticks % 20 == 0) return ticks / 20 + "s";
+        return ticks + "t";
+    }
+
+    private static String formatPower(long powerDraw) {
+        if (powerDraw < 0) return "+" + formatAmount(-powerDraw);
+        if (powerDraw > 0) return "-" + formatAmount(powerDraw);
+        return "0";
+    }
+
+    private static String formatCost(java.util.Map<ItemStack, Long> cost) {
+        if (cost.isEmpty()) return "free";
+        int shown = 0;
+        StringBuilder out = new StringBuilder();
+        for (java.util.Map.Entry<ItemStack, Long> entry : cost.entrySet()) {
+            if (shown > 0) out.append(", ");
+            out.append(formatAmount(entry.getValue()))
+                .append("x ")
+                .append(
+                    entry.getKey()
+                        .getDisplayName());
+            shown++;
+            if (shown >= 2) break;
+        }
+        int remaining = cost.size() - shown;
+        if (remaining > 0) out.append(" +")
+            .append(remaining);
+        return out.toString();
+    }
+
+    private static String formatAmount(long amount) {
+        if (amount >= 1_000_000L) return amount / 1_000_000L + "M";
+        if (amount >= 1_000L) return amount / 1_000L + "k";
+        return Long.toString(amount);
     }
 
     private static void clearPending() {

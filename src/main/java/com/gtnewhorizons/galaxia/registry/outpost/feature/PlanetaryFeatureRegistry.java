@@ -5,75 +5,38 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.MagmaPoolFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.MineralVeinFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.RareCrystalFormationFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.RegolithFlatsFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.StableBedrockFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.SubsurfaceIcePocketFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.ThermalSinkZoneFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.types.VolatileDepositFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 
 public final class PlanetaryFeatureRegistry {
 
-    public static final PlanetaryFeatureDefinition REGOLITH_FLATS = feature("regolith_flats")
-        .displayName("Regolith Flats")
-        .description("Flat construction terrain")
-        .layer(PlanetaryFeatureLayer.TERRAIN)
-        .placement(PlanetaryFeaturePlacement.patch(42.0, 14.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_REGOLITH_FLATS.getColor())
-        .build();
+    private static final PlanetaryFeature REGOLITH_FLATS_FEATURE = new RegolithFlatsFeature();
+    private static final PlanetaryFeature STABLE_BEDROCK_FEATURE = new StableBedrockFeature();
+    private static final PlanetaryFeature MINERAL_VEIN_FEATURE = new MineralVeinFeature();
+    private static final PlanetaryFeature SUBSURFACE_ICE_POCKET_FEATURE = new SubsurfaceIcePocketFeature();
+    private static final PlanetaryFeature MAGMA_POOL_FEATURE = new MagmaPoolFeature();
+    private static final PlanetaryFeature VOLATILE_DEPOSIT_FEATURE = new VolatileDepositFeature();
+    private static final PlanetaryFeature RARE_CRYSTAL_FORMATION_FEATURE = new RareCrystalFormationFeature();
+    private static final PlanetaryFeature THERMAL_SINK_ZONE_FEATURE = new ThermalSinkZoneFeature();
 
-    public static final PlanetaryFeatureDefinition STABLE_BEDROCK = feature("stable_bedrock")
-        .displayName("Stable Bedrock")
-        .description("Structurally stable terrain")
-        .layer(PlanetaryFeatureLayer.TERRAIN)
-        .placement(PlanetaryFeaturePlacement.patch(30.0, 10.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_STABLE_BEDROCK.getColor())
-        .build();
-
-    public static final PlanetaryFeatureDefinition MINERAL_VEIN = feature("mineral_vein").displayName("Mineral Vein")
-        .description("Ore-rich tile")
-        .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.patch(14.0, 6.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_MINERAL_VEIN.getColor())
-        .build();
-
-    public static final PlanetaryFeatureDefinition SUBSURFACE_ICE_POCKET = feature("subsurface_ice_pocket")
-        .displayName("Subsurface Ice Pocket")
-        .description("Buried ice deposit")
-        .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.patch(5.0, 2.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_SUBSURFACE_ICE_POCKET.getColor())
-        .build();
-
-    public static final PlanetaryFeatureDefinition GEOTHERMAL_VENT = feature("geothermal_vent")
-        .displayName("Geothermal Vent")
-        .description("Natural heat source")
-        .layer(PlanetaryFeatureLayer.ENVIRONMENT)
-        .placement(PlanetaryFeaturePlacement.isolated())
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_GEOTHERMAL_VENT.getColor())
-        .build();
-
-    public static final PlanetaryFeatureDefinition VOLATILE_DEPOSIT = feature("volatile_deposit")
-        .displayName("Volatile Deposit")
-        .description("Chemical volatile pocket")
-        .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.clusteredPatch(8.0, 4.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_VOLATILE_DEPOSIT.getColor())
-        .build();
-
-    public static final PlanetaryFeatureDefinition RARE_CRYSTAL_FORMATION = feature("rare_crystal_formation")
-        .displayName("Rare Crystal Formation")
-        .description("Rare crystal growth")
-        .layer(PlanetaryFeatureLayer.RESOURCE)
-        .placement(PlanetaryFeaturePlacement.patch(3.0, 1.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_RARE_CRYSTAL_FORMATION.getColor())
-        .build();
-
-    public static final PlanetaryFeatureDefinition THERMAL_SINK_ZONE = feature("thermal_sink_zone")
-        .displayName("Thermal Sink Zone")
-        .description("Naturally heat-absorbing terrain")
-        .layer(PlanetaryFeatureLayer.ENVIRONMENT)
-        .placement(PlanetaryFeaturePlacement.patch(12.0, 5.0))
-        .overlayColor(EnumColors.MAP_COLOR_STATION_FEATURE_THERMAL_SINK_ZONE.getColor())
-        .build();
+    public static final PlanetaryFeatureDefinition REGOLITH_FLATS = REGOLITH_FLATS_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition STABLE_BEDROCK = STABLE_BEDROCK_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition MINERAL_VEIN = MINERAL_VEIN_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition SUBSURFACE_ICE_POCKET = SUBSURFACE_ICE_POCKET_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition MAGMA_POOL = MAGMA_POOL_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition VOLATILE_DEPOSIT = VOLATILE_DEPOSIT_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition RARE_CRYSTAL_FORMATION = RARE_CRYSTAL_FORMATION_FEATURE.definition();
+    public static final PlanetaryFeatureDefinition THERMAL_SINK_ZONE = THERMAL_SINK_ZONE_FEATURE.definition();
 
     private static final Map<PlanetaryFeatureKey, PlanetaryFeatureDefinition> FEATURES = new LinkedHashMap<>();
+    private static final Map<PlanetaryFeatureKey, PlanetaryFeature> BEHAVIORS = new LinkedHashMap<>();
     private static boolean bootstrapped;
 
     private PlanetaryFeatureRegistry() {}
@@ -81,14 +44,24 @@ public final class PlanetaryFeatureRegistry {
     public static synchronized void registerDefaults() {
         if (bootstrapped) return;
         bootstrapped = true;
-        register(REGOLITH_FLATS);
-        register(STABLE_BEDROCK);
-        register(MINERAL_VEIN);
-        register(SUBSURFACE_ICE_POCKET);
-        register(GEOTHERMAL_VENT);
-        register(VOLATILE_DEPOSIT);
-        register(RARE_CRYSTAL_FORMATION);
-        register(THERMAL_SINK_ZONE);
+        register(REGOLITH_FLATS_FEATURE);
+        register(STABLE_BEDROCK_FEATURE);
+        register(MINERAL_VEIN_FEATURE);
+        register(SUBSURFACE_ICE_POCKET_FEATURE);
+        register(MAGMA_POOL_FEATURE);
+        register(VOLATILE_DEPOSIT_FEATURE);
+        register(RARE_CRYSTAL_FORMATION_FEATURE);
+        register(THERMAL_SINK_ZONE_FEATURE);
+    }
+
+    public static synchronized PlanetaryFeature register(PlanetaryFeature feature) {
+        PlanetaryFeatureDefinition definition = feature.definition();
+        PlanetaryFeatureDefinition previous = FEATURES.putIfAbsent(definition.key(), definition);
+        PlanetaryFeature previousBehavior = BEHAVIORS.putIfAbsent(definition.key(), feature);
+        if (previous != null || previousBehavior != null) {
+            throw new IllegalStateException("Duplicate planetary feature registration: " + definition.key());
+        }
+        return feature;
     }
 
     public static synchronized PlanetaryFeatureDefinition register(PlanetaryFeatureDefinition definition) {
@@ -104,13 +77,26 @@ public final class PlanetaryFeatureRegistry {
         return FEATURES.get(key);
     }
 
+    public static PlanetaryFeature feature(PlanetaryFeatureKey key) {
+        registerDefaults();
+        return BEHAVIORS.get(key);
+    }
+
     public static Collection<PlanetaryFeatureDefinition> all() {
         registerDefaults();
         return Collections.unmodifiableCollection(FEATURES.values());
     }
 
-    private static PlanetaryFeatureDefinition.Builder feature(String path) {
-        return PlanetaryFeatureDefinition.builder(path)
-            .texture(GalaxiaAPI.LocationGalaxia("textures/gui/station/features/" + path + ".png"));
+    public static Collection<PlanetaryFeature> allFeatures() {
+        registerDefaults();
+        return Collections.unmodifiableCollection(BEHAVIORS.values());
+    }
+
+    public static PlanetaryFeatureKey requiredAnchorFeature(FacilityModuleKind kind) {
+        registerDefaults();
+        for (PlanetaryFeature feature : BEHAVIORS.values()) {
+            if (feature.isRequiredAnchorFeatureFor(kind)) return feature.key();
+        }
+        return null;
     }
 }

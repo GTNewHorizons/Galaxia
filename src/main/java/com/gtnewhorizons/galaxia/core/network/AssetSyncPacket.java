@@ -702,7 +702,7 @@ public final class AssetSyncPacket implements IMessage {
                 PacketUtil.writeEnum(buf, h.variant());
                 buf.writeLong(h.energyStored());
             }
-            case POWER -> {}
+            case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> writeRecipeConfig(
                 buf,
@@ -742,7 +742,7 @@ public final class AssetSyncPacket implements IMessage {
                 ModuleHammer.requireTier(variant, tier);
                 module.setComponent(new ModuleHammer(kind, cfg, routePriority, variant, 64, energyStored));
             }
-            case POWER -> {}
+            case POWER, GEOTHERMAL_GENERATOR -> {}
             case STORAGE, TANK, BATTERY -> {}
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> readRecipeConfig(
                 buf,

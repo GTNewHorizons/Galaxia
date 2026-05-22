@@ -294,6 +294,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             panX,
             panY);
 
+        drawFeatureOverlay(facility);
+
         for (StationTileCoord slot : expansionSlots) {
             int sx = tileLocalX(slot);
             int sy = tileLocalY(slot);
@@ -306,8 +308,6 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             int ty = tileLocalY(coord);
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
-
-        drawFeatureOverlay(facility);
 
         drawPickerOverlay(context, tiles);
 
@@ -532,9 +532,11 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         if (features.isEmpty()) return;
 
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int iconSize = 8;
+        int iconGap = 4;
         int tooltipWidth = fr.getStringWidth("Features");
         for (PlanetaryFeatureDefinition feature : features) {
-            tooltipWidth = Math.max(tooltipWidth, fr.getStringWidth(feature.displayName()));
+            tooltipWidth = Math.max(tooltipWidth, iconSize + iconGap + fr.getStringWidth(feature.displayName()));
         }
         tooltipWidth += 12;
         int tooltipHeight = 8 + (features.size() + 1) * (fr.FONT_HEIGHT + 2);
@@ -553,7 +555,12 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         fr.drawStringWithShadow("Features", tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
         textY += fr.FONT_HEIGHT + 2;
         for (PlanetaryFeatureDefinition feature : features) {
-            fr.drawStringWithShadow(feature.displayName(), tooltipX + 6, textY, feature.overlayColor());
+            PlanetaryFeatureOverlayRenderer.drawIcon(feature, tooltipX + 6, textY, iconSize);
+            fr.drawStringWithShadow(
+                feature.displayName(),
+                tooltipX + 6 + iconSize + iconGap,
+                textY,
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             textY += fr.FONT_HEIGHT + 2;
         }
     }

@@ -3,8 +3,8 @@ package com.gtnewhorizons.galaxia.registry.outpost.feature;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -111,20 +111,45 @@ final class PlanetaryFeatureGeneratorTest {
     }
 
     @Test
-    void defaultFeatureRegistrationDeclaresLayerAndPlacement() {
-        PlanetaryFeatureDefinition bedrock = PlanetaryFeatureRegistry
-            .get(PlanetaryFeatureRegistry.STABLE_BEDROCK.key());
-        PlanetaryFeatureDefinition vein = PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
-
-        assertSame(PlanetaryFeatureLayer.TERRAIN, bedrock.layer());
-        assertSame(PlanetaryFeatureLayer.RESOURCE, vein.layer());
+    void defaultFeatureRegistrationProvidesUsableDefinitions() {
         assertFalse(
-            bedrock.placement()
-                .isIsolated());
-        assertTrue(
-            PlanetaryFeatureRegistry.get(PlanetaryFeatureRegistry.GEOTHERMAL_VENT.key())
-                .placement()
-                .isIsolated());
+            PlanetaryFeatureRegistry.all()
+                .isEmpty());
+        for (PlanetaryFeatureDefinition definition : PlanetaryFeatureRegistry.all()) {
+            assertNotNull(definition.key());
+            assertFalse(
+                definition.displayName()
+                    .isBlank());
+            assertNotNull(definition.texture());
+            assertNotNull(definition.layer());
+            assertNotNull(definition.placement());
+        }
+    }
+
+    @Test
+    void isolatedMagmaPoolsRejectNearbySecondPool() {
+        CelestialObject body = CelestialObject.builder()
+            .id(CelestialObjectId.EGORA)
+            .featureProfile(
+                p -> p.featureTileChance(1.0)
+                    .weight(PlanetaryFeatureRegistry.MAGMA_POOL, 1.0))
+            .build();
+
+        StationTileCoord vent = findTileWith(99887766L, body, PlanetaryFeatureRegistry.MAGMA_POOL.key());
+
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dy = -6; dy <= 6; dy++) {
+                if (Math.abs(dx) + Math.abs(dy) > 6 || dx == 0 && dy == 0) continue;
+                int x = vent.dx() + dx;
+                int y = vent.dy() + dy;
+                if (x < StationTileCoord.MIN || x > StationTileCoord.MAX) continue;
+                if (y < StationTileCoord.MIN || y > StationTileCoord.MAX) continue;
+                assertFalse(
+                    PlanetaryFeatureGenerator.featuresAt(99887766L, StationTileCoord.of(x, y), body)
+                        .contains(PlanetaryFeatureRegistry.MAGMA_POOL.key()),
+                    "Magma pool generated too close to " + vent);
+            }
+        }
     }
 
     private static StationTileCoord findTileWith(long salt, CelestialObject body, PlanetaryFeatureKey key) {

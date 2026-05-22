@@ -75,7 +75,7 @@ public interface IDistributedInventory {
 
     /**
      * Declares what fluids this subtree can store.
-     * 
+     *
      * @see #getItemFilter()
      */
     default ResourceFilter<FluidKey> getFluidFilter() {
@@ -294,7 +294,7 @@ public interface IDistributedInventory {
 
     /**
      * Dispatches to item or fluid mutation based on key type.
-     * 
+     *
      * @param delta positive to insert, negative to extract
      * @return amount actually transferred
      */
@@ -306,7 +306,7 @@ public interface IDistributedInventory {
      * Inserts (delta > 0) or extracts (delta < 0) an item within this subtree.
      * Inserts in descending priority; extracts in ascending priority. Mismatches
      * short-circuit immediately.
-     * 
+     *
      * @return amount transferred, in [0, |delta|]
      */
     default long updateItems(ItemStackWrapper item, int delta) {
@@ -393,7 +393,7 @@ public interface IDistributedInventory {
 
     /**
      * Inserts (delta > 0) or extracts (delta < 0) a fluid within this subtree.
-     * 
+     *
      * @return volume transferred (mB)
      * @see #updateItems(ItemStackWrapper, int) for priority and traversal semantics
      */

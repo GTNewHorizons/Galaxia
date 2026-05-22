@@ -170,7 +170,7 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 2.0)
-                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.4));
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.2));
         register(
             DimensionEnum.PANSPIRA,
             builder -> builder.parent(CelestialObjectId.VAEL)
@@ -189,10 +189,14 @@ public final class CelestialRegistry {
                         .metadata("surface", "undefined")
                         .ores(Blocks.iron_ore, Blocks.gold_ore, Blocks.redstone_ore, Blocks.emerald_ore))
                 .featureTileChance(0.26)
-                .feature(PlanetaryFeatureRegistry.GEOTHERMAL_VENT, 3.0)
-                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 2.0)
+                .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
+                .feature(PlanetaryFeatureRegistry.MAGMA_POOL, 0.4)
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.5)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.0)
-                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0));
+                .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 1.0)
+                .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 0.8)
+                .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 0.8)
+                .feature(PlanetaryFeatureRegistry.THERMAL_SINK_ZONE, 0.8));
 
         register(
             DimensionEnum.MARS,
@@ -259,7 +263,7 @@ public final class CelestialRegistry {
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
                 .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)
                 .feature(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET, 1.0)
-                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.8));
+                .feature(PlanetaryFeatureRegistry.VOLATILE_DEPOSIT, 0.3));
 
         register(
             CelestialObjectId.AMBERGRIS_FRAGMENT,

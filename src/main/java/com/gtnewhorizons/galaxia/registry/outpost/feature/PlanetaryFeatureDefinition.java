@@ -5,7 +5,7 @@ import java.util.Objects;
 import net.minecraft.util.ResourceLocation;
 
 public record PlanetaryFeatureDefinition(PlanetaryFeatureKey key, String displayName, ResourceLocation texture,
-    String description, PlanetaryFeatureLayer layer, PlanetaryFeaturePlacement placement, int overlayColor) {
+    String description, PlanetaryFeatureLayer layer, PlanetaryFeaturePlacement placement) {
 
     public PlanetaryFeatureDefinition {
         Objects.requireNonNull(key, "Planetary feature key must not be null");
@@ -34,7 +34,6 @@ public record PlanetaryFeatureDefinition(PlanetaryFeatureKey key, String display
         private String description = "";
         private PlanetaryFeatureLayer layer = PlanetaryFeatureLayer.RESOURCE;
         private PlanetaryFeaturePlacement placement = PlanetaryFeaturePlacement.patch(12.0, 4.0);
-        private int overlayColor = 0xFFFFFFFF;
 
         private Builder(PlanetaryFeatureKey key) {
             this.key = Objects.requireNonNull(key, "Planetary feature key must not be null");
@@ -65,20 +64,8 @@ public record PlanetaryFeatureDefinition(PlanetaryFeatureKey key, String display
             return this;
         }
 
-        public Builder overlayColor(int overlayColor) {
-            this.overlayColor = overlayColor;
-            return this;
-        }
-
         public PlanetaryFeatureDefinition build() {
-            return new PlanetaryFeatureDefinition(
-                key,
-                displayName,
-                texture,
-                description,
-                layer,
-                placement,
-                overlayColor);
+            return new PlanetaryFeatureDefinition(key, displayName, texture, description, layer, placement);
         }
     }
 }

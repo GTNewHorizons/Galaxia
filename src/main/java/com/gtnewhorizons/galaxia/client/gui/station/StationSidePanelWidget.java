@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.Gui;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -35,7 +36,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static final int TITLE_SECTION_GAP = 6;
     private static final int SECTION_GAP = 8;
     private static final int DESTROY_BUTTON_X = 10;
-    private static final int DESTROY_BUTTON_Y = 150;
+    private static final int DESTROY_BUTTON_Y = 205;
     private static final int ACTION_BUTTON_WIDTH = 88;
     private static final int ACTION_BUTTON_HEIGHT = 20;
     private static final int ACTION_BUTTON_COLUMN_GAP = 8;
@@ -49,6 +50,8 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
     private static final int DESTROY_BUTTON_HEIGHT = 20;
     private static final int ACTION_BUTTON_START_Y = DESTROY_BUTTON_Y + DESTROY_BUTTON_HEIGHT + 8;
     private static final int BUTTON_TEXT_BASELINE_OFFSET = 1;
+    private static final int HAMMER_ENERGY_BAR_HEIGHT = 8;
+    private static final int HAMMER_ENERGY_BAR_TOP_GAP = 4;
 
     private final @Nullable CelestialAsset.ID assetId;
     private final StationMapWidget map;
@@ -177,28 +180,17 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
             return;
         }
 
-        lineY = drawLine(
-            "Selected " + selected.dx() + ", " + selected.dy(),
-            x + CONTENT_PADDING,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         PlacedTile tile = layout == null ? null : layout.get(selected);
-        if (tile == null) {
-            drawLine("Expansion slot", x + CONTENT_PADDING, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            return;
+        ModuleInstance module = tile == null ? null : tile.module();
+        lineY = ModuleStatusTextRegistry.collect(new ModuleStatusTextRegistry.Context(facility, selected, tile, module))
+            .draw(x + CONTENT_PADDING, lineY);
+        if (module != null && module.component() instanceof ModuleHammer hammer) {
+            drawHammerEnergyBar(
+                hammer,
+                x + CONTENT_PADDING,
+                lineY + HAMMER_ENERGY_BAR_TOP_GAP,
+                width - CONTENT_PADDING * 2);
         }
-
-        ModuleInstance module = tile.module();
-        String moduleName = module == null ? "Station Core"
-            : module.kind()
-                .getDisplayName();
-        lineY = drawLine(moduleName, x + CONTENT_PADDING, lineY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-        drawLine(
-            tile.state()
-                .name(),
-            x + CONTENT_PADDING,
-            lineY,
-            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
     }
 
     private static @Nullable AutomatedFacility resolveFacility(@Nullable CelestialAsset.ID assetId) {
@@ -536,6 +528,18 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         fr.drawStringWithShadow(text, x, y, color);
         return y + fr.FONT_HEIGHT + 3;
+    }
+
+    private static void drawHammerEnergyBar(ModuleHammer hammer, int x, int y, int width) {
+        long capacity = Math.max(1L, hammer.energyCapacity());
+        int fillW = (int) (width * hammer.energyStored() / capacity);
+        Gui.drawRect(x, y, x + width, y + HAMMER_ENERGY_BAR_HEIGHT, EnumColors.MAP_COLOR_BTN_DISABLED.getColor());
+        Gui.drawRect(
+            x,
+            y,
+            x + fillW,
+            y + HAMMER_ENERGY_BAR_HEIGHT,
+            EnumColors.MAP_COLOR_SIDEBAR_CONFIRM_TEXT_ENABLED.getColor());
     }
 
     private com.cleanroommc.modularui.api.drawable.IDrawable drawable(DrawableCommand cmd) {
