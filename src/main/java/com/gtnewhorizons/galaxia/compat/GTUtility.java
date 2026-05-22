@@ -79,6 +79,23 @@ public final class GTUtility {
             .collect(Collectors.toList());
     }
 
+    public static List<ItemStack> getRawOreStacks(@Nonnull String... materialNames) {
+        List<ItemStack> pool = new ArrayList<>(materialNames.length);
+        for (String materialName : materialNames) {
+            ItemStack stack;
+            try {
+                stack = getRawOreStack(materialName);
+            } catch (ClassCastException ignored) {
+                stack = null;
+            }
+            if (stack == null) continue;
+            stack = stack.copy();
+            stack.stackSize = 1;
+            pool.add(stack);
+        }
+        return pool;
+    }
+
     public static ItemStack getRawOreStack(String materialName) {
         if (!isGregTechLoaded()) return null;
         if (materialName == null || materialName.isEmpty()) return null;

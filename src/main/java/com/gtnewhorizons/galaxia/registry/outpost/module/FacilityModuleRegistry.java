@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleCentrifuge;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleChemicalReactor;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDistillery;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleElectrolyzer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleGeothermalGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMacerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMaintenanceBay;
@@ -69,6 +70,18 @@ public class FacilityModuleRegistry {
                 .build(),
             ModulePower::doNothing,
             ModulePower::new);
+        register(
+            FacilityModuleKind.GEOTHERMAL_GENERATOR,
+            Map.of(
+                ModuleTier.HV,
+                ModuleTierData.builder()
+                    .addedEnergyCapacity(2000L)
+                    .powerDraw(-ModuleGeothermalGenerator.EU_TICK)
+                    .cooldown(1)
+                    .cost(Map.of(new ItemStack(Items.redstone), 64L, new ItemStack(Items.gold_ingot), 64L))
+                    .build()),
+            ModulePower::doNothing,
+            ModuleGeothermalGenerator::new);
         builder(FacilityModuleKind.MINER)
             .tiers(
                 new TierMapBuilder()

@@ -12,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -47,7 +48,8 @@ public class ModuleInstance implements Buildable {
     }
 
     private void tickOperational(CelestialAsset asset) {
-        long powerDraw = this.powerDrawEuPerTick();
+        long powerDraw = asset instanceof AutomatedFacility facility ? facility.effectivePowerDrawEuPerTick(this)
+            : this.powerDrawEuPerTick();
 
         if (!asset.tryConsumeEnergy(powerDraw)) {
             ticks = 0;

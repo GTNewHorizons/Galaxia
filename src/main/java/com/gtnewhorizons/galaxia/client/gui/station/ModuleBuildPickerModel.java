@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleFootprint;
@@ -32,6 +33,7 @@ final class ModuleBuildPickerModel {
             return false;
         }
         if (!facility.hasStationLayout() || facility.stationLayout() == null) return false;
+        if (!hasRequiredAnchorFeature(facility, kind, coord)) return false;
         if (shape == ModuleShape.SINGLE) {
             return isCompatibleSingleTarget(facility, coord, pendingTargets);
         }
@@ -113,6 +115,13 @@ final class ModuleBuildPickerModel {
         if (StationPlacementValidator.validate(facility.stationLayout(), coord) == StationPlacementValidator.Result.OK)
             return true;
         return pendingTargets != null && hasPendingOrthogonalNeighbour(pendingTargets, coord);
+    }
+
+    private static boolean hasRequiredAnchorFeature(AutomatedFacility facility, FacilityModuleKind kind,
+        StationTileCoord coord) {
+        PlanetaryFeatureKey requiredFeature = kind.requiredAnchorFeature();
+        return requiredFeature == null || facility.planetaryFeaturesAt(coord)
+            .contains(requiredFeature);
     }
 
     private static boolean isCompatibleFootprintTarget(AutomatedFacility facility, StationTileCoord coord,

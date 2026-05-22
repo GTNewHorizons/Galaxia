@@ -3,9 +3,15 @@ package com.gtnewhorizons.galaxia.registry.outpost.module;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -16,6 +22,11 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureModuleContext;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.ModuleFeatureModifierBuilder;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -239,24 +250,102 @@ final class ModuleMinerTest {
     void mineralVeinContributionScalesAgainstTwoByTwoFootprint() {
         ModuleInstance miner = createMiner();
 
-        FeatureContribution contribution = miner.component()
-            .featureContribution(
+        PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(PlanetaryFeatureRegistry.MINERAL_VEIN.key());
+        ModuleFeatureModifierBuilder builder = new ModuleFeatureModifierBuilder();
+        feature.applyModuleModifiers(
+            new FeatureModuleContext(
                 miner,
                 PlanetaryFeatureRegistry.MINERAL_VEIN.key(),
                 2,
                 miner.shape()
-                    .tileCount());
+                    .tileCount()),
+            builder);
+        FeatureContribution contribution = builder
+            .build(java.util.Map.of(PlanetaryFeatureRegistry.MINERAL_VEIN.key(), 2))
+            .contributions()
+            .get(0);
 
         assertEquals(ModuleShape.QUAD_2x2, miner.shape());
         assertEquals(2, contribution.coveredTiles());
         assertEquals(4, contribution.totalTiles());
-        assertEquals("Mining yield bonus 2/4", contribution.effectLine());
+    }
+
+    @Test
+    void mineralVeinBonusRollsUseCoveredTiles() {
+        AutomatedFacility facility = createFacility();
+        facility.setStationFeatureSalt(987654321L);
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.MINERAL_VEIN.key()));
+
+        int expectedCoveredTiles = facility.featureContributions(miner)
+            .stream()
+            .filter(
+                c -> c.key()
+                    .equals(PlanetaryFeatureRegistry.MINERAL_VEIN.key()))
+            .findFirst()
+            .orElseThrow()
+            .coveredTiles();
+
+        assertEquals(
+            expectedCoveredTiles,
+            ModuleMiner.featureMiningEffects(miner, facility)
+                .bonusRolls());
+    }
+
+    @Test
+    void icePocketCanReplaceOreRollWithIce() {
+        AutomatedFacility facility = createFeatureFacility();
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()));
+        int coveredTiles = facility.featureContributions(miner)
+            .stream()
+            .filter(
+                c -> c.key()
+                    .equals(PlanetaryFeatureRegistry.SUBSURFACE_ICE_POCKET.key()))
+            .findFirst()
+            .orElseThrow()
+            .coveredTiles();
+        int chancePercent = coveredTiles * 20;
+        MiningFeatureEffects effects = ModuleMiner.featureMiningEffects(miner, facility);
+
+        assertEquals(
+            chancePercent,
+            effects.replacementRolls()
+                .get(0)
+                .chancePercent());
+        assertNotNull(effects.rollReplacement(randomReturning(chancePercent - 1)));
+        assertNull(effects.rollReplacement(randomReturning(chancePercent)));
+    }
+
+    @Test
+    void rareCrystalAddsGemMiningCandidates() {
+        AutomatedFacility facility = createFeatureFacility();
+        ModuleInstance miner = createMiner(
+            findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key()));
+        List<ItemStack> candidates = new java.util.ArrayList<>();
+        candidates.add(new ItemStack(Items.iron_ingot));
+
+        candidates.addAll(
+            ModuleMiner.featureMiningEffects(miner, facility)
+                .candidates());
+
+        assertTrue(
+            candidates.stream()
+                .anyMatch(stack -> stack.getItem() == Items.diamond || stack.getItem() == Items.emerald));
     }
 
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+    }
+
+    private static AutomatedFacility createFeatureFacility() {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
     }
@@ -274,5 +363,33 @@ final class ModuleMinerTest {
             ModuleTier.EV);
         miner.updateStatus(Buildable.Status.OPERATIONAL);
         return miner;
+    }
+
+    private static StationTileCoord findMinerAnchorWithFeature(AutomatedFacility facility,
+        PlanetaryFeatureKey feature) {
+        for (int dx = StationTileCoord.MIN; dx < StationTileCoord.MAX; dx++) {
+            for (int dy = StationTileCoord.MIN; dy < StationTileCoord.MAX; dy++) {
+                StationTileCoord anchor = StationTileCoord.of(dx, dy);
+                ModuleInstance miner = createMiner(anchor);
+                if (facility.featureContributions(miner)
+                    .stream()
+                    .anyMatch(
+                        c -> c.key()
+                            .equals(feature))) {
+                    return anchor;
+                }
+            }
+        }
+        throw new AssertionError("No deterministic feature found for miner test: " + feature);
+    }
+
+    private static java.util.Random randomReturning(int value) {
+        return new java.util.Random(0L) {
+
+            @Override
+            public int nextInt(int bound) {
+                return value;
+            }
+        };
     }
 }

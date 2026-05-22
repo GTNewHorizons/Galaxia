@@ -5,6 +5,8 @@ import java.util.EnumSet;
 import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
@@ -23,7 +25,8 @@ public enum FacilityModuleKind {
     ELECTROLYZER,
     CHEMICAL_REACTOR,
     ASSEMBLER,
-    DISTILLERY;
+    DISTILLERY,
+    GEOTHERMAL_GENERATOR;
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
@@ -43,7 +46,7 @@ public enum FacilityModuleKind {
         return switch (this) {
             case HAMMER -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
-            case POWER -> StationModuleCategory.POWER;
+            case POWER, GEOTHERMAL_GENERATOR -> StationModuleCategory.POWER;
             case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
             case MAINTENANCE_BAY -> StationModuleCategory.SUPPORT;
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> StationModuleCategory.PROCESSING;
@@ -93,6 +96,7 @@ public enum FacilityModuleKind {
             case HAMMER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV);
             case MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
             case POWER -> EnumSet.of(ModuleTier.NONE);
+            case GEOTHERMAL_GENERATOR -> EnumSet.of(ModuleTier.HV);
             case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
             case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> EnumSet
@@ -104,6 +108,7 @@ public enum FacilityModuleKind {
         return switch (this) {
             case HAMMER, MINER -> ModuleTier.EV;
             case POWER -> ModuleTier.NONE;
+            case GEOTHERMAL_GENERATOR -> ModuleTier.HV;
             case STORAGE, TANK, BATTERY -> ModuleTier.HV;
             case MAINTENANCE_BAY -> ModuleTier.NONE;
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModuleTier.HV;
@@ -113,6 +118,7 @@ public enum FacilityModuleKind {
     public ModuleShape defaultShape() {
         return switch (this) {
             case MINER -> ModuleShape.QUAD_2x2;
+            case GEOTHERMAL_GENERATOR -> ModuleShape.BLOCK_3x3;
             default -> ModuleShape.SINGLE;
         };
     }
@@ -120,10 +126,14 @@ public enum FacilityModuleKind {
     public ModulePriority defaultPriority() {
         return switch (this) {
             case HAMMER, MINER -> ModulePriority.NORMAL;
-            case POWER -> ModulePriority.HIGH;
+            case POWER, GEOTHERMAL_GENERATOR -> ModulePriority.HIGH;
             case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
             case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModulePriority.NORMAL;
         };
+    }
+
+    public PlanetaryFeatureKey requiredAnchorFeature() {
+        return PlanetaryFeatureRegistry.requiredAnchorFeature(this);
     }
 
     public boolean isCapacityModule() {

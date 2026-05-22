@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module.types;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
@@ -13,7 +15,9 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureMiningContext;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.MiningFeatureEffects;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeature;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -43,10 +47,10 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
     }
 
     public static void generateOre(ModuleInstance instance, CelestialAsset outpost) {
-        if (!(instance.component() instanceof ModuleMiner)) {
+        if (!(instance.component() instanceof ModuleMiner miner)) {
             throw new IllegalStateException("miner tick sent to non-miner module " + instance.id);
         }
-        if (!(outpost instanceof AutomatedFacility)) {
+        if (!(outpost instanceof AutomatedFacility facility)) {
             throw new IllegalStateException("Miner should be only created in the AutomatedFacility");
         }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
@@ -57,17 +61,49 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                 List<ItemStack> candidates = new java.util.ArrayList<>(ores.size() + veinOres.size());
                 candidates.addAll(ores);
                 candidates.addAll(veinOres);
-                if (candidates.isEmpty()) return;
-                ItemStack chosen = chooseFocusedOre((ModuleMiner) instance.component(), candidates);
-                String oreKey = ItemStackWrapper.of(chosen)
-                    .toKey();
-                ((ModuleMiner) instance.component()).advanceFocusAlignment();
-                if (shouldVoidOre(instance, (AutomatedFacility) outpost, oreKey)) return;
-                ItemStack ore = chosen.copy();
-                ore.stackSize = 1;
-                ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
-                if (oreWrapper != null) outpost.updateContents(oreWrapper, 1, true);
+                MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
+                candidates.addAll(featureEffects.candidates());
+                if (candidates.isEmpty() && featureEffects.replacementRolls()
+                    .isEmpty()) return;
+                miner.advanceFocusAlignment();
+                int rolls = 1 + featureEffects.bonusRolls();
+                for (int i = 0; i < rolls; i++) {
+                    ItemStack replacement = featureEffects.rollReplacement(RANDOM);
+                    ItemStack chosen = replacement != null ? replacement
+                        : candidates.isEmpty() ? null : chooseFocusedOre(miner, candidates);
+                    if (chosen == null) continue;
+                    String oreKey = ItemStackWrapper.of(chosen)
+                        .toKey();
+                    if (shouldVoidOre(instance, facility, oreKey)) continue;
+                    if (!featureEffects.shouldKeepOutput(RANDOM)) continue;
+                    ItemStack ore = chosen.copy();
+                    ore.stackSize = 1;
+                    ItemStackWrapper oreWrapper = ItemStackWrapper.of(ore);
+                    if (oreWrapper != null) facility.updateContents(oreWrapper, 1, true);
+                }
             });
+    }
+
+    public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
+        @Nonnull AutomatedFacility outpost) {
+        Map<PlanetaryFeatureKey, Integer> counts = new LinkedHashMap<>();
+        for (var tile : module.shape()
+            .tiles(module.anchor())) {
+            for (PlanetaryFeatureKey feature : outpost.planetaryFeaturesAt(tile)) {
+                counts.merge(feature, 1, Integer::sum);
+            }
+        }
+        MiningFeatureEffects.Builder builder = MiningFeatureEffects.builder();
+        int totalTiles = module.shape()
+            .tileCount();
+        for (Map.Entry<PlanetaryFeatureKey, Integer> entry : counts.entrySet()) {
+            PlanetaryFeature feature = PlanetaryFeatureRegistry.feature(entry.getKey());
+            if (feature == null) continue;
+            feature.applyMiningEffects(
+                new FeatureMiningContext(module, entry.getKey(), entry.getValue(), totalTiles),
+                builder);
+        }
+        return builder.build();
     }
 
     private static ItemStack chooseFocusedOre(ModuleMiner miner, List<ItemStack> candidates) {
@@ -130,18 +166,6 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
             throw new IllegalStateException("Miner settings copy target is not a miner: " + target.id);
         }
         targetMiner.setFocusOre(sourceMiner.focusOreKeyOrNull());
-    }
-
-    @Override
-    public FeatureContribution featureContribution(ModuleInstance module, PlanetaryFeatureKey feature, int coveredTiles,
-        int totalTiles) {
-        if (!PlanetaryFeatureRegistry.MINERAL_VEIN.key()
-            .equals(feature)) return null;
-        return new FeatureContribution(
-            feature,
-            (byte) coveredTiles,
-            (byte) totalTiles,
-            "Mining yield bonus " + coveredTiles + "/" + totalTiles);
     }
 
     public MinerFocusTier focusTier() {
