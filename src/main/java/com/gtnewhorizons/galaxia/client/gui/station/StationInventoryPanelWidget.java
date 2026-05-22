@@ -741,7 +741,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private void toggleUpkeepAutoOrder(ItemStackWrapper wrapper) {
         AutomatedFacility af = af();
         if (af == null) return;
-        af.setUpkeepAutoOrder(wrapper, !af.isUpkeepAutoOrderEnabled(wrapper));
+        boolean enabled = !af.isUpkeepAutoOrderEnabled(wrapper);
+        af.setUpkeepAutoOrder(wrapper, enabled);
+        if (assetId != null) {
+            CelestialClient.updateUpkeepAutoOrder(assetId, wrapper, enabled);
+        }
     }
 
     private void updateUpkeepReserveInput(ItemStackWrapper wrapper, String rowKey, String text) {
@@ -749,7 +753,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         upkeepReserveInputs.put(rowKey, value);
         AutomatedFacility af = af();
         if (af != null) {
-            af.setUpkeepReserve(wrapper, parseAmount(value));
+            long amount = parseAmount(value);
+            af.setUpkeepReserve(wrapper, amount);
+            if (assetId != null) {
+                CelestialClient.updateUpkeepReserve(assetId, wrapper, amount);
+            }
         }
     }
 

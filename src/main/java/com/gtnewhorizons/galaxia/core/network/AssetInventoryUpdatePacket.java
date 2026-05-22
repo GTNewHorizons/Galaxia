@@ -85,6 +85,28 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         return pkt;
     }
 
+    public static AssetInventoryUpdatePacket setUpkeepReserve(CelestialAsset.ID assetId, ItemStackWrapper resource,
+        long amount) {
+        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
+        pkt.assetId = assetId;
+        pkt.operation = Operation.SET_UPKEEP_RESERVE;
+        pkt.resource = resource;
+        pkt.delta = amount;
+        pkt.creativeOnly = false;
+        return pkt;
+    }
+
+    public static AssetInventoryUpdatePacket setUpkeepAutoOrder(CelestialAsset.ID assetId, ItemStackWrapper resource,
+        boolean enabled) {
+        AssetInventoryUpdatePacket pkt = new AssetInventoryUpdatePacket();
+        pkt.assetId = assetId;
+        pkt.operation = Operation.SET_UPKEEP_AUTO_ORDER;
+        pkt.resource = resource;
+        pkt.delta = enabled ? 1L : 0L;
+        pkt.creativeOnly = false;
+        return pkt;
+    }
+
     @Override
     public void toBytes(ByteBuf buf) {
         PacketUtil.writeId(buf, assetId);
@@ -92,7 +114,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         PacketUtil.writeInventoryKey(buf, resource);
         buf.writeLong(delta);
         buf.writeBoolean(creativeOnly);
-        if (operation != Operation.DELTA) {
+        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             PacketUtil.writeEnum(buf, boundKind);
         }
     }
@@ -104,7 +126,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         resource = PacketUtil.readInventoryKey(buf);
         delta = buf.readLong();
         creativeOnly = buf.readBoolean();
-        if (operation != Operation.DELTA) {
+        if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             boundKind = PacketUtil.readEnum(buf, BoundKind.class);
         }
     }
@@ -130,6 +152,12 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         if (operation == Operation.SET_BOUND || operation == Operation.CLEAR_BOUND) {
             if (asset instanceof AutomatedFacility state) {
                 return applyBoundUpdate(state);
+            }
+            return null;
+        }
+        if (operation == Operation.SET_UPKEEP_RESERVE || operation == Operation.SET_UPKEEP_AUTO_ORDER) {
+            if (asset instanceof AutomatedFacility state && resource instanceof ItemStackWrapper item) {
+                return applyUpkeepSettingsUpdate(state, item);
             }
             return null;
         }
@@ -193,9 +221,25 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         }
     }
 
+    private AssetSyncPacket applyUpkeepSettingsUpdate(AutomatedFacility state, ItemStackWrapper item) {
+        if (operation == Operation.SET_UPKEEP_RESERVE) {
+            state.setUpkeepReserve(item, delta);
+        } else if (operation == Operation.SET_UPKEEP_AUTO_ORDER) {
+            state.setUpkeepAutoOrder(item, delta != 0L);
+        } else {
+            throw new IllegalStateException("[Logistics] Received malformed upkeep settings update");
+        }
+        state.bumpSyncRevision();
+        return AssetSyncPacket
+            .upkeepSettingsUpdate(assetId, item, state.upkeepReserve(item), state.isUpkeepAutoOrderEnabled(item))
+            .withSyncRevision(state.getSyncRevision());
+    }
+
     private enum Operation {
         DELTA,
         SET_BOUND,
-        CLEAR_BOUND
+        CLEAR_BOUND,
+        SET_UPKEEP_RESERVE,
+        SET_UPKEEP_AUTO_ORDER
     }
 }

@@ -244,6 +244,31 @@ public final class AutomatedFacility extends CelestialAsset {
         return Collections.unmodifiableSet(upkeepAutoOrderItems);
     }
 
+    public Map<ItemStackWrapper, Long> upkeepItemReserves() {
+        return Collections.unmodifiableMap(upkeepItemReserves);
+    }
+
+    public void loadUpkeepSettings(Map<ItemStackWrapper, Long> reserves, Set<ItemStackWrapper> autoOrderItems) {
+        upkeepItemReserves.clear();
+        upkeepAutoOrderItems.clear();
+        if (reserves != null) {
+            for (Map.Entry<ItemStackWrapper, Long> entry : reserves.entrySet()) {
+                ItemStackWrapper item = entry.getKey();
+                Long amount = entry.getValue();
+                if (item != null && amount != null && amount >= 0L) {
+                    upkeepItemReserves.put(item, amount);
+                }
+            }
+        }
+        if (autoOrderItems != null) {
+            for (ItemStackWrapper item : autoOrderItems) {
+                if (item != null) {
+                    upkeepAutoOrderItems.add(item);
+                }
+            }
+        }
+    }
+
     public long effectiveLowerBound(InventoryKey key) {
         long manualLowerBound = getBound(key).lowOrDefault();
         if (key instanceof ItemStackWrapper item) {

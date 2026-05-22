@@ -101,6 +101,33 @@ final class AssetInventoryUpdatePacketTest {
         assertEquals(1, sync.syncRevision());
     }
 
+    @Test
+    void upkeepReservePacketSetsReserveForNonCreativePlayer() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.setUpkeepReserve(facility.assetId, resource, 21);
+
+        AssetSyncPacket sync = packet.apply(TEAM, false);
+
+        assertEquals(21L, facility.upkeepReserve(resource));
+        assertEquals(1, facility.getSyncRevision());
+        assertEquals(1, sync.syncRevision());
+    }
+
+    @Test
+    void upkeepAutoOrderPacketSetsAutoOrderForNonCreativePlayer() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
+            .setUpkeepAutoOrder(facility.assetId, resource, true);
+
+        AssetSyncPacket sync = packet.apply(TEAM, false);
+
+        assertEquals(true, facility.isUpkeepAutoOrderEnabled(resource));
+        assertEquals(1, facility.getSyncRevision());
+        assertEquals(1, sync.syncRevision());
+    }
+
     private static AutomatedFacility addFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),

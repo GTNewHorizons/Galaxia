@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.init.Items;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -1384,6 +1385,30 @@ final class FacilityPersistenceManagerTest {
     }
 
     // ── Helpers ──
+
+    @Test
+    void upkeepReserveSettingsRoundTripThroughPersistence() {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.diamond, 0, null);
+        station.setUpkeepReserve(resource, 17L);
+        station.setUpkeepAutoOrder(resource, true);
+
+        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = new AutomatedFacility(
+            station.assetId,
+            station.celestialObjectId,
+            station.kind,
+            station.status());
+        manager.decodeFacilityState(decoded, encoded);
+
+        assertEquals(17L, decoded.upkeepReserve(resource));
+        assertTrue(decoded.isUpkeepAutoOrderEnabled(resource));
+    }
 
     private static ModuleInstance createAndPlaceModule(AutomatedFacility station, FacilityModuleKind kind,
         Buildable.Status status, ModuleShape shape, ModuleTier tier, StationTileCoord coord) {

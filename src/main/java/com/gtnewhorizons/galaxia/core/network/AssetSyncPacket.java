@@ -90,6 +90,7 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte FILTER_UPDATED = 12;
     public static final byte FILTER_REMOVED = 13;
     public static final byte INVENTORY_BOUND_UPDATE = 14;
+    public static final byte UPKEEP_SETTINGS_UPDATE = 15;
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
     private static final int MAX_RECIPE_STACKS = 64;
@@ -125,6 +126,8 @@ public final class AssetSyncPacket implements IMessage {
     private BoundKind inventoryBoundKind;
     private boolean inventoryBoundPresent;
     private long inventoryBoundAmount;
+    private long upkeepReserveAmount;
+    private boolean upkeepAutoOrder;
     private LogisticsResourceConfig logConfig;
 
     private StationTileCoord tileCoord;
@@ -217,6 +220,21 @@ public final class AssetSyncPacket implements IMessage {
         for (Map.Entry<ItemStackWrapper, Long> e : state.itemSnapshot()
             .entrySet()) {
             pkt.fullSyncDeltas.add(inventoryUpdate(state.assetId, e.getKey(), e.getValue()));
+        }
+        for (Map.Entry<ItemStackWrapper, Long> e : state.upkeepItemReserves()
+            .entrySet()) {
+            pkt.fullSyncDeltas.add(
+                upkeepSettingsUpdate(
+                    state.assetId,
+                    e.getKey(),
+                    e.getValue(),
+                    state.isUpkeepAutoOrderEnabled(e.getKey())));
+        }
+        for (ItemStackWrapper item : state.upkeepAutoOrderItems()) {
+            if (!state.upkeepItemReserves()
+                .containsKey(item)) {
+                pkt.fullSyncDeltas.add(upkeepSettingsUpdate(state.assetId, item, state.upkeepReserve(item), true));
+            }
         }
         // TODO: This is HORRIBLE, rework it when optimizing the packets
         for (Map.Entry<InventoryKey, InventoryBounds> e : state.getBounds(true)
@@ -341,6 +359,17 @@ public final class AssetSyncPacket implements IMessage {
         pkt.resource = resource;
         pkt.inventoryBoundPresent = present;
         pkt.inventoryBoundAmount = amount;
+        return pkt;
+    }
+
+    public static AssetSyncPacket upkeepSettingsUpdate(CelestialAsset.ID assetId, ItemStackWrapper resource,
+        long reserveAmount, boolean autoOrder) {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.assetId = assetId;
+        pkt.syncType = UPKEEP_SETTINGS_UPDATE;
+        pkt.resource = resource;
+        pkt.upkeepReserveAmount = reserveAmount;
+        pkt.upkeepAutoOrder = autoOrder;
         return pkt;
     }
 
@@ -588,6 +617,11 @@ public final class AssetSyncPacket implements IMessage {
                 buf.writeBoolean(inventoryBoundPresent);
                 buf.writeLong(inventoryBoundAmount);
             }
+            case UPKEEP_SETTINGS_UPDATE -> {
+                PacketUtil.writeInventoryKey(buf, resource);
+                buf.writeLong(upkeepReserveAmount);
+                buf.writeBoolean(upkeepAutoOrder);
+            }
             case LOGISTICS_CONFIG_UPDATED -> {
                 PacketUtil.writeInventoryKey(buf, resource);
                 writeLogisticsConfig(buf, logConfig);
@@ -638,6 +672,11 @@ public final class AssetSyncPacket implements IMessage {
                 resource = PacketUtil.readInventoryKey(buf);
                 inventoryBoundPresent = buf.readBoolean();
                 inventoryBoundAmount = buf.readLong();
+            }
+            case UPKEEP_SETTINGS_UPDATE -> {
+                resource = PacketUtil.readInventoryKey(buf);
+                upkeepReserveAmount = buf.readLong();
+                upkeepAutoOrder = buf.readBoolean();
             }
             case LOGISTICS_CONFIG_UPDATED -> {
                 resource = PacketUtil.readInventoryKey(buf);
@@ -1369,6 +1408,12 @@ public final class AssetSyncPacket implements IMessage {
                         if (packet.resource != null) {
                             asset.clearBound(packet.resource, isLow);
                         }
+                    }
+                }
+                case UPKEEP_SETTINGS_UPDATE -> {
+                    if (asset instanceof AutomatedFacility state && packet.resource instanceof ItemStackWrapper item) {
+                        state.setUpkeepReserve(item, packet.upkeepReserveAmount);
+                        state.setUpkeepAutoOrder(item, packet.upkeepAutoOrder);
                     }
                 }
                 case LOGISTICS_CONFIG_UPDATED -> {
