@@ -204,6 +204,7 @@ public final class StarmapActionSyncHandler extends SyncHandler {
                 syncPacket(packet.apply(teamId));
             }
             case REQUEST_FILTER_UPDATE -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
                 AssetFilterUpdatePacket packet = new AssetFilterUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));
