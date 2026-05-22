@@ -8,7 +8,6 @@ import net.minecraft.world.World;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 
