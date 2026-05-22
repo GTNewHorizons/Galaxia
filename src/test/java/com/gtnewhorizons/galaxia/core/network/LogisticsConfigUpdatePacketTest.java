@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
 
@@ -18,6 +20,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class LogisticsConfigUpdatePacketTest {
@@ -54,6 +57,23 @@ final class LogisticsConfigUpdatePacketTest {
 
         assertEquals(1, facility.getSyncRevision());
         assertEquals(1, sync.syncRevision());
+    }
+
+    @Test
+    void importOnlyLogisticsUpdateCannotEnableSupply() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket(
+            facility.assetId,
+            resource,
+            new LogisticsResourceConfig(12, 64, true, true),
+            LogisticsConfigAccessMode.IMPORT_ONLY);
+
+        packet.apply(TEAM);
+
+        LogisticsResourceConfig config = facility.logisticsConfig.get(resource);
+        assertTrue(config.isImportEnabled());
+        assertFalse(config.isSupplyEnabled());
     }
 
     private static AutomatedFacility addFacilityToServer() {

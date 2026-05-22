@@ -343,6 +343,7 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private @Nullable ModulePanelAction actionAtSlot(int slot) {
         if (slot < 0) return null;
+        if (isCoreSelected()) return slot == 0 ? ModulePanelAction.CONFIG : null;
         ModuleInstance module = selectedModule();
         if (module == null) return null;
         FacilityModuleRegistry.Definition definition = FacilityModuleRegistry.get(module.kind());
@@ -356,6 +357,10 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
 
     private void runModuleAction(ModulePanelAction action) {
         if (configController == null) return;
+        if (isCoreSelected()) {
+            if (action == ModulePanelAction.CONFIG) configController.openCoreLogistics();
+            return;
+        }
         ModuleInstance module = selectedModule();
         int moduleIndex = selectedModuleIndex();
         if (module == null || moduleIndex < 0) return;
@@ -393,6 +398,16 @@ public final class StationSidePanelWidget extends ParentWidget<StationSidePanelW
         }
         return facility.modules()
             .get(moduleIndex);
+    }
+
+    private boolean isCoreSelected() {
+        AutomatedFacility facility = resolveFacility(assetId);
+        if (facility == null || map == null) return false;
+        StationLayout layout = facility.stationLayout();
+        StationTileCoord selected = map.selection();
+        if (layout == null || selected == null) return false;
+        PlacedTile tile = layout.get(selected);
+        return tile != null && tile.isCore();
     }
 
     private int selectedModuleIndex() {
