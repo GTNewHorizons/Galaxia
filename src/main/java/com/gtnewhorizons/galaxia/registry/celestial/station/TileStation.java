@@ -237,7 +237,7 @@ public class TileStation extends TileStationBase<TileStation> {
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
 
-        int panelHeight = isCtrl ? 140 : 160;
+        int panelHeight = 160;
         ModularPanel panel = new ModularPanel("galaxia:station_controller").size(210, panelHeight)
             .child(
                 IKey.str(StatCollector.translateToLocal("galaxia.gui.station_controller.title"))
