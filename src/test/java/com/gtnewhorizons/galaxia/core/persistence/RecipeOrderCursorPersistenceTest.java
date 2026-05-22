@@ -21,6 +21,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 /**
  * Tests that ORDER mode cursor state (orderCursor, orderRemaining) persists
@@ -32,8 +33,7 @@ final class RecipeOrderCursorPersistenceTest {
 
     @BeforeAll
     static void init() {
-        com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry.freezeAndBake();
-        FacilityModuleRegistry.init();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @Test

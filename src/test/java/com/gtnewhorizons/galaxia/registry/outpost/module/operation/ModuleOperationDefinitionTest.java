@@ -11,17 +11,17 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class ModuleOperationDefinitionTest {
 
     @BeforeAll
     static void init() {
-        TestFMLRegistry.init();
+        GalaxiaTestBootstrap.ensureMinecraft();
     }
 
     @Test

@@ -11,16 +11,16 @@ import net.minecraftforge.fluids.FluidStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.gtnewhorizons.galaxia.TestFMLRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class ResourceFilterTest {
 
     @BeforeAll
     static void initRegistries() {
-        TestFMLRegistry.init();
+        GalaxiaTestBootstrap.ensureMinecraft();
     }
 
     @Test

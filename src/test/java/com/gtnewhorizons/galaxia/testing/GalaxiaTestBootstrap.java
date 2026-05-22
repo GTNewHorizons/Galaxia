@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia;
+package com.gtnewhorizons.galaxia.testing;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -7,16 +7,44 @@ import java.util.HashMap;
 import net.minecraft.init.Bootstrap;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
+import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 
 import cpw.mods.fml.common.Loader;
 import sun.misc.Unsafe;
 
-public class TestFMLRegistry {
+public final class GalaxiaTestBootstrap {
 
-    private static boolean init = false;
+    private static boolean minecraftInitialized;
+    private static boolean celestialRegistryInitialized;
+    private static boolean facilityModulesInitialized;
 
-    public static synchronized void init() {
-        if (init) return;
+    private GalaxiaTestBootstrap() {}
+
+    public static synchronized void ensureMinecraft() {
+        if (minecraftInitialized) return;
+
+        installFakeLoader();
+        Bootstrap.func_151354_b();
+        minecraftInitialized = true;
+    }
+
+    public static synchronized void ensureCelestialRegistry() {
+        if (celestialRegistryInitialized) return;
+
+        ensureMinecraft();
+        CelestialRegistry.freezeAndBake();
+        celestialRegistryInitialized = true;
+    }
+
+    public static synchronized void ensureFacilityModules() {
+        if (facilityModulesInitialized) return;
+
+        ensureCelestialRegistry();
+        FacilityModuleRegistry.init();
+        facilityModulesInitialized = true;
+    }
+
+    private static void installFakeLoader() {
         try {
             Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);
@@ -29,16 +57,9 @@ public class TestFMLRegistry {
             Field instanceField = Loader.class.getDeclaredField("instance");
             instanceField.setAccessible(true);
             instanceField.set(null, fakeLoader);
-            if (!bootstrapMinecraftRegistries()) {
-                init = true;
-                return;
-            }
-            CelestialRegistry.freezeAndBake();
-            init = true;
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to install fake FML Loader for tests", e);
         }
-
     }
 
     private static void setField(Object target, String fieldName, Object value) throws ReflectiveOperationException {
@@ -46,21 +67,5 @@ public class TestFMLRegistry {
             .getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
-    }
-
-    private static boolean bootstrapMinecraftRegistries() {
-        try {
-            Bootstrap.func_151354_b();
-            return true;
-        } catch (NullPointerException e) {
-            if (!isKnownFireBootstrapFailure(e)) throw e;
-            return false;
-        }
-    }
-
-    private static boolean isKnownFireBootstrapFailure(NullPointerException e) {
-        StackTraceElement[] stack = e.getStackTrace();
-        return stack.length > 0 && "net.minecraft.block.BlockFire".equals(stack[0].getClassName())
-            && "func_149843_e".equals(stack[0].getMethodName());
     }
 }
