@@ -44,8 +44,10 @@ final class CoreDispatchPlannerTest {
 
         assertTrue(dispatched);
         assertEquals(80L, supplier.getItemAmount(resource));
-        assertEquals(1, LogisticStore.activeDeliveries()
-            .size());
+        assertEquals(
+            1,
+            LogisticStore.activeDeliveries()
+                .size());
         LogisticsDelivery delivery = LogisticStore.activeDeliveries()
             .get(0);
         assertEquals(supplier.assetId, delivery.data.fromAssetId());

@@ -29,6 +29,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.CoreDispatchPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoadTracker;
@@ -175,6 +176,8 @@ public class CelestialEventHandler {
         double orbitalTime, boolean profileHammerTrajectoryLoad) {
 
         boolean sameBody = supplier.celestialObjectId.equals(requester.celestialObjectId);
+
+        if (CoreDispatchPlanner.tryDispatch(supplier, requester, resource, orbitalTime)) return true;
 
         Map<ModuleInstance, TileHammerCannon> moduleCannon = null;
         if (supplier instanceof Station station) {

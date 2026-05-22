@@ -67,6 +67,10 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
     private static final int VOID_WIDTH = 42;
     private static final int VOID_X = SCROLL_WIDTH - ROW_RIGHT_PADDING - VOID_WIDTH;
     private static final int MODE_BUTTON_X = VOID_X - CONTROL_GAP - MODE_BUTTON_WIDTH;
+    private static final int UPKEEP_AUTO_ORDER_WIDTH = 18;
+    private static final int UPKEEP_ALL_GAP = 4;
+    private static final int UPKEEP_ALL_X = MODE_BUTTON_X + UPKEEP_AUTO_ORDER_WIDTH + UPKEEP_ALL_GAP;
+    private static final int UPKEEP_ALL_WIDTH = MODE_BUTTON_WIDTH - UPKEEP_AUTO_ORDER_WIDTH - UPKEEP_ALL_GAP;
     private static final int AMOUNT_INPUT_X = MODE_BUTTON_X - CONTROL_GAP - AMOUNT_INPUT_WIDTH;
     private static final int BOUNDS_X = AMOUNT_INPUT_X - CONTROL_GAP - BOUNDS_WIDTH;
     private static final int BOUND_MARKER_SIZE = 4;
@@ -368,7 +372,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                     "Auto-order upkeep",
                     () -> toggleUpkeepAutoOrder(wrapper))
                 .pos(MODE_BUTTON_X, 3)
-                .size(18, 18));
+                .size(UPKEEP_AUTO_ORDER_WIDTH, 18));
+        rowWidget.child(
+            ModuleConfigModalSupport.button(() -> isUpkeepItem(wrapper), "ALL", () -> setAmountMode(rowKey, false))
+                .pos(UPKEEP_ALL_X, 3)
+                .size(UPKEEP_ALL_WIDTH, 18));
         rowWidget.child(
             ModuleConfigModalSupport
                 .button(
