@@ -2,13 +2,13 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getThermalProtection;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 
 public class HazardTemperature implements IEnvironmentalHazard {
 

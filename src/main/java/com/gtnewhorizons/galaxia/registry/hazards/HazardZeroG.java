@@ -1,10 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.hazards;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 
 public class HazardZeroG implements IEnvironmentalHazard {
 

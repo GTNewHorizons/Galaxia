@@ -2,6 +2,8 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.List;
 
+import net.minecraft.util.StatCollector;
+
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
@@ -66,17 +68,12 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public void onStructureFormed(TileStation station) {
-        station.oxygenLevel = 0;
-    }
-
-    @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
         return List.of(new TextWidget<>(IKey.dynamic(() -> {
             int count = station.getAttachments()
                 .size();
             String key = "galaxia.gui.station_controller.targets";
-            return net.minecraft.util.StatCollector.translateToLocal(key) + ": " + count;
+            return StatCollector.translateToLocal(key) + ": " + count;
         })).pos(10, yOffset));
     }
 }

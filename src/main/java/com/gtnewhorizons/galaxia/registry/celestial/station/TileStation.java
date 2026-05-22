@@ -27,6 +27,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
@@ -71,6 +72,10 @@ public class TileStation extends TileStationBase<TileStation> {
         if (!attachments.contains(pos)) {
             attachments.add(pos);
         }
+    }
+
+    public boolean protectsAgainst(IEnvironmentalHazard hazard) {
+        return true;
     }
 
     @Override

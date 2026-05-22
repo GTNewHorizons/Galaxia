@@ -3,27 +3,28 @@ package com.gtnewhorizons.galaxia.handlers;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isInGalaxiaDimension;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.HazardWarningPacket;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
-import com.gtnewhorizons.galaxia.registry.hazards.EnvironmentalHazard;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardOxygen;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardPressure;
+import com.gtnewhorizons.galaxia.registry.hazards.HazardRadiation;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardSpores;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardWithering;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardZeroG;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
@@ -38,17 +39,14 @@ public class DimensionEventHandler {
 
     private List<HazardWarnings> batchedWarnings;
 
-    private static final List<EnvironmentalHazard> ENVIRONMENTAL_HAZARDS;
-
-    static {
-        ENVIRONMENTAL_HAZARDS = Arrays.asList(
-            new HazardTemperature(),
-            new HazardSpores(),
-            new HazardOxygen(),
-            new HazardWithering(),
-            new HazardPressure(),
-            new HazardZeroG());
-    }
+    private static final List<IEnvironmentalHazard> ENVIRONMENTAL_HAZARDS = List.of(
+        new HazardTemperature(),
+        new HazardSpores(),
+        new HazardOxygen(),
+        new HazardWithering(),
+        new HazardPressure(),
+        new HazardZeroG(),
+        new HazardRadiation());
 
     public DimensionEventHandler() {
         this.counter = 0;
@@ -131,9 +129,15 @@ public class DimensionEventHandler {
         }
 
         this.batchedWarnings.clear();
-
-        for (EnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
-            HazardWarnings w = h.applyTotal(def, player);
+        TileStation station = GalaxiaAPI.getStationAround(
+            player.worldObj,
+            player.dimension,
+            (int) player.posX,
+            (int) player.posY,
+            (int) player.posZ);
+        for (IEnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
+            if (station != null && station.protectsAgainst(h)) continue;
+            HazardWarnings w = h.apply(def, player);
             if (w != HazardWarnings.FINE) {
                 batchedWarnings.add(w);
             }

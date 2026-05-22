@@ -2,12 +2,12 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getPressureProtection;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 
 public class HazardPressure implements IEnvironmentalHazard {
 

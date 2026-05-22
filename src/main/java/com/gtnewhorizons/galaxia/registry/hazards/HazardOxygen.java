@@ -2,14 +2,13 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
-import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 
 public class HazardOxygen implements IEnvironmentalHazard {
 
@@ -29,7 +28,7 @@ public class HazardOxygen implements IEnvironmentalHazard {
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
         final int oxygenPercent = def.getOxygenPercent(player);
-        if (GalaxiaAPI.canBreathe(player, def)) return HazardWarnings.FINE;
+        if (oxygenPercent >= 100) return HazardWarnings.FINE;
 
         final boolean hasMask = hasOxygenmask(player);
         final boolean hasOxygenToDrain = hasMask && checkOxygenAndDrain(player, oxygenPercent);

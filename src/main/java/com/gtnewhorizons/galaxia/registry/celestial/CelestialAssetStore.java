@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,23 +24,23 @@ public final class CelestialAssetStore {
 
     // ── Static instances ──
 
-    /** Server-authoritative instance. Static convenience methods delegate here. */
     public static final CelestialAssetStore SERVER = new CelestialAssetStore();
-
-    /** Client-side mirror, populated by sync packets. Isolated from SERVER. */
     public static final CelestialAssetStore CLIENT = new CelestialAssetStore();
 
     // ── Instance fields ──
 
-    private final Map<UUID, Map<CelestialObjectId, Set<CelestialAsset>>> stateByBody;
-    private final Map<CelestialAsset.ID, UUID> teamById;
     private final Map<CelestialAsset.ID, CelestialAsset> byId;
 
-    /** Package-private for testing; external code uses {@link #SERVER} or {@link #CLIENT}. */
+    /** indexes for fast lookups **/
+    private final Map<CelestialAsset.ID, UUID> teamById;
+    private final Map<UUID, Map<CelestialObjectId, Set<CelestialAsset.ID>>> bodyIndex;
+    private final Map<CelestialObjectId, Set<CelestialAsset.ID>> byBody;
+
     CelestialAssetStore() {
-        this.stateByBody = new LinkedHashMap<>();
-        this.teamById = new LinkedHashMap<>();
         this.byId = new LinkedHashMap<>();
+        this.teamById = new LinkedHashMap<>();
+        this.bodyIndex = new LinkedHashMap<>();
+        this.byBody = new LinkedHashMap<>();
     }
 
     // ── Static convenience wrappers (delegate to SERVER) ──
@@ -114,6 +113,10 @@ public final class CelestialAssetStore {
         return SERVER.isOwnedByInternal(teamId, id);
     }
 
+    public static Set<CelestialAsset.ID> getAssetsOnBody(CelestialObjectId objectId) {
+        return SERVER.getAssetsOnBodyInternal(objectId);
+    }
+
     public static void removeTeam(UUID teamId) {
         SERVER.removeTeamInternal(teamId);
     }
@@ -128,14 +131,13 @@ public final class CelestialAssetStore {
     // ── Instance methods ──
 
     public void registerAssetInternal(UUID teamId, CelestialAsset asset) {
-        Map<CelestialObjectId, Set<CelestialAsset>> byBody = stateByBody
-            .computeIfAbsent(teamId, k -> new LinkedHashMap<>());
-
-        Set<CelestialAsset> celestialAssets = byBody.computeIfAbsent(asset.celestialObjectId, k -> new HashSet<>());
-
-        celestialAssets.add(asset);
-        teamById.put(asset.assetId, teamId);
         byId.put(asset.assetId, asset);
+        teamById.put(asset.assetId, teamId);
+        bodyIndex.computeIfAbsent(teamId, k -> new LinkedHashMap<>())
+            .computeIfAbsent(asset.celestialObjectId, k -> new HashSet<>())
+            .add(asset.assetId);
+        byBody.computeIfAbsent(asset.celestialObjectId, k -> new HashSet<>()) // ← new
+            .add(asset.assetId);
     }
 
     public UUID getTeamIdInternal(CelestialAsset.ID assetId) {
@@ -143,13 +145,16 @@ public final class CelestialAssetStore {
     }
 
     public List<CelestialAsset> getStateInternal(UUID teamId, CelestialObjectId celestialObjectId) {
-        Set<CelestialAsset> celestialAssets = stateByBody.getOrDefault(teamId, Collections.emptyMap())
-            .getOrDefault(celestialObjectId, Collections.emptySet());
-        return new ArrayList<>(celestialAssets);
+        Set<CelestialAsset.ID> ids = bodyIndex.getOrDefault(teamId, Map.of())
+            .getOrDefault(celestialObjectId, Set.of());
+        return resolveIds(ids);
     }
 
     public Map<CelestialObjectId, Set<CelestialAsset>> getTeamAssetsInternal(UUID teamId) {
-        return stateByBody.getOrDefault(teamId, new LinkedHashMap<>());
+        Map<CelestialObjectId, Set<CelestialAsset.ID>> teamIndex = bodyIndex.getOrDefault(teamId, Map.of());
+        Map<CelestialObjectId, Set<CelestialAsset>> result = new LinkedHashMap<>();
+        teamIndex.forEach((body, ids) -> result.put(body, resolveIdsToSet(ids)));
+        return result;
     }
 
     public CelestialAsset findAssetInternal(CelestialAsset.ID assetId) {
@@ -157,33 +162,31 @@ public final class CelestialAssetStore {
     }
 
     public List<CelestialAsset> allAssetsInternal() {
-        List<CelestialAsset> all = new ArrayList<>();
-        for (Map<CelestialObjectId, Set<CelestialAsset>> teamAsset : stateByBody.values()) {
-            for (Set<CelestialAsset> assets : teamAsset.values()) {
-                all.addAll(assets);
-            }
-        }
-        return all;
+        return new ArrayList<>(byId.values());
     }
 
     public boolean destroyAssetInternal(CelestialAsset.ID assetId) {
-        CelestialAsset asset = byId.get(assetId);
+        CelestialAsset asset = byId.remove(assetId);
         if (asset == null) return false;
 
-        UUID id = teamById.get(assetId);
-        if (id == null) return false;
+        UUID teamId = teamById.remove(assetId);
+        if (teamId == null) return false;
 
-        Map<CelestialObjectId, Set<CelestialAsset>> map = stateByBody.get(id);
-        if (map == null) {
-            return false;
+        Map<CelestialObjectId, Set<CelestialAsset.ID>> teamIndex = bodyIndex.get(teamId);
+        if (teamIndex != null) {
+            Set<CelestialAsset.ID> ids = teamIndex.get(asset.celestialObjectId);
+            if (ids != null) {
+                ids.remove(assetId);
+                if (ids.isEmpty()) teamIndex.remove(asset.celestialObjectId);
+            }
+            if (teamIndex.isEmpty()) bodyIndex.remove(teamId);
         }
 
-        Set<CelestialAsset> list = map.get(asset.celestialObjectId);
-        if (list == null) return false;
-
-        list.remove(asset);
-        byId.remove(assetId);
-        teamById.remove(assetId);
+        Set<CelestialAsset.ID> bodyIds = byBody.get(asset.celestialObjectId); // ← new
+        if (bodyIds != null) {
+            bodyIds.remove(assetId);
+            if (bodyIds.isEmpty()) byBody.remove(asset.celestialObjectId);
+        }
 
         return true;
     }
@@ -204,66 +207,50 @@ public final class CelestialAssetStore {
 
     public boolean cancelConstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) {
-            return false;
-        }
+        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         return destroyAssetInternal(assetId);
     }
 
     public boolean startDeconstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) {
-            return false;
-        }
+        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         asset.updateStatus(CelestialAsset.Status.DECONSTRUCTION);
         return true;
     }
 
     public boolean completeConstructionInternal(CelestialAsset.ID assetId) {
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) {
-            return false;
-        }
+        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
         asset.completeConstruction();
         return true;
     }
 
     public boolean renameAssetInternal(CelestialAsset.ID assetId, String displayName) {
-        if (displayName == null || displayName.trim()
-            .isEmpty()) {
-            return false;
-        }
-
+        if (displayName == null || displayName.isBlank()) return false;
         CelestialAsset asset = byId.get(assetId);
         if (asset == null) return false;
-
         asset.setDisplayName(displayName.trim());
         return true;
     }
 
     public boolean addToConstructionInventoryInternal(CelestialAsset.ID assetId, ItemStack stack, long amount) {
         if (stack == null || amount <= 0) return false;
-
         CelestialAsset asset = byId.get(assetId);
-        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) {
-            return false;
-        }
+        if (asset == null || asset.status() != Buildable.Status.CONSTRUCTION_SITE) return false;
 
-        Map<ItemStack, Long> inventory = mergeIntoConstructionInventory(asset.constructionInventory(), stack, amount);
-
-        asset.setConstructionInventory(inventory);
+        asset.setConstructionInventory(mergeIntoConstructionInventory(asset.constructionInventory(), stack, amount));
 
         if (asset.isConstructionSatisfied()) {
             asset.updateStatus(Buildable.Status.OPERATIONAL);
         }
-
         return true;
     }
 
     public void clearInternal() {
-        stateByBody.clear();
         byId.clear();
         teamById.clear();
+        bodyIndex.clear();
+        byBody.clear();
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {
@@ -282,6 +269,13 @@ public final class CelestialAssetStore {
             }
         }
     }
+        return teamId.equals(teamById.get(id));
+    }
+
+    public Set<CelestialAsset.ID> getAssetsOnBodyInternal(CelestialObjectId objectId) {
+        return byBody.getOrDefault(objectId, Set.of());
+    }
+    // ── Private helpers ──
 
     public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
         Map<CelestialObjectId, Set<CelestialAsset>> fromAssets = stateByBody.remove(fromTeamId);
@@ -302,6 +296,22 @@ public final class CelestialAssetStore {
             }
             return existing;
         });
+    private List<CelestialAsset> resolveIds(Set<CelestialAsset.ID> ids) {
+        List<CelestialAsset> result = new ArrayList<>(ids.size());
+        for (CelestialAsset.ID id : ids) {
+            CelestialAsset a = byId.get(id);
+            if (a != null) result.add(a);
+        }
+        return result;
+    }
+
+    private Set<CelestialAsset> resolveIdsToSet(Set<CelestialAsset.ID> ids) {
+        Set<CelestialAsset> result = new HashSet<>(ids.size());
+        for (CelestialAsset.ID id : ids) {
+            CelestialAsset a = byId.get(id);
+            if (a != null) result.add(a);
+        }
+        return result;
     }
 
     private static Map<ItemStack, Long> mergeIntoConstructionInventory(Map<ItemStack, Long> constructionInventory,
