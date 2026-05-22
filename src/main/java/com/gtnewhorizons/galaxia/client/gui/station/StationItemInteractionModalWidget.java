@@ -10,6 +10,8 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.ScrollWidget;
+import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -23,10 +25,13 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 final class StationItemInteractionModalWidget extends ParentWidget<StationItemInteractionModalWidget> {
 
     static final int WIDTH = 292;
-    static final int HEIGHT = 170;
+    static final int HEIGHT = 204;
 
     private static final int ROW_HEIGHT = 18;
-    private static final int MAX_LINES = 7;
+    private static final int CONTENT_X = 8;
+    private static final int CONTENT_Y = 52;
+    private static final int CONTENT_WIDTH = WIDTH - 16;
+    private static final int CONTENT_HEIGHT = HEIGHT - CONTENT_Y - 8;
     private static final ItemStack ACTION_ICON = new ItemStack(Items.book);
     private static final ItemStack CLOSE_ICON = new ItemStack(Items.redstone);
 
@@ -34,6 +39,8 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
     private final @Nullable ModuleConfigModalController configController;
     private final ItemStack displayStack;
     private final List<Line> lines;
+    private final VerticalScrollData scrollData = new VerticalScrollData();
+    private final ParentWidget<?> scrollContent = new ParentWidget<>().width(CONTENT_WIDTH);
     private final Runnable onClose;
 
     StationItemInteractionModalWidget(@Nullable CelestialAsset.ID assetId,
@@ -42,7 +49,7 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
         this.assetId = assetId;
         this.configController = configController;
         this.displayStack = item.toStack(1);
-        this.lines = visibleLines(StationItemInteractionModel.forItem(facility, item));
+        this.lines = layoutLines(StationItemInteractionModel.forItem(facility, item));
         this.onClose = onClose;
         size(WIDTH, HEIGHT);
         overlay(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawModal(x, y)));
@@ -50,12 +57,24 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
             ModuleConfigModalSupport.iconButton(() -> true, CLOSE_ICON, "Close", onClose)
                 .pos(WIDTH - 24, 4)
                 .size(18, 18));
+        int contentHeight = Math.max(
+            CONTENT_HEIGHT,
+            lines.isEmpty() ? ROW_HEIGHT
+                : lines.get(lines.size() - 1)
+                    .y() + ROW_HEIGHT);
+        scrollData.setScrollSize(contentHeight);
+        scrollContent.height(contentHeight)
+            .overlay(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> drawContent(x, y)));
+        ScrollWidget<?> scroll = new ScrollWidget<>(scrollData).pos(CONTENT_X, CONTENT_Y)
+            .size(CONTENT_WIDTH, CONTENT_HEIGHT);
+        scroll.child(scrollContent);
+        child(scroll);
         for (Line line : lines) {
             if (line.entry() == null) continue;
-            child(
+            scrollContent.child(
                 ModuleConfigModalSupport
                     .iconButton(() -> canOpen(line.entry()), ACTION_ICON, "Open config", () -> openEntry(line.entry()))
-                    .pos(WIDTH - 30, line.y() - 2)
+                    .pos(CONTENT_WIDTH - 22, line.y() - 2)
                     .size(20, 18));
         }
     }
@@ -69,38 +88,43 @@ final class StationItemInteractionModalWidget extends ParentWidget<StationItemIn
             y + 32,
             WIDTH - 46,
             EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
+    }
+
+    private void drawContent(int x, int y) {
         if (lines.isEmpty()) {
             ModuleConfigModalSupport
-                .drawLine("No interactions.", x + 10, y + 58, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+                .drawLine("No interactions.", x + 2, y + 2, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             return;
         }
         for (Line line : lines) {
             int rowY = y + line.y();
             if (line.header() != null) {
                 ModuleConfigModalSupport
-                    .drawLine(line.header(), x + 10, rowY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+                    .drawLine(line.header(), x + 2, rowY, EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
                 continue;
             }
             StationItemInteractionModel.Entry entry = line.entry();
             if (entry == null) continue;
-            ModuleConfigModalSupport.renderItemIcon(iconFor(entry), x + 12, rowY - 4);
-            ModuleConfigModalSupport
-                .drawTrimmedLine(textFor(entry), x + 34, rowY, WIDTH - 70, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            ModuleConfigModalSupport.renderItemIcon(iconFor(entry), x + 4, rowY - 4);
+            ModuleConfigModalSupport.drawTrimmedLine(
+                textFor(entry),
+                x + 26,
+                rowY,
+                CONTENT_WIDTH - 54,
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
     }
 
-    private static List<Line> visibleLines(List<StationItemInteractionModel.Entry> entries) {
+    private static List<Line> layoutLines(List<StationItemInteractionModel.Entry> entries) {
         List<Line> lines = new ArrayList<>();
         StationItemInteractionModel.Section section = null;
-        int y = 54;
+        int y = 2;
         for (StationItemInteractionModel.Entry entry : entries) {
-            if (lines.size() >= MAX_LINES) break;
             if (entry.section() != section) {
                 section = entry.section();
                 lines.add(new Line(headerFor(section), null, y));
                 y += ROW_HEIGHT;
             }
-            if (lines.size() >= MAX_LINES) break;
             lines.add(new Line(null, entry, y));
             y += ROW_HEIGHT;
         }

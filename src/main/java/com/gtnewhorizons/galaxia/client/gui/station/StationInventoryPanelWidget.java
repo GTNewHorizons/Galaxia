@@ -656,7 +656,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         itemInteractionRoot.removeAll();
         itemInteractionRoot.child(
             new StationItemInteractionModalWidget(assetId, configController, af, wrapper, this::closeItemInteractions)
-                .pos(48, 34)
+                .pos(48, 24)
                 .size(StationItemInteractionModalWidget.WIDTH, StationItemInteractionModalWidget.HEIGHT));
         itemInteractionRoot.setEnabled(true);
     }

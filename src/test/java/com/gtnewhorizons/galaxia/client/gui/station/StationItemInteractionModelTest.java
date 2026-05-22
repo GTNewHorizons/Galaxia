@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
@@ -17,13 +18,16 @@ import org.junit.jupiter.api.Test;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.NotDoablePolicy;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSchedulerMode;
@@ -97,10 +101,53 @@ final class StationItemInteractionModelTest {
                 .anyMatch(entry -> entry.role() == StationItemInteractionModel.Role.HAMMER_EXPORT));
         StationItemInteractionModel.Entry upkeep = entries.stream()
             .filter(entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP)
-            .filter(entry -> entry.groupId() == group.id())
+            .filter(entry -> entry.kind() == FacilityModuleKind.MACERATOR)
             .findFirst()
             .orElseThrow();
         assertEquals(2, upkeep.count());
+        assertEquals(0, upkeep.groupId());
+        assertTrue(
+            upkeep.amountPerMinute()
+                .microUnitsPerMinute() > 0);
+    }
+
+    @Test
+    void upkeepSplitsSameKindModulesWithDifferentDemand() {
+        AutomatedFacility facility = createFacility();
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L));
+        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L));
+        facility.addModule(moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(3, 0), 2L));
+
+        List<Integer> counts = StationItemInteractionModel.forItem(facility, resource)
+            .stream()
+            .filter(entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP)
+            .filter(entry -> entry.kind() == FacilityModuleKind.POWER)
+            .map(StationItemInteractionModel.Entry::count)
+            .sorted()
+            .toList();
+
+        assertEquals(List.of(1, 2), counts);
+    }
+
+    @Test
+    void upkeepAggregatesSameKindModulesWithoutSettingsGroup() {
+        AutomatedFacility facility = createFacility();
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0)));
+        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(2, 0)));
+        facility.addModule(createModule(FacilityModuleKind.POWER, StationTileCoord.of(3, 0)));
+
+        List<StationItemInteractionModel.Entry> upkeepEntries = StationItemInteractionModel.forItem(facility, resource)
+            .stream()
+            .filter(entry -> entry.section() == StationItemInteractionModel.Section.UPKEEP)
+            .filter(entry -> entry.kind() == FacilityModuleKind.POWER)
+            .toList();
+
+        assertEquals(1, upkeepEntries.size());
+        StationItemInteractionModel.Entry upkeep = upkeepEntries.get(0);
+        assertEquals(3, upkeep.count());
+        assertEquals(0, upkeep.groupId());
         assertTrue(
             upkeep.amountPerMinute()
                 .microUnitsPerMinute() > 0);
@@ -126,8 +173,14 @@ final class StationItemInteractionModelTest {
     }
 
     private static ModuleInstance createHammer(StationTileCoord anchor) {
+        ModuleInstance module = createModule(FacilityModuleKind.HAMMER, anchor);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        return module;
+    }
+
+    private static ModuleInstance createModule(FacilityModuleKind kind, StationTileCoord anchor) {
         ModuleInstance module = FacilityModuleRegistry
-            .create(ModuleInstance.ID.create(), FacilityModuleKind.HAMMER, anchor, ModuleShape.SINGLE, ModuleTier.EV);
+            .create(ModuleInstance.ID.create(), kind, anchor, ModuleShape.SINGLE, kind.defaultTier());
         module.updateStatus(Buildable.Status.OPERATIONAL);
         return module;
     }
@@ -143,5 +196,35 @@ final class StationItemInteractionModelTest {
                 (byte) 0,
                 (byte) 1));
         return new RecipeConfig(recipes, RecipeSchedulerMode.PRIORITY, NotDoablePolicy.SKIP, (byte) 0, (byte) 0);
+    }
+
+    private static ModuleInstance moduleWithUpkeep(FacilityModuleKind kind, StationTileCoord anchor, long itemAmount) {
+        ModuleTierData tierData = ModuleTierData.builder()
+            .addedEnergyCapacity(0L)
+            .powerDraw(0L)
+            .cooldown(20)
+            .cost(Map.of(new ItemStack(Items.iron_ingot), 1L))
+            .upkeepItem(new ItemStack(Items.iron_ingot), itemAmount)
+            .build();
+        FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
+            kind,
+            Map.of(ModuleTier.NONE, tierData),
+            (module, facility) -> {},
+            TestTieredModule::new,
+            List.<ModulePanelAction>of(),
+            false,
+            List.of());
+        ModuleInstance module = new ModuleInstance(
+            ModuleInstance.ID.create(),
+            definition,
+            anchor,
+            ModuleShape.SINGLE,
+            ModuleTier.NONE);
+        module.setComponent(new TestTieredModule());
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        return module;
+    }
+
+    private static final class TestTieredModule extends TieredModuleComponent {
     }
 }

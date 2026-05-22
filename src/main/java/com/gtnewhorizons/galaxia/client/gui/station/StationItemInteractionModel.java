@@ -122,17 +122,39 @@ final class StationItemInteractionModel {
                 .itemsPerMinute()
                 .get(item);
             if (amount == null || amount.isZero()) continue;
-            aggregate(aggregated, facility, Section.UPKEEP, Role.UPKEEP, module, amount);
+            aggregateUpkeep(aggregated, module, amount);
         }
         aggregated.values()
             .forEach(entry -> entries.add(entry.toEntry()));
+    }
+
+    private static void aggregateUpkeep(Map<Key, AggregatedEntry> aggregated, ModuleInstance module,
+        UpkeepAmount amountPerMinute) {
+        Key key = new Key(
+            Section.UPKEEP,
+            Role.UPKEEP,
+            module.kind(),
+            (short) 0,
+            null,
+            amountPerMinute.microUnitsPerMinute());
+        AggregatedEntry entry = aggregated.computeIfAbsent(
+            key,
+            ignored -> new AggregatedEntry(
+                Section.UPKEEP,
+                Role.UPKEEP,
+                module.kind()
+                    .getDisplayName(),
+                module.kind(),
+                module.id,
+                (short) 0));
+        entry.add(amountPerMinute);
     }
 
     private static void aggregate(Map<Key, AggregatedEntry> aggregated, AutomatedFacility facility, Section section,
         Role role, ModuleInstance module, @Nullable UpkeepAmount amountPerMinute) {
         SettingsGroup group = sharedGroup(facility, module);
         short groupId = group == null ? 0 : group.id();
-        Key key = new Key(section, role, groupId, groupId == 0 ? module.id : null);
+        Key key = new Key(section, role, module.kind(), groupId, groupId == 0 ? module.id : null, 0L);
         AggregatedEntry entry = aggregated.computeIfAbsent(
             key,
             ignored -> new AggregatedEntry(
@@ -175,7 +197,8 @@ final class StationItemInteractionModel {
         return null;
     }
 
-    private record Key(Section section, Role role, short groupId, @Nullable ModuleInstance.ID moduleId) {}
+    private record Key(Section section, Role role, FacilityModuleKind kind, short groupId,
+        @Nullable ModuleInstance.ID moduleId, long upkeepMicroUnitsPerMinute) {}
 
     private static final class AggregatedEntry {
 
