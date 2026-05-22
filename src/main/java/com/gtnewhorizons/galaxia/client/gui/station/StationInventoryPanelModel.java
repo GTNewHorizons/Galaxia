@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -11,6 +12,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 
 final class StationInventoryPanelModel {
 
@@ -71,6 +73,30 @@ final class StationInventoryPanelModel {
         result.sort(Comparator.comparing(FluidRow::fluidName, String.CASE_INSENSITIVE_ORDER));
         return result;
     }
+
+    static UpkeepReserveStatus upkeepReserveStatus(AutomatedFacility facility, ItemStackWrapper item) {
+        UpkeepAmount demand = facility.upkeepSummary()
+            .itemsPerMinute()
+            .get(item);
+        long reserve = facility.upkeepReserve(item);
+        if (demand == null || demand.isZero()) {
+            return new UpkeepReserveStatus(reserve, 0.0D, UpkeepReserveLevel.NONE, "");
+        }
+        double minutes = reserve * (double) UpkeepAmount.MICRO_UNITS_PER_WHOLE / demand.microUnitsPerMinute();
+        UpkeepReserveLevel level = minutes < 3.0D ? UpkeepReserveLevel.CRITICAL
+            : minutes < 10.0D ? UpkeepReserveLevel.WARNING : UpkeepReserveLevel.NORMAL;
+        String tooltip = String.format(Locale.ROOT, "Reserve covers %.1f min of upkeep.", minutes);
+        return new UpkeepReserveStatus(reserve, minutes, level, tooltip);
+    }
+
+    enum UpkeepReserveLevel {
+        NONE,
+        NORMAL,
+        WARNING,
+        CRITICAL
+    }
+
+    record UpkeepReserveStatus(long reserve, double minutes, UpkeepReserveLevel level, String tooltip) {}
 
     record FluidRow(String fluidName, FluidKey fluidKey, long amount) {
 

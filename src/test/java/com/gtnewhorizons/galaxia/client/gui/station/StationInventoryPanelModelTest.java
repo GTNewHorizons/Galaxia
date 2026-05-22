@@ -106,6 +106,39 @@ final class StationInventoryPanelModelTest {
                 .getValue());
     }
 
+    @Test
+    void upkeepReserveStatusWarnsWhenReserveCoversLessThanTenMinutes() {
+        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
+        ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
+        distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
+        distributed.setUpkeepReserve(tracked, 13L);
+
+        StationInventoryPanelModel.UpkeepReserveStatus status = StationInventoryPanelModel
+            .upkeepReserveStatus(distributed, tracked);
+
+        assertEquals(StationInventoryPanelModel.UpkeepReserveLevel.WARNING, status.level());
+        assertEquals("Reserve covers 6.5 min of upkeep.", status.tooltip());
+        assertTrue(
+            !status.tooltip()
+                .contains("Shortage risk."));
+    }
+
+    @Test
+    void upkeepReserveStatusIsCriticalBelowThreeMinutes() {
+        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
+        ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
+        distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
+        distributed.setUpkeepReserve(tracked, 5L);
+
+        StationInventoryPanelModel.UpkeepReserveStatus status = StationInventoryPanelModel
+            .upkeepReserveStatus(distributed, tracked);
+
+        assertEquals(StationInventoryPanelModel.UpkeepReserveLevel.CRITICAL, status.level());
+        assertEquals("Reserve covers 2.5 min of upkeep.", status.tooltip());
+    }
+
     private static void setAmount(IDistributedInventory distributed, ItemStackWrapper item, int amount) {
         if (distributed instanceof AutomatedFacility af) {
             af.updateItems(item, amount);

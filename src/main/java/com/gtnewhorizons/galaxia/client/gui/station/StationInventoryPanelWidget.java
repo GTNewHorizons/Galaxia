@@ -92,6 +92,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         .pos(8, 48);
     private final Map<String, Boolean> amountModes = new LinkedHashMap<>();
     private final Map<String, String> amountInputs = new LinkedHashMap<>();
+    private final Map<String, String> upkeepReserveInputs = new LinkedHashMap<>();
     private ResourceMode resourceMode = ResourceMode.ITEMS;
     private @Nullable ItemStackWrapper selectedBoundItem;
     private @Nullable FluidKey selectedBoundFluid;
@@ -354,14 +355,31 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .pos(BOUNDS_X, 3)
                 .size(BOUNDS_WIDTH, 18));
         rowWidget.child(
-            amountField(rowKey).pos(AMOUNT_INPUT_X, 3)
+            amountField(rowKey, wrapper).pos(AMOUNT_INPUT_X, 3)
                 .size(AMOUNT_INPUT_WIDTH, 18));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> isAmountMode(rowKey), "Amount", () -> setAmountMode(rowKey, false))
+            upkeepReserveField(wrapper, rowKey).pos(AMOUNT_INPUT_X, 3)
+                .size(AMOUNT_INPUT_WIDTH, 18));
+        rowWidget.child(
+            ModuleConfigModalSupport
+                .checkbox(
+                    () -> isUpkeepItem(wrapper),
+                    () -> isUpkeepAutoOrderEnabled(wrapper),
+                    "Auto-order upkeep",
+                    () -> toggleUpkeepAutoOrder(wrapper))
+                .pos(MODE_BUTTON_X, 3)
+                .size(18, 18));
+        rowWidget.child(
+            ModuleConfigModalSupport
+                .button(
+                    () -> !isUpkeepItem(wrapper) && isAmountMode(rowKey),
+                    "Amount",
+                    () -> setAmountMode(rowKey, false))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
         rowWidget.child(
-            ModuleConfigModalSupport.button(() -> !isAmountMode(rowKey), "ALL", () -> setAmountMode(rowKey, true))
+            ModuleConfigModalSupport
+                .button(() -> !isUpkeepItem(wrapper) && !isAmountMode(rowKey), "ALL", () -> setAmountMode(rowKey, true))
                 .pos(MODE_BUTTON_X, 3)
                 .size(MODE_BUTTON_WIDTH, 18));
         rowWidget.child(
@@ -405,7 +423,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return rowWidget;
     }
 
-    private TextFieldWidget amountField(String rowKey) {
+    private TextFieldWidget amountField(String rowKey, ItemStackWrapper wrapper) {
         return new TextFieldWidget().setMaxLength(9)
             .setPattern(INTEGER_PATTERN)
             .setDefaultNumber(0)
@@ -429,7 +447,42 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                     () -> amountInputs.getOrDefault(rowKey, "0"),
                     text -> { amountInputs.put(rowKey, text == null ? "" : text); }))
             .setFocusOnGuiOpen(false)
-            .setEnabledIf(w -> isAmountMode(rowKey));
+            .setEnabledIf(w -> !isUpkeepItem(wrapper) && isAmountMode(rowKey));
+    }
+
+    private TextFieldWidget upkeepReserveField(ItemStackWrapper wrapper, String rowKey) {
+        return new TextFieldWidget().setMaxLength(9)
+            .setPattern(INTEGER_PATTERN)
+            .setDefaultNumber(0)
+            .setNumbers(0, Integer.MAX_VALUE)
+            .setFormatAsInteger(true)
+            .acceptsExpressions(false)
+            .autoUpdateOnChange(true)
+            .setTextColor(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
+            .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
+            .background(ModuleConfigModalSupport.drawable((ctx, x, y, w, h) -> {
+                if (!isUpkeepItem(wrapper)) return;
+                BorderedRect.draw(
+                    x,
+                    y,
+                    w,
+                    h,
+                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
+                    upkeepReserveBorderColor(wrapper));
+            }))
+            .value(
+                new StringValue.Dynamic(
+                    () -> upkeepReserveInputs.getOrDefault(rowKey, Long.toString(currentUpkeepReserve(wrapper))),
+                    text -> updateUpkeepReserveInput(wrapper, rowKey, text)))
+            .tooltipDynamic(t -> {
+                StationInventoryPanelModel.UpkeepReserveStatus status = upkeepReserveStatus(wrapper);
+                if (status.level() != StationInventoryPanelModel.UpkeepReserveLevel.NONE) {
+                    t.addLine(status.tooltip());
+                }
+            })
+            .onUpdateListener(TextFieldWidget::markTooltipDirty, true)
+            .setFocusOnGuiOpen(false)
+            .setEnabledIf(w -> isUpkeepItem(wrapper));
     }
 
     private TextFieldWidget boundField(boolean input) {
@@ -634,6 +687,11 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return cachedItemAmounts.getOrDefault(wrapper, 0L);
     }
 
+    private long currentUpkeepReserve(ItemStackWrapper wrapper) {
+        AutomatedFacility af = af();
+        return af == null ? 0L : af.upkeepReserve(wrapper);
+    }
+
     private long currentFluidAmount(FluidKey fluid) {
         return cachedFluidAmounts.getOrDefault(fluid, 0L);
     }
@@ -662,7 +720,56 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             if (!isAmountMode(rowKey)) {
                 amountInputs.put(rowKey, Long.toString(row.getValue()));
             }
+            if (isUpkeepItem(row.getKey())) {
+                upkeepReserveInputs.putIfAbsent(rowKey, Long.toString(currentUpkeepReserve(row.getKey())));
+            }
         }
+    }
+
+    private boolean isUpkeepItem(ItemStackWrapper wrapper) {
+        AutomatedFacility af = af();
+        return af != null && af.upkeepSummary()
+            .itemsPerMinute()
+            .containsKey(wrapper);
+    }
+
+    private boolean isUpkeepAutoOrderEnabled(ItemStackWrapper wrapper) {
+        AutomatedFacility af = af();
+        return af != null && af.isUpkeepAutoOrderEnabled(wrapper);
+    }
+
+    private void toggleUpkeepAutoOrder(ItemStackWrapper wrapper) {
+        AutomatedFacility af = af();
+        if (af == null) return;
+        af.setUpkeepAutoOrder(wrapper, !af.isUpkeepAutoOrderEnabled(wrapper));
+    }
+
+    private void updateUpkeepReserveInput(ItemStackWrapper wrapper, String rowKey, String text) {
+        String value = text == null ? "" : text;
+        upkeepReserveInputs.put(rowKey, value);
+        AutomatedFacility af = af();
+        if (af != null) {
+            af.setUpkeepReserve(wrapper, parseAmount(value));
+        }
+    }
+
+    private StationInventoryPanelModel.UpkeepReserveStatus upkeepReserveStatus(ItemStackWrapper wrapper) {
+        AutomatedFacility af = af();
+        return af == null
+            ? new StationInventoryPanelModel.UpkeepReserveStatus(
+                0L,
+                0.0D,
+                StationInventoryPanelModel.UpkeepReserveLevel.NONE,
+                "")
+            : StationInventoryPanelModel.upkeepReserveStatus(af, wrapper);
+    }
+
+    private int upkeepReserveBorderColor(ItemStackWrapper wrapper) {
+        return switch (upkeepReserveStatus(wrapper).level()) {
+            case CRITICAL -> BOUND_MARKER_BLOCKING;
+            case WARNING -> BOUND_MARKER_WARNING;
+            case NONE, NORMAL -> EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor();
+        };
     }
 
     private String rowStructureSignature(List<Map.Entry<ItemStackWrapper, Long>> itemRows,
