@@ -31,6 +31,7 @@ final class LogisticStoreTest {
     @AfterEach
     void cleanup() {
         LogisticStore.clearDeliveries();
+        LogisticStore.clearSignals();
         CelestialAssetStore.clear();
     }
 

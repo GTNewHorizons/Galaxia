@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -229,6 +230,7 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         } else {
             throw new IllegalStateException("[Logistics] Received malformed upkeep settings update");
         }
+        LogisticStore.updateSignalsForFacility(state);
         state.bumpSyncRevision();
         return AssetSyncPacket
             .upkeepSettingsUpdate(assetId, item, state.upkeepReserve(item), state.isUpkeepAutoOrderEnabled(item))

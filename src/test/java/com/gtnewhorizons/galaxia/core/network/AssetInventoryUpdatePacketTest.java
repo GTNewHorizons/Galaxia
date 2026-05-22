@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.core.network;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
@@ -19,6 +20,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 import io.netty.buffer.ByteBuf;
@@ -37,12 +40,14 @@ final class AssetInventoryUpdatePacketTest {
     void cleanStores() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
+        LogisticStore.clearSignals();
     }
 
     @AfterEach
     void cleanStoresAfter() {
         CelestialAssetStore.SERVER.clearInternal();
         CelestialAssetStore.CLIENT.clearInternal();
+        LogisticStore.clearSignals();
     }
 
     @Test
@@ -128,6 +133,25 @@ final class AssetInventoryUpdatePacketTest {
         assertEquals(1, sync.syncRevision());
     }
 
+    @Test
+    void upkeepSettingsPacketsRefreshLogisticsRequestImmediately() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        facility.updateItems(resource, 3);
+
+        AssetInventoryUpdatePacket.setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 5)
+            .apply(TEAM, false);
+        AssetInventoryUpdatePacket.setUpkeepReserve(facility.assetId, resource, 10)
+            .apply(TEAM, false);
+
+        AssetSyncPacket sync = AssetInventoryUpdatePacket.setUpkeepAutoOrder(facility.assetId, resource, true)
+            .apply(TEAM, false);
+
+        LogisticSignal signal = logisticsSignalFor(facility, resource);
+        assertEquals(-12L, signal.amount());
+        assertEquals(3, sync.syncRevision());
+    }
+
     private static AutomatedFacility addFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -145,5 +169,16 @@ final class AssetInventoryUpdatePacketTest {
         AssetInventoryUpdatePacket decoded = new AssetInventoryUpdatePacket();
         decoded.fromBytes(buf);
         return decoded;
+    }
+
+    private static LogisticSignal logisticsSignalFor(AutomatedFacility facility, ItemStackWrapper resource) {
+        return LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+            .values()
+            .stream()
+            .flatMap(List::stream)
+            .filter(signal -> facility.assetId.equals(signal.outpostAssetId()))
+            .filter(signal -> resource.equals(signal.resourceId()))
+            .findFirst()
+            .orElseThrow();
     }
 }
