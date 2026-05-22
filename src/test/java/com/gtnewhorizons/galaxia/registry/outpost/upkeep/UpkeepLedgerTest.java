@@ -112,7 +112,29 @@ final class UpkeepLedgerTest {
         for (ModuleInstance module : modules) {
             facility.addModule(module);
         }
+        facility.setStationFeatureSalt(neutralFeatureSalt(facility, modules));
         return facility;
+    }
+
+    private static long neutralFeatureSalt(AutomatedFacility facility, ModuleInstance... modules) {
+        for (long salt = 0; salt < 10_000L; salt++) {
+            facility.setStationFeatureSalt(salt);
+            if (hasNoPlanetaryFeatures(facility, modules)) return salt;
+        }
+        throw new AssertionError("Could not find neutral station feature salt");
+    }
+
+    private static boolean hasNoPlanetaryFeatures(AutomatedFacility facility, ModuleInstance... modules) {
+        for (ModuleInstance module : modules) {
+            for (StationTileCoord tile : module.shape()
+                .tiles(module.anchor())) {
+                if (!facility.planetaryFeaturesAt(tile)
+                    .isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount, String fluidName,
