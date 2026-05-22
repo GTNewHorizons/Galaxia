@@ -29,12 +29,15 @@ public class TestFMLRegistry {
             Field instanceField = Loader.class.getDeclaredField("instance");
             instanceField.setAccessible(true);
             instanceField.set(null, fakeLoader);
-            Bootstrap.func_151354_b();
+            if (!bootstrapMinecraftRegistries()) {
+                init = true;
+                return;
+            }
             CelestialRegistry.freezeAndBake();
-        } catch (Throwable e) {
-            // Some FML registry setup failures leave enough state for tests to run.
+            init = true;
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to install fake FML Loader for tests", e);
         }
-        init = true;
 
     }
 
@@ -43,5 +46,21 @@ public class TestFMLRegistry {
             .getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static boolean bootstrapMinecraftRegistries() {
+        try {
+            Bootstrap.func_151354_b();
+            return true;
+        } catch (NullPointerException e) {
+            if (!isKnownFireBootstrapFailure(e)) throw e;
+            return false;
+        }
+    }
+
+    private static boolean isKnownFireBootstrapFailure(NullPointerException e) {
+        StackTraceElement[] stack = e.getStackTrace();
+        return stack.length > 0 && "net.minecraft.block.BlockFire".equals(stack[0].getClassName())
+            && "func_149843_e".equals(stack[0].getMethodName());
     }
 }
