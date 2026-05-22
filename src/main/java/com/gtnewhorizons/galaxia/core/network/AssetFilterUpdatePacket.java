@@ -109,6 +109,7 @@ public final class AssetFilterUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetFilterUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            if (player == null) return null;
             UUID teamId = GTTeamsCompat.getTeam(player);
             if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return null;
             return message.apply(teamId);

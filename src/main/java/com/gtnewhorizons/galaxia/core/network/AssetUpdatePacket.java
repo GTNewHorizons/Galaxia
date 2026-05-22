@@ -74,6 +74,7 @@ public final class AssetUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            if (player == null) return null;
             UUID teamId = GTTeamsCompat.getTeam(player);
             return message.apply(teamId, player);
         }
@@ -92,10 +93,10 @@ public final class AssetUpdatePacket implements IMessage {
         }
 
         boolean authorized = switch (action) {
+            case REQUEST_FULL_SYNC -> true;
             case DESTROY_ASSET -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.DESTROY_ASSET);
             case START_DECONSTRUCTION -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.DECONSTRUCT_ASSET);
-            case CANCEL_CONSTRUCTION, REQUEST_FULL_SYNC -> GTTeamsCompat
-                .hasPermission(teamId, player, TeamAction.BUILD_MODULE);
+            case CANCEL_CONSTRUCTION -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.BUILD_MODULE);
             case RENAME_ASSET -> GTTeamsCompat.hasPermission(teamId, player, TeamAction.RENAME_ASSET);
         };
         if (!authorized) return null;

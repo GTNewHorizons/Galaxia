@@ -3,6 +3,8 @@ package com.gtnewhorizons.galaxia.compat.teams;
 import java.util.Optional;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.entity.player.EntityPlayer;
 
 import com.gtnewhorizon.gtnhlib.teams.Team;
@@ -22,14 +24,9 @@ public final class GTTeamsCompat {
         return team != null ? team.getTeamId() : null;
     }
 
-    public static UUID getTeam(EntityPlayer player) {
-        return getTeamOptional(player).orElse(new UUID(0, 0));
-    }
-
-    public static Optional<UUID> getTeamOptional(EntityPlayer player) {
-        if (player == null) return Optional.empty();
+    public static UUID getTeam(@Nonnull EntityPlayer player) {
         Team team = TeamManager.getTeamByPlayer(player.getUniqueID());
-        return team != null ? Optional.of(team.getTeamId()) : Optional.empty();
+        return team.getTeamId();
     }
 
     @SideOnly(Side.CLIENT)
