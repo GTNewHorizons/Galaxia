@@ -232,16 +232,6 @@ public final class CelestialClient {
         StarmapActionSyncHandler.sendInventoryUpdate(packet);
     }
 
-    public static void updateUpkeepReserve(ID assetId, ItemStackWrapper resource, long amount) {
-        StarmapActionSyncHandler
-            .sendInventoryUpdate(AssetInventoryUpdatePacket.setUpkeepReserve(assetId, resource, amount));
-    }
-
-    public static void updateUpkeepAutoOrder(ID assetId, ItemStackWrapper resource, boolean enabled) {
-        StarmapActionSyncHandler
-            .sendInventoryUpdate(AssetInventoryUpdatePacket.setUpkeepAutoOrder(assetId, resource, enabled));
-    }
-
     public static void updateMinerOreBlacklisted(ID assetId, int moduleIndex, String oreKey, boolean blacklisted) {
         sendModuleUpdate(
             assetId,

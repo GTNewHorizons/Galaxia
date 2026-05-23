@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.core.network;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.init.Items;
@@ -20,8 +19,6 @@ import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
-import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticSignal;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -129,57 +126,6 @@ final class AssetInventoryUpdatePacketTest {
         assertEquals(0, facility.getSyncRevision());
     }
 
-    @Test
-    void upkeepReservePacketSetsReserveForNonCreativePlayer() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket.setUpkeepReserve(facility.assetId, resource, 21);
-
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertEquals(21L, facility.upkeepReserve(resource));
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
-    }
-
-    @Test
-    void upkeepAutoOrderPacketSetsAutoOrderForNonCreativePlayer() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        facility.setUpkeepReserve(resource, 21L);
-        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
-            .setUpkeepAutoOrder(facility.assetId, resource, true);
-
-        AssetSyncPacket sync = packet.apply(TEAM, false);
-
-        assertEquals(true, facility.isUpkeepAutoOrderEnabled(resource));
-        LogisticsResourceConfig config = facility.logisticsConfig.get(resource);
-        assertEquals(21L, config.minReserve());
-        assertEquals(true, config.isImportEnabled());
-        assertEquals(false, config.isSupplyEnabled());
-        assertEquals(1, facility.getSyncRevision());
-        assertEquals(1, sync.syncRevision());
-    }
-
-    @Test
-    void upkeepSettingsPacketsRefreshLogisticsRequestImmediately() {
-        AutomatedFacility facility = addFacilityToServer();
-        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
-        facility.updateItems(resource, 3);
-
-        AssetInventoryUpdatePacket.setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 5)
-            .apply(TEAM, false);
-        AssetInventoryUpdatePacket.setUpkeepReserve(facility.assetId, resource, 10)
-            .apply(TEAM, false);
-
-        AssetSyncPacket sync = AssetInventoryUpdatePacket.setUpkeepAutoOrder(facility.assetId, resource, true)
-            .apply(TEAM, false);
-
-        LogisticSignal signal = logisticsSignalFor(facility, resource);
-        assertEquals(-12L, signal.amount());
-        assertEquals(3, sync.syncRevision());
-    }
-
     private static AutomatedFacility addFacilityToServer() {
         AutomatedFacility facility = new AutomatedFacility(
             CelestialAsset.ID.create(),
@@ -199,14 +145,4 @@ final class AssetInventoryUpdatePacketTest {
         return decoded;
     }
 
-    private static LogisticSignal logisticsSignalFor(AutomatedFacility facility, ItemStackWrapper resource) {
-        return LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-            .values()
-            .stream()
-            .flatMap(List::stream)
-            .filter(signal -> facility.assetId.equals(signal.outpostAssetId()))
-            .filter(signal -> resource.equals(signal.resourceId()))
-            .findFirst()
-            .orElseThrow();
-    }
 }

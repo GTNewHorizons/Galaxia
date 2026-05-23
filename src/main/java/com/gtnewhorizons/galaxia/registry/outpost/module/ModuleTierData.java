@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepDemand;
@@ -162,17 +163,21 @@ public record ModuleTierData(long baseEnergyCapacity, long powerDrawEuPerTick, i
         }
 
         public Builder upkeepFluid(String fluidName, long amountPerMinute) {
-            return upkeepFluid(fluidName, UpkeepAmount.ofWhole(amountPerMinute));
+            return upkeepFluid(
+                require(FluidKey.fromName(fluidName), "upkeepFluid"),
+                UpkeepAmount.ofWhole(amountPerMinute));
         }
 
         public Builder upkeepFluid(String fluidName, String amountPerMinute) {
-            return upkeepFluid(fluidName, UpkeepAmount.parse(amountPerMinute));
+            return upkeepFluid(
+                require(FluidKey.fromName(fluidName), "upkeepFluid"),
+                UpkeepAmount.parse(amountPerMinute));
         }
 
-        public Builder upkeepFluid(String fluidName, UpkeepAmount amountPerMinute) {
+        public Builder upkeepFluid(FluidKey fluid, UpkeepAmount amountPerMinute) {
             this.upkeepDemand = upkeepDemand.plus(
                 UpkeepDemand.builder()
-                    .fluid(fluidName, amountPerMinute)
+                    .fluid(require(fluid, "upkeepFluid"), amountPerMinute)
                     .build());
             return this;
         }

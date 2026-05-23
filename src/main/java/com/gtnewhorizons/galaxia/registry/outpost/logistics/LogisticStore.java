@@ -136,6 +136,9 @@ public final class LogisticStore {
             long supplyReserve = cfg.minReserve();
             if (automatedFacility != null) {
                 supplyReserve = Math.max(supplyReserve, automatedFacility.effectiveLowerBound(resource));
+                if (cfg.isImportEnabled()) {
+                    importTarget = Math.max(importTarget, automatedFacility.effectiveLowerBound(resource));
+                }
             }
 
             if (importTarget > 0L && stock < importTarget) {

@@ -8,7 +8,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -551,18 +550,6 @@ public final class FacilityPersistenceManager {
         out.upkeepFluidCredits = encodeFluidUpkeepAmountMap(
             state.upkeepCredits()
                 .fluidCredits());
-        out.upkeepItemReserves = new LinkedHashMap<>();
-        for (Map.Entry<ItemStackWrapper, Long> entry : state.upkeepItemReserves()
-            .entrySet()) {
-            out.upkeepItemReserves.put(
-                entry.getKey()
-                    .toKey(),
-                entry.getValue());
-        }
-        out.upkeepAutoOrderItems = state.upkeepAutoOrderItems()
-            .stream()
-            .map(ItemStackWrapper::toKey)
-            .toList();
         out.layoutTiles = new ArrayList<>();
         StationLayout layout = state.stationLayout();
         int anchorCount = 0;
@@ -763,7 +750,6 @@ public final class FacilityPersistenceManager {
             new UpkeepSettlement.Credits(
                 decodeItemUpkeepAmountMap(json.upkeepItemCredits),
                 decodeFluidUpkeepAmountMap(json.upkeepFluidCredits)));
-        state.loadUpkeepSettings(decodeUpkeepItemReserves(json.upkeepItemReserves), decodeUpkeepAutoOrderItems(json));
 
         StationLayout layout = state.stationLayout();
         int tilesLoaded = 0;
@@ -984,56 +970,29 @@ public final class FacilityPersistenceManager {
         return decoded;
     }
 
-    private static Map<String, Long> encodeFluidUpkeepAmountMap(Map<String, UpkeepAmount> amounts) {
+    private static Map<String, Long> encodeFluidUpkeepAmountMap(Map<FluidKey, UpkeepAmount> amounts) {
         Map<String, Long> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
-        for (Map.Entry<String, UpkeepAmount> entry : amounts.entrySet()) {
-            if (entry.getKey() == null || entry.getKey()
-                .isEmpty()
-                || entry.getValue() == null
+        for (Map.Entry<FluidKey, UpkeepAmount> entry : amounts.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null
                 || entry.getValue()
                     .isZero())
                 continue;
             encoded.put(
-                entry.getKey(),
+                entry.getKey()
+                    .toKey(),
                 entry.getValue()
                     .microUnitsPerMinute());
         }
         return encoded;
     }
 
-    private static Map<String, UpkeepAmount> decodeFluidUpkeepAmountMap(Map<String, Long> encoded) {
-        Map<String, UpkeepAmount> decoded = new LinkedHashMap<>();
+    private static Map<FluidKey, UpkeepAmount> decodeFluidUpkeepAmountMap(Map<String, Long> encoded) {
+        Map<FluidKey, UpkeepAmount> decoded = new LinkedHashMap<>();
         if (encoded == null || encoded.isEmpty()) return decoded;
         for (Map.Entry<String, Long> entry : encoded.entrySet()) {
-            if (entry.getKey() != null && !entry.getKey()
-                .isEmpty() && entry.getValue() > 0L)
-                decoded.put(entry.getKey(), UpkeepAmount.ofMicroUnits(entry.getValue()));
-        }
-        return decoded;
-    }
-
-    private static Map<ItemStackWrapper, Long> decodeUpkeepItemReserves(Map<String, Long> encoded) {
-        Map<ItemStackWrapper, Long> decoded = new LinkedHashMap<>();
-        if (encoded == null || encoded.isEmpty()) return decoded;
-        for (Map.Entry<String, Long> entry : encoded.entrySet()) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(entry.getKey());
-            Long amount = entry.getValue();
-            if (item != null && amount != null && amount >= 0L) {
-                decoded.put(item, amount);
-            }
-        }
-        return decoded;
-    }
-
-    private static Set<ItemStackWrapper> decodeUpkeepAutoOrderItems(FacilityStateJson json) {
-        Set<ItemStackWrapper> decoded = new LinkedHashSet<>();
-        if (json == null || json.upkeepAutoOrderItems == null || json.upkeepAutoOrderItems.isEmpty()) return decoded;
-        for (String key : json.upkeepAutoOrderItems) {
-            ItemStackWrapper item = ItemStackWrapper.fromKey(key);
-            if (item != null) {
-                decoded.add(item);
-            }
+            FluidKey key = FluidKey.fromName(entry.getKey());
+            if (key != null && entry.getValue() > 0L) decoded.put(key, UpkeepAmount.ofMicroUnits(entry.getValue()));
         }
         return decoded;
     }
@@ -1097,8 +1056,6 @@ public final class FacilityPersistenceManager {
         Map<String, Long> fluidBuffer;
         Map<String, Long> upkeepItemCredits;
         Map<String, Long> upkeepFluidCredits;
-        Map<String, Long> upkeepItemReserves;
-        List<String> upkeepAutoOrderItems;
         List<StationTileJson> layoutTiles;
     }
 

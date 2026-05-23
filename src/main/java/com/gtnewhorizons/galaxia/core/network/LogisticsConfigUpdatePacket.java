@@ -11,9 +11,7 @@ import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
@@ -132,7 +130,6 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         if (resource == null) return null;
         if (removeEntry) {
             asset.logisticsConfig.reset(resource);
-            syncUpkeepAutoOrder(asset, resource, null);
             LogisticStore.updateSignalsForFacility(asset);
             asset.bumpSyncRevision();
             return AssetSyncPacket.logisticsConfigRemoved(assetId, resource)
@@ -145,7 +142,6 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
                 isSupplyEnabled);
             config = (accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode).sanitize(config);
             asset.logisticsConfig.set(resource, config);
-            syncUpkeepAutoOrder(asset, resource, config);
             LogisticStore.updateSignalsForFacility(asset);
             asset.bumpSyncRevision();
             return AssetSyncPacket
@@ -160,15 +156,4 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         }
     }
 
-    private static void syncUpkeepAutoOrder(CelestialAsset asset, InventoryKey resource,
-        LogisticsResourceConfig config) {
-        if (!(asset instanceof AutomatedFacility facility) || !(resource instanceof ItemStackWrapper item)) return;
-        if (config != null && config.isImportEnabled() && facility.upkeepReserve(item) > 0L) {
-            facility.setUpkeepAutoOrder(item, true);
-            return;
-        }
-        if (config == null || !config.isImportEnabled()) {
-            facility.setUpkeepAutoOrder(item, false);
-        }
-    }
 }

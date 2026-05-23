@@ -32,7 +32,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.BoundKind;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
-import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 
 final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPanelWidget>
     implements StationOverlayCoordinator.Overlay {
@@ -896,9 +896,12 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (af == null) return;
         boolean enabled = !af.isUpkeepAutoOrderEnabled(wrapper);
         af.setUpkeepAutoOrder(wrapper, enabled);
-        syncLocalCoreImport(af, wrapper, enabled);
         if (assetId != null) {
-            CelestialClient.updateUpkeepAutoOrder(assetId, wrapper, enabled);
+            CelestialClient.updateLogisticsConfig(
+                assetId,
+                wrapper,
+                af.logisticsConfig.get(wrapper),
+                LogisticsConfigAccessMode.IMPORT_ONLY);
         }
     }
 
@@ -909,26 +912,13 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         if (af != null) {
             long amount = parseAmount(value);
             af.setUpkeepReserve(wrapper, amount);
-            if (af.isUpkeepAutoOrderEnabled(wrapper)) {
-                syncLocalCoreImport(af, wrapper, true);
-            }
             if (assetId != null) {
-                CelestialClient.updateUpkeepReserve(assetId, wrapper, amount);
+                CelestialClient.updateLogisticsConfig(
+                    assetId,
+                    wrapper,
+                    af.logisticsConfig.get(wrapper),
+                    LogisticsConfigAccessMode.IMPORT_ONLY);
             }
-        }
-    }
-
-    private static void syncLocalCoreImport(AutomatedFacility af, ItemStackWrapper wrapper, boolean enabled) {
-        LogisticsResourceConfig current = af.logisticsConfig.get(wrapper);
-        if (enabled) {
-            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
-            int importTarget = (int) Math.min(Integer.MAX_VALUE, af.effectiveLowerBound(wrapper));
-            af.logisticsConfig.set(wrapper, new LogisticsResourceConfig(importTarget, orderSize, true, false));
-        } else if (current != LogisticsResourceConfig.DEFAULT) {
-            af.logisticsConfig.set(
-                wrapper,
-                current.withImportEnabled(false)
-                    .withSupplyEnabled(false));
         }
     }
 

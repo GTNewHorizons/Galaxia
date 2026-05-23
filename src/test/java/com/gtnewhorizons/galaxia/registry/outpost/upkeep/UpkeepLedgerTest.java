@@ -8,6 +8,7 @@ import java.util.Map;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
@@ -31,6 +33,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class UpkeepLedgerTest {
 
+    private static final FluidKey COOLANT = new FluidKey(new Fluid("galaxia.test.coolant"), null);
+
     @BeforeAll
     static void initRegistries() {
         CelestialRegistry.freezeAndBake();
@@ -42,7 +46,7 @@ final class UpkeepLedgerTest {
         Item item = new Item();
         ItemStack itemStack = new ItemStack(item);
         ItemStackWrapper itemKey = ItemStackWrapper.of(itemStack);
-        AutomatedFacility facility = facilityWithModule(moduleWithUpkeep(itemStack, 5L, "galaxia.test.coolant", 250L));
+        AutomatedFacility facility = facilityWithModule(moduleWithUpkeep(itemStack, 5L, COOLANT, 250L));
 
         UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
 
@@ -53,7 +57,7 @@ final class UpkeepLedgerTest {
         assertEquals(
             UpkeepAmount.ofWhole(250L),
             summary.fluidsPerMinute()
-                .get("galaxia.test.coolant"));
+                .get(COOLANT));
         assertEquals(
             1,
             summary.moduleDemands()
@@ -62,7 +66,7 @@ final class UpkeepLedgerTest {
 
     @Test
     void summaryIgnoresDisabledModules() {
-        ModuleInstance module = moduleWithUpkeep(new ItemStack(new Item()), 5L, "galaxia.test.coolant", 250L);
+        ModuleInstance module = moduleWithUpkeep(new ItemStack(new Item()), 5L, COOLANT, 250L);
         module.setEnabled(false);
         AutomatedFacility facility = facilityWithModule(module);
 
@@ -77,7 +81,7 @@ final class UpkeepLedgerTest {
         ItemStack itemStack = new ItemStack(item);
         ItemStackWrapper itemKey = ItemStackWrapper.of(itemStack);
         ModuleInstance source = moduleWithAreaEffect();
-        ModuleInstance target = moduleWithUpkeep(itemStack, 5L, "galaxia.test.coolant", 250L);
+        ModuleInstance target = moduleWithUpkeep(itemStack, 5L, COOLANT, 250L);
         AutomatedFacility facility = facilityWithModule(source, target);
 
         UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
@@ -89,7 +93,7 @@ final class UpkeepLedgerTest {
         assertEquals(
             UpkeepAmount.ofWhole(200L),
             summary.fluidsPerMinute()
-                .get("galaxia.test.coolant"));
+                .get(COOLANT));
         assertEquals(
             UpkeepAmount.ofWhole(4L),
             summary.moduleDemands()
@@ -137,7 +141,7 @@ final class UpkeepLedgerTest {
         return true;
     }
 
-    private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount, String fluidName,
+    private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount, FluidKey fluid,
         long fluidAmount) {
         ModuleTierData tierData = ModuleTierData.builder()
             .addedEnergyCapacity(0L)
@@ -145,7 +149,7 @@ final class UpkeepLedgerTest {
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L))
             .upkeepItem(upkeepItem, itemAmount)
-            .upkeepFluid(fluidName, fluidAmount)
+            .upkeepFluid(fluid, UpkeepAmount.ofWhole(fluidAmount))
             .build();
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.POWER,

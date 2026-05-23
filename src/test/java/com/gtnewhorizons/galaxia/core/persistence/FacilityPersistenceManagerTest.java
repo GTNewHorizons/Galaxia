@@ -151,13 +151,10 @@ final class FacilityPersistenceManagerTest {
             .get(1);
         station.setMinerOreBlacklisted(miner, "ore:iron", true);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
+        encoded.facility = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
+        manager.decodeFacilityState(decoded, encoded.facility);
 
         assertTrue(
             decoded.isMinerOreBlacklisted(
@@ -175,13 +172,10 @@ final class FacilityPersistenceManagerTest {
             .component();
         miner.setFocus(MinerFocusTier.III, "ore:iron", 1200);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
+        encoded.facility = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
+        manager.decodeFacilityState(decoded, encoded.facility);
 
         ModuleMiner decodedMiner = (ModuleMiner) decoded.modules()
             .get(1)
@@ -1405,8 +1399,8 @@ final class FacilityPersistenceManagerTest {
             CelestialObjectId.PANSPIRA,
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
-        station.loadUpkeepCredits(
-            new UpkeepSettlement.Credits(Map.of(), Map.of("galaxia.persistence.coolant", UpkeepAmount.parse("0.25"))));
+        FluidKey coolant = new FluidKey(TEST_FLUID_1, null);
+        station.loadUpkeepCredits(new UpkeepSettlement.Credits(Map.of(), Map.of(coolant, UpkeepAmount.parse("0.25"))));
 
         FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
         AutomatedFacility decoded = new AutomatedFacility(
@@ -1420,7 +1414,7 @@ final class FacilityPersistenceManagerTest {
             "0.25",
             decoded.upkeepCredits()
                 .fluidCredits()
-                .get("galaxia.persistence.coolant")
+                .get(coolant)
                 .toDisplayString());
     }
 
@@ -1438,13 +1432,10 @@ final class FacilityPersistenceManagerTest {
         station.setUpkeepReserve(resource, 17L);
         station.setUpkeepAutoOrder(resource, true);
 
-        FacilityPersistenceManager.FacilityStateJson encoded = manager.encodeFacilityState(station);
-        AutomatedFacility decoded = new AutomatedFacility(
-            station.assetId,
-            station.celestialObjectId,
-            station.kind,
-            station.status());
-        manager.decodeFacilityState(decoded, encoded);
+        FacilityPersistenceManager.AssetJson encoded = manager.encodeAsset(station);
+        encoded.facility = manager.encodeFacilityState(station);
+        AutomatedFacility decoded = (AutomatedFacility) manager.decodeAsset(encoded);
+        manager.decodeFacilityState(decoded, encoded.facility);
 
         assertEquals(17L, decoded.upkeepReserve(resource));
         assertTrue(decoded.isUpkeepAutoOrderEnabled(resource));

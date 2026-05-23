@@ -5,15 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import net.minecraft.item.Item;
+import net.minecraftforge.fluids.Fluid;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 final class UpkeepDemandTest {
 
     private static final ItemStackWrapper REDSTONE = new ItemStackWrapper(new Item(), 0, null);
     private static final ItemStackWrapper GOLD = new ItemStackWrapper(new Item(), 0, null);
+    private static final FluidKey COOLANT = new FluidKey(new Fluid("galaxia.test.fluid"), null);
 
     @Test
     void emptyBuilderReturnsSharedEmptyDemand() {
@@ -28,8 +31,8 @@ final class UpkeepDemandTest {
         UpkeepDemand demand = UpkeepDemand.builder()
             .item(REDSTONE, 4)
             .item(REDSTONE, 6)
-            .fluid("galaxia.test.fluid", 100)
-            .fluid("galaxia.test.fluid", 250)
+            .fluid(COOLANT, 100)
+            .fluid(COOLANT, 250)
             .build();
 
         assertEquals(
@@ -39,19 +42,19 @@ final class UpkeepDemandTest {
         assertEquals(
             UpkeepAmount.ofWhole(350L),
             demand.fluidsPerMinute()
-                .get("galaxia.test.fluid"));
+                .get(COOLANT));
     }
 
     @Test
     void plusAggregatesItemAndFluidDemands() {
         UpkeepDemand first = UpkeepDemand.builder()
             .item(REDSTONE, 4)
-            .fluid("galaxia.test.fluid", 100)
+            .fluid(COOLANT, 100)
             .build();
         UpkeepDemand second = UpkeepDemand.builder()
             .item(REDSTONE, 6)
             .item(GOLD, 2)
-            .fluid("galaxia.test.fluid", 50)
+            .fluid(COOLANT, 50)
             .build();
 
         UpkeepDemand result = first.plus(second);
@@ -67,14 +70,14 @@ final class UpkeepDemandTest {
         assertEquals(
             UpkeepAmount.ofWhole(150L),
             result.fluidsPerMinute()
-                .get("galaxia.test.fluid"));
+                .get(COOLANT));
     }
 
     @Test
     void percentMultiplierScalesUpkeepWithCeiling() {
         UpkeepDemand demand = UpkeepDemand.builder()
             .item(REDSTONE, 3)
-            .fluid("galaxia.test.fluid", 101)
+            .fluid(COOLANT, 101)
             .build();
 
         UpkeepDemand result = demand.multiplyPercent(80);
@@ -86,15 +89,15 @@ final class UpkeepDemandTest {
         assertEquals(
             UpkeepAmount.parse("80.8"),
             result.fluidsPerMinute()
-                .get("galaxia.test.fluid"));
+                .get(COOLANT));
     }
 
     @Test
-    void constructorRejectsInvalidFluidNames() {
+    void constructorRejectsNullFluidKeys() {
         assertThrows(
-            IllegalArgumentException.class,
+            NullPointerException.class,
             () -> UpkeepDemand.builder()
-                .fluid(" ", 1)
+                .fluid((FluidKey) null, 1)
                 .build());
     }
 }

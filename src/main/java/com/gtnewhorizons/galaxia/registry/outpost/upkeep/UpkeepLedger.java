@@ -9,6 +9,7 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -49,7 +50,7 @@ public final class UpkeepLedger {
     }
 
     public record UpkeepSummary(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
-        @Nonnull Map<String, UpkeepAmount> fluidsPerMinute, @Nonnull List<ModuleDemand> moduleDemands) {
+        @Nonnull Map<FluidKey, UpkeepAmount> fluidsPerMinute, @Nonnull List<ModuleDemand> moduleDemands) {
 
         public static final UpkeepSummary EMPTY = new UpkeepSummary(Map.of(), Map.of(), List.of());
 

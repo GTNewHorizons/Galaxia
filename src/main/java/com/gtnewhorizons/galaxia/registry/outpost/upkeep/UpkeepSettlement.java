@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
@@ -73,11 +74,11 @@ public final class UpkeepSettlement {
             nextItemCredits.put(item, newCredit);
         }
 
-        Map<String, UpkeepAmount> nextFluidCredits = new LinkedHashMap<>(credits.fluidCredits());
-        Map<String, Long> fluidConsumes = new LinkedHashMap<>();
-        for (Map.Entry<String, UpkeepAmount> entry : demand.fluidsPerMinute()
+        Map<FluidKey, UpkeepAmount> nextFluidCredits = new LinkedHashMap<>(credits.fluidCredits());
+        Map<FluidKey, Long> fluidConsumes = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, UpkeepAmount> entry : demand.fluidsPerMinute()
             .entrySet()) {
-            String fluid = entry.getKey();
+            FluidKey fluid = entry.getKey();
             UpkeepAmount demandAmount = entry.getValue();
             UpkeepAmount availableCredit = nextFluidCredits.getOrDefault(fluid, UpkeepAmount.ZERO);
             if (availableCredit.compareTo(demandAmount) >= 0) {
@@ -105,16 +106,16 @@ public final class UpkeepSettlement {
 
         boolean tryConsume(ItemStackWrapper item, long amount);
 
-        default long availableFluid(String fluidName) {
+        default long availableFluid(FluidKey fluid) {
             return 0L;
         }
 
-        default boolean tryConsumeFluid(String fluidName, long amount) {
+        default boolean tryConsumeFluid(FluidKey fluid, long amount) {
             return false;
         }
     }
 
-    public record Credits(Map<ItemStackWrapper, UpkeepAmount> itemCredits, Map<String, UpkeepAmount> fluidCredits) {
+    public record Credits(Map<ItemStackWrapper, UpkeepAmount> itemCredits, Map<FluidKey, UpkeepAmount> fluidCredits) {
 
         public Credits {
             itemCredits = normalizeItemCredits(itemCredits);
@@ -142,9 +143,9 @@ public final class UpkeepSettlement {
             return Collections.unmodifiableMap(result);
         }
 
-        private static Map<String, UpkeepAmount> normalizeFluidCredits(Map<String, UpkeepAmount> source) {
-            Map<String, UpkeepAmount> result = new LinkedHashMap<>();
-            for (Map.Entry<String, UpkeepAmount> entry : Objects.requireNonNull(source, "fluidCredits")
+        private static Map<FluidKey, UpkeepAmount> normalizeFluidCredits(Map<FluidKey, UpkeepAmount> source) {
+            Map<FluidKey, UpkeepAmount> result = new LinkedHashMap<>();
+            for (Map.Entry<FluidKey, UpkeepAmount> entry : Objects.requireNonNull(source, "fluidCredits")
                 .entrySet()) {
                 UpkeepAmount amount = Objects.requireNonNull(entry.getValue(), "fluid credit");
                 if (!amount.isZero()) {
@@ -187,7 +188,7 @@ public final class UpkeepSettlement {
     }
 
     private record Payment(Credits creditsAfter, Map<ItemStackWrapper, Long> itemConsumes,
-        Map<String, Long> fluidConsumes) {
+        Map<FluidKey, Long> fluidConsumes) {
 
         private void consume(ResourceInventory inventory) {
             itemConsumes.forEach(inventory::tryConsume);

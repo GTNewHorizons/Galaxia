@@ -60,12 +60,12 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
         }
 
         @Override
-        public long availableFluid(String fluidName) {
-            return facility.getFluidAmount(FluidKey.fromName(fluidName));
+        public long availableFluid(FluidKey fluid) {
+            return facility.getFluidAmount(fluid);
         }
 
         @Override
-        public boolean tryConsumeFluid(String fluidName, long amount) {
+        public boolean tryConsumeFluid(FluidKey fluid, long amount) {
             return true;
         }
     }

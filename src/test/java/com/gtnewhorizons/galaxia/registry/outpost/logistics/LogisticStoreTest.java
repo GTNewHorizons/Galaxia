@@ -2,7 +2,6 @@ package com.gtnewhorizons.galaxia.registry.outpost.logistics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
@@ -146,7 +145,7 @@ final class LogisticStoreTest {
     }
 
     @Test
-    void upkeepAutoOrderWithoutCoreImportDoesNotEmitVirtualRequest() {
+    void upkeepAutoOrderUsesCoreImportConfigForRequest() {
         AutomatedFacility station = facility();
         ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
         station.updateItems(resource, 3);
@@ -156,9 +155,8 @@ final class LogisticStoreTest {
 
         LogisticStore.updateSignalsForFacility(station);
 
-        assertTrue(
-            LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
-                .isEmpty());
+        LogisticSignal signal = signalFor(station, resource);
+        assertEquals(-12L, signal.amount());
     }
 
     @Test
@@ -170,14 +168,20 @@ final class LogisticStoreTest {
 
         LogisticStore.updateSignalsForFacility(station);
 
-        LogisticSignal signal = LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
+        LogisticSignal signal = signalFor(station, resource);
+        assertEquals(resource, signal.resourceId());
+        assertEquals(-12L, signal.amount());
+    }
+
+    private static LogisticSignal signalFor(AutomatedFacility station, ItemStackWrapper resource) {
+        return LogisticStore.allSignalsForScope(LogisticSignal.Scope.SYSTEM)
             .values()
             .stream()
             .flatMap(List::stream)
+            .filter(signal -> station.assetId.equals(signal.outpostAssetId()))
+            .filter(signal -> resource.equals(signal.resourceId()))
             .findFirst()
             .orElseThrow();
-        assertEquals(resource, signal.resourceId());
-        assertEquals(-12L, signal.amount());
     }
 
     private static AutomatedFacility facility() {

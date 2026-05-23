@@ -7,10 +7,11 @@ import java.util.Objects;
 
 import javax.annotation.Nonnull;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
 public record UpkeepDemand(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
-    @Nonnull Map<String, UpkeepAmount> fluidsPerMinute) {
+    @Nonnull Map<FluidKey, UpkeepAmount> fluidsPerMinute) {
 
     public static final UpkeepDemand EMPTY = new UpkeepDemand(Map.of(), Map.of());
 
@@ -67,17 +68,14 @@ public record UpkeepDemand(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPer
         return Collections.unmodifiableMap(result);
     }
 
-    private static Map<String, UpkeepAmount> normalizeFluids(Map<String, UpkeepAmount> source) {
+    private static Map<FluidKey, UpkeepAmount> normalizeFluids(Map<FluidKey, UpkeepAmount> source) {
         Objects.requireNonNull(source, "fluidsPerMinute");
-        Map<String, UpkeepAmount> result = new LinkedHashMap<>();
-        for (Map.Entry<String, UpkeepAmount> entry : source.entrySet()) {
-            String fluid = Objects.requireNonNull(entry.getKey(), "upkeep fluid");
-            if (fluid.isBlank()) {
-                throw new IllegalArgumentException("upkeep fluid name must not be blank");
-            }
+        Map<FluidKey, UpkeepAmount> result = new LinkedHashMap<>();
+        for (Map.Entry<FluidKey, UpkeepAmount> entry : source.entrySet()) {
+            FluidKey fluid = Objects.requireNonNull(entry.getKey(), "upkeep fluid");
             UpkeepAmount amount = Objects.requireNonNull(entry.getValue(), "upkeep fluid amount");
             if (amount.isZero()) {
-                throw new IllegalArgumentException("upkeep fluid amount must be > 0 for " + fluid);
+                throw new IllegalArgumentException("upkeep fluid amount must be > 0 for " + fluid.toKey());
             }
             result.put(fluid, amount);
         }
@@ -87,7 +85,7 @@ public record UpkeepDemand(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPer
     public static final class Builder {
 
         private final Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute = new LinkedHashMap<>();
-        private final Map<String, UpkeepAmount> fluidsPerMinute = new LinkedHashMap<>();
+        private final Map<FluidKey, UpkeepAmount> fluidsPerMinute = new LinkedHashMap<>();
 
         private Builder() {}
 
@@ -102,13 +100,13 @@ public record UpkeepDemand(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPer
             return this;
         }
 
-        public @Nonnull Builder fluid(@Nonnull String fluidName, long amount) {
-            return fluid(fluidName, UpkeepAmount.ofWhole(amount));
+        public @Nonnull Builder fluid(@Nonnull FluidKey fluid, long amount) {
+            return fluid(fluid, UpkeepAmount.ofWhole(amount));
         }
 
-        public @Nonnull Builder fluid(@Nonnull String fluidName, @Nonnull UpkeepAmount amount) {
+        public @Nonnull Builder fluid(@Nonnull FluidKey fluid, @Nonnull UpkeepAmount amount) {
             if (amount != null && !amount.isZero()) {
-                fluidsPerMinute.merge(Objects.requireNonNull(fluidName, "fluidName"), amount, UpkeepAmount::plus);
+                fluidsPerMinute.merge(Objects.requireNonNull(fluid, "fluid"), amount, UpkeepAmount::plus);
             }
             return this;
         }

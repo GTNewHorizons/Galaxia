@@ -69,8 +69,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private final UpkeepLedger upkeepLedger;
     private UpkeepSettlement.Credits upkeepCredits = UpkeepSettlement.Credits.empty();
-    private final Map<ItemStackWrapper, Long> upkeepItemReserves = new LinkedHashMap<>();
-    private final Set<ItemStackWrapper> upkeepAutoOrderItems = new HashSet<>();
 
     private long stationFeatureSalt;
     private final Map<ModuleInstance.ID, ModuleFeatureModifiers> featureModifiersByModule = new LinkedHashMap<>();
@@ -212,13 +210,16 @@ public final class AutomatedFacility extends CelestialAsset {
         if (amount < 0L) {
             throw new IllegalArgumentException("upkeep reserve must be >= 0");
         }
-        upkeepItemReserves.put(item, amount);
+        LogisticsResourceConfig current = logisticsConfig.get(item);
+        logisticsConfig.set(item, current.withMinReserve((int) Math.min(Integer.MAX_VALUE, amount)));
     }
 
     public long upkeepReserve(ItemStackWrapper item) {
         if (item == null) return 0L;
-        Long manual = upkeepItemReserves.get(item);
-        if (manual != null) return manual;
+        if (logisticsConfig.hasExplicit(item)) {
+            return logisticsConfig.get(item)
+                .minReserve();
+        }
         UpkeepAmount perMinute = upkeepSummary().itemsPerMinute()
             .get(item);
         if (perMinute == null || perMinute.isZero()) return 0L;
@@ -230,44 +231,23 @@ public final class AutomatedFacility extends CelestialAsset {
         if (item == null) {
             throw new IllegalArgumentException("item must not be null");
         }
+        LogisticsResourceConfig current = logisticsConfig.get(item);
         if (enabled) {
-            upkeepAutoOrderItems.add(item);
+            long reserve = upkeepReserve(item);
+            int minReserve = (int) Math.min(Integer.MAX_VALUE, reserve);
+            int orderSize = current == LogisticsResourceConfig.DEFAULT ? 64 : current.orderSize();
+            logisticsConfig.set(item, new LogisticsResourceConfig(minReserve, orderSize, true, false));
         } else {
-            upkeepAutoOrderItems.remove(item);
+            logisticsConfig.set(
+                item,
+                current.withImportEnabled(false)
+                    .withSupplyEnabled(false));
         }
     }
 
     public boolean isUpkeepAutoOrderEnabled(ItemStackWrapper item) {
-        return item != null && upkeepAutoOrderItems.contains(item);
-    }
-
-    public Set<ItemStackWrapper> upkeepAutoOrderItems() {
-        return Collections.unmodifiableSet(upkeepAutoOrderItems);
-    }
-
-    public Map<ItemStackWrapper, Long> upkeepItemReserves() {
-        return Collections.unmodifiableMap(upkeepItemReserves);
-    }
-
-    public void loadUpkeepSettings(Map<ItemStackWrapper, Long> reserves, Set<ItemStackWrapper> autoOrderItems) {
-        upkeepItemReserves.clear();
-        upkeepAutoOrderItems.clear();
-        if (reserves != null) {
-            for (Map.Entry<ItemStackWrapper, Long> entry : reserves.entrySet()) {
-                ItemStackWrapper item = entry.getKey();
-                Long amount = entry.getValue();
-                if (item != null && amount != null && amount >= 0L) {
-                    upkeepItemReserves.put(item, amount);
-                }
-            }
-        }
-        if (autoOrderItems != null) {
-            for (ItemStackWrapper item : autoOrderItems) {
-                if (item != null) {
-                    upkeepAutoOrderItems.add(item);
-                }
-            }
-        }
+        return item != null && logisticsConfig.get(item)
+            .isImportEnabled();
     }
 
     public long effectiveLowerBound(InventoryKey key) {
@@ -585,11 +565,9 @@ public final class AutomatedFacility extends CelestialAsset {
         return addInventory(item, -amount, true) == amount;
     }
 
-    public boolean tryConsumeFluid(String fluidName, long amount) {
-        if (fluidName == null || fluidName.isEmpty()) return false;
-        if (amount <= 0L) return true;
-        FluidKey key = FluidKey.fromName(fluidName);
+    public boolean tryConsumeFluid(FluidKey key, long amount) {
         if (key == null) return false;
+        if (amount <= 0L) return true;
         if (getFluidAmount(key) < amount) return false;
         long remaining = amount;
         long consumed = 0L;
@@ -616,14 +594,13 @@ public final class AutomatedFacility extends CelestialAsset {
         }
 
         @Override
-        public long availableFluid(String fluidName) {
-            FluidKey key = FluidKey.fromName(fluidName);
-            return key == null ? 0L : getFluidAmount(key);
+        public long availableFluid(FluidKey fluid) {
+            return fluid == null ? 0L : getFluidAmount(fluid);
         }
 
         @Override
-        public boolean tryConsumeFluid(String fluidName, long amount) {
-            return AutomatedFacility.this.tryConsumeFluid(fluidName, amount);
+        public boolean tryConsumeFluid(FluidKey fluid, long amount) {
+            return AutomatedFacility.this.tryConsumeFluid(fluid, amount);
         }
     }
 
