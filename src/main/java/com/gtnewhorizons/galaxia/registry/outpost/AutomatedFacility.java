@@ -541,10 +541,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    public long itemInventoryCapacity() {
-        return totalItemCapacity();
-    }
-
     public long insertInventory(ItemStackWrapper item, long amount) {
         return insertInventory(item, amount, true);
     }

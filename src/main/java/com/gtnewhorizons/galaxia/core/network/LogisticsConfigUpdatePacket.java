@@ -87,7 +87,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         buf.writeBoolean(isImportEnabled);
         buf.writeBoolean(isSupplyEnabled);
         buf.writeBoolean(removeEntry);
-        buf.writeByte((accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode).ordinal());
+        PacketUtil.writeEnum(buf, accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode);
     }
 
     @Override
@@ -99,10 +99,7 @@ public final class LogisticsConfigUpdatePacket implements IMessage {
         isImportEnabled = buf.readBoolean();
         isSupplyEnabled = buf.readBoolean();
         removeEntry = buf.readBoolean();
-        int modeOrdinal = buf.readByte();
-        LogisticsConfigAccessMode[] modes = LogisticsConfigAccessMode.values();
-        accessMode = modeOrdinal >= 0 && modeOrdinal < modes.length ? modes[modeOrdinal]
-            : LogisticsConfigAccessMode.FULL;
+        accessMode = PacketUtil.readEnum(buf, LogisticsConfigAccessMode.class);
     }
 
     public static class Handler implements IMessageHandler<LogisticsConfigUpdatePacket, IMessage> {

@@ -263,12 +263,11 @@ public abstract class CelestialAsset implements Buildable, IDistributedInventory
         InventoryBounds current = getBound(key);
         long nextLow = low ? amount : current.low();
         long nextUpper = low ? current.upper() : amount;
-        try {
-            getBoundsMap(key).put(key, new InventoryBounds(nextLow, nextUpper));
-            return true;
-        } catch (IllegalStateException e) {
-            return false;
-        }
+        boolean hasNextLow = low || current.hasLow();
+        boolean hasNextUpper = !low || current.hasUpper();
+        if (hasNextLow && hasNextUpper && nextLow > nextUpper) return false;
+        getBoundsMap(key).put(key, new InventoryBounds(nextLow, nextUpper));
+        return true;
     }
 
     public void clearBound(InventoryKey key) {

@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.annotation.Nonnull;
+
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -14,7 +16,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 
 public final class UpkeepLedger {
 
-    public UpkeepSummary summary(AutomatedFacility facility) {
+    public @Nonnull UpkeepSummary summary(@Nonnull AutomatedFacility facility) {
         Objects.requireNonNull(facility, "facility");
         UpkeepDemand aggregate = UpkeepDemand.EMPTY;
         List<ModuleDemand> moduleDemands = new java.util.ArrayList<>();
@@ -35,8 +37,8 @@ public final class UpkeepLedger {
         return module != null && module.isOperational() && module.enabled() && module.component() != null;
     }
 
-    public record ModuleDemand(ModuleInstance.ID moduleId, FacilityModuleKind kind, ModulePriority priority,
-        UpkeepDemand demand) {
+    public record ModuleDemand(@Nonnull ModuleInstance.ID moduleId, @Nonnull FacilityModuleKind kind,
+        @Nonnull ModulePriority priority, @Nonnull UpkeepDemand demand) {
 
         public ModuleDemand {
             Objects.requireNonNull(moduleId, "moduleId");
@@ -46,8 +48,8 @@ public final class UpkeepLedger {
         }
     }
 
-    public record UpkeepSummary(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
-        Map<String, UpkeepAmount> fluidsPerMinute, List<ModuleDemand> moduleDemands) {
+    public record UpkeepSummary(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
+        @Nonnull Map<String, UpkeepAmount> fluidsPerMinute, @Nonnull List<ModuleDemand> moduleDemands) {
 
         public static final UpkeepSummary EMPTY = new UpkeepSummary(Map.of(), Map.of(), List.of());
 

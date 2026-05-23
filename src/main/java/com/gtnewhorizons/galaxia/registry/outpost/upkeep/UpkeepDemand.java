@@ -5,10 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.annotation.Nonnull;
+
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 
-public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
-    Map<String, UpkeepAmount> fluidsPerMinute) {
+public record UpkeepDemand(@Nonnull Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
+    @Nonnull Map<String, UpkeepAmount> fluidsPerMinute) {
 
     public static final UpkeepDemand EMPTY = new UpkeepDemand(Map.of(), Map.of());
 
@@ -17,7 +19,7 @@ public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
         fluidsPerMinute = normalizeFluids(fluidsPerMinute);
     }
 
-    public static Builder builder() {
+    public static @Nonnull Builder builder() {
         return new Builder();
     }
 
@@ -25,7 +27,7 @@ public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
         return itemsPerMinute.isEmpty() && fluidsPerMinute.isEmpty();
     }
 
-    public UpkeepDemand plus(UpkeepDemand other) {
+    public @Nonnull UpkeepDemand plus(@Nonnull UpkeepDemand other) {
         Objects.requireNonNull(other, "other");
         if (other.isEmpty()) return this;
         if (isEmpty()) return other;
@@ -38,7 +40,7 @@ public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
         return builder.build();
     }
 
-    public UpkeepDemand multiplyPercent(int percent) {
+    public @Nonnull UpkeepDemand multiplyPercent(int percent) {
         if (percent < 0) {
             throw new IllegalArgumentException("percent must be >= 0, got " + percent);
         }
@@ -60,7 +62,7 @@ public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
             if (amount.isZero()) {
                 throw new IllegalArgumentException("upkeep item amount must be > 0 for " + item.toKey());
             }
-            result.merge(item, amount, UpkeepAmount::plus);
+            result.put(item, amount);
         }
         return Collections.unmodifiableMap(result);
     }
@@ -77,7 +79,7 @@ public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
             if (amount.isZero()) {
                 throw new IllegalArgumentException("upkeep fluid amount must be > 0 for " + fluid);
             }
-            result.merge(fluid, amount, UpkeepAmount::plus);
+            result.put(fluid, amount);
         }
         return Collections.unmodifiableMap(result);
     }
@@ -89,29 +91,29 @@ public record UpkeepDemand(Map<ItemStackWrapper, UpkeepAmount> itemsPerMinute,
 
         private Builder() {}
 
-        public Builder item(ItemStackWrapper item, long amount) {
+        public @Nonnull Builder item(@Nonnull ItemStackWrapper item, long amount) {
             return item(item, UpkeepAmount.ofWhole(amount));
         }
 
-        public Builder item(ItemStackWrapper item, UpkeepAmount amount) {
+        public @Nonnull Builder item(@Nonnull ItemStackWrapper item, @Nonnull UpkeepAmount amount) {
             if (amount != null && !amount.isZero()) {
                 itemsPerMinute.merge(Objects.requireNonNull(item, "item"), amount, UpkeepAmount::plus);
             }
             return this;
         }
 
-        public Builder fluid(String fluidName, long amount) {
+        public @Nonnull Builder fluid(@Nonnull String fluidName, long amount) {
             return fluid(fluidName, UpkeepAmount.ofWhole(amount));
         }
 
-        public Builder fluid(String fluidName, UpkeepAmount amount) {
+        public @Nonnull Builder fluid(@Nonnull String fluidName, @Nonnull UpkeepAmount amount) {
             if (amount != null && !amount.isZero()) {
                 fluidsPerMinute.merge(Objects.requireNonNull(fluidName, "fluidName"), amount, UpkeepAmount::plus);
             }
             return this;
         }
 
-        public UpkeepDemand build() {
+        public @Nonnull UpkeepDemand build() {
             if (itemsPerMinute.isEmpty() && fluidsPerMinute.isEmpty()) return EMPTY;
             return new UpkeepDemand(itemsPerMinute, fluidsPerMinute);
         }
