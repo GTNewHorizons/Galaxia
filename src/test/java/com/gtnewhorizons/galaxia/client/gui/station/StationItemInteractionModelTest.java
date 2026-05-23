@@ -22,6 +22,8 @@ import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
+import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -153,11 +155,61 @@ final class StationItemInteractionModelTest {
                 .microUnitsPerMinute() > 0);
     }
 
+    @Test
+    void minerAppearsAsProducerForBodyOre() {
+        AutomatedFacility facility = createMiningFacility();
+        facility.addModule(createMiner(StationTileCoord.of(1, 0)));
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Blocks.iron_ore));
+
+        List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, resource);
+
+        assertTrue(
+            entries.stream()
+                .anyMatch(
+                    entry -> entry.section() == StationItemInteractionModel.Section.MACHINES
+                        && entry.role() == StationItemInteractionModel.Role.PRODUCES
+                        && entry.kind() == FacilityModuleKind.MINER));
+    }
+
+    @Test
+    void minerAppearsAsProducerForFeatureMiningCandidate() {
+        AutomatedFacility facility = createFeatureMiningFacility();
+        facility.setStationFeatureSalt(987654321L);
+        facility.addModule(
+            createMiner(findMinerAnchorWithFeature(facility, PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION.key())));
+        ItemStackWrapper diamond = ItemStackWrapper.of(new ItemStack(Items.diamond));
+
+        List<StationItemInteractionModel.Entry> entries = StationItemInteractionModel.forItem(facility, diamond);
+
+        assertTrue(
+            entries.stream()
+                .anyMatch(
+                    entry -> entry.section() == StationItemInteractionModel.Section.MACHINES
+                        && entry.role() == StationItemInteractionModel.Role.PRODUCES
+                        && entry.kind() == FacilityModuleKind.MINER));
+    }
+
     private static AutomatedFacility createFacility() {
         return new AutomatedFacility(
             CelestialAsset.ID.create(),
             CelestialObjectId.PROXIMA_CENTAURI,
             CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+    }
+
+    private static AutomatedFacility createMiningFacility() {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MOON,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+    }
+
+    private static AutomatedFacility createFeatureMiningFacility() {
+        return new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.FROZEN_BELT,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
             Buildable.Status.OPERATIONAL);
     }
 
@@ -174,6 +226,17 @@ final class StationItemInteractionModelTest {
 
     private static ModuleInstance createHammer(StationTileCoord anchor) {
         ModuleInstance module = createModule(FacilityModuleKind.HAMMER, anchor);
+        module.updateStatus(Buildable.Status.OPERATIONAL);
+        return module;
+    }
+
+    private static ModuleInstance createMiner(StationTileCoord anchor) {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            anchor,
+            FacilityModuleKind.MINER.defaultShape(),
+            ModuleTier.EV);
         module.updateStatus(Buildable.Status.OPERATIONAL);
         return module;
     }
@@ -223,6 +286,24 @@ final class StationItemInteractionModelTest {
         module.setComponent(new TestTieredModule());
         module.updateStatus(Buildable.Status.OPERATIONAL);
         return module;
+    }
+
+    private static StationTileCoord findMinerAnchorWithFeature(AutomatedFacility facility,
+        PlanetaryFeatureKey feature) {
+        for (int dx = StationTileCoord.MIN; dx < StationTileCoord.MAX; dx++) {
+            for (int dy = StationTileCoord.MIN; dy < StationTileCoord.MAX; dy++) {
+                StationTileCoord anchor = StationTileCoord.of(dx, dy);
+                ModuleInstance miner = createMiner(anchor);
+                if (facility.featureContributions(miner)
+                    .stream()
+                    .anyMatch(
+                        contribution -> contribution.key()
+                            .equals(feature))) {
+                    return anchor;
+                }
+            }
+        }
+        throw new AssertionError("No deterministic feature found for item interaction test: " + feature);
     }
 
     private static final class TestTieredModule extends TieredModuleComponent {

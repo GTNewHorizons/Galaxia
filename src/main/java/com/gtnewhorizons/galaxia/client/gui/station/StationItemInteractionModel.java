@@ -17,6 +17,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
@@ -92,21 +93,24 @@ final class StationItemInteractionModel {
     private static void addRecipeMachines(List<Entry> entries, AutomatedFacility facility, ItemStackWrapper item) {
         Map<Key, AggregatedEntry> aggregated = new LinkedHashMap<>();
         for (ModuleInstance module : facility.modules()) {
-            if (!(module.component() instanceof IRecipeModule recipeModule)) continue;
-            RecipeConfig config = recipeModule.getRecipeConfig();
-            if (config == null) continue;
             boolean consumes = false;
-            boolean produces = false;
-            for (SavedRecipe saved : config.savedRecipes()) {
-                if (!saved.enabled()) continue;
-                consumes |= contains(
-                    saved.recipe()
-                        .inputs(),
-                    item);
-                produces |= contains(
-                    saved.recipe()
-                        .outputs(),
-                    item);
+            boolean produces = module.component() instanceof ModuleMiner
+                && contains(ModuleMiner.possibleOutputs(module, facility), item);
+            if (module.component() instanceof IRecipeModule recipeModule) {
+                RecipeConfig config = recipeModule.getRecipeConfig();
+                if (config != null) {
+                    for (SavedRecipe saved : config.savedRecipes()) {
+                        if (!saved.enabled()) continue;
+                        consumes |= contains(
+                            saved.recipe()
+                                .inputs(),
+                            item);
+                        produces |= contains(
+                            saved.recipe()
+                                .outputs(),
+                            item);
+                    }
+                }
             }
             if (consumes) aggregate(aggregated, facility, Section.MACHINES, Role.CONSUMES, module, null);
             if (produces) aggregate(aggregated, facility, Section.MACHINES, Role.PRODUCES, module, null);
@@ -182,6 +186,15 @@ final class StationItemInteractionModel {
 
     private static boolean contains(ItemStack[] stacks, ItemStackWrapper item) {
         if (stacks == null) return false;
+        for (ItemStack stack : stacks) {
+            if (stack != null && stack.getItem() != null && item.equals(ItemStackWrapper.of(stack))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean contains(List<ItemStack> stacks, ItemStackWrapper item) {
         for (ItemStack stack : stacks) {
             if (stack != null && stack.getItem() != null && item.equals(ItemStackWrapper.of(stack))) {
                 return true;

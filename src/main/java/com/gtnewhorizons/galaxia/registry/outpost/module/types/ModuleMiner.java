@@ -55,14 +55,8 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
         }
         GalaxiaCelestialAPI.get(outpost.celestialObjectId)
             .ifPresent(registration -> {
-                var properties = registration.properties();
-                List<ItemStack> ores = properties.ores();
-                List<ItemStack> veinOres = properties.getResolvedGtVeinOreStacks();
-                List<ItemStack> candidates = new java.util.ArrayList<>(ores.size() + veinOres.size());
-                candidates.addAll(ores);
-                candidates.addAll(veinOres);
                 MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
-                candidates.addAll(featureEffects.candidates());
+                List<ItemStack> candidates = miningCandidates(instance, facility, featureEffects);
                 if (candidates.isEmpty() && featureEffects.replacementRolls()
                     .isEmpty()) return;
                 miner.advanceFocusAlignment();
@@ -82,6 +76,38 @@ public final class ModuleMiner extends TieredModuleComponent implements IParalle
                     if (oreWrapper != null) facility.updateContents(oreWrapper, 1, true);
                 }
             });
+    }
+
+    public static List<ItemStack> possibleOutputs(@Nonnull ModuleInstance instance,
+        @Nonnull AutomatedFacility facility) {
+        MiningFeatureEffects featureEffects = featureMiningEffects(instance, facility);
+        List<ItemStack> outputs = new java.util.ArrayList<>(miningCandidates(instance, facility, featureEffects));
+        for (MiningFeatureEffects.ChanceStack roll : featureEffects.replacementRolls()) {
+            ItemStack copy = roll.stack()
+                .copy();
+            copy.stackSize = 1;
+            outputs.add(copy);
+        }
+        return List.copyOf(outputs);
+    }
+
+    private static List<ItemStack> miningCandidates(@Nonnull ModuleInstance instance,
+        @Nonnull AutomatedFacility facility, @Nonnull MiningFeatureEffects featureEffects) {
+        return GalaxiaCelestialAPI.get(facility.celestialObjectId)
+            .map(registration -> {
+                var properties = registration.properties();
+                List<ItemStack> ores = properties.ores();
+                List<ItemStack> veinOres = properties.getResolvedGtVeinOreStacks();
+                List<ItemStack> candidates = new java.util.ArrayList<>(
+                    ores.size() + veinOres.size()
+                        + featureEffects.candidates()
+                            .size());
+                candidates.addAll(ores);
+                candidates.addAll(veinOres);
+                candidates.addAll(featureEffects.candidates());
+                return List.copyOf(candidates);
+            })
+            .orElse(List.of());
     }
 
     public static MiningFeatureEffects featureMiningEffects(@Nonnull ModuleInstance module,
