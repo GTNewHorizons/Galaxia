@@ -15,10 +15,15 @@ public record StationModuleAlert(Severity severity, String title, String message
     }
 
     public static StationModuleAlert warning(String title, String message, @Nullable ResourceLocation icon) {
-        return new StationModuleAlert(Severity.WARNING, title, message, icon);
+        return new StationModuleAlert(Severity.YELLOW, title, message, icon);
+    }
+
+    public static StationModuleAlert critical(String title, String message, @Nullable ResourceLocation icon) {
+        return new StationModuleAlert(Severity.RED, title, message, icon);
     }
 
     public enum Severity {
-        WARNING
+        YELLOW,
+        RED
     }
 }

@@ -63,9 +63,42 @@ final class StationModuleAlertRegistryTest {
 
         assertFalse(alerts.isEmpty());
         assertEquals(
-            StationModuleAlert.Severity.WARNING,
+            StationModuleAlert.Severity.YELLOW,
             alerts.get(0)
                 .severity());
+    }
+
+    @Test
+    void blockedUpkeepShortageIsRedAlert() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
+        facility.addModule(module);
+
+        tickUpkeepMinute(facility);
+
+        List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
+        assertFalse(alerts.isEmpty());
+        assertEquals(
+            StationModuleAlert.Severity.RED,
+            alerts.get(0)
+                .severity());
+    }
+
+    @Test
+    void redAlertsAreOrderedBeforeYellowAlerts() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance module = createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
+        StationModuleAlert yellow = StationModuleAlert
+            .warning("Yellow", "Yellow alert", EnumTextures.ICON_STATION_ALERT_WARNING.get());
+        StationModuleAlert red = StationModuleAlert
+            .critical("Red", "Red alert", EnumTextures.ICON_STATION_ALERT_ERROR.get());
+
+        try (StationModuleAlertRegistry.Registration ignored = StationModuleAlertRegistry
+            .register((f, m) -> m == module ? List.of(yellow, red) : List.of())) {
+            List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
+
+            assertEquals(List.of(red, yellow), alerts);
+        }
     }
 
     @Test
@@ -78,6 +111,21 @@ final class StationModuleAlertRegistryTest {
         List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
 
         assertEquals(List.of(), alerts);
+    }
+
+    @Test
+    void coveredUpkeepStillConsumesInventoryOnMinuteTick() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
+        ItemStackWrapper upkeepItem = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        facility.addModule(module);
+        facility.addInventory(upkeepItem, 1L);
+
+        assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, module));
+
+        tickUpkeepMinute(facility);
+
+        assertEquals(0L, facility.getItemAmount(upkeepItem));
     }
 
     private static AutomatedFacility createFacility() {
@@ -120,6 +168,12 @@ final class StationModuleAlertRegistryTest {
         module.setComponent(new TestTieredModule());
         module.updateStatus(Buildable.Status.OPERATIONAL);
         return module;
+    }
+
+    private static void tickUpkeepMinute(AutomatedFacility facility) {
+        for (int i = 0; i < AutomatedFacility.UPKEEP_INTERVAL_TICKS; i++) {
+            facility.tick();
+        }
     }
 
     private static final class TestTieredModule extends TieredModuleComponent {

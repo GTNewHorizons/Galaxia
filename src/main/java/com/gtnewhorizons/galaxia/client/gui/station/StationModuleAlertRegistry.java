@@ -37,6 +37,7 @@ public final class StationModuleAlertRegistry {
                 if (alert != null) alerts.add(alert);
             }
         }
+        alerts.sort((a, b) -> Integer.compare(severityRank(b.severity()), severityRank(a.severity())));
         return alerts.isEmpty() ? List.of() : Collections.unmodifiableList(alerts);
     }
 
@@ -48,6 +49,13 @@ public final class StationModuleAlertRegistry {
             if (!alerts.isEmpty()) result.put(module.id, alerts);
         }
         return result.isEmpty() ? Map.of() : Collections.unmodifiableMap(result);
+    }
+
+    private static int severityRank(StationModuleAlert.Severity severity) {
+        return switch (severity) {
+            case RED -> 1;
+            case YELLOW -> 0;
+        };
     }
 
     @FunctionalInterface
