@@ -12,18 +12,15 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
-import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
@@ -386,24 +383,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
     private static void drawModuleAlertIcon(int tileX, int tileY, StationModuleAlert alert) {
         ResourceLocation icon = alert.icon() != null ? alert.icon() : DEFAULT_ALERT_ICON;
-        Minecraft.getMinecraft()
-            .getTextureManager()
-            .bindTexture(icon);
-        GlStateManager.enableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glColor4f(1f, 1f, 1f, 1f);
-        drawTexturedQuad(tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
-    }
-
-    private static void drawTexturedQuad(int x, int y, int width, int height) {
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + height, 0.0, 0.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y + height, 0.0, 1.0, 1.0);
-        tessellator.addVertexWithUV(x + width, y, 0.0, 1.0, 0.0);
-        tessellator.addVertexWithUV(x, y, 0.0, 0.0, 0.0);
-        tessellator.draw();
+        ModuleConfigModalSupport.renderTextureIcon(icon, tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
     }
 
     private void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,

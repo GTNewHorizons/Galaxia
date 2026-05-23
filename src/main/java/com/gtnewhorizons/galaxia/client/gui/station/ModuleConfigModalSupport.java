@@ -9,8 +9,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
@@ -148,6 +150,27 @@ final class ModuleConfigModalSupport {
             .setEnabledIf(w -> enabledSupplier.getAsBoolean());
     }
 
+    static ButtonWidget<?> textureIconButton(BooleanSupplier enabledSupplier, ResourceLocation icon, String tooltip,
+        Runnable onClick) {
+        return new ButtonWidget<>()
+            .background(
+                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), false)))
+            .hoverBackground(
+                drawable((ctx, x, y, w, h) -> drawButtonBackground(x, y, w, h, enabledSupplier.getAsBoolean(), true)))
+            .overlay(drawable((ctx, x, y, w, h) -> {
+                if (!enabledSupplier.getAsBoolean() || icon == null) return;
+                renderTextureIcon(icon, x + (w - 12) / 2, y + (h - 12) / 2, 12, 12);
+            }))
+            .onMousePressed(mouseButton -> {
+                if (mouseButton != 0 || !enabledSupplier.getAsBoolean()) return false;
+                onClick.run();
+                return true;
+            })
+            .tooltipDynamic(t -> { if (enabledSupplier.getAsBoolean()) t.addLine(tooltip); })
+            .onUpdateListener(ButtonWidget::markTooltipDirty, true)
+            .setEnabledIf(w -> enabledSupplier.getAsBoolean());
+    }
+
     static int drawLine(String text, int x, int y, int color) {
         FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
         fr.drawStringWithShadow(text, x, y, color);
@@ -248,6 +271,24 @@ final class ModuleConfigModalSupport {
         RenderHelper.disableStandardItemLighting();
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         com.cleanroommc.modularui.utils.GlStateManager.popMatrix();
+    }
+
+    static void renderTextureIcon(ResourceLocation texture, int x, int y, int width, int height) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.getTextureManager() == null || texture == null) return;
+        mc.getTextureManager()
+            .bindTexture(texture);
+        com.cleanroommc.modularui.utils.GlStateManager.enableTexture2D();
+        com.cleanroommc.modularui.utils.GlStateManager.enableBlend();
+        com.cleanroommc.modularui.utils.GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.startDrawingQuads();
+        tessellator.addVertexWithUV(x, y + height, 0.0, 0.0, 1.0);
+        tessellator.addVertexWithUV(x + width, y + height, 0.0, 1.0, 1.0);
+        tessellator.addVertexWithUV(x + width, y, 0.0, 1.0, 0.0);
+        tessellator.addVertexWithUV(x, y, 0.0, 0.0, 0.0);
+        tessellator.draw();
     }
 
     private static String moduleDisplayName(ModuleInstance module) {

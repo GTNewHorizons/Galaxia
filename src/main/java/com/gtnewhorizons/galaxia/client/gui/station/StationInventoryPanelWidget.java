@@ -8,7 +8,6 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.gui.Gui;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -22,6 +21,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.DrawableCommand;
 import com.gtnewhorizons.galaxia.core.network.AssetModuleUpdatePacket;
@@ -365,9 +365,9 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                         .size(NAME_WIDTH, ROW_HEIGHT));
         rowWidget.child(
             ModuleConfigModalSupport
-                .iconButton(
+                .textureIconButton(
                     () -> af() != null,
-                    new ItemStack(Items.compass),
+                    EnumTextures.ICON_STATION_ITEM_INTERACTIONS.get(),
                     "Interactions",
                     () -> openItemInteractions(wrapper))
                 .pos(ITEM_INTERACTION_BUTTON_X, 3)
