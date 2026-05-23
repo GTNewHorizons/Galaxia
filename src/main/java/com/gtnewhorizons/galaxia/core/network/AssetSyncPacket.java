@@ -87,10 +87,11 @@ public final class AssetSyncPacket implements IMessage {
     public static final byte LAYOUT_TILE_REMOVED = 9;
     public static final byte ASSET_REMOVED = 10;
     public static final byte SETTINGS_GROUP_UPDATED = 11;
-    public static final byte FILTER_UPDATED = 12;
-    public static final byte FILTER_REMOVED = 13;
-    public static final byte INVENTORY_BOUND_UPDATE = 14;
-    public static final byte UPKEEP_SETTINGS_UPDATE = 15;
+    public static final byte INVENTORY_BOUND_UPDATE = 12;
+    public static final byte FILTER_UPDATED = 13;
+    public static final byte FILTER_REMOVED = 14;
+    public static final byte CLEAR = 15;
+    public static final byte UPKEEP_SETTINGS_UPDATE = 16;
 
     private static final int MAX_OPERATION_MAP_ENTRIES = 256;
     private static final int MAX_RECIPE_STACKS = 64;
@@ -306,6 +307,12 @@ public final class AssetSyncPacket implements IMessage {
         return pkt;
     }
 
+    public static AssetSyncPacket clear() {
+        AssetSyncPacket pkt = new AssetSyncPacket();
+        pkt.syncType = CLEAR;
+        return pkt;
+    }
+
     public static AssetSyncPacket assetRemoved(CelestialAsset.ID assetId) {
         AssetSyncPacket pkt = new AssetSyncPacket();
         pkt.assetId = assetId;
@@ -499,10 +506,12 @@ public final class AssetSyncPacket implements IMessage {
 
     @Override
     public void toBytes(ByteBuf buf) {
-        PacketUtil.writeId(buf, assetId);
         buf.writeByte(syncType);
         buf.writeInt(syncRevision);
 
+        if (syncType != CLEAR) {
+            PacketUtil.writeId(buf, assetId);
+        }
         switch (syncType) {
             case FULL_SYNC -> {
                 PacketUtil.writeEnum(buf, assetKind);
@@ -546,10 +555,12 @@ public final class AssetSyncPacket implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        assetId = PacketUtil.readAssetId(buf);
         syncType = buf.readByte();
         syncRevision = buf.readInt();
 
+        if (syncType != CLEAR) {
+            assetId = PacketUtil.readAssetId(buf);
+        }
         switch (syncType) {
             case FULL_SYNC -> {
                 assetKind = PacketUtil.readEnum(buf, CelestialAsset.Kind.class);
@@ -1269,6 +1280,7 @@ public final class AssetSyncPacket implements IMessage {
 
         public static void handleClientSync(AssetSyncPacket packet) {
             switch (packet.syncType) {
+                case CLEAR -> CelestialAssetStore.CLIENT.clearInternal();
                 case ASSET_REMOVED -> CelestialAssetStore.CLIENT.destroyAssetInternal(packet.assetId);
                 case FULL_SYNC -> handleFull(packet);
                 default -> {

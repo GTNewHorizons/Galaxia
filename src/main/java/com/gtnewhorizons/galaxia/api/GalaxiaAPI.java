@@ -20,7 +20,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
@@ -360,7 +360,7 @@ public final class GalaxiaAPI {
 
         CelestialObjectId id = GalaxiaCelestialAPI.getObjectFromDimension(player.dimension);
         if (id == CelestialObjectId.INVALID) return false;
-        Set<CelestialAsset> teamAssets = CelestialAssetStore.getTeamAssets(TempTeamCompat.getTeam(player), id);
+        Set<CelestialAsset> teamAssets = CelestialAssetStore.getTeamAssets(GTTeamsCompat.getTeam(player), id);
         for (CelestialAsset asset : teamAssets) {
             if (asset instanceof Station station) {
                 BlockPos pos = station.getController();

@@ -10,7 +10,8 @@ import net.minecraft.network.PacketBuffer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.outpost.Station;
@@ -163,11 +164,12 @@ public final class StarmapActionSyncHandler extends SyncHandler {
     public void readOnServer(int id, PacketBuffer buf) throws IOException {
         EntityPlayer player = getSyncManager().getPlayer();
         if (!(player instanceof EntityPlayerMP playerMp)) return;
-        UUID teamId = TempTeamCompat.getTeam(playerMp);
+        UUID teamId = GTTeamsCompat.getTeam(playerMp);
         boolean creative = playerMp.capabilities.isCreativeMode;
 
         switch (id) {
             case REQUEST_CREATE_ASSET -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CREATE_ASSET)) return;
                 AssetCreateRequestPacket packet = new AssetCreateRequestPacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));
@@ -175,29 +177,34 @@ public final class StarmapActionSyncHandler extends SyncHandler {
             case REQUEST_UPDATE_ASSET -> {
                 AssetUpdatePacket packet = new AssetUpdatePacket();
                 packet.fromBytes(buf);
-                syncPacket(packet.apply(teamId));
+                syncPacket(packet.apply(teamId, playerMp));
             }
             case REQUEST_BUILD_MODULE -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.BUILD_MODULE)) return;
                 AssetBuildModulePacket packet = new AssetBuildModulePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_MODULE_UPDATE -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MODIFY_MODULE)) return;
                 AssetModuleUpdatePacket packet = new AssetModuleUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_INVENTORY_UPDATE -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.MANAGE_INVENTORY)) return;
                 AssetInventoryUpdatePacket packet = new AssetInventoryUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId, creative));
             }
             case REQUEST_LOGISTICS_CONFIG -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
                 LogisticsConfigUpdatePacket packet = new LogisticsConfigUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));
             }
             case REQUEST_FILTER_UPDATE -> {
+                if (!GTTeamsCompat.hasPermission(playerMp, TeamAction.CONFIGURE_LOGISTICS)) return;
                 AssetFilterUpdatePacket packet = new AssetFilterUpdatePacket();
                 packet.fromBytes(buf);
                 syncPacket(packet.apply(teamId));

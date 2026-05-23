@@ -11,10 +11,17 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter.B
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection.BAUBLE_TYPE_THERMAL_PROTECTION;
 import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection.BAUBLE_TYPE_WITHER_PROTECTION;
 
+import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
+import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
+import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
+import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
+import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
+import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
+import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TetherEventHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
@@ -52,6 +59,10 @@ public class CommonProxy {
 
         // Forge bus registering
         ForgeBusRegister(new FacilityPersistenceManager());
+        ForgeBusRegister(new TeamEventHandler());
+
+        // GTNH Teams custom data
+        TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
 
         // Registration
         GalaxiaItemList.registerAll();
@@ -75,6 +86,12 @@ public class CommonProxy {
         NetworkManager.registerPackets();
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
         EntityRegistry.registerModEntity(EntityRocketSeat.class, "RocketSeat", 1, Galaxia.instance, 64, 1, false);
+
+        // Why Gui code on server? idk ask mui2
+        ItemPickerScreen.FACTORY.init();
+        ModulePickerScreen.FACTORY.init();
+        StationManagementScreen.FACTORY.init();
+        TeamPermissionScreen.FACTORY.init();
     }
 
     // postInit "Handle interaction with other mods, complete your setup based on

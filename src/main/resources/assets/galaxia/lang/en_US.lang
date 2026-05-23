@@ -504,6 +504,23 @@ galaxia.gui.oxygen_pylon.title=Oxygen Pylon
 galaxia.gui.oxygen_pylon.radius=Radius: %s
 galaxia.gui.oxygen_pylon.players_charged=Players Charged: %s
 
+# Team Permissions GUI
+galaxia.gui.team_config.title=Team Configuration
+galaxia.gui.team_config.color=Team Color
+galaxia.gui.team_config.action.create_asset=Create Asset
+galaxia.gui.team_config.action.build_module=Build Module
+galaxia.gui.team_config.action.modify_module=Modify Module
+galaxia.gui.team_config.action.configure_logistics=Configure Logistics
+galaxia.gui.team_config.action.manage_inventory=Manage Inventory
+galaxia.gui.team_config.action.rename_asset=Rename Asset
+galaxia.gui.team_config.action.destroy_asset=Destroy Asset
+galaxia.gui.team_config.action.deconstruct_asset=Deconstruct Asset
+galaxia.gui.team_config.button=Team config
+
+# Team Info
+galaxia.gui.team_info.team=Team: %s
+galaxia.gui.team_info.members=Members: %s
+
 # Common
 galaxia.gui.common.generating=Generating
 galaxia.gui.common.filling=Filling

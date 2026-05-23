@@ -13,7 +13,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
@@ -36,7 +36,8 @@ public class BlockStationController extends BlockUpdatable implements ITileEntit
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
 
         if (placer instanceof EntityPlayer player) {
-            UUID teamId = TempTeamCompat.getTeam();
+            UUID teamId = GTTeamsCompat.getTeam(player);
+            if (teamId == null) return;
             TileEntity te = world.getTileEntity(x, y, z);
             if (!(te instanceof TileStationController sm)) return;
 

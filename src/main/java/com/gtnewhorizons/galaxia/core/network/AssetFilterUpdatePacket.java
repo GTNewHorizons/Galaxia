@@ -6,7 +6,8 @@ import java.util.UUID;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 
-import com.gtnewhorizons.galaxia.compat.TempTeamCompat;
+import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -108,7 +109,9 @@ public final class AssetFilterUpdatePacket implements IMessage {
         @Override
         public IMessage onMessage(AssetFilterUpdatePacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            UUID teamId = TempTeamCompat.getTeam(player);
+            if (player == null) return null;
+            UUID teamId = GTTeamsCompat.getTeam(player);
+            if (!GTTeamsCompat.hasPermission(player, TeamAction.CONFIGURE_LOGISTICS)) return null;
             return message.apply(teamId);
         }
     }
@@ -120,10 +123,6 @@ public final class AssetFilterUpdatePacket implements IMessage {
 
         CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
         if (asset == null) return null;
-
-        if (!CelestialAssetStore.isOwnedBy(teamId, assetId)) {
-            return null;
-        }
 
         if (!(asset instanceof AutomatedFacility facility)) {
             return null;

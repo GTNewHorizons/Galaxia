@@ -25,6 +25,7 @@ import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.SafePhantomItemSlot;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -82,6 +83,11 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
     private static final int DEBUG_GHOST_SLOT_LEFT = DEBUG_PANEL_PADDING + 110;
     private static final int DEBUG_PICK_BUTTON_LEFT = DEBUG_PANEL_PADDING + 134;
     private static final int DEBUG_PICK_BUTTON_WIDTH = 68;
+
+    // Permissions button (bottom-anchored, only for team owners)
+    private static final int PERMISSIONS_BTN_WIDTH = 100;
+    private static final int PERMISSIONS_BTN_HEIGHT = 16;
+    private static final int PERMISSIONS_BTN_BOTTOM = 6;
 
     public CelestialSidebarWidget(CelestialObject root, CelestialObject currentSystem,
         OrbitalView.OrbitalMapWidget map) {
@@ -166,6 +172,7 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
         if (handleTransferSimulatorButtonClick(localX, localYAbsolute)) return true;
         if (handleSupplyDebugButtonClick(localX, localYAbsolute)) return true;
         if (supplyDebugPanelOpen && handleSupplyDebugPanelClick(localX, localYAbsolute)) return true;
+        if (handlePermissionsButtonClick(localX, localYAbsolute)) return true;
         if (activeLayer == root) return false;
         VisibleEntry entry = findVisibleRowAt(localX, localYAbsolute);
         if (entry == null) return false;
@@ -329,6 +336,26 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             return true;
         }
         return false;
+    }
+
+    private boolean handlePermissionsButtonClick(int localX, int localY) {
+        int btnLeft = getPermissionsButtonLeft();
+        int btnTop = getPermissionsButtonTop();
+        if (localX >= btnLeft && localX <= btnLeft + PERMISSIONS_BTN_WIDTH
+            && localY >= btnTop
+            && localY <= btnTop + PERMISSIONS_BTN_HEIGHT) {
+            TeamPermissionScreen.open();
+            return true;
+        }
+        return false;
+    }
+
+    private int getPermissionsButtonLeft() {
+        return (getArea().width - PERMISSIONS_BTN_WIDTH) / 2;
+    }
+
+    private int getPermissionsButtonTop() {
+        return getArea().height - PERMISSIONS_BTN_HEIGHT - PERMISSIONS_BTN_BOTTOM;
     }
 
     private void selectLayer(CelestialObject layerRoot) {
@@ -688,6 +715,15 @@ public class CelestialSidebarWidget extends ParentWidget<CelestialSidebarWidget>
             "Supply Debug",
             supplyDebugPanelOpen);
         updateSupplyDebugFieldPositions();
+        int btnLeft = getPermissionsButtonLeft();
+        int btnTop = getPermissionsButtonTop();
+        drawInlineButton(
+            btnLeft,
+            btnTop,
+            PERMISSIONS_BTN_WIDTH,
+            PERMISSIONS_BTN_HEIGHT,
+            StatCollector.translateToLocal("galaxia.gui.team_config.button"),
+            true);
         if (supplyDebugPanelOpen) {
             drawSupplyDebugPanel(context, widgetTheme);
             return;

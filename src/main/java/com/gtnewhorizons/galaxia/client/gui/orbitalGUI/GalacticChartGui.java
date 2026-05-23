@@ -1,6 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
-import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayer;
 
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -15,13 +15,12 @@ public class GalacticChartGui {
 
     private static final int LEFT_PANEL_WIDTH = 216;
 
-    public ModularPanel build(PanelSyncManager syncManager) {
+    public ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
         syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         ModularPanel panel = ModularPanel.defaultPanel("galactic_orbital_map")
             .fullScreenInvisible();
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();
-        int currentDimension = Minecraft.getMinecraft().thePlayer == null ? 0
-            : Minecraft.getMinecraft().thePlayer.dimension;
+        int currentDimension = player.dimension;
         CelestialObject currentStar = GalaxiaCelestialAPI.findCurrentStar(currentDimension)
             .orElseGet(
                 () -> GalaxiaCelestialAPI.getPrimaryStar()
