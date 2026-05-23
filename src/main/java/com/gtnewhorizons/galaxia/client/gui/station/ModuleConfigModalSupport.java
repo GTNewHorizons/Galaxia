@@ -231,10 +231,15 @@ final class ModuleConfigModalSupport {
     }
 
     static void renderItemIcon(ItemStack stack, int x, int y) {
+        renderItemIcon(stack, x, y, 1.0f);
+    }
+
+    static void renderItemIcon(ItemStack stack, int x, int y, float scale) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc == null || mc.fontRenderer == null || mc.getTextureManager() == null || stack == null) return;
         com.cleanroommc.modularui.utils.GlStateManager.pushMatrix();
         com.cleanroommc.modularui.utils.GlStateManager.translate(x, y, 200f);
+        if (scale != 1.0f) GL11.glScalef(scale, scale, 1.0f);
         GL11.glEnable(GL12.GL_RESCALE_NORMAL);
         GL11.glEnable(GL11.GL_ALPHA_TEST);
         RenderHelper.enableGUIStandardItemLighting();

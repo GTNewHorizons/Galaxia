@@ -1,0 +1,68 @@
+package com.gtnewhorizons.galaxia.client.gui.station;
+
+import java.util.List;
+
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
+import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
+
+final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvider {
+
+    static final UpkeepShortageModuleAlertProvider INSTANCE = new UpkeepShortageModuleAlertProvider();
+
+    private static final ItemStack WARNING_ICON = new ItemStack(Items.glowstone_dust);
+
+    private UpkeepShortageModuleAlertProvider() {}
+
+    @Override
+    public List<StationModuleAlert> alerts(AutomatedFacility facility, ModuleInstance module) {
+        UpkeepLedger.ModuleDemand demand = demandFor(facility, module);
+        if (demand == null) return List.of();
+        UpkeepSettlement.Result result = UpkeepSettlement
+            .settle(List.of(demand), facility.upkeepCredits(), new FacilityResourceView(facility));
+        return result.unpaidModuleIds()
+            .contains(module.id)
+                ? List.of(StationModuleAlert.warning("Upkeep", "Missing upkeep resources.", WARNING_ICON))
+                : List.of();
+    }
+
+    private static UpkeepLedger.ModuleDemand demandFor(AutomatedFacility facility, ModuleInstance module) {
+        if (facility == null || module == null) return null;
+        for (UpkeepLedger.ModuleDemand demand : facility.upkeepSummary()
+            .moduleDemands()) {
+            if (module.id.equals(demand.moduleId()) && !demand.demand()
+                .isEmpty()) {
+                return demand;
+            }
+        }
+        return null;
+    }
+
+    private record FacilityResourceView(AutomatedFacility facility) implements UpkeepSettlement.ResourceInventory {
+
+        @Override
+        public long available(com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper item) {
+            return facility.getItemAmount(item);
+        }
+
+        @Override
+        public boolean tryConsume(com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper item, long amount) {
+            return true;
+        }
+
+        @Override
+        public long availableFluid(String fluidName) {
+            return facility.getFluidAmount(FluidKey.fromName(fluidName));
+        }
+
+        @Override
+        public boolean tryConsumeFluid(String fluidName, long amount) {
+            return true;
+        }
+    }
+}

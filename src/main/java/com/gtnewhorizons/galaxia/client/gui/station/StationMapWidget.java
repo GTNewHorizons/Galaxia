@@ -12,6 +12,8 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -70,6 +72,10 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
     private boolean listenersRegistered;
     private static final int CLICK_DRAG_THRESHOLD = 3;
+    private static final int ALERT_ICON_BOX_SIZE = 12;
+    private static final int ALERT_ICON_SIZE = 10;
+    private static final float ALERT_ICON_SCALE = ALERT_ICON_SIZE / 16.0f;
+    private static final ItemStack DEFAULT_ALERT_ICON = new ItemStack(Items.glowstone_dust);
 
     public StationMapWidget(CelestialAsset.ID assetId) {
         this(assetId, null, null);
@@ -267,6 +273,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         updateHover(layout);
         Map<StationTileCoord, PlacedTile> tiles = layout.snapshot();
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts = StationModuleAlertRegistry.alerts(facility);
         updateExpansionSlots(layout);
 
         int widgetWidth = getArea().width;
@@ -308,6 +315,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             int ty = tileLocalY(coord);
             ModuleLayerRenderer.drawOccupied(context, tx, ty, e.getValue());
         }
+        drawModuleAlerts(tiles, moduleAlerts);
 
         drawPickerOverlay(context, tiles);
 
@@ -357,6 +365,104 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         }
 
         drawFeatureTooltip(facility);
+        drawModuleAlertTooltip(tiles, moduleAlerts);
+    }
+
+    private void drawModuleAlerts(Map<StationTileCoord, PlacedTile> tiles,
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts) {
+        if (moduleAlerts.isEmpty()) return;
+        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
+            ModuleInstance module = moduleOf(entry.getValue());
+            if (module == null || !entry.getKey()
+                .equals(alertBadgeCoord(module, tiles))) {
+                continue;
+            }
+            StationModuleAlert alert = firstAlert(moduleAlerts, module);
+            if (alert == null) continue;
+            drawModuleAlertIcon(tileLocalX(entry.getKey()), tileLocalY(entry.getKey()), alert);
+        }
+    }
+
+    private static void drawModuleAlertIcon(int tileX, int tileY, StationModuleAlert alert) {
+        int boxX = tileX + 1;
+        int boxY = tileY + 1;
+        BorderedRect.draw(
+            boxX,
+            boxY,
+            ALERT_ICON_BOX_SIZE,
+            ALERT_ICON_BOX_SIZE,
+            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
+            EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
+        ItemStack icon = alert.icon() != null ? alert.icon() : DEFAULT_ALERT_ICON;
+        ModuleConfigModalSupport.renderItemIcon(icon, boxX + 1, boxY + 1, ALERT_ICON_SCALE);
+    }
+
+    private void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts) {
+        if (moduleAlerts.isEmpty() || hovered == null) return;
+        PlacedTile tile = tiles.get(hovered);
+        ModuleInstance module = moduleOf(tile);
+        if (module == null) return;
+        StationModuleAlert alert = firstAlert(moduleAlerts, module);
+        if (alert == null) return;
+
+        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
+        int localX = toLocalMouseX(getContext().getMouseX());
+        int localY = toLocalMouseY(getContext().getMouseY());
+        int maxTextWidth = Math.max(40, Math.min(180, getArea().width - 20));
+        String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
+        String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
+        int tooltipWidth = Math.max(fr.getStringWidth(title), fr.getStringWidth(message)) + 12;
+        int tooltipHeight = 8 + 2 * (fr.FONT_HEIGHT + 2);
+        int tooltipX = Math.min(localX + 10, getArea().width - tooltipWidth - 2);
+        int tooltipY = Math.min(localY + 10, getArea().height - tooltipHeight - 2);
+        tooltipX = Math.max(2, tooltipX);
+        tooltipY = Math.max(2, tooltipY);
+        BorderedRect.draw(
+            tooltipX,
+            tooltipY,
+            tooltipWidth,
+            tooltipHeight,
+            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
+            EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
+        int textY = tooltipY + 4;
+        fr.drawStringWithShadow(
+            title,
+            tooltipX + 6,
+            textY,
+            EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
+        textY += fr.FONT_HEIGHT + 2;
+        fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+    }
+
+    private static @Nullable StationModuleAlert firstAlert(
+        Map<ModuleInstance.ID, List<StationModuleAlert>> moduleAlerts, ModuleInstance module) {
+        List<StationModuleAlert> alerts = moduleAlerts.get(module.id);
+        return alerts == null || alerts.isEmpty() ? null : alerts.get(0);
+    }
+
+    private static @Nullable ModuleInstance moduleOf(@Nullable PlacedTile tile) {
+        return tile == null ? null : tile.module();
+    }
+
+    private static StationTileCoord alertBadgeCoord(ModuleInstance module, Map<StationTileCoord, PlacedTile> tiles) {
+        int minDx = module.anchor()
+            .dx();
+        int minDy = module.anchor()
+            .dy();
+        for (Map.Entry<StationTileCoord, PlacedTile> entry : tiles.entrySet()) {
+            ModuleInstance tileModule = moduleOf(entry.getValue());
+            if (tileModule == null || !module.id.equals(tileModule.id)) continue;
+            minDx = Math.min(
+                minDx,
+                entry.getKey()
+                    .dx());
+            minDy = Math.min(
+                minDy,
+                entry.getKey()
+                    .dy());
+        }
+        return StationTileCoord.of(minDx, minDy);
     }
 
     private void updateHover(StationLayout layout) {
