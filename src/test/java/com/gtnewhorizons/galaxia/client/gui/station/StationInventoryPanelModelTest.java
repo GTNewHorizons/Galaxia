@@ -151,6 +151,34 @@ final class StationInventoryPanelModelTest {
         assertEquals("Reserve covers 2.5 min of upkeep.", status.tooltip());
     }
 
+    @Test
+    void upkeepOverviewRowsExposeDemandStockReserveAndAutoOrder() {
+        AutomatedFacility distributed = (AutomatedFacility) distributed();
+        ItemStack upkeepStack = new ItemStack(new Item(), 1, 0);
+        ItemStackWrapper tracked = ItemStackWrapper.of(upkeepStack);
+        distributed.addModule(moduleWithUpkeep(upkeepStack, 2L));
+        distributed.updateItems(tracked, 7);
+        distributed.setUpkeepReserve(tracked, 13L);
+        distributed.setUpkeepAutoOrder(tracked, true);
+
+        List<StationInventoryPanelModel.UpkeepItemRow> rows = StationInventoryPanelModel.upkeepItemRows(distributed);
+
+        assertEquals(1, rows.size());
+        StationInventoryPanelModel.UpkeepItemRow row = rows.get(0);
+        assertEquals(tracked, row.item());
+        assertEquals(
+            "2",
+            row.perMinute()
+                .toDisplayString());
+        assertEquals(7L, row.stock());
+        assertEquals(13L, row.reserve());
+        assertTrue(row.autoOrder());
+        assertEquals(
+            StationInventoryPanelModel.UpkeepReserveLevel.WARNING,
+            row.status()
+                .level());
+    }
+
     private static void setAmount(IDistributedInventory distributed, ItemStackWrapper item, int amount) {
         if (distributed instanceof AutomatedFacility af) {
             af.updateItems(item, amount);

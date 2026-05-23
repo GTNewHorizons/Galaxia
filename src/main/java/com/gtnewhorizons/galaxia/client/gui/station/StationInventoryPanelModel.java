@@ -93,6 +93,30 @@ final class StationInventoryPanelModel {
         return result;
     }
 
+    static List<UpkeepItemRow> upkeepItemRows(AutomatedFacility facility) {
+        List<UpkeepItemRow> result = new ArrayList<>();
+        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : facility.upkeepSummary()
+            .itemsPerMinute()
+            .entrySet()) {
+            ItemStackWrapper item = entry.getKey();
+            result.add(
+                new UpkeepItemRow(
+                    item,
+                    entry.getValue(),
+                    facility.getItemAmount(item),
+                    facility.upkeepReserve(item),
+                    facility.isUpkeepAutoOrderEnabled(item),
+                    upkeepReserveStatus(facility, item)));
+        }
+        result.sort(
+            Comparator.comparing(
+                row -> row.item()
+                    .toStack(1)
+                    .getDisplayName(),
+                String.CASE_INSENSITIVE_ORDER));
+        return result;
+    }
+
     static UpkeepReserveStatus upkeepReserveStatus(AutomatedFacility facility, ItemStackWrapper item) {
         UpkeepAmount demand = facility.upkeepSummary()
             .itemsPerMinute()
@@ -118,6 +142,9 @@ final class StationInventoryPanelModel {
     record UpkeepReserveStatus(long reserve, double minutes, UpkeepReserveLevel level, String tooltip) {}
 
     private record BoundInput(boolean present, long amount, boolean valid) {}
+
+    record UpkeepItemRow(ItemStackWrapper item, UpkeepAmount perMinute, long stock, long reserve, boolean autoOrder,
+        UpkeepReserveStatus status) {}
 
     record FluidRow(String fluidName, FluidKey fluidKey, long amount) {
 
