@@ -912,15 +912,15 @@ public final class FacilityPersistenceManager {
         return requirements;
     }
 
-    private static Map<String, Map.Entry<Long, Long>> encodeBoundsMap(Map<InventoryKey, InventoryBounds> amounts) {
-        Map<String, Map.Entry<Long, Long>> encoded = new LinkedHashMap<>();
+    private static Map<String, BoundsJson> encodeBoundsMap(Map<InventoryKey, InventoryBounds> amounts) {
+        Map<String, BoundsJson> encoded = new LinkedHashMap<>();
         if (amounts == null) return encoded;
         for (Map.Entry<InventoryKey, InventoryBounds> entry : amounts.entrySet()) {
             if (entry.getKey() == null) continue;
             encoded.put(
                 entry.getKey()
                     .toKey(),
-                Map.entry(
+                new BoundsJson(
                     entry.getValue()
                         .low(),
                     entry.getValue()
@@ -929,20 +929,14 @@ public final class FacilityPersistenceManager {
         return encoded;
     }
 
-    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, Map.Entry<Long, Long>> encoded,
-        boolean items) {
+    private static Map<InventoryKey, InventoryBounds> decodeBoundsMap(Map<String, BoundsJson> encoded, boolean items) {
         Map<InventoryKey, InventoryBounds> decoded = new LinkedHashMap<>();
         if (encoded == null || encoded.isEmpty()) return decoded;
-        for (Map.Entry<String, Map.Entry<Long, Long>> entry : encoded.entrySet()) {
+        for (Map.Entry<String, BoundsJson> entry : encoded.entrySet()) {
             InventoryKey key = items ? ItemStackWrapper.fromKey(entry.getKey()) : FluidKey.fromName(entry.getKey());
-            if (key == null) continue;
-            decoded.put(
-                key,
-                new InventoryBounds(
-                    entry.getValue()
-                        .getKey(),
-                    entry.getValue()
-                        .getValue()));
+            BoundsJson value = entry.getValue();
+            if (key == null || value == null || !value.hasBounds()) continue;
+            decoded.put(key, new InventoryBounds(value.low(), value.upper()));
         }
         return decoded;
     }
@@ -1061,10 +1055,35 @@ public final class FacilityPersistenceManager {
         Integer controllerX;
         Integer controllerY;
         Integer controllerZ;
-        Map<String, Map.Entry<Long, Long>> itemsBounds;
-        Map<String, Map.Entry<Long, Long>> fluidsBounds;
+        Map<String, BoundsJson> itemsBounds;
+        Map<String, BoundsJson> fluidsBounds;
         Map<String, LogisticsConfigJson> logisticsConfig;
         Map<Boolean, List<String>> filters;
+    }
+
+    static final class BoundsJson {
+
+        Long low;
+        Long upper;
+
+        BoundsJson() {}
+
+        BoundsJson(long low, long upper) {
+            this.low = low;
+            this.upper = upper;
+        }
+
+        boolean hasBounds() {
+            return low != null && upper != null;
+        }
+
+        long low() {
+            return low;
+        }
+
+        long upper() {
+            return upper;
+        }
     }
 
     static final class FacilityStateJson {

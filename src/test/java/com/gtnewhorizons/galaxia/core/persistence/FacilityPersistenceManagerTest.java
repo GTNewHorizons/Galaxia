@@ -510,6 +510,46 @@ final class FacilityPersistenceManagerTest {
                 .contains("malformed"));
     }
 
+    @Test
+    void assetBoundsRoundTripThroughSaveFile(@TempDir Path tempDir) throws Exception {
+        FacilityPersistenceManager manager = new FacilityPersistenceManager();
+        UUID teamId = UUID.randomUUID();
+        AutomatedFacility station = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        ItemStackWrapper resource = new ItemStackWrapper(Items.iron_ingot, 0, null);
+        station.setBound(resource, 48L, true);
+        station.setBound(resource, 96L, false);
+
+        CelestialAssetStore.clear();
+        CelestialAssetStore.registerAsset(teamId, station);
+        FacilityPersistenceManager.AssetJson json = manager.encodeAsset(station);
+        json.facility = manager.encodeFacilityState(station);
+
+        Path dataDir = tempDir.resolve("galaxiadata");
+        Files.createDirectories(dataDir);
+        Files.write(
+            dataDir.resolve("_assets.json"),
+            PERSISTENCE_GSON.toJson(List.of(json))
+                .getBytes(StandardCharsets.UTF_8));
+
+        CelestialAssetStore.clear();
+        assertDoesNotThrow(() -> manager.loadFromSaveDirectory(tempDir.toFile()));
+
+        AutomatedFacility loaded = (AutomatedFacility) CelestialAssetStore.findAsset(station.assetId);
+        assertNotNull(loaded);
+        assertEquals(
+            48L,
+            loaded.getBound(resource)
+                .lowOrDefault());
+        assertEquals(
+            96L,
+            loaded.getBound(resource)
+                .upperOrDefault());
+    }
+
     private static FacilityPersistenceManager.AssetJson assetJson(UUID teamId, CelestialAsset.Kind kind,
         CelestialObjectId body) {
         FacilityPersistenceManager.AssetJson json = new FacilityPersistenceManager.AssetJson();
