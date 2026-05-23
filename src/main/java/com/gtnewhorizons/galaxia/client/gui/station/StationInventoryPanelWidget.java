@@ -168,7 +168,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
             boundField(false).pos(BOUND_FIELD_X, BOUND_EDITOR_Y + 58)
                 .size(70, 18));
         boundEditorRoot.child(
-            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Set", () -> applyBound(true))
+            ModuleConfigModalSupport.button(this::canApplyBound, "Set", () -> applyBound(true))
                 .pos(BOUND_SET_X, BOUND_EDITOR_Y + 34)
                 .size(40, 18));
         boundEditorRoot.child(
@@ -176,7 +176,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                 .pos(BOUND_CLEAR_X, BOUND_EDITOR_Y + 34)
                 .size(50, 18));
         boundEditorRoot.child(
-            ModuleConfigModalSupport.button(this::isBoundEditorOpen, "Set", () -> applyBound(false))
+            ModuleConfigModalSupport.button(this::canApplyBound, "Set", () -> applyBound(false))
                 .pos(BOUND_SET_X, BOUND_EDITOR_Y + 58)
                 .size(40, 18));
         boundEditorRoot.child(
@@ -534,7 +534,8 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
                         w,
                         h,
                         EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                        EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor())))
+                        boundFieldBorderColor())))
+            .tooltipDynamic(t -> { if (!boundsInputValid()) t.addLine("Lower bound cannot exceed upper bound."); })
             .value(new StringValue.Dynamic(() -> input ? inputBoundAmount : outputBoundAmount, text -> {
                 if (input) {
                     inputBoundAmount = text == null ? "" : text;
@@ -607,6 +608,32 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         return open && (selectedBoundItem != null || selectedBoundFluid != null);
     }
 
+    private boolean canApplyBound() {
+        return isBoundEditorOpen() && boundsInputValid();
+    }
+
+    private boolean boundsInputValid() {
+        AutomatedFacility af = af();
+        InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
+        if (af == null || resource == null) return false;
+        boolean hasLower = af.hasLowerBound(resource);
+        boolean hasUpper = af.hasUpperBound(resource);
+        return StationInventoryPanelModel.boundsInputValid(
+            inputBoundAmount,
+            hasLower,
+            hasLower ? af.getBound(resource)
+                .low() : 0L,
+            outputBoundAmount,
+            hasUpper,
+            hasUpper ? af.getBound(resource)
+                .upper() : 0L);
+    }
+
+    private int boundFieldBorderColor() {
+        return boundsInputValid() ? EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor()
+            : EnumColors.MAP_COLOR_BTN_DANGER_BORDER.getColor();
+    }
+
     private void openBoundEditor(ItemStackWrapper wrapper) {
         selectedBoundItem = wrapper;
         selectedBoundFluid = null;
@@ -676,7 +703,7 @@ final class StationInventoryPanelWidget extends ParentWidget<StationInventoryPan
         InventoryKey resource = selectedBoundItem != null ? selectedBoundItem : selectedBoundFluid;
         AutomatedFacility af = af();
         if (af != null) {
-            af.setBound(resource, amount, low);
+            if (!af.trySetBound(resource, amount, low)) return;
         }
         CelestialClient.updateInventoryBound(
             assetId,

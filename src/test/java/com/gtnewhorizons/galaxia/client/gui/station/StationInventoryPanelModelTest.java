@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -54,6 +55,17 @@ final class StationInventoryPanelModelTest {
     @Test
     void blankAmountVoidsNothing() {
         assertEquals(0L, StationInventoryPanelModel.voidAmount(true, 128L, ""));
+    }
+
+    @Test
+    void boundInputsAreInvalidWhenLowerExceedsUpper() {
+        assertFalse(StationInventoryPanelModel.boundsInputValid("442", false, 0L, "320", false, 0L));
+    }
+
+    @Test
+    void boundInputsUseExistingBoundsWhenFieldsAreBlank() {
+        assertFalse(StationInventoryPanelModel.boundsInputValid("442", false, 0L, "", true, 320L));
+        assertTrue(StationInventoryPanelModel.boundsInputValid("", true, 128L, "320", false, 0L));
     }
 
     @Test

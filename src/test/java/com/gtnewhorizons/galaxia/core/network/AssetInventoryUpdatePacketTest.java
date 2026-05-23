@@ -108,6 +108,28 @@ final class AssetInventoryUpdatePacketTest {
     }
 
     @Test
+    void invalidBoundPacketIsRejectedWithoutChangingExistingBounds() {
+        AutomatedFacility facility = addFacilityToServer();
+        ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);
+        facility.setBound(resource, 320, false);
+        AssetInventoryUpdatePacket packet = AssetInventoryUpdatePacket
+            .setBound(facility.assetId, BoundKind.ITEM_LOWER, resource, 442);
+
+        AssetSyncPacket sync = packet.apply(TEAM, false);
+
+        assertNull(sync);
+        assertEquals(
+            0L,
+            facility.getBound(resource)
+                .lowOrDefault());
+        assertEquals(
+            320L,
+            facility.getBound(resource)
+                .upperOrDefault());
+        assertEquals(0, facility.getSyncRevision());
+    }
+
+    @Test
     void upkeepReservePacketSetsReserveForNonCreativePlayer() {
         AutomatedFacility facility = addFacilityToServer();
         ItemStackWrapper resource = new ItemStackWrapper(Items.redstone, 0, null);

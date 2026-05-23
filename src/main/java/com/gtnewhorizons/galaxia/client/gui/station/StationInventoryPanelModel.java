@@ -32,6 +32,25 @@ final class StationInventoryPanelModel {
         return Math.min(parsed, availableAmount);
     }
 
+    static boolean boundsInputValid(String lowerText, boolean hasExistingLower, long existingLower, String upperText,
+        boolean hasExistingUpper, long existingUpper) {
+        BoundInput lower = resolveBoundInput(lowerText, hasExistingLower, existingLower);
+        BoundInput upper = resolveBoundInput(upperText, hasExistingUpper, existingUpper);
+        if (!lower.valid() || !upper.valid()) return false;
+        return !lower.present() || !upper.present() || lower.amount() <= upper.amount();
+    }
+
+    private static BoundInput resolveBoundInput(String text, boolean hasExisting, long existing) {
+        if (text == null || text.isBlank()) {
+            return hasExisting ? new BoundInput(true, existing, true) : new BoundInput(false, 0L, true);
+        }
+        try {
+            return new BoundInput(true, Long.parseLong(text), true);
+        } catch (NumberFormatException ignored) {
+            return new BoundInput(false, 0L, false);
+        }
+    }
+
     static List<Map.Entry<ItemStackWrapper, Long>> inventoryRows(IDistributedInventory inventory) {
         Map<ItemStackWrapper, Long> rows = new LinkedHashMap<>(inventory.aggregatedItems());
         Set<ItemStackWrapper> upkeepItems = Set.of();
@@ -97,6 +116,8 @@ final class StationInventoryPanelModel {
     }
 
     record UpkeepReserveStatus(long reserve, double minutes, UpkeepReserveLevel level, String tooltip) {}
+
+    private record BoundInput(boolean present, long amount, boolean valid) {}
 
     record FluidRow(String fluidName, FluidKey fluidKey, long amount) {
 

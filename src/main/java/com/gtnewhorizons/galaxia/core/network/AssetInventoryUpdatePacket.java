@@ -199,7 +199,15 @@ public final class AssetInventoryUpdatePacket implements IMessage {
         if (boundKind == null) return null;
         if (operation == Operation.SET_BOUND) {
             final boolean low = boundKind == BoundKind.ITEM_LOWER || boundKind == BoundKind.FLUID_LOWER;
-            state.setBound(resource, delta, low);
+            if (!state.trySetBound(resource, delta, low)) {
+                LOG.warn(
+                    "[Logistics] Inventory bound rejected: {} {}={} on outpost {}",
+                    boundKind,
+                    resource.toKey(),
+                    delta,
+                    assetId);
+                return null;
+            }
 
             state.markInventoryBoundDelta(boundKind, resource, true, delta);
             LOG.info(
