@@ -13,6 +13,7 @@ import net.minecraft.item.ItemStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
@@ -41,7 +42,8 @@ final class StationModuleAlertRegistryTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = createModule(FacilityModuleKind.POWER, StationTileCoord.of(1, 0));
         facility.addModule(module);
-        StationModuleAlert alert = StationModuleAlert.warning("Test", "Registered alert", new ItemStack(Items.paper));
+        StationModuleAlert alert = StationModuleAlert
+            .warning("Test", "Registered alert", EnumTextures.ICON_STATION_ALERT_WARNING.get());
 
         try (StationModuleAlertRegistry.Registration ignored = StationModuleAlertRegistry
             .register((f, m) -> m == module ? List.of(alert) : List.of())) {

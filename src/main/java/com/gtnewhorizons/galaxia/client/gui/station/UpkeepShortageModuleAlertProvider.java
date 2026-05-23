@@ -2,9 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.List;
 
-import net.minecraft.init.Items;
-import net.minecraft.item.ItemStack;
-
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -14,8 +12,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepSettlement;
 final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvider {
 
     static final UpkeepShortageModuleAlertProvider INSTANCE = new UpkeepShortageModuleAlertProvider();
-
-    private static final ItemStack WARNING_ICON = new ItemStack(Items.glowstone_dust);
 
     private UpkeepShortageModuleAlertProvider() {}
 
@@ -27,7 +23,9 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
             .settle(List.of(demand), facility.upkeepCredits(), new FacilityResourceView(facility));
         return result.unpaidModuleIds()
             .contains(module.id)
-                ? List.of(StationModuleAlert.warning("Upkeep", "Missing upkeep resources.", WARNING_ICON))
+                ? List.of(
+                    StationModuleAlert
+                        .warning("Upkeep", "Missing upkeep resources.", EnumTextures.ICON_STATION_ALERT_WARNING.get()))
                 : List.of();
     }
 

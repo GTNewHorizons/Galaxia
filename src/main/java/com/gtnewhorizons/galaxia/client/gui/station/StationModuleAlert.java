@@ -4,9 +4,9 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.util.ResourceLocation;
 
-public record StationModuleAlert(Severity severity, String title, String message, @Nullable ItemStack icon) {
+public record StationModuleAlert(Severity severity, String title, String message, @Nullable ResourceLocation icon) {
 
     public StationModuleAlert {
         Objects.requireNonNull(severity, "severity");
@@ -14,7 +14,7 @@ public record StationModuleAlert(Severity severity, String title, String message
         message = Objects.requireNonNull(message, "message");
     }
 
-    public static StationModuleAlert warning(String title, String message, @Nullable ItemStack icon) {
+    public static StationModuleAlert warning(String title, String message, @Nullable ResourceLocation icon) {
         return new StationModuleAlert(Severity.WARNING, title, message, icon);
     }
 
