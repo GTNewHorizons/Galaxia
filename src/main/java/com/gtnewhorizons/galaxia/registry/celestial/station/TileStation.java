@@ -450,7 +450,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 backingStation.id()
                     .getLeastSignificantBits());
         }
-
+        nbt.setDouble("oxygenLevel", oxygenLevel);
         behavior.writeToNBT(this, nbt);
     }
 
@@ -475,6 +475,9 @@ public class TileStation extends TileStationBase<TileStation> {
                 .from(new UUID(nbt.getLong("backingStationMost"), nbt.getLong("backingStationLeast")));
         }
 
+        if (nbt.hasKey("oxygenLevel")) {
+            oxygenLevel = nbt.getDouble("oxygenLevel");
+        }
         behavior.readFromNBT(this, nbt);
     }
 
