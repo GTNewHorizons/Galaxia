@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.block.special;
 
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
@@ -46,11 +47,10 @@ public class BlockStationController extends BlockUpdatable implements ITileEntit
 
             sm.setOwner(teamId);
 
-            int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-            ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
-                ForgeDirection.WEST };
-            sm.setPlacedFacing(dirs[f]);
-            sm.setFacing(dirs[f]);
+            ForgeDirection facing = PlacementHelper.placeInEveryDirection(placer);
+
+            sm.setPlacedFacing(facing);
+            sm.setFacing(facing);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
@@ -39,12 +40,10 @@ public class BlockAirlockController extends BlockOpenable implements ITileEntity
         TileEntity te = world.getTileEntity(x, y, z);
 
         if (!(te instanceof TileEntityAirlock airlock)) return;
+        ForgeDirection facing = PlacementHelper.placeInEveryDirection(placer);
 
-        int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
-            ForgeDirection.WEST };
-        airlock.setPlacedFacing(dirs[f]);
-        airlock.setFacing(dirs[f]);
+        airlock.setPlacedFacing(facing);
+        airlock.setFacing(facing);
     }
 
     @Override

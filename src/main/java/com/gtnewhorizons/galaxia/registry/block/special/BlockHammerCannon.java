@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
@@ -29,13 +30,12 @@ public class BlockHammerCannon extends BlockUpdatable implements ITileEntityProv
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
 
         TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileHammerCannon sm)) return;
+        if (!(te instanceof TileHammerCannon cannon)) return;
 
-        int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
-            ForgeDirection.WEST };
-        sm.setPlacedFacing(dirs[f]);
-        sm.setFacing(dirs[f]);
+        ForgeDirection facing = PlacementHelper.placeOnlyCardinal(placer);
+
+        cannon.setPlacedFacing(facing);
+        cannon.setFacing(facing);
     }
 
     @Override
