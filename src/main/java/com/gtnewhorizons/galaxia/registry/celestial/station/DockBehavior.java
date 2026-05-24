@@ -5,8 +5,6 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.util.StatCollector;
 
-import org.jetbrains.annotations.UnknownNullability;
-
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
@@ -31,7 +29,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(@UnknownNullability DimensionDef def) {
+    public IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def) {
         return ArbitraryShapeDefinition.<TileStation>builder()
             .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
             .addElements(
