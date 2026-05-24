@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -57,6 +58,8 @@ public class TileStation extends TileStationBase<TileStation> {
     @Setter
     @Getter
     private List<BlockPos> attachments = new ArrayList<>();
+
+    private IStructureDefinition<TileStation> DEFINITION = null;
 
     private final LongArraySet coolingCoils = new LongArraySet();
     private final LongArraySet heatingCoils = new LongArraySet();
@@ -131,7 +134,10 @@ public class TileStation extends TileStationBase<TileStation> {
 
     @Override
     public IStructureDefinition<TileStation> getStructureDefinition() {
-        return behavior.getStructureDefinition();
+        if (DEFINITION != null) return DEFINITION;
+
+        DEFINITION = behavior.buildStructureDefinition(GalaxiaAPI.getEffects(worldObj.provider.dimensionId));
+        return DEFINITION;
     }
 
     @Override
@@ -262,7 +268,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     public int getVolume() {
-        var def = behavior.getStructureDefinition();
+        var def = getStructureDefinition();
         if (def instanceof ArbitraryShapeDefinition<?>asd) {
             return asd.getVolume();
         }
@@ -274,7 +280,7 @@ public class TileStation extends TileStationBase<TileStation> {
 
     public int getTotalVolume() {
         int own = 0;
-        var def = behavior.getStructureDefinition();
+        var def = getStructureDefinition();
         if (def instanceof ArbitraryShapeDefinition<?>asd) {
             own = asd.getVolume();
         }
@@ -282,7 +288,7 @@ public class TileStation extends TileStationBase<TileStation> {
         int sum = own;
         for (TileStationBase<?> s : graph.iterateOver(TileStationBase.class)) {
             if (s instanceof TileStation ts) {
-                var tsDef = ts.behavior.getStructureDefinition();
+                var tsDef = ts.getStructureDefinition();
                 if (tsDef instanceof ArbitraryShapeDefinition<?>asd) {
                     sum += asd.getVolume();
                 }
