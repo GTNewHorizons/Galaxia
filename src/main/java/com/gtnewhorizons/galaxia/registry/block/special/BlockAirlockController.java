@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
-import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
