@@ -14,6 +14,7 @@ import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
@@ -58,7 +59,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> getStructureDefinition() {
+    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def) {
         return STRUCTURE_DEFINITION;
     }
 

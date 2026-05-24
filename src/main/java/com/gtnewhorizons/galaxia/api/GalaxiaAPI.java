@@ -83,6 +83,12 @@ public final class GalaxiaAPI {
         return def.effects();
     }
 
+    public static EffectBuilder getEffects(int dimension) {
+        DimensionDef def = SolarSystemRegistry.getById(dimension);
+        if (def == null) return new EffectBuilder();
+        return def.effects();
+    }
+
     /**
      * Gets the air resistance on the planet, or returns 1 if failed
      *
