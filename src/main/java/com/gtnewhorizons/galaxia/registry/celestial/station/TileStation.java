@@ -213,6 +213,7 @@ public class TileStation extends TileStationBase<TileStation> {
                 if (station.getController() == null) {
                     station.setController(this.here);
                 }
+                this.owner = CelestialAssetStore.getTeamId(backingStation);
                 return;
             }
         }
