@@ -1,12 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
-import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
@@ -18,10 +16,15 @@ import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 
 public class RoomBehavior implements IStationBehavior {
+
+    public static List<Block> ALL_VALID_ROOM_BLOCKS = List.of(
+        GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+        GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+        GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
 
     @Override
     public String getUnlocalizedName() {
@@ -29,11 +32,13 @@ public class RoomBehavior implements IStationBehavior {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def, World world) {
+    public IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def) {
         return ArbitraryShapeDefinition.<TileStation>builder()
             .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
             .addElements(
-                getValidExteriorForEnvironment(def, world).stream()
+                def.validSpaceStationBlocks()
+                    .stream()
+                    .filter(b -> ALL_VALID_ROOM_BLOCKS.contains(b))
                     .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
             .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
                 if (tileEntity instanceof TileEntityAirlock airlock) {
@@ -81,19 +86,5 @@ public class RoomBehavior implements IStationBehavior {
             EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
             return label + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, yOffset));
-    }
-
-    private List<Block> getValidExteriorForEnvironment(EffectBuilder def, World world) {
-        final List<Block> valid_blocks = new ArrayList<>(
-            List.of(
-                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
-                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get()));
-
-        if (def.getPressure(world) >= 300) {
-            valid_blocks.remove(GalaxiaBlocksEnum.SPACE_STATION_PANEL.get());
-        }
-
-        return valid_blocks;
     }
 }

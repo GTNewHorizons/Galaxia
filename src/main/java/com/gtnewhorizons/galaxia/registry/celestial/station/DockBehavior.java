@@ -2,8 +2,10 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.List;
 
+import net.minecraft.block.Block;
 import net.minecraft.util.StatCollector;
-import net.minecraft.world.World;
+
+import org.jetbrains.annotations.UnknownNullability;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
@@ -15,44 +17,13 @@ import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 public class DockBehavior implements IStationBehaviorWithAttachments {
 
-    private final ArbitraryShapeDefinition<TileStation> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
-        .<TileStation>builder()
-        .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
-        .addElement(GalaxiaStructureUtility.ofBlockAnyMeta(GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get()))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
-            if (tileEntity instanceof TileEntityAirlock airlock) {
-                if (!airlock.isStructureValid()) return false;
-                dock.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
-                return true;
-            }
-            return false;
-        }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
-            if (tileEntity instanceof IStationAttachment) {
-                BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
-                dock.addAttachment(pos);
-                return true;
-            }
-            return false;
-        }, GalaxiaBlocksEnum.HAMMER_TARGET.get(), 0))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
-            if (tileEntity instanceof IStationAttachment) {
-                BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
-                dock.addAttachment(pos);
-                return true;
-            }
-            return false;
-        }, GalaxiaBlocksEnum.HAMMER_CANNON.get(), 0))
-        .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-        .withSearchRadius(ConfigStructures.open.searchRadius)
-        .open()
-        .build();
+    public static List<Block> ALL_VALID_DOCK_BLOCKS = List.of(GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get());
 
     @Override
     public String getUnlocalizedName() {
@@ -60,9 +31,42 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def, World world) {
-        // TODO: Change materials based on the environment like RoomBehavior
-        return STRUCTURE_DEFINITION;
+    public IStructureDefinition<TileStation> buildStructureDefinition(@UnknownNullability DimensionDef def) {
+        return ArbitraryShapeDefinition.<TileStation>builder()
+            .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
+            .addElements(
+                def.validSpaceStationBlocks()
+                    .stream()
+                    .filter(b -> ALL_VALID_DOCK_BLOCKS.contains(b))
+                    .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
+            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
+                if (tileEntity instanceof TileEntityAirlock airlock) {
+                    if (!airlock.isStructureValid()) return false;
+                    dock.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                    return true;
+                }
+                return false;
+            }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
+            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
+                if (tileEntity instanceof IStationAttachment) {
+                    BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
+                    dock.addAttachment(pos);
+                    return true;
+                }
+                return false;
+            }, GalaxiaBlocksEnum.HAMMER_TARGET.get(), 0))
+            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
+                if (tileEntity instanceof IStationAttachment) {
+                    BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
+                    dock.addAttachment(pos);
+                    return true;
+                }
+                return false;
+            }, GalaxiaBlocksEnum.HAMMER_CANNON.get(), 0))
+            .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+            .withSearchRadius(ConfigStructures.open.searchRadius)
+            .open()
+            .build();
     }
 
     @Override

@@ -22,13 +22,13 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
@@ -143,7 +143,7 @@ public class TileStation extends TileStationBase<TileStation> {
     public IStructureDefinition<TileStation> getStructureDefinition() {
         if (DEFINITION != null) return DEFINITION;
 
-        DEFINITION = behavior.buildStructureDefinition(GalaxiaAPI.getEffects(worldObj.provider.dimensionId), worldObj);
+        DEFINITION = behavior.buildStructureDefinition(SolarSystemRegistry.getById(worldObj.provider.dimensionId));
         return DEFINITION;
     }
 
