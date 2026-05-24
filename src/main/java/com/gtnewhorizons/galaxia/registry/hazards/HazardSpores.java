@@ -35,7 +35,7 @@ public class HazardSpores implements IEnvironmentalHazard {
      */
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
-        if (!def.getSpore(player)) return HazardWarnings.FINE;
+        if (!def.getSpore(player.worldObj)) return HazardWarnings.FINE;
         final boolean hasFilter = hasSporeFilter(player);
         final int harshness = 1;
 

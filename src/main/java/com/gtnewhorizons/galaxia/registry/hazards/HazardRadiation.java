@@ -23,7 +23,7 @@ public class HazardRadiation implements IEnvironmentalHazard {
      */
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
-        int radiation = def.getRadiation(player);
+        int radiation = def.getRadiation(player.worldObj);
         if (radiation == 0) return HazardWarnings.FINE;
         int acceptableMax = DEFAULT_MAX;
 

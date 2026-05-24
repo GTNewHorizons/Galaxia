@@ -26,7 +26,7 @@ public class HazardPressure implements IEnvironmentalHazard {
         // Temp until space suit added:
         int acceptableMin = DEFAULT_MIN;
         int acceptableMax = DEFAULT_MAX;
-        int pressure = def.getPressure(player);
+        int pressure = def.getPressure(player.worldObj);
 
         acceptableMax += getPressureProtection(player, true);
         acceptableMin -= getPressureProtection(player, false);

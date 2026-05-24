@@ -27,7 +27,7 @@ public class HazardOxygen implements IEnvironmentalHazard {
      */
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
-        final int oxygenPercent = def.getOxygenPercent(player);
+        final int oxygenPercent = def.getOxygenPercent(player.worldObj);
         if (oxygenPercent >= 100) return HazardWarnings.FINE;
 
         final boolean hasMask = hasOxygenmask(player);

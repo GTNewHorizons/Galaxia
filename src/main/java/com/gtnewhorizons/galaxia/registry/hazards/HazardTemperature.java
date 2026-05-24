@@ -42,7 +42,7 @@ public class HazardTemperature implements IEnvironmentalHazard {
      */
     @Override
     public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
-        int temp = def.getTemperature(player);
+        int temp = def.getTemperature(player.worldObj);
 
         int acceptableMaxTemp = getAcceptableMaxTemp(player);
         int acceptableMinTemp = getAcceptableMinTemp(player);
