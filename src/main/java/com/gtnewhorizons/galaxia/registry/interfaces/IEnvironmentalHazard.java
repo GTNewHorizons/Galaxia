@@ -7,7 +7,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardWarnings;
-import net.minecraft.entity.player.EntityPlayer;
 
 public interface IEnvironmentalHazard {
 

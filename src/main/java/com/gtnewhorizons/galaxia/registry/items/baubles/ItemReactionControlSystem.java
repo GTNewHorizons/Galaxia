@@ -105,7 +105,7 @@ public class ItemReactionControlSystem extends Item implements IBaubleExpanded, 
         }
 
         EffectBuilder def = GalaxiaAPI.getEffects(player);
-        int oxygen = def.getOxygenPercent((EntityPlayer) player);
+        int oxygen = def.getOxygenPercent(player.worldObj);
 
         // TODO: Adjust for balance
         this.enabled = GalaxiaAPI.checkOxygenAndDrain((EntityPlayer) player, oxygen);

@@ -274,10 +274,6 @@ public final class CelestialAssetStore {
         return byBody.getOrDefault(objectId, Set.of());
     }
 
-    public Set<CelestialAsset.ID> getAssetsOnBodyInternal(CelestialObjectId objectId) {
-        return byBody.getOrDefault(objectId, Set.of());
-    }
-
     public void transferTeamAssetsInternal(UUID fromTeamId, UUID toTeamId) {
         Map<CelestialObjectId, Set<CelestialAsset.ID>> fromAssets = bodyIndex.remove(fromTeamId);
         if (fromAssets == null || fromAssets.isEmpty()) return;
@@ -297,24 +293,6 @@ public final class CelestialAssetStore {
             }
             return existing;
         });
-    }
-
-    private List<CelestialAsset> resolveIds(Set<CelestialAsset.ID> ids) {
-        List<CelestialAsset> result = new ArrayList<>(ids.size());
-        for (CelestialAsset.ID id : ids) {
-            CelestialAsset a = byId.get(id);
-            if (a != null) result.add(a);
-        }
-        return result;
-    }
-
-    private Set<CelestialAsset> resolveIdsToSet(Set<CelestialAsset.ID> ids) {
-        Set<CelestialAsset> result = new HashSet<>(ids.size());
-        for (CelestialAsset.ID id : ids) {
-            CelestialAsset a = byId.get(id);
-            if (a != null) result.add(a);
-        }
-        return result;
     }
 
     private List<CelestialAsset> resolveIds(Set<CelestialAsset.ID> ids) {

@@ -131,7 +131,7 @@ public class DimensionEventHandler {
 
         this.batchedWarnings.clear();
 
-Optional<TileStation> station = Optional.ofNullable(
+        Optional<TileStation> station = Optional.ofNullable(
             GalaxiaAPI.getStationAround(
                 player.worldObj,
                 player.dimension,
