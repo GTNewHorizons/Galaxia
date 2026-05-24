@@ -37,7 +37,7 @@ dependencies {
     api("com.github.GTNewHorizons:StructureLib:1.4.34:dev")
     api("com.github.GTNewHorizons:NotEnoughItems:2.8.98-GTNH:dev")
     api("com.github.GTNewHorizons:GTNHLib:0.9.66:dev")
-    api("com.github.GTNewHorizons:ModularUI2:2.3.63-1.7.10:dev")
+    api("com.github.GTNewHorizons:ModularUI2:2.3.66-1.7.10:dev")
     api("com.github.GTNewHorizons:waila:1.19.28:dev")
 
     devOnlyNonPublishable("com.github.GTNewHorizons:Hodgepodge:2.7.139:dev")

@@ -23,7 +23,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public final class StarmapActionSyncHandler extends SyncHandler {
+public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyncHandler> {
 
     public static final String KEY = "starmap_actions";
 
