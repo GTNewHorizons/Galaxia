@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import java.util.Iterator;
+import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -36,15 +37,14 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
         if (graph == null) return;
 
         boolean changed = false;
-        Iterator<BlockPos> it = station.getAttachments()
-            .iterator();
-        while (it.hasNext()) {
-            BlockPos pos = it.next();
+        List<BlockPos> attachments = station.getAttachments();
+        for (int i = attachments.size(); --i > 0;) {
+            BlockPos pos = attachments.get(i);
             TileEntity te = pos.getTE(station.getWorldObj());
             if (!(te instanceof IStationAttachment)
                 || (te instanceof GalaxiaBootableMultiblock<?>base && !base.isStructureValid())) {
                 graph.removeAttachment(pos);
-                it.remove();
+                attachments.remove(i);
                 changed = true;
             }
         }
