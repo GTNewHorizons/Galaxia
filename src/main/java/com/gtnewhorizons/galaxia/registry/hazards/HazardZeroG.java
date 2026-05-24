@@ -2,11 +2,7 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import java.util.Optional;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.entity.player.EntityPlayer;
-
-import org.jetbrains.annotations.UnknownNullability;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;

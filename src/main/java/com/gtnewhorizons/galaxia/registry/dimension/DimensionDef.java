@@ -23,6 +23,7 @@ public record DimensionDef(String name, int id, Class<? extends WorldProvider> p
 
     public DimensionDef {
         celestialBodies = celestialBodies == null ? null : Collections.unmodifiableList(celestialBodies);
-        validSpaceStationBlocks = validSpaceStationBlocks == null ? null : Collections.unmodifiableList(validSpaceStationBlocks);
+        validSpaceStationBlocks = validSpaceStationBlocks == null ? null
+            : Collections.unmodifiableList(validSpaceStationBlocks);
     }
 }
