@@ -30,7 +30,6 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
@@ -116,9 +115,8 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     public void tick() {
         if (graph == null) return;
         moduleInstance.tick(
-            CelestialAssetStore.findAsset(
-                graph.getController()
-                    .getBackingStation()));
+            graph.getController()
+                .getBackingStation());
     }
 
     @Override

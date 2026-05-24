@@ -26,6 +26,8 @@ import com.gtnewhorizons.galaxia.compat.structure.util.LocalCoord;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 
+import lombok.Getter;
+
 public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implements IStructureDefinition<T> {
 
     private static final int[] DIR_DX = { 0, 0, 0, 0, 1, -1 };
@@ -40,8 +42,10 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     private static final int CHUNK_SHIFT = 2;
     private static final int CHUNK_SIZE = 1 << CHUNK_SHIFT;
 
+    @Getter
     private final int searchRadius;
     private T tile;
+    @Getter
     private int volume;
     private final boolean enclosed;
 
@@ -83,14 +87,6 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
     public static <T extends GalaxiaMultiblockBase<T>> Builder<T> builder() {
         return new Builder<>();
-    }
-
-    public int getVolume() {
-        return volume;
-    }
-
-    public int getSearchRadius() {
-        return searchRadius;
     }
 
     @SuppressWarnings("unchecked")
@@ -183,6 +179,10 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     @Override
     public void iterate(String shapeName, World world, ExtendedFacing extendedFacing, int x, int y, int z, int offsetX,
         int offsetY, int offsetZ, IStructureWalker<T> walker) {}
+
+    public int getStructureBlocksAmount() {
+        return structureBlocks.size();
+    }
 
     private boolean openCheck(T tile, World world) {
         if (fastRevalidate(tile, world)) return true;

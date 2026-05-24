@@ -45,6 +45,14 @@ public class TileStation extends TileStationBase<TileStation> {
     public static final int OXYGEN_FACTOR = 1;
     public static final int OXYGEN_DECAY_RATE = 1;
 
+    public static final long COIL_COOLING_EUT = 1024;
+    public static final long COIL_HEATING_EUT = 1024;
+    public static final long OXYGENATOR_EUT = 1024;
+    public static final long AIR_PURIFIER_EUT = 1024;
+    public static final long WITHER_BLOCKER_EUT = 1024;
+
+    public static final long BASE_EUT_PER_BLOCK = 8;
+
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
     @Getter
@@ -52,7 +60,6 @@ public class TileStation extends TileStationBase<TileStation> {
     private UUID owner;
     private Role controllerFlag = Role.UNDEFINED;
 
-    @Getter
     private CelestialAsset.ID backingStation;
 
     @Setter
@@ -239,7 +246,14 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void tick() {
         super.tick();
-        if (isSealed()) {
+        if (!getBackingStation().tryConsumeEnergy(
+            oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
+                + heatingCoils.size() * COIL_HEATING_EUT
+                + airPurifiers.size() * AIR_PURIFIER_EUT
+                + witherBlockers.size() * WITHER_BLOCKER_EUT
+                + getStructureBlocksAmount() * BASE_EUT_PER_BLOCK)
+            && isSealed()) {
+
             oxygenLevel = Math
                 .clamp(oxygenLevel + (double) (oxygenators.size() * OXYGEN_FACTOR) / getVolume(), 0.0, 100.0);
         } else {
@@ -278,6 +292,17 @@ public class TileStation extends TileStationBase<TileStation> {
         return 1;
     }
 
+    public int getStructureBlocksAmount() {
+        var def = getStructureDefinition();
+        if (def instanceof ArbitraryShapeDefinition<?>asd) {
+            return asd.getStructureBlocksAmount();
+        }
+
+        Galaxia.LOG.warn("[Station] `getVolme` called on structure defined without amount of blocks");
+
+        return 1;
+    }
+
     public int getTotalVolume() {
         int own = 0;
         var def = getStructureDefinition();
@@ -301,6 +326,10 @@ public class TileStation extends TileStationBase<TileStation> {
         if (graph == null) return List.of();
         return graph.connectedInventories()
             .toList();
+    }
+
+    public Station getBackingStation() {
+        return (Station) CelestialAssetStore.findAsset(backingStation);
     }
 
     @Override
