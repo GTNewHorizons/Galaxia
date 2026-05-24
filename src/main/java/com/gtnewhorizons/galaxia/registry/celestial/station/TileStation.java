@@ -246,7 +246,7 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void tick() {
         super.tick();
-        if (!getBackingStation().tryConsumeEnergy(
+        if (getBackingStation().tryConsumeEnergy(
             oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
                 + heatingCoils.size() * COIL_HEATING_EUT
                 + airPurifiers.size() * AIR_PURIFIER_EUT
@@ -287,7 +287,7 @@ public class TileStation extends TileStationBase<TileStation> {
             return asd.getVolume();
         }
 
-        Galaxia.LOG.warn("[Station] `getVolme` called on a sealed structure defined without volume");
+        Galaxia.LOG.warn("[Station] `getVolume` called on a sealed structure defined without volume");
 
         return 1;
     }
@@ -298,7 +298,7 @@ public class TileStation extends TileStationBase<TileStation> {
             return asd.getStructureBlocksAmount();
         }
 
-        Galaxia.LOG.warn("[Station] `getVolme` called on structure defined without amount of blocks");
+        Galaxia.LOG.warn("[Station] `getVolume` called on structure defined without amount of blocks");
 
         return 1;
     }

@@ -16,8 +16,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
 public class HazardZeroG implements IEnvironmentalHazard {
 
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player,
-        @Nullable @UnknownNullability Optional<TileStation> station) {
+    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
         if (GalaxiaAPI.getGravity(player) != 0) return HazardWarnings.FINE;
         if (GalaxiaAPI.hasZeroGMovementCapability(player)) return HazardWarnings.FINE;
 

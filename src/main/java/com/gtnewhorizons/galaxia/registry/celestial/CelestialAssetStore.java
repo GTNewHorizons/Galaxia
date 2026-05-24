@@ -262,10 +262,11 @@ public final class CelestialAssetStore {
     public void removeTeamInternal(UUID teamId) {
         Map<CelestialObjectId, Set<CelestialAsset.ID>> teamAssets = bodyIndex.remove(teamId);
         if (teamAssets == null) return;
-        for (Set<CelestialAsset.ID> ids : teamAssets.values()) {
-            for (CelestialAsset.ID id : ids) {
+        for (Map.Entry<CelestialObjectId, Set<CelestialAsset.ID>> ids : teamAssets.entrySet()) {
+            for (CelestialAsset.ID id : ids.getValue()) {
                 byId.remove(id);
                 teamById.remove(id);
+                byBody.get(ids.getKey()).remove(id);
             }
         }
     }

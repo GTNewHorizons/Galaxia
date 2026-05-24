@@ -9,6 +9,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -81,7 +82,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         }
         airlocks.clear();
         sealed = false;
-        sealedDirty = false;
+        markSealedDirty();
     }
 
     public void markSealedDirty() {
@@ -159,7 +160,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     }
 
     private void recomputeNetworkSeal() {
-        Set<TileStationBase<?>> component = new LinkedHashSet<>();
+        Set<TileStationBase<?>> component = new ObjectOpenHashSet<>();
         Deque<TileStationBase<?>> queue = new ArrayDeque<>();
         component.add(this);
         queue.add(this);

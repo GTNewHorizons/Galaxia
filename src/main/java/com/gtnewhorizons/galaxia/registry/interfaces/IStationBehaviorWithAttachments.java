@@ -37,7 +37,7 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
 
         boolean changed = false;
         List<BlockPos> attachments = station.getAttachments();
-        for (int i = attachments.size(); --i > 0;) {
+        for (int i = attachments.size(); --i >= 0;) {
             BlockPos pos = attachments.get(i);
             TileEntity te = pos.getTE(station.getWorldObj());
             if (!(te instanceof IStationAttachment)
