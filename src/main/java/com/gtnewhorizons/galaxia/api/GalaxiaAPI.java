@@ -141,7 +141,7 @@ public final class GalaxiaAPI {
         EffectBuilder def = SolarSystemRegistry.getById(player.dimension)
             .effects();
 
-        int temp = def.getTemperature(player);
+        int temp = def.getTemperature(player.worldObj);
         int acceptableMaxTemp = HazardTemperature.getAcceptableMaxTemp(player);
         int acceptableMinTemp = HazardTemperature.getAcceptableMinTemp(player);
 
