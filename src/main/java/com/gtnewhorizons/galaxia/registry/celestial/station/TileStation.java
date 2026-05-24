@@ -143,7 +143,7 @@ public class TileStation extends TileStationBase<TileStation> {
     public IStructureDefinition<TileStation> getStructureDefinition() {
         if (DEFINITION != null) return DEFINITION;
 
-        DEFINITION = behavior.buildStructureDefinition(GalaxiaAPI.getEffects(worldObj.provider.dimensionId));
+        DEFINITION = behavior.buildStructureDefinition(GalaxiaAPI.getEffects(worldObj.provider.dimensionId), worldObj);
         return DEFINITION;
     }
 

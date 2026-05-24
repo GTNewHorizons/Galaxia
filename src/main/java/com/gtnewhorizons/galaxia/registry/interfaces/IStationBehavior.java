@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
@@ -14,7 +15,7 @@ public interface IStationBehavior {
 
     String getUnlocalizedName();
 
-    IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def);
+    IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def, World world);
 
     int getSearchRadius();
 

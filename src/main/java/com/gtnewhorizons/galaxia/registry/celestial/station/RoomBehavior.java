@@ -1,9 +1,12 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.block.Block;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
+import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
@@ -20,52 +23,50 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
 
 public class RoomBehavior implements IStationBehavior {
 
-    private final ArbitraryShapeDefinition<TileStation> STRUCTURE_DEFINITION = ArbitraryShapeDefinition
-        .<TileStation>builder()
-        .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
-        .addElements(
-            TileStationBase.BASE_VALID_BLOCKS.stream()
-                .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-        .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
-            if (tileEntity instanceof TileEntityAirlock airlock) {
-                if (!airlock.isStructureValid()) return false;
-                station.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
-                return true;
-            }
-            return false;
-        }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addHeatingCoil, GalaxiaBlocksEnum.HEATING_COIL.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addAirPurifier, GalaxiaBlocksEnum.AIR_PURIFIER.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addWitherBlocker, GalaxiaBlocksEnum.WITHER_BLOCKER.get(), 0))
-        .addElement(
-            GalaxiaStructureUtility.ofBlockPosAdder(TileStation::addOxygenator, GalaxiaBlocksEnum.OXYGENATOR.get(), 0))
-        .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-        .withSearchRadius(ConfigStructures.enclosed.searchRadius)
-        .enclosed()
-        .build();
-
     @Override
     public String getUnlocalizedName() {
         return "galaxia.behavior.room";
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def) {
-        return STRUCTURE_DEFINITION;
+    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def, World world) {
+        return ArbitraryShapeDefinition.<TileStation>builder()
+            .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
+            .addElements(
+                getValidExteriorForEnvironment(def, world).stream()
+                    .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
+            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
+                if (tileEntity instanceof TileEntityAirlock airlock) {
+                    if (!airlock.isStructureValid()) return false;
+                    station.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
+                    return true;
+                }
+                return false;
+            }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
+            .addElement(
+                GalaxiaStructureUtility
+                    .ofBlockPosAdder(TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
+            .addElement(
+                GalaxiaStructureUtility
+                    .ofBlockPosAdder(TileStation::addHeatingCoil, GalaxiaBlocksEnum.HEATING_COIL.get(), 0))
+            .addElement(
+                GalaxiaStructureUtility
+                    .ofBlockPosAdder(TileStation::addAirPurifier, GalaxiaBlocksEnum.AIR_PURIFIER.get(), 0))
+            .addElement(
+                GalaxiaStructureUtility
+                    .ofBlockPosAdder(TileStation::addWitherBlocker, GalaxiaBlocksEnum.WITHER_BLOCKER.get(), 0))
+            .addElement(
+                GalaxiaStructureUtility
+                    .ofBlockPosAdder(TileStation::addOxygenator, GalaxiaBlocksEnum.OXYGENATOR.get(), 0))
+            .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
+            .withSearchRadius(ConfigStructures.enclosed.searchRadius)
+            .enclosed()
+            .build();
     }
 
     @Override
     public int getSearchRadius() {
-        return STRUCTURE_DEFINITION.getSearchRadius();
+        return ConfigStructures.enclosed.searchRadius;
     }
 
     @Override
@@ -80,5 +81,19 @@ public class RoomBehavior implements IStationBehavior {
             EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
             return label + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, yOffset));
+    }
+
+    private List<Block> getValidExteriorForEnvironment(EffectBuilder def, World world) {
+        final List<Block> valid_blocks = new ArrayList<>(
+            List.of(
+                GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
+                GalaxiaBlocksEnum.SPACE_STATION_GLASS.get()));
+
+        if (def.getPressure(world) >= 300) {
+            valid_blocks.remove(GalaxiaBlocksEnum.SPACE_STATION_PANEL.get());
+        }
+
+        return valid_blocks;
     }
 }

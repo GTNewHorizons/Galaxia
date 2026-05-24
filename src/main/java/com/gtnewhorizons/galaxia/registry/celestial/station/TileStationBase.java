@@ -30,11 +30,6 @@ import lombok.Getter;
 public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {
 
-    public static final List<Block> BASE_VALID_BLOCKS = List.of(
-        GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-        GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
-        GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
-
     protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
     protected BlockPos here;

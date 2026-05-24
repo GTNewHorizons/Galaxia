@@ -3,6 +3,7 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 import java.util.List;
 
 import net.minecraft.util.StatCollector;
+import net.minecraft.world.World;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
@@ -59,7 +60,8 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def) {
+    public IStructureDefinition<TileStation> buildStructureDefinition(EffectBuilder def, World world) {
+        // TODO: Change materials based on the environment like RoomBehavior
         return STRUCTURE_DEFINITION;
     }
 
