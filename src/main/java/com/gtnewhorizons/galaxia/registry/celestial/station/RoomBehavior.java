@@ -42,7 +42,7 @@ public class RoomBehavior implements IStationBehavior {
                 .ofBlockPosAdder(TileStation::addHeatingCoil, GalaxiaBlocksEnum.HEATING_COIL.get(), 0))
         .addElement(
             GalaxiaStructureUtility
-                .ofBlockPosAdder(TileStation::addSporeFilter, GalaxiaBlocksEnum.SPORE_FILTER.get(), 0))
+                .ofBlockPosAdder(TileStation::addAirPurifier, GalaxiaBlocksEnum.AIR_PURIFIER.get(), 0))
         .addElement(
             GalaxiaStructureUtility
                 .ofBlockPosAdder(TileStation::addWitherBlocker, GalaxiaBlocksEnum.WITHER_BLOCKER.get(), 0))

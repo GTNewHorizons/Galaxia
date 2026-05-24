@@ -66,7 +66,7 @@ public enum GalaxiaBlocksEnum {
     AIRLOCK_DOOR(new BlockAirlockDoor(), "airlock_door"),
     COOLING_COIL(new BlockCasing("space_station/cooling_coil"), "cooling_coil"),
     HEATING_COIL(new BlockCasing("space_station/heating_coil"), "heating_coil"),
-    SPORE_FILTER(new BlockCasing("space_station/spore_filter"), "spore_filter"),
+    AIR_PURIFIER(new BlockCasing("space_station/air_purifier"), "air_purifier"),
     WITHER_BLOCKER(new BlockCasing("space_station/wither_blocker"), "wither_blocker"),
     OXYGENATOR(new BlockCasing("space_station/oxygenator"), "oxygenator"),
 

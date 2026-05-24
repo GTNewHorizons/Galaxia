@@ -64,7 +64,7 @@ public class TileStation extends TileStationBase<TileStation> {
     private final LongArraySet coolingCoils = new LongArraySet();
     private final LongArraySet heatingCoils = new LongArraySet();
     private final LongArraySet oxygenators = new LongArraySet();
-    private final LongArraySet sporeFilters = new LongArraySet();
+    private final LongArraySet airPurifiers = new LongArraySet();
     private final LongArraySet witherBlockers = new LongArraySet();
 
     private double oxygenLevel = 0;
@@ -93,12 +93,12 @@ public class TileStation extends TileStationBase<TileStation> {
         oxygenators.add(CoordinatePacker.pack(x, y, z));
     }
 
-    public boolean hasSporeFilter() {
-        return isSealed() && !sporeFilters.isEmpty();
+    public boolean hasAirPurifier() {
+        return isSealed() && !airPurifiers.isEmpty();
     }
 
-    public void addSporeFilter(int x, int y, int z) {
-        sporeFilters.add(CoordinatePacker.pack(x, y, z));
+    public void addAirPurifier(int x, int y, int z) {
+        airPurifiers.add(CoordinatePacker.pack(x, y, z));
     }
 
     public boolean hasWitherBlocker() {
@@ -173,7 +173,7 @@ public class TileStation extends TileStationBase<TileStation> {
         coolingCoils.clear();
         heatingCoils.clear();
         oxygenators.clear();
-        sporeFilters.clear();
+        airPurifiers.clear();
         witherBlockers.clear();
     }
 

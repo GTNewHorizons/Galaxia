@@ -42,7 +42,7 @@ public class HazardSpores implements IEnvironmentalHazard {
         final boolean hasFilter = hasSporeFilter(player);
         final int harshness = 1;
 
-        if (station.filter(TileStation::hasSporeFilter)
+        if (station.filter(TileStation::hasAirPurifier)
             .isPresent()) {
             return HazardWarnings.FINE;
         }
