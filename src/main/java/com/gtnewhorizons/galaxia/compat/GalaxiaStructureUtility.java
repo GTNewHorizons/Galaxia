@@ -374,8 +374,8 @@ public class GalaxiaStructureUtility {
         void accept(T t, int x, int y, int z);
     }
 
-    public static <T> IExtendedStructureElement<T> ofBlockPosAdder(BlockPosConsumer<T> consumer, Block block,
-        int hintMeta) {
+    public static <T> IExtendedStructureElement<T> ofBlockPosAdderNoMetaForceCheck(BlockPosConsumer<T> consumer, Block block,
+                                                                                   int hintMeta) {
         return new IExtendedStructureElement<T>() {
 
             @Override
@@ -394,7 +394,7 @@ public class GalaxiaStructureUtility {
 
             @Override
             public boolean couldBeValid(T t, World world, int x, int y, int z, ItemStack trigger) {
-                return block == world.getBlock(x, y, z);
+                return check(t, world, x, y, z);
             }
 
             @Override
