@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import java.util.List;
-import java.util.Set;
 
 import net.minecraft.nbt.NBTTagCompound;
 
