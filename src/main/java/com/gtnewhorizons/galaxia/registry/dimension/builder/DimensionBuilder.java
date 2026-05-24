@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import net.minecraft.block.Block;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldProvider;
@@ -244,6 +245,10 @@ public class DimensionBuilder {
         return this;
     }
 
+    /**
+     * @param blocks each block must be registered as a machine block
+     * @return Configured builder
+     */
     public final DimensionBuilder addValidSpaceStationBlocks(Block... blocks) {
         this.validSpaceStationBlocks.addAll(List.of(blocks));
         return this;
