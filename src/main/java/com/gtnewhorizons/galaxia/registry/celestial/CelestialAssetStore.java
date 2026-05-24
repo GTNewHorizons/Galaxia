@@ -266,7 +266,8 @@ public final class CelestialAssetStore {
             for (CelestialAsset.ID id : ids.getValue()) {
                 byId.remove(id);
                 teamById.remove(id);
-                byBody.get(ids.getKey()).remove(id);
+                byBody.get(ids.getKey())
+                    .remove(id);
             }
         }
     }

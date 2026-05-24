@@ -43,7 +43,6 @@ public interface IStationBehaviorWithAttachments extends IStationBehavior {
             if (!(te instanceof IStationAttachment)
                 || (te instanceof GalaxiaBootableMultiblock<?>base && !base.isStructureValid())) {
                 graph.removeAttachment(pos);
-                attachments.remove(i);
                 changed = true;
             }
         }

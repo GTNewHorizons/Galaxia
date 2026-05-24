@@ -21,6 +21,7 @@ import lombok.Builder;
  * @param radiationModifier Optional modifier for radiation (can be null)
  * @param pressureModifier  Optional modifier for pressure (can be null)
  */
+@Builder
 public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
     int pressure,
 
@@ -31,13 +32,6 @@ public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, 
     public interface Modifier<T> {
 
         int apply(T target, int base);
-    }
-
-    @Builder
-    public EffectBuilder {
-        if (baseTemp == 0) baseTemp = 273;
-        if (oxygenPercent == 0) oxygenPercent = 100;
-        if (pressure == 0) pressure = 1;
     }
 
     /** Constructor without modifiers */
@@ -93,5 +87,13 @@ public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, 
             float time = world.getCelestialAngle(freq);
             return base + (int) (Math.sin(time) * amp);
         }
+    }
+
+    // Default values for Lombok builder
+    public static class EffectBuilderBuilder {
+
+        private int baseTemp = 273;
+        private int oxygenPercent = 100;
+        private int pressure = 1;
     }
 }

@@ -123,6 +123,7 @@ public class DimensionEventHandler {
         if (player.capabilities.isCreativeMode && !ConfigPlayer.ConfigPlayerGlobal.applyDebuffsInCreative) {
             if (!this.batchedWarnings.isEmpty()) {
                 this.batchedWarnings.clear();
+                // Clear warnings on the client
                 Galaxia.GALAXIA_NETWORK.sendTo(new HazardWarningPacket(this.batchedWarnings), (EntityPlayerMP) player);
             }
 

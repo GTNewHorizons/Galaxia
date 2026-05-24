@@ -131,6 +131,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
+        DEFINITION = null;
     }
 
     public void addAttachment(BlockPos pos) {

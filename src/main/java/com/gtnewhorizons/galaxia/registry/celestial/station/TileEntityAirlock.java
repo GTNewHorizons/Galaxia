@@ -139,6 +139,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
         if (stationControllers.contains(pos)) return true;
         stationControllers.add(pos);
         markDirty();
+        notifyDirtySeal();
         return true;
     }
 
