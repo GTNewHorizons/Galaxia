@@ -18,12 +18,8 @@ public class PlacementHelper {
 
     public static ForgeDirection placeOnlyCardinal(EntityLivingBase placer) {
         int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        ForgeDirection[] dirs = {
-            ForgeDirection.NORTH,
-            ForgeDirection.EAST,
-            ForgeDirection.SOUTH,
-            ForgeDirection.WEST
-        };
+        ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
+            ForgeDirection.WEST };
         return dirs[f];
     }
 }

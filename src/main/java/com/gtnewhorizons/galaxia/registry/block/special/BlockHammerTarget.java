@@ -1,17 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.block.special;
 
-import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerTarget;
 
