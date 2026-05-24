@@ -2,10 +2,13 @@ package com.gtnewhorizons.galaxia.registry.hazards;
 
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.getThermalProtection;
 
+import java.util.Optional;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnvironmentalHazard;
@@ -36,16 +39,19 @@ public class HazardTemperature implements IEnvironmentalHazard {
      * 20K <= Diff <= 50K = Slowness/Fatigue 2
      * Diff > 50K = Slowness/Fatigue 3 and 1 heart per second damange
      *
-     * @param def    The EffectDef of the dimension
-     * @param player The player entity
+     * @param def     The EffectDef of the dimension
+     * @param player  The player entity
+     * @param station
      * @return
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player) {
+    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
         int temp = def.getTemperature(player.worldObj);
 
-        int acceptableMaxTemp = getAcceptableMaxTemp(player);
-        int acceptableMinTemp = getAcceptableMinTemp(player);
+        int acceptableMaxTemp = getAcceptableMaxTemp(player) + station.map(TileStation::getHeatingModifier)
+            .orElse(0);
+        int acceptableMinTemp = getAcceptableMinTemp(player) - station.map(TileStation::getCoolingModifier)
+            .orElse(0);
 
         if (temp < acceptableMaxTemp && temp > acceptableMinTemp) return HazardWarnings.FINE;
         if (temp < acceptableMinTemp) {

@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.compat;
 import static com.gtnewhorizon.structurelib.StructureLib.LOGGER;
 import static com.gtnewhorizon.structurelib.StructureLib.PANIC_MODE;
 
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import net.minecraft.block.Block;
@@ -25,7 +24,6 @@ import com.gtnewhorizon.structurelib.structure.IItemSource;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizon.structurelib.structure.adders.ITileAdder;
 import com.gtnewhorizon.structurelib.util.ItemStackPredicate;
-import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 
 // TODO: This probably could be upstreamed, don't know if IExtendedStructureElement would be accepted though, but I
@@ -372,11 +370,12 @@ public class GalaxiaStructureUtility {
 
     @FunctionalInterface
     public interface BlockPosConsumer<T> {
-        void accept(T t, int x, int y,int z);
+
+        void accept(T t, int x, int y, int z);
     }
 
-    public static <T> IExtendedStructureElement<T> ofBlockPosAdder(
-        BlockPosConsumer<T> consumer, Block block, int hintMeta) {
+    public static <T> IExtendedStructureElement<T> ofBlockPosAdder(BlockPosConsumer<T> consumer, Block block,
+        int hintMeta) {
         return new IExtendedStructureElement<T>() {
 
             @Override

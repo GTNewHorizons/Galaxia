@@ -4,6 +4,7 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.isInGalaxiaDimension;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -129,15 +130,15 @@ public class DimensionEventHandler {
         }
 
         this.batchedWarnings.clear();
-        TileStation station = GalaxiaAPI.getStationAround(
-            player.worldObj,
-            player.dimension,
-            (int) player.posX,
-            (int) player.posY,
-            (int) player.posZ);
+        Optional<TileStation> station = Optional.ofNullable(
+            GalaxiaAPI.getStationAround(
+                player.worldObj,
+                player.dimension,
+                (int) player.posX,
+                (int) player.posY,
+                (int) player.posZ));
         for (IEnvironmentalHazard h : ENVIRONMENTAL_HAZARDS) {
-            if (station != null && station.protectsAgainst(h)) continue;
-            HazardWarnings w = h.apply(def, player);
+            HazardWarnings w = h.apply(def, player, station);
             if (w != HazardWarnings.FINE) {
                 batchedWarnings.add(w);
             }

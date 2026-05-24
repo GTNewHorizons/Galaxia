@@ -1,10 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.dimension.builder;
 
-import java.util.function.BiFunction;
+import net.minecraft.world.World;
 
 import lombok.Builder;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.world.World;
 
 /**
  * Record + Builder class to get a list of effects on each planet as required
@@ -24,14 +22,14 @@ import net.minecraft.world.World;
  * @param pressureModifier  Optional modifier for pressure (can be null)
  */
 public record EffectBuilder(int baseTemp, boolean withering, int oxygenPercent, int radiation, boolean spores,
-                            int pressure,
+    int pressure,
 
-                            Modifier<World> tempModifier, Modifier<World> oxygenModifier,
-                            Modifier<World> radiationModifier,
-                            Modifier<World> pressureModifier) {
+    Modifier<World> tempModifier, Modifier<World> oxygenModifier, Modifier<World> radiationModifier,
+    Modifier<World> pressureModifier) {
 
     @FunctionalInterface
     public interface Modifier<T> {
+
         int apply(T target, int base);
     }
 

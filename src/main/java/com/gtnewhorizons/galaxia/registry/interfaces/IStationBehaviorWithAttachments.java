@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
-import java.util.Iterator;
 import java.util.List;
 
 import net.minecraft.nbt.NBTTagCompound;

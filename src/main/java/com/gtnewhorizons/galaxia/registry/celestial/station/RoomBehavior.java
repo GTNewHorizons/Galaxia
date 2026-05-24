@@ -33,8 +33,9 @@ public class RoomBehavior implements IStationBehavior {
             }
             return false;
         }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-        .addElement(GalaxiaStructureUtility.ofBlockPosAdder(
-            TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
+        .addElement(
+            GalaxiaStructureUtility
+                .ofBlockPosAdder(TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
         .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
         .withSearchRadius(ConfigStructures.enclosed.searchRadius)
         .enclosed()
@@ -57,9 +58,7 @@ public class RoomBehavior implements IStationBehavior {
 
     @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        BooleanSyncValue sealedSync = new BooleanSyncValue(
-            () -> station.isSealed(),
-            () -> station.isSealed());
+        BooleanSyncValue sealedSync = new BooleanSyncValue(() -> station.isSealed(), () -> station.isSealed());
         syncManager.syncValue("sealed", 0, sealedSync);
 
         return List.of(new TextWidget<>(IKey.dynamic(() -> {
