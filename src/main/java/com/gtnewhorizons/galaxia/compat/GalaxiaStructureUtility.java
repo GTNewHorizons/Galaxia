@@ -374,8 +374,8 @@ public class GalaxiaStructureUtility {
         void accept(T t, int x, int y, int z);
     }
 
-    public static <T> IExtendedStructureElement<T> ofBlockPosAdderNoMetaForceCheck(BlockPosConsumer<T> consumer, Block block,
-                                                                                   int hintMeta) {
+    public static <T> IExtendedStructureElement<T> ofBlockPosAdderNoMetaForceCheck(BlockPosConsumer<T> consumer,
+        Block block, int hintMeta) {
         return new IExtendedStructureElement<T>() {
 
             @Override

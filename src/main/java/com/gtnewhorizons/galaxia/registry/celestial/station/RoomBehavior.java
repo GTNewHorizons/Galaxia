@@ -49,17 +49,25 @@ public class RoomBehavior implements IStationBehavior {
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
             .addElement(
-                GalaxiaStructureUtility
-                    .ofBlockPosAdderNoMetaForceCheck(TileStation::addCoolingCoil, GalaxiaBlocksEnum.COOLING_COIL.get(), 0))
+                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addCoolingCoil,
+                    GalaxiaBlocksEnum.COOLING_COIL.get(),
+                    0))
             .addElement(
-                GalaxiaStructureUtility
-                    .ofBlockPosAdderNoMetaForceCheck(TileStation::addHeatingCoil, GalaxiaBlocksEnum.HEATING_COIL.get(), 0))
+                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addHeatingCoil,
+                    GalaxiaBlocksEnum.HEATING_COIL.get(),
+                    0))
             .addElement(
-                GalaxiaStructureUtility
-                    .ofBlockPosAdderNoMetaForceCheck(TileStation::addAirPurifier, GalaxiaBlocksEnum.AIR_PURIFIER.get(), 0))
+                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addAirPurifier,
+                    GalaxiaBlocksEnum.AIR_PURIFIER.get(),
+                    0))
             .addElement(
-                GalaxiaStructureUtility
-                    .ofBlockPosAdderNoMetaForceCheck(TileStation::addWitherBlocker, GalaxiaBlocksEnum.WITHER_BLOCKER.get(), 0))
+                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addWitherBlocker,
+                    GalaxiaBlocksEnum.WITHER_BLOCKER.get(),
+                    0))
             .addElement(
                 GalaxiaStructureUtility
                     .ofBlockPosAdderNoMetaForceCheck(TileStation::addOxygenator, GalaxiaBlocksEnum.OXYGENATOR.get(), 0))
