@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,39 +30,24 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
-import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
-import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
-import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
-import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
-public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerCannon> {
-
-    private static final String NBT_FILTER = "filter";
-    private static final String NBT_HAMMER_VARIANT = "hammerVariant";
-    private static final String NBT_HAMMER_ENERGY = "hammerEnergy";
-    private static final String NBT_HAMMER_COOLDOWN_SHOT = "hammerCooldownShot";
-    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownShot";
+public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
+    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerTarget> {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
-    private static final IStructureDefinition<TileHammerCannon> STRUCTURE_DEFINITION = StructureDefinition
-        .<TileHammerCannon>builder()
+    private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
+        .<TileHammerTarget>builder()
         // spotless:off
-        .addShape(STRUCTURE_PIECE_MAIN, StructureUtility.transpose(new String[][]{
-            {"  T  ", "     ", "T   T", "     ", "  T  "},
-            {"  T  ", "     ", "T   T", "     ", "  T  "},
-            {"  C  ", "     ", "C   C", "     ", "  C  "},
-            {" CCC ", "C   C", "C   C", "C   C", " CCC "},
-            {" C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC "}
+        .addShape(STRUCTURE_PIECE_MAIN, StructureUtility.transpose(new String[][] {
+            { "  T  ", "     ", "T   T", "     ", "  T  " },
+            { "  T  ", "     ", "T   T", "     ", "  T  " },
+            { "  C  ", "     ", "C   C", "     ", "  C  " },
+            { " CCC ", "C   C", "C   C", "C   C", " CCC " },
+            { " C~C ", "CCCCC", "CCCCC", "CCCCC", " CCC " }
         }))
         // spotless:on
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0))
@@ -75,40 +60,14 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         }, Blocks.chest, 0), StructureUtility.ofBlock(GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(), 0)))
         .build();
 
-    // Internal inventory only available for firing hammer packages
-    private final List<IInventory> inventory = new ArrayList<>();
+    private final List<IInventory> inventory = new java.util.ArrayList<>();
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
-    private BlockPos here;
-    private final ModuleInstance moduleInstance;
-    private final ModuleHammer hammer;
+    private final BlockPos here;
 
-    public ModuleInstance getModuleInstance() {
-        return moduleInstance;
-    }
-
-    public ModuleHammer getHammer() {
-        return hammer;
-    }
-
-    public List<IInventory> getChestInventories() {
-        return inventory;
-    }
-
-    public ResourceFilter<ItemStackWrapper> getFilter() {
-        return filter;
-    }
-
-    public TileHammerCannon() {
+    public TileHammerTarget() {
         super();
-
         here = new BlockPos(xCoord, yCoord, zCoord);
-        // TODO: Figure out tiering system
-        this.moduleInstance = FacilityModuleKind.HAMMER
-            .create(StationTileCoord.CORE, ModuleShape.SINGLE, ModuleTier.UV);
-        moduleInstance.updateStatus(Buildable.Status.DISABLED);
-        this.hammer = (ModuleHammer) this.moduleInstance.component();
-        this.hammer.setVariant(HammerVariant.BIG);
     }
 
     @Override
@@ -117,19 +76,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     }
 
     @Override
-    public void tick() {
-        if (graph == null) return;
-        moduleInstance.tick(
-            CelestialAssetStore.findAsset(
-                graph.getController()
-                    .getBackingStation()));
-    }
-
-    @Override
-    public void onStructureFormed() {
-        super.onStructureFormed();
-        here = new BlockPos(xCoord, yCoord, zCoord);
-    }
+    public void tick() {}
 
     @Override
     public void onStructureDisformed() {
@@ -145,16 +92,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     }
 
     @Override
-    protected void onBootComplete() {
-        moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
-    }
-
-    @Override
-    protected void onBootFailed() {
-        moduleInstance.updateStatus(Buildable.Status.DISABLED);
-    }
-
-    @Override
     public void onAttached(StationGraph graph) {
         this.graph = graph;
     }
@@ -166,7 +103,12 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
 
     @Override
     public List<IInventory> getInventories() {
-        return List.of();
+        return this.inventory;
+    }
+
+    @Override
+    public ResourceFilter<ItemStackWrapper> getItemFilter() {
+        return filter;
     }
 
     @Override
@@ -176,43 +118,25 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         for (String key : filter.serialize()) {
             filterList.appendTag(new NBTTagString(key));
         }
-        nbt.setTag(NBT_FILTER, filterList);
-        nbt.setString(
-            NBT_HAMMER_VARIANT,
-            hammer.variant()
-                .name());
-        nbt.setLong(NBT_HAMMER_ENERGY, hammer.energyStored());
-        nbt.setInteger(NBT_HAMMER_COOLDOWN_SHOT, hammer.shotCooldownTicks());
-        nbt.setInteger(NBT_HAMMER_COOLDOWN_ROUTE, hammer.routeProbeCooldownTicks());
+        nbt.setTag("filter", filterList);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
         filter.clear();
-        if (nbt.hasKey(NBT_FILTER)) {
-            NBTTagList filterList = nbt.getTagList(NBT_FILTER, Constants.NBT.TAG_STRING);
-            java.util.ArrayList<String> keys = new java.util.ArrayList<>();
+        if (nbt.hasKey("filter")) {
+            NBTTagList filterList = nbt.getTagList("filter", Constants.NBT.TAG_STRING);
+            List<String> keys = new ArrayList<>();
             for (int i = 0; i < filterList.tagCount(); i++) {
                 keys.add(filterList.getStringTagAt(i));
             }
             filter.load(keys);
         }
-        if (nbt.hasKey(NBT_HAMMER_VARIANT)) {
-            try {
-                HammerVariant variant = HammerVariant.valueOf(nbt.getString(NBT_HAMMER_VARIANT));
-                hammer.setVariant(variant);
-            } catch (IllegalArgumentException e) {
-                hammer.setVariant(HammerVariant.BIG);
-            }
-        }
-        hammer.setEnergyStored(nbt.getLong(NBT_HAMMER_ENERGY));
-        hammer
-            .setDispatchCooldowns(nbt.getInteger(NBT_HAMMER_COOLDOWN_SHOT), nbt.getInteger(NBT_HAMMER_COOLDOWN_ROUTE));
     }
 
     @Override
-    public IStructureDefinition<TileHammerCannon> getStructureDefinition() {
+    public IStructureDefinition<TileHammerTarget> getStructureDefinition() {
         return STRUCTURE_DEFINITION;
     }
 
@@ -233,7 +157,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
 
     @Override
     public Block getControllerBlock() {
-        return GalaxiaBlocksEnum.HAMMER_CANNON.get();
+        return GalaxiaBlocksEnum.HAMMER_TARGET.get();
     }
 
     @Override
@@ -245,7 +169,7 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         BooleanSyncValue structureValidSync = new BooleanSyncValue(() -> structureValid, () -> structureValid);
         syncManager.syncValue("structureValid", 0, structureValidSync);
 
-        return new ModularPanel("galaxia:hammer_cannon").size(210, 130)
+        return new ModularPanel("galaxia:station_room").size(210, 130)
             .child(
                 IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
                     .asWidget()

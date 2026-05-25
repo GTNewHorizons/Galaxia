@@ -15,6 +15,7 @@ import net.minecraftforge.fluids.Fluid;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -187,9 +188,9 @@ final class StationInventoryPanelModelTest {
 
     private static IDistributedInventory distributed() {
         return new AutomatedFacility(
-            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.ID.create(),
+            CelestialAsset.ID.create(),
             com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId.PROXIMA_CENTAURI,
-            com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
             com.gtnewhorizons.galaxia.registry.interfaces.Buildable.Status.OPERATIONAL);
     }
 

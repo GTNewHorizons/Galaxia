@@ -37,7 +37,7 @@ public class RocketEditorUI {
             .copy();
 
         final int[] selectedId = { -1 };
-        IntSyncValue selectedPartId = new IntSyncValue(() -> selectedId[0], val -> selectedId[0] = val);
+        IntSyncValue selectedPartId = new IntSyncValue(() -> selectedId[0], val -> selectedId[0] = val).allowC2S();
         syncManager.syncValue("selected_part_id", selectedPartId);
 
         IntSyncValue buildStatusSync = new IntSyncValue(

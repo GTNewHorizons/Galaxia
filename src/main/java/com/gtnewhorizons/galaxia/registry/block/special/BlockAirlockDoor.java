@@ -11,7 +11,7 @@ import com.gtnewhorizons.galaxia.compat.structure.util.LocalCoord;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 

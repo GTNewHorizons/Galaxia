@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -23,6 +23,8 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
+import lombok.Getter;
+
 public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> extends GalaxiaBootableMultiblock<T>
     implements IGuiHolder<PosGuiData>, IGraphListener {
 
@@ -35,8 +37,11 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     protected List<BlockPos> airlocks = new ArrayList<>();
     protected BlockPos here;
 
+    @Getter
     private boolean oxygenated = false;
-    protected int oxygenLevel = 100;
+    protected int oxygenLevel = DEFAULT_OXYGEN_LEVEL;
+
+    public static final int DEFAULT_OXYGEN_LEVEL = 100;
 
     public TileStationBase() {
         super();
@@ -148,10 +153,6 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         oxygenated = checkOxygenLevels(new HashSet<>());
     }
 
-    public boolean isOxygenated() {
-        return oxygenated;
-    }
-
     private boolean checkOxygenLevels(Set<BlockPos> visited) {
         if (!structureValid) return false;
 
@@ -176,7 +177,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             for (BlockPos otherPos : airlock.getStationControllers()) {
                 if (otherPos.equals(here)) continue;
 
-                TileStationBase other = otherPos.getTE(worldObj);
+                TileStationBase<?> other = otherPos.getTE(worldObj);
                 if (other == null) continue;
 
                 if (other.checkOxygenLevels(visited)) {

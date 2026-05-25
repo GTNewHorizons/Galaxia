@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.outpost;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,12 +11,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
+import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 
@@ -39,7 +39,7 @@ public class Station extends CelestialAsset {
 
     @Override
     public void tick() {
-        TileStationController teController = getTileController();
+        TileStation teController = getTileController();
         if (teController == null) return;
 
         teController.tick();
@@ -61,7 +61,7 @@ public class Station extends CelestialAsset {
 
     @Override
     public List<IDistributedInventory> getChildren() {
-        TileStationController teController = getTileController();
+        TileStation teController = getTileController();
         if (teController == null) return List.of();
 
         return teController.getConnectedInventories();
@@ -81,7 +81,7 @@ public class Station extends CelestialAsset {
 
     @Override
     public Stream<ModuleInstance> forEachModule() {
-        TileStationController ctrl = getTileController();
+        TileStation ctrl = getTileController();
         if (ctrl == null) return Stream.of();
         StationGraph graph = ctrl.getGraph();
         if (graph == null) return Stream.of();
@@ -92,7 +92,7 @@ public class Station extends CelestialAsset {
 
     public Map<ItemStackWrapper, Long> getCannonChestItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
-        TileStationController ctrl = getTileController();
+        TileStation ctrl = getTileController();
         if (ctrl == null) return result;
         StationGraph graph = ctrl.getGraph();
         if (graph == null) return result;
@@ -114,7 +114,7 @@ public class Station extends CelestialAsset {
     }
 
     /** Public so network handlers can route filter mutations. */
-    public TileStationController getTileController() {
+    public TileStation getTileController() {
         if (this.isDisabled()) return null;
         if (controller == null) return null;
 

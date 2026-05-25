@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.ArrayList;
 import java.util.List;

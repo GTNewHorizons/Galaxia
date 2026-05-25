@@ -19,16 +19,16 @@ import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.AssetSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
-import com.gtnewhorizons.galaxia.registry.block.tile.StationGraph;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
-import com.gtnewhorizons.galaxia.registry.outpost.Station;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchPlanner;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerTrajectoryLoadTracker;
@@ -184,7 +184,7 @@ public class CelestialEventHandler {
 
         Map<ModuleInstance, TileHammerCannon> moduleCannon = null;
         if (supplier instanceof Station station) {
-            TileStationController ctrl = station.getTileController();
+            TileStation ctrl = station.getTileController();
             StationGraph graph = ctrl != null ? ctrl.getGraph() : null;
             if (graph == null) return false;
             moduleCannon = new HashMap<>();

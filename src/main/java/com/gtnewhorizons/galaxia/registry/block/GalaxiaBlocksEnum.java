@@ -16,18 +16,14 @@ import com.gtnewhorizons.galaxia.registry.block.special.BlockFumarole;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerCannon;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockHammerTarget;
 import com.gtnewhorizons.galaxia.registry.block.special.BlockStationController;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockStationDock;
-import com.gtnewhorizons.galaxia.registry.block.special.BlockStationRoom;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.block.tile.TileEntityFumarole;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerCannon;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileHammerTarget;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationController;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationDock;
-import com.gtnewhorizons.galaxia.registry.block.tile.TileStationRoom;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenCollector;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenPylon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileHammerTarget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.BlockRocketTrophy;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityRocketTrophy;
@@ -53,9 +49,7 @@ public enum GalaxiaBlocksEnum {
     // TE
     SILO_CONTROLLER(new BlockSilo(), TileEntitySilo.class, "silo_controller"),
     AIRLOCK_CONTROLLER(new BlockAirlockController(), TileEntityAirlock.class, "airlock_controller"),
-    STATION_CONTROLLER(new BlockStationController(), TileStationController.class, "station_controller"),
-    STATION_ROOM(new BlockStationRoom(), TileStationRoom.class, "station_room"),
-    STATION_DOCK(new BlockStationDock(), TileStationDock.class, "station_dock"),
+    STATION_CONTROLLER(new BlockStationController(), TileStation.class, "station_controller"),
     ASSEMBLER_CONTROLLER(new BlockModuleAssembler(), TileEntityModuleAssembler.class, "module_assembler_controller"),
     FUMAROLE(new BlockFumarole(), TileEntityFumarole.class, "tenebrae_fumarole"),
     GANTRY(new BlockGantry(), TileEntityGantry.class, "gantry_block"),

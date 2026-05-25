@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.block.tile;
+package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -19,7 +19,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public final class StationGraph {
 
-    private final TileStationController controller;
+    private final TileStation controller;
     private final Object2ObjectOpenHashMap<BlockPos, TileStationBase<?>> pieces = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, IStationAttachment<?>> attachments = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, ObjectArrayList<BlockPos>> adjacency = new Object2ObjectOpenHashMap<>();
@@ -27,7 +27,7 @@ public final class StationGraph {
     private final ObjectArrayList<BlockPos> queue = new ObjectArrayList<>();
     private final List<IGraphListener> listeners = new ObjectArrayList<>();
 
-    public StationGraph(TileStationController controller) {
+    public StationGraph(TileStation controller) {
         this.controller = controller;
     }
 
@@ -220,7 +220,7 @@ public final class StationGraph {
         return pieces.size() <= 1;
     }
 
-    public TileStationController getController() {
+    public TileStation getController() {
         return controller;
     }
 
