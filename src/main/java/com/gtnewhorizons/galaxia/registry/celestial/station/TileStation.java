@@ -55,6 +55,14 @@ public class TileStation extends TileStationBase<TileStation> {
 
     private IStationBehavior behavior = GalaxiaBehaviors.ROOM.get();
 
+    private StationGraphSyncHandler activeGraphSyncHandler;
+
+    public void clearActiveGraphSyncHandler(StationGraphSyncHandler handler) {
+        if (activeGraphSyncHandler == handler) {
+            activeGraphSyncHandler = null;
+        }
+    }
+
     @Getter
     @Setter
     private UUID owner;
@@ -128,6 +136,10 @@ public class TileStation extends TileStationBase<TileStation> {
         this.behavior = newBehavior;
         markStructureDirty();
         markDirty();
+        if (activeGraphSyncHandler != null) {
+            activeGraphSyncHandler.forceDirty();
+            activeGraphSyncHandler.triggerFullSync();
+        }
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
@@ -397,6 +409,12 @@ public class TileStation extends TileStationBase<TileStation> {
             EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
             return structure + ": " + color + status + EnumChatFormatting.RESET;
         })).pos(10, structY));
+
+        // Register station graph sync handler for all behaviors to consume
+        StationGraphSyncHandler graphSyncHandler = new StationGraphSyncHandler();
+        graphSyncHandler.setStation(this);
+        syncManager.syncValue(StationGraphSyncHandler.KEY, graphSyncHandler);
+        activeGraphSyncHandler = graphSyncHandler;
 
         // Behavior-specific widgets
         int behaviorY = isCtrl ? 60 : 78;

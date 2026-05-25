@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
+import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
@@ -69,14 +71,36 @@ public class Station extends CelestialAsset {
 
     @Override
     public boolean tryConsumeEnergy(long powerDraw) {
-        // TODO
-        return true;
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return false;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return false;
+
+        long remaining = powerDraw;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) graph
+            .getEnergyAttachments()::iterator) {
+            IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
+            long drawn = h.drawEnergy(ra.attachment(), remaining);
+            remaining -= drawn;
+            if (remaining <= 0) return true;
+        }
+        return remaining < powerDraw;
     }
 
     @Override
     public long getEnergyStored() {
-        // TODO
-        return Integer.MAX_VALUE;
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return 0;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return 0;
+
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) graph
+            .getEnergyAttachments()::iterator) {
+            IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
+            total = total.add(h.getEnergyStored(ra.attachment()));
+        }
+        return total.min(BigInteger.valueOf(Long.MAX_VALUE)).longValue();
     }
 
     @Override
