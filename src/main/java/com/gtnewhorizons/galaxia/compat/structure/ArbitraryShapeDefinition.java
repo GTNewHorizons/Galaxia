@@ -181,7 +181,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         int offsetY, int offsetZ, IStructureWalker<T> walker) {}
 
     public int getStructureBlocksAmount() {
-        return structureBlocks.size();
+        return structureBlocks != null ? structureBlocks.size() : 0;
     }
 
     private boolean openCheck(T tile, World world) {

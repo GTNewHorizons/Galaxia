@@ -30,8 +30,8 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.dimension.SolarSystemRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
+import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 import it.unimi.dsi.fastutil.longs.LongArraySet;
@@ -131,7 +131,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
-        DEFINITION = null;
+        reset();
     }
 
     public void addAttachment(BlockPos pos) {
@@ -246,6 +246,8 @@ public class TileStation extends TileStationBase<TileStation> {
 
     @Override
     public void tick() {
+        if (!structureValid) return;
+
         super.tick();
         if (getBackingStation().tryConsumeEnergy(
             oxygenators.size() * OXYGENATOR_EUT + coolingCoils.size() * COIL_COOLING_EUT
@@ -266,8 +268,7 @@ public class TileStation extends TileStationBase<TileStation> {
         for (TileStationBase<?> secondary : graph.iterateOver(TileStationBase.class)) {
             secondary.tick();
         }
-        graph.getAttachments()
-            .forEach(IStationAttachment::tick);
+        graph.tickAttachments();
     }
 
     public boolean isMainController() {
@@ -547,7 +548,6 @@ public class TileStation extends TileStationBase<TileStation> {
             bootState = BootState.UNINITIALIZED;
         }
         graph = null;
-        controllerFlag = Role.UNDEFINED;
     }
 
     @Override
@@ -563,7 +563,7 @@ public class TileStation extends TileStationBase<TileStation> {
     }
 
     @Override
-    public void onAttachmentConnected(BlockPos pos, IStationAttachment<?> attachment) {
+    public void onAttachmentConnected(BlockPos pos, Object attachment) {
         if (!(behavior instanceof IStationBehaviorWithAttachments attacher)) return;
         if (!attachments.contains(pos)) {
             attachments.add(pos);
@@ -594,6 +594,13 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     protected int getControllerOffsetZ() {
         return 0;
+    }
+
+    protected void reset() {
+        DEFINITION = null;
+        controllerFlag = Role.UNDEFINED;
+        graph = null;
+        super.reset();
     }
 
     public enum Role {

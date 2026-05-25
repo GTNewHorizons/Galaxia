@@ -30,13 +30,13 @@ import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
+import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerTarget> {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -65,18 +65,50 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     private @Nullable StationGraph graph;
     private final BlockPos here;
 
+    static {
+        StationAttachmentRegistry.register(TileHammerTarget.class, new IAttachmentHandler<TileHammerTarget>() {
+
+            @Override
+            public BlockPos getPosition(TileHammerTarget attachment) {
+                return attachment.getPosition();
+            }
+
+            @Override
+            public void tick(TileHammerTarget attachment) {
+                attachment.tick();
+            }
+
+            @Override
+            public boolean isReady(TileHammerTarget attachment) {
+                return attachment.booted();
+            }
+
+            @Override
+            public void onAttached(TileHammerTarget attachment, StationGraph graph) {
+                attachment.onAttached(graph);
+            }
+
+            @Override
+            public void onDetached(TileHammerTarget attachment, StationGraph graph) {
+                attachment.onDetached(graph);
+            }
+        });
+    }
+
     public TileHammerTarget() {
         super();
         here = new BlockPos(xCoord, yCoord, zCoord);
     }
 
-    @Override
     public BlockPos getPosition() {
         return here;
     }
 
-    @Override
     public void tick() {}
+
+    public boolean isReady() {
+        return booted();
+    }
 
     @Override
     public void onStructureDisformed() {
@@ -91,12 +123,10 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
         return graph != null;
     }
 
-    @Override
     public void onAttached(StationGraph graph) {
         this.graph = graph;
     }
 
-    @Override
     public void onDetached(StationGraph graph) {
         this.graph = null;
     }

@@ -16,7 +16,6 @@ import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 public class DockBehavior implements IStationBehaviorWithAttachments {
@@ -46,7 +45,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
             .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
-                if (tileEntity instanceof IStationAttachment) {
+                if (StationAttachmentRegistry.isRegisteredTileEntity(tileEntity)) {
                     BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
                     dock.addAttachment(pos);
                     return true;
@@ -54,7 +53,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                 return false;
             }, GalaxiaBlocksEnum.HAMMER_TARGET.get(), 0))
             .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
-                if (tileEntity instanceof IStationAttachment) {
+                if (StationAttachmentRegistry.isRegisteredTileEntity(tileEntity)) {
                     BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
                     dock.addAttachment(pos);
                     return true;

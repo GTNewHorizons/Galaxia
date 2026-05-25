@@ -31,8 +31,8 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationAttachment;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -46,7 +46,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import lombok.Getter;
 
 public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory, IStationAttachment<TileHammerCannon> {
+    implements IGuiHolder<PosGuiData>, IDistributedInventory {
 
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
@@ -90,6 +90,36 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     @Getter
     private final ModuleHammer hammer;
 
+    static {
+        StationAttachmentRegistry.register(TileHammerCannon.class, new IAttachmentHandler<TileHammerCannon>() {
+
+            @Override
+            public BlockPos getPosition(TileHammerCannon attachment) {
+                return attachment.getPosition();
+            }
+
+            @Override
+            public void tick(TileHammerCannon attachment) {
+                attachment.tick();
+            }
+
+            @Override
+            public boolean isReady(TileHammerCannon attachment) {
+                return attachment.booted();
+            }
+
+            @Override
+            public void onAttached(TileHammerCannon attachment, StationGraph graph) {
+                attachment.onAttached(graph);
+            }
+
+            @Override
+            public void onDetached(TileHammerCannon attachment, StationGraph graph) {
+                attachment.onDetached(graph);
+            }
+        });
+    }
+
     public List<IInventory> getChestInventories() {
         return inventory;
     }
@@ -106,17 +136,19 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         this.hammer.setVariant(HammerVariant.BIG);
     }
 
-    @Override
     public BlockPos getPosition() {
         return here;
     }
 
-    @Override
     public void tick() {
         if (graph == null) return;
         moduleInstance.tick(
             graph.getController()
                 .getBackingStation());
+    }
+
+    public boolean isReady() {
+        return booted();
     }
 
     @Override
@@ -148,12 +180,10 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         moduleInstance.updateStatus(Buildable.Status.DISABLED);
     }
 
-    @Override
     public void onAttached(StationGraph graph) {
         this.graph = graph;
     }
 
-    @Override
     public void onDetached(StationGraph graph) {
         this.graph = null;
     }

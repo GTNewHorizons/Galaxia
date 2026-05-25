@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.block;
 
+import lombok.Getter;
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -28,6 +29,7 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     protected int mCheckTimer = 0;
     protected boolean updated = true;
 
+    @Getter
     protected boolean structureValid = false;
     protected boolean isChunkUnloading = false;
     protected boolean reloadHappened = false;
@@ -45,10 +47,6 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     }
 
     public abstract Block getControllerBlock();
-
-    public boolean isStructureValid() {
-        return structureValid;
-    }
 
     public void markStructureDirty() {
         updated = true;
@@ -146,6 +144,12 @@ public abstract class GalaxiaMultiblockBase<T extends GalaxiaMultiblockBase<T>> 
     }
 
     protected void onStructureChecked() {}
+
+    protected void reset() {
+        structureValid = false;
+        updated = true;
+        onStructureDisformed();
+    }
 
     @Override
     public void updateEntity() {

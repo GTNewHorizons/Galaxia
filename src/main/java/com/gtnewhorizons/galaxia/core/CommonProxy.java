@@ -16,6 +16,7 @@ import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
@@ -87,6 +88,8 @@ public class CommonProxy {
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
         EntityRegistry.registerModEntity(EntityRocketSeat.class, "RocketSeat", 1, Galaxia.instance, 64, 1, false);
 
+        registerAttachments();
+
         // Why Gui code on server? idk ask mui2
         ItemPickerScreen.FACTORY.init();
         ModulePickerScreen.FACTORY.init();
@@ -110,6 +113,12 @@ public class CommonProxy {
 
     // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {}
+
+    private void registerAttachments() {
+        if (isGregTechLoaded()) {
+            GalaxiaGTAttachmentRegistration.init();
+        }
+    }
 
     private void registerBaublesSlots() {
         BaubleExpandedSlots.tryRegisterType(BAUBLE_TYPE_OXYGEN_TANK);
