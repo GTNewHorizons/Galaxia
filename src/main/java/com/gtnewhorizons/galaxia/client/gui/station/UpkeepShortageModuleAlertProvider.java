@@ -24,7 +24,11 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
         }
         UpkeepLedger.ModuleDemand demand = demandFor(facility, module);
         if (demand == null) return List.of();
-        UpkeepSettlement.Result result = UpkeepSettlement.preview(List.of(demand), facility.upkeepCredits(), facility);
+        UpkeepSettlement.Result result = UpkeepSettlement.preview(
+            facility.upkeepSummary()
+                .moduleDemands(),
+            facility.upkeepCredits(),
+            facility);
         return result.unpaidModuleIds()
             .contains(module.id)
                 ? List.of(

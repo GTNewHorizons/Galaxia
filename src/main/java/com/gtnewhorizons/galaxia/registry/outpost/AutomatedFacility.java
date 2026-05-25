@@ -501,8 +501,8 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            if (updateContents(material.getKey(), -(int) Math.min(material.getValue(), Integer.MAX_VALUE), true)
-                <= 0L) {
+            long reserved = applyContentsDelta(material.getKey(), -material.getValue(), true);
+            if (reserved != material.getValue()) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
                         + ", item="
@@ -512,7 +512,7 @@ public final class AutomatedFacility extends CelestialAsset {
             deposited.merge(
                 material.getKey()
                     .toKey(),
-                material.getValue(),
+                reserved,
                 Long::sum);
         }
         module.setOperation(operation.withDepositedResources(mergeAmounts(operation.depositedResources(), deposited)));
@@ -564,11 +564,12 @@ public final class AutomatedFacility extends CelestialAsset {
             long available = getItemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            if (updateContents(material.getKey(), -(int) Math.min(reserved, Integer.MAX_VALUE), true) <= 0L) {
+            long applied = applyContentsDelta(material.getKey(), -reserved, true);
+            if (applied <= 0L) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
             }
-            deposited.merge(itemKey, reserved, Long::sum);
+            deposited.merge(itemKey, applied, Long::sum);
             changed = true;
         }
         if (changed) {
@@ -616,7 +617,7 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
             ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = updateItems(item, (int) (long) entry.getValue());
+            long accepted = applyContentsDelta(item, entry.getValue(), true);
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -1223,7 +1224,7 @@ public final class AutomatedFacility extends CelestialAsset {
     public long updateContents(InventoryKey item, int delta, boolean sync) {
         final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
             : updateFluids((FluidKey) item, delta);
-        if (actual != 0L && sync) markInventoryDelta(item, delta);
+        if (actual != 0L && sync) markInventoryDelta(item, delta > 0 ? actual : -actual);
         return actual;
     }
 

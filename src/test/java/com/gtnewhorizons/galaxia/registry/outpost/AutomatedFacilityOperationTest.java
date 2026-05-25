@@ -190,6 +190,7 @@ final class AutomatedFacilityOperationTest {
         assertTrue(facility.flushModuleOperationRefund(module));
 
         assertEquals(2L, facility.getItemAmount(refund));
+        assertEquals(Map.of(refund, 2L), facility.drainDirtyInventoryDeltas());
         assertNotNull(module.operationOrNull());
         assertEquals(
             ModuleOperationPhase.REFUNDING,

@@ -24,6 +24,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePanelAction;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
@@ -111,6 +112,27 @@ final class StationModuleAlertRegistryTest {
         List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
 
         assertEquals(List.of(), alerts);
+    }
+
+    @Test
+    void upkeepWarningUsesFullPrioritySettlement() {
+        AutomatedFacility facility = createFacility();
+        ModuleInstance high = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
+        ModuleInstance low = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(2, 0), 1L);
+        high.setPriorityOverride(ModulePriority.HIGH);
+        low.setPriorityOverride(ModulePriority.LOW);
+        facility.addModule(high);
+        facility.addModule(low);
+        facility.updateItems(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
+
+        assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, high));
+        List<StationModuleAlert> lowAlerts = StationModuleAlertRegistry.alertsFor(facility, low);
+
+        assertFalse(lowAlerts.isEmpty());
+        assertEquals(
+            StationModuleAlert.Severity.YELLOW,
+            lowAlerts.get(0)
+                .severity());
     }
 
     @Test

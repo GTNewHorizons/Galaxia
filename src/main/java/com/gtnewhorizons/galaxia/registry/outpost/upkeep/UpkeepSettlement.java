@@ -38,14 +38,20 @@ public final class UpkeepSettlement {
         List<UpkeepLedger.ModuleDemand> ordered = new ArrayList<>(moduleDemands);
         ordered.sort((a, b) -> Integer.compare(priorityRank(b.priority()), priorityRank(a.priority())));
 
+        Map<InventoryKey, Long> previewConsumes = consume ? Map.of() : new LinkedHashMap<>();
         List<ModuleResult> results = new ArrayList<>();
         for (UpkeepLedger.ModuleDemand moduleDemand : ordered) {
-            Payment payment = tryPlanPayment(moduleDemand.demand(), currentCredits, facility);
+            Payment payment = tryPlanPayment(moduleDemand.demand(), currentCredits, facility, previewConsumes);
             if (payment == null) {
                 results.add(new ModuleResult(moduleDemand.moduleId(), false));
                 continue;
             }
-            if (consume) payment.consume(facility);
+            if (consume) {
+                payment.consume(facility);
+            } else {
+                payment.consumes()
+                    .forEach((key, amount) -> previewConsumes.merge(key, amount, Long::sum));
+            }
             currentCredits = payment.creditsAfter();
             results.add(new ModuleResult(moduleDemand.moduleId(), true));
         }
@@ -61,18 +67,20 @@ public final class UpkeepSettlement {
         };
     }
 
-    private static Payment tryPlanPayment(UpkeepDemand demand, Credits credits, AutomatedFacility facility) {
+    private static Payment tryPlanPayment(UpkeepDemand demand, Credits credits, AutomatedFacility facility,
+        Map<InventoryKey, Long> previewConsumes) {
         Map<InventoryKey, UpkeepAmount> nextCredits = credits.allCredits();
         Map<InventoryKey, Long> consumes = new LinkedHashMap<>();
 
-        if (!tryPlanResources(demand.itemsPerMinute(), nextCredits, consumes, facility)) return null;
-        if (!tryPlanResources(demand.fluidsPerMinute(), nextCredits, consumes, facility)) return null;
+        if (!tryPlanResources(demand.itemsPerMinute(), nextCredits, consumes, facility, previewConsumes)) return null;
+        if (!tryPlanResources(demand.fluidsPerMinute(), nextCredits, consumes, facility, previewConsumes)) return null;
 
         return new Payment(Credits.fromInventoryCredits(nextCredits), consumes);
     }
 
     private static <T extends InventoryKey> boolean tryPlanResources(Map<T, UpkeepAmount> demands,
-        Map<InventoryKey, UpkeepAmount> nextCredits, Map<InventoryKey, Long> consumes, AutomatedFacility facility) {
+        Map<InventoryKey, UpkeepAmount> nextCredits, Map<InventoryKey, Long> consumes, AutomatedFacility facility,
+        Map<InventoryKey, Long> previewConsumes) {
         for (Map.Entry<T, UpkeepAmount> entry : demands.entrySet()) {
             InventoryKey key = entry.getKey();
             UpkeepAmount demandAmount = entry.getValue();
@@ -84,7 +92,7 @@ public final class UpkeepSettlement {
 
             UpkeepAmount deficit = demandAmount.minus(availableCredit);
             long toConsume = deficit.wholeUnitsToCoverDeficit();
-            long alreadyPlanned = consumes.getOrDefault(key, 0L);
+            long alreadyPlanned = consumes.getOrDefault(key, 0L) + previewConsumes.getOrDefault(key, 0L);
             if (available(facility, key) < alreadyPlanned + toConsume) return false;
 
             consumes.merge(key, toConsume, Long::sum);

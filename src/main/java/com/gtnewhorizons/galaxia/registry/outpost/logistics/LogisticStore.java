@@ -46,6 +46,10 @@ public final class LogisticStore {
         outpostSignals.clear();
     }
 
+    public static void removeSignalsFor(CelestialAsset.ID assetId) {
+        if (assetId != null) outpostSignals.remove(assetId);
+    }
+
     public static long inboundInTransitAmount(CelestialAsset.ID toAssetId, ItemStackWrapper resource) {
         long total = 0L;
         for (LogisticsDelivery task : activeDeliveries) {

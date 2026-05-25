@@ -13,6 +13,7 @@ import net.minecraft.item.ItemStack;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticStore;
 
 /**
  * Server-authoritative asset store with a separate {@link #CLIENT} mirror instance.
@@ -184,6 +185,7 @@ public final class CelestialAssetStore {
         list.remove(asset);
         byId.remove(assetId);
         teamById.remove(assetId);
+        LogisticStore.removeSignalsFor(assetId);
 
         return true;
     }
@@ -264,6 +266,7 @@ public final class CelestialAssetStore {
         stateByBody.clear();
         byId.clear();
         teamById.clear();
+        LogisticStore.clearSignals();
     }
 
     public boolean isOwnedByInternal(UUID teamId, CelestialAsset.ID id) {
