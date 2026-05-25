@@ -14,9 +14,8 @@ public final class GalaxiaGTAttachmentRegistration {
     private GalaxiaGTAttachmentRegistration() {}
 
     public static void init() {
-        StationAttachmentRegistry.register(
-            MTELapotronicSuperCapacitor.class,
-            new IEnergyHandler<MTELapotronicSuperCapacitor>() {
+        StationAttachmentRegistry
+            .register(MTELapotronicSuperCapacitor.class, new IEnergyHandler<MTELapotronicSuperCapacitor>() {
 
                 @Override
                 public BlockPos getPosition(MTELapotronicSuperCapacitor attachment) {

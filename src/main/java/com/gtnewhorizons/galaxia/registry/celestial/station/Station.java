@@ -100,7 +100,8 @@ public class Station extends CelestialAsset {
             IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
             total = total.add(h.getEnergyStored(ra.attachment()));
         }
-        return total.min(BigInteger.valueOf(Long.MAX_VALUE)).longValue();
+        return total.min(BigInteger.valueOf(Long.MAX_VALUE))
+            .longValue();
     }
 
     @Override

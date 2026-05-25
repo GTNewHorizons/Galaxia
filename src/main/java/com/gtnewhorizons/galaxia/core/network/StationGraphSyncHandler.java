@@ -3,7 +3,6 @@ package com.gtnewhorizons.galaxia.core.network;
 import java.io.IOException;
 import java.math.BigInteger;
 
-import lombok.Setter;
 import net.minecraft.network.PacketBuffer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
@@ -15,6 +14,7 @@ import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import lombok.Setter;
 
 public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncHandler> {
 

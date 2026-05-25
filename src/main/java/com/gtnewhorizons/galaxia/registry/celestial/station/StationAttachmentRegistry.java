@@ -3,11 +3,10 @@ package com.gtnewhorizons.galaxia.registry.celestial.station;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
-import com.gtnewhorizons.galaxia.core.Galaxia;
 import net.minecraft.tileentity.TileEntity;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 
@@ -16,7 +15,7 @@ import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 
 public final class StationAttachmentRegistry {
 
-    public record ResolvedAttachment<T>(T attachment, IAttachmentHandler<T> handler) {}
+    public record ResolvedAttachment<T> (T attachment, IAttachmentHandler<T> handler) {}
 
     private static final Map<Class<?>, IAttachmentHandler<?>> handlers = new HashMap<>();
 
@@ -42,7 +41,7 @@ public final class StationAttachmentRegistry {
         return null;
     }
 
-    @SuppressWarnings({"rawtypes"})
+    @SuppressWarnings({ "rawtypes" })
     private static ResolvedAttachment<?> wrap(Object attachment, IAttachmentHandler<?> handler) {
         return new ResolvedAttachment(attachment, handler);
     }

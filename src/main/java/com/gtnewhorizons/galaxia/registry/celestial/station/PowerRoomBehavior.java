@@ -46,8 +46,9 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                     .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
             .addElement(GalaxiaStructureUtility.ofTileAdderCheckHints((room, tileEntity) -> {
                 if (tileEntity instanceof IGregTechTileEntity gtTE) {
-                    if (StationAttachmentRegistry.isRegisteredMTE(gtTE.getMetaTileEntity()
-                        .getClass())) {
+                    if (StationAttachmentRegistry.isRegisteredMTE(
+                        gtTE.getMetaTileEntity()
+                            .getClass())) {
                         room.addAttachment(new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord));
                         return true;
                     }
@@ -75,16 +76,15 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
 
     @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        return List.of(
-            new TextWidget<>(IKey.dynamic(() -> {
-                var snap = StationGraphSyncHandler.getSnapshot();
-                String key = "galaxia.gui.station_controller.attachments";
-                return StatCollector.translateToLocal(key) + ": " + snap.attachmentCount();
-            })).pos(10, yOffset),
-            new TextWidget<>(IKey.dynamic(() -> {
-                var snap = StationGraphSyncHandler.getSnapshot();
-                if (snap.attachmentCount() == 0) return "No energy sources";
-                return "Energy: " + snap.totalStored() + " / " + snap.totalCapacity() + " EU (" + snap.attachmentCount() + " src)";
-            })).pos(10, yOffset + 12));
+        return List.of(new TextWidget<>(IKey.dynamic(() -> {
+            var snap = StationGraphSyncHandler.getSnapshot();
+            String key = "galaxia.gui.station_controller.attachments";
+            return StatCollector.translateToLocal(key) + ": " + snap.attachmentCount();
+        })).pos(10, yOffset), new TextWidget<>(IKey.dynamic(() -> {
+            var snap = StationGraphSyncHandler.getSnapshot();
+            if (snap.attachmentCount() == 0) return "No energy sources";
+            return "Energy: " + snap
+                .totalStored() + " / " + snap.totalCapacity() + " EU (" + snap.attachmentCount() + " src)";
+        })).pos(10, yOffset + 12));
     }
 }

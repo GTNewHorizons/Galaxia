@@ -4,12 +4,12 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.gtnewhorizon.gtnhlib.teams.TeamDataTransferReason;
 import net.minecraft.nbt.NBTTagCompound;
 
 import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
 import com.gtnewhorizon.gtnhlib.teams.Team;
+import com.gtnewhorizon.gtnhlib.teams.TeamDataTransferReason;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
 
@@ -79,7 +79,7 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void transferData(Team prevTeam, Team newTeam, UUID playerId, ITeamData prevTeamData,
-                              TeamDataTransferReason reason) {
+        TeamDataTransferReason reason) {
         if (prevTeamData instanceof GalaxiaTeamData other) {
             this.teamColor = other.teamColor;
             this.permissions.clear();

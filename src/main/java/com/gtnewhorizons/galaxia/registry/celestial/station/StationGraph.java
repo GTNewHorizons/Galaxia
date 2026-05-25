@@ -76,8 +76,7 @@ public final class StationGraph {
             .map(te -> (IDistributedInventory) te);
     }
 
-    public void registerAttachment(BlockPos parent, BlockPos pos,
-        StationAttachmentRegistry.ResolvedAttachment<?> ra) {
+    public void registerAttachment(BlockPos parent, BlockPos pos, StationAttachmentRegistry.ResolvedAttachment<?> ra) {
         if (!pieces.containsKey(parent)) return;
         if (attachments.containsKey(pos)) return;
 
