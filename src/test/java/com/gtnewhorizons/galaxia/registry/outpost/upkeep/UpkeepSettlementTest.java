@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +11,10 @@ import net.minecraft.item.Item;
 
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -23,16 +26,16 @@ final class UpkeepSettlementTest {
 
     @Test
     void paysFractionalDemandFromWholeItemThenUsesStationCredit() {
-        TestInventory inventory = new TestInventory(1);
+        AutomatedFacility facility = facilityWithInventory(1);
         UpkeepSettlement.Credits credits = UpkeepSettlement.Credits.empty();
         UpkeepDemand demand = UpkeepDemand.builder()
             .item(GOLD, UpkeepAmount.parse("0.1"))
             .build();
 
         UpkeepSettlement.Result first = UpkeepSettlement
-            .settle(List.of(module(ModulePriority.NORMAL, demand)), credits, inventory);
+            .settle(List.of(module(ModulePriority.NORMAL, demand)), credits, facility);
         UpkeepSettlement.Result second = UpkeepSettlement
-            .settle(List.of(module(ModulePriority.NORMAL, demand)), first.credits(), inventory);
+            .settle(List.of(module(ModulePriority.NORMAL, demand)), first.credits(), facility);
 
         assertTrue(
             first.paidModuleIds()
@@ -40,11 +43,11 @@ final class UpkeepSettlementTest {
                     first.moduleResults()
                         .get(0)
                         .moduleId()));
-        assertEquals(1, inventory.consumedCalls.size());
+        assertEquals(0L, facility.getItemAmount(GOLD));
         assertTrue(
             second.unpaidModuleIds()
                 .isEmpty());
-        assertEquals(1, inventory.consumedCalls.size());
+        assertEquals(0L, facility.getItemAmount(GOLD));
         assertEquals(
             "0.8",
             second.credits()
@@ -54,7 +57,7 @@ final class UpkeepSettlementTest {
 
     @Test
     void shortageOnlyDisablesModulesThatCannotBePaidWithoutDebt() {
-        TestInventory inventory = new TestInventory(1);
+        AutomatedFacility facility = facilityWithInventory(1);
         UpkeepDemand demand = UpkeepDemand.builder()
             .item(GOLD, UpkeepAmount.parse("0.6"))
             .build();
@@ -63,7 +66,7 @@ final class UpkeepSettlementTest {
         UpkeepLedger.ModuleDemand low = module(ModulePriority.LOW, demand);
 
         UpkeepSettlement.Result result = UpkeepSettlement
-            .settle(List.of(low, normal, high), UpkeepSettlement.Credits.empty(), inventory);
+            .settle(List.of(low, normal, high), UpkeepSettlement.Credits.empty(), facility);
 
         assertTrue(
             result.paidModuleIds()
@@ -75,7 +78,7 @@ final class UpkeepSettlementTest {
             result.paidModuleIds()
                 .contains(low.moduleId()));
         assertEquals(List.of(normal.moduleId(), low.moduleId()), result.unpaidModuleIds());
-        assertEquals(1, inventory.consumedCalls.size());
+        assertEquals(0L, facility.getItemAmount(GOLD));
         assertEquals(
             "0.4",
             result.credits()
@@ -91,26 +94,13 @@ final class UpkeepSettlementTest {
             demand);
     }
 
-    private static final class TestInventory implements UpkeepSettlement.ResourceInventory {
-
-        private long available;
-        private final List<Long> consumedCalls = new ArrayList<>();
-
-        private TestInventory(long available) {
-            this.available = available;
-        }
-
-        @Override
-        public long available(ItemStackWrapper item) {
-            return available;
-        }
-
-        @Override
-        public boolean tryConsume(ItemStackWrapper item, long amount) {
-            if (available < amount) return false;
-            available -= amount;
-            consumedCalls.add(amount);
-            return true;
-        }
+    private static AutomatedFacility facilityWithInventory(int available) {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.PANSPIRA,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        facility.updateItems(GOLD, available);
+        return facility;
     }
 }

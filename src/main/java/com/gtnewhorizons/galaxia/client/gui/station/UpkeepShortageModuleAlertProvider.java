@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepLedger;
@@ -25,8 +24,7 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
         }
         UpkeepLedger.ModuleDemand demand = demandFor(facility, module);
         if (demand == null) return List.of();
-        UpkeepSettlement.Result result = UpkeepSettlement
-            .settle(List.of(demand), facility.upkeepCredits(), new FacilityResourceView(facility));
+        UpkeepSettlement.Result result = UpkeepSettlement.preview(List.of(demand), facility.upkeepCredits(), facility);
         return result.unpaidModuleIds()
             .contains(module.id)
                 ? List.of(
@@ -45,28 +43,5 @@ final class UpkeepShortageModuleAlertProvider implements StationModuleAlertProvi
             }
         }
         return null;
-    }
-
-    private record FacilityResourceView(AutomatedFacility facility) implements UpkeepSettlement.ResourceInventory {
-
-        @Override
-        public long available(com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper item) {
-            return facility.getItemAmount(item);
-        }
-
-        @Override
-        public boolean tryConsume(com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper item, long amount) {
-            return true;
-        }
-
-        @Override
-        public long availableFluid(FluidKey fluid) {
-            return facility.getFluidAmount(fluid);
-        }
-
-        @Override
-        public boolean tryConsumeFluid(FluidKey fluid, long amount) {
-            return true;
-        }
     }
 }

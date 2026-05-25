@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModulePriority;
@@ -19,21 +21,31 @@ public final class UpkeepSettlement {
     private UpkeepSettlement() {}
 
     public static Result settle(List<UpkeepLedger.ModuleDemand> moduleDemands, Credits credits,
-        ResourceInventory inventory) {
+        AutomatedFacility facility) {
+        return settle(moduleDemands, credits, facility, true);
+    }
+
+    public static Result preview(List<UpkeepLedger.ModuleDemand> moduleDemands, Credits credits,
+        AutomatedFacility facility) {
+        return settle(moduleDemands, credits, facility, false);
+    }
+
+    private static Result settle(List<UpkeepLedger.ModuleDemand> moduleDemands, Credits credits,
+        AutomatedFacility facility, boolean consume) {
         Objects.requireNonNull(moduleDemands, "moduleDemands");
-        Objects.requireNonNull(inventory, "inventory");
+        Objects.requireNonNull(facility, "facility");
         Credits currentCredits = credits == null ? Credits.empty() : credits;
         List<UpkeepLedger.ModuleDemand> ordered = new ArrayList<>(moduleDemands);
         ordered.sort((a, b) -> Integer.compare(priorityRank(b.priority()), priorityRank(a.priority())));
 
         List<ModuleResult> results = new ArrayList<>();
         for (UpkeepLedger.ModuleDemand moduleDemand : ordered) {
-            Payment payment = tryPlanPayment(moduleDemand.demand(), currentCredits, inventory);
+            Payment payment = tryPlanPayment(moduleDemand.demand(), currentCredits, facility);
             if (payment == null) {
                 results.add(new ModuleResult(moduleDemand.moduleId(), false));
                 continue;
             }
-            payment.consume(inventory);
+            if (consume) payment.consume(facility);
             currentCredits = payment.creditsAfter();
             results.add(new ModuleResult(moduleDemand.moduleId(), true));
         }
@@ -49,70 +61,48 @@ public final class UpkeepSettlement {
         };
     }
 
-    private static Payment tryPlanPayment(UpkeepDemand demand, Credits credits, ResourceInventory inventory) {
-        Map<ItemStackWrapper, UpkeepAmount> nextItemCredits = new LinkedHashMap<>(credits.itemCredits());
-        Map<ItemStackWrapper, Long> itemConsumes = new LinkedHashMap<>();
+    private static Payment tryPlanPayment(UpkeepDemand demand, Credits credits, AutomatedFacility facility) {
+        Map<InventoryKey, UpkeepAmount> nextCredits = credits.allCredits();
+        Map<InventoryKey, Long> consumes = new LinkedHashMap<>();
 
-        for (Map.Entry<ItemStackWrapper, UpkeepAmount> entry : demand.itemsPerMinute()
-            .entrySet()) {
-            ItemStackWrapper item = entry.getKey();
-            UpkeepAmount demandAmount = entry.getValue();
-            UpkeepAmount availableCredit = nextItemCredits.getOrDefault(item, UpkeepAmount.ZERO);
-            if (availableCredit.compareTo(demandAmount) >= 0) {
-                nextItemCredits.put(item, availableCredit.minus(demandAmount));
-                continue;
-            }
+        if (!tryPlanResources(demand.itemsPerMinute(), nextCredits, consumes, facility)) return null;
+        if (!tryPlanResources(demand.fluidsPerMinute(), nextCredits, consumes, facility)) return null;
 
-            UpkeepAmount deficit = demandAmount.minus(availableCredit);
-            long toConsume = deficit.wholeUnitsToCoverDeficit();
-            long alreadyPlanned = itemConsumes.getOrDefault(item, 0L);
-            if (inventory.available(item) < alreadyPlanned + toConsume) return null;
-
-            itemConsumes.merge(item, toConsume, Long::sum);
-            UpkeepAmount newCredit = availableCredit.plus(UpkeepAmount.wholeUnitsCredit(toConsume))
-                .minus(demandAmount);
-            nextItemCredits.put(item, newCredit);
-        }
-
-        Map<FluidKey, UpkeepAmount> nextFluidCredits = new LinkedHashMap<>(credits.fluidCredits());
-        Map<FluidKey, Long> fluidConsumes = new LinkedHashMap<>();
-        for (Map.Entry<FluidKey, UpkeepAmount> entry : demand.fluidsPerMinute()
-            .entrySet()) {
-            FluidKey fluid = entry.getKey();
-            UpkeepAmount demandAmount = entry.getValue();
-            UpkeepAmount availableCredit = nextFluidCredits.getOrDefault(fluid, UpkeepAmount.ZERO);
-            if (availableCredit.compareTo(demandAmount) >= 0) {
-                nextFluidCredits.put(fluid, availableCredit.minus(demandAmount));
-                continue;
-            }
-
-            UpkeepAmount deficit = demandAmount.minus(availableCredit);
-            long toConsume = deficit.wholeUnitsToCoverDeficit();
-            long alreadyPlanned = fluidConsumes.getOrDefault(fluid, 0L);
-            if (inventory.availableFluid(fluid) < alreadyPlanned + toConsume) return null;
-
-            fluidConsumes.merge(fluid, toConsume, Long::sum);
-            UpkeepAmount newCredit = availableCredit.plus(UpkeepAmount.wholeUnitsCredit(toConsume))
-                .minus(demandAmount);
-            nextFluidCredits.put(fluid, newCredit);
-        }
-
-        return new Payment(new Credits(nextItemCredits, nextFluidCredits), itemConsumes, fluidConsumes);
+        return new Payment(Credits.fromInventoryCredits(nextCredits), consumes);
     }
 
-    public interface ResourceInventory {
+    private static <T extends InventoryKey> boolean tryPlanResources(Map<T, UpkeepAmount> demands,
+        Map<InventoryKey, UpkeepAmount> nextCredits, Map<InventoryKey, Long> consumes, AutomatedFacility facility) {
+        for (Map.Entry<T, UpkeepAmount> entry : demands.entrySet()) {
+            InventoryKey key = entry.getKey();
+            UpkeepAmount demandAmount = entry.getValue();
+            UpkeepAmount availableCredit = nextCredits.getOrDefault(key, UpkeepAmount.ZERO);
+            if (availableCredit.compareTo(demandAmount) >= 0) {
+                nextCredits.put(key, availableCredit.minus(demandAmount));
+                continue;
+            }
 
-        long available(ItemStackWrapper item);
+            UpkeepAmount deficit = demandAmount.minus(availableCredit);
+            long toConsume = deficit.wholeUnitsToCoverDeficit();
+            long alreadyPlanned = consumes.getOrDefault(key, 0L);
+            if (available(facility, key) < alreadyPlanned + toConsume) return false;
 
-        boolean tryConsume(ItemStackWrapper item, long amount);
-
-        default long availableFluid(FluidKey fluid) {
-            return 0L;
+            consumes.merge(key, toConsume, Long::sum);
+            UpkeepAmount newCredit = availableCredit.plus(UpkeepAmount.wholeUnitsCredit(toConsume))
+                .minus(demandAmount);
+            nextCredits.put(key, newCredit);
         }
+        return true;
+    }
 
-        default boolean tryConsumeFluid(FluidKey fluid, long amount) {
-            return false;
-        }
+    private static long available(AutomatedFacility facility, InventoryKey key) {
+        if (key instanceof ItemStackWrapper item) return facility.getItemAmount(item);
+        return facility.getFluidAmount((FluidKey) key);
+    }
+
+    private static boolean consume(AutomatedFacility facility, InventoryKey key, long amount) {
+        if (key instanceof ItemStackWrapper item) return facility.tryConsumeInventory(item, amount);
+        return facility.tryConsumeFluid((FluidKey) key, amount);
     }
 
     public record Credits(Map<ItemStackWrapper, UpkeepAmount> itemCredits, Map<FluidKey, UpkeepAmount> fluidCredits) {
@@ -128,6 +118,26 @@ public final class UpkeepSettlement {
 
         public UpkeepAmount itemCredit(ItemStackWrapper item) {
             return itemCredits.getOrDefault(item, UpkeepAmount.ZERO);
+        }
+
+        private Map<InventoryKey, UpkeepAmount> allCredits() {
+            Map<InventoryKey, UpkeepAmount> result = new LinkedHashMap<>();
+            result.putAll(itemCredits);
+            result.putAll(fluidCredits);
+            return result;
+        }
+
+        private static Credits fromInventoryCredits(Map<InventoryKey, UpkeepAmount> credits) {
+            Map<ItemStackWrapper, UpkeepAmount> itemCredits = new LinkedHashMap<>();
+            Map<FluidKey, UpkeepAmount> fluidCredits = new LinkedHashMap<>();
+            for (Map.Entry<InventoryKey, UpkeepAmount> entry : credits.entrySet()) {
+                if (entry.getKey() instanceof ItemStackWrapper item) {
+                    itemCredits.put(item, entry.getValue());
+                } else {
+                    fluidCredits.put((FluidKey) entry.getKey(), entry.getValue());
+                }
+            }
+            return new Credits(itemCredits, fluidCredits);
         }
 
         private static Map<ItemStackWrapper, UpkeepAmount> normalizeItemCredits(
@@ -187,12 +197,10 @@ public final class UpkeepSettlement {
         }
     }
 
-    private record Payment(Credits creditsAfter, Map<ItemStackWrapper, Long> itemConsumes,
-        Map<FluidKey, Long> fluidConsumes) {
+    private record Payment(Credits creditsAfter, Map<InventoryKey, Long> consumes) {
 
-        private void consume(ResourceInventory inventory) {
-            itemConsumes.forEach(inventory::tryConsume);
-            fluidConsumes.forEach(inventory::tryConsumeFluid);
+        private void consume(AutomatedFacility facility) {
+            consumes.forEach((key, amount) -> UpkeepSettlement.consume(facility, key, amount));
         }
     }
 }

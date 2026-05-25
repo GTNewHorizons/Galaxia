@@ -106,7 +106,7 @@ final class StationModuleAlertRegistryTest {
         AutomatedFacility facility = createFacility();
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         facility.addModule(module);
-        facility.addInventory(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1L);
+        facility.updateItems(ItemStackWrapper.of(new ItemStack(Items.iron_ingot)), 1);
 
         List<StationModuleAlert> alerts = StationModuleAlertRegistry.alertsFor(facility, module);
 
@@ -119,7 +119,7 @@ final class StationModuleAlertRegistryTest {
         ModuleInstance module = moduleWithUpkeep(FacilityModuleKind.POWER, StationTileCoord.of(1, 0), 1L);
         ItemStackWrapper upkeepItem = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
         facility.addModule(module);
-        facility.addInventory(upkeepItem, 1L);
+        facility.updateItems(upkeepItem, 1);
 
         assertEquals(List.of(), StationModuleAlertRegistry.alertsFor(facility, module));
 

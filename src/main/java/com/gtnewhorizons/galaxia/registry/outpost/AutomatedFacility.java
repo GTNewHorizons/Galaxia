@@ -279,8 +279,7 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public UpkeepSettlement.Result settleUpkeep() {
         UpkeepLedger.UpkeepSummary summary = upkeepSummary();
-        UpkeepSettlement.Result result = UpkeepSettlement
-            .settle(summary.moduleDemands(), upkeepCredits, new FacilityUpkeepInventory());
+        UpkeepSettlement.Result result = UpkeepSettlement.settle(summary.moduleDemands(), upkeepCredits, this);
         upkeepCredits = result.credits();
         Set<ModuleInstance.ID> demanded = new HashSet<>();
         for (UpkeepLedger.ModuleDemand demand : summary.moduleDemands()) {
@@ -521,28 +520,13 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    private long insertInventory(ItemStackWrapper item, long amount, boolean trackSync) {
-        if (item == null || amount <= 0L) return 0L;
-        long accepted = Math.min(amount, remainingItemInventoryCapacity());
-        if (accepted <= 0L) return 0L;
-        return addInventory(item, accepted, trackSync);
-    }
-
-    public long addInventory(ItemStackWrapper item, long delta) {
-        return addInventory(item, delta, true);
-    }
-
-    public long addInventoryWithoutSync(ItemStackWrapper item, long delta) {
-        return addInventory(item, delta, false);
-    }
-
-    private long addInventory(ItemStackWrapper item, long delta, boolean trackSync) {
-        if (item == null || delta == 0L) return 0L;
+    private long applyContentsDelta(InventoryKey key, long delta, boolean sync) {
+        if (key == null || delta == 0L) return 0L;
         long remaining = Math.abs(delta);
         long appliedTotal = 0L;
         while (remaining > 0L) {
             int step = (int) Math.min(remaining, Integer.MAX_VALUE);
-            long applied = updateContents(item, delta > 0L ? step : -step, trackSync);
+            long applied = updateContents(key, delta > 0L ? step : -step, sync);
             if (applied <= 0L) break;
             appliedTotal += applied;
             remaining -= applied;
@@ -554,46 +538,14 @@ public final class AutomatedFacility extends CelestialAsset {
         if (item == null) return false;
         if (amount <= 0L) return true;
         if (getItemAmount(item) < amount) return false;
-        return addInventory(item, -amount, true) == amount;
+        return applyContentsDelta(item, -amount, true) == amount;
     }
 
     public boolean tryConsumeFluid(FluidKey key, long amount) {
         if (key == null) return false;
         if (amount <= 0L) return true;
         if (getFluidAmount(key) < amount) return false;
-        long remaining = amount;
-        long consumed = 0L;
-        while (remaining > 0L) {
-            int step = (int) Math.min(remaining, Integer.MAX_VALUE);
-            long applied = updateContents(key, -step, true);
-            if (applied <= 0L) break;
-            consumed += applied;
-            remaining -= applied;
-        }
-        return consumed == amount;
-    }
-
-    private final class FacilityUpkeepInventory implements UpkeepSettlement.ResourceInventory {
-
-        @Override
-        public long available(ItemStackWrapper item) {
-            return getItemAmount(item);
-        }
-
-        @Override
-        public boolean tryConsume(ItemStackWrapper item, long amount) {
-            return tryConsumeInventory(item, amount);
-        }
-
-        @Override
-        public long availableFluid(FluidKey fluid) {
-            return fluid == null ? 0L : getFluidAmount(fluid);
-        }
-
-        @Override
-        public boolean tryConsumeFluid(FluidKey fluid, long amount) {
-            return AutomatedFacility.this.tryConsumeFluid(fluid, amount);
-        }
+        return applyContentsDelta(key, -amount, true) == amount;
     }
 
     public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,

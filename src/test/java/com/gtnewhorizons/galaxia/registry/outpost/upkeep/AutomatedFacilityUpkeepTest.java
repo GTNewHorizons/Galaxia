@@ -60,7 +60,7 @@ final class AutomatedFacilityUpkeepTest {
     @Test
     void minuteTickConsumesWholeItemAndStoresFractionalCredit() {
         AutomatedFacility facility = facilityWithModules(moduleWithUpkeep(ModulePriority.NORMAL, "0.1"));
-        facility.addInventory(UPKEEP_ITEM, 1L);
+        facility.updateItems(UPKEEP_ITEM, 1);
 
         tickUpkeepMinute(facility);
 
@@ -83,7 +83,7 @@ final class AutomatedFacilityUpkeepTest {
         ModuleInstance normal = moduleWithUpkeep(ModulePriority.NORMAL, "0.6");
         ModuleInstance low = moduleWithUpkeep(ModulePriority.LOW, "0.6");
         AutomatedFacility facility = facilityWithModules(low, normal, high);
-        facility.addInventory(UPKEEP_ITEM, 1L);
+        facility.updateItems(UPKEEP_ITEM, 1);
 
         tickUpkeepMinute(facility);
 
