@@ -521,14 +521,6 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    public long insertInventory(ItemStackWrapper item, long amount) {
-        return insertInventory(item, amount, true);
-    }
-
-    public long insertInventoryWithoutSync(ItemStackWrapper item, long amount) {
-        return insertInventory(item, amount, false);
-    }
-
     private long insertInventory(ItemStackWrapper item, long amount, boolean trackSync) {
         if (item == null || amount <= 0L) return 0L;
         long accepted = Math.min(amount, remainingItemInventoryCapacity());

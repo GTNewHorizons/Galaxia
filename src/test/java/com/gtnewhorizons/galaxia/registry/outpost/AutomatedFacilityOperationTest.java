@@ -165,7 +165,7 @@ final class AutomatedFacilityOperationTest {
     }
 
     @Test
-    void insertInventoryAcceptsOnlyRemainingCapacity() {
+    void updateItemsAcceptsOnlyRemainingCapacity() {
         AutomatedFacility facility = facilityWithHammer();
         ItemStackWrapper key = ItemStackWrapper.of(new ItemStack(TEST_FILLER_ITEM));
 
