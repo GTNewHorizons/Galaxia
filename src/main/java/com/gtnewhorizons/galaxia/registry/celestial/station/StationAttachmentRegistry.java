@@ -9,6 +9,7 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
+import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
@@ -53,6 +54,20 @@ public final class StationAttachmentRegistry {
     @SuppressWarnings("rawtypes")
     public static IEnergyHandler asEnergyHandler(IAttachmentHandler<?> handler) {
         return (IEnergyHandler) handler;
+    }
+
+    public static boolean isFluidStorageHandler(Class<?> mteClass) {
+        IAttachmentHandler<?> handler = handlers.get(mteClass);
+        return handler instanceof IFluidStorageHandler;
+    }
+
+    public static boolean isFluidStorageHandler(IAttachmentHandler<?> handler) {
+        return handler instanceof IFluidStorageHandler;
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static IFluidStorageHandler asFluidStorageHandler(IAttachmentHandler<?> handler) {
+        return (IFluidStorageHandler) handler;
     }
 
     public static boolean isRegisteredMTE(Class<?> mteClass) {

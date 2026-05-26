@@ -12,14 +12,20 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
+import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
+import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
-import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehavior;
+import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
-public class RoomBehavior implements IStationBehavior {
+import gregtech.api.GregTechAPI;
+import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
+
+public class RoomBehavior implements IStationBehaviorWithAttachments {
 
     public static List<Block> ALL_VALID_ROOM_BLOCKS = List.of(
         GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
@@ -71,6 +77,16 @@ public class RoomBehavior implements IStationBehavior {
             .addElement(
                 GalaxiaStructureUtility
                     .ofBlockPosAdderNoMetaForceCheck(TileStation::addOxygenator, GalaxiaBlocksEnum.OXYGENATOR.get(), 0))
+            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
+                if (tileEntity instanceof IGregTechTileEntity gtTE) {
+                    IMetaTileEntity mte = gtTE.getMetaTileEntity();
+                    if (mte != null && StationAttachmentRegistry.isFluidStorageHandler(mte.getClass())) {
+                        room.addAttachment(new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord));
+                        return true;
+                    }
+                }
+                return false;
+            }, GregTechAPI.sBlockMachines, 0))
             .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
             .withSearchRadius(ConfigStructures.enclosed.searchRadius)
             .enclosed()
@@ -87,12 +103,24 @@ public class RoomBehavior implements IStationBehavior {
         BooleanSyncValue sealedSync = new BooleanSyncValue(() -> station.isSealed(), () -> station.isSealed());
         syncManager.syncValue("sealed", 0, sealedSync);
 
-        return List.of(new TextWidget<>(IKey.dynamic(() -> {
-            boolean sealed = sealedSync.getBoolValue();
-            String label = StatCollector.translateToLocal("galaxia.gui.station_controller.sealed");
-            String status = StatCollector.translateToLocal(sealed ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
-            EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-            return label + ": " + color + status + EnumChatFormatting.RESET;
-        })).pos(10, yOffset));
+        final int fluidRow = yOffset + 14;
+        return List.of(
+            new TextWidget<>(IKey.dynamic(() -> {
+                boolean sealed = sealedSync.getBoolValue();
+                String label = StatCollector.translateToLocal("galaxia.gui.station_controller.sealed");
+                String status = StatCollector.translateToLocal(
+                    sealed ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
+                EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
+                return label + ": " + color + status + EnumChatFormatting.RESET;
+            })).pos(10, yOffset),
+            new TextWidget<>(IKey.dynamic(() -> {
+                var snap = StationGraphSyncHandler.getSnapshot();
+                if (snap.fluidAttachmentCount() == 0) {
+                    return StatCollector.translateToLocal("galaxia.gui.station_controller.no_fluid_tanks");
+                }
+                return StatCollector.translateToLocal("galaxia.gui.station_controller.fluid_storage")
+                    + ": " + snap.fluidStored() + " / " + snap.fluidCapacity() + " L (" + snap.fluidAttachmentCount()
+                    + ")";
+            })).pos(10, fluidRow));
     }
 }

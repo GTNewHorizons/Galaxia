@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -62,18 +63,32 @@ public final class StationGraph {
             .filter(StationGraph::isReady);
     }
 
+    public Stream<StationAttachmentRegistry.ResolvedAttachment<?>> getFluidStorageAttachments() {
+        return attachments.values()
+            .stream()
+            .filter(ra -> StationAttachmentRegistry.isFluidStorageHandler(ra.handler()))
+            .filter(StationGraph::isReady);
+    }
+
     public void tickAttachments() {
         attachments.values()
             .forEach(StationGraph::tick);
     }
 
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
-        return attachments.keySet()
+        Stream<IDistributedInventory> teInventories = attachments.keySet()
             .stream()
             .map(pos -> pos.getTE(controller.getWorldObj()))
             .filter(te -> te instanceof IDistributedInventory)
             .filter(te -> !(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid())
             .map(te -> (IDistributedInventory) te);
+
+        Stream<IDistributedInventory> fluidTanks = getFluidStorageAttachments()
+            .map(ra -> new FluidAttachmentInventory(
+                StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
+                ra.attachment()));
+
+        return Stream.concat(teInventories, fluidTanks);
     }
 
     public void registerAttachment(BlockPos parent, BlockPos pos, StationAttachmentRegistry.ResolvedAttachment<?> ra) {

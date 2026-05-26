@@ -300,8 +300,14 @@ galaxia.gui.module_assembler.not_formed=Module Assembler not properly formed!
 galaxia.gui.station_controller.title=Station Controller
 galaxia.gui.station_controller.oxygen=Oxygen
 galaxia.gui.station_controller.structure=Structure
+
 galaxia.gui.station_controller.targets=Targets
+
 galaxia.gui.station_controller.refresh=Refresh
+
+galaxia.gui.station_controller.no_fluid_tanks=No fluid tanks
+
+galaxia.gui.station_controller.fluid_storage=Fluid Storage
 
 galaxia.gui.behavior=Behavior
 galaxia.gui.role=Role
