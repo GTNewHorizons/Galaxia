@@ -7,9 +7,9 @@ import net.minecraft.network.PacketBuffer;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 

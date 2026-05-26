@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.celestial.station;
+package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

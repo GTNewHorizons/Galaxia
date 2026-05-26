@@ -1,4 +1,4 @@
-package com.gtnewhorizons.galaxia.registry.celestial.station;
+package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -7,6 +7,7 @@ import net.minecraft.tileentity.TileEntity;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;

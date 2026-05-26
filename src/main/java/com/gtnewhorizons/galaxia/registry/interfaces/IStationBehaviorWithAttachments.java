@@ -6,10 +6,10 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.Constants;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationAttachmentRegistry;
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationAttachmentRegistry.ResolvedAttachment;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry.ResolvedAttachment;
 
 public interface IStationBehaviorWithAttachments extends IStationBehavior {
 

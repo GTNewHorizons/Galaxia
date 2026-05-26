@@ -8,7 +8,7 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTankInfo;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationAttachmentRegistry;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 
