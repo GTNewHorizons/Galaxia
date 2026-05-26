@@ -11,6 +11,8 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import goodgenerator.blocks.tileEntity.MTEYottaFluidTank;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
@@ -43,6 +45,11 @@ public final class GalaxiaGTAttachmentRegistration {
             public boolean isReady(MTELapotronicSuperCapacitor attachment) {
                 IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
                 return base != null && !base.isDead();
+            }
+
+            @Override
+            public void markDirty(MTELapotronicSuperCapacitor attachment) {
+                attachment.markDirty();
             }
 
             @Override
@@ -88,6 +95,8 @@ public final class GalaxiaGTAttachmentRegistration {
     private static void registerFluidHandlers() {
         StationAttachmentRegistry.register(MTEYottaFluidTank.class, new IFluidStorageHandler<>() {
 
+            private final ResourceFilter<FluidKey> filter = ResourceFilter.forFluids();
+
             @Override
             public BlockPos getPosition(MTEYottaFluidTank attachment) {
                 IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
@@ -102,6 +111,11 @@ public final class GalaxiaGTAttachmentRegistration {
             public boolean isReady(MTEYottaFluidTank attachment) {
                 IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
                 return base != null && !base.isDead();
+            }
+
+            @Override
+            public void markDirty(MTEYottaFluidTank attachment) {
+                attachment.markDirty();
             }
 
             @Override
@@ -123,9 +137,9 @@ public final class GalaxiaGTAttachmentRegistration {
             }
 
             @Override
-            public FluidStack drainFluid(MTEYottaFluidTank attachment, long amount, boolean doDrain) {
-                if (attachment.mFluid == null) return null;
-                long drained = Math.min(amount, attachment.mStorageCurrent.longValue());
+            public FluidStack drainFluid(MTEYottaFluidTank attachment, FluidStack fluid, boolean doDrain) {
+                if (attachment.mFluid == null || attachment.mFluid.isFluidEqual(fluid)) return null;
+                long drained = Math.min(fluid.amount, attachment.mStorageCurrent.longValue());
                 if (drained <= 0) return null;
                 if (doDrain && !attachment.reduceFluid(drained)) return null;
                 return new FluidStack(attachment.mFluid.getFluid(), (int) drained);
@@ -136,6 +150,14 @@ public final class GalaxiaGTAttachmentRegistration {
                 if (resource == null || resource.amount <= 0) return 0;
                 if (attachment.mFluid != null && !attachment.mFluid.isFluidEqual(resource)) return 0;
                 return attachment.addFluid(resource.amount, doFill) ? resource.amount : 0;
+            }
+
+            @Override
+            public ResourceFilter<FluidKey> getFluidFilter(MTEYottaFluidTank attachment) {
+                if (attachment.mFluid != null) {
+                    filter.add(FluidKey.of(attachment.mFluid));
+                }
+                return filter;
             }
         });
 
@@ -155,6 +177,11 @@ public final class GalaxiaGTAttachmentRegistration {
             public boolean isReady(MTETankTFFT attachment) {
                 IGregTechTileEntity base = attachment.getBaseMetaTileEntity();
                 return base != null && !base.isDead() && base.isActive();
+            }
+
+            @Override
+            public void markDirty(MTETankTFFT attachment) {
+                attachment.markDirty();
             }
 
             @Override
@@ -187,16 +214,20 @@ public final class GalaxiaGTAttachmentRegistration {
             }
 
             @Override
-            public FluidStack drainFluid(MTETankTFFT attachment, long amount, boolean doDrain) {
-                if (amount <= 0) return null;
-                int intAmount = (int) Math.min(amount, Integer.MAX_VALUE);
-                return attachment.push(intAmount, doDrain);
+            public FluidStack drainFluid(MTETankTFFT attachment, FluidStack resource, boolean doDrain) {
+                if (resource == null || resource.amount <= 0) return null;
+                return attachment.push(resource, doDrain);
             }
 
             @Override
             public long fillFluid(MTETankTFFT attachment, FluidStack resource, boolean doFill) {
                 if (resource == null || resource.amount <= 0) return 0;
                 return attachment.pull(resource, doFill);
+            }
+
+            @Override
+            public ResourceFilter<FluidKey> getFluidFilter(MTETankTFFT attachment) {
+                return ResourceFilter.forFluids();
             }
         });
     }

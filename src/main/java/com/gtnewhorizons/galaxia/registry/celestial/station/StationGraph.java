@@ -7,8 +7,8 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.FluidAttachmentInventory;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.ItemAttachmentInventory;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
@@ -24,6 +24,7 @@ public final class StationGraph {
     private final TileStation controller;
     private final Object2ObjectOpenHashMap<BlockPos, TileStationBase<?>> pieces = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, StationAttachmentRegistry.ResolvedAttachment<?>> attachments = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<StationAttachmentRegistry.ResolvedAttachment<?>, IDistributedInventory> resolvedInventories = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<BlockPos, ObjectArrayList<BlockPos>> adjacency = new Object2ObjectOpenHashMap<>();
     private final ObjectOpenHashSet<BlockPos> visited = new ObjectOpenHashSet<>();
     private final ObjectArrayList<BlockPos> queue = new ObjectArrayList<>();
@@ -33,7 +34,6 @@ public final class StationGraph {
         this.controller = controller;
     }
 
-    @SuppressWarnings("unchecked")
     public <T extends TileStationBase<?>> Iterable<T> iterateOver(Class<T> clazz) {
         return () -> pieces.values()
             .stream()
@@ -45,8 +45,8 @@ public final class StationGraph {
     public Stream<Object> getAttachments() {
         return attachments.values()
             .stream()
-            .filter(ra -> isReady(ra))
-            .map(ra -> ra.attachment());
+            .filter(StationGraph::isReady)
+            .map(StationAttachmentRegistry.ResolvedAttachment::attachment);
     }
 
     public <T> Stream<T> getAttachments(Class<T> type) {
@@ -71,33 +71,48 @@ public final class StationGraph {
             .filter(StationGraph::isReady);
     }
 
+    public Stream<StationAttachmentRegistry.ResolvedAttachment<?>> getItemStorageAttachments() {
+        return attachments.values()
+            .stream()
+            .filter(ra -> StationAttachmentRegistry.isItemStorageHandler(ra.handler()))
+            .filter(StationGraph::isReady);
+    }
+
     public void tickAttachments() {
         attachments.values()
             .forEach(StationGraph::tick);
     }
 
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
-        Stream<IDistributedInventory> teInventories = attachments.keySet()
-            .stream()
-            .map(pos -> pos.getTE(controller.getWorldObj()))
-            .filter(te -> te instanceof IDistributedInventory)
-            .filter(te -> !(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid())
-            .map(te -> (IDistributedInventory) te);
-
-        Stream<IDistributedInventory> fluidTanks = getFluidStorageAttachments().map(
-            ra -> new FluidAttachmentInventory(
-                StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
-                ra.attachment()));
-
-        return Stream.concat(teInventories, fluidTanks);
+        return resolvedInventories.values()
+            .stream();
     }
 
-    public void registerAttachment(BlockPos parent, BlockPos pos, StationAttachmentRegistry.ResolvedAttachment<?> ra) {
+    public void registerAttachment(BlockPos parent, BlockPos pos,
+        @Nonnull StationAttachmentRegistry.ResolvedAttachment<?> ra) {
         if (!pieces.containsKey(parent)) return;
         if (attachments.containsKey(pos)) return;
 
         addAdjacency(parent, pos);
         attachments.put(pos, ra);
+        if (ra.handler()
+            .hasDistributedInventory()) {
+            if (StationAttachmentRegistry.isFluidStorageHandler(ra.handler())) {
+                resolvedInventories.put(
+                    ra,
+                    new FluidAttachmentInventory(
+                        StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
+                        ra.attachment()));
+            } else if (StationAttachmentRegistry.isItemStorageHandler(ra.handler())) {
+                resolvedInventories.put(
+                    ra,
+                    new ItemAttachmentInventory(
+                        StationAttachmentRegistry.asItemStorageHandler(ra.handler()),
+                        ra.attachment()));
+            } else {
+                throw new IllegalStateException("[StationGraph] Trying to register unknown inventory handler");
+            }
+        }
         onAttached(ra, this);
         fireListeners(l -> l.onAttachmentConnected(pos, ra.attachment()));
     }
@@ -107,10 +122,12 @@ public final class StationGraph {
         adjacency.values()
             .forEach(list -> list.remove(pos));
 
-        if (ra != null) {
-            onDetached(ra, this);
-            fireListeners(l -> l.onAttachmentDisconnected(pos));
+        if (ra.handler()
+            .hasDistributedInventory()) {
+            resolvedInventories.remove(ra);
         }
+        onDetached(ra, this);
+        fireListeners(l -> l.onAttachmentDisconnected(pos));
     }
 
     private static <T> boolean isReady(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
@@ -259,6 +276,7 @@ public final class StationGraph {
         adjacency.clear();
         visited.clear();
         queue.clear();
+        resolvedInventories.clear();
     }
 
     private void fireListeners(Consumer<IGraphListener> action) {

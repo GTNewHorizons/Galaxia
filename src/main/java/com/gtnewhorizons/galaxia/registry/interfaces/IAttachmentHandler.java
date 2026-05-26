@@ -14,4 +14,10 @@ public interface IAttachmentHandler<T> {
     default void onAttached(T attachment, StationGraph graph) {}
 
     default void onDetached(T attachment, StationGraph graph) {}
+
+    default boolean hasDistributedInventory() {
+        return false;
+    }
+
+    void markDirty(T attachment);
 }

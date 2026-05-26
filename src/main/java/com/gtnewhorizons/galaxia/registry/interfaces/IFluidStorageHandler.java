@@ -4,7 +4,17 @@ import java.util.List;
 
 import net.minecraftforge.fluids.FluidStack;
 
+import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+
 public interface IFluidStorageHandler<T> extends IAttachmentHandler<T> {
+
+    // TODO: get/set priority, set filter
+
+    @Override
+    default boolean hasDistributedInventory() {
+        return true;
+    }
 
     long getFluidStored(T attachment);
 
@@ -15,7 +25,9 @@ public interface IFluidStorageHandler<T> extends IAttachmentHandler<T> {
      */
     List<FluidStack> getAllFluids(T attachment);
 
-    FluidStack drainFluid(T attachment, long amount, boolean doDrain);
+    FluidStack drainFluid(T attachment, FluidStack resource, boolean doDrain);
 
     long fillFluid(T attachment, FluidStack resource, boolean doFill);
+
+    ResourceFilter<FluidKey> getFluidFilter(T attachment);
 }

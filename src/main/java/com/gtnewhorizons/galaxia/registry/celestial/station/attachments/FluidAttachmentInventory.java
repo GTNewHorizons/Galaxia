@@ -1,6 +1,5 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +8,9 @@ import net.minecraftforge.fluids.FluidStack;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
+import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 @SuppressWarnings("rawtypes")
 public class FluidAttachmentInventory implements IDistributedInventory {
@@ -25,7 +27,7 @@ public class FluidAttachmentInventory implements IDistributedInventory {
     public Map<FluidKey, Long> getFluidAmounts() {
         List<FluidStack> fluids = handler.getAllFluids(attachment);
         if (fluids.isEmpty()) return Map.of();
-        Map<FluidKey, Long> map = new LinkedHashMap<>();
+        Map<FluidKey, Long> map = new Object2LongOpenHashMap<>();
         for (FluidStack fs : fluids) {
             if (fs != null && fs.amount > 0) {
                 map.merge(FluidKey.of(fs), (long) fs.amount, Long::sum);
@@ -55,7 +57,13 @@ public class FluidAttachmentInventory implements IDistributedInventory {
 
     @Override
     public long extractFromOwnFluidStorage(FluidKey fluid, long target) {
-        FluidStack drained = handler.drainFluid(attachment, Math.min(target, Integer.MAX_VALUE), true);
+        FluidStack drained = handler
+            .drainFluid(attachment, fluid.toStack((int) Math.min(target, Integer.MAX_VALUE)), true);
         return drained != null ? drained.amount : 0;
+    }
+
+    @Override
+    public ResourceFilter<FluidKey> getFluidFilter() {
+        return handler.getFluidFilter(attachment);
     }
 }

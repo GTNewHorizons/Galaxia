@@ -98,7 +98,6 @@ public interface IDistributedInventory {
         return total;
     }
 
-    // TODO: Make it use BigInt
     default long totalItemsStored() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -110,7 +109,6 @@ public interface IDistributedInventory {
         return total;
     }
 
-    // TODO: Make it use BigInt
     default long totalFluidStored() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -122,7 +120,6 @@ public interface IDistributedInventory {
         return total;
     }
 
-    // TODO: Make it use BigInt
     default long totalItemCapacity() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -131,7 +128,6 @@ public interface IDistributedInventory {
         return total;
     }
 
-    // TODO: Make it use BigInt
     default long totalFluidCapacity() {
         long total = 0;
         for (IDistributedInventory child : getChildren()) {
@@ -140,7 +136,6 @@ public interface IDistributedInventory {
         return total;
     }
 
-    // TODO: Make it use BigInt
     default long getFreeItemSpace(ItemStackWrapper item) {
         if (!getItemFilter().test(item)) return 0L;
         long space = 0;
@@ -150,7 +145,6 @@ public interface IDistributedInventory {
         return space;
     }
 
-    // TODO: Make it use BigInt
     default long getFreeFluidSpace(FluidKey fluid) {
         if (!getFluidFilter().test(fluid)) return 0L;
         long space = 0;

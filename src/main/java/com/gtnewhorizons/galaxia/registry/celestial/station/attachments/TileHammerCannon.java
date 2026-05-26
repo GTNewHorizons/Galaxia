@@ -33,7 +33,6 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -46,8 +45,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import lombok.Getter;
 
-public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory {
+public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> implements IGuiHolder<PosGuiData> {
 
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
@@ -123,6 +121,11 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon>
             public void onDetached(TileHammerCannon attachment, StationGraph graph) {
                 attachment.graph = null;
                 attachment.moduleInstance.updateStatus(Buildable.Status.DISABLED);
+            }
+
+            @Override
+            public void markDirty(TileHammerCannon attachment) {
+                attachment.markDirty();
             }
         });
     }

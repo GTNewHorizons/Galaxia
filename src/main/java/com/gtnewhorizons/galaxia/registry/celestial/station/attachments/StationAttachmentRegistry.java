@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
+import com.gtnewhorizons.galaxia.registry.interfaces.IItemStorageHandler;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
@@ -66,9 +67,18 @@ public final class StationAttachmentRegistry {
         return handler instanceof IFluidStorageHandler;
     }
 
+    public static boolean isItemStorageHandler(IAttachmentHandler<?> handler) {
+        return handler instanceof IItemStorageHandler;
+    }
+
     @SuppressWarnings("rawtypes")
     public static IFluidStorageHandler asFluidStorageHandler(IAttachmentHandler<?> handler) {
         return (IFluidStorageHandler) handler;
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static IItemStorageHandler asItemStorageHandler(IAttachmentHandler<?> handler) {
+        return (IItemStorageHandler) handler;
     }
 
     public static boolean isRegisteredMTE(Class<?> mteClass) {

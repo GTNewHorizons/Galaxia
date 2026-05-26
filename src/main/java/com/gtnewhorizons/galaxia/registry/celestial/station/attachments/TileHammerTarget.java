@@ -31,13 +31,11 @@ import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
-import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
-import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IInventoryStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
-public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
-    implements IGuiHolder<PosGuiData>, IDistributedInventory {
+public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget> implements IGuiHolder<PosGuiData> {
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerTarget> STRUCTURE_DEFINITION = StructureDefinition
@@ -62,14 +60,22 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
         .build();
 
     private final List<IInventory> inventory = new ArrayList<>();
-    private final List<IDistributedInventory> children = new ArrayList<>();
-
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private final BlockPos here;
 
     static {
-        StationAttachmentRegistry.register(TileHammerTarget.class, new IAttachmentHandler<>() {
+        StationAttachmentRegistry.register(TileHammerTarget.class, new IInventoryStorageHandler<>() {
+
+            @Override
+            public ResourceFilter<ItemStackWrapper> getItemFilter(TileHammerTarget attachment) {
+                return attachment.filter;
+            }
+
+            @Override
+            public List<IInventory> getInventories(TileHammerTarget attachment) {
+                return attachment.inventory;
+            }
 
             @Override
             public BlockPos getPosition(TileHammerTarget attachment) {
@@ -93,6 +99,11 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
             public void onDetached(TileHammerTarget attachment, StationGraph graph) {
                 attachment.graph = null;
             }
+
+            @Override
+            public void markDirty(TileHammerTarget attachment) {
+                attachment.markDirty();
+            }
         });
     }
 
@@ -102,30 +113,11 @@ public class TileHammerTarget extends GalaxiaMultiblockBase<TileHammerTarget>
     }
 
     @Override
-    public void onStructureFormed() {
-        for (IInventory inv : inventory) {
-            children.add(new InventoryToMapAdapter(inv, filter));
-        }
-    }
-
-    @Override
     public void onStructureDisformed() {
         super.onStructureDisformed();
         if (graph != null) {
             graph.removeAttachment(here);
         }
-
-        children.clear();
-    }
-
-    @Override
-    public List<IDistributedInventory> getChildren() {
-        return children;
-    }
-
-    @Override
-    public ResourceFilter<ItemStackWrapper> getItemFilter() {
-        return filter;
     }
 
     @Override
