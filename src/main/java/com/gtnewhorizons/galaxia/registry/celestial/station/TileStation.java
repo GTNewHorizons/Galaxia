@@ -266,7 +266,8 @@ public class TileStation extends TileStationBase<TileStation> {
         for (CelestialAsset.ID otherId : CelestialAssetStore.getAssetsOnBody(bodyId)) {
             CelestialAsset other = CelestialAssetStore.findAsset(otherId);
             if (!(other instanceof Station otherStation)) continue;
-            if (otherStation.getController() != null && otherStation.getController().equals(here)) continue;
+            if (otherStation.getController() != null && otherStation.getController()
+                .equals(here)) continue;
             UUID otherTeam = CelestialAssetStore.getTeamId(otherId);
             if (otherTeam != null && otherTeam.equals(owner)) continue;
 
