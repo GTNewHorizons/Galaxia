@@ -9,7 +9,9 @@ import java.util.stream.Stream;
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
@@ -36,8 +38,8 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
     /**
      * Chunk size for the hierarchical flood: each axis of a chunk cell spans
-     * 2^CHUNK_SHIFT. Tuning this higher reduces the coarse-pass
-     * overhead but widens the "shell" that still needs fine-grained work;
+     * 2^CHUNK_SHIFT. Tuning this higher reduces the coarse-pass overhead but
+     * widens the "shell" that still needs fine-grained work.
      */
     private static final int CHUNK_SHIFT = 2;
     private static final int CHUNK_SIZE = 1 << CHUNK_SHIFT;
@@ -49,15 +51,31 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     private int volume;
     private final boolean enclosed;
 
+    // ── Boundary elements (keyed by Block, define the shell) ──────────────────
     private final Map<Block, IStructureElement<T>> structureElements;
 
-    // ── Temporary bitsets — sized to searchRadius, cleared after every check() ─
+    // ── Interior elements (keyed by Block, matched inside the formed volume) ──
+    //
+    // Interior elements are NOT part of the boundary flood. They are scanned
+    // once after a successful full validation via a cheap chunk TE map walk,
+    // and their positions are persisted in interiorBlocks for fastRevalidate.
+    //
+    // For enclosed structures the TE must also pass isInsideStructure().
+    // For open structures the AABB bounds are sufficient.
+    //
+    // element.check() is called exactly once per full validation — never during
+    // fastRevalidate — so side-effects (e.g. attachment registration) fire
+    // predictably and without duplication.
+    private final Map<Block, IStructureElement<T>> interiorElements;
+
+    // ── Temporary bitsets — sized to searchRadius, cleared after every check ─
     private DenseBitSet floodVisited;
     private DenseBitSet validBoundaryBits;
 
     // ── Persistent bitsets — sized to the actual structure AABB ───────────────
-    private DenseBitSet structureBlocks; // valid boundary blocks that passed check
-    private DenseBitSet enclosedVisited; // every block inside the closed volume
+    private DenseBitSet structureBlocks; // boundary blocks that passed check
+    private DenseBitSet enclosedVisited; // every block inside the closed volume (enclosed only)
+    private DenseBitSet interiorBlocks; // interior TE positions that passed check last full validation
 
     // Bounds of the currently allocated persistent bitsets
     private int encMinX, encMinY, encMinZ;
@@ -72,15 +90,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     private int aabbMinZ, aabbMaxZ;
 
     // ── Coarse (chunk-level) state for the hierarchical flood ─────────────────
-    //
-    // "Chunk" here means a CHUNK_SIZE³ cube of blocks. We work in chunk-space
-    // coordinates: a block at local position (lx, ly, lz) belongs to chunk
-    // (lx >> CHUNK_SHIFT, ly >> CHUNK_SHIFT, lz >> CHUNK_SHIFT).
-    //
-    // coarseRadius is chosen so that every reachable chunk fits in these bitsets:
-    // max chunk index = ceil(searchRadius / CHUNK_SIZE) + 1 slack
     private final int coarseRadius;
-
     private final DenseBitSet chunkHasBoundary;
     private final DenseBitSet coarseVisited;
     private final DenseBitSet coarseInterior;
@@ -90,18 +100,24 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     }
 
     @SuppressWarnings("unchecked")
-    private ArbitraryShapeDefinition(Map<Block, IStructureElement<T>> structureElement, int searchRadius,
-        boolean enclosed) {
+    private ArbitraryShapeDefinition(Map<Block, IStructureElement<T>> structureElements,
+        Map<Block, IStructureElement<T>> interiorElements, int searchRadius, boolean enclosed) {
+
         if (searchRadius > LocalCoord.MAX_SEARCH_RADIUS) {
             throw new IllegalArgumentException("Search radius too large: " + searchRadius);
         }
         // spotless:off
         this.enclosed           = enclosed;
         this.searchRadius       = searchRadius;
-        this.structureElements  = structureElement;
+        this.structureElements  = structureElements;
+        this.interiorElements   = interiorElements;
 
         this.structureBlocks    = null;
         this.enclosedVisited    = null;
+        this.interiorBlocks     = null;
+
+        // For open structures coarseRadius is 0 — the coarse bitsets are 1×1×1
+        // and are never touched, but must still be allocated.
         this.coarseRadius       = enclosed ? (searchRadius >> CHUNK_SHIFT) + 2 : 0;
         int crLen               = 2 * coarseRadius + 1;
         this.chunkHasBoundary   = new DenseBitSet(-coarseRadius, -coarseRadius, -coarseRadius, crLen, crLen, crLen);
@@ -110,19 +126,12 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         // spotless:on
     }
 
+    // ── IStructureDefinition ──────────────────────────────────────────────────
+
     @Override
     public IStructureElement<T>[] getStructureFor(String s) {
         return structureElements.values()
             .toArray(new IStructureElement[0]);
-    }
-
-    public boolean isInsideStructure(int x, int y, int z) {
-        if (tile == null) {
-            Galaxia.LOG.error("Structure is not formed yet");
-            return false;
-        }
-        return enclosed && enclosedVisited.containsChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord)
-            || isInCoarseInteriorChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord);
     }
 
     @Override
@@ -137,15 +146,14 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     @Override
     public boolean check(T tile, String shapeName, World world, ExtendedFacing extendedFacing, int x, int y, int z,
         int offsetX, int offsetY, int offsetZ, boolean forceCheckAllBlocks) {
-
         return enclosed ? enclosedCheck(tile, world, extendedFacing) : openCheck(tile, world);
     }
 
     @Override
     public boolean hints(T tile, ItemStack trigger, String shapeName, World world, ExtendedFacing extendedFacing, int x,
         int y, int z, int offsetX, int offsetY, int offsetZ) {
-        // TODO: In addition to normal building, there should also be leak detection that marks `enclosedVisted` near
-        // the boundary
+        // TODO: In addition to normal building, there should also be leak detection
+        // that marks enclosedVisited near the boundary
         return false;
     }
 
@@ -180,6 +188,15 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     public void iterate(String shapeName, World world, ExtendedFacing extendedFacing, int x, int y, int z, int offsetX,
         int offsetY, int offsetZ, IStructureWalker<T> walker) {}
 
+    public boolean isInsideStructure(int x, int y, int z) {
+        if (tile == null) {
+            Galaxia.LOG.error("Structure is not formed yet");
+            return false;
+        }
+        return enclosed && enclosedVisited.containsChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord)
+            || isInCoarseInteriorChecked(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord);
+    }
+
     public int getStructureBlocksAmount() {
         return structureBlocks != null ? structureBlocks.size() : 0;
     }
@@ -193,14 +210,19 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         this.validBoundaryBits = new DenseBitSet(-sr, -sr, -sr, srLen, srLen, srLen);
 
         floodStructure(tile, world);
+
         if (canReuse()) {
             structureBlocks.clear();
+            if (interiorBlocks != null) interiorBlocks.clear();
         } else {
             structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+            interiorBlocks = interiorElements.isEmpty() ? null
+                : new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
         }
 
         final boolean[] valid = { true };
         this.validBoundaryBits.forEach((lx, ly, lz) -> {
+            if (!valid[0]) return;
             if (!checkValidBoundary(
                 tile,
                 world,
@@ -213,6 +235,10 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             this.structureBlocks.add(lx, ly, lz);
         });
 
+        if (valid[0] && !interiorElements.isEmpty()) {
+            scanInteriorElements(tile, world);
+        }
+
         this.tile = tile;
         this.floodVisited = null;
         this.validBoundaryBits = null;
@@ -221,6 +247,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
 
     private boolean enclosedCheck(T tile, World world, ExtendedFacing extendedFacing) {
         if (fastRevalidate(tile, world)) return true;
+
         if (floodVisited == null) {
             int sr = searchRadius;
             int srLen = 2 * sr + 1;
@@ -231,44 +258,46 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
         coarseVisited.clear();
         floodStructure(tile, world);
 
-        // Size (or reuse) the two persistent bitsets to exactly the discovered AABB,
-        // then clear them so checkEnclosed() starts fresh.
         if (canReuse()) {
             structureBlocks.clear();
             enclosedVisited.clear();
+            if (interiorBlocks != null) interiorBlocks.clear();
         } else {
             structureBlocks = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
             enclosedVisited = new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
+            interiorBlocks = interiorElements.isEmpty() ? null
+                : new DenseBitSet(aabbMinX, aabbMinY, aabbMinZ, encLenX, encLenY, encLenZ);
         }
 
         ForgeDirection placedFacing = extendedFacing.getDirection();
-        boolean enclosed = checkEnclosed(tile, world, placedFacing);
-        if (enclosed) {
+        boolean isEnclosed = checkEnclosed(tile, world, placedFacing);
+        if (isEnclosed) {
             this.tile = tile;
             this.volume = (enclosedVisited.size() + coarseVisited.size() * coarseRadius * coarseRadius * coarseRadius)
                 - structureElements.size();
 
+            if (!interiorElements.isEmpty()) {
+                scanInteriorElements(tile, world);
+            }
+
             floodVisited = null;
             validBoundaryBits = null;
         } else {
-            // Discard all temporary state; enclosedVisited and structureBlocks are
-            // intentionally kept for isInsideStructure / fastRevalidate queries.
+            // Discard temporary state; enclosedVisited and structureBlocks are kept
+            // for isInsideStructure / fastRevalidate queries.
             floodVisited.clear();
             validBoundaryBits.clear();
         }
-        return enclosed;
+        return isEnclosed;
     }
 
-    /**
-     * Checks if any of the known boundary blocks are still valid. Also checks if any of the neighboring *air* blocks
-     * are still invalid. If they aren't something might have changed in the structure shell, so needs full revalidation
-     */
     private boolean fastRevalidate(T tile, World world) {
         if (structureBlocks == null || !tile.isStructureValid() || structureBlocks.isEmpty()) return false;
         if (world == null || world.isRemote) return true;
 
         final boolean[] valid = { true };
 
+        // ── Phase 1: boundary ─────────────────────────────────────────────────
         structureBlocks.forEach((lx, ly, lz) -> {
             if (!valid[0]) return;
             if (!couldBeValidBoundary(
@@ -277,17 +306,16 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
                 LocalCoord.worldX(lx, tile.xCoord),
                 LocalCoord.worldY(ly, tile.yCoord),
                 LocalCoord.worldZ(lz, tile.zCoord))) {
-
                 valid[0] = false;
                 return;
             }
             for (int d = 0; d < 6; d++) {
                 int nx = lx + DIR_DX[d], ny = ly + DIR_DY[d], nz = lz + DIR_DZ[d];
                 if (structureBlocks.containsChecked(nx, ny, nz)) continue;
-                // If outside the structure, then don't care for changes
+                // If the neighbor is outside the structure volume, changes there
+                // cannot affect our enclosure — skip it
                 if (enclosedVisited != null && !enclosedVisited.containsChecked(nx, ny, nz)
                     && !isInCoarseInteriorChecked(nx, ny, nz)) continue;
-
                 if (couldBeValidBoundary(
                     tile,
                     world,
@@ -300,17 +328,109 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             }
         });
 
-        return valid[0];
+        if (!valid[0]) return false;
+
+        // ── Phase 2: known interior elements ─────────────────────────────────
+        if (interiorBlocks != null && !interiorBlocks.isEmpty()) {
+            interiorBlocks.forEach((lx, ly, lz) -> {
+                if (!valid[0]) return;
+                if (!interiorElements.containsKey(
+                    world.getBlock(
+                        LocalCoord.worldX(lx, tile.xCoord),
+                        LocalCoord.worldY(ly, tile.yCoord),
+                        LocalCoord.worldZ(lz, tile.zCoord)))) {
+                    valid[0] = false;
+                }
+            });
+        }
+
+        if (!valid[0]) return false;
+
+        // ── Phase 3: new interior element detection ───────────────────────────
+        return interiorElements.isEmpty() || !hasNewInteriorElements(tile, world);
     }
 
     /**
-     * <p>
-     * The required radius is the Chebyshev distance from the origin to the
-     * farthest corner of the AABB
-     *
-     * <p>
-     * When the radius is unchanged from the previous check the existing arrays
-     * are cleared in place, avoiding allocation churn on repeated validation.
+     * Walks the chunk TE maps covering the structure AABB and calls
+     * {@code element.check()} on every TE whose block type is registered as
+     * an interior element. Passing positions are recorded in {@code interiorBlocks}.
+     */
+    private void scanInteriorElements(T tile, World world) {
+        if (interiorBlocks == null) return;
+
+        int minX = tile.xCoord + aabbMinX, maxX = tile.xCoord + aabbMaxX;
+        int minY = tile.yCoord + aabbMinY, maxY = tile.yCoord + aabbMaxY;
+        int minZ = tile.zCoord + aabbMinZ, maxZ = tile.zCoord + aabbMaxZ;
+
+        for (int cx = minX >> 4; cx <= maxX >> 4; cx++) {
+            for (int cz = minZ >> 4; cz <= maxZ >> 4; cz++) {
+                if (!world.getChunkProvider()
+                    .chunkExists(cx, cz)) continue;
+                Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
+
+                for (TileEntity te : chunk.chunkTileEntityMap.values()) {
+                    if (te.xCoord < minX || te.xCoord > maxX) continue;
+                    if (te.yCoord < minY || te.yCoord > maxY) continue;
+                    if (te.zCoord < minZ || te.zCoord > maxZ) continue;
+
+                    int lx = te.xCoord - tile.xCoord;
+                    int ly = te.yCoord - tile.yCoord;
+                    int lz = te.zCoord - tile.zCoord;
+
+                    if (structureBlocks != null && structureBlocks.containsChecked(lx, ly, lz)) continue;
+                    if (enclosed && !isInsideStructure(te.xCoord, te.yCoord, te.zCoord)) continue;
+
+                    IStructureElement<T> el = interiorElements.get(world.getBlock(te.xCoord, te.yCoord, te.zCoord));
+                    if (el != null && el.check(tile, world, te.xCoord, te.yCoord, te.zCoord)) {
+                        interiorBlocks.add(lx, ly, lz);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns {@code true} if any loaded TE in the AABB matches a registered
+     * interior element block type but is NOT already recorded in
+     * {@code interiorBlocks}.
+     */
+    private boolean hasNewInteriorElements(T tile, World world) {
+        int minX = tile.xCoord + aabbMinX, maxX = tile.xCoord + aabbMaxX;
+        int minY = tile.yCoord + aabbMinY, maxY = tile.yCoord + aabbMaxY;
+        int minZ = tile.zCoord + aabbMinZ, maxZ = tile.zCoord + aabbMaxZ;
+
+        for (int cx = minX >> 4; cx <= maxX >> 4; cx++) {
+            for (int cz = minZ >> 4; cz <= maxZ >> 4; cz++) {
+                if (!world.getChunkProvider()
+                    .chunkExists(cx, cz)) continue;
+                Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
+
+                for (TileEntity te : chunk.chunkTileEntityMap.values()) {
+                    if (te.xCoord < minX || te.xCoord > maxX) continue;
+                    if (te.yCoord < minY || te.yCoord > maxY) continue;
+                    if (te.zCoord < minZ || te.zCoord > maxZ) continue;
+
+                    if (!interiorElements.containsKey(world.getBlock(te.xCoord, te.yCoord, te.zCoord))) continue;
+                    if (enclosed && !isInsideStructure(te.xCoord, te.yCoord, te.zCoord)) continue;
+
+                    int lx = te.xCoord - tile.xCoord;
+                    int ly = te.yCoord - tile.yCoord;
+                    int lz = te.zCoord - tile.zCoord;
+
+                    if (structureBlocks != null && structureBlocks.containsChecked(lx, ly, lz)) continue;
+                    if (interiorBlocks != null && interiorBlocks.containsChecked(lx, ly, lz)) continue;
+
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether the current AABB matches the previously allocated
+     * persistent bitset dimensions. When they match the bitsets can be cleared
+     * in-place, avoiding allocation churn on repeated validation.
      */
     private boolean canReuse() {
         int neededLenX = aabbMaxX - aabbMinX + 1;
@@ -359,20 +479,16 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             int ly = LocalCoord.unpackY(cur, sr);
             int lz = LocalCoord.unpackZ(cur, sr);
 
-            // Here we want to check also the diagonals to add support for disconnected structures like diagonals
+            // Include diagonals to support disconnected structure like diagonal walls
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
-                        // Skip the center point (the current block itself)
                         if (dx == 0 && dy == 0 && dz == 0) continue;
 
-                        int nlx = lx + dx;
-                        int nly = ly + dy;
-                        int nlz = lz + dz;
+                        int nlx = lx + dx, nly = ly + dy, nlz = lz + dz;
 
                         if (!LocalCoord.isInBounds(nlx, nly, nlz, sr)) continue;
                         if (!floodVisited.add(nlx, nly, nlz)) continue;
-
                         if (!couldBeValidBoundary(
                             tile,
                             world,
@@ -416,27 +532,23 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
      * Hierarchical enclosure check — two levels of granularity.
      *
      * <p>
-     * <b>Phase 1 — coarse BFS (chunk granularity):</b><br>
-     * Starting from the chunk that contains the seed block, flood outward
-     * through chunks that have <em>no</em> valid-boundary bits. Any such
-     * chunk whose chunk-space coordinates escape the structure's coarse AABB
-     * immediately proves the interior is open → return {@code false}.
-     * All surviving chunks are recorded as {@code coarseInterior}: they hold
-     * only passable air and need no per-block work.
+     * <b>Phase 1 — coarse BFS (chunk granularity):</b> starting from the chunk
+     * that contains the seed block, flood outward through chunks that have no
+     * valid-boundary bits. Any chunk that escapes the structure's coarse AABB
+     * proves the interior is open → return {@code false}. All surviving chunks
+     * are recorded in {@code coarseInterior}.
      *
      * <p>
-     * <b>Phase 2 — bulk pre-mark + fine BFS seeding:</b><br>
-     * Every block in every {@code coarseInterior} chunk is marked visited in
-     * one sweep (64 bitset writes per chunk instead of 64 BFS iterations).
-     * The face of each boundary chunk that is adjacent to a {@code coarseInterior}
-     * chunk is enqueued as the seed for the fine BFS.
+     * <b>Phase 2 — bulk pre-mark + fine BFS seeding:</b> every block in every
+     * {@code coarseInterior} chunk is marked visited in one sweep. The face of
+     * each boundary chunk adjacent to a {@code coarseInterior} chunk is enqueued
+     * as the seed for the fine BFS.
      *
      * <p>
-     * <b>Phase 3 — fine BFS (block granularity, shell only):</b><br>
-     * The fine BFS runs exactly as the original algorithm, but because all
-     * interior blocks are already marked visited, it only traverses the shell
-     * of boundary chunks. Wall blocks (those in {@code validBoundaryBits} that
-     * pass {@code checkValidBoundary}) are collected into {@code structureBlocks}.
+     * <b>Phase 3 — fine BFS (block granularity, shell only):</b> the fine BFS
+     * traverses the shell of boundary chunks. Wall blocks (those in
+     * {@code validBoundaryBits} that pass {@code checkValidBoundary}) are
+     * collected into {@code structureBlocks}.
      *
      * <p>
      * Complexity improvement (hollow sphere, radius R, chunk size C=4):
@@ -469,7 +581,6 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             && csy <= caMaxY
             && csz >= caMinZ
             && csz <= caMaxZ) {
-
             coarseVisited.add(csx, csy, csz);
             coarseInterior.add(csx, csy, csz);
             coarseBFS.enqueue(LocalCoord.pack(csx, csy, csz, cr));
@@ -563,14 +674,12 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
      * Enqueues the interior-facing face of boundary chunk {@code (ncx, ncy, ncz)}.
      *
      * <p>
-     * {@code d} is the direction <em>interior → boundary</em> (i.e. the direction
-     * used when the coarse BFS stepped from an interior chunk into this boundary
-     * chunk). The face we want is therefore the {@code −d} face of the boundary
-     * chunk — the CHUNK_SIZE² block slice that is nearest to the interior.
+     * {@code d} is the direction <em>interior → boundary</em>. The face we
+     * want is therefore the {@code −d} face of the boundary chunk — the
+     * CHUNK_SIZE² slice nearest to the interior.
      *
      * <p>
-     * Blocks already marked visited (from another adjacent interior chunk that
-     * already seeded this face) are silently skipped by {@link #tryEnqueue}.
+     * Blocks already marked visited are silently skipped by {@link #tryEnqueue}.
      */
     private void enqueueFace(int ncx, int ncy, int ncz, int d, IntQueue bfs, int sr) {
         int bx0 = ncx << CHUNK_SHIFT, by0 = ncy << CHUNK_SHIFT, bz0 = ncz << CHUNK_SHIFT;
@@ -605,6 +714,7 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
     public static class Builder<T extends GalaxiaMultiblockBase<T>> {
 
         private final Map<Block, IStructureElement<T>> elements = new HashMap<>();
+        private final Map<Block, IStructureElement<T>> interiorElements = new HashMap<>();
         private int searchRadius = LocalCoord.SEARCH_RADIUS;
         private int enclosed = -1;
 
@@ -636,6 +746,8 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
                     0));
         }
 
+        // ── Boundary elements ─────────────────────────────────────────────────
+
         public Builder<T> addElement(IExtendedStructureElement<T> element) {
             elements.put(element.getValidBlock(), element);
             return this;
@@ -646,7 +758,25 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             return this;
         }
 
-        @SuppressWarnings({ "unchecked", "rawtypes" })
+        // ── Interior elements ─────────────────────────────────────────────────
+        //
+        // Interior elements are scanned inside the formed volume after each
+        // successful full validation. They do not participate in the boundary
+        // flood, so their block types must not overlap with boundary element
+        // block types.
+
+        public Builder<T> addInteriorElement(IExtendedStructureElement<T> element) {
+            interiorElements.put(element.getValidBlock(), element);
+            return this;
+        }
+
+        public Builder<T> addInteriorElements(Stream<IExtendedStructureElement<T>> elements) {
+            elements.forEach(e -> interiorElements.put(e.getValidBlock(), e));
+            return this;
+        }
+
+        // ── Embed ─────────────────────────────────────────────────────────────
+
         public <D> Builder<T> embedDefinition(String shape, IStructureDefinition<D> definition) {
             if (!(definition instanceof StructureDefinition<D>def)) {
                 throw new IllegalArgumentException("Unsupported structure definition");
@@ -670,12 +800,11 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             return this;
         }
 
-        @SuppressWarnings("unchecked")
         public ArbitraryShapeDefinition<T> build() {
             if (enclosed == -1) {
                 throw new InvalidParameterException("Must specify if multiblock is open or enclosed");
             }
-            return new ArbitraryShapeDefinition<>(elements, searchRadius, enclosed == 1);
+            return new ArbitraryShapeDefinition<>(elements, interiorElements, searchRadius, enclosed == 1);
         }
     }
 }

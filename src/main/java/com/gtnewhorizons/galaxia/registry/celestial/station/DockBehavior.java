@@ -44,7 +44,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                 }
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
-            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
+            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
                 if (StationAttachmentRegistry.isRegisteredTileEntity(tileEntity)) {
                     BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
                     dock.addAttachment(pos);
@@ -52,7 +52,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
                 }
                 return false;
             }, GalaxiaBlocksEnum.HAMMER_TARGET.get(), 0))
-            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
+            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
                 if (StationAttachmentRegistry.isRegisteredTileEntity(tileEntity)) {
                     BlockPos pos = new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord);
                     dock.addAttachment(pos);

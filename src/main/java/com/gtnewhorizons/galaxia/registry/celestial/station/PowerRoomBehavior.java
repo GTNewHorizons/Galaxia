@@ -44,7 +44,7 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                     .stream()
                     .filter(b -> ALL_VALID_POWER_ROOM_BLOCKS.contains(b))
                     .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHints((room, tileEntity) -> {
+            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHints((room, tileEntity) -> {
                 if (tileEntity instanceof IGregTechTileEntity gtTE) {
                     if (StationAttachmentRegistry.isRegisteredMTE(
                         gtTE.getMetaTileEntity()
@@ -71,7 +71,7 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
 
     @Override
     public int getSearchRadius() {
-        return 0;
+        return ConfigStructures.enclosed.searchRadius;
     }
 
     @Override
