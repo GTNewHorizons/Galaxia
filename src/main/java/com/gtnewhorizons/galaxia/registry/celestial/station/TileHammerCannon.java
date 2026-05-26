@@ -29,7 +29,7 @@ import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
@@ -45,7 +45,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import lombok.Getter;
 
-public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon>
+public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon>
     implements IGuiHolder<PosGuiData>, IDistributedInventory {
 
     private static final String NBT_FILTER = "filter";
@@ -91,31 +91,37 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
     private final ModuleHammer hammer;
 
     static {
-        StationAttachmentRegistry.register(TileHammerCannon.class, new IAttachmentHandler<TileHammerCannon>() {
+        StationAttachmentRegistry.register(TileHammerCannon.class, new IAttachmentHandler<>() {
 
             @Override
             public BlockPos getPosition(TileHammerCannon attachment) {
-                return attachment.getPosition();
+                return attachment.here;
             }
 
             @Override
             public void tick(TileHammerCannon attachment) {
-                attachment.tick();
+                if (attachment.graph == null) return;
+
+                attachment.moduleInstance.tick(
+                    attachment.graph.getController()
+                        .getBackingStation());
             }
 
             @Override
             public boolean isReady(TileHammerCannon attachment) {
-                return attachment.booted();
+                return attachment.structureValid && attachment.graph != null;
             }
 
             @Override
             public void onAttached(TileHammerCannon attachment, StationGraph graph) {
-                attachment.onAttached(graph);
+                attachment.graph = graph;
+                attachment.moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
             }
 
             @Override
             public void onDetached(TileHammerCannon attachment, StationGraph graph) {
-                attachment.onDetached(graph);
+                attachment.graph = null;
+                attachment.moduleInstance.updateStatus(Buildable.Status.DISABLED);
             }
         });
     }
@@ -136,21 +142,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         this.hammer.setVariant(HammerVariant.BIG);
     }
 
-    public BlockPos getPosition() {
-        return here;
-    }
-
-    public void tick() {
-        if (graph == null) return;
-        moduleInstance.tick(
-            graph.getController()
-                .getBackingStation());
-    }
-
-    public boolean isReady() {
-        return booted();
-    }
-
     @Override
     public void onStructureFormed() {
         super.onStructureFormed();
@@ -163,29 +154,6 @@ public class TileHammerCannon extends GalaxiaBootableMultiblock<TileHammerCannon
         if (graph != null) {
             graph.removeAttachment(here);
         }
-    }
-
-    @Override
-    protected boolean attemptBoot() {
-        return graph != null;
-    }
-
-    @Override
-    protected void onBootComplete() {
-        moduleInstance.updateStatus(Buildable.Status.OPERATIONAL);
-    }
-
-    @Override
-    protected void onBootFailed() {
-        moduleInstance.updateStatus(Buildable.Status.DISABLED);
-    }
-
-    public void onAttached(StationGraph graph) {
-        this.graph = graph;
-    }
-
-    public void onDetached(StationGraph graph) {
-        this.graph = null;
     }
 
     @Override
