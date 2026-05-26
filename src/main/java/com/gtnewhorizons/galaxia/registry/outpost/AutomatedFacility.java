@@ -60,7 +60,6 @@ public final class AutomatedFacility extends CelestialAsset {
 
     private final Map<ItemStackWrapper, Long> amounts = new LinkedHashMap<>();
     private final Map<FluidKey, Long> fluidAmounts = new LinkedHashMap<>();
-    private long totalItemAmount;
 
     private final List<ModuleInstance> modules;
     private final StationLayout layout;
@@ -1153,38 +1152,13 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
-    public Map<ItemStackWrapper, Long> aggregatedItems() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
+    public Map<ItemStackWrapper, Long> getItemAmounts() {
+        return amounts;
     }
 
     @Override
-    public Map<FluidKey, Long> aggregatedFluids() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(fluidAmounts));
-    }
-
-    @Override
-    public long totalItemsStored() {
-        return totalItemAmount;
-    }
-
-    @Override
-    public long totalFluidStored() {
-        long total = 0L;
-        for (long v : fluidAmounts.values()) total += v;
-        return total;
-    }
-
-    @Override
-    public long getItemAmount(ItemStackWrapper item) {
-        Long v = amounts.get(item);
-        return v == null ? 0L : v;
-    }
-
-    @Override
-    public long getFluidAmount(FluidKey fluid) {
-        if (fluid == null) return 0L;
-        Long v = fluidAmounts.get(fluid);
-        return v == null ? 0L : v;
+    public Map<FluidKey, Long> getFluidAmounts() {
+        return fluidAmounts;
     }
 
     @Override
@@ -1212,43 +1186,6 @@ public final class AutomatedFacility extends CelestialAsset {
             : updateFluids((FluidKey) item, delta);
         if (actual != 0L && sync) markInventoryDelta(item, delta > 0 ? actual : -actual);
         return actual;
-    }
-
-    @Override
-    public long updateItems(ItemStackWrapper item, long delta) {
-        if (item == null || delta == 0L) return 0L;
-        if (!getItemFilter().test(item)) return 0L;
-
-        long current = amounts.getOrDefault(item, 0L);
-        long actualDelta = Math.clamp(delta, -current, remainingItemInventoryCapacity());
-        long newValue = current + actualDelta;
-
-        if (newValue == 0L) {
-            amounts.remove(item);
-        } else {
-            amounts.put(item, newValue);
-        }
-
-        totalItemAmount += actualDelta;
-        return Math.abs(actualDelta);
-    }
-
-    @Override
-    public long updateFluids(FluidKey fluid, long delta) {
-        if (fluid == null || delta == 0L) return 0L;
-        if (!getFluidFilter().test(fluid)) return 0L;
-
-        long current = fluidAmounts.getOrDefault(fluid, 0L);
-        long actualDelta = Math.clamp(delta, -current, remainingFluidInventoryCapacity());
-        long newValue = current + actualDelta;
-
-        if (newValue == 0L) {
-            fluidAmounts.remove(fluid);
-        } else {
-            fluidAmounts.put(fluid, newValue);
-        }
-
-        return Math.abs(actualDelta);
     }
 
     public long usedItemInventoryCapacity() {
@@ -1295,7 +1232,11 @@ public final class AutomatedFacility extends CelestialAsset {
     /// ----------------------------------------------------------------------------------
 
     public Map<ItemStackWrapper, Long> itemSnapshot() {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (Map.Entry<ItemStackWrapper, Long> e : amounts.entrySet()) {
+            result.put(e.getKey(), e.getValue());
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     public Map<String, Long> fluidSnapshot() {
@@ -1312,11 +1253,9 @@ public final class AutomatedFacility extends CelestialAsset {
 
     public void loadFromSnapshot(Map<ItemStackWrapper, Long> snapshot) {
         amounts.clear();
-        totalItemAmount = 0L;
         for (Map.Entry<ItemStackWrapper, Long> e : snapshot.entrySet()) {
             if (e.getValue() > 0) {
                 amounts.put(e.getKey(), e.getValue());
-                totalItemAmount += e.getValue();
             }
         }
     }
@@ -1336,7 +1275,6 @@ public final class AutomatedFacility extends CelestialAsset {
         super.clear();
         amounts.clear();
         fluidAmounts.clear();
-        totalItemAmount = 0L;
     }
 
     public void addFilter(String key, boolean item) {

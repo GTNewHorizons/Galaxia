@@ -104,23 +104,24 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
         syncManager.syncValue("sealed", 0, sealedSync);
 
         final int fluidRow = yOffset + 14;
-        return List.of(
-            new TextWidget<>(IKey.dynamic(() -> {
-                boolean sealed = sealedSync.getBoolValue();
-                String label = StatCollector.translateToLocal("galaxia.gui.station_controller.sealed");
-                String status = StatCollector.translateToLocal(
-                    sealed ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
-                EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-                return label + ": " + color + status + EnumChatFormatting.RESET;
-            })).pos(10, yOffset),
-            new TextWidget<>(IKey.dynamic(() -> {
-                var snap = StationGraphSyncHandler.getSnapshot();
-                if (snap.fluidAttachmentCount() == 0) {
-                    return StatCollector.translateToLocal("galaxia.gui.station_controller.no_fluid_tanks");
-                }
-                return StatCollector.translateToLocal("galaxia.gui.station_controller.fluid_storage")
-                    + ": " + snap.fluidStored() + " / " + snap.fluidCapacity() + " L (" + snap.fluidAttachmentCount()
-                    + ")";
-            })).pos(10, fluidRow));
+        return List.of(new TextWidget<>(IKey.dynamic(() -> {
+            boolean sealed = sealedSync.getBoolValue();
+            String label = StatCollector.translateToLocal("galaxia.gui.station_controller.sealed");
+            String status = StatCollector.translateToLocal(sealed ? "galaxia.gui.status_yes" : "galaxia.gui.status_no");
+            EnumChatFormatting color = sealed ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
+            return label + ": " + color + status + EnumChatFormatting.RESET;
+        })).pos(10, yOffset), new TextWidget<>(IKey.dynamic(() -> {
+            var snap = StationGraphSyncHandler.getSnapshot();
+            if (snap.fluidAttachmentCount() == 0) {
+                return StatCollector.translateToLocal("galaxia.gui.station_controller.no_fluid_tanks");
+            }
+            return StatCollector.translateToLocal("galaxia.gui.station_controller.fluid_storage") + ": "
+                + snap.fluidStored()
+                + " / "
+                + snap.fluidCapacity()
+                + " L ("
+                + snap.fluidAttachmentCount()
+                + ")";
+        })).pos(10, fluidRow));
     }
 }

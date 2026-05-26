@@ -61,6 +61,8 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
         .build();
 
     private final List<IInventory> inventory = new java.util.ArrayList<>();
+    private final List<IDistributedInventory> children = new ArrayList<>();
+
     private final ResourceFilter<ItemStackWrapper> filter = ResourceFilter.forItems();
     private @Nullable StationGraph graph;
     private final BlockPos here;
@@ -111,11 +113,20 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     }
 
     @Override
+    public void onStructureFormed() {
+        for (IInventory inv : inventory) {
+            children.add(new InventoryToMapAdapter(inv, filter));
+        }
+    }
+
+    @Override
     public void onStructureDisformed() {
         super.onStructureDisformed();
         if (graph != null) {
             graph.removeAttachment(here);
         }
+
+        children.clear();
     }
 
     @Override
@@ -132,8 +143,8 @@ public class TileHammerTarget extends GalaxiaBootableMultiblock<TileHammerTarget
     }
 
     @Override
-    public List<IInventory> getInventories() {
-        return this.inventory;
+    public List<IDistributedInventory> getChildren() {
+        return children;
     }
 
     @Override

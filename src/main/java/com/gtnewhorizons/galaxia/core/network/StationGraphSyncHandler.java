@@ -37,7 +37,7 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     private TileStation station;
 
     public record EnergySnapshot(int attachmentCount, long totalStored, long totalCapacity, long fluidStored,
-            long fluidCapacity, int fluidAttachmentCount) {}
+        long fluidCapacity, int fluidAttachmentCount) {}
 
     @Override
     public void init(String key, PanelSyncManager syncManager) {
@@ -98,7 +98,8 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
             }
         }
 
-        if (count == lastSentCount && stored == lastSentStored && capacity == lastSentCapacity
+        if (count == lastSentCount && stored == lastSentStored
+            && capacity == lastSentCapacity
             && fluidStored == lastSentFluidStored
             && fluidCapacity == lastSentFluidCapacity
             && fluidCount == lastSentFluidCount) return;

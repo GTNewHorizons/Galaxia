@@ -9,7 +9,6 @@ import javax.annotation.Nonnull;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
-import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -83,8 +82,8 @@ public final class StationGraph {
             .filter(te -> !(te instanceof GalaxiaMultiblockBase<?>base) || base.isStructureValid())
             .map(te -> (IDistributedInventory) te);
 
-        Stream<IDistributedInventory> fluidTanks = getFluidStorageAttachments()
-            .map(ra -> new FluidAttachmentInventory(
+        Stream<IDistributedInventory> fluidTanks = getFluidStorageAttachments().map(
+            ra -> new FluidAttachmentInventory(
                 StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
                 ra.attachment()));
 
