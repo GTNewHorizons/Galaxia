@@ -66,6 +66,7 @@ public class TileStation extends TileStationBase<TileStation> {
     @Getter
     @Setter
     private UUID owner;
+    private boolean proximityBlocked;
     private Role controllerFlag = Role.UNDEFINED;
 
     private CelestialAsset.ID backingStation;
@@ -168,6 +169,11 @@ public class TileStation extends TileStationBase<TileStation> {
     @Override
     public void onStructureFormed() {
         super.onStructureFormed();
+        if (overlapsForeignStation()) {
+            proximityBlocked = true;
+            return;
+        }
+        proximityBlocked = false;
         behavior.onStructureFormed(this);
     }
 
@@ -251,14 +257,51 @@ public class TileStation extends TileStationBase<TileStation> {
         CelestialAssetStore.registerAsset(owner, station);
     }
 
+    private boolean overlapsForeignStation() {
+        if (owner == null) return false;
+
+        CelestialObjectId bodyId = GalaxiaCelestialAPI.getObjectFromDimension(worldObj.provider.dimensionId);
+        if (bodyId == CelestialObjectId.INVALID) return false;
+
+        for (CelestialAsset.ID otherId : CelestialAssetStore.getAssetsOnBody(bodyId)) {
+            CelestialAsset other = CelestialAssetStore.findAsset(otherId);
+            if (!(other instanceof Station otherStation)) continue;
+            if (otherStation.getController() != null && otherStation.getController().equals(here)) continue;
+            UUID otherTeam = CelestialAssetStore.getTeamId(otherId);
+            if (otherTeam != null && otherTeam.equals(owner)) continue;
+
+            TileStation otherTile = otherStation.getTileController();
+            if (otherTile == null || !otherTile.structureValid) continue;
+
+            if (piecesOverlap(this, otherTile)) return true;
+
+            StationGraph otherGraph = otherTile.getGraph();
+            if (otherGraph != null) {
+                for (TileStationBase<?> piece : otherGraph.iterateOver(TileStationBase.class)) {
+                    if (piecesOverlap(this, piece)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean piecesOverlap(TileStationBase<?> a, TileStationBase<?> b) {
+        int dist = (a.getSearchRadius() + b.getSearchRadius()) * 2;
+        int dx = Math.abs(a.here.x() - b.here.x());
+        int dy = Math.abs(a.here.y() - b.here.y());
+        int dz = Math.abs(a.here.z() - b.here.z());
+        return dx < dist && dy < dist && dz < dist;
+    }
+
     @Override
     protected void tickPostBoot() {
+        if (proximityBlocked) return;
         behavior.tickPostBoot(this);
     }
 
     @Override
     public void tick() {
-        if (!structureValid) return;
+        if (!structureValid || proximityBlocked) return;
 
         super.tick();
         if (getBackingStation().tryConsumeEnergy(
@@ -471,12 +514,16 @@ public class TileStation extends TileStationBase<TileStation> {
                     .getLeastSignificantBits());
         }
         nbt.setDouble("oxygenLevel", oxygenLevel);
+        nbt.setBoolean("proximityBlocked", proximityBlocked);
         behavior.writeToNBT(this, nbt);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         super.readFromNBT(nbt);
+        if (nbt.hasKey("proximityBlocked")) {
+            this.proximityBlocked = nbt.getBoolean("proximityBlocked");
+        }
 
         if (nbt.hasKey("controllerFlag")) {
             controllerFlag = Role.fromId(nbt.getByte("controllerFlag"));
@@ -574,6 +621,7 @@ public class TileStation extends TileStationBase<TileStation> {
         if (controller.getGraph() != null) {
             graph = controller.getGraph();
         }
+        if (proximityBlocked || overlapsForeignStation()) return;
         behavior.onGraphRebuilt(this);
         if (behavior instanceof IStationBehaviorWithAttachments attacher && graph != null) {
             attacher.registerAttachments(this, graph);

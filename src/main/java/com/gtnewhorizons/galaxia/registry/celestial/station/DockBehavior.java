@@ -68,7 +68,7 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
 
     @Override
     public int getSearchRadius() {
-        return 0;
+        return ConfigStructures.open.searchRadius;
     }
 
     @Override
