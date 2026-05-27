@@ -12,6 +12,8 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlugMulti;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
@@ -45,7 +47,7 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                     .stream()
                     .filter(b -> ALL_VALID_POWER_ROOM_BLOCKS.contains(b))
                     .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHints((room, tileEntity) -> {
+            .addInteriorElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHints((room, tileEntity) -> {
                 if (tileEntity instanceof IGregTechTileEntity gtTE) {
                     if (StationAttachmentRegistry.isRegisteredMTE(
                         gtTE.getMetaTileEntity()
@@ -56,7 +58,19 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                 }
                 return false;
             }, GregTechAPI.sBlockMachines, MetaTileEntityIDs.lsc.ID))
-            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
+                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                    0,
+                    MTEStationPlug.ID,
+                    TileStation::addStationPlug))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
+                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                    0,
+                    MTEStationPlugMulti.ID,
+                    TileStation::addStationPlug))
+            .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
                 if (tileEntity instanceof TileEntityAirlock airlock) {
                     if (!airlock.isStructureValid()) return false;
                     room.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
@@ -65,14 +79,14 @@ public class PowerRoomBehavior implements IStationBehaviorWithAttachments {
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
             .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-            .withSearchRadius(ConfigStructures.enclosed.searchRadius)
-            .enclosed()
+            .withSearchRadius(ConfigStructures.open.searchRadius)
+            .open()
             .build();
     }
 
     @Override
     public int getSearchRadius() {
-        return ConfigStructures.enclosed.searchRadius;
+        return ConfigStructures.open.searchRadius;
     }
 
     @Override

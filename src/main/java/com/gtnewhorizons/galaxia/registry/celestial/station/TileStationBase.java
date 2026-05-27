@@ -17,6 +17,7 @@ import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
@@ -24,6 +25,7 @@ import com.gtnewhorizons.galaxia.registry.block.GalaxiaBootableMultiblock;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import lombok.Getter;
 
@@ -32,6 +34,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
 
     protected @Nullable StationGraph graph;
     protected List<BlockPos> airlocks = new ArrayList<>();
+    protected List<BlockPos> stationPlugs = new ArrayList<>();
     protected BlockPos here;
 
     @Getter
@@ -50,6 +53,18 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     @Override
     protected boolean checkStructure() {
         return isValidDimension(worldObj) && super.checkStructure();
+    }
+
+    @Override
+    protected boolean attemptBoot() {
+        for (BlockPos plug : stationPlugs) {
+            if (!(plug.getTE(worldObj) instanceof IGregTechTileEntity gtTe
+                && gtTe.getMetaTileEntity() instanceof MTEStationPlug mtePlug)) continue;
+
+            mtePlug.setGraph(graph);
+        }
+
+        return graph != null;
     }
 
     @Override
@@ -80,6 +95,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
             teLock.untrackStationController(this.here);
         }
         airlocks.clear();
+        stationPlugs.clear();
         sealed = false;
         markSealedDirty();
     }
@@ -95,6 +111,19 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         }
     }
 
+    public void addStationPlug(int x, int y, int z) {
+        if (stationPlugs.size() >= 2) return;
+        BlockPos plug = new BlockPos(x, y, z);
+        if (!this.stationPlugs.contains(plug)) {
+            this.stationPlugs.add(plug);
+        }
+        if (plug.getTE(worldObj) instanceof IGregTechTileEntity te
+            && te.getMetaTileEntity() instanceof MTEStationPlug mtePlug) {
+            mtePlug.setGraph(graph);
+        }
+        markDirty();
+    }
+
     public boolean isValidDimension(World world) {
         CelestialObjectId objectId = GalaxiaCelestialAPI.getObjectFromDimension(world.provider.dimensionId);
         return objectId != CelestialObjectId.INVALID;
@@ -104,6 +133,7 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
     public void writeToNBT(NBTTagCompound nbt) {
         super.writeToNBT(nbt);
         nbt.setTag("airlocks", BlockPos.listToNBT(airlocks));
+        nbt.setTag("plugs", BlockPos.listToNBT(stationPlugs));
         nbt.setBoolean("sealed", sealed);
     }
 
@@ -113,6 +143,9 @@ public abstract class TileStationBase<T extends GalaxiaBootableMultiblock<T>> ex
         this.here = new BlockPos(xCoord, yCoord, zCoord);
         if (nbt.hasKey("airlocks")) {
             this.airlocks = BlockPos.listFromNBT(nbt.getTagList("airlocks", Constants.NBT.TAG_COMPOUND));
+        }
+        if (nbt.hasKey("plugs")) {
+            this.stationPlugs = BlockPos.listFromNBT(nbt.getTagList("plugs", Constants.NBT.TAG_COMPOUND));
         }
         if (nbt.hasKey("sealed")) {
             this.sealed = nbt.getBoolean("sealed");

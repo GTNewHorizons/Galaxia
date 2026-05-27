@@ -12,6 +12,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
@@ -73,20 +74,24 @@ public class Station extends CelestialAsset {
 
     @Override
     public boolean tryConsumeEnergy(long powerDraw) {
-        TileStation ctrl = getTileController();
-        if (ctrl == null) return false;
-        StationGraph graph = ctrl.getGraph();
-        if (graph == null) return false;
+        return drawEnergy(powerDraw) > 0;
+    }
 
-        long remaining = powerDraw;
+    public long drawEnergy(long maxPowerDraw) {
+        TileStation ctrl = getTileController();
+        if (ctrl == null) return 0;
+        StationGraph graph = ctrl.getGraph();
+        if (graph == null) return 0;
+
+        long remaining = maxPowerDraw;
         for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) graph
             .getEnergyAttachments()::iterator) {
             IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
             long drawn = h.drawEnergy(ra.attachment(), remaining);
             remaining -= drawn;
-            if (remaining <= 0) return true;
+            if (remaining <= 0) return maxPowerDraw;
         }
-        return remaining < powerDraw;
+        return maxPowerDraw - remaining;
     }
 
     @Override
@@ -153,6 +158,9 @@ public class Station extends CelestialAsset {
         WorldServer world = server.worldServerForDimension(dimId);
         if (world == null) return null;
 
-        return controller.getTE(world);
+        if (controller.getTE(world) instanceof TileStation s) return s;
+        Galaxia.LOG.error("[Station] Something that should not be a controller is registered as such");
+
+        return null;
     }
 }

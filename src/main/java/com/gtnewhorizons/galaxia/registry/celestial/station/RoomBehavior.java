@@ -14,6 +14,8 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlugMulti;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.core.network.StationGraphSyncHandler;
@@ -47,7 +49,7 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
                     .stream()
                     .filter(b -> ALL_VALID_ROOM_BLOCKS.contains(b))
                     .map(b -> GalaxiaStructureUtility.ofBlock(b, 0)))
-            .addElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
+            .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((station, tileEntity) -> {
                 if (tileEntity instanceof TileEntityAirlock airlock) {
                     if (!airlock.isStructureValid()) return false;
                     station.registerAirlock(airlock.xCoord, airlock.yCoord, airlock.zCoord);
@@ -56,47 +58,62 @@ public class RoomBehavior implements IStationBehaviorWithAttachments {
                 return false;
             }, GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get(), 0))
             .addElement(
-                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
+                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                    0,
+                    MTEStationPlug.ID,
+                    (room, x, y, z) -> room.addStationPlug(x, y, z)))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>stationHatchAdder(
+                    GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
+                    0,
+                    MTEStationPlugMulti.ID,
+                    (room, x, y, z) -> room.addStationPlug(x, y, z)))
+            .addElement(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
                     TileStation::addCoolingCoil,
                     GalaxiaBlocksEnum.COOLING_COIL.get(),
                     0))
             .addElement(
-                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
                     TileStation::addHeatingCoil,
                     GalaxiaBlocksEnum.HEATING_COIL.get(),
                     0))
             .addElement(
-                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
                     TileStation::addAirPurifier,
                     GalaxiaBlocksEnum.AIR_PURIFIER.get(),
                     0))
             .addElement(
-                GalaxiaStructureUtility.ofBlockPosAdderNoMetaForceCheck(
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
                     TileStation::addWitherBlocker,
                     GalaxiaBlocksEnum.WITHER_BLOCKER.get(),
                     0))
             .addElement(
-                GalaxiaStructureUtility
-                    .ofBlockPosAdderNoMetaForceCheck(TileStation::addOxygenator, GalaxiaBlocksEnum.OXYGENATOR.get(), 0))
-            .addInteriorElement(GalaxiaStructureUtility.ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
-                if (tileEntity instanceof IGregTechTileEntity gtTE) {
-                    IMetaTileEntity mte = gtTE.getMetaTileEntity();
-                    if (mte != null && StationAttachmentRegistry.isFluidStorageHandler(mte.getClass())) {
-                        room.addAttachment(new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord));
-                        return true;
+                GalaxiaStructureUtility.<TileStation>ofBlockPosAdderNoMetaForceCheck(
+                    TileStation::addOxygenator,
+                    GalaxiaBlocksEnum.OXYGENATOR.get(),
+                    0))
+            .addInteriorElement(
+                GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((room, tileEntity) -> {
+                    if (tileEntity instanceof IGregTechTileEntity gtTE) {
+                        IMetaTileEntity mte = gtTE.getMetaTileEntity();
+                        if (mte != null && StationAttachmentRegistry.isFluidStorageHandler(mte.getClass())) {
+                            room.addAttachment(new BlockPos(tileEntity.xCoord, tileEntity.yCoord, tileEntity.zCoord));
+                            return true;
+                        }
                     }
-                }
-                return false;
-            }, GregTechAPI.sBlockMachines, 0))
+                    return false;
+                }, GregTechAPI.sBlockMachines, 0))
             .embedDefinition(TileEntityAirlock.STRUCTURE_PIECE_MAIN, TileEntityAirlock.STRUCTURE_DEFINITION)
-            .withSearchRadius(ConfigStructures.enclosed.searchRadius)
-            .enclosed()
+            .withSearchRadius(ConfigStructures.open.searchRadius)
+            .open()
             .build();
     }
 
     @Override
     public int getSearchRadius() {
-        return ConfigStructures.enclosed.searchRadius;
+        return ConfigStructures.open.searchRadius;
     }
 
     @Override

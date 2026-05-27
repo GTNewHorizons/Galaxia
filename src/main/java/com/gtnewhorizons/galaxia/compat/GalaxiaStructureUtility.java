@@ -24,7 +24,12 @@ import com.gtnewhorizon.structurelib.structure.IItemSource;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizon.structurelib.structure.adders.ITileAdder;
 import com.gtnewhorizon.structurelib.util.ItemStackPredicate;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
+import com.gtnewhorizons.galaxia.compat.gt.MTEStationPlug;
 import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
+
+import gregtech.api.GregTechAPI;
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 
 // TODO: This probably could be upstreamed, don't know if IExtendedStructureElement would be accepted though, but I
 // need something for efficiently selecting the IStructureElement to perform the block check and normal
@@ -406,6 +411,47 @@ public class GalaxiaStructureUtility {
             @Override
             public boolean placeBlock(T t, World world, int x, int y, int z, ItemStack trigger) {
                 return false;
+            }
+        };
+    }
+
+    public static <T> IExtendedStructureElement<T> stationHatchAdder(Block hintBlock, int hintMeta, int mteId,
+        BlockPosConsumer<T> consumer) {
+        if (hintBlock == null || consumer == null) throw new IllegalArgumentException();
+        return new IExtendedStructureElement<T>() {
+
+            @Override
+            public Block getValidBlock() {
+                return GregTechAPI.sBlockMachines;
+            }
+
+            @Override
+            public boolean check(T t, World world, int x, int y, int z) {
+                TileEntity te = world.getTileEntity(x, y, z);
+                if (te instanceof IGregTechTileEntity gtTE && gtTE.getMetaTileEntity() instanceof MTEStationPlug) {
+                    consumer.accept(t, x, y, z);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public boolean couldBeValid(T t, World world, int x, int y, int z, ItemStack trigger) {
+                Block block = world.getBlock(x, y, z);
+                return GregTechAPI.sBlockMachines == block
+                    && GalaxiaGTAttachmentRegistration.plugId.contains(block.getDamageValue(world, x, y, z));
+            }
+
+            @Override
+            public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
+                StructureLibAPI.hintParticle(world, x, y, z, hintBlock, hintMeta);
+                return true;
+            }
+
+            @Override
+            public boolean placeBlock(T t, World world, int x, int y, int z, ItemStack trigger) {
+                world.setBlock(x, y, z, hintBlock, hintMeta, 2);
+                return true;
             }
         };
     }

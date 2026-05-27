@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.FluidAtt
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.ItemAttachmentInventory;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
+import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
 import com.gtnewhorizons.galaxia.registry.interfaces.IGraphListener;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -81,6 +82,17 @@ public final class StationGraph {
     public void tickAttachments() {
         attachments.values()
             .forEach(StationGraph::tick);
+    }
+
+    public long drawEnergy(long maxPowerDraw) {
+        long remaining = maxPowerDraw;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            IEnergyHandler h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
+            long drawn = h.drawEnergy(ra.attachment(), remaining);
+            remaining -= drawn;
+            if (remaining <= 0) return maxPowerDraw;
+        }
+        return maxPowerDraw - remaining;
     }
 
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {

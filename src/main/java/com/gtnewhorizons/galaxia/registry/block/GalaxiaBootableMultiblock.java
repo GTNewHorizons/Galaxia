@@ -35,7 +35,7 @@ public abstract class GalaxiaBootableMultiblock<T extends GalaxiaBootableMultibl
 
     @Override
     protected boolean shouldCheckStructure() {
-        return bootState == BootState.UNINITIALIZED;
+        return bootState != BootState.STRUCTURE_VALID;
     }
 
     @Override

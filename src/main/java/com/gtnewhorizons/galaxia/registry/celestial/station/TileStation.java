@@ -207,6 +207,7 @@ public class TileStation extends TileStationBase<TileStation> {
     protected boolean attemptBoot() {
         if (controllerFlag == Role.MAIN) {
             initController();
+            super.attemptBoot();
             return true;
         }
 
@@ -220,17 +221,20 @@ public class TileStation extends TileStationBase<TileStation> {
                     this.graph = base.graph;
                     graph.connectPiece(here);
                     controllerFlag = Role.SECONDARY;
+                    super.attemptBoot();
                     return true;
                 }
             }
         }
 
         if (controllerFlag == Role.SECONDARY) {
+            super.attemptBoot();
             return false;
         }
 
         controllerFlag = Role.MAIN;
         initController();
+        super.attemptBoot();
         return true;
     }
 

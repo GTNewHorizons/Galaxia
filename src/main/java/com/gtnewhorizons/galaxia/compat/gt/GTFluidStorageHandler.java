@@ -3,10 +3,10 @@ package com.gtnewhorizons.galaxia.compat.gt;
 import com.gtnewhorizons.galaxia.registry.interfaces.IFluidStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 
-public abstract class GTFluidStorageHandler<T extends MTEMultiBlockBase>
-    extends GTBaseAttachmentHandler<T>
+public abstract class GTFluidStorageHandler<T extends MTEMultiBlockBase> extends GTBaseAttachmentHandler<T>
     implements IFluidStorageHandler<T> {
 
     @Override

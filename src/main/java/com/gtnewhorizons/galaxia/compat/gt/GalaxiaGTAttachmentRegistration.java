@@ -2,21 +2,19 @@ package com.gtnewhorizons.galaxia.compat.gt;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
-import gregtech.api.metatileentity.implementations.MTEHatchDynamo;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTankInfo;
 
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 
 import goodgenerator.blocks.tileEntity.MTEYottaFluidTank;
+import gregtech.api.enums.GTValues;
 import kekztech.common.tileentities.MTELapotronicSuperCapacitor;
 import kekztech.common.tileentities.MTETankTFFT;
-import tectech.thing.metaTileEntity.hatch.MTEHatchEnergyTunnel;
 
 public final class GalaxiaGTAttachmentRegistration {
 
@@ -32,6 +30,7 @@ public final class GalaxiaGTAttachmentRegistration {
         registerHatches();
         registerEnergyHandlers();
         registerFluidHandlers();
+        registerStationPlugs();
     }
 
     private static void registerHatches() {
@@ -39,15 +38,13 @@ public final class GalaxiaGTAttachmentRegistration {
             stationHatchId,
             "hatch.station_controller",
             "Station Controller Hatch",
-            1
-        );
+            1);
         mteHatchAutoStationMaintenance = new MTEHatchStationMaintenance(
             stationAutoHatchId,
             "hatch.station_controller",
             "Station Controller Auto Hatch",
             1,
-            true
-        );
+            true);
     }
 
     private static void registerEnergyHandlers() {
@@ -83,7 +80,10 @@ public final class GalaxiaGTAttachmentRegistration {
             @Override
             public long drawEnergy(MTELapotronicSuperCapacitor attachment, long amount) {
                 BigInteger current = attachment.getStored();
-                long drawn = Math.min(amount, current.min(BigInteger.valueOf(Long.MAX_VALUE)).longValue());
+                long drawn = Math.min(
+                    amount,
+                    current.min(BigInteger.valueOf(Long.MAX_VALUE))
+                        .longValue());
                 attachment.setStored(current.subtract(BigInteger.valueOf(drawn)));
                 return drawn;
             }
@@ -171,5 +171,27 @@ public final class GalaxiaGTAttachmentRegistration {
                 return attachment.pull(resource, doFill);
             }
         });
+    }
+
+    public static final Set<Integer> plugId = new HashSet<>();
+
+    private static void registerStationPlugs() {
+        int[] amps = new int[] { 4, 16, 64 };
+        for (int tier = 0; tier < GTValues.V.length; tier++) {
+            int id = MTEStationPlug.ID + tier;
+            plugId.add(id);
+            new MTEStationPlug(id, "station_plug_" + tier, "Station Plug " + tier, tier);
+            for (int i = 0; i < amps.length; i++) {
+                id = MTEStationPlugMulti.ID + tier * 10 + i;
+                plugId.add(id);
+                new MTEStationPlugMulti(
+                    id,
+                    "station_plug_multi_" + amps[i] + "a_t" + tier,
+                    "Station Plug " + amps[i] + "A (Tier " + tier + ")",
+                    tier,
+                    amps[i]);
+            }
+        }
+
     }
 }

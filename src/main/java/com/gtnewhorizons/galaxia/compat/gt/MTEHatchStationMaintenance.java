@@ -11,6 +11,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+
 import gregtech.api.interfaces.ITexture;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.metatileentity.MetaTileEntity;
@@ -45,7 +46,7 @@ public class MTEHatchStationMaintenance extends MTEHatchMaintenance {
     }
 
     public MTEHatchStationMaintenance(String aName, int aTier, String[] aDescription, ITexture[][][] aTextures,
-                               boolean aAuto) {
+        boolean aAuto) {
         super(aName, aTier, aDescription, aTextures, aAuto);
     }
 
@@ -57,7 +58,9 @@ public class MTEHatchStationMaintenance extends MTEHatchMaintenance {
     @Override
     public void onPostTick(IGregTechTileEntity aBaseMetaTileEntity, long aTick) {
         super.onPostTick(aBaseMetaTileEntity, aTick);
-        if (aBaseMetaTileEntity.isServerSide() && graph.getController() == null && aTick % 100L == 0L) {
+        if (aBaseMetaTileEntity.isServerSide() && graph != null
+            && graph.getController() == null
+            && aTick % 100L == 0L) {
             mWrench = mScrewdriver = mSoftMallet = mHardHammer = mCrowbar = mSolderingTool = false;
         }
     }

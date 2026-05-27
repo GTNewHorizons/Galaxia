@@ -2,10 +2,12 @@ package com.gtnewhorizons.galaxia.compat.gt;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
+import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
+
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 
-public abstract class GTBaseAttachmentHandler<T extends MTEMultiBlockBase> {
+public abstract class GTBaseAttachmentHandler<T extends MTEMultiBlockBase> implements IAttachmentHandler<T> {
 
     public BlockPos getPosition(T attachment) {
         IGregTechTileEntity base = attachment.getBaseMetaTileEntity();

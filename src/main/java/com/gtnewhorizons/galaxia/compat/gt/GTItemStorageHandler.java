@@ -3,10 +3,10 @@ package com.gtnewhorizons.galaxia.compat.gt;
 import com.gtnewhorizons.galaxia.registry.interfaces.IItemStorageHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
+
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 
-public abstract class GTItemStorageHandler<T extends MTEMultiBlockBase>
-    extends GTBaseAttachmentHandler<T>
+public abstract class GTItemStorageHandler<T extends MTEMultiBlockBase> extends GTBaseAttachmentHandler<T>
     implements IItemStorageHandler<T> {
 
     @Override
