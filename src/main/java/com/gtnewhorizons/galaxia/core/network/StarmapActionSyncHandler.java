@@ -4,16 +4,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ChatComponentText;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
+import com.gtnewhorizons.galaxia.client.gui.station.StationNotificationHelper;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
@@ -193,11 +192,7 @@ public final class StarmapActionSyncHandler extends SyncHandler<StarmapActionSyn
                 AssetSyncPacket.Handler.handleClientSync(packet);
             }
             case RESPONSE_ACTION_FAILED -> {
-                Minecraft minecraft = Minecraft.getMinecraft();
-                if (minecraft != null && minecraft.ingameGUI != null) {
-                    minecraft.ingameGUI.getChatGUI()
-                        .printChatMessage(new ChatComponentText("[Galaxia] " + PacketUtil.readString(buf)));
-                }
+                StationNotificationHelper.showFailure(PacketUtil.readString(buf));
             }
         }
     }

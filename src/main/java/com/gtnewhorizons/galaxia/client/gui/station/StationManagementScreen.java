@@ -254,7 +254,7 @@ public final class StationManagementScreen implements IGuiHolder<GuiData> {
                         request.creativeBuildMode(),
                         targets);
                 }
-                if (!sent) StationBuildStatus.notifyFailure("Module build request failed");
+                if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             },
             targets -> ModuleBuildPickerModel.connectedTargets(facility, targets, shape));
         controller.setSelectionFootprint(shape, shape == ModuleShape.QUAD_2x2);

@@ -337,7 +337,7 @@ public final class ModulePickerScreen implements IGuiHolder<GuiData> {
                 pendingSettingsGroupId,
                 pendingInstantBuild,
                 coord);
-            if (!sent) StationBuildStatus.notifyFailure("Module build request failed");
+            if (!sent) StationNotificationHelper.showFailure("Module build request failed");
             StationManagementScreen.open(assetId, pendingInstantBuild);
         } else {
             StationManagementScreen.open(assetId, pendingInstantBuild);
