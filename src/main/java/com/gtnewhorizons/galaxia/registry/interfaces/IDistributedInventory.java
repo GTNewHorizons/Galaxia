@@ -298,7 +298,7 @@ public interface IDistributedInventory {
      * @param delta positive to insert, negative to extract
      * @return amount actually transferred
      */
-    default <T extends InventoryKey> long updateContents(T key, int delta) {
+    default <T extends InventoryKey> long updateContents(T key, long delta) {
         return key.isItem() ? updateItems((ItemStackWrapper) key, delta) : updateFluids((FluidKey) key, delta);
     }
 
@@ -309,13 +309,13 @@ public interface IDistributedInventory {
      *
      * @return amount transferred, in [0, |delta|]
      */
-    default long updateItems(ItemStackWrapper item, int delta) {
-        if (item == null || delta == 0) return 0L;
+    default long updateItems(ItemStackWrapper item, long delta) {
+        if (item == null || delta == 0L) return 0L;
         if (!getItemFilter().test(item)) return 0L;
-        return delta > 0 ? insertItems(item, delta) : extractItems(item, -delta);
+        return delta > 0 ? insertItems(item, delta) : extractItems(item, extractionTarget(delta));
     }
 
-    private long insertItems(ItemStackWrapper item, int target) {
+    private long insertItems(ItemStackWrapper item, long target) {
         long transferred = 0;
         ItemStack template = item.toStack(1);
 
@@ -324,7 +324,7 @@ public interface IDistributedInventory {
             if (transferred >= target) break;
             if (child == null || !child.getItemFilter()
                 .test(item)) continue;
-            transferred += child.updateItems(item, (int) (target - transferred));
+            transferred += child.updateItems(item, target - transferred);
         }
 
         // 2. Leaf insertion
@@ -362,7 +362,7 @@ public interface IDistributedInventory {
         return transferred;
     }
 
-    private long extractItems(ItemStackWrapper item, int target) {
+    private long extractItems(ItemStackWrapper item, long target) {
         long transferred = 0;
 
         // 1. Child extraction (ascending priority)
@@ -370,7 +370,7 @@ public interface IDistributedInventory {
         for (int i = sorted.size() - 1; i >= 0 && transferred < target; i--) {
             IDistributedInventory child = sorted.get(i);
             if (child == null) continue;
-            transferred += child.updateItems(item, -(int) (target - transferred));
+            transferred += child.updateItems(item, -(target - transferred));
         }
 
         // 2. Leaf extraction
@@ -395,22 +395,26 @@ public interface IDistributedInventory {
      * Inserts (delta > 0) or extracts (delta < 0) a fluid within this subtree.
      *
      * @return volume transferred (mB)
-     * @see #updateItems(ItemStackWrapper, int) for priority and traversal semantics
+     * @see #updateItems(ItemStackWrapper, long) for priority and traversal semantics
      */
-    default long updateFluids(FluidKey fluid, int delta) {
-        if (fluid == null || delta == 0) return 0L;
+    default long updateFluids(FluidKey fluid, long delta) {
+        if (fluid == null || delta == 0L) return 0L;
         if (!getFluidFilter().test(fluid)) return 0L;
-        return delta > 0 ? insertFluids(fluid, delta) : extractFluids(fluid, -delta);
+        return delta > 0 ? insertFluids(fluid, delta) : extractFluids(fluid, extractionTarget(delta));
     }
 
-    private long insertFluids(FluidKey fluid, int target) {
+    private static long extractionTarget(long delta) {
+        return delta == Long.MIN_VALUE ? Long.MAX_VALUE : -delta;
+    }
+
+    private long insertFluids(FluidKey fluid, long target) {
         long transferred = 0;
 
         for (IDistributedInventory child : getChildrenSortedByPriority()) {
             if (transferred >= target) break;
             if (child == null || !child.getFluidFilter()
                 .test(fluid)) continue;
-            transferred += child.updateFluids(fluid, (int) (target - transferred));
+            transferred += child.updateFluids(fluid, target - transferred);
         }
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null || transferred >= target) continue;
@@ -423,14 +427,14 @@ public interface IDistributedInventory {
         return transferred;
     }
 
-    private long extractFluids(FluidKey fluid, int target) {
+    private long extractFluids(FluidKey fluid, long target) {
         long transferred = 0;
 
         List<IDistributedInventory> sorted = getChildrenSortedByPriority();
         for (int i = sorted.size() - 1; i >= 0 && transferred < target; i--) {
             IDistributedInventory child = sorted.get(i);
             if (child == null) continue;
-            transferred += child.updateFluids(fluid, -(int) (target - transferred));
+            transferred += child.updateFluids(fluid, -(target - transferred));
         }
         for (IFluidTank tank : getFluidTanks()) {
             if (tank == null || transferred >= target) continue;

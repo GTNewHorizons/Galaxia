@@ -501,7 +501,7 @@ public final class AutomatedFacility extends CelestialAsset {
         }
         Map<String, Long> deposited = new java.util.LinkedHashMap<>();
         for (Map.Entry<ItemStackWrapper, Long> material : requested.entrySet()) {
-            long reserved = applyContentsDelta(material.getKey(), -material.getValue(), true);
+            long reserved = updateContents(material.getKey(), -material.getValue(), true);
             if (reserved != material.getValue()) {
                 throw new IllegalStateException(
                     "Operation material reservation became inconsistent for module " + module.id
@@ -520,32 +520,18 @@ public final class AutomatedFacility extends CelestialAsset {
         return true;
     }
 
-    private long applyContentsDelta(InventoryKey key, long delta, boolean sync) {
-        if (key == null || delta == 0L) return 0L;
-        long remaining = Math.abs(delta);
-        long appliedTotal = 0L;
-        while (remaining > 0L) {
-            int step = (int) Math.min(remaining, Integer.MAX_VALUE);
-            long applied = updateContents(key, delta > 0L ? step : -step, sync);
-            if (applied <= 0L) break;
-            appliedTotal += applied;
-            remaining -= applied;
-        }
-        return appliedTotal;
-    }
-
     public boolean tryConsumeInventory(ItemStackWrapper item, long amount) {
         if (item == null) return false;
         if (amount <= 0L) return true;
         if (getItemAmount(item) < amount) return false;
-        return applyContentsDelta(item, -amount, true) == amount;
+        return updateContents(item, -amount, true) == amount;
     }
 
     public boolean tryConsumeFluid(FluidKey key, long amount) {
         if (key == null) return false;
         if (amount <= 0L) return true;
         if (getFluidAmount(key) < amount) return false;
-        return applyContentsDelta(key, -amount, true) == amount;
+        return updateContents(key, -amount, true) == amount;
     }
 
     public boolean tryReserveAvailableOperationMaterials(ModuleInstance module,
@@ -564,7 +550,7 @@ public final class AutomatedFacility extends CelestialAsset {
             long available = getItemAmount(material.getKey());
             long reserved = Math.min(available, remaining);
             if (reserved <= 0L) continue;
-            long applied = applyContentsDelta(material.getKey(), -reserved, true);
+            long applied = updateContents(material.getKey(), -reserved, true);
             if (applied <= 0L) {
                 throw new IllegalStateException(
                     "Operation partial reservation became inconsistent for module " + module.id + ", item=" + itemKey);
@@ -617,7 +603,7 @@ public final class AutomatedFacility extends CelestialAsset {
         for (Map.Entry<String, Long> entry : operation.refundBuffer()
             .entrySet()) {
             ItemStackWrapper item = requireItemKey(entry.getKey(), module);
-            long accepted = applyContentsDelta(item, entry.getValue(), true);
+            long accepted = updateContents(item, entry.getValue(), true);
             if (accepted > 0L) changed = true;
             long leftover = entry.getValue() - accepted;
             if (leftover > 0L) remaining.put(entry.getKey(), leftover);
@@ -1221,7 +1207,7 @@ public final class AutomatedFacility extends CelestialAsset {
         return fluidFilter;
     }
 
-    public long updateContents(InventoryKey item, int delta, boolean sync) {
+    public long updateContents(InventoryKey item, long delta, boolean sync) {
         final long actual = item instanceof ItemStackWrapper ? updateItems((ItemStackWrapper) item, delta)
             : updateFluids((FluidKey) item, delta);
         if (actual != 0L && sync) markInventoryDelta(item, delta > 0 ? actual : -actual);
@@ -1229,8 +1215,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
-    public long updateItems(ItemStackWrapper item, int delta) {
-        if (item == null || delta == 0) return 0L;
+    public long updateItems(ItemStackWrapper item, long delta) {
+        if (item == null || delta == 0L) return 0L;
         if (!getItemFilter().test(item)) return 0L;
 
         long current = amounts.getOrDefault(item, 0L);
@@ -1248,8 +1234,8 @@ public final class AutomatedFacility extends CelestialAsset {
     }
 
     @Override
-    public long updateFluids(FluidKey fluid, int delta) {
-        if (fluid == null || delta == 0) return 0L;
+    public long updateFluids(FluidKey fluid, long delta) {
+        if (fluid == null || delta == 0L) return 0L;
         if (!getFluidFilter().test(fluid)) return 0L;
 
         long current = fluidAmounts.getOrDefault(fluid, 0L);

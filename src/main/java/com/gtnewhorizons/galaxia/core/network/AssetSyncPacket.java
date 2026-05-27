@@ -1409,12 +1409,7 @@ public final class AssetSyncPacket implements IMessage {
                 }
                 case INVENTORY_UPDATE -> {
                     if (packet.resource != null) {
-                        long delta = packet.inventoryDelta;
-                        if (delta > 0) {
-                            asset.updateContents(packet.resource, (int) Math.min(delta, Integer.MAX_VALUE));
-                        } else {
-                            asset.updateContents(packet.resource, (int) Math.max(delta, Integer.MIN_VALUE + 1));
-                        }
+                        asset.updateContents(packet.resource, packet.inventoryDelta);
                     }
                 }
                 case INVENTORY_BOUND_UPDATE -> {

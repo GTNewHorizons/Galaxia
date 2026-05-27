@@ -135,6 +135,19 @@ final class AutomatedFacilityDeltaSyncTest {
     }
 
     @Test
+    void inventoryDeltaAcceptsLongAmountWithoutTruncation() {
+        AutomatedFacility facility = createFacility();
+        facility.markSyncedFor(PLAYER_A);
+        facility.clean();
+        ItemStackWrapper resource = ItemStackWrapper.of(new ItemStack(Items.diamond));
+
+        long requested = (long) Integer.MAX_VALUE + 1L;
+
+        assertEquals(AutomatedFacility.BASE_ITEM_CAPACITY, facility.updateContents(resource, requested, true));
+        assertEquals(Map.of(resource, AutomatedFacility.BASE_ITEM_CAPACITY), facility.drainDirtyInventoryDeltas());
+    }
+
+    @Test
     void addThenRemoveSameModuleClearsAddDirtiness() {
         AutomatedFacility facility = createFacility();
         facility.markSyncedFor(PLAYER_A);

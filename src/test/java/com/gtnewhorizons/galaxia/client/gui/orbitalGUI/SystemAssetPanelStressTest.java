@@ -153,7 +153,7 @@ final class SystemAssetPanelStressTest {
         public void tick() {}
 
         @Override
-        public long updateContents(InventoryKey item, int delta, boolean sync) {
+        public long updateContents(InventoryKey item, long delta, boolean sync) {
             return updateContents(item, delta);
         }
 
